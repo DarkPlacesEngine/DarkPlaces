@@ -2459,8 +2459,8 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &to); // otherwise we'll request the challenge later
 			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
 			cls.rcon_addresses[cls.rcon_ringpos] = to;
-			cls.rcon_ringpos = (cls.rcon_ringpos) % 64;
-			cls.rcon_timeout[i] = realtime + rcon_secure_challengetimeout.value;
+			cls.rcon_timeout[cls.rcon_ringpos] = realtime + rcon_secure_challengetimeout.value;
+			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
 		}
 		else if(rcon_secure.integer)
 		{
