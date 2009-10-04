@@ -5813,10 +5813,11 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 	}
 }
 
+static int markframe = 0;
+
 static void Mod_Q3BSP_TracePoint(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
 {
 	int i;
-	static int markframe = 0x80000000;
 	q3mbrush_t *brush;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
@@ -5836,7 +5837,6 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, int frame, trace_t *trace, co
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
-	static int markframe = 0x40000000;
 	msurface_t *surface;
 	q3mbrush_t *brush;
 
@@ -5874,7 +5874,6 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
-	static int markframe = 0;
 	msurface_t *surface;
 	q3mbrush_t *brush;
 	colbrushf_t *thisbrush_start, *thisbrush_end;
