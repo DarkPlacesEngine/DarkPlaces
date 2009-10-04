@@ -519,7 +519,7 @@ void CL_Particles_Shutdown (void)
 // orientation - one of the PARTICLE_ values
 // staincolor1, staincolor2: minimum and maximum ranges of stain color, randomly interpolated to decide particle color (-1 to use none)
 // staintex: any of the tex_ values such as tex_smoke[rand()&7] or tex_particle (-1 to use none)
-static particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qboolean pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex)
+particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qboolean pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex)
 {
 	int l1, l2, r, g, b;
 	particle_t *part;

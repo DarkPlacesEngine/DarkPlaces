@@ -48,6 +48,8 @@
 #define RF_USEAXIS			16	// When set, the entity will use the v_forward, v_right and v_up globals instead of it's angles field for orientation. Angles will be ignored compleatly.
 								// Note that to use this properly, you'll NEED to use the predraw function to set the globals.
 //#define RF_DOUBLESIDED		32
+#define RF_USETRANSPARENTOFFSET 64 // Allows QC to customize origin used for transparent sorting via transparent_origin global, helps to fix transparent sorting bugs on a very large entities
+#define RF_NOCULL				128 // do not cull this entity using r_cullentities, for large outdoor entities (asteroids on the sky. etc)
 
 extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 extern cvar_t csqc_progcrc;

@@ -271,6 +271,8 @@ typedef struct entity_render_s
 	float alpha;
 	// size the model is shown
 	float scale;
+	// transparent sorting offset
+	float transparent_offset;
 
 	// NULL = no model
 	dp_model_t *model;
@@ -1341,6 +1343,7 @@ extern cvar_t cl_decals_fadetime;
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
 void CL_Particles_Shutdown(void);
+particle_t *CL_NewParticle(unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qboolean pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex);
 
 typedef enum effectnameindex_s
 {
