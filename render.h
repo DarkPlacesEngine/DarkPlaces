@@ -312,6 +312,8 @@ typedef struct rsurfacestate_s
 	// colormapping state from entity (these are black if colormapping is off)
 	vec3_t colormap_pantscolor;
 	vec3_t colormap_shirtcolor;
+	// special coloring of glow textures
+	vec3_t glowmod;
 	// view location in model space
 	vec3_t modelorg; // TODO: rename this
 	// polygon offset data for submodels

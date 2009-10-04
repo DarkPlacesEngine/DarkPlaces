@@ -290,6 +290,7 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "cursor_screen"},
 	{ev_vector, "cursor_trace_endpos"},
 	{ev_vector, "cursor_trace_start"},
+	{ev_vector, "glowmod"},
 	{ev_vector, "movement"},
 	{ev_vector, "punchvector"},
 };
@@ -1139,6 +1140,16 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 		i = (int)(val->vector[0] * 32.0f);cs->colormod[0] = bound(0, i, 255);
 		i = (int)(val->vector[1] * 32.0f);cs->colormod[1] = bound(0, i, 255);
 		i = (int)(val->vector[2] * 32.0f);cs->colormod[2] = bound(0, i, 255);
+	}
+
+	// don't need to init cs->glowmod because the defaultstate did that for us
+	//cs->glowmod[0] = cs->glowmod[1] = cs->glowmod[2] = 32;
+	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glowmod);
+	if (val->vector[0] || val->vector[1] || val->vector[2])
+	{
+		i = (int)(val->vector[0] * 32.0f);cs->glowmod[0] = bound(0, i, 255);
+		i = (int)(val->vector[1] * 32.0f);cs->glowmod[1] = bound(0, i, 255);
+		i = (int)(val->vector[2] * 32.0f);cs->glowmod[2] = bound(0, i, 255);
 	}
 
 	cs->modelindex = modelindex;

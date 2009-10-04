@@ -192,6 +192,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int glow_color; // ssqc
 	int glow_size; // ssqc
 	int glow_trail; // ssqc
+	int glowmod; // ssqc / csqc
 	int gravity; // ssqc
 	int groundentity; // ssqc / csqc
 	int hull; // ssqc / csqc

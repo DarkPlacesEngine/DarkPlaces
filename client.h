@@ -290,6 +290,7 @@ typedef struct entity_render_s
 
 	// colormod tinting of models
 	float colormod[3];
+	float glowmod[3];
 
 	// interpolated animation - active framegroups and blend factors
 	framegroupblend_t framegroupblend[MAX_FRAMEGROUPBLENDS];

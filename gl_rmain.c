@@ -2211,7 +2211,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
 		}
 		if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
-		if (r_glsl_permutation->loc_GlowColor >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowColor, r_hdr_glowintensity.value, r_hdr_glowintensity.value, r_hdr_glowintensity.value);
+		if (r_glsl_permutation->loc_GlowColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_GlowColor, rsurface.glowmod[0] * r_hdr_glowintensity.value, rsurface.glowmod[1] * r_hdr_glowintensity.value, rsurface.glowmod[2] * r_hdr_glowintensity.value);
 		// additive passes are only darkened by fog, not tinted
 		if (r_glsl_permutation->loc_FogColor >= 0)
 		{
@@ -5655,6 +5655,7 @@ void RSurf_ActiveWorldEntity(void)
 	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
 	VectorSet(rsurface.colormap_pantscolor, 0, 0, 0);
 	VectorSet(rsurface.colormap_shirtcolor, 0, 0, 0);
+	VectorSet(rsurface.glowmod, 1, 1, 1);
 	memset(rsurface.frameblend, 0, sizeof(rsurface.frameblend));
 	rsurface.frameblend[0].lerp = 1;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
@@ -5726,6 +5727,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	VectorCopy(ent->modellight_lightdir, rsurface.modellight_lightdir);
 	VectorCopy(ent->colormap_pantscolor, rsurface.colormap_pantscolor);
 	VectorCopy(ent->colormap_shirtcolor, rsurface.colormap_shirtcolor);
+	VectorCopy(ent->glowmod, rsurface.glowmod);
 	memcpy(rsurface.frameblend, ent->frameblend, sizeof(ent->frameblend));
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;

@@ -1442,6 +1442,11 @@ static void VM_CL_makestatic (void)
 		staticent->render.scale = 1;
 		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale)) && val->_float) staticent->render.scale = val->_float;
 		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.colormod)) && VectorLength2(val->vector)) VectorCopy(val->vector, staticent->render.colormod);
+		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector)) VectorCopy(val->vector, staticent->render.glowmod);
+		if (!VectorLength2(staticent->render.colormod))
+			VectorSet(staticent->render.colormod, 1, 1, 1);
+		if (!VectorLength2(staticent->render.glowmod))
+			VectorSet(staticent->render.glowmod, 1, 1, 1);
 
 		renderflags = 0;
 		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && val->_float) renderflags = (int)val->_float;

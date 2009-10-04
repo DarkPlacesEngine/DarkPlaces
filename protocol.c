@@ -50,8 +50,9 @@ entity_state_t defaultstate =
 	0,//unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
+	{32, 32, 32},//unsigned char glowmod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0,0,0,0}//unsigned char unused[5]; // !
+	{0,0}//unsigned char unused[2]; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599
@@ -2158,6 +2159,12 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			MSG_WriteByte(msg, s->colormod[1]);
 			MSG_WriteByte(msg, s->colormod[2]);
 		}
+		if (bits & E5_GLOWMOD)
+		{
+			MSG_WriteByte(msg, s->glowmod[0]);
+			MSG_WriteByte(msg, s->glowmod[1]);
+			MSG_WriteByte(msg, s->glowmod[2]);
+		}
 	}
 
 	ENTITYSIZEPROFILING_END(msg, s->number);
@@ -2270,6 +2277,12 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 		s->colormod[1] = MSG_ReadByte();
 		s->colormod[2] = MSG_ReadByte();
 	}
+	if (bits & E5_GLOWMOD)
+	{
+		s->glowmod[0] = MSG_ReadByte();
+		s->glowmod[1] = MSG_ReadByte();
+		s->glowmod[2] = MSG_ReadByte();
+	}
 
 
 	if (developer_networkentities.integer >= 2)
@@ -2325,6 +2338,8 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			Con_Printf(" E5_GLOW %i:%i", s->glowsize * 4, s->glowcolor);
 		if (bits & E5_COLORMOD)
 			Con_Printf(" E5_COLORMOD %f:%f:%f", s->colormod[0] / 32.0f, s->colormod[1] / 32.0f, s->colormod[2] / 32.0f);
+		if (bits & E5_GLOWMOD)
+			Con_Printf(" E5_GLOWMOD %f:%f:%f", s->glowmod[0] / 32.0f, s->glowmod[1] / 32.0f, s->glowmod[2] / 32.0f);
 		Con_Print("\n");
 	}
 }
@@ -2364,6 +2379,8 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 			bits |= E5_GLOW;
 		if (o->colormod[0] != n->colormod[0] || o->colormod[1] != n->colormod[1] || o->colormod[2] != n->colormod[2])
 			bits |= E5_COLORMOD;
+		if (o->glowmod[0] != n->glowmod[0] || o->glowmod[1] != n->glowmod[1] || o->glowmod[2] != n->glowmod[2])
+			bits |= E5_GLOWMOD;
 	}
 	else
 		if (o->active == ACTIVE_NETWORK)
