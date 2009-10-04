@@ -148,7 +148,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 
 				VectorCopy (traceendpos, ent->fields.server->origin);
 				if (relink)
-					SV_LinkEdict (ent, true);
+				{
+					SV_LinkEdict(ent);
+					SV_LinkEdict_TouchAreaGrid(ent);
+				}
 				return true;
 			}
 
@@ -180,7 +183,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 		{
 			VectorAdd (ent->fields.server->origin, move, ent->fields.server->origin);
 			if (relink)
-				SV_LinkEdict (ent, true);
+			{
+				SV_LinkEdict(ent);
+				SV_LinkEdict_TouchAreaGrid(ent);
+			}
 			ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 			return true;
 		}
@@ -197,7 +203,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 		{	// entity had floor mostly pulled out from underneath it
 			// and is trying to correct
 			if (relink)
-				SV_LinkEdict (ent, true);
+			{
+				SV_LinkEdict(ent);
+				SV_LinkEdict_TouchAreaGrid(ent);
+			}
 			return true;
 		}
 		VectorCopy (oldorg, ent->fields.server->origin);
@@ -211,7 +220,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 
 // the move is ok
 	if (relink)
-		SV_LinkEdict (ent, true);
+	{
+		SV_LinkEdict(ent);
+		SV_LinkEdict_TouchAreaGrid(ent);
+	}
 	return true;
 }
 
@@ -249,10 +261,12 @@ qboolean SV_StepDirection (prvm_edict_t *ent, float yaw, float dist)
 		{		// not turned far enough, so don't take the step
 			VectorCopy (oldorigin, ent->fields.server->origin);
 		}
-		SV_LinkEdict (ent, true);
+		SV_LinkEdict(ent);
+		SV_LinkEdict_TouchAreaGrid(ent);
 		return true;
 	}
-	SV_LinkEdict (ent, true);
+	SV_LinkEdict(ent);
+	SV_LinkEdict_TouchAreaGrid(ent);
 
 	return false;
 }

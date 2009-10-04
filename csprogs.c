@@ -883,6 +883,7 @@ void CL_VM_Init (void)
 	prog->init_cmd = VM_CL_Cmd_Init;
 	prog->reset_cmd = VM_CL_Cmd_Reset;
 	prog->error_cmd = CL_VM_Error;
+	prog->ExecuteProgram = CLVM_ExecuteProgram;
 
 	PRVM_LoadProgs(csprogsfn, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
 

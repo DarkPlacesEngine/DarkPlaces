@@ -728,13 +728,11 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		VectorAdd(start, mins, shiftstart);
 		VectorAdd(end, mins, shiftend);
 		if (VectorCompare(start, end))
-			return CL_TracePoint(shiftstart, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
+			trace = CL_TracePoint(shiftstart, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
 		else
-		{
 			trace = CL_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
-			VectorSubtract(trace.endpos, mins, trace.endpos);
-			return trace;
-		}
+		VectorSubtract(trace.endpos, mins, trace.endpos);
+		return trace;
 	}
 
 	if (hitnetworkentity)

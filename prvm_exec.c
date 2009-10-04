@@ -643,7 +643,7 @@ void PRVM_Init_Exec(void)
 
 /*
 ====================
-PRVM_ExecuteProgram
+MVM_ExecuteProgram
 ====================
 */
 // LordHavoc: optimized
@@ -655,7 +655,7 @@ extern cvar_t prvm_statementprofiling;
 extern sizebuf_t vm_tempstringsbuf;
 extern qboolean prvm_runawaycheck;
 extern qboolean prvm_boundscheck;
-void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
+void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
 	mfunction_t	*f, *newf;
@@ -671,7 +671,7 @@ void PRVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	{
 		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
 			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
-		PRVM_ERROR ("PRVM_ExecuteProgram: %s", errormessage);
+		PRVM_ERROR ("MVM_ExecuteProgram: %s", errormessage);
 	}
 
 	f = &prog->functions[fnum];
@@ -836,7 +836,415 @@ chooseexecprogram:
 
 cleanup:
 	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_Printf("PRVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+		Con_Printf("MVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	// delete tempstrings created by this function
+	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	f->totaltime += (Sys_DoubleTime() - calltime);
+
+	SV_FlushBroadcastMessages();
+}
+
+/*
+====================
+CLVM_ExecuteProgram
+====================
+*/
+// LordHavoc: optimized
+#define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
+#define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
+#define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
+extern cvar_t prvm_traceqc;
+extern cvar_t prvm_statementprofiling;
+extern sizebuf_t vm_tempstringsbuf;
+extern qboolean prvm_runawaycheck;
+extern qboolean prvm_boundscheck;
+void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
+{
+	dstatement_t	*st, *startst;
+	mfunction_t	*f, *newf;
+	prvm_edict_t	*ed;
+	prvm_eval_t	*ptr;
+	int		jumpcount, cachedpr_trace, exitdepth;
+	int		restorevm_tempstringsbuf_cursize;
+	double  calltime;
+
+	calltime = Sys_DoubleTime();
+
+	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
+	{
+		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
+		PRVM_ERROR ("CLVM_ExecuteProgram: %s", errormessage);
+	}
+
+	f = &prog->functions[fnum];
+
+	// after executing this function, delete all tempstrings it created
+	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+
+	prog->trace = prvm_traceqc.integer;
+
+	// we know we're done when pr_depth drops to this
+	exitdepth = prog->depth;
+
+// make a stack frame
+	st = &prog->statements[PRVM_EnterFunction (f)];
+	// save the starting statement pointer for profiling
+	// (when the function exits or jumps, the (st - startst) integer value is
+	// added to the function's profile counter)
+	startst = st;
+	// instead of counting instructions, we count jumps
+	jumpcount = 0;
+	// add one to the callcount of this function because otherwise engine-called functions aren't counted
+	prog->xfunction->callcount++;
+
+chooseexecprogram:
+	cachedpr_trace = prog->trace;
+	if (prvm_runawaycheck)
+	{
+#define PRVMRUNAWAYCHECK 1
+		if (prvm_statementprofiling.integer)
+		{
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+#undef PRVMSTATEMENTPROFILING
+		}
+		else
+		{
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+		}
+#undef PRVMRUNAWAYCHECK
+	}
+	else
+	{
+		if (prvm_statementprofiling.integer)
+		{
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+#undef PRVMSTATEMENTPROFILING
+		}
+		else
+		{
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+		}
+	}
+
+cleanup:
+	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_Printf("CLVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	// delete tempstrings created by this function
+	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	f->totaltime += (Sys_DoubleTime() - calltime);
+
+	SV_FlushBroadcastMessages();
+}
+
+/*
+====================
+SVVM_ExecuteProgram
+====================
+*/
+// LordHavoc: optimized
+#define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
+#define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
+#define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
+extern cvar_t prvm_traceqc;
+extern cvar_t prvm_statementprofiling;
+extern sizebuf_t vm_tempstringsbuf;
+extern qboolean prvm_runawaycheck;
+extern qboolean prvm_boundscheck;
+void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
+{
+	dstatement_t	*st, *startst;
+	mfunction_t	*f, *newf;
+	prvm_edict_t	*ed;
+	prvm_eval_t	*ptr;
+	int		jumpcount, cachedpr_trace, exitdepth;
+	int		restorevm_tempstringsbuf_cursize;
+	double  calltime;
+
+	calltime = Sys_DoubleTime();
+
+	if (!fnum || fnum >= (unsigned int)prog->progs->numfunctions)
+	{
+		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
+		PRVM_ERROR ("SVVM_ExecuteProgram: %s", errormessage);
+	}
+
+	f = &prog->functions[fnum];
+
+	// after executing this function, delete all tempstrings it created
+	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+
+	prog->trace = prvm_traceqc.integer;
+
+	// we know we're done when pr_depth drops to this
+	exitdepth = prog->depth;
+
+// make a stack frame
+	st = &prog->statements[PRVM_EnterFunction (f)];
+	// save the starting statement pointer for profiling
+	// (when the function exits or jumps, the (st - startst) integer value is
+	// added to the function's profile counter)
+	startst = st;
+	// instead of counting instructions, we count jumps
+	jumpcount = 0;
+	// add one to the callcount of this function because otherwise engine-called functions aren't counted
+	prog->xfunction->callcount++;
+
+chooseexecprogram:
+	cachedpr_trace = prog->trace;
+	if (prvm_runawaycheck)
+	{
+#define PRVMRUNAWAYCHECK 1
+		if (prvm_statementprofiling.integer)
+		{
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+#undef PRVMSTATEMENTPROFILING
+		}
+		else
+		{
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+		}
+#undef PRVMRUNAWAYCHECK
+	}
+	else
+	{
+		if (prvm_statementprofiling.integer)
+		{
+#define PRVMSTATEMENTPROFILING 1
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+#undef PRVMSTATEMENTPROFILING
+		}
+		else
+		{
+			if (prvm_boundscheck)
+			{
+#define PRVMBOUNDSCHECK 1
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+#undef PRVMBOUNDSCHECK
+			}
+			else
+			{
+				if (prog->trace)
+				{
+#define PRVMTRACE 1
+#include "prvm_execprogram.h"
+#undef PRVMTRACE
+				}
+				else
+				{
+#include "prvm_execprogram.h"
+				}
+			}
+		}
+	}
+
+cleanup:
+	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_Printf("SVVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 

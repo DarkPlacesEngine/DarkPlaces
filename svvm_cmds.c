@@ -211,7 +211,7 @@ static void VM_SV_setorigin (void)
 	}
 	org = PRVM_G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->fields.server->origin);
-	SV_LinkEdict (e, false);
+	SV_LinkEdict(e);
 }
 
 // TODO: rotate param isnt used.. could be a bug. please check this and remove it if possible [1/10/2008 Black]
@@ -228,7 +228,7 @@ static void SetMinMaxSize (prvm_edict_t *e, float *min, float *max, qboolean rot
 	VectorCopy (max, e->fields.server->maxs);
 	VectorSubtract (max, min, e->fields.server->size);
 
-	SV_LinkEdict (e, false);
+	SV_LinkEdict(e);
 }
 
 /*
@@ -1089,7 +1089,7 @@ static void VM_SV_droptofloor (void)
 		{
 			Con_DPrintf("droptofloor at %f %f %f - COULD NOT FIX BADLY PLACED ENTITY\n", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			SV_UnstickEntity(ent);
-			SV_LinkEdict (ent, false);
+			SV_LinkEdict(ent);
 			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 			ent->fields.server->groundentity = 0;
 			PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -1099,7 +1099,7 @@ static void VM_SV_droptofloor (void)
 			Con_DPrintf("droptofloor at %f %f %f - FIXED BADLY PLACED ENTITY\n", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			VectorCopy (trace.endpos, ent->fields.server->origin);
 			SV_UnstickEntity(ent);
-			SV_LinkEdict (ent, false);
+			SV_LinkEdict(ent);
 			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 			ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
 			PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -1113,7 +1113,7 @@ static void VM_SV_droptofloor (void)
 		{
 			if (trace.fraction < 1)
 				VectorCopy (trace.endpos, ent->fields.server->origin);
-			SV_LinkEdict (ent, false);
+			SV_LinkEdict(ent);
 			ent->fields.server->flags = (int)ent->fields.server->flags | FL_ONGROUND;
 			ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
 			PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -1682,7 +1682,7 @@ static void VM_SV_copyentity (void)
 		return;
 	}
 	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
-	SV_LinkEdict(out, false);
+	SV_LinkEdict(out);
 }
 
 

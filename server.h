@@ -507,9 +507,10 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 
 /*! Needs to be called any time an entity changes origin, mins, maxs, or solid
  * sets ent->v.absmin and ent->v.absmax
- * if touchtriggers, calls prog functions for the intersected triggers
+ * call TouchAreaGrid as well to fire triggers that overlap the box
  */
-void SV_LinkEdict (prvm_edict_t *ent, qboolean touch_triggers);
+void SV_LinkEdict(prvm_edict_t *ent);
+void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent);
 
 /*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
  * returns true if it found a better place
