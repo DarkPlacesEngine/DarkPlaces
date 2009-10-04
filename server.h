@@ -409,6 +409,7 @@ extern cvar_t sv_fixedframeratesingleplayer;
 extern cvar_t sv_freezenonclients;
 extern cvar_t sv_friction;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;
+extern cvar_t sv_gameplayfix_consistentplayerprethink;
 extern cvar_t sv_gameplayfix_delayprojectiles;
 extern cvar_t sv_gameplayfix_droptofloorstartsolid;
 extern cvar_t sv_gameplayfix_droptofloorstartsolid_nudgetocorrect;
@@ -499,7 +500,7 @@ void SV_BroadcastPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 void SV_Physics (void);
 void SV_Physics_ClientMove (void);
-void SV_Physics_ClientEntity (prvm_edict_t *ent);
+//void SV_Physics_ClientEntity (prvm_edict_t *ent);
 
 qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
 qboolean SV_CheckBottom (prvm_edict_t *ent);

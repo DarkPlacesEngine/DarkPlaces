@@ -1025,6 +1025,12 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 		}
 	}
 
+	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
+	// player_run/player_stand1 does not horribly malfunction if the
+	// velocity becomes a denormalized float
+	if (VectorLength2(ent->fields.server->velocity) < 0.0001)
+		VectorClear(ent->fields.server->velocity);
+
 	// LordHavoc: max velocity fix, inspired by Maddes's source fixes, but this is faster
 	wishspeed = DotProduct(ent->fields.server->velocity, ent->fields.server->velocity);
 	if (wishspeed > sv_maxvelocity.value * sv_maxvelocity.value)
@@ -2672,12 +2678,6 @@ void SV_Physics_ClientMove(void)
 
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
-	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
-	// player_run/player_stand1 does not horribly malfunction if the
-	// velocity becomes a number that is both == 0 and != 0
-	// (sounds to me like NaN but to be absolutely safe...)
-	if (DotProduct(ent->fields.server->velocity, ent->fields.server->velocity) < 0.0001)
-		VectorClear(ent->fields.server->velocity);
 
 	// perform MOVETYPE_WALK behavior
 	SV_WalkMove (ent);
@@ -2701,14 +2701,14 @@ void SV_Physics_ClientMove(void)
 	}
 }
 
-void SV_Physics_ClientEntity(prvm_edict_t *ent)
+static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 {
 	// don't do physics on disconnected clients, FrikBot relies on this
 	if (!host_client->spawned)
-	{
-		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
 		return;
-	}
+
+	// make sure the velocity is sane (not a NaN)
+	SV_CheckVelocity(ent);
 
 	// don't run physics here if running asynchronously
 	if (host_client->clmovement_inputtimeout <= 0)
@@ -2717,20 +2717,61 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		//host_client->cmd.time = max(host_client->cmd.time, sv.time);
 	}
 
-	// make sure the velocity is sane (not a NaN)
+	// make sure the velocity is still sane (not a NaN)
 	SV_CheckVelocity(ent);
-	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
-	// player_run/player_stand1 does not horribly malfunction if the
-	// velocity becomes a number that is both == 0 and != 0
-	// (sounds to me like NaN but to be absolutely safe...)
-	if (DotProduct(ent->fields.server->velocity, ent->fields.server->velocity) < 0.0001)
-		VectorClear(ent->fields.server->velocity);
 
 	// call standard client pre-think
 	prog->globals.server->time = sv.time;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram (prog->globals.server->PlayerPreThink, "QC function PlayerPreThink is missing");
-	SV_CheckVelocity (ent);
+	PRVM_ExecuteProgram(prog->globals.server->PlayerPreThink, "QC function PlayerPreThink is missing");
+
+	// make sure the velocity is still sane (not a NaN)
+	SV_CheckVelocity(ent);
+}
+
+static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
+{
+	// make sure the velocity is sane (not a NaN)
+	SV_CheckVelocity(ent);
+
+	// call standard player post-think
+	prog->globals.server->time = sv.time;
+	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
+	PRVM_ExecuteProgram(prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
+
+	// make sure the velocity is still sane (not a NaN)
+	SV_CheckVelocity(ent);
+
+	if(ent->fields.server->fixangle)
+	{
+		// angle fixing was requested by physics code...
+		// so store the current angles for later use
+		memcpy(host_client->fixangle_angles, ent->fields.server->angles, sizeof(host_client->fixangle_angles));
+		host_client->fixangle_angles_set = TRUE;
+
+		// and clear fixangle for the next frame
+		ent->fields.server->fixangle = 0;
+	}
+
+	// decrement the countdown variable used to decide when to go back to
+	// synchronous physics
+	if (host_client->clmovement_inputtimeout > sv.frametime)
+		host_client->clmovement_inputtimeout -= sv.frametime;
+	else
+		host_client->clmovement_inputtimeout = 0;
+}
+
+static void SV_Physics_ClientEntity(prvm_edict_t *ent)
+{
+	// don't do physics on disconnected clients, FrikBot relies on this
+	if (!host_client->spawned)
+	{
+		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
+		return;
+	}
+
+	// make sure the velocity is sane (not a NaN)
+	SV_CheckVelocity(ent);
 
 	switch ((int) ent->fields.server->movetype)
 	{
@@ -2778,35 +2819,12 @@ void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		break;
 	}
 
-	// decrement the countdown variable used to decide when to go back to
-	// synchronous physics
-	if (host_client->clmovement_inputtimeout > sv.frametime)
-		host_client->clmovement_inputtimeout -= sv.frametime;
-	else
-		host_client->clmovement_inputtimeout = 0;
-
 	SV_CheckVelocity (ent);
 
 	SV_LinkEdict(ent);
 	SV_LinkEdict_TouchAreaGrid(ent);
 
 	SV_CheckVelocity (ent);
-
-	// call standard player post-think
-	prog->globals.server->time = sv.time;
-	prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram (prog->globals.server->PlayerPostThink, "QC function PlayerPostThink is missing");
-
-	if(ent->fields.server->fixangle)
-	{
-		// angle fixing was requested by physics code...
-		// so store the current angles for later use
-		memcpy(host_client->fixangle_angles, ent->fields.server->angles, sizeof(host_client->fixangle_angles));
-		host_client->fixangle_angles_set = TRUE;
-
-		// and clear fixangle for the next frame
-		ent->fields.server->fixangle = 0;
-	}
 }
 
 /*
@@ -2837,10 +2855,34 @@ void SV_Physics (void)
 			if (!ent->priv.server->free)
 				SV_LinkEdict_TouchAreaGrid(ent); // force retouch even for stationary
 
-	// run physics on the client entities
-	for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
-		if (!ent->priv.server->free)
+	if (sv_gameplayfix_consistentplayerprethink.integer)
+	{
+		// run physics on the client entities in 3 stages
+		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
+			if (!ent->priv.server->free)
+				SV_Physics_ClientEntity_PreThink(ent);
+
+		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
+			if (!ent->priv.server->free)
 				SV_Physics_ClientEntity(ent);
+
+		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
+			if (!ent->priv.server->free)
+				SV_Physics_ClientEntity_PostThink(ent);
+	}
+	else
+	{
+		// run physics on the client entities
+		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
+		{
+			if (!ent->priv.server->free)
+			{
+				SV_Physics_ClientEntity_PreThink(ent);
+				SV_Physics_ClientEntity(ent);
+				SV_Physics_ClientEntity_PostThink(ent);
+			}
+		}
+	}
 
 	// run physics on all the non-client entities
 	if (!sv_freezenonclients.integer)
