@@ -1634,9 +1634,9 @@ void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t 
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
-	VectorCopy(start, trace->endpos);
 	if (model && model->TracePoint)
 		model->TracePoint(model, 0, trace, start, hitsupercontents);
+	VectorCopy(start, trace->endpos);
 }
 
 void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel)
