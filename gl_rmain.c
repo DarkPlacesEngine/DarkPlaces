@@ -3295,7 +3295,7 @@ static void R_View_UpdateEntityVisible (void)
 			for (i = 0;i < r_refdef.scene.numentities;i++)
 			{
 				ent = r_refdef.scene.entities[i];
-				if(r_refdef.viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->flags & RENDER_VIEWMODEL) && !(ent->model && (ent->model->name[0] == '*')))
+				if(r_refdef.viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->flags & (RENDER_VIEWMODEL + RENDER_NOCULL)) && !(ent->model && (ent->model->name[0] == '*')))
 				{
 					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.scene.worldmodel, r_refdef.view.origin, ent->mins, ent->maxs))
 						ent->last_trace_visibility = realtime;
@@ -5505,6 +5505,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			t->glosstexture = r_texture_white;
 			t->backgroundglosstexture = r_texture_white;
 			t->specularscale = r_shadow_gloss2intensity.value;
+			t->specularpower = r_shadow_gloss2exponent.value;
 		}
 	}
 
@@ -7575,6 +7576,12 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, msurface_t 
 			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+			if (queueentity->transparent_offset) // transparent offset
+			{
+				center[0] += r_refdef.view.forward[0]*queueentity->transparent_offset;
+				center[1] += r_refdef.view.forward[1]*queueentity->transparent_offset;
+				center[2] += r_refdef.view.forward[2]*queueentity->transparent_offset;
+			}
 			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
 		}
 	}

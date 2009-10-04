@@ -1675,6 +1675,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.gettaginfo_parent             = PRVM_ED_FindGlobalOffset("gettaginfo_parent");
 	prog->globaloffsets.gettaginfo_right              = PRVM_ED_FindGlobalOffset("gettaginfo_right");
 	prog->globaloffsets.gettaginfo_up                 = PRVM_ED_FindGlobalOffset("gettaginfo_up");
+	prog->globaloffsets.transparent_offset            = PRVM_ED_FindGlobalOffset("transparent_offset");
 	prog->globaloffsets.intermission                  = PRVM_ED_FindGlobalOffset("intermission");
 	prog->globaloffsets.require_spawnfunc_prefix      = PRVM_ED_FindGlobalOffset("require_spawnfunc_prefix");
 	prog->globaloffsets.sb_showscores                 = PRVM_ED_FindGlobalOffset("sb_showscores");

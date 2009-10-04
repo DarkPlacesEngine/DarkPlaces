@@ -278,6 +278,7 @@ typedef struct prvm_prog_globaloffsets_s
 	int gettaginfo_forward; // ssqc / csqc
 	int gettaginfo_right; // ssqc / csqc
 	int gettaginfo_up; // ssqc / csqc
+	int transparent_offset; // csqc
 }
 prvm_prog_globaloffsets_t;
 

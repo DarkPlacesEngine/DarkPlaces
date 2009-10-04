@@ -302,6 +302,7 @@ typedef enum gamemode_e
 	GAME_EDU2P,
 	GAME_BLADEMASTER,
 	GAME_PROPHECY,
+	GAME_BLOODOMNICIDE,
 	GAME_COUNT
 }
 gamemode_t;

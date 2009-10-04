@@ -1492,6 +1492,9 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 // GAME_PROPHECY
 // COMMANDLINEOPTION: Game: -prophecy runs the game Quake (default)
 { "prophecy",				"-prophecy",		"Prophecy",		"data",		NULL,			"prophecy",			"prophecy" },
+// GAME_BLOODOMNICIDE
+// COMMANDLINEOPTION: Game: -omnicide runs the game Blood Omnicide
+{ "omnicide", "-omnicide", "Blood Omnicide", "kain", NULL, "omnicide", "omnicide" },
 };
 
 void COM_InitGameType (void)

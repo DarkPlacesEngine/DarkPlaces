@@ -2456,6 +2456,448 @@ void VM_CL_gettaginfo (void)
 //============================================================================
 
 //====================
+// DP_CSQC_SPAWNPARTICLE
+// a QC hook to engine's CL_NewParticle
+//====================
+
+// particle theme struct
+typedef struct vmparticletheme_s
+{
+	unsigned short typeindex;
+	qboolean initialized;
+	pblend_t blendmode;
+	porientation_t orientation;
+	int color1;
+	int color2;
+	int tex;
+	float size;
+	float sizeincrease;
+	int alpha;
+	int alphafade;
+	float gravity;
+	float bounce;
+	float airfriction;
+	float liquidfriction;
+	float originjitter;
+	float velocityjitter;
+	qboolean qualityreduction;
+	float lifetime;
+	float stretch;
+	int staincolor1;
+	int staincolor2;
+	int staintex;
+	float delayspawn;
+	float delaycollision;
+}vmparticletheme_t;
+
+// particle spawner
+typedef struct vmparticlespawner_s
+{
+	mempool_t			*pool;
+	qboolean			initialized;
+	qboolean			verified;
+	vmparticletheme_t	*themes;
+	int					max_themes;
+	// global addresses
+	float *particle_type;
+	float *particle_blendmode; 
+	float *particle_orientation;
+	float *particle_color1;
+	float *particle_color2;
+	float *particle_tex;
+	float *particle_size;
+	float *particle_sizeincrease;
+	float *particle_alpha;
+	float *particle_alphafade;
+	float *particle_time;
+	float *particle_gravity;
+	float *particle_bounce;
+	float *particle_airfriction;
+	float *particle_liquidfriction;
+	float *particle_originjitter;
+	float *particle_velocityjitter;
+	float *particle_qualityreduction;
+	float *particle_stretch;
+	float *particle_staincolor1;
+	float *particle_staincolor2;
+	float *particle_staintex;
+	float *particle_delayspawn;
+	float *particle_delaycollision;
+}vmparticlespawner_t;
+
+vmparticlespawner_t vmpartspawner;
+
+// TODO: automatic max_themes grow
+static void VM_InitParticleSpawner (int maxthemes)
+{
+	prvm_eval_t *val;
+
+	// bound max themes to not be an insane value
+	if (maxthemes < 4)
+		maxthemes = 4;
+	if (maxthemes > 2048)
+		maxthemes = 2048;
+	// allocate and set up structure
+	if (vmpartspawner.initialized) // reallocate
+	{
+		Mem_FreePool(&vmpartspawner.pool);
+		memset(&vmpartspawner, 0, sizeof(vmparticlespawner_t));
+	}
+	vmpartspawner.pool = Mem_AllocPool("VMPARTICLESPAWNER", 0, NULL);
+	vmpartspawner.themes = (vmparticletheme_t *)Mem_Alloc(vmpartspawner.pool, sizeof(vmparticletheme_t)*maxthemes);
+	vmpartspawner.max_themes = maxthemes;
+	vmpartspawner.initialized = true;
+	vmpartspawner.verified = true;
+	// get field addresses for fast querying (we can do 1000 calls of spawnparticle in a frame)
+	#define getglobal(v,s) val = PRVM_GLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset(s)); if (val) { vmpartspawner.v = &val->_float; } else { VM_Warning("VM_InitParticleSpawner: missing global '%s', spawner cannot work\n", s); vmpartspawner.verified = false; }
+	#define getglobalvector(v,s) val = PRVM_GLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset(s)); if (val) { vmpartspawner.v = (float *)val->vector; } else { VM_Warning("VM_InitParticleSpawner: missing global '%s', spawner cannot work\n", s); vmpartspawner.verified = false; }
+	getglobal(particle_type, "particle_type");
+	getglobal(particle_blendmode, "particle_blendmode");
+	getglobal(particle_orientation, "particle_orientation");
+	getglobalvector(particle_color1, "particle_color1");
+	getglobalvector(particle_color2, "particle_color2");
+	getglobal(particle_tex, "particle_tex");
+	getglobal(particle_size, "particle_size");
+	getglobal(particle_sizeincrease, "particle_sizeincrease");
+	getglobal(particle_alpha, "particle_alpha");
+	getglobal(particle_alphafade, "particle_alphafade");
+	getglobal(particle_time, "particle_time");
+	getglobal(particle_gravity, "particle_gravity");
+	getglobal(particle_bounce, "particle_bounce");
+	getglobal(particle_airfriction, "particle_airfriction");
+	getglobal(particle_liquidfriction, "particle_liquidfriction");
+	getglobal(particle_originjitter, "particle_originjitter");
+	getglobal(particle_velocityjitter, "particle_velocityjitter");
+	getglobal(particle_qualityreduction, "particle_qualityreduction");
+	getglobal(particle_stretch, "particle_stretch");
+	getglobalvector(particle_staincolor1, "particle_staincolor1");
+	getglobalvector(particle_staincolor2, "particle_staincolor2");
+	getglobal(particle_staintex, "particle_staintex");
+	getglobal(particle_delayspawn, "particle_delayspawn");
+	getglobal(particle_delaycollision, "particle_delaycollision");
+	#undef getglobal
+	#undef getglobalvector
+}
+
+// reset particle theme to default values
+static void VM_ResetParticleTheme (vmparticletheme_t *theme)
+{
+	theme->initialized = true;
+	theme->typeindex = pt_static;
+	theme->blendmode = PBLEND_ADD;
+	theme->orientation = PARTICLE_BILLBOARD;
+	theme->color1 = 0x808080;
+	theme->color2 = 0xFFFFFF;
+	theme->tex = 63;
+	theme->size = 2;
+	theme->sizeincrease = 0;
+	theme->alpha = 256;
+	theme->alphafade = 512;
+	theme->gravity = 0.0f;
+	theme->bounce = 0.0f;
+	theme->airfriction = 1.0f;
+	theme->liquidfriction = 4.0f;
+	theme->originjitter = 0.0f;
+	theme->velocityjitter = 0.0f;
+	theme->qualityreduction = false;
+	theme->lifetime = 4;
+	theme->stretch = 1;
+	theme->staincolor1 = -1;
+	theme->staincolor2 = -1;
+	theme->staintex = -1;
+	theme->delayspawn = 0.0f;
+	theme->delaycollision = 0.0f;
+}
+
+// particle theme -> QC globals
+void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme)
+{
+	*vmpartspawner.particle_type = theme->typeindex;
+	*vmpartspawner.particle_blendmode = theme->blendmode;
+	*vmpartspawner.particle_orientation = theme->orientation;
+	vmpartspawner.particle_color1[0] = (theme->color1 >> 16) & 0xFF; // VorteX: int only can store 0-255, not 0-256 which means 0 - 0,99609375...
+	vmpartspawner.particle_color1[1] = (theme->color1 >> 8) & 0xFF;
+	vmpartspawner.particle_color1[2] = (theme->color1 >> 0) & 0xFF;
+	vmpartspawner.particle_color2[0] = (theme->color2 >> 16) & 0xFF;
+	vmpartspawner.particle_color2[1] = (theme->color2 >> 8) & 0xFF;
+	vmpartspawner.particle_color2[2] = (theme->color2 >> 0) & 0xFF;
+	*vmpartspawner.particle_tex = (float)theme->tex;
+	*vmpartspawner.particle_size = theme->size;
+	*vmpartspawner.particle_sizeincrease = theme->sizeincrease;
+	*vmpartspawner.particle_alpha = (float)theme->alpha/256;
+	*vmpartspawner.particle_alphafade = (float)theme->alphafade/256;
+	*vmpartspawner.particle_time = theme->lifetime;
+	*vmpartspawner.particle_gravity = theme->gravity;
+	*vmpartspawner.particle_bounce = theme->bounce;
+	*vmpartspawner.particle_airfriction = theme->airfriction;
+	*vmpartspawner.particle_liquidfriction = theme->liquidfriction;
+	*vmpartspawner.particle_originjitter = theme->originjitter;
+	*vmpartspawner.particle_velocityjitter = theme->velocityjitter;
+	*vmpartspawner.particle_qualityreduction = theme->qualityreduction;
+	*vmpartspawner.particle_stretch = theme->stretch;
+	vmpartspawner.particle_staincolor1[0] = (theme->staincolor1 >> 16) & 0xFF;
+	vmpartspawner.particle_staincolor1[1] = (theme->staincolor1 >> 8) & 0xFF;
+	vmpartspawner.particle_staincolor1[2] = (theme->staincolor1 >> 0) & 0xFF;
+	vmpartspawner.particle_staincolor2[0] = (theme->staincolor2 >> 16) & 0xFF;
+	vmpartspawner.particle_staincolor2[1] = (theme->staincolor2 >> 8) & 0xFF;
+	vmpartspawner.particle_staincolor2[2] = (theme->staincolor2 >> 0) & 0xFF;
+	*vmpartspawner.particle_staintex = (float)theme->staintex;
+	*vmpartspawner.particle_delayspawn = theme->delayspawn;
+	*vmpartspawner.particle_delaycollision = theme->delaycollision;
+}
+
+// QC globals ->  particle theme
+void VM_CL_ParticleThemeFromGlobals(vmparticletheme_t *theme)
+{
+	theme->typeindex = (unsigned short)*vmpartspawner.particle_type;
+	theme->blendmode = (pblend_t)*vmpartspawner.particle_blendmode;
+	theme->orientation = (porientation_t)*vmpartspawner.particle_orientation;
+	theme->color1 = ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]);
+	theme->color2 = ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]);
+	theme->tex = (int)*vmpartspawner.particle_tex;
+	theme->size = *vmpartspawner.particle_size;
+	theme->sizeincrease = *vmpartspawner.particle_sizeincrease;
+	theme->alpha = (int)(*vmpartspawner.particle_alpha*256);
+	theme->alphafade = (int)(*vmpartspawner.particle_alphafade*256);
+	theme->lifetime = *vmpartspawner.particle_time;
+	theme->gravity = *vmpartspawner.particle_gravity;
+	theme->bounce = *vmpartspawner.particle_bounce;
+	theme->airfriction = *vmpartspawner.particle_airfriction;
+	theme->liquidfriction = *vmpartspawner.particle_liquidfriction;
+	theme->originjitter = *vmpartspawner.particle_originjitter;
+	theme->velocityjitter = *vmpartspawner.particle_velocityjitter;
+	theme->qualityreduction = (*vmpartspawner.particle_qualityreduction) ? true : false;
+	theme->stretch = *vmpartspawner.particle_stretch;
+	theme->staincolor1 = vmpartspawner.particle_staincolor1[0]*65536 + vmpartspawner.particle_staincolor1[1]*256 + vmpartspawner.particle_staincolor1[2];
+	theme->staincolor2 = vmpartspawner.particle_staincolor2[0]*65536 + vmpartspawner.particle_staincolor2[1]*256 + vmpartspawner.particle_staincolor2[2];
+	theme->staintex =(int)*vmpartspawner.particle_staintex;
+	theme->delayspawn = *vmpartspawner.particle_delayspawn;
+	theme->delaycollision = *vmpartspawner.particle_delaycollision;
+}
+
+// init particle spawner interface
+// # float(float max_themes) initparticlespawner
+void VM_CL_InitParticleSpawner (void)
+{
+	VM_SAFEPARMCOUNTRANGE(0, 1, VM_CL_InitParticleSpawner);
+	VM_InitParticleSpawner((int)PRVM_G_FLOAT(OFS_PARM0));
+	vmpartspawner.themes[0].initialized = true;
+	VM_ResetParticleTheme(&vmpartspawner.themes[0]);
+	PRVM_G_FLOAT(OFS_RETURN) = (vmpartspawner.verified == true) ? 1 : 0;
+}
+
+// void() resetparticle
+void VM_CL_ResetParticle (void)
+{
+	VM_SAFEPARMCOUNT(0, VM_CL_ResetParticle);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_ResetParticle: particle spawner not initialized\n");
+		return;
+	}
+	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+}
+
+// void(float themenum) particletheme
+void VM_CL_ParticleTheme (void)
+{
+	int themenum;
+
+	VM_SAFEPARMCOUNT(1, VM_CL_ParticleTheme);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_ParticleTheme: particle spawner not initialized\n");
+		return;
+	}
+	themenum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (themenum < 0 || themenum >= vmpartspawner.max_themes)
+	{
+		VM_Warning("VM_CL_ParticleTheme: bad theme number %i\n", themenum);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		return;
+	}
+	if (vmpartspawner.themes[themenum].initialized = false)
+	{
+		VM_Warning("VM_CL_ParticleTheme: theme #%i not exists\n", themenum);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		return;
+	}
+	// load particle theme into globals
+	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[themenum]);
+}
+
+// float() saveparticletheme
+// void(float themenum) updateparticletheme
+void VM_CL_ParticleThemeSave (void)
+{
+	int themenum;
+
+	VM_SAFEPARMCOUNTRANGE(0, 1, VM_CL_ParticleThemeSave);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_ParticleThemeSave: particle spawner not initialized\n");
+		return;
+	}
+	// allocate new theme, save it and return
+	if (prog->argc < 1)
+	{
+		for (themenum = 0; themenum < vmpartspawner.max_themes; themenum++)
+			if (vmpartspawner.themes[themenum].initialized == false)
+				break;
+		if (themenum >= vmpartspawner.max_themes)
+		{
+			if (vmpartspawner.max_themes == 2048)
+				VM_Warning("VM_CL_ParticleThemeSave: no free theme slots\n");
+			else
+				VM_Warning("VM_CL_ParticleThemeSave: no free theme slots, try initparticlespawner() with highter max_themes\n");
+			PRVM_G_FLOAT(OFS_RETURN) = -1;
+			return;
+		}
+		vmpartspawner.themes[themenum].initialized = true;
+		VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum]);
+		PRVM_G_FLOAT(OFS_RETURN) = themenum;
+		return;
+	}
+	// update existing theme
+	themenum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (themenum < 0 || themenum >= vmpartspawner.max_themes)
+	{
+		VM_Warning("VM_CL_ParticleThemeSave: bad theme number %i\n", themenum);
+		return;
+	}
+	vmpartspawner.themes[themenum].initialized = true;
+	VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum]);
+}
+
+// void(float themenum) freeparticletheme
+void VM_CL_ParticleThemeFree (void)
+{
+	int themenum;
+
+	VM_SAFEPARMCOUNT(1, VM_CL_ParticleThemeFree);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_ParticleThemeFree: particle spawner not initialized\n");
+		return;
+	}
+	themenum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	// check parms
+	if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
+	{
+		VM_Warning("VM_CL_ParticleThemeFree: bad theme number %i\n", themenum);
+		return;
+	}
+	if (vmpartspawner.themes[themenum].initialized = false)
+	{
+		VM_Warning("VM_CL_ParticleThemeFree: theme #%i already freed\n", themenum);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		return;
+	}
+	// free theme
+	VM_ResetParticleTheme(&vmpartspawner.themes[themenum]);
+	vmpartspawner.themes[themenum].initialized = false;
+}
+
+// float(vector org, vector dir, [float theme]) particle
+// returns 0 if failed, 1 if succesful
+void VM_CL_SpawnParticle (void)
+{
+	float *org, *dir;
+	vmparticletheme_t *theme;
+	particle_t *part;
+	int themenum;
+
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_SpawnParticle2);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_SpawnParticle: particle spawner not initialized\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		return;
+	}
+	org = PRVM_G_VECTOR(OFS_PARM0);
+	dir = PRVM_G_VECTOR(OFS_PARM1);
+	
+	if (prog->argc < 3) // global-set particle
+	{
+		part = CL_NewParticle((unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, (int)(*vmpartspawner.particle_alpha*256), (int)(*vmpartspawner.particle_alphafade*256), *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex);
+		if (!part)
+		{
+			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			return;
+		}
+		if (*vmpartspawner.particle_delayspawn)
+			part->delayedspawn = cl.time + *vmpartspawner.particle_delayspawn;
+		if (*vmpartspawner.particle_delaycollision)
+			part->delayedcollisions = cl.time + *vmpartspawner.particle_delaycollision;
+	}
+	else // quick themed particle
+	{
+		themenum = (int)PRVM_G_FLOAT(OFS_PARM2);
+		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
+		{
+			VM_Warning("VM_CL_SpawnParticle: bad theme number %i\n", themenum);
+			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			return;
+		}
+		theme = &vmpartspawner.themes[themenum];
+		part = CL_NewParticle(theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex);
+		if (!part)
+		{
+			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			return;
+		}
+		if (theme->delayspawn)
+			part->delayedspawn = cl.time + theme->delayspawn;
+		if (theme->delaycollision)
+			part->delayedcollisions = cl.time + theme->delaycollision;
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = 1; 
+}
+
+// float(vector org, vector dir, float spawndelay, float collisiondelay, [float theme]) delayedparticle
+// returns 0 if failed, 1 if success
+void VM_CL_SpawnParticleDelayed (void)
+{
+	float *org, *dir;
+	vmparticletheme_t *theme;
+	particle_t *part;
+	int themenum;
+
+	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_SpawnParticle2);
+	if (vmpartspawner.verified == false)
+	{
+		VM_Warning("VM_CL_SpawnParticle: particle spawner not initialized\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		return;
+	}
+	org = PRVM_G_VECTOR(OFS_PARM0);
+	dir = PRVM_G_VECTOR(OFS_PARM1);
+	if (prog->argc < 5) // global-set particle
+		part = CL_NewParticle((unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, (int)(*vmpartspawner.particle_alpha*256), (int)(*vmpartspawner.particle_alphafade*256), *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex);
+	else // themed particle
+	{
+		themenum = (int)PRVM_G_FLOAT(OFS_PARM4);
+		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
+		{
+			VM_Warning("VM_CL_SpawnParticle: bad theme number %i\n", themenum);
+			PRVM_G_FLOAT(OFS_RETURN) = 0;  
+			return;
+		}
+		theme = &vmpartspawner.themes[themenum];
+		part = CL_NewParticle(theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex);
+	}
+	if (!part) 
+	{ 
+		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		return; 
+	}
+	part->delayedspawn = cl.time + PRVM_G_FLOAT(OFS_PARM2);
+	part->delayedcollisions = cl.time + PRVM_G_FLOAT(OFS_PARM3);
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+}
+
+//
+//====================
 //QC POLYGON functions
 //====================
 
@@ -3709,14 +4151,14 @@ VM_buf_cvarlist,						// #517 void(float buf, string prefix, string antiprefix) 
 VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
 VM_gettime,						// #519 float(float timer) gettime = #519; (DP_QC_GETTIME)
 VM_keynumtostring,				// #520 string keynumtostring(float keynum)
-VM_findkeysforcommand,		// #521 string findkeysforcommand(string command)
-NULL,							// #522
-NULL,							// #523
-NULL,							// #524
-NULL,							// #525
-NULL,							// #526
-NULL,							// #527
-NULL,							// #528
+VM_findkeysforcommand,			// #521 string findkeysforcommand(string command)
+VM_CL_InitParticleSpawner,		// #522 void(float max_themes) initparticlespawner (DP_CSQC_SPAWNPARTICLE)
+VM_CL_ResetParticle,			// #523 void() resetparticle (DP_CSQC_SPAWNPARTICLE)
+VM_CL_ParticleTheme,			// #524 void(float theme) particletheme (DP_CSQC_SPAWNPARTICLE)
+VM_CL_ParticleThemeSave,		// #525 void() particlethemesave, void(float theme) particlethemeupdate (DP_CSQC_SPAWNPARTICLE)
+VM_CL_ParticleThemeFree,		// #526 void() particlethemefree (DP_CSQC_SPAWNPARTICLE)
+VM_CL_SpawnParticle,			// #527 float(vector org, vector vel, [float theme]) particle (DP_CSQC_SPAWNPARTICLE)
+VM_CL_SpawnParticleDelayed,		// #528 float(vector org, vector vel, float delay, float collisiondelay, [float theme]) delayedparticle (DP_CSQC_SPAWNPARTICLE)
 NULL,							// #529
 NULL,							// #530
 NULL,							// #531
