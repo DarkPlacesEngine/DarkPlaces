@@ -239,9 +239,10 @@ void VM_M_getresolution(void)
 	}
 	else
 	{
-		PRVM_G_VECTOR(OFS_RETURN)[0] = (fs ? video_resolutions : video_resolutions_hardcoded)[nr].width;
-		PRVM_G_VECTOR(OFS_RETURN)[1] = (fs ? video_resolutions : video_resolutions_hardcoded)[nr].height;
-		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+		video_resolution_t *r = &((fs ? video_resolutions : video_resolutions_hardcoded)[nr]);
+		PRVM_G_VECTOR(OFS_RETURN)[0] = r->width;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = r->height;
+		PRVM_G_VECTOR(OFS_RETURN)[2] = r->pixelheight;
 	}
 }
 
