@@ -1537,7 +1537,6 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame,
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
-	VectorCopy(end, trace->endpos);
 
 	Matrix4x4_Transform(inversematrix, start, starttransformed);
 	Matrix4x4_Transform(inversematrix, end, endtransformed);
@@ -1575,7 +1574,6 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, int fr
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
-	VectorCopy(end, trace->endpos);
 
 	Matrix4x4_Transform(inversematrix, start, starttransformed);
 	Matrix4x4_Transform(inversematrix, end, endtransformed);
@@ -1624,10 +1622,10 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int f
 	else
 		Collision_ClipTrace_Point(trace, bodymins, bodymaxs, starttransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
 
+	VectorCopy(start, trace->endpos);
 	// transform plane
 	// NOTE: this relies on plane.dist being directly after plane.normal
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
-	VectorCopy(start, trace->endpos);
 }
 
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents)
