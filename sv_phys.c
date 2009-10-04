@@ -2731,6 +2731,10 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 
 static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
 {
+	// don't do physics on disconnected clients, FrikBot relies on this
+	if (!host_client->spawned)
+		return;
+
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
 
