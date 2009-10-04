@@ -1613,7 +1613,6 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int f
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
-	VectorCopy(start, trace->endpos);
 
 	Matrix4x4_Transform(inversematrix, start, starttransformed);
 #if COLLISIONPARANOID >= 3
@@ -1628,6 +1627,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int f
 	// transform plane
 	// NOTE: this relies on plane.dist being directly after plane.normal
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
+	VectorCopy(start, trace->endpos);
 }
 
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents)
