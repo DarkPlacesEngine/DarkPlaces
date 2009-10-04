@@ -849,7 +849,7 @@ static const char *builtinshaderstring =
 "//# endif\n"
 "//#endif\n"
 "\n"
-"uniform myhalf GlowScale;\n"
+"uniform myhalf3 GlowColor;\n"
 "uniform myhalf SceneBrightness;\n"
 "\n"
 "uniform float OffsetMapping_Scale;\n"
@@ -1373,7 +1373,7 @@ static const char *builtinshaderstring =
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "	color.rgb += mix(myhalf3(texture2D(Texture_SecondaryGlow, TexCoord2)), myhalf3(texture2D(Texture_Glow, TexCoord)), terrainblend);\n"
 "#else\n"
-"	color.rgb += myhalf3(texture2D(Texture_Glow, TexCoord)) * GlowScale;\n"
+"	color.rgb += myhalf3(texture2D(Texture_Glow, TexCoord)) * GlowColor;\n"
 "#endif\n"
 "#endif\n"
 "\n"
@@ -1596,7 +1596,7 @@ typedef struct r_glsl_permutation_s
 	int loc_DiffuseScale;
 	int loc_SpecularScale;
 	int loc_SpecularPower;
-	int loc_GlowScale;
+	int loc_GlowColor;
 	int loc_SceneBrightness; // or: Scenebrightness * ContrastBoost
 	int loc_OffsetMapping_Scale;
 	int loc_TintColor;
@@ -1791,7 +1791,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_DiffuseScale               = qglGetUniformLocationARB(p->program, "DiffuseScale");
 		p->loc_SpecularPower              = qglGetUniformLocationARB(p->program, "SpecularPower");
 		p->loc_SpecularScale              = qglGetUniformLocationARB(p->program, "SpecularScale");
-		p->loc_GlowScale                  = qglGetUniformLocationARB(p->program, "GlowScale");
+		p->loc_GlowColor                  = qglGetUniformLocationARB(p->program, "GlowColor");
 		p->loc_SceneBrightness            = qglGetUniformLocationARB(p->program, "SceneBrightness");
 		p->loc_OffsetMapping_Scale        = qglGetUniformLocationARB(p->program, "OffsetMapping_Scale");
 		p->loc_TintColor                  = qglGetUniformLocationARB(p->program, "TintColor");
@@ -2211,7 +2211,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 			if (r_glsl_permutation->loc_SpecularScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularScale, r_refdef.lightmapintensity * specularscale);
 		}
 		if (r_glsl_permutation->loc_TintColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_TintColor, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2], rsurface.texture->lightmapcolor[3]);
-		if (r_glsl_permutation->loc_GlowScale >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowScale, r_hdr_glowintensity.value);
+		if (r_glsl_permutation->loc_GlowColor >= 0) qglUniform1fARB(r_glsl_permutation->loc_GlowColor, r_hdr_glowintensity.value, r_hdr_glowintensity.value, r_hdr_glowintensity.value);
 		// additive passes are only darkened by fog, not tinted
 		if (r_glsl_permutation->loc_FogColor >= 0)
 		{
