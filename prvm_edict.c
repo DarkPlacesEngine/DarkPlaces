@@ -1596,6 +1596,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.glow_color                     = PRVM_ED_FindFieldOffset("glow_color");
 	prog->fieldoffsets.glow_size                      = PRVM_ED_FindFieldOffset("glow_size");
 	prog->fieldoffsets.glow_trail                     = PRVM_ED_FindFieldOffset("glow_trail");
+	prog->fieldoffsets.glowmod                        = PRVM_ED_FindFieldOffset("glowmod");
 	prog->fieldoffsets.gravity                        = PRVM_ED_FindFieldOffset("gravity");
 	prog->fieldoffsets.groundentity                   = PRVM_ED_FindFieldOffset("groundentity");
 	prog->fieldoffsets.hull                           = PRVM_ED_FindFieldOffset("hull");

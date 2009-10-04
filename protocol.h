@@ -378,8 +378,9 @@ typedef struct entity_state_s
 	unsigned char internaleffects; // INTEF_FLAG1QW and so on
 	unsigned char tagindex;
 	unsigned char colormod[3];
+	unsigned char glowmod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[5];
+	unsigned char unused[2];
 }
 entity_state_t;
 
@@ -705,8 +706,8 @@ void EntityFrame4_CL_ReadFrame(void);
 // bits >= (1<<24)
 #define E5_EXTEND3 (1<<23)
 
-// unused
-#define E5_UNUSED24 (1<<24)
+// byte[3] = s->glowmod[0], s->glowmod[1], s->glowmod[2]
+#define E5_GLOWMOD (1<<24)
 // unused
 #define E5_UNUSED25 (1<<25)
 // unused

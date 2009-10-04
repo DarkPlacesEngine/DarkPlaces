@@ -180,6 +180,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		entrender->alpha = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		entrender->scale = scale = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->colormod);
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->glowmod);
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	entrender->effects |= (int)val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
@@ -192,6 +193,10 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	}
 	else
 		Matrix4x4_CreateIdentity(&tagmatrix);
+	if (!VectorLength2(entrender->colormod))
+		VectorSet(entrender->colormod, 1, 1, 1);
+	if (!VectorLength2(entrender->glowmod))
+		VectorSet(entrender->glowmod, 1, 1, 1);
 
 	if (renderflags & RF_USEAXIS)
 	{
