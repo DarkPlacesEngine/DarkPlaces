@@ -3080,7 +3080,7 @@ static void SV_VM_CB_EndIncreaseEdicts(void)
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
 		if (!ent->priv.server->free)
-			SV_LinkEdict(ent, false);
+			SV_LinkEdict(ent);
 }
 
 static void SV_VM_CB_InitEdict(prvm_edict_t *e)
@@ -3240,6 +3240,7 @@ static void SV_VM_Setup(void)
 	prog->init_cmd = VM_SV_Cmd_Init;
 	prog->reset_cmd = VM_SV_Cmd_Reset;
 	prog->error_cmd = Host_Error;
+	prog->ExecuteProgram = SVVM_ExecuteProgram;
 
 	// TODO: add a requiredfuncs list (ask LH if this is necessary at all)
 	PRVM_LoadProgs( sv_progs.string, 0, NULL, REQFIELDS, reqfields, 0, NULL );

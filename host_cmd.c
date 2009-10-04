@@ -877,7 +877,7 @@ void Host_Loadgame_f (void)
 
 			// link it into the bsp tree
 			if (!ent->priv.server->free)
-				SV_LinkEdict (ent, false);
+				SV_LinkEdict(ent);
 		}
 
 		end = t;

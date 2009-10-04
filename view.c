@@ -357,10 +357,12 @@ void V_CalcRefdef (void)
 {
 	entity_t *ent;
 	float vieworg[3], gunorg[3], viewangles[3], smoothtime;
+#if 0
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
 	vec3_t camboxmins = {-3, -3, -3};
 	vec3_t camboxmaxs = {3, 3, 3};
 // end of chase camera bounding box size for proper collisions by Alexander Zubov
+#endif
 	trace_t trace;
 	VectorClear(gunorg);
 	viewmodelmatrix = identitymatrix;
@@ -439,13 +441,22 @@ void V_CalcRefdef (void)
 					chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup;
 					chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
 #if 0
+#if 1
+					//trace = CL_TraceLine(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+					trace = CL_TraceLine(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#else
 					//trace = CL_TraceBox(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
 					trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
 					VectorCopy(trace.endpos, vieworg);
 					vieworg[2] -= 8;
 #else
 					// trace from first person view location to our chosen third person view location
+#if 1
+					trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#else
 					trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
 					VectorCopy(trace.endpos, bestvieworg);
 					offset[2] = 0;
 					for (offset[0] = -16;offset[0] <= 16;offset[0] += 8)
@@ -456,7 +467,11 @@ void V_CalcRefdef (void)
 							chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup + offset[0];
 							chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
 							chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
+#if 1
+							trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#else
 							trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
 							if (bestvieworg[2] > trace.endpos[2])
 								bestvieworg[2] = trace.endpos[2];
 						}

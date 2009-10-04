@@ -5185,6 +5185,7 @@ void MP_Init (void)
 	prog->init_cmd = VM_M_Cmd_Init;
 	prog->reset_cmd = VM_M_Cmd_Reset;
 	prog->error_cmd = MP_Error;
+	prog->ExecuteProgram = MVM_ExecuteProgram;
 
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
