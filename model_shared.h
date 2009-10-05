@@ -384,7 +384,10 @@ typedef struct q3shaderinfo_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
-#define Q3SHADERINFO_COMPARE_END r_water_wateralpha
+
+	// gloss
+	float specularpowermod;
+#define Q3SHADERINFO_COMPARE_END specularpowermod
 }
 q3shaderinfo_t;
 
@@ -514,6 +517,9 @@ typedef struct texture_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+
+	// gloss
+	float specularpowermod;
 }
 texture_t;
 
