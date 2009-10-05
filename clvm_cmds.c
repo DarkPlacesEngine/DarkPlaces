@@ -2716,7 +2716,7 @@ void VM_CL_ParticleTheme (void)
 		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
 		return;
 	}
-	if (vmpartspawner.themes[themenum].initialized = false)
+	if (vmpartspawner.themes[themenum].initialized == false)
 	{
 		VM_Warning("VM_CL_ParticleTheme: theme #%i not exists\n", themenum);
 		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
@@ -2787,7 +2787,7 @@ void VM_CL_ParticleThemeFree (void)
 		VM_Warning("VM_CL_ParticleThemeFree: bad theme number %i\n", themenum);
 		return;
 	}
-	if (vmpartspawner.themes[themenum].initialized = false)
+	if (vmpartspawner.themes[themenum].initialized == false)
 	{
 		VM_Warning("VM_CL_ParticleThemeFree: theme #%i already freed\n", themenum);
 		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
