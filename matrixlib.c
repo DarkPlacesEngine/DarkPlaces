@@ -197,7 +197,7 @@ int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
 
 	return 1;
 }
-#elsif 1
+#elif 1
 // Adapted from code contributed to Mesa by David Moore (Mesa 7.6 under SGI Free License B - which is MIT/X11-type)
 // number of multiplications reduced by divVerent, yet to be benchmarked
 int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
