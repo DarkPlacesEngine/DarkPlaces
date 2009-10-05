@@ -1416,6 +1416,7 @@ void Mod_LoadQ3Shaders(void)
 			shader.reflectfactor = 1;
 			Vector4Set(shader.reflectcolor4f, 1, 1, 1, 1);
 			shader.r_water_wateralpha = 1;
+			shader.specularpowermod = 1;
 
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -1814,6 +1815,10 @@ void Mod_LoadQ3Shaders(void)
 					Vector4Set(shader.reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
 					shader.r_water_wateralpha = atof(parameter[11]);
 				}
+				else if (!strcasecmp(parameter[0], "dp_specularpowermod") && numparameters >= 2)
+				{
+					shader.specularpowermod = atof(parameter[1]);
+				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
 					int i, deformindex;
@@ -1922,6 +1927,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texflagsmask &= ~TEXF_PICMIP;
 	if(!(defaulttexflags & TEXF_COMPRESS))
 		texflagsmask &= ~TEXF_COMPRESS;
+	texture->specularpowermod = 1; // unless later loaded from the shader
 
 	if (shader)
 	{
@@ -2056,6 +2062,7 @@ nothing                GL_ZERO GL_ONE
 		texture->reflectfactor = shader->reflectfactor;
 		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
 		texture->r_water_wateralpha = shader->r_water_wateralpha;
+		texture->specularpowermod = shader->specularpowermod;
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{

@@ -5508,6 +5508,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			t->specularpower = r_shadow_gloss2exponent.value;
 		}
 	}
+	t->specularpower *= t->specularpowermod;
 
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
 	// off the colormap and glossmap, but leave the normalmap on as it still
