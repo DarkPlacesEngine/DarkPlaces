@@ -1816,11 +1816,11 @@ void Mod_LoadQ3Shaders(void)
 					Vector4Set(shader.reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
 					shader.r_water_wateralpha = atof(parameter[11]);
 				}
-				else if (!strcasecmp(parameter[0], "dp_specularscalemod") && numparameters >= 2)
+				else if (!strcasecmp(parameter[0], "dp_glossintensitymod") && numparameters >= 2)
 				{
 					shader.specularscalemod = atof(parameter[1]);
 				}
-				else if (!strcasecmp(parameter[0], "dp_specularpowermod") && numparameters >= 2)
+				else if (!strcasecmp(parameter[0], "dp_glossexponentmod") && numparameters >= 2)
 				{
 					shader.specularpowermod = atof(parameter[1]);
 				}
