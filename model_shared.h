@@ -386,6 +386,7 @@ typedef struct q3shaderinfo_s
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 
 	// gloss
+	float specularscalemod;
 	float specularpowermod;
 #define Q3SHADERINFO_COMPARE_END specularpowermod
 }
@@ -519,6 +520,7 @@ typedef struct texture_s
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 
 	// gloss
+	float specularscalemod;
 	float specularpowermod;
 }
 texture_t;
