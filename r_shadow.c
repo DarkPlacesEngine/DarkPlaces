@@ -1386,7 +1386,7 @@ int R_Shadow_FrustumCullSides(rtlight_t *rtlight, float size, float border)
 	int i, j;
 	int sides = 0x3F;
 	// cos(45 + bias)
-	float scale = 0.707106781186548*(size - 2*border)/size;
+	float scale = 0.707106781186548*size/(size - 2*border);
 	for (i = 0;i < 5;i++)
 	{
 		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) > -0.03125)
