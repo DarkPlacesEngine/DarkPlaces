@@ -1464,8 +1464,8 @@ void Mod_LoadQ3Shaders(void)
 							if (!COM_ParseToken_QuakeC(&text, true))
 								break;
 						}
-						for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
-							parameter[j][0] = 0;
+						//for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
+						//	parameter[j][0] = 0;
 						if (developer.integer >= 100)
 						{
 							Con_Printf("%s %i: ", shader.name, shader.numlayers - 1);
@@ -1683,8 +1683,8 @@ void Mod_LoadQ3Shaders(void)
 					if (!COM_ParseToken_QuakeC(&text, true))
 						break;
 				}
-				for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
-					parameter[j][0] = 0;
+				//for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
+				//	parameter[j][0] = 0;
 				if (fileindex == 0 && !strcasecmp(com_token, "}"))
 					break;
 				if (developer.integer >= 100)
