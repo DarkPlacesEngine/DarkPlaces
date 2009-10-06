@@ -149,6 +149,9 @@ typedef struct rtlight_s
 	/// (important on big surfaces such as terrain)
 	int static_numlighttrispvsbytes;
 	unsigned char *static_lighttrispvs;
+	/// masks of all shadowmap sides that have any potential static receivers or casters
+	int static_shadowmap_receivers;
+	int static_shadowmap_casters;
 }
 rtlight_t;
 

@@ -1379,7 +1379,36 @@ int R_Shadow_CalcSphereSideMask(const vec3_t p, float radius, float bias)
     return mask;
 }
 
-void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals)
+int R_Shadow_FrustumCullSides(rtlight_t *rtlight, float size, float border)
+{
+	static const vec3_t lightnormals[6] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+	vec3_t frustumdir;
+	int i, j;
+	int sides = 0x3F;
+	// cos(45 + bias)
+	float scale = 0.707106781186548*(size - 2*border)/size;
+	for (i = 0;i < 5;i++)
+	{
+		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) > -0.03125)
+			continue;
+		Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[i].normal, frustumdir);
+		VectorNormalize(frustumdir);
+		for (j = 0;j < 6;j++)
+			if(DotProduct(frustumdir, lightnormals[j]) < -scale)
+				sides &= ~(1 << j);
+	}
+    if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[4]) > r_refdef.farclip - r_refdef.nearclip + 0.03125)
+	{
+        Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, frustumdir);
+        VectorNormalize(frustumdir);
+		for (j = 0;j < 6;j++)
+        	if (DotProduct(frustumdir, lightnormals[j]) > scale) 
+            	sides &= ~(1 << j);
+	}
+	return sides;
+}
+
+int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals)
 {
 	int t, tend;
 	const int *e;
@@ -1387,9 +1416,9 @@ void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *in
 	float normal[3];
 	vec3_t p[3];
 	float bias;
-	unsigned char mask;
+	int mask, surfacemask = 0;
 	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
-		return;
+		return 0;
 	bias = r_shadow_shadowmapborder / (float)(r_shadow_shadowmapmaxsize - r_shadow_shadowmapborder);
 	tend = firsttriangle + numtris;
 	if (BoxInsideBox(surfacemins, surfacemaxs, lightmins, lightmaxs))
@@ -1405,9 +1434,13 @@ void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *in
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);
-					totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
-					shadowsides[numshadowsides] = mask;
-					shadowsideslist[numshadowsides++] = t;
+					surfacemask |= mask;
+					if(totals)
+					{
+						totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
+						shadowsides[numshadowsides] = mask;
+						shadowsideslist[numshadowsides++] = t;
+					}
 				}
 			}
 		}
@@ -1420,9 +1453,13 @@ void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *in
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);
-					totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
-					shadowsides[numshadowsides] = mask;
-					shadowsideslist[numshadowsides++] = t;
+					surfacemask |= mask;
+					if(totals)
+					{
+						totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
+						shadowsides[numshadowsides] = mask;
+						shadowsideslist[numshadowsides++] = t;
+					}
 				}
 			}
 		}
@@ -1441,9 +1478,13 @@ void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *in
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);
-					totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
-					shadowsides[numshadowsides] = mask;
-					shadowsideslist[numshadowsides++] = t;
+					surfacemask |= mask;
+					if(totals)
+					{
+						totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
+						shadowsides[numshadowsides] = mask;
+						shadowsideslist[numshadowsides++] = t;
+					}
 				}
 			}
 		}
@@ -1457,13 +1498,18 @@ void R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *in
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);
-					totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
-					shadowsides[numshadowsides] = mask;
-					shadowsideslist[numshadowsides++] = t;
+					surfacemask |= mask;
+					if(totals)
+					{
+						totals[0] += mask&1, totals[1] += (mask>>1)&1, totals[2] += (mask>>2)&1, totals[3] += (mask>>3)&1, totals[4] += (mask>>4)&1, totals[5] += mask>>5;
+						shadowsides[numshadowsides] = mask;
+						shadowsideslist[numshadowsides++] = t;
+					}
 				}
 			}
 		}
 	}
+	return surfacemask;
 }
 
 void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, const int *elements, int numsidetris, const int *sidetotals, const unsigned char *sides, const int *sidetris)
@@ -3315,6 +3361,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	rtlight->static_leafpvs = NULL;
 	rtlight->static_numsurfaces = 0;
 	rtlight->static_surfacelist = NULL;
+	rtlight->static_shadowmap_receivers = 0x3F;
+	rtlight->static_shadowmap_casters = 0x3F;
 	rtlight->cullmins[0] = rtlight->shadoworigin[0] - rtlight->radius;
 	rtlight->cullmins[1] = rtlight->shadoworigin[1] - rtlight->radius;
 	rtlight->cullmins[2] = rtlight->shadoworigin[2] - rtlight->radius;
@@ -3698,6 +3746,16 @@ void R_Shadow_DrawWorldShadow(int numsurfaces, int *surfacelist, const unsigned 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
+static int R_Shadow_CalcEntitySideMask(rtlight_t *rtlight, entity_render_t *ent, float borderbias)
+{
+	vec3_t radius, worldorigin, lightorigin;
+	VectorSubtract(ent->maxs, ent->mins, radius);
+	VectorScale(radius, 0.5f, radius);
+	VectorAdd(ent->mins, radius, worldorigin);
+	Matrix4x4_Transform(&rtlight->matrix_worldtolight, worldorigin, lightorigin);
+	return R_Shadow_CalcSphereSideMask(lightorigin, VectorLength(radius) / rtlight->radius, borderbias);
+}
+
 void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 {
 	vec3_t relativeshadoworigin, relativeshadowmins, relativeshadowmaxs;
@@ -3713,13 +3771,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D)
 	{
-		vec3_t radius, worldorigin, lightorigin;
-		VectorSubtract(ent->maxs, ent->mins, radius);
-		VectorScale(radius, 0.5f, radius);
-		VectorAdd(ent->mins, radius, worldorigin);
-		Matrix4x4_Transform(&rsurface.rtlight->matrix_worldtolight, worldorigin, lightorigin);
-		if (R_Shadow_CalcSphereSideMask(lightorigin, VectorLength(radius) / relativeshadowradius, r_shadow_shadowmapborder / (float)(r_shadow_shadowmapsize - r_shadow_shadowmapborder)) & (1 << r_shadow_shadowmapside))
-			ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
+		ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
 	}
 	else
 		ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
@@ -3784,9 +3836,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	int numshadowentities;
 	int numshadowentities_noselfshadow;
 	static entity_render_t *lightentities[MAX_EDICTS];
-	static entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
 	static entity_render_t *shadowentities[MAX_EDICTS];
-	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
+	static unsigned char entitysides[MAX_EDICTS];
+	int lightentities_noselfshadow;
+	int shadowentities_noselfshadow;
 	vec3_t nearestpoint;
 	vec_t distance;
 	qboolean castshadows;
@@ -3889,8 +3942,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	// make a list of lit entities and shadow casting entities
 	numlightentities = 0;
 	numlightentities_noselfshadow = 0;
+	lightentities_noselfshadow = sizeof(lightentities)/sizeof(lightentities[0]) - 1;
 	numshadowentities = 0;
 	numshadowentities_noselfshadow = 0;
+	shadowentities_noselfshadow = sizeof(shadowentities)/sizeof(shadowentities[0]) - 1;
+
 	// add dynamic entities that are lit by the light
 	if (r_drawentities.integer)
 	{
@@ -3916,7 +3972,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.scene.worldmodel, leafpvs, ent->mins, ent->maxs))
 					continue;
 				if (ent->flags & RENDER_NOSELFSHADOW)
-					lightentities_noselfshadow[numlightentities_noselfshadow++] = ent;
+					lightentities[lightentities_noselfshadow - numlightentities_noselfshadow++] = ent;
 				else
 					lightentities[numlightentities++] = ent;
 				// since it is lit, it probably also casts a shadow...
@@ -3931,7 +3987,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 					// RENDER_NOSELFSHADOW entities such as the gun
 					// (very weird, but keeps the player shadow off the gun)
 					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
-						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
+						shadowentities[shadowentities_noselfshadow - numshadowentities_noselfshadow++] = ent;
 					else
 						shadowentities[numshadowentities++] = ent;
 				}
@@ -3949,7 +4005,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 				{
 					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
-						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
+						shadowentities[shadowentities_noselfshadow - numshadowentities_noselfshadow++] = ent;
 					else
 						shadowentities[numshadowentities++] = ent;
 				}
@@ -3980,7 +4036,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numshadowentities;i++)
 			R_Shadow_DrawEntityShadow(shadowentities[i]);
 		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+			R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
 	}
 
 	if (r_showlighting.integer && r_refdef.view.showdebug && numsurfaces + numlightentities + numlightentities_noselfshadow)
@@ -3993,7 +4049,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numlightentities;i++)
 			R_Shadow_DrawEntityLight(lightentities[i]);
 		for (i = 0;i < numlightentities_noselfshadow;i++)
-			R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+			R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 	}
 
 	castshadows = numsurfaces + numshadowentities + numshadowentities_noselfshadow > 0 && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows);
@@ -4007,8 +4063,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 	if (castshadows && r_shadow_shadowmode >= 1 && r_shadow_shadowmode <= 3 && r_glsl.integer && gl_support_fragment_shader)
 	{
+		float borderbias;
 		int side;
 		int size;
+		int castermask = 0;
+		int receivermask = 0;
 
 		r_shadow_shadowmaplod = 0;
 		for (i = 1;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
@@ -4017,16 +4076,47 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 		size = r_shadow_shadowmode == 3 ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
 		size = bound(1, size, 2048);
+		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
+
+		if (numsurfaces)
+		{
+			castermask = 0x3F;
+			receivermask = 0x3F;
+			if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
+			{
+				castermask &= rtlight->static_shadowmap_casters;
+				receivermask &= rtlight->static_shadowmap_receivers;
+			}
+		}
+		if (receivermask < 0x3F) 
+		{
+			for (i = 0;i < numlightentities;i++)
+				receivermask |= R_Shadow_CalcEntitySideMask(rtlight, lightentities[i], borderbias);
+			if (receivermask < 0x3F)
+				for(i = 0; i < numlightentities_noselfshadow;i++)
+					receivermask |= R_Shadow_CalcEntitySideMask(rtlight, lightentities[lightentities_noselfshadow - i], borderbias);
+		}
+
+		receivermask &= R_Shadow_FrustumCullSides(rtlight, size, r_shadow_shadowmapborder);
+
+		if (receivermask)
+		{
+			for (i = 0;i < numshadowentities;i++)
+				castermask |= (entitysides[i] = R_Shadow_CalcEntitySideMask(rtlight, shadowentities[i], borderbias));
+			for (i = 0;i < numshadowentities_noselfshadow;i++)
+				castermask |= (entitysides[shadowentities_noselfshadow - i] = R_Shadow_CalcEntitySideMask(rtlight, shadowentities[shadowentities_noselfshadow - i], borderbias)); 
+		}
 
 		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
 
 		// render shadow casters into 6 sided depth texture
-		for (side = 0;side < 6;side++)
+		for (side = 0;side < 6;side++) if (receivermask & (1 << side))
 		{
 			R_Shadow_RenderMode_ShadowMap(side, true, size);
+			if (! (castermask & (1 << side))) continue;
 			if (numsurfaces)
 				R_Shadow_DrawWorldShadow_ShadowMap(numsurfaces, surfacelist, shadowtrispvs);
-			for (i = 0;i < numshadowentities;i++)
+			for (i = 0;i < numshadowentities;i++) if (entitysides[i] & (1 << side))
 				R_Shadow_DrawEntityShadow(shadowentities[i]);
 		}
 
@@ -4036,15 +4126,18 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			// draw lighting in the unmasked areas
 			R_Shadow_RenderMode_Lighting(false, false, true);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 		}
 
 		// render shadow casters into 6 sided depth texture
-		for (side = 0;side < 6;side++)
+		if (numshadowentities_noselfshadow) 
 		{
-			R_Shadow_RenderMode_ShadowMap(side, false, size);
-			for (i = 0;i < numshadowentities_noselfshadow;i++)
-				R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+			for (side = 0;side < 6;side++) if ((receivermask & castermask) & (1 << side))
+			{
+				R_Shadow_RenderMode_ShadowMap(side, false, size);
+				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides[shadowentities_noselfshadow - i] && (1 << side))
+					R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
+			}
 		}
 
 		// render lighting using the depth texture as shadowmap
@@ -4071,7 +4164,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			// draw lighting in the unmasked areas
 			R_Shadow_RenderMode_Lighting(true, false, false);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 
 			// optionally draw the illuminated areas
 			// for performance analysis by level designers
@@ -4079,11 +4172,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			{
 				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
 				for (i = 0;i < numlightentities_noselfshadow;i++)
-					R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+					R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 			}
 		}
 		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+			R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
 
 		if (numsurfaces + numlightentities)
 		{
@@ -4106,7 +4199,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			for (i = 0;i < numlightentities;i++)
 				R_Shadow_DrawEntityLight(lightentities[i]);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 		}
 	}
 }

@@ -147,7 +147,6 @@ void Matrix4x4_Transpose (matrix4x4_t *out, const matrix4x4_t *in1)
 int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
 {
         float det;
-        int i, j;
 
         // note: orientation does not matter, as transpose(invert(transpose(m))) == invert(m), proof:
         //   transpose(invert(transpose(m))) * m

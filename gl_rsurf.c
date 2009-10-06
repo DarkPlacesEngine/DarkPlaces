@@ -1064,18 +1064,21 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 	dp_model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
-	int sidetotals[6] = { 0, 0, 0, 0, 0, 0 };
+	int sidetotals[6] = { 0, 0, 0, 0, 0, 0 }, sidemasks = 0;
+	int i;
 	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 	R_Shadow_PrepareShadowSides(model->brush.shadowmesh->numtriangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
-		if (surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW)
-			continue;
-		R_Shadow_ChooseSidesFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, sidetotals);
+		sidemasks |= R_Shadow_ChooseSidesFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW ? NULL : sidetotals);
 	}
 	R_Shadow_ShadowMapFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, numshadowsides, sidetotals, shadowsides, shadowsideslist);
 	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, false, false, true);
+	r_shadow_compilingrtlight->static_shadowmap_receivers &= sidemasks;
+	for(i = 0;i<6;i++)
+		if(!sidetotals[i])
+			r_shadow_compilingrtlight->static_shadowmap_casters &= ~(1 << i);
 }
 
 void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
