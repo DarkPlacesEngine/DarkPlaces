@@ -143,6 +143,61 @@ void Matrix4x4_Transpose (matrix4x4_t *out, const matrix4x4_t *in1)
 
 #if 1
 // Adapted from code contributed to Mesa by David Moore (Mesa 7.6 under SGI Free License B - which is MIT/X11-type)
+// added helper for common subexpression elimination by eihrul, and other optimizations by div0
+int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
+{
+        float det;
+        int i, j;
+
+        // note: orientation does not matter, as transpose(invert(transpose(m))) == invert(m), proof:
+        //   transpose(invert(transpose(m))) * m
+        // = transpose(invert(transpose(m))) * transpose(transpose(m))
+        // = transpose(transpose(m) * invert(transpose(m)))
+        // = transpose(identity)
+        // = identity
+
+        // this seems to help gcc's common subexpression elimination, and also makes the code look nicer
+        float   m00 = in1->m[0][0], m01 = in1->m[0][1], m02 = in1->m[0][2], m03 = in1->m[0][3],
+                m10 = in1->m[1][0], m11 = in1->m[1][1], m12 = in1->m[1][2], m13 = in1->m[1][3],
+                m20 = in1->m[2][0], m21 = in1->m[2][1], m22 = in1->m[2][2], m23 = in1->m[2][3],
+                m30 = in1->m[3][0], m31 = in1->m[3][1], m32 = in1->m[3][2], m33 = in1->m[3][3];
+
+        // calculate the adjoint
+        out->m[0][0] =  (m11*(m22*m33 - m23*m32) - m21*(m12*m33 - m13*m32) + m31*(m12*m23 - m13*m22));
+        out->m[0][1] = -(m01*(m22*m33 - m23*m32) - m21*(m02*m33 - m03*m32) + m31*(m02*m23 - m03*m22));
+        out->m[0][2] =  (m01*(m12*m33 - m13*m32) - m11*(m02*m33 - m03*m32) + m31*(m02*m13 - m03*m12));
+        out->m[0][3] = -(m01*(m12*m23 - m13*m22) - m11*(m02*m23 - m03*m22) + m21*(m02*m13 - m03*m12));
+        out->m[1][0] = -(m10*(m22*m33 - m23*m32) - m20*(m12*m33 - m13*m32) + m30*(m12*m23 - m13*m22));
+        out->m[1][1] =  (m00*(m22*m33 - m23*m32) - m20*(m02*m33 - m03*m32) + m30*(m02*m23 - m03*m22));
+        out->m[1][2] = -(m00*(m12*m33 - m13*m32) - m10*(m02*m33 - m03*m32) + m30*(m02*m13 - m03*m12));
+        out->m[1][3] =  (m00*(m12*m23 - m13*m22) - m10*(m02*m23 - m03*m22) + m20*(m02*m13 - m03*m12));
+        out->m[2][0] =  (m10*(m21*m33 - m23*m31) - m20*(m11*m33 - m13*m31) + m30*(m11*m23 - m13*m21));
+        out->m[2][1] = -(m00*(m21*m33 - m23*m31) - m20*(m01*m33 - m03*m31) + m30*(m01*m23 - m03*m21));
+        out->m[2][2] =  (m00*(m11*m33 - m13*m31) - m10*(m01*m33 - m03*m31) + m30*(m01*m13 - m03*m11));
+        out->m[2][3] = -(m00*(m11*m23 - m13*m21) - m10*(m01*m23 - m03*m21) + m20*(m01*m13 - m03*m11));
+        out->m[3][0] = -(m10*(m21*m32 - m22*m31) - m20*(m11*m32 - m12*m31) + m30*(m11*m22 - m12*m21));
+        out->m[3][1] =  (m00*(m21*m32 - m22*m31) - m20*(m01*m32 - m02*m31) + m30*(m01*m22 - m02*m21));
+        out->m[3][2] = -(m00*(m11*m32 - m12*m31) - m10*(m01*m32 - m02*m31) + m30*(m01*m12 - m02*m11));
+        out->m[3][3] =  (m00*(m11*m22 - m12*m21) - m10*(m01*m22 - m02*m21) + m20*(m01*m12 - m02*m11));
+
+        // calculate the determinant (as inverse == 1/det * adjoint, adjoint * m == identity * det, so this calculates the det)
+        det = in1->m[0][0]*out->m[0][0] + in1->m[1][0]*out->m[0][1] + in1->m[2][0]*out->m[0][2] + in1->m[3][0]*out->m[0][3];
+        if (det == 0.0f)
+                return 0;
+
+        // multiplications are faster than divisions, usually
+        det = 1.0f / det;
+
+        // manually unrolled loop to multiply all matrix elements by 1/det
+        out->m[0][0] *= det; out->m[0][1] *= det; out->m[0][2] *= det; out->m[0][3] *= det;
+        out->m[1][0] *= det; out->m[1][1] *= det; out->m[1][2] *= det; out->m[1][3] *= det;
+        out->m[2][0] *= det; out->m[2][1] *= det; out->m[2][2] *= det; out->m[2][3] *= det;
+        out->m[3][0] *= det; out->m[3][1] *= det; out->m[3][2] *= det; out->m[3][3] *= det;
+
+        return 1;
+}
+#elif 1
+// Adapted from code contributed to Mesa by David Moore (Mesa 7.6 under SGI Free License B - which is MIT/X11-type)
 int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
 {
 	matrix4x4_t temp;
@@ -183,63 +238,6 @@ int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
 	temp.m[3][1] =  in1->m[0][0]*in1->m[2][1]*in1->m[3][2] - in1->m[0][0]*in1->m[3][1]*in1->m[2][2] - in1->m[0][1]*in1->m[2][0]*in1->m[3][2] + in1->m[0][1]*in1->m[3][0]*in1->m[2][2] + in1->m[0][2]*in1->m[2][0]*in1->m[3][1] - in1->m[0][2]*in1->m[3][0]*in1->m[2][1];
 	temp.m[3][2] = -in1->m[0][0]*in1->m[1][1]*in1->m[3][2] + in1->m[0][0]*in1->m[3][1]*in1->m[1][2] + in1->m[0][1]*in1->m[1][0]*in1->m[3][2] - in1->m[0][1]*in1->m[3][0]*in1->m[1][2] - in1->m[0][2]*in1->m[1][0]*in1->m[3][1] + in1->m[0][2]*in1->m[3][0]*in1->m[1][1];
 	temp.m[3][3] =  in1->m[0][0]*in1->m[1][1]*in1->m[2][2] - in1->m[0][0]*in1->m[2][1]*in1->m[1][2] - in1->m[0][1]*in1->m[1][0]*in1->m[2][2] + in1->m[0][1]*in1->m[2][0]*in1->m[1][2] + in1->m[0][2]*in1->m[1][0]*in1->m[2][1] - in1->m[0][2]*in1->m[2][0]*in1->m[1][1];
-#endif
-
-	det = in1->m[0][0]*temp.m[0][0] + in1->m[1][0]*temp.m[0][1] + in1->m[2][0]*temp.m[0][2] + in1->m[3][0]*temp.m[0][3];
-	if (det == 0.0f)
-		return 0;
-
-	det = 1.0f / det;
-
-	for (i = 0;i < 4;i++)
-		for (j = 0;j < 4;j++)
-			out->m[i][j] = temp.m[i][j] * det;
-
-	return 1;
-}
-#elif 1
-// Adapted from code contributed to Mesa by David Moore (Mesa 7.6 under SGI Free License B - which is MIT/X11-type)
-// number of multiplications reduced by divVerent, yet to be benchmarked
-int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
-{
-	matrix4x4_t temp;
-	double det;
-	int i, j;
-
-#ifdef MATRIX4x4_OPENGLORIENTATION
-	temp.m[0][0] =  in1->m[1][1]*(in1->m[2][2]*in1->m[3][3] - in1->m[2][3]*in1->m[3][2]) - in1->m[2][1]*(in1->m[1][2]*in1->m[3][3] - in1->m[1][3]*in1->m[3][2]) + in1->m[3][1]*(in1->m[1][2]*in1->m[2][3] - in1->m[1][3]*in1->m[2][2]);
-	temp.m[1][0] = -in1->m[1][0]*(in1->m[2][2]*in1->m[3][3] - in1->m[2][3]*in1->m[3][2]) + in1->m[2][0]*(in1->m[1][2]*in1->m[3][3] - in1->m[1][3]*in1->m[3][2]) - in1->m[3][0]*(in1->m[1][2]*in1->m[2][3] - in1->m[1][3]*in1->m[2][2]);
-	temp.m[2][0] =  in1->m[1][0]*(in1->m[2][1]*in1->m[3][3] - in1->m[2][3]*in1->m[3][1]) - in1->m[2][0]*(in1->m[1][1]*in1->m[3][3] - in1->m[1][3]*in1->m[3][1]) + in1->m[3][0]*(in1->m[1][1]*in1->m[2][3] - in1->m[1][3]*in1->m[2][1]);
-	temp.m[3][0] = -in1->m[1][0]*(in1->m[2][1]*in1->m[3][2] - in1->m[2][2]*in1->m[3][1]) + in1->m[2][0]*(in1->m[1][1]*in1->m[3][2] - in1->m[1][2]*in1->m[3][1]) - in1->m[3][0]*(in1->m[1][1]*in1->m[2][2] - in1->m[1][2]*in1->m[2][1]);
-	temp.m[0][1] = -in1->m[0][1]*(in1->m[2][2]*in1->m[3][3] - in1->m[2][3]*in1->m[3][2]) + in1->m[2][1]*(in1->m[0][2]*in1->m[3][3] - in1->m[0][3]*in1->m[3][2]) - in1->m[3][1]*(in1->m[0][2]*in1->m[2][3] - in1->m[0][3]*in1->m[2][2]);
-	temp.m[1][1] =  in1->m[0][0]*(in1->m[2][2]*in1->m[3][3] - in1->m[2][3]*in1->m[3][2]) - in1->m[2][0]*(in1->m[0][2]*in1->m[3][3] - in1->m[0][3]*in1->m[3][2]) + in1->m[3][0]*(in1->m[0][2]*in1->m[2][3] - in1->m[0][3]*in1->m[2][2]);
-	temp.m[2][1] = -in1->m[0][0]*(in1->m[2][1]*in1->m[3][3] - in1->m[2][3]*in1->m[3][1]) + in1->m[2][0]*(in1->m[0][1]*in1->m[3][3] - in1->m[0][3]*in1->m[3][1]) - in1->m[3][0]*(in1->m[0][1]*in1->m[2][3] - in1->m[0][3]*in1->m[2][1]);
-	temp.m[3][1] =  in1->m[0][0]*(in1->m[2][1]*in1->m[3][2] - in1->m[2][2]*in1->m[3][1]) - in1->m[2][0]*(in1->m[0][1]*in1->m[3][2] - in1->m[0][2]*in1->m[3][1]) + in1->m[3][0]*(in1->m[0][1]*in1->m[2][2] - in1->m[0][2]*in1->m[2][1]);
-	temp.m[0][2] =  in1->m[0][1]*(in1->m[1][2]*in1->m[3][3] - in1->m[1][3]*in1->m[3][2]) - in1->m[1][1]*(in1->m[0][2]*in1->m[3][3] - in1->m[0][3]*in1->m[3][2]) + in1->m[3][1]*(in1->m[0][2]*in1->m[1][3] - in1->m[0][3]*in1->m[1][2]);
-	temp.m[1][2] = -in1->m[0][0]*(in1->m[1][2]*in1->m[3][3] - in1->m[1][3]*in1->m[3][2]) + in1->m[1][0]*(in1->m[0][2]*in1->m[3][3] - in1->m[0][3]*in1->m[3][2]) - in1->m[3][0]*(in1->m[0][2]*in1->m[1][3] - in1->m[0][3]*in1->m[1][2]);
-	temp.m[2][2] =  in1->m[0][0]*(in1->m[1][1]*in1->m[3][3] - in1->m[1][3]*in1->m[3][1]) - in1->m[1][0]*(in1->m[0][1]*in1->m[3][3] - in1->m[0][3]*in1->m[3][1]) + in1->m[3][0]*(in1->m[0][1]*in1->m[1][3] - in1->m[0][3]*in1->m[1][1]);
-	temp.m[3][2] = -in1->m[0][0]*(in1->m[1][1]*in1->m[3][2] - in1->m[1][2]*in1->m[3][1]) + in1->m[1][0]*(in1->m[0][1]*in1->m[3][2] - in1->m[0][2]*in1->m[3][1]) - in1->m[3][0]*(in1->m[0][1]*in1->m[1][2] - in1->m[0][2]*in1->m[1][1]);
-	temp.m[0][3] = -in1->m[0][1]*(in1->m[1][2]*in1->m[2][3] - in1->m[1][3]*in1->m[2][2]) + in1->m[1][1]*(in1->m[0][2]*in1->m[2][3] - in1->m[0][3]*in1->m[2][2]) - in1->m[2][1]*(in1->m[0][2]*in1->m[1][3] - in1->m[0][3]*in1->m[1][2]);
-	temp.m[1][3] =  in1->m[0][0]*(in1->m[1][2]*in1->m[2][3] - in1->m[1][3]*in1->m[2][2]) - in1->m[1][0]*(in1->m[0][2]*in1->m[2][3] - in1->m[0][3]*in1->m[2][2]) + in1->m[2][0]*(in1->m[0][2]*in1->m[1][3] - in1->m[0][3]*in1->m[1][2]);
-	temp.m[2][3] = -in1->m[0][0]*(in1->m[1][1]*in1->m[2][3] - in1->m[1][3]*in1->m[2][1]) + in1->m[1][0]*(in1->m[0][1]*in1->m[2][3] - in1->m[0][3]*in1->m[2][1]) - in1->m[2][0]*(in1->m[0][1]*in1->m[1][3] - in1->m[0][3]*in1->m[1][1]);
-	temp.m[3][3] =  in1->m[0][0]*(in1->m[1][1]*in1->m[2][2] - in1->m[1][2]*in1->m[2][1]) - in1->m[1][0]*(in1->m[0][1]*in1->m[2][2] - in1->m[0][2]*in1->m[2][1]) + in1->m[2][0]*(in1->m[0][1]*in1->m[1][2] - in1->m[0][2]*in1->m[1][1]);
-#else
-	temp.m[0][0] =  in1->m[1][1]*(in1->m[2][2]*in1->m[3][3] - in1->m[3][2]*in1->m[2][3]) - in1->m[1][2]*(in1->m[2][1]*in1->m[3][3] - in1->m[3][1]*in1->m[2][3]) + in1->m[1][3]*(in1->m[2][1]*in1->m[3][2] - in1->m[3][1]*in1->m[2][2]);
-	temp.m[0][1] = -in1->m[0][1]*(in1->m[2][2]*in1->m[3][3] - in1->m[3][2]*in1->m[2][3]) + in1->m[0][2]*(in1->m[2][1]*in1->m[3][3] - in1->m[3][1]*in1->m[2][3]) - in1->m[0][3]*(in1->m[2][1]*in1->m[3][2] - in1->m[3][1]*in1->m[2][2]);
-	temp.m[0][2] =  in1->m[0][1]*(in1->m[1][2]*in1->m[3][3] - in1->m[3][2]*in1->m[1][3]) - in1->m[0][2]*(in1->m[1][1]*in1->m[3][3] - in1->m[3][1]*in1->m[1][3]) + in1->m[0][3]*(in1->m[1][1]*in1->m[3][2] - in1->m[3][1]*in1->m[1][2]);
-	temp.m[0][3] = -in1->m[0][1]*(in1->m[1][2]*in1->m[2][3] - in1->m[2][2]*in1->m[1][3]) + in1->m[0][2]*(in1->m[1][1]*in1->m[2][3] - in1->m[2][1]*in1->m[1][3]) - in1->m[0][3]*(in1->m[1][1]*in1->m[2][2] - in1->m[2][1]*in1->m[1][2]);
-	temp.m[1][0] = -in1->m[1][0]*(in1->m[2][2]*in1->m[3][3] - in1->m[3][2]*in1->m[2][3]) + in1->m[1][2]*(in1->m[2][0]*in1->m[3][3] - in1->m[3][0]*in1->m[2][3]) - in1->m[1][3]*(in1->m[2][0]*in1->m[3][2] - in1->m[3][0]*in1->m[2][2]);
-	temp.m[1][1] =  in1->m[0][0]*(in1->m[2][2]*in1->m[3][3] - in1->m[3][2]*in1->m[2][3]) - in1->m[0][2]*(in1->m[2][0]*in1->m[3][3] - in1->m[3][0]*in1->m[2][3]) + in1->m[0][3]*(in1->m[2][0]*in1->m[3][2] - in1->m[3][0]*in1->m[2][2]);
-	temp.m[1][2] = -in1->m[0][0]*(in1->m[1][2]*in1->m[3][3] - in1->m[3][2]*in1->m[1][3]) + in1->m[0][2]*(in1->m[1][0]*in1->m[3][3] - in1->m[3][0]*in1->m[1][3]) - in1->m[0][3]*(in1->m[1][0]*in1->m[3][2] - in1->m[3][0]*in1->m[1][2]);
-	temp.m[1][3] =  in1->m[0][0]*(in1->m[1][2]*in1->m[2][3] - in1->m[2][2]*in1->m[1][3]) - in1->m[0][2]*(in1->m[1][0]*in1->m[2][3] - in1->m[2][0]*in1->m[1][3]) + in1->m[0][3]*(in1->m[1][0]*in1->m[2][2] - in1->m[2][0]*in1->m[1][2]);
-	temp.m[2][0] =  in1->m[1][0]*(in1->m[2][1]*in1->m[3][3] - in1->m[3][1]*in1->m[2][3]) - in1->m[1][1]*(in1->m[2][0]*in1->m[3][3] - in1->m[3][0]*in1->m[2][3]) + in1->m[1][3]*(in1->m[2][0]*in1->m[3][1] - in1->m[3][0]*in1->m[2][1]);
-	temp.m[2][1] = -in1->m[0][0]*(in1->m[2][1]*in1->m[3][3] - in1->m[3][1]*in1->m[2][3]) + in1->m[0][1]*(in1->m[2][0]*in1->m[3][3] - in1->m[3][0]*in1->m[2][3]) - in1->m[0][3]*(in1->m[2][0]*in1->m[3][1] - in1->m[3][0]*in1->m[2][1]);
-	temp.m[2][2] =  in1->m[0][0]*(in1->m[1][1]*in1->m[3][3] - in1->m[3][1]*in1->m[1][3]) - in1->m[0][1]*(in1->m[1][0]*in1->m[3][3] - in1->m[3][0]*in1->m[1][3]) + in1->m[0][3]*(in1->m[1][0]*in1->m[3][1] - in1->m[3][0]*in1->m[1][1]);
-	temp.m[2][3] = -in1->m[0][0]*(in1->m[1][1]*in1->m[2][3] - in1->m[2][1]*in1->m[1][3]) + in1->m[0][1]*(in1->m[1][0]*in1->m[2][3] - in1->m[2][0]*in1->m[1][3]) - in1->m[0][3]*(in1->m[1][0]*in1->m[2][1] - in1->m[2][0]*in1->m[1][1]);
-	temp.m[3][0] = -in1->m[1][0]*(in1->m[2][1]*in1->m[3][2] - in1->m[3][1]*in1->m[2][2]) + in1->m[1][1]*(in1->m[2][0]*in1->m[3][2] - in1->m[3][0]*in1->m[2][2]) - in1->m[1][2]*(in1->m[2][0]*in1->m[3][1] - in1->m[3][0]*in1->m[2][1]);
-	temp.m[3][1] =  in1->m[0][0]*(in1->m[2][1]*in1->m[3][2] - in1->m[3][1]*in1->m[2][2]) - in1->m[0][1]*(in1->m[2][0]*in1->m[3][2] - in1->m[3][0]*in1->m[2][2]) + in1->m[0][2]*(in1->m[2][0]*in1->m[3][1] - in1->m[3][0]*in1->m[2][1]);
-	temp.m[3][2] = -in1->m[0][0]*(in1->m[1][1]*in1->m[3][2] - in1->m[3][1]*in1->m[1][2]) + in1->m[0][1]*(in1->m[1][0]*in1->m[3][2] - in1->m[3][0]*in1->m[1][2]) - in1->m[0][2]*(in1->m[1][0]*in1->m[3][1] - in1->m[3][0]*in1->m[1][1]);
-	temp.m[3][3] =  in1->m[0][0]*(in1->m[1][1]*in1->m[2][2] - in1->m[2][1]*in1->m[1][2]) - in1->m[0][1]*(in1->m[1][0]*in1->m[2][2] - in1->m[2][0]*in1->m[1][2]) + in1->m[0][2]*(in1->m[1][0]*in1->m[2][1] - in1->m[2][0]*in1->m[1][1]);
 #endif
 
 	det = in1->m[0][0]*temp.m[0][0] + in1->m[1][0]*temp.m[0][1] + in1->m[2][0]*temp.m[0][2] + in1->m[3][0]*temp.m[0][3];
