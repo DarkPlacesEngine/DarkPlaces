@@ -4285,6 +4285,8 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 	loadmodel->brush.entities[l->filelen] = 0;
 	data = loadmodel->brush.entities;
 	// some Q3 maps override the lightgrid_cellsize with a worldspawn key
+	// VorteX: q3map2 FS-R generates tangentspace deluxemaps for q3bsp and sets 'deluxeMaps' key
+	loadmodel->brushq3.deluxemapping = false;
 	if (data && COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{')
 	{
 		while (1)
@@ -4309,6 +4311,19 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 #endif
 				if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3 && v[0] != 0 && v[1] != 0 && v[2] != 0)
 					VectorCopy(v, loadmodel->brushq3.num_lightgrid_cellsize);
+			}
+			else if (!strcmp("deluxeMaps", key))
+			{
+				if (!strcmp(com_token, "1"))
+				{
+					loadmodel->brushq3.deluxemapping = true;
+					loadmodel->brushq3.deluxemapping_modelspace = true;
+				}
+				else if (!strcmp(com_token, "2"))
+				{
+					loadmodel->brushq3.deluxemapping = true;
+					loadmodel->brushq3.deluxemapping_modelspace = false;
+				}
 			}
 		}
 	}
@@ -4666,51 +4681,56 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	// reason when only one lightmap is used, which can throw off the
 	// deluxemapping detection method, so check 2-lightmap bsp's specifically
 	// to see if the second lightmap is blank, if so it is not deluxemapped.
-	loadmodel->brushq3.deluxemapping = !(count & 1);
-	loadmodel->brushq3.deluxemapping_modelspace = true;
-	endlightmap = 0;
-	if (loadmodel->brushq3.deluxemapping)
+	// VorteX: autodetect only if previous attempt to find "deluxeMaps" key
+	// in Mod_Q3BSP_LoadEntities was failed
+	if (!loadmodel->brushq3.deluxemapping)
 	{
-		int facecount = faceslump->filelen / sizeof(q3dface_t);
-		q3dface_t *faces = (q3dface_t *)(mod_base + faceslump->fileofs);
-		for (i = 0;i < facecount;i++)
+		loadmodel->brushq3.deluxemapping = !(count & 1);
+		loadmodel->brushq3.deluxemapping_modelspace = true;
+		endlightmap = 0;
+		if (loadmodel->brushq3.deluxemapping)
 		{
-			j = LittleLong(faces[i].lightmapindex);
-			if (j >= 0)
+			int facecount = faceslump->filelen / sizeof(q3dface_t);
+			q3dface_t *faces = (q3dface_t *)(mod_base + faceslump->fileofs);
+			for (i = 0;i < facecount;i++)
 			{
-				endlightmap = max(endlightmap, j + 1);
-				if ((j & 1) || j + 1 >= count)
+				j = LittleLong(faces[i].lightmapindex);
+				if (j >= 0)
 				{
-					loadmodel->brushq3.deluxemapping = false;
-					break;
+					endlightmap = max(endlightmap, j + 1);
+					if ((j & 1) || j + 1 >= count)
+					{
+						loadmodel->brushq3.deluxemapping = false;
+						break;
+					}
 				}
 			}
 		}
-	}
 
-	// q3map2 sometimes (or always?) makes a second blank lightmap for no
-	// reason when only one lightmap is used, which can throw off the
-	// deluxemapping detection method, so check 2-lightmap bsp's specifically
-	// to see if the second lightmap is blank, if so it is not deluxemapped.
-	//
-	// further research has shown q3map2 sometimes creates a deluxemap and two
-	// blank lightmaps, which must be handled properly as well
-	if (endlightmap == 1 && count > 1)
-	{
-		c = inpixels[1];
-		for (i = 0;i < size*size;i++)
+		// q3map2 sometimes (or always?) makes a second blank lightmap for no
+		// reason when only one lightmap is used, which can throw off the
+		// deluxemapping detection method, so check 2-lightmap bsp's specifically
+		// to see if the second lightmap is blank, if so it is not deluxemapped.
+		//
+		// further research has shown q3map2 sometimes creates a deluxemap and two
+		// blank lightmaps, which must be handled properly as well
+		if (endlightmap == 1 && count > 1)
 		{
-			if (c[bytesperpixel*i + rgbmap[0]])
-				break;
-			if (c[bytesperpixel*i + rgbmap[1]])
-				break;
-			if (c[bytesperpixel*i + rgbmap[2]])
-				break;
-		}
-		if (i == size*size)
-		{
-			// all pixels in the unused lightmap were black...
-			loadmodel->brushq3.deluxemapping = false;
+			c = inpixels[1];
+			for (i = 0;i < size*size;i++)
+			{
+				if (c[bytesperpixel*i + rgbmap[0]])
+					break;
+				if (c[bytesperpixel*i + rgbmap[1]])
+					break;
+				if (c[bytesperpixel*i + rgbmap[2]])
+					break;
+			}
+			if (i == size*size)
+			{
+				// all pixels in the unused lightmap were black...
+				loadmodel->brushq3.deluxemapping = false;
+			}
 		}
 	}
 
