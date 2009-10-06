@@ -181,7 +181,7 @@ int Matrix4x4_Invert_Full (matrix4x4_t *out, const matrix4x4_t *in1)
         out->m[3][3] =  (m00*(m11*m22 - m12*m21) - m10*(m01*m22 - m02*m21) + m20*(m01*m12 - m02*m11));
 
         // calculate the determinant (as inverse == 1/det * adjoint, adjoint * m == identity * det, so this calculates the det)
-        det = in1->m[0][0]*out->m[0][0] + in1->m[1][0]*out->m[0][1] + in1->m[2][0]*out->m[0][2] + in1->m[3][0]*out->m[0][3];
+        det = m00*out->m[0][0] + m10*out->m[0][1] + m20*out->m[0][2] + m30*out->m[0][3];
         if (det == 0.0f)
                 return 0;
 
