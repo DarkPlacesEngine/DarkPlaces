@@ -1663,3 +1663,17 @@ void Matrix4x4_Scale (matrix4x4_t *out, double rotatescale, double originscale)
 	out->m[2][3] *= originscale;
 #endif
 }
+
+void Matrix4x4_Abs (matrix4x4_t *out)
+{
+    out->m[0][0] = fabs(out->m[0][0]);
+    out->m[0][1] = fabs(out->m[0][1]);
+    out->m[0][2] = fabs(out->m[0][2]);
+    out->m[1][0] = fabs(out->m[1][0]);
+    out->m[1][1] = fabs(out->m[1][1]);
+    out->m[1][2] = fabs(out->m[1][2]);
+    out->m[2][0] = fabs(out->m[2][0]);
+    out->m[2][1] = fabs(out->m[2][1]);
+    out->m[2][2] = fabs(out->m[2][2]);
+}
+
