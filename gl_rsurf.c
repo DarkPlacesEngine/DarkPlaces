@@ -1081,7 +1081,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 			r_shadow_compilingrtlight->static_shadowmap_casters &= ~(1 << i);
 }
 
-void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
 	msurface_t *surface, *batch[64];
@@ -1093,10 +1093,12 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 	for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 	{
 		surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
+		if (surfacesides && !(surfacesides[modelsurfacelistindex] && (1 << side)))
+			continue;
 		rsurface.texture = R_GetCurrentTexture(surface->texture);
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 			continue;
-		if(!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
+		if (!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 			continue;
 		r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
 		r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
@@ -1105,9 +1107,11 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		while(++modelsurfacelistindex < modelnumsurfaces && batchsize < (int)(sizeof(batch)/sizeof(batch[0])))
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			if(surface->texture != batch[0]->texture)
+			if (surfacesides && !(surfacesides[modelsurfacelistindex] & (1 << side)))
+				continue;
+			if (surface->texture != batch[0]->texture)
 				break;
-			if(!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
+			if (!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 				continue;
 			r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
 			r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
