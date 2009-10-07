@@ -1440,33 +1440,49 @@ int R_Shadow_CalcSphereSideMask(const vec3_t p, float radius, float bias)
     return mask;
 }
 
-int R_Shadow_FrustumCullSides(rtlight_t *rtlight, float size, float border)
+int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
 {
-	static const vec3_t lightnormals[6] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
-	vec3_t frustumdir;
-	int i, j;
-	int sides = 0x3F;
-	// cos(45 + bias)
-	float scale = 0.707106781186548*size/(size - 2*border);
+	int i;
+	vec3_t p, n;
+	int sides = 0x3F, masks[6] = { 3<<4, 3<<4, 3<<0, 3<<0, 3<<2, 3<<2 };
+	float scale = (size - 2*border)/size, len;
+	float bias = border / (float)(size - border), dp, dn, ap, an;
+	// check if cone enclosing side would cross frustum plane 
+	scale = 2 / (scale*scale + 2);
 	for (i = 0;i < 5;i++)
 	{
 		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) > -0.03125)
 			continue;
-		Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[i].normal, frustumdir);
-		VectorNormalize(frustumdir);
-		for (j = 0;j < 6;j++)
-			if(DotProduct(frustumdir, lightnormals[j]) < -scale)
-				sides &= ~(1 << j);
+		Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[i].normal, n);
+		len = scale*VectorLength2(n);
+		if(n[0]*n[0] > len) sides &= n[0] < 0 ? ~(1<<0) : ~(2 << 0);
+		if(n[1]*n[1] > len) sides &= n[1] < 0 ? ~(1<<2) : ~(2 << 2);
+		if(n[2]*n[2] > len) sides &= n[2] < 0 ? ~(1<<4) : ~(2 << 4);
 	}
-    if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[4]) > r_refdef.farclip - r_refdef.nearclip + 0.03125)
+	if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[4]) >= r_refdef.farclip - r_refdef.nearclip + 0.03125)
 	{
-        Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, frustumdir);
-        VectorNormalize(frustumdir);
-		for (j = 0;j < 6;j++)
-        	if (DotProduct(frustumdir, lightnormals[j]) > scale) 
-            	sides &= ~(1 << j);
+        Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, n);
+        len = scale*VectorLength(n);
+		if(n[0]*n[0] > len) sides &= n[0] >= 0 ? ~(1<<0) : ~(2 << 0);
+		if(n[1]*n[1] > len) sides &= n[1] >= 0 ? ~(1<<2) : ~(2 << 2);
+		if(n[2]*n[2] > len) sides &= n[2] >= 0 ? ~(1<<4) : ~(2 << 4);
 	}
-	return sides;
+	// this next test usually clips off more sides than the former, but occasionally clips fewer/different ones, so do both and combine results
+	// check if frustum corners/origin cross plane sides
+	for (i = 0;i < 5;i++)
+	{
+		Matrix4x4_Transform(&rtlight->matrix_worldtolight, !i ? r_refdef.view.origin : r_refdef.view.frustumcorner[i-1], p);
+		dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn),
+		masks[0] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+		masks[1] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+		dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn),
+		masks[2] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+		masks[3] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+		dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn),
+		masks[4] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+		masks[5] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+	}
+	return sides & masks[0] & masks[1] & masks[2] & masks[3] & masks[4] & masks[5];
 }
 
 int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals)
@@ -4161,7 +4177,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 					receivermask |= R_Shadow_CalcEntitySideMask(lightentities[lightentities_noselfshadow - i], &rtlight->matrix_worldtolight, &radiustolight, borderbias);
 		}
 
-		receivermask &= R_Shadow_FrustumCullSides(rtlight, size, r_shadow_shadowmapborder);
+		receivermask &= R_Shadow_CullFrustumSides(rtlight, size, r_shadow_shadowmapborder);
 
 		if (receivermask)
 		{
