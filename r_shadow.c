@@ -4217,7 +4217,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			for (side = 0;side < 6;side++) if ((receivermask & castermask) & (1 << side))
 			{
 				R_Shadow_RenderMode_ShadowMap(side, false, size);
-				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides[shadowentities_noselfshadow - i] && (1 << side))
+				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides[shadowentities_noselfshadow - i] & (1 << side))
 					R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
 			}
 		}
