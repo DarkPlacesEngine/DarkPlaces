@@ -368,7 +368,7 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmode = 0;
-	if(r_shadow_shadowmapping.integer && gl_support_fragment_shader)
+	if(r_shadow_shadowmapping.integer && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object)
 	{
 		if(r_shadow_shadowmapfilterquality < 0)
 		{
@@ -4133,7 +4133,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
 	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapping_maxsize.integer);
 
-	if (castshadows && r_shadow_shadowmode >= 1 && r_shadow_shadowmode <= 3 && r_glsl.integer && gl_support_fragment_shader)
+	if (castshadows && r_shadow_shadowmode >= 1 && r_shadow_shadowmode <= 3)
 	{
 		float borderbias;
 		int side;
@@ -4296,7 +4296,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	size_t range;
 
 	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) || 
-		(r_shadow_shadowmode != 0) != (r_shadow_shadowmapping.integer != 0) || 
+		(r_shadow_shadowmode != 0) != (r_shadow_shadowmapping.integer != 0 && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object) || 
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
