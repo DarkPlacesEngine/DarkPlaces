@@ -368,7 +368,7 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmode = 0;
-	if(r_shadow_shadowmapping.integer)
+	if(r_shadow_shadowmapping.integer && gl_support_fragment_shader)
 	{
 		if(r_shadow_shadowmapfilterquality < 0)
 		{
