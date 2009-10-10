@@ -4073,6 +4073,8 @@ void R_Bloom_MakeTexture(void)
 	brighten = r_bloom_brighten.value;
 	if (r_hdr.integer)
 		brighten *= r_hdr_range.value;
+	if(range >= 1)
+		brighten *= pow((3 * range) / (2 * range - 1), 2); // compensate for the "dot particle"
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.offsettexcoord2f, 0, 0);
 
@@ -4080,6 +4082,7 @@ void R_Bloom_MakeTexture(void)
 	{
 		// blend on at multiple vertical offsets to achieve a vertical blur
 		// TODO: do offset blends using GLSL
+		// TODO instead of changing the texcoords, change the target positions to prevent artifacts at edges
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		for (x = -range;x <= range;x++)
 		{
@@ -4101,7 +4104,9 @@ void R_Bloom_MakeTexture(void)
 			// (probably not realistic but looks good enough)
 			//r = ((range*range+1)/((float)(x*x+1)))/(range*2+1);
 			//r = (dir ? 1.0f : brighten)/(range*2+1);
-			r = (dir ? 1.0f : brighten)/(range*2+1)*(1 - x*x/(float)(range*range));
+			r = (dir ? 1.0f : brighten) / (range * 2 + 1);
+			if(range >= 1)
+				r *= (1 - x*x/(float)(range*range));
 			GL_Color(r, r, r, 1);
 			R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
