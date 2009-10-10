@@ -239,7 +239,9 @@ char *Sys_ConsoleInput(void)
 			if (len >= 1)
 			{
 				// rip off the \n and terminate
-				text[len-1] = 0;
+				// div0: WHY? console code can deal with \n just fine
+				// this caused problems with pasting stuff into a terminal window
+				// text[len-1] = 0;
 				return text;
 			}
 		}
