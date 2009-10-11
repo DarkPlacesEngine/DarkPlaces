@@ -53,8 +53,13 @@ typedef enum
 	CINIT(PRIVATE, OBJECTPOINT, 103),
 	CINIT(LOW_SPEED_LIMIT, LONG , 19),
 	CINIT(LOW_SPEED_TIME, LONG, 20),
+	CINIT(PROTOCOLS, LONG, 181),
+	CINIT(REDIR_PROTOCOLS, LONG, 182),
 }
 CURLoption;
+#define CURLPROTO_HTTP   (1<<0)
+#define CURLPROTO_HTTPS  (1<<1)
+#define CURLPROTO_FTP    (1<<2)
 typedef enum
 {
 	CURLINFO_TEXT = 0,
@@ -585,6 +590,13 @@ static void CheckPendingDownloads(void)
 				qcurl_easy_setopt(di->curle, CURLOPT_LOW_SPEED_TIME, (long) 45);
 				qcurl_easy_setopt(di->curle, CURLOPT_WRITEDATA, (void *) di);
 				qcurl_easy_setopt(di->curle, CURLOPT_PRIVATE, (void *) di);
+				qcurl_easy_setopt(di->curle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS | CURLPROTO_FTP);
+				if(qcurl_easy_setopt(di->curle, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS | CURLPROTO_FTP) != CURLE_OK)
+				{
+					Con_Printf("^1WARNING:^7 for security reasons, please upgrade to libcurl 7.19.4 or above. In a later version of DarkPlaces, HTTP redirect support will be disabled for this libcurl version.\n");
+					//qcurl_easy_setopt(di->curle, CURLOPT_FOLLOWLOCATION, 0);
+				}
+				
 				qcurl_multi_add_handle(curlm, di->curle);
 				di->started = true;
 				++numdownloads;
