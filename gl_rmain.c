@@ -4073,8 +4073,9 @@ void R_Bloom_MakeTexture(void)
 	brighten = r_bloom_brighten.value;
 	if (r_hdr.integer)
 		brighten *= r_hdr_range.value;
+	brighten = sqrt(brighten);
 	if(range >= 1)
-		brighten *= pow((3 * range) / (2 * range - 1), 2); // compensate for the "dot particle"
+		brighten *= (3 * range) / (2 * range - 1); // compensate for the "dot particle"
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.offsettexcoord2f, 0, 0);
 
@@ -4103,8 +4104,8 @@ void R_Bloom_MakeTexture(void)
 			// black at the edges
 			// (probably not realistic but looks good enough)
 			//r = ((range*range+1)/((float)(x*x+1)))/(range*2+1);
-			//r = (dir ? 1.0f : brighten)/(range*2+1);
-			r = (dir ? 1.0f : brighten) / (range * 2 + 1);
+			//r = brighten/(range*2+1);
+			r = brighten / (range * 2 + 1);
 			if(range >= 1)
 				r *= (1 - x*x/(float)(range*range));
 			GL_Color(r, r, r, 1);
