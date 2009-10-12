@@ -293,6 +293,7 @@ cvar_t r_shadow_shadowmapping_precision = {CVAR_SAVE, "r_shadow_shadowmapping_pr
 cvar_t r_shadow_shadowmapping_vsdct = {CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
 cvar_t r_shadow_shadowmapping_minsize = {CVAR_SAVE, "r_shadow_shadowmapping_minsize", "32", "shadowmap size limit"};
 cvar_t r_shadow_shadowmapping_maxsize = {CVAR_SAVE, "r_shadow_shadowmapping_maxsize", "512", "shadowmap size limit"};
+cvar_t r_shadow_shadowmapping_quality = {CVAR_SAVE, "r_shadow_shadowmapping_quality", "0", "Makes shadowmaps to have initial resolution of this number of pixels per light source radius unit. Like, light with radius 200 will have initial shadowmaps with resolution 200. This overrides default LOD-based shadowmaps resolution formula. Might be good in some situations but futher testing is required."};
 cvar_t r_shadow_shadowmapping_lod_bias = {CVAR_SAVE, "r_shadow_shadowmapping_lod_bias", "16", "shadowmap size bias"};
 cvar_t r_shadow_shadowmapping_lod_scale = {CVAR_SAVE, "r_shadow_shadowmapping_lod_scale", "128", "shadowmap size scaling parameter"};
 cvar_t r_shadow_shadowmapping_bordersize = {CVAR_SAVE, "r_shadow_shadowmapping_bordersize", "4", "shadowmap size bias for filtering"};
@@ -691,6 +692,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_texturetype);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_filterquality);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_precision);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_quality);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_maxsize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_minsize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_lod_bias);
@@ -4156,7 +4158,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	nearestpoint[1] = bound(rtlight->cullmins[1], r_refdef.view.origin[1], rtlight->cullmaxs[1]);
 	nearestpoint[2] = bound(rtlight->cullmins[2], r_refdef.view.origin[2], rtlight->cullmaxs[2]);
 	distance = VectorDistance(nearestpoint, r_refdef.view.origin);
-	lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
+
+	// VorteX: loosy quality mode, might be good in some situations
+	if (r_shadow_shadowmapping_quality.value)
+		lodlinear = ( rtlight->radius * r_shadow_shadowmapping_quality.value ) / pow ( max(1.0f,(distance/rtlight->radius)), 0.5 );
+	else
+		lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
 	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapping_maxsize.integer);
 
 	if (castshadows && (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE))
