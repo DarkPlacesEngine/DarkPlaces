@@ -298,6 +298,8 @@ cvar_t r_shadow_shadowmapping_lod_scale = {CVAR_SAVE, "r_shadow_shadowmapping_lo
 cvar_t r_shadow_shadowmapping_bordersize = {CVAR_SAVE, "r_shadow_shadowmapping_bordersize", "4", "shadowmap size bias for filtering"};
 cvar_t r_shadow_shadowmapping_nearclip = {CVAR_SAVE, "r_shadow_shadowmapping_nearclip", "1", "shadowmap nearclip in world units"};
 cvar_t r_shadow_shadowmapping_bias = {CVAR_SAVE, "r_shadow_shadowmapping_bias", "0.03", "shadowmap bias parameter (this is multiplied by nearclip * 1024 / lodsize)"};
+cvar_t r_shadow_shadowmapping_polygonfactor = {CVAR_SAVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
+cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_SAVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
 cvar_t r_shadow_culltriangles = {0, "r_shadow_culltriangles", "1", "performs more expensive tests to remove unnecessary triangles of lit surfaces"};
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
@@ -696,6 +698,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_bordersize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_nearclip);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_bias);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonfactor);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_culltriangles);
 	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
@@ -2054,7 +2058,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		qglClearColor(1,1,1,1);CHECKGLERROR
 	}
 	CHECKGLERROR
-	GL_PolygonOffset(0, 0);
+	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	qglClearDepth(1);
