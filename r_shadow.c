@@ -194,7 +194,7 @@ GLuint r_shadow_fbo2d;
 r_shadow_shadowmode_t r_shadow_shadowmode;
 int r_shadow_shadowmapfilterquality;
 int r_shadow_shadowmaptexturetype;
-int r_shadow_shadowmapprecision;
+int r_shadow_shadowmapdepthbits;
 int r_shadow_shadowmapmaxsize;
 qboolean r_shadow_shadowmapvsdct;
 qboolean r_shadow_shadowmapsampler;
@@ -289,13 +289,13 @@ cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization
 cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "0", "enables use of shadowmapping (depth texture sampling) instead of stencil shadow volumes, requires gl_fbo 1"};
 cvar_t r_shadow_shadowmapping_texturetype = {CVAR_SAVE, "r_shadow_shadowmapping_texturetype", "-1", "shadowmap texture types: -1 = auto-select, 0 = 2D, 1 = rectangle, 2 = cubemap"};
 cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
-cvar_t r_shadow_shadowmapping_precision = {CVAR_SAVE, "r_shadow_shadowmapping_precision", "24", "requested minimum shadowmap texture precision"};
+cvar_t r_shadow_shadowmapping_depthbits = {CVAR_SAVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
 cvar_t r_shadow_shadowmapping_vsdct = {CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
 cvar_t r_shadow_shadowmapping_minsize = {CVAR_SAVE, "r_shadow_shadowmapping_minsize", "32", "shadowmap size limit"};
 cvar_t r_shadow_shadowmapping_maxsize = {CVAR_SAVE, "r_shadow_shadowmapping_maxsize", "512", "shadowmap size limit"};
-cvar_t r_shadow_shadowmapping_quality = {CVAR_SAVE, "r_shadow_shadowmapping_quality", "0", "Makes shadowmaps to have initial resolution of this number of pixels per light source radius unit. Like, light with radius 200 will have initial shadowmaps with resolution 200. This overrides default LOD-based shadowmaps resolution formula. Might be good in some situations but futher testing is required."};
-cvar_t r_shadow_shadowmapping_lod_bias = {CVAR_SAVE, "r_shadow_shadowmapping_lod_bias", "16", "shadowmap size bias"};
-cvar_t r_shadow_shadowmapping_lod_scale = {CVAR_SAVE, "r_shadow_shadowmapping_lod_scale", "128", "shadowmap size scaling parameter"};
+cvar_t r_shadow_shadowmapping_precision = {CVAR_SAVE, "r_shadow_shadowmapping_precision", "1", "makes shadowmaps have a maximum resolution of this number of pixels per light source radius unit such that, for example, at precision 0.5 a light with radius 200 will have a maximum resolution of 100 pixels"};
+//cvar_t r_shadow_shadowmapping_lod_bias = {CVAR_SAVE, "r_shadow_shadowmapping_lod_bias", "16", "shadowmap size bias"};
+//cvar_t r_shadow_shadowmapping_lod_scale = {CVAR_SAVE, "r_shadow_shadowmapping_lod_scale", "128", "shadowmap size scaling parameter"};
 cvar_t r_shadow_shadowmapping_bordersize = {CVAR_SAVE, "r_shadow_shadowmapping_bordersize", "4", "shadowmap size bias for filtering"};
 cvar_t r_shadow_shadowmapping_nearclip = {CVAR_SAVE, "r_shadow_shadowmapping_nearclip", "1", "shadowmap nearclip in world units"};
 cvar_t r_shadow_shadowmapping_bias = {CVAR_SAVE, "r_shadow_shadowmapping_bias", "0.03", "shadowmap bias parameter (this is multiplied by nearclip * 1024 / lodsize)"};
@@ -373,7 +373,7 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
 	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
-	r_shadow_shadowmapprecision = r_shadow_shadowmapping_precision.integer;
+	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
 	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
 	r_shadow_shadowmaplod = -1;
 	r_shadow_shadowmapsize = 0;
@@ -496,7 +496,7 @@ void r_shadow_start(void)
 	r_shadow_shadowmaplod = 0;
 	r_shadow_shadowmapfilterquality = -1;
 	r_shadow_shadowmaptexturetype = -1;
-	r_shadow_shadowmapprecision = 0;
+	r_shadow_shadowmapdepthbits = 0;
 	r_shadow_shadowmapvsdct = false;
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
@@ -691,12 +691,12 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_vsdct);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_texturetype);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_filterquality);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_depthbits);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_precision);
-	Cvar_RegisterVariable(&r_shadow_shadowmapping_quality);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_maxsize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_minsize);
-	Cvar_RegisterVariable(&r_shadow_shadowmapping_lod_bias);
-	Cvar_RegisterVariable(&r_shadow_shadowmapping_lod_scale);
+//	Cvar_RegisterVariable(&r_shadow_shadowmapping_lod_bias);
+//	Cvar_RegisterVariable(&r_shadow_shadowmapping_lod_scale);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_bordersize);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_nearclip);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_bias);
@@ -1960,7 +1960,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		{
 #if 1
 			int w = maxsize*2, h = gl_support_arb_texture_non_power_of_two ? maxsize*3 : maxsize*4;
-			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", w, h, r_shadow_shadowmapprecision, r_shadow_shadowmapsampler);
+			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", w, h, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbo2d);CHECKGLERROR
 			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_shadowmap2dtexture), 0);CHECKGLERROR
@@ -1994,7 +1994,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmaprectangletexture)
 		{
 #if 1
-			r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*3, r_shadow_shadowmapprecision, r_shadow_shadowmapsampler);
+			r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*3, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fborectangle);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fborectangle);CHECKGLERROR
 			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_shadowmaprectangletexture), 0);CHECKGLERROR
@@ -2026,7 +2026,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod])
 		{
  #if 1
-			r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", size, r_shadow_shadowmapprecision, r_shadow_shadowmapsampler);
+			r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", size, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
 			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
@@ -4159,11 +4159,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	nearestpoint[2] = bound(rtlight->cullmins[2], r_refdef.view.origin[2], rtlight->cullmaxs[2]);
 	distance = VectorDistance(nearestpoint, r_refdef.view.origin);
 
-	// VorteX: loosy quality mode, might be good in some situations
-	if (r_shadow_shadowmapping_quality.value)
-		lodlinear = ( rtlight->radius * r_shadow_shadowmapping_quality.value ) / pow ( max(1.0f,(distance/rtlight->radius)), 0.5 );
-	else
-		lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
+	lodlinear = (rtlight->radius * r_shadow_shadowmapping_precision.value) / sqrt(max(1.0f, distance/rtlight->radius));
+	//lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
 	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapping_maxsize.integer);
 
 	if (castshadows && (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE))
@@ -4333,7 +4330,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
-		r_shadow_shadowmapprecision != r_shadow_shadowmapping_precision.integer || 
+		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
 		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
 		R_Shadow_FreeShadowMaps();
 
