@@ -1368,7 +1368,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	R_SetupGenericShader(false);
 
 	CHECKGLERROR
-	qglLineWidth(width);CHECKGLERROR
+	//qglLineWidth(width);CHECKGLERROR
 
 	GL_Color(r,g,b,alpha);
 	CHECKGLERROR
