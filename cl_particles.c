@@ -2201,6 +2201,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 void R_DrawDecals (void)
 {
 	int i;
+	int drawdecals = r_drawdecals.integer;
 	decal_t *decal;
 	float frametime;
 	float decalfade;
@@ -2210,7 +2211,7 @@ void R_DrawDecals (void)
 	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
 
 	// LordHavoc: early out conditions
-	if ((!cl.num_decals) || (!r_drawdecals.integer))
+	if (!cl.num_decals)
 		return;
 
 	decalfade = frametime * 256 / cl_decals_fadetime.value;
@@ -2241,6 +2242,9 @@ void R_DrawDecals (void)
 		}
 
 		if(cl_decals_visculling.integer && decal->clusterindex > -1000 && !CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, decal->clusterindex))
+			continue;
+
+		if (!drawdecals)
 			continue;
 
 		if (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size))
@@ -2481,6 +2485,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 void R_DrawParticles (void)
 {
 	int i, a, content;
+	int drawparticles = r_drawparticles.integer;
 	float minparticledist;
 	particle_t *p;
 	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
@@ -2493,7 +2498,7 @@ void R_DrawParticles (void)
 	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);
 
 	// LordHavoc: early out conditions
-	if ((!cl.num_particles) || (!r_drawparticles.integer))
+	if (!cl.num_particles)
 		return;
 
 	minparticledist = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + 4.0f;
@@ -2658,7 +2663,8 @@ void R_DrawParticles (void)
 		}
 		else if (p->delayedspawn)
 			continue;
-
+		if (!drawparticles)
+			continue;
 		// don't render particles too close to the view (they chew fillrate)
 		// also don't render particles behind the view (useless)
 		// further checks to cull to the frustum would be too slow here
