@@ -2346,6 +2346,19 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 
 static void Mod_BuildVBOs(void)
 {
+	if (developer.integer && loadmodel->surfmesh.data_element3s && loadmodel->surfmesh.data_element3i)
+	{
+		int i;
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+		{
+			if (loadmodel->surfmesh.data_element3s[i] != loadmodel->surfmesh.data_element3i[i])
+			{
+				Con_Printf("Mod_BuildVBOs: element %u is incorrect (%u should be %u)\n", i, loadmodel->surfmesh.data_element3s[i], loadmodel->surfmesh.data_element3i[i]);
+				loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
+			}
+		}
+	}
+
 	if (!gl_support_arb_vertex_buffer_object)
 		return;
 
@@ -2353,12 +2366,7 @@ static void Mod_BuildVBOs(void)
 	if (loadmodel->surfmesh.num_triangles)
 	{
 		if (loadmodel->surfmesh.data_element3s)
-		{
-			int i;
-			for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
-				loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 			loadmodel->surfmesh.ebo3s = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]), loadmodel->name);
-		}
 		else
 			loadmodel->surfmesh.ebo3i = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(unsigned int[3]), loadmodel->name);
 	}
