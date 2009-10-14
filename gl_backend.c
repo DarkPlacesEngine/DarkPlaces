@@ -1590,7 +1590,7 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 
 void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset)
 {
-	if (!gl_vbo.integer)
+	if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
 		bufferobject = 0;
 	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != bufferoffset)
 	{
@@ -1610,7 +1610,7 @@ void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferof
 	// means that a valid vbo may be supplied even if there is no color array.
 	if (color4f)
 	{
-		if (!gl_vbo.integer)
+		if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
 			bufferobject = 0;
 		// caller wants color array enabled
 		if (!gl_state.pointer_color_enabled)
@@ -1652,7 +1652,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 	// that involve a valid bufferobject also supply a texcoord array
 	if (texcoord)
 	{
-		if (!gl_vbo.integer)
+		if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
 			bufferobject = 0;
 		// texture array unit is enabled, enable the array
 		if (!unit->arrayenabled)
