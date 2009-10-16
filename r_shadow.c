@@ -260,6 +260,7 @@ rtexturepool_t *r_shadow_filters_texturepool;
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0", "generate fake bumpmaps from diffuse textures at this bumpyness, try 4 to match tenebrae, higher values increase depth, requires r_restart to take effect"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
+cvar_t r_shadow_dot3 = {CVAR_SAVE, "r_shadow_dot3", "0", "enables use of (slow) per pixel lighting on GL1.3 hardware"};
 cvar_t r_shadow_usenormalmap = {CVAR_SAVE, "r_shadow_usenormalmap", "1", "enables use of directional shading on lights"};
 cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
 cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.125", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
@@ -660,6 +661,7 @@ void R_Shadow_Init(void)
 {
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
+	Cvar_RegisterVariable(&r_shadow_dot3);
 	Cvar_RegisterVariable(&r_shadow_usenormalmap);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_gloss);
@@ -1791,7 +1793,7 @@ void R_Shadow_RenderMode_Begin(void)
 
 	if (r_glsl.integer && gl_support_fragment_shader)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
-	else if (gl_dot3arb && gl_texturecubemap && r_textureunits.integer >= 2 && gl_combine.integer && gl_stencil)
+	else if (gl_dot3arb && gl_texturecubemap && r_shadow_dot3.integer && gl_stencil)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
 	else
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
@@ -2087,6 +2089,13 @@ init_done:
 
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
 {
+	if (transparent)
+	{
+		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
+		r_shadow_lightscissor[1] = r_refdef.view.viewport.y;
+		r_shadow_lightscissor[2] = r_refdef.view.viewport.width;
+		r_shadow_lightscissor[3] = r_refdef.view.viewport.height;
+	}
 	CHECKGLERROR
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -3291,7 +3300,7 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
 		if (r_textureunits.integer >= 3)
 		{
-			// Voodoo4 or Kyro (or Geforce3/Radeon with gl_combine off)
+			// Voodoo4 or Kyro (or Geforce3/Radeon with r_shadow_dot3 off)
 			m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
 			m.texmatrix[2] = rsurface.entitytoattenuationz;
 			m.pointer_texcoord3f[2] = rsurface.vertex3f;
