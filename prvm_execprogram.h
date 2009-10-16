@@ -153,7 +153,7 @@
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
 #if PRVMBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int + 4 > prog->edictareasize)
+				if (OPB->_int < 0 || OPB->_int + 1 > prog->edictareasize)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -161,12 +161,14 @@
 					goto cleanup;
 				}
 #endif
-				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
+				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+				ptr = (prvm_eval_t *)((float *)prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
 #if PRVMBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int + 12 > prog->edictareasize)
+				if (OPB->_int < 0 || OPB->_int + 3 > prog->edictareasize)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -174,7 +176,9 @@
 					goto cleanup;
 				}
 #endif
-				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
+				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+				ptr = (prvm_eval_t *)((float *)prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
 				ptr->ivector[2] = OPA->ivector[2];
@@ -197,6 +201,7 @@
 					goto cleanup;
 				}
 #endif
+#if 0
 				if (OPA->edict == 0 && !prog->allowworldwrites)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -204,8 +209,9 @@
 					PRVM_ERROR("forbidden assignment to null/world entity in %s", PRVM_NAME);
 					goto cleanup;
 				}
+#endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (unsigned char *)((int *)ed->fields.vp + OPB->_int) - (unsigned char *)prog->edictsfields;
+				OPC->_int = (float *)((float *)ed->fields.vp + OPB->_int) - (float *)prog->edictsfields;
 				break;
 
 			case OP_LOAD_F:
