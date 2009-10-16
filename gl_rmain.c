@@ -3269,6 +3269,45 @@ static void R_View_UpdateEntityLighting (void)
 	}
 }
 
+#define MAX_LINEOFSIGHTTRACES 64
+
+static qboolean R_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+{
+	int i;
+	vec3_t boxmins, boxmaxs;
+	vec3_t start;
+	vec3_t end;
+	dp_model_t *model = r_refdef.scene.worldmodel;
+	
+	if (!model || !model->brush.TraceLineOfSight)
+		return true;
+
+	// expand the box a little
+	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0];
+	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0];
+	boxmins[1] = (enlarge+1) * entboxmins[1] - enlarge * entboxmaxs[1];
+	boxmaxs[1] = (enlarge+1) * entboxmaxs[1] - enlarge * entboxmins[1];
+	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2];
+	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2];
+
+	// try center
+	VectorCopy(eye, start);
+	VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, end);
+	if (model->brush.TraceLineOfSight(model, start, end))
+		return true;
+
+	// try various random positions
+	for (i = 0;i < numsamples;i++)
+	{
+		VectorSet(end, lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));
+		if (model->brush.TraceLineOfSight(model, start, end))
+			return true;
+	}
+
+	return false;
+}
+
+
 static void R_View_UpdateEntityVisible (void)
 {
 	int i, renderimask;
@@ -3297,7 +3336,7 @@ static void R_View_UpdateEntityVisible (void)
 				ent = r_refdef.scene.entities[i];
 				if(r_refdef.viewcache.entityvisible[i] && !(ent->effects & EF_NODEPTHTEST) && !(ent->flags & (RENDER_VIEWMODEL + RENDER_NOCULL)) && !(ent->model && (ent->model->name[0] == '*')))
 				{
-					if(Mod_CanSeeBox_Trace(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.scene.worldmodel, r_refdef.view.origin, ent->mins, ent->maxs))
+					if(R_CanSeeBox(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
 						ent->last_trace_visibility = realtime;
 					if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
 						r_refdef.viewcache.entityvisible[i] = 0;

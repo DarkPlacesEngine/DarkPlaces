@@ -73,6 +73,8 @@ cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "nu
 cvar_t sv_cullentities_trace_delay_players = {0, "sv_cullentities_trace_delay_players", "0.2", "number of seconds until the entity gets actually culled if it is a player entity"};
 cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
+cvar_t sv_cullentities_trace_prediction_time = {0, "sv_cullentities_trace_prediction_time", "0.2", "how many seconds of prediction to use"};
+cvar_t sv_cullentities_trace_entityocclusion = {0, "sv_cullentities_trace_entityocclusion", "0", "also check if doors and other bsp models are in the way"};
 cvar_t sv_cullentities_trace_samples = {0, "sv_cullentities_trace_samples", "1", "number of samples to test for entity culling"};
 cvar_t sv_cullentities_trace_samples_extra = {0, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
 cvar_t sv_cullentities_trace_samples_players = {0, "sv_cullentities_trace_samples_players", "8", "number of samples to test for entity culling when the entity is a player entity"};
@@ -364,7 +366,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
+	Cvar_RegisterVariable (&sv_cullentities_trace_entityocclusion);
 	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
+	Cvar_RegisterVariable (&sv_cullentities_trace_prediction_time);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_players);
@@ -1314,6 +1318,127 @@ void SV_PrepareEntitiesForSending(void)
 	}
 }
 
+#define MAX_LINEOFSIGHTTRACES 64
+
+qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+{
+	float pitchsign;
+	float alpha;
+	float starttransformed[3], endtransformed[3];
+	int blocked = 0;
+	int traceindex;
+	int originalnumtouchedicts;
+	int numtouchedicts = 0;
+	int touchindex;
+	matrix4x4_t matrix, imatrix;
+	dp_model_t *model;
+	prvm_edict_t *touch;
+	prvm_edict_t *touchedicts[MAX_EDICTS];
+	unsigned int modelindex;
+	vec3_t boxmins, boxmaxs;
+	vec3_t clipboxmins, clipboxmaxs;
+	vec3_t endpoints[MAX_LINEOFSIGHTTRACES];
+
+	numtraces = min(numtraces, MAX_LINEOFSIGHTTRACES);
+
+	// expand the box a little
+	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0];
+	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0];
+	boxmins[1] = (enlarge+1) * entboxmins[1] - enlarge * entboxmaxs[1];
+	boxmaxs[1] = (enlarge+1) * entboxmaxs[1] - enlarge * entboxmins[1];
+	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2];
+	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2];
+
+	VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, endpoints[0]);
+	for (traceindex = 1;traceindex < numtraces;traceindex++)
+		VectorSet(endpoints[traceindex], lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));
+
+	// calculate sweep box for the entire swarm of traces
+	VectorCopy(eye, clipboxmins);
+	VectorCopy(eye, clipboxmaxs);
+	for (traceindex = 0;traceindex < numtraces;traceindex++)
+	{
+		clipboxmins[0] = min(clipboxmins[0], endpoints[traceindex][0]);
+		clipboxmins[1] = min(clipboxmins[1], endpoints[traceindex][1]);
+		clipboxmins[2] = min(clipboxmins[2], endpoints[traceindex][2]);
+		clipboxmaxs[0] = max(clipboxmaxs[0], endpoints[traceindex][0]);
+		clipboxmaxs[1] = max(clipboxmaxs[1], endpoints[traceindex][1]);
+		clipboxmaxs[2] = max(clipboxmaxs[2], endpoints[traceindex][2]);
+	}
+
+	// get the list of entities in the sweep box
+	if (sv_cullentities_trace_entityocclusion.integer)
+		numtouchedicts = World_EntitiesInBox(&sv.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
+	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
+	}
+	// iterate the entities found in the sweep box and filter them
+	originalnumtouchedicts = numtouchedicts;
+	numtouchedicts = 0;
+	for (touchindex = 0;touchindex < originalnumtouchedicts;touchindex++)
+	{
+		touch = touchedicts[touchindex];
+		if (touch->fields.server->solid != SOLID_BSP)
+			continue;
+		modelindex = (unsigned int)touch->fields.server->modelindex;
+		if (!modelindex)
+			continue;
+		if (modelindex >= MAX_MODELS)
+			continue; // error?
+		model = sv.models[(int)touch->fields.server->modelindex];
+		if (!model->brush.TraceLineOfSight)
+			continue;
+		// skip obviously transparent entities
+		alpha = PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.alpha)->_float;
+		if (alpha && alpha < 1)
+			continue;
+		if ((int)touch->fields.server->effects & EF_ADDITIVE)
+			continue;
+		touchedicts[numtouchedicts++] = touch;
+	}
+
+	// now that we have a filtered list of "interesting" entities, fire each
+	// ray against all of them, this gives us an early-out case when something
+	// is visible (which it often is)
+
+	for (traceindex = 0;traceindex < numtraces;traceindex++)
+	{
+		// check world occlusion
+		if (sv.worldmodel && sv.worldmodel->brush.TraceLineOfSight)
+			if (!sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, eye, endpoints[traceindex]))
+				continue;
+		for (touchindex = 0;touchindex < numtouchedicts;touchindex++)
+		{
+			touch = touchedicts[touchindex];
+			modelindex = (unsigned int)touch->fields.server->modelindex;
+			model = sv.models[(int)touch->fields.server->modelindex];
+			// get the entity matrix
+			pitchsign = (model->type == mod_alias) ? -1 : 1;
+			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
+			Matrix4x4_Invert_Simple(&imatrix, &matrix);
+			// see if the ray hits this entity
+			Matrix4x4_Transform(&imatrix, eye, starttransformed);
+			Matrix4x4_Transform(&imatrix, endpoints[traceindex], endtransformed);
+			if (!model->brush.TraceLineOfSight(model, starttransformed, endtransformed))
+			{
+				blocked++;
+				break;
+			}
+		}
+		// check if the ray was blocked
+		if (touchindex < numtouchedicts)
+			continue;
+		// return if the ray was not blocked
+		return true;
+	}
+
+	// no rays survived
+	return false;
+}
+
 void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
 	int isbmodel;
@@ -1410,42 +1535,13 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 						: sv_cullentities_trace_samples.integer;
 				float enlarge = sv_cullentities_trace_enlarge.value;
 
-				qboolean visible = TRUE;
-
 				if(samples > 0)
 				{
-					do
-					{
-						if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, sv.writeentitiestoclient_testeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-							break; // directly visible from the server's view
-
-						if(sv_cullentities_trace_prediction.integer)
-						{
-							vec3_t predeye;
-
-							// get player velocity
-							float predtime = bound(0, host_client->ping, 0.2); // / 2
-								// sorry, no wallhacking by high ping please, and at 200ms
-								// ping a FPS is annoying to play anyway and a player is
-								// likely to have changed his direction
-							VectorMA(sv.writeentitiestoclient_testeye, predtime, host_client->edict->fields.server->velocity, predeye);
-							if(sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, sv.writeentitiestoclient_testeye, predeye)) // must be able to go there...
-							{
-								if(Mod_CanSeeBox_Trace(samples, enlarge, sv.worldmodel, predeye, ed->priv.server->cullmins, ed->priv.server->cullmaxs))
-									break; // directly visible from the predicted view
-							}
-							else
-							{
-								//Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
-							}
-						}
-
-						// when we get here, we can't see the entity
-						visible = false;
-					}
-					while(0);
-
-					if(visible)
+					int eyeindex;
+					for (eyeindex = 0;eyeindex < sv.writeentitiestoclient_numeyes;eyeindex++)
+						if(SV_CanSeeBox(samples, enlarge, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+							break;
+					if(eyeindex < sv.writeentitiestoclient_numeyes)
 						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
 							realtime + (
 								s->number <= svs.maxclients
@@ -1476,6 +1572,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	entity_state_t *s;
 	prvm_edict_t *camera;
 	qboolean success;
+	vec3_t eye;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 25 > maxsize)
@@ -1488,16 +1585,37 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	sv.writeentitiestoclient_stats_culled_trace = 0;
 	sv.writeentitiestoclient_stats_visibleentities = 0;
 	sv.writeentitiestoclient_stats_totalentities = 0;
+	sv.writeentitiestoclient_numeyes = 0;
 
-// find the client's PVS
-	// the real place being tested from
-	camera = PRVM_EDICT_NUM( client->clientcamera );
-	VectorAdd(camera->fields.server->origin, clent->fields.server->view_ofs, sv.writeentitiestoclient_testeye);
-	sv.writeentitiestoclient_pvsbytes = 0;
-	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
-		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_testeye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), false);
-
+	// get eye location
 	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
+	camera = PRVM_EDICT_NUM( client->clientcamera );
+	VectorAdd(camera->fields.server->origin, clent->fields.server->view_ofs, eye);
+	sv.writeentitiestoclient_pvsbytes = 0;
+	// get the PVS values for the eye location, later FatPVS calls will merge
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, eye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), sv.writeentitiestoclient_pvsbytes != 0);
+
+	// add the eye to a list for SV_CanSeeBox tests
+	VectorCopy(eye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
+	sv.writeentitiestoclient_numeyes++;
+
+	// calculate predicted eye origin for SV_CanSeeBox tests
+	if (sv_cullentities_trace_prediction.integer)
+	{
+		vec_t predtime = bound(0, host_client->ping, sv_cullentities_trace_prediction_time.value);
+		vec3_t predeye;
+		VectorMA(eye, predtime, camera->fields.server->velocity, predeye);
+		if (SV_CanSeeBox(1, 0, eye, predeye, predeye))
+		{
+			VectorCopy(predeye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
+			sv.writeentitiestoclient_numeyes++;
+		}
+		//if (!sv.writeentitiestoclient_useprediction)
+		//	Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+	}
+
+	// TODO: check line of sight to portal entities and add them to PVS
 
 	sv.sententitiesmark++;
 
