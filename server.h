@@ -68,6 +68,8 @@ typedef struct server_connectfloodaddress_s
 }
 server_connectfloodaddress_t;
 
+#define MAX_CLIENTNETWORKEYES 256
+
 typedef struct server_s
 {
 	/// false if only a net client
@@ -142,7 +144,8 @@ typedef struct server_s
 	int writeentitiestoclient_cliententitynumber;
 	int writeentitiestoclient_clientnumber;
 	sizebuf_t *writeentitiestoclient_msg;
-	vec3_t writeentitiestoclient_testeye;
+	vec3_t writeentitiestoclient_eyes[MAX_CLIENTNETWORKEYES];
+	int writeentitiestoclient_numeyes;
 	int writeentitiestoclient_pvsbytes;
 	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
 	entity_state_t writeentitiestoclient_sendstates[MAX_EDICTS];
@@ -524,6 +527,8 @@ int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);
 trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask);
 trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask);
 trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask);
+
+qboolean SV_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
 
 int SV_PointSuperContents(const vec3_t point);
 

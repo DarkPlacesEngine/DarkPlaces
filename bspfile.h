@@ -202,6 +202,7 @@ typedef struct dplane_s
 //   structural?     (div0) no, game code should not be allowed to differentiate between structural and detail
 //   trigger?        (div0) no, as these are always solid anyway, and that's all that matters for trigger brushes
 #define SUPERCONTENTS_LIQUIDSMASK	(SUPERCONTENTS_LAVA | SUPERCONTENTS_SLIME | SUPERCONTENTS_WATER)
+#define SUPERCONTENTS_VISBLOCKERMASK	SUPERCONTENTS_OPAQUE
 
 /*
 #define SUPERCONTENTS_DEADMONSTER	0x00000000
