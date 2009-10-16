@@ -108,7 +108,7 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in wi
 cvar_t vid_grabkeyboard = {CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
 cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
-cvar_t gl_combine = {0, "gl_combine", "1", "faster rendering by using GL_ARB_texture_env_combine extension (part of OpenGL 1.3 and above)"};
+cvar_t gl_combine = {0, "gl_combine", "0", "enables slow but advanced rendering techniques using GL_ARB_texture_env_combine extension (part of OpenGL 1.3 and above)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
