@@ -79,7 +79,7 @@ cvar_t r_shadows_drawafterrtlighting = {CVAR_SAVE, "r_shadows_drawafterrtlightin
 cvar_t r_shadows_castfrombmodels = {CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
-cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "2", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "4", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 
