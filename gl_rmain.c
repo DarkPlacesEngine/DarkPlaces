@@ -191,8 +191,15 @@ unsigned int r_queries[R_MAX_OCCLUSION_QUERIES];
 unsigned int r_numqueries;
 unsigned int r_maxqueries;
 
-char r_qwskincache[MAX_SCOREBOARD][MAX_QPATH];
-skinframe_t *r_qwskincache_skinframe[MAX_SCOREBOARD];
+typedef struct r_qwskincache_s
+{
+	char name[MAX_QPATH];
+	skinframe_t *skinframe;
+}
+r_qwskincache_t;
+
+static r_qwskincache_t *r_qwskincache;
+static int r_qwskincache_size;
 
 /// vertex coordinates for a quad that covers the screen exactly
 const float r_screenvertex3f[12] =
@@ -2430,7 +2437,8 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 	int basepixels_height;
 	skinframe_t *skinframe;
 
-	*has_alpha = false;
+	if (has_alpha)
+		*has_alpha = false;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -2474,7 +2482,8 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 		if (j < basepixels_width * basepixels_height * 4)
 		{
 			// has transparent pixels
-			*has_alpha = true;
+			if (has_alpha)
+				*has_alpha = true;
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 			for (j = 0;j < image_width * image_height * 4;j += 4)
 			{
@@ -2532,8 +2541,7 @@ skinframe_t *R_SkinFrame_LoadExternal_CheckAlpha(const char *name, int texturefl
 
 skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain)
 {
-	qboolean has_alpha;
-	return R_SkinFrame_LoadExternal_CheckAlpha(name, textureflags, complain, &has_alpha);
+	return R_SkinFrame_LoadExternal_CheckAlpha(name, textureflags, complain, NULL);
 }
 
 static rtexture_t *R_SkinFrame_TextureForSkinLayer(const unsigned char *in, int width, int height, const char *name, const unsigned int *palette, int textureflags, qboolean force)
@@ -2715,8 +2723,8 @@ void gl_main_start(void)
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
 
-	memset(r_qwskincache, 0, sizeof(r_qwskincache));
-	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
+	r_qwskincache = NULL;
+	r_qwskincache_size = 0;
 
 	// set up r_skinframe loading system for textures
 	memset(&r_skinframe, 0, sizeof(r_skinframe));
@@ -2753,8 +2761,8 @@ void gl_main_shutdown(void)
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
 
-	memset(r_qwskincache, 0, sizeof(r_qwskincache));
-	memset(r_qwskincache_skinframe, 0, sizeof(r_qwskincache_skinframe));
+	r_qwskincache = NULL;
+	r_qwskincache_size = 0;
 
 	// clear out the r_skinframe state
 	Mem_ExpandableArray_FreeArray(&r_skinframe.array);
@@ -2785,6 +2793,10 @@ void gl_main_newmap(void)
 	// FIXME: move this code to client
 	int l;
 	char *entities, entname[MAX_QPATH];
+	if (r_qwskincache)
+		Mem_Free(r_qwskincache);
+	r_qwskincache = NULL;
+	r_qwskincache_size = 0;
 	if (cl.worldmodel)
 	{
 		strlcpy(entname, cl.worldmodel->name, sizeof(entname));
@@ -5413,6 +5425,33 @@ void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *t
 	Matrix4x4_Concat(texmatrix, &matrix, &temp);
 }
 
+void R_LoadQWSkin(r_qwskincache_t *cache, const char *skinname)
+{
+	int textureflags = TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP | TEXF_COMPRESS;
+	char name[MAX_QPATH];
+	skinframe_t *skinframe;
+	unsigned char pixels[296*194];
+	strlcpy(cache->name, skinname, sizeof(cache->name));
+	dpsnprintf(name, sizeof(name), "skins/%s.pcx", cache->name);
+	if (developer_loading.integer)
+		Con_Printf("loading %s\n", name);
+	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, false);
+	if (!skinframe || !skinframe->base)
+	{
+		unsigned char *f;
+		fs_offset_t filesize;
+		skinframe = NULL;
+		f = FS_LoadFile(name, tempmempool, true, &filesize);
+		if (f)
+		{
+			if (LoadPCX_QWSkin(f, filesize, pixels, 296, 194))
+				skinframe = R_SkinFrame_LoadInternalQuake(name, textureflags, true, r_fullbrights.integer, pixels, image_width, image_height);
+			Mem_Free(f);
+		}
+	}
+	cache->skinframe = skinframe;
+}
+
 texture_t *R_GetCurrentTexture(texture_t *t)
 {
 	int i;
@@ -5455,14 +5494,16 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	// update currentskinframe to be a qw skin or animation frame
 	if ((i = ent->entitynumber - 1) >= 0 && i < cl.maxclients && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[i].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl"))
 	{
-		if (strcmp(r_qwskincache[i], cl.scores[i].qw_skin))
+		if (!r_qwskincache || r_qwskincache_size != cl.maxclients)
 		{
-			strlcpy(r_qwskincache[i], cl.scores[i].qw_skin, sizeof(r_qwskincache[i]));
-			if (developer_loading.integer)
-				Con_Printf("loading skins/%s\n", r_qwskincache[i]);
-			r_qwskincache_skinframe[i] = R_SkinFrame_LoadExternal(va("skins/%s", r_qwskincache[i]), TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP | TEXF_COMPRESS, developer.integer > 0);
+			r_qwskincache_size = cl.maxclients;
+			if (r_qwskincache)
+				Mem_Free(r_qwskincache);
+			r_qwskincache = Mem_Alloc(r_main_mempool, sizeof(*r_qwskincache) * r_qwskincache_size);
 		}
-		t->currentskinframe = r_qwskincache_skinframe[i];
+		if (strcmp(r_qwskincache[i].name, cl.scores[i].qw_skin))
+			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
+		t->currentskinframe = r_qwskincache[i].skinframe;
 		if (t->currentskinframe == NULL)
 			t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - ent->shadertime)) % t->numskinframes];
 	}

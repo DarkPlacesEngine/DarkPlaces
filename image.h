@@ -26,6 +26,9 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize);
 // loads a texture, as pixel data
 unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans);
 
+// loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
+qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);
+
 // loads a texture, as a texture
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans);
 
