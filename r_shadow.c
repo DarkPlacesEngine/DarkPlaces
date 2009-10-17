@@ -367,10 +367,11 @@ cachepic_t *r_editlights_sprnoshadowlight;
 cachepic_t *r_editlights_sprcubemaplight;
 cachepic_t *r_editlights_sprcubemapnoshadowlight;
 cachepic_t *r_editlights_sprselection;
+extern cvar_t gl_max_size;
 
 void R_Shadow_SetShadowMode(void)
 {
-	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, 2048);
+	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, gl_max_size.integer / 4);
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
 	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
@@ -4188,7 +4189,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				r_shadow_shadowmaplod = i;
 
 		size = r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
-		size = bound(1, size, 2048);
+		size = bound(1, size, r_shadow_shadowmapping_maxsize.integer);
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
 
 		if (numsurfaces)
@@ -4334,7 +4335,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	dlight_t *light;
 	size_t range;
 
-	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, 2048) || 
+	if (r_shadow_shadowmapmaxsize != r_shadow_shadowmapping_maxsize.integer || 
 		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object) || 
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
