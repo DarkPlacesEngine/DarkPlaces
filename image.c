@@ -248,7 +248,6 @@ unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize)
 			else
 				a[x++] = dataByte;
 		}
-		fin += pcx.bytes_per_line - image_width; // the number of bytes per line is always forced to an even number
 		while(x < image_width)
 			a[x++] = 0;
 	}
@@ -266,6 +265,85 @@ unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize)
 	}
 
 	return image_buffer;
+}
+
+/*
+============
+LoadPCX
+============
+*/
+qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight)
+{
+	pcx_t pcx;
+	unsigned char *a;
+	const unsigned char *fin, *enddata;
+	int x, y, x2, dataByte, pcxwidth, pcxheight;
+
+	if (filesize < (int)sizeof(pcx) + 768)
+		return false;
+
+	image_width = outwidth;
+	image_height = outheight;
+	fin = f;
+
+	memcpy(&pcx, fin, sizeof(pcx));
+	fin += sizeof(pcx);
+
+	// LordHavoc: big-endian support ported from QF newtree
+	pcx.xmax = LittleShort (pcx.xmax);
+	pcx.xmin = LittleShort (pcx.xmin);
+	pcx.ymax = LittleShort (pcx.ymax);
+	pcx.ymin = LittleShort (pcx.ymin);
+	pcx.hres = LittleShort (pcx.hres);
+	pcx.vres = LittleShort (pcx.vres);
+	pcx.bytes_per_line = LittleShort (pcx.bytes_per_line);
+	pcx.palette_type = LittleShort (pcx.palette_type);
+
+	pcxwidth = pcx.xmax + 1 - pcx.xmin;
+	pcxheight = pcx.ymax + 1 - pcx.ymin;
+	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || pcxwidth > 4096 || pcxheight > 4096 || pcxwidth <= 0 || pcxheight <= 0)
+		return false;
+
+	enddata = f + filesize - 768;
+
+	for (y = 0;y < outheight && fin < enddata;y++)
+	{
+		a = pixels + y * outwidth;
+		// pad the output with blank lines if needed
+		if (y >= pcxheight)
+		{
+			memset(a, 0, outwidth);
+			continue;
+		}
+		for (x = 0;x < pcxwidth;)
+		{
+			if (fin >= enddata)
+				return false;
+			dataByte = *fin++;
+			if(dataByte >= 0xC0)
+			{
+				x2 = x + (dataByte & 0x3F);
+				if (fin >= enddata)
+					return false;
+				if (x2 > pcxwidth)
+					return false;
+				dataByte = *fin++;
+				for (;x < x2;x++)
+					if (x < outwidth)
+						a[x] = dataByte;
+			}
+			else
+			{
+				if (x < outwidth) // truncate to destination width
+					a[x] = dataByte;
+				x++;
+			}
+		}
+		while(x < outwidth)
+			a[x++] = 0;
+	}
+
+	return true;
 }
 
 /*
