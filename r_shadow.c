@@ -4171,7 +4171,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 	lodlinear = (rtlight->radius * r_shadow_shadowmapping_precision.value) / sqrt(max(1.0f, distance/rtlight->radius));
 	//lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
-	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapping_maxsize.integer);
+	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapmaxsize);
 
 	if (castshadows && (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE))
 	{
@@ -4185,11 +4185,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 
 		r_shadow_shadowmaplod = 0;
 		for (i = 1;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-			if ((r_shadow_shadowmapping_maxsize.integer >> i) > lodlinear)
+			if ((r_shadow_shadowmapmaxsize >> i) > lodlinear)
 				r_shadow_shadowmaplod = i;
 
-		size = r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE ? r_shadow_shadowmapping_maxsize.integer >> r_shadow_shadowmaplod : lodlinear;
-		size = bound(1, size, r_shadow_shadowmapping_maxsize.integer);
+		size = r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE ? r_shadow_shadowmapmaxsize >> r_shadow_shadowmaplod : lodlinear;
+		size = bound(1, size, r_shadow_shadowmapmaxsize);
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
 
 		if (numsurfaces)
