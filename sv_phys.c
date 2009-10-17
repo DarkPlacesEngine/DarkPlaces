@@ -2432,7 +2432,13 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		movetime *= 1 - min(1, trace.fraction);
 		if (ent->fields.server->movetype == MOVETYPE_BOUNCEMISSILE)
 		{
-			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 2.0);
+			prvm_eval_t *val;
+			float bouncefactor = 1.0f;
+			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.bouncefactor);
+			if (val!=0 && val->_float)
+				bouncefactor = val->_float;
+
+			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 1 + bouncefactor);
 			ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 		}
 		else if (ent->fields.server->movetype == MOVETYPE_BOUNCE)
