@@ -299,7 +299,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 			// whenever rcon_secure is changed to 0, clear rcon_password for
 			// security reasons (prevents a send-rcon-password-as-plaintext
 			// attack based on NQ protocol session takeover and svc_stufftext)
-			if(!var->integer)
+			if(var->integer <= 0)
 				Cvar_Set("rcon_password", "");
 		}
 		else if (!strcmp(var->name, "net_slist_favorites"))
