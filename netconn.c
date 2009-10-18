@@ -2722,7 +2722,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			char *endpos = string + length + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
 			char password[64];
 
-			if(rcon_secure.integer)
+			if(rcon_secure.integer > 0)
 				return true;
 
 			for (i = 0;!ISWHITESPACE(*s);s++)
