@@ -61,7 +61,6 @@ double host_starttime = 0;
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
-cvar_t host_sleep = {0, "host_sleep","1", "gives up some processing time to other applications each frame, value in milliseconds"};
 cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
 cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
@@ -69,6 +68,7 @@ cvar_t cl_minfps_qualitymin = {CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowes
 cvar_t cl_minfps_qualitypower = {CVAR_SAVE, "cl_minfps_qualitypower", "4", "raises quality value to a power of itself, higher values make quality drop more sharply in relation to framerate"};
 cvar_t cl_minfps_qualityscale = {CVAR_SAVE, "cl_minfps_qualityscale", "0.5", "multiplier for quality"};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
@@ -214,7 +214,6 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
-	Cvar_RegisterVariable (&host_sleep);
 	Cvar_RegisterVariable (&cl_minfps);
 	Cvar_RegisterVariable (&cl_minfps_fade);
 	Cvar_RegisterVariable (&cl_minfps_qualitymax);
@@ -222,6 +221,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_minfps_qualitypower);
 	Cvar_RegisterVariable (&cl_minfps_qualityscale);
 	Cvar_RegisterVariable (&cl_maxfps);
+	Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
 	Cvar_RegisterVariable (&cl_maxidlefps);
 
 	Cvar_RegisterVariable (&developer);
@@ -840,9 +840,15 @@ void Host_Main(void)
 					cl.realframetime = max(cl_timer, clframetime);
 				}
 			}
-			else if (vid_activewindow && cl_maxfps.value >= 1)
+			else if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+			{
 				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
-			else if (!vid_activewindow && cl_maxidlefps.value >= 1)
+				// when running slow, we need to sleep to keep input responsive
+				wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
+				if (wait > 0)
+					Sys_Sleep((int)wait);
+			}
+			else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
 				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
 			else
 				clframetime = cl.realframetime = cl_timer;
@@ -924,9 +930,6 @@ void Host_Main(void)
 				Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
 							pass1+pass2+pass3, pass1, pass2, pass3);
 			}
-			wait = bound(0, host_sleep.value * 1000, 100000);
-			if (!cls.timedemo && wait >= 1)
-				Sys_Sleep((int)wait);
 		}
 
 #if MEMPARANOIA
