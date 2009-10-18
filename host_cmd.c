@@ -514,7 +514,7 @@ void Host_Connect_f (void)
 		return;
 	}
 	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
-	if(!rcon_secure.integer)
+	if(rcon_secure.integer <= 0)
 		Cvar_SetQuick(&rcon_password, "");
 	CL_EstablishConnection(Cmd_Argv(1));
 }
@@ -2349,7 +2349,7 @@ void Host_PQRcon_f (void)
 	lhnetsocket_t *mysocket;
 	char peer_address[64];
 
-	if (!rcon_password.string || !rcon_password.string[0] || rcon_secure.integer)
+	if (!rcon_password.string || !rcon_password.string[0] || rcon_secure.integer > 0)
 	{
 		Con_Printf ("You must set rcon_password before issuing an pqrcon command, and rcon_secure must be 0.\n");
 		return;
@@ -2462,7 +2462,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			cls.rcon_timeout[cls.rcon_ringpos] = realtime + rcon_secure_challengetimeout.value;
 			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
 		}
-		else if(rcon_secure.integer)
+		else if(rcon_secure.integer > 0)
 		{
 			char buf[1500];
 			char argbuf[1500];
