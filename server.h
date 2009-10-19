@@ -313,6 +313,7 @@ typedef struct client_s
 #define MOVETYPE_BOUNCEMISSILE	11		///< bounce w/o gravity
 #define MOVETYPE_FOLLOW			12		///< track movement of aiment
 #define MOVETYPE_FAKEPUSH		13		///< tenebrae's push that doesn't push
+#define MOVETYPE_PHYSICS		32		///< indicates this object is physics controlled
 
 // edict->solid values
 #define	SOLID_NOT				0		///< no interaction with other objects
@@ -322,6 +323,10 @@ typedef struct client_s
 #define	SOLID_BSP				4		///< bsp clip, touch on edge, block
 // LordHavoc: corpse code
 #define	SOLID_CORPSE			5		///< same as SOLID_BBOX, except it behaves as SOLID_NOT against SOLID_SLIDEBOX objects (players/monsters)
+// LordHavoc: physics
+#define	SOLID_PHYSICS_BOX		32		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
+#define	SOLID_PHYSICS_SPHERE	33		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
+#define	SOLID_PHYSICS_CAPSULE	34		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
 
 // edict->deadflag values
 #define	DEAD_NO					0

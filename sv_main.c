@@ -296,6 +296,21 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "glowmod"},
 	{ev_vector, "movement"},
 	{ev_vector, "punchvector"},
+
+	// physics
+	//{ev_float, "solid"},
+	//{ev_float, "movetype"},
+	//{ev_float, "modelindex"},
+	{ev_vector, "mass"},
+	//{ev_vector, "origin"},
+	//{ev_vector, "angles"},
+	{ev_vector, "axis_forward"},
+	{ev_vector, "axis_left"},
+	{ev_vector, "axis_up"},
+	//{ev_vector, "angles"},
+	//{ev_vector, "velocity"},
+	{ev_vector, "spinvelocity"},
+
 };
 
 
@@ -2942,6 +2957,7 @@ void SV_SpawnServer (const char *server)
 	if(sv.active)
 	{
 		SV_VM_Begin();
+		World_End(&sv.world);
 		if(prog->funcoffsets.SV_Shutdown)
 		{
 			func_t s = prog->funcoffsets.SV_Shutdown;
@@ -3072,6 +3088,7 @@ void SV_SpawnServer (const char *server)
 // clear world interaction links
 //
 	World_SetSize(&sv.world, sv.worldmodel->name, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
+	World_Start(&sv.world);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
@@ -3271,6 +3288,8 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	VectorClear(ed->fields.server->angles);
 	ed->fields.server->nextthink = -1;
 	ed->fields.server->solid = 0;
+
+	World_Physics_RemoveFromEntity(&sv.world, ed);
 
 	// make sure csqc networking is aware of the removed entity
 	e = PRVM_NUM_FOR_EDICT(ed);

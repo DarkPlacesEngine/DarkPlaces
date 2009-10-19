@@ -428,6 +428,7 @@ static void CL_SetupWorldModel(void)
 		World_SetSize(&cl.world, cl.worldmodel->name, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 	else
 		World_SetSize(&cl.world, "", defaultmins, defaultmaxs);
+	World_Start(&cl.world);
 
 	// load or reload .loc file for team chat messages
 	CL_Locs_Reload_f();
@@ -3186,6 +3187,9 @@ static void CL_NetworkTimeReceived(double newtime)
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 	// update the csqc's server timestamps, critical for proper sync
 	CSQC_UpdateNetworkTimes(cl.mtime[0], cl.mtime[1]);
+
+	if (cl.mtime[0] > cl.mtime[1])
+		World_Physics_Frame(&cl.world, cl.mtime[0] - cl.mtime[1], cl.movevars_gravity);
 }
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s(%i)\n", msg_readcount-1, x, cmd);

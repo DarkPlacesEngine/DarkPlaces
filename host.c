@@ -536,6 +536,7 @@ void Host_ShutdownServer(void)
 
 // make sure all the clients know we're disconnecting
 	SV_VM_Begin();
+	World_End(&sv.world);
 	if(prog->loaded)
 		if(prog->funcoffsets.SV_Shutdown)
 		{
