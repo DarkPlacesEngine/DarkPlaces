@@ -1694,6 +1694,7 @@ static void R_Shadow_MakeTextures(void)
 	int x, y, z;
 	float intensity, dist;
 	unsigned int *data;
+	R_Shadow_FreeShadowMaps();
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
 	r_shadow_attenlinearscale = r_shadow_lightattenuationlinearscale.value;
@@ -4509,7 +4510,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 	float zdist;
 	vec3_t centerorigin;
 	// if it's too close, skip it
-	if (VectorLength(rtlight->color) < (1.0f / 256.0f))
+	if (VectorLength(rtlight->currentcolor) < (1.0f / 256.0f))
 		return;
 	zdist = (DotProduct(rtlight->shadoworigin, r_refdef.view.forward) - DotProduct(r_refdef.view.origin, r_refdef.view.forward));
 	if (zdist < 32)
@@ -4558,7 +4559,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
 			return;
 	}
-	VectorScale(rtlight->color, cscale, color);
+	VectorScale(rtlight->currentcolor, cscale, color);
 	if (VectorLength(color) > (1.0f / 256.0f))
 		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, color[0], color[1], color[2], 1);
 }
