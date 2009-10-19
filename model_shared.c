@@ -1254,6 +1254,34 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	}
 }
 
+void Mod_CreateCollisionMesh(dp_model_t *mod)
+{
+	int k;
+	int numcollisionmeshtriangles;
+	const msurface_t *surface;
+	mempool_t *mempool = mod->mempool;
+	if (!mempool && mod->brush.parentmodel)
+		mempool = mod->brush.parentmodel->mempool;
+	// make a single combined collision mesh for physics engine use
+	numcollisionmeshtriangles = 0;
+	for (k = 0;k < mod->nummodelsurfaces;k++)
+	{
+		surface = mod->data_surfaces + mod->firstmodelsurface + k;
+		if (!(surface->texture->supercontents & SUPERCONTENTS_SOLID))
+			continue;
+		numcollisionmeshtriangles += surface->num_triangles;
+	}
+	mod->brush.collisionmesh = Mod_ShadowMesh_Begin(mempool, numcollisionmeshtriangles * 3, numcollisionmeshtriangles, NULL, NULL, NULL, false, false, true);
+	for (k = 0;k < mod->nummodelsurfaces;k++)
+	{
+		surface = mod->data_surfaces + mod->firstmodelsurface + k;
+		if (!(surface->texture->supercontents & SUPERCONTENTS_SOLID))
+			continue;
+		Mod_ShadowMesh_AddMesh(mempool, mod->brush.collisionmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
+	}
+	mod->brush.collisionmesh = Mod_ShadowMesh_Finish(mempool, mod->brush.collisionmesh, false, true, false);
+}
+
 void Mod_GetTerrainVertex3fTexCoord2fFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float v[3], tc[3];

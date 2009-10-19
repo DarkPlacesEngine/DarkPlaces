@@ -39,6 +39,23 @@ typedef struct link_s
 	struct link_s	*prev, *next;
 } link_t;
 
+typedef struct world_physics_s
+{
+	// for ODE physics engine
+	qboolean ode; // if true then ode is activated
+	void *ode_world;
+	void *ode_space;
+	void *ode_contactgroup;
+	// number of constraint solver iterations to use (for dWorldStepFast)
+	int ode_iterations;
+	// actual step (server frametime / ode_iterations)
+	vec_t ode_step;
+	// max velocity for a 1-unit radius object at current step to prevent
+	// missed collisions
+	vec_t ode_movelimit;
+}
+world_physics_t;
+
 typedef struct world_s
 {
 	// convenient fields
@@ -58,6 +75,9 @@ typedef struct world_s
 	vec3_t areagrid_maxs;
 	vec3_t areagrid_size;
 	int areagrid_marknumber;
+
+	// if the QC uses a physics engine, the data for it is here
+	world_physics_t physics;
 }
 world_t;
 
@@ -69,6 +89,7 @@ void World_RemoveLink(link_t *l);
 void World_InsertLinkBefore(link_t *l, link_t *before, int entitynumber);
 
 void World_Init(void);
+void World_Shutdown(void);
 
 /// called after the world model has been loaded, before linking any entities
 void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs);
@@ -86,6 +107,18 @@ void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins
 
 /// \returns list of entities touching a box
 int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, struct prvm_edict_s **list);
+
+void World_Start(world_t *world);
+void World_End(world_t *world);
+
+// update physics
+// this is called by SV_Physics
+void World_Physics_Frame(world_t *world, double frametime, double gravity);
+
+// remove physics data from entity
+// this is called by entity removal
+struct prvm_edict_s;
+void World_Physics_RemoveFromEntity(world_t *world, struct prvm_edict_s *ed);
 
 #endif
 

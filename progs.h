@@ -68,6 +68,22 @@ typedef struct edict_engineprivate_s
 	// moved, in case they need to be moved back
 	vec3_t moved_from;
 	vec3_t moved_fromangles;
+
+	// physics parameters
+	qboolean ode_physics;
+	void *ode_body;
+	void *ode_geom;
+	float *ode_vertex3f;
+	int *ode_element3i;
+	int ode_numvertices;
+	int ode_numtriangles;
+	vec3_t ode_mins;
+	vec3_t ode_maxs;
+	vec_t ode_mass;
+	int ode_modelindex;
+	vec_t ode_movelimit; // smallest component of (maxs[]-mins[])
+	matrix4x4_t ode_offsetmatrix;
+	matrix4x4_t ode_offsetimatrix;
 }
 edict_engineprivate_t;
 

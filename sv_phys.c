@@ -1634,12 +1634,18 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	for (e = 0;e < numcheckentities;e++)
 	{
 		prvm_edict_t *check = checkentities[e];
-		if (check->fields.server->movetype == MOVETYPE_NONE
-		 || check->fields.server->movetype == MOVETYPE_PUSH
-		 || check->fields.server->movetype == MOVETYPE_FOLLOW
-		 || check->fields.server->movetype == MOVETYPE_NOCLIP
-		 || check->fields.server->movetype == MOVETYPE_FAKEPUSH)
+		int movetype = (int)check->fields.server->movetype;
+		switch(movetype)
+		{
+		case MOVETYPE_NONE:
+		case MOVETYPE_PUSH:
+		case MOVETYPE_FOLLOW:
+		case MOVETYPE_NOCLIP:
+		case MOVETYPE_FAKEPUSH:
 			continue;
+		default:
+			break;
+		}
 
 		if (check->fields.server->owner == pusherprog)
 			continue;
@@ -1686,6 +1692,15 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		VectorCopy (check->fields.server->origin, check->priv.server->moved_from);
 		VectorCopy (check->fields.server->angles, check->priv.server->moved_fromangles);
 		moved_edicts[num_moved++] = PRVM_NUM_FOR_EDICT(check);
+
+		// physics objects need better collisions than this code can do
+		if (movetype == MOVETYPE_PHYSICS)
+		{
+			VectorAdd(check->fields.server->origin, move, check->fields.server->origin);
+			SV_LinkEdict(check);
+			SV_LinkEdict_TouchAreaGrid(check);
+			continue;
+		}
 
 		// try moving the contacted entity
 		pusher->fields.server->solid = SOLID_NOT;
@@ -2660,6 +2675,13 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 		if (SV_RunThink (ent))
 			SV_Physics_Toss (ent);
 		break;
+	case MOVETYPE_PHYSICS:
+		if (SV_RunThink(ent))
+		{
+			SV_LinkEdict(ent);
+			SV_LinkEdict_TouchAreaGrid(ent);
+		}
+		break;
 	default:
 		Con_Printf ("SV_Physics: bad movetype %i\n", (int)ent->fields.server->movetype);
 		break;
@@ -2824,6 +2846,9 @@ static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_RunThink (ent);
 		SV_WalkMove (ent);
 		break;
+	case MOVETYPE_PHYSICS:
+		SV_RunThink (ent);
+		break;
 	default:
 		Con_Printf ("SV_Physics_ClientEntity: bad movetype %i\n", (int)ent->fields.server->movetype);
 		break;
@@ -2854,6 +2879,9 @@ void SV_Physics (void)
 	prog->globals.server->time = sv.time;
 	prog->globals.server->frametime = sv.frametime;
 	PRVM_ExecuteProgram (prog->globals.server->StartFrame, "QC function StartFrame is missing");
+
+	// run physics engine
+	World_Physics_Frame(&sv.world, sv.frametime, sv_gravity.value);
 
 //
 // treat each object in turn

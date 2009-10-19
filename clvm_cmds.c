@@ -4280,6 +4280,7 @@ void VM_CL_Cmd_Init(void)
 
 void VM_CL_Cmd_Reset(void)
 {
+	World_End(&cl.world);
 	VM_Cmd_Reset();
 	VM_Polygons_Reset();
 }

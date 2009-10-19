@@ -231,6 +231,20 @@ typedef struct prvm_prog_fieldoffsets_s
 	int yaw_speed; // ssqc / csqc
 	int bouncefactor; // ssqc
 	int bouncestop; // ssqc
+
+	int solid; // ssqc / csqc (physics)
+	int movetype; // ssqc / csqc (physics)
+	int modelindex; // ssqc / csqc (physics)
+	int mins; // ssqc / csqc (physics)
+	int maxs; // ssqc / csqc (physics)
+	int mass; // ssqc / csqc (physics)
+	int origin; // ssqc / csqc (physics)
+	int axis_forward; // ssqc / csqc (physics)
+	int axis_left; // ssqc / csqc (physics)
+	int axis_up; // ssqc / csqc (physics)
+	//int angles; // ssqc / csqc (physics)
+	int velocity; // ssqc / csqc (physics)
+	int spinvelocity; // ssqc / csqc (physics)
 }
 prvm_prog_fieldoffsets_t;
 

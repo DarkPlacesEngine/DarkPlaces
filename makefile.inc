@@ -23,6 +23,11 @@ CPUOPTIMIZATIONS?=
 #CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
 
+# Additional stuff for libode
+LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ $(DP_ODE_STATIC_LIBDIR)/libode.a\ -lstdc++`
+CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ -I$(DP_ODE_STATIC_LIBDIR)/../include\ -DODE_STATIC`
+
+
 SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
 SDLCONFIG_UNIXLIBS?=`$(SDL_CONFIG) --libs`
@@ -191,7 +196,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
@@ -463,6 +468,10 @@ bin-release-profile :
 snd_modplug.o: snd_modplug.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SND_MODPLUG)
+
+world.o: world.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_ODE)
 
 vid_glx.o: vid_glx.c
 	$(CHECKLEVEL2)

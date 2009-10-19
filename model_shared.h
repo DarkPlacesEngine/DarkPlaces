@@ -676,6 +676,9 @@ typedef struct model_brush_s
 	// a mesh containing all shadow casting geometry for the whole model (including submodels), portions of this are referenced by each surface's num_firstshadowmeshtriangle
 	shadowmesh_t *shadowmesh;
 
+	// a mesh containing all SUPERCONTENTS_SOLID surfaces for this model or submodel, for physics engines to use
+	shadowmesh_t *collisionmesh;
+
 	// common functions
 	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
 	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
@@ -965,6 +968,8 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean neighbors, qboolean createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
+
+void Mod_CreateCollisionMesh(dp_model_t *mod);
 
 void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
