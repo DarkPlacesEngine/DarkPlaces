@@ -249,6 +249,11 @@ tag_head,                                         says that the first tag is nam
 tag_torso,                                        second tag name
 tag_weapon,                                       third tag name
 
+How to install a soundtrack in ogg format
+These files must be in ogg or wav format, and numbers begin at 002 if you wish to replace (or install) the Quake cd music - since track 001 was the Quake data track.</p>
+quake/id1/sound/cdtracks/002.ogg                  replacement track for "cd loop 2"
+quake/id1/sound/cdtracks/003.ogg                  replacement track for "cd loop 3"
+
 Example list of filenames:
 quake/id1/progs/player.mdl                        replaces the player model)
 quake/id1/progs/player.mdl_0.skin                 text file that specifies textures to use on an md3 model)
@@ -266,6 +271,8 @@ quake/id1/gfx/conchars.tga                        replacement font image, this w
 quake/id1/gfx/conback.tga                         replacement console background, just like in quake)
 quake/id1/gfx/mainmenu.tga                        replacement main menu image, just like in quake)
 quake/id1/maps/b_bh25.bsp                         replacement for normal health pack, for example this could be an md3 model instead)
+quake/id1/sound/cdtracks/002.ogg                  replacement track for "cd loop 2"
+quake/id1/sound/cdtracks/003.ogg                  replacement track for "cd loop 3"
 
 
 
