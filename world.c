@@ -478,7 +478,8 @@ typedef void dNearCallback (void *data, dGeomID o1, dGeomID o2);
 
 const char*     (ODE_API *dGetConfiguration)(void);
 int             (ODE_API *dCheckConfiguration)( const char* token );
-int             (ODE_API *dInitODE2)(unsigned int uiInitFlags);
+int             (ODE_API *dInitODE)(void);
+//int             (ODE_API *dInitODE2)(unsigned int uiInitFlags);
 int             (ODE_API *dAllocateODEDataForThread)(unsigned int uiAllocateFlags);
 void            (ODE_API *dCleanupODEAllDataForThread)(void);
 void            (ODE_API *dCloseODE)(void);
@@ -943,7 +944,8 @@ static dllfunction_t odefuncs[] =
 {
 	{"dGetConfiguration",							(void **) &dGetConfiguration},
 	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
-	{"dInitODE2",									(void **) &dInitODE2},
+	{"dInitODE",									(void **) &dInitODE},
+//	{"dInitODE2",									(void **) &dInitODE2},
 	{"dAllocateODEDataForThread",					(void **) &dAllocateODEDataForThread},
 	{"dCleanupODEAllDataForThread",					(void **) &dCleanupODEAllDataForThread},
 	{"dCloseODE",									(void **) &dCloseODE},
@@ -1429,7 +1431,8 @@ static void World_Physics_Init(void)
 	if (Sys_LoadLibrary (dllnames, &ode_dll, odefuncs))
 #endif
 	{
-		dInitODE2(0);
+		dInitODE();
+//		dInitODE2(0);
 #ifndef ODE_STATIC
 # ifdef dSINGLE
 		if (!dCheckConfiguration("ODE_single_precision"))
