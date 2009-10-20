@@ -1545,6 +1545,8 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	matrix4x4_t bodymatrix;
 	matrix4x4_t entitymatrix;
 	prvm_eval_t *val;
+	vec3_t angles;
+	vec3_t avelocity;
 	vec3_t forward, left, up;
 	vec3_t origin;
 	vec3_t spinvelocity;
@@ -1575,13 +1577,24 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	Matrix4x4_FromVectors(&bodymatrix, forward, left, up, origin);
 	Matrix4x4_Concat(&entitymatrix, &bodymatrix, &ed->priv.server->ode_offsetimatrix);
 	Matrix4x4_ToVectors(&entitymatrix, forward, left, up, origin);
+
+	AnglesFromVectors(angles, forward, up, true);
+	VectorSet(avelocity, RAD2DEG(spinvelocity[PITCH]), RAD2DEG(spinvelocity[YAW]), RAD2DEG(spinvelocity[ROLL]));
+
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(origin, val->vector);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_forward);if (val) VectorCopy(forward, val->vector);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_left);if (val) VectorCopy(left, val->vector);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_up);if (val) VectorCopy(up, val->vector);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(velocity, val->vector);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(spinvelocity, val->vector);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) AnglesFromVectors(val->vector, forward, up, true);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_forward);if (val) VectorCopy(forward, val->vector);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_left);if (val) VectorCopy(left, val->vector);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_up);if (val) VectorCopy(up, val->vector);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(spinvelocity, val->vector);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(angles, val->vector);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(avelocity, val->vector);
+
+	// values for BodyFromEntity to check if the qc modified anything later
+	VectorCopy(origin, ed->priv.server->ode_origin);
+	VectorCopy(velocity, ed->priv.server->ode_velocity);
+	VectorCopy(angles, ed->priv.server->ode_angles);
+	VectorCopy(avelocity, ed->priv.server->ode_avelocity);
 }
 
 static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
@@ -1598,14 +1611,15 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	int *oe;
 	int axisindex;
 	int modelindex = 0;
-	int movetype;
+	int movetype = MOVETYPE_NONE;
 	int numtriangles;
 	int numvertices;
-	int solid;
+	int solid = SOLID_NOT;
 	int triangleindex;
 	int vertexindex;
 	mempool_t *mempool;
 	prvm_eval_t *val;
+	qboolean modified = false;
 	vec3_t angles;
 	vec3_t avelocity;
 	vec3_t entmaxs;
@@ -1623,20 +1637,22 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec_t massval = 1.0f;
 	vec_t movelimit;
 	vec_t radius;
+	vec_t scale = 1.0f;
 	vec_t spinlimit;
 #ifdef ODE_DYNAMIC
 	if (!ode_dll)
 		return;
 #endif
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.solid);
-	solid = (int)val->_float;
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);
-	movetype = (int)val->_float;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.solid);if (val) solid = (int)val->_float;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val) movetype = (int)val->_float;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val && val->_float) scale = val->_float;
+	modelindex = 0;
 	switch(solid)
 	{
 	case SOLID_BSP:
 		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.modelindex);
-		modelindex = (int)val->_float;
+		if (val)
+			modelindex = (int)val->_float;
 		if (world == &sv.world && modelindex >= 1 && modelindex < MAX_MODELS)
 		{
 			model = sv.models[modelindex];
@@ -1655,8 +1671,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		}
 		if (model)
 		{
-			VectorCopy(model->normalmins, entmins);
-			VectorCopy(model->normalmaxs, entmaxs);
+			VectorScale(model->normalmins, scale, entmins);
+			VectorScale(model->normalmaxs, scale, entmaxs);
 			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.mass);if (val) massval = val->_float;
 		}
 		else
@@ -1700,6 +1716,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	 || ed->priv.server->ode_mass != massval
 	 || ed->priv.server->ode_modelindex != modelindex)
 	{
+		modified = true;
 		World_Physics_RemoveFromEntity(world, ed);
 		ed->priv.server->ode_physics = true;
 		VectorCopy(entmins, ed->priv.server->ode_mins);
@@ -1825,29 +1842,29 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 
 	// get current data from entity
 	VectorClear(origin);
-	VectorClear(forward);
-	VectorClear(left);
-	VectorClear(up);
 	VectorClear(velocity);
-	VectorClear(spinvelocity);
+	//VectorClear(forward);
+	//VectorClear(left);
+	//VectorClear(up);
+	//VectorClear(spinvelocity);
+	VectorClear(angles);
+	VectorClear(avelocity);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(val->vector, origin);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_forward);if (val) VectorCopy(val->vector, forward);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_left);if (val) VectorCopy(val->vector, left);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_up);if (val) VectorCopy(val->vector, up);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(val->vector, velocity);
-	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(val->vector, spinvelocity);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_forward);if (val) VectorCopy(val->vector, forward);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_left);if (val) VectorCopy(val->vector, left);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_up);if (val) VectorCopy(val->vector, up);
+	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(val->vector, spinvelocity);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(val->vector, avelocity);
 
 	// compatibility for legacy entities
-	if (!VectorLength2(forward) || solid == SOLID_BSP)
+	//if (!VectorLength2(forward) || solid == SOLID_BSP)
 	{
-		VectorClear(angles);
-		VectorClear(avelocity);
-		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
-		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(val->vector, avelocity);
 		AngleVectorsFLU(angles, forward, left, up);
 		// convert single-axis rotations in avelocity to spinvelocity
 		// FIXME: untested math - check signs
-		VectorSet(spinvelocity, avelocity[PITCH] * ((float)M_PI / 180.0f), avelocity[ROLL] * ((float)M_PI / 180.0f), avelocity[YAW] * ((float)M_PI / 180.0f));
+		VectorSet(spinvelocity, DEG2RAD(avelocity[PITCH]), DEG2RAD(avelocity[ROLL]), DEG2RAD(avelocity[YAW]));
 	}
 
 	// compatibility for legacy entities
@@ -1856,7 +1873,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	case SOLID_BBOX:
 	case SOLID_SLIDEBOX:
 	case SOLID_CORPSE:
-		//VectorClear(velocity);
 		VectorSet(forward, 1, 0, 0);
 		VectorSet(left, 0, 1, 0);
 		VectorSet(up, 0, 0, 1);
@@ -1864,17 +1880,21 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		break;
 	}
 
+
 	// we must prevent NANs...
 	test = VectorLength2(origin) + VectorLength2(forward) + VectorLength2(left) + VectorLength2(up) + VectorLength2(velocity) + VectorLength2(spinvelocity);
 	if (IS_NAN(test))
 	{
-		Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = '%f %f %f' .velocity = '%f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], velocity[0], velocity[1], velocity[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+		modified = true;
+		//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+		Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
 		test = VectorLength2(origin);
 		if (IS_NAN(test))
 			VectorClear(origin);
 		test = VectorLength2(forward) * VectorLength2(left) * VectorLength2(up);
 		if (IS_NAN(test))
 		{
+			VectorSet(angles, 0, 0, 0);
 			VectorSet(forward, 1, 0, 0);
 			VectorSet(left, 0, 1, 0);
 			VectorSet(up, 0, 0, 1);
@@ -1885,6 +1905,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		test = VectorLength2(spinvelocity);
 		if (IS_NAN(test))
 		{
+			VectorClear(avelocity);
 			VectorClear(spinvelocity);
 		}
 	}
@@ -1894,10 +1915,12 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	test = VectorLength2(velocity);
 	if (test > movelimit*movelimit)
 	{
+		modified = true;
 		// scale down linear velocity to the movelimit
 		// scale down angular velocity the same amount for consistency
 		f = movelimit / sqrt(test);
 		VectorScale(velocity, f, velocity);
+		VectorScale(avelocity, f, avelocity);
 		VectorScale(spinvelocity, f, spinvelocity);
 	}
 
@@ -1905,11 +1928,22 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	spinlimit = physics_ode_spinlimit.value;
 	test = VectorLength2(spinvelocity);
 	if (test > spinlimit)
+	{
+		modified = true;
+		VectorClear(avelocity);
 		VectorClear(spinvelocity);
+	}
 
-	// store the values into the physics engine
+	// check if the qc edited any position data
+	if (!VectorCompare(origin, ed->priv.server->ode_origin)
+	 || !VectorCompare(velocity, ed->priv.server->ode_velocity)
+	 || !VectorCompare(angles, ed->priv.server->ode_angles)
+	 || !VectorCompare(avelocity, ed->priv.server->ode_avelocity))
+		modified = true;
+
+	// store the qc values into the physics engine
 	body = ed->priv.server->ode_body;
-	if (body)
+	if (body && modified)
 	{
 		dVector3 r[3];
 		matrix4x4_t entitymatrix;

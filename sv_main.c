@@ -303,14 +303,13 @@ prvm_required_field_t reqfields[] =
 	//{ev_float, "modelindex"},
 	{ev_vector, "mass"},
 	//{ev_vector, "origin"},
-	//{ev_vector, "angles"},
-	{ev_vector, "axis_forward"},
-	{ev_vector, "axis_left"},
-	{ev_vector, "axis_up"},
-	//{ev_vector, "angles"},
 	//{ev_vector, "velocity"},
+	//{ev_vector, "axis_forward"},
+	//{ev_vector, "axis_left"},
+	//{ev_vector, "axis_up"},
+	//{ev_vector, "spinvelocity"},
+	//{ev_vector, "angles"},
 	//{ev_vector, "avelocity"},
-	{ev_vector, "spinvelocity"},
 
 };
 

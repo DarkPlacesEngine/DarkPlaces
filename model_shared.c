@@ -1345,6 +1345,86 @@ void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int ima
 			Mod_GetTerrainVertexFromBGRA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
 }
 
+#if 0
+void Mod_Terrain_SurfaceRecurseChunk(dp_model_t *model, int stepsize, int x, int y)
+{
+	float mins[3];
+	float maxs[3];
+	float chunkwidth = min(stepsize, model->terrain.width - 1 - x);
+	float chunkheight = min(stepsize, model->terrain.height - 1 - y);
+	float viewvector[3];
+	unsigned int firstvertex;
+	unsigned int *e;
+	float *v;
+	if (chunkwidth < 2 || chunkheight < 2)
+		return;
+	VectorSet(mins, model->terrain.mins[0] +  x    * stepsize * model->terrain.scale[0], model->terrain.mins[1] +  y    * stepsize * model->terrain.scale[1], model->terrain.mins[2]);
+	VectorSet(maxs, model->terrain.mins[0] + (x+1) * stepsize * model->terrain.scale[0], model->terrain.mins[1] + (y+1) * stepsize * model->terrain.scale[1], model->terrain.maxs[2]);
+	viewvector[0] = bound(mins[0], modelorg, maxs[0]) - model->terrain.vieworigin[0];
+	viewvector[1] = bound(mins[1], modelorg, maxs[1]) - model->terrain.vieworigin[1];
+	viewvector[2] = bound(mins[2], modelorg, maxs[2]) - model->terrain.vieworigin[2];
+	if (stepsize > 1 && VectorLength(viewvector) < stepsize*model->terrain.scale[0]*r_terrain_lodscale.value)
+	{
+		// too close for this stepsize, emit as 4 chunks instead
+		stepsize /= 2;
+		Mod_Terrain_SurfaceRecurseChunk(model, stepsize, x, y);
+		Mod_Terrain_SurfaceRecurseChunk(model, stepsize, x+stepsize, y);
+		Mod_Terrain_SurfaceRecurseChunk(model, stepsize, x, y+stepsize);
+		Mod_Terrain_SurfaceRecurseChunk(model, stepsize, x+stepsize, y+stepsize);
+		return;
+	}
+	// emit the geometry at stepsize into our vertex buffer / index buffer
+	// we add two columns and two rows for skirt
+	outwidth = chunkwidth+2;
+	outheight = chunkheight+2;
+	outwidth2 = outwidth-1;
+	outheight2 = outheight-1;
+	outwidth3 = outwidth+1;
+	outheight3 = outheight+1;
+	firstvertex = numvertices;
+	e = model->terrain.element3i + numtriangles;
+	numtriangles += chunkwidth*chunkheight*2+chunkwidth*2*2+chunkheight*2*2;
+	v = model->terrain.vertex3f + numvertices;
+	numvertices += (chunkwidth+1)*(chunkheight+1)+(chunkwidth+1)*2+(chunkheight+1)*2;
+	// emit the triangles (note: the skirt is treated as two extra rows and two extra columns)
+	for (ty = 0;ty < outheight;ty++)
+	{
+		for (tx = 0;tx < outwidth;tx++)
+		{
+			*e++ = firstvertex + (ty  )*outwidth3+(tx  );
+			*e++ = firstvertex + (ty  )*outwidth3+(tx+1);
+			*e++ = firstvertex + (ty+1)*outwidth3+(tx+1);
+			*e++ = firstvertex + (ty  )*outwidth3+(tx  );
+			*e++ = firstvertex + (ty+1)*outwidth3+(tx+1);
+			*e++ = firstvertex + (ty+1)*outwidth3+(tx  );
+		}
+	}
+	// TODO: emit surface vertices (x+tx*stepsize, y+ty*stepsize)
+	for (ty = 0;ty <= outheight;ty++)
+	{
+		skirtrow = ty == 0 || ty == outheight;
+		ry = y+bound(1, ty, outheight)*stepsize;
+		for (tx = 0;tx <= outwidth;tx++)
+		{
+			skirt = skirtrow || tx == 0 || tx == outwidth;
+			rx = x+bound(1, tx, outwidth)*stepsize;
+			v[0] = rx*scale[0];
+			v[1] = ry*scale[1];
+			v[2] = heightmap[ry*terrainwidth+rx]*scale[2];
+			v += 3;
+		}
+	}
+	// TODO: emit skirt vertices
+}
+
+void Mod_Terrain_UpdateSurfacesForViewOrigin(dp_model_t *model)
+{
+	for (y = 0;y < model->terrain.size[1];y += model->terrain.
+	Mod_Terrain_SurfaceRecurseChunk(model, model->terrain.maxstepsize, x, y);
+	Mod_Terrain_BuildChunk(model, 
+}
+#endif
+
 q3wavefunc_t Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
 {
 	if (!strcasecmp(s, "sin"))             return Q3WAVEFUNC_SIN;

@@ -1643,13 +1643,13 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.maxs                           = PRVM_ED_FindFieldOffset("maxs");
 	prog->fieldoffsets.mass                           = PRVM_ED_FindFieldOffset("mass");
 	prog->fieldoffsets.origin                         = PRVM_ED_FindFieldOffset("origin");
-	prog->fieldoffsets.axis_forward                   = PRVM_ED_FindFieldOffset("axis_forward");
-	prog->fieldoffsets.axis_left                      = PRVM_ED_FindFieldOffset("axis_left");
-	prog->fieldoffsets.axis_up                        = PRVM_ED_FindFieldOffset("axis_up");
-	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
 	prog->fieldoffsets.velocity                       = PRVM_ED_FindFieldOffset("velocity");
+	//prog->fieldoffsets.axis_forward                   = PRVM_ED_FindFieldOffset("axis_forward");
+	//prog->fieldoffsets.axis_left                      = PRVM_ED_FindFieldOffset("axis_left");
+	//prog->fieldoffsets.axis_up                        = PRVM_ED_FindFieldOffset("axis_up");
+	//prog->fieldoffsets.spinvelocity                   = PRVM_ED_FindFieldOffset("spinvelocity");
+	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
 	prog->fieldoffsets.avelocity                      = PRVM_ED_FindFieldOffset("avelocity");
-	prog->fieldoffsets.spinvelocity                   = PRVM_ED_FindFieldOffset("spinvelocity");
 
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
