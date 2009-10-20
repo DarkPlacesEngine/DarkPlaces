@@ -480,8 +480,8 @@ const char*     (ODE_API *dGetConfiguration)(void);
 int             (ODE_API *dCheckConfiguration)( const char* token );
 int             (ODE_API *dInitODE)(void);
 //int             (ODE_API *dInitODE2)(unsigned int uiInitFlags);
-int             (ODE_API *dAllocateODEDataForThread)(unsigned int uiAllocateFlags);
-void            (ODE_API *dCleanupODEAllDataForThread)(void);
+//int             (ODE_API *dAllocateODEDataForThread)(unsigned int uiAllocateFlags);
+//void            (ODE_API *dCleanupODEAllDataForThread)(void);
 void            (ODE_API *dCloseODE)(void);
 
 //int             (ODE_API *dMassCheck)(const dMass *m);
@@ -946,8 +946,8 @@ static dllfunction_t odefuncs[] =
 	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
 	{"dInitODE",									(void **) &dInitODE},
 //	{"dInitODE2",									(void **) &dInitODE2},
-	{"dAllocateODEDataForThread",					(void **) &dAllocateODEDataForThread},
-	{"dCleanupODEAllDataForThread",					(void **) &dCleanupODEAllDataForThread},
+//	{"dAllocateODEDataForThread",					(void **) &dAllocateODEDataForThread},
+//	{"dCleanupODEAllDataForThread",					(void **) &dCleanupODEAllDataForThread},
 	{"dCloseODE",									(void **) &dCloseODE},
 //	{"dMassCheck",									(void **) &dMassCheck},
 //	{"dMassSetZero",								(void **) &dMassSetZero},
