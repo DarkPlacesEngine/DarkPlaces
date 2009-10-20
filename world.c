@@ -342,7 +342,8 @@ cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin
 #include "ode/ode.h"
 #else
 #ifdef WINAPI
-#define ODE_API WINAPI
+// ODE does not use WINAPI
+#define ODE_API
 #else
 #define ODE_API
 #endif
