@@ -313,6 +313,15 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 // physics engine support
 //============================================================================
 
+#ifndef ODE_STATIC
+#define ODE_DYNAMIC 1
+#endif
+
+#if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
+#define USEODE 1
+#endif
+
+#ifdef USEODE
 cvar_t physics_ode_quadtree_depth = {0, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
 cvar_t physics_ode_contactsurfacelayer = {0, "physics_ode_contactsurfacelayer","0", "allows objects to overlap this many units to reduce jitter"};
 cvar_t physics_ode_worldquickstep = {0, "physics_ode_worldquickstep","1", "use dWorldQuickStep rather than dWorldStepFast1 or dWorldStep"};
@@ -329,15 +338,6 @@ cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin
 // LordHavoc: this large chunk of definitions comes from the ODE library
 // include files.
 
-#ifndef ODE_STATIC
-#define ODE_DYNAMIC 1
-#endif
-
-#if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
-#define USEODE 1
-#endif
-
-#ifdef USEODE
 #ifdef ODE_STATIC
 #include "ode/ode.h"
 #else
@@ -1397,7 +1397,7 @@ dllhandle_t ode_dll = NULL;
 static void World_Physics_Init(void)
 {
 #ifdef USEODE
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 	const char* dllnames [] =
 	{
 # if defined(WIN64)
@@ -1426,14 +1426,14 @@ static void World_Physics_Init(void)
 	Cvar_RegisterVariable(&physics_ode_movelimit);
 	Cvar_RegisterVariable(&physics_ode_spinlimit);
 
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 	// Load the DLL
 	if (Sys_LoadLibrary (dllnames, &ode_dll, odefuncs))
 #endif
 	{
 		dInitODE();
 //		dInitODE2(0);
-#ifndef ODE_STATIC
+#ifdef ODE_DNYAMIC
 # ifdef dSINGLE
 		if (!dCheckConfiguration("ODE_single_precision"))
 # else
@@ -1456,12 +1456,12 @@ static void World_Physics_Init(void)
 static void World_Physics_Shutdown(void)
 {
 #ifdef USEODE
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 	if (ode_dll)
 #endif
 	{
 		dCloseODE();
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 		Sys_UnloadLibrary(&ode_dll);
 		ode_dll = NULL;
 #endif
@@ -1475,7 +1475,7 @@ static void World_Physics_EnableODE(world_t *world)
 	dVector3 center, extents;
 	if (world->physics.ode)
 		return;
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 	if (!ode_dll)
 		return;
 #endif
@@ -1513,15 +1513,16 @@ static void World_Physics_End(world_t *world)
 
 void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 {
-#ifdef USEODE
 	// entity is not physics controlled, free any physics data
 	ed->priv.server->ode_physics = false;
+#ifdef USEODE
 	if (ed->priv.server->ode_geom)
 		dGeomDestroy((dGeomID)ed->priv.server->ode_geom);
 	ed->priv.server->ode_geom = NULL;
 	if (ed->priv.server->ode_body)
 		dBodyDestroy((dBodyID)ed->priv.server->ode_body);
 	ed->priv.server->ode_body = NULL;
+#endif
 	if (ed->priv.server->ode_vertex3f)
 		Mem_Free(ed->priv.server->ode_vertex3f);
 	ed->priv.server->ode_vertex3f = NULL;
@@ -1530,7 +1531,6 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 		Mem_Free(ed->priv.server->ode_element3i);
 	ed->priv.server->ode_element3i = NULL;
 	ed->priv.server->ode_numtriangles = 0;
-#endif
 }
 
 #ifdef USEODE
@@ -1624,7 +1624,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec_t movelimit;
 	vec_t radius;
 	vec_t spinlimit;
-#ifndef ODE_STATIC
+#ifdef ODE_DYNAMIC
 	if (!ode_dll)
 		return;
 #endif
@@ -1838,10 +1838,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(val->vector, spinvelocity);
 
 	// compatibility for legacy entities
-	switch (solid)
+	if (!VectorLength2(forward) || solid == SOLID_BSP)
 	{
-	case SOLID_BSP:
-		//VectorClear(velocity);
 		VectorClear(angles);
 		VectorClear(avelocity);
 		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
@@ -1850,7 +1848,11 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		// convert single-axis rotations in avelocity to spinvelocity
 		// FIXME: untested math - check signs
 		VectorSet(spinvelocity, avelocity[PITCH] * ((float)M_PI / 180.0f), avelocity[ROLL] * ((float)M_PI / 180.0f), avelocity[YAW] * ((float)M_PI / 180.0f));
-		break;
+	}
+
+	// compatibility for legacy entities
+	switch (solid)
+	{
 	case SOLID_BBOX:
 	case SOLID_SLIDEBOX:
 	case SOLID_CORPSE:
