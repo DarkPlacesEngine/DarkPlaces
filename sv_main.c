@@ -1239,7 +1239,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 			VectorMA(cs->origin, scale, model->rotatedmins, cullmins);
 			VectorMA(cs->origin, scale, model->rotatedmaxs, cullmaxs);
 		}
-		else if (cs->angles[1])
+		else if (cs->angles[1] || ((effects | model->effects) & EF_ROTATE))
 		{
 			VectorMA(cs->origin, scale, model->yawmins, cullmins);
 			VectorMA(cs->origin, scale, model->yawmaxs, cullmaxs);
