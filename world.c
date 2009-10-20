@@ -1442,7 +1442,7 @@ static void World_Physics_Init(void)
 # else
 			Con_Printf("ode library not compiled for double precision - incompatible!  Not using ODE physics.\n");
 # endif
-			Sys_UnloadLibrary(ode_dll);
+			Sys_UnloadLibrary(&ode_dll);
 			ode_dll = NULL;
 		}
 #endif
@@ -1459,7 +1459,7 @@ static void World_Physics_Shutdown(void)
 	{
 		dCloseODE();
 #ifndef ODE_STATIC
-		Sys_UnloadLibrary(ode_dll);
+		Sys_UnloadLibrary(&ode_dll);
 		ode_dll = NULL;
 #endif
 	}
