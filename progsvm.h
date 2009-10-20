@@ -244,6 +244,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int axis_up; // ssqc / csqc (physics)
 	//int angles; // ssqc / csqc (physics)
 	int velocity; // ssqc / csqc (physics)
+	int avelocity; // ssqc / csqc (physics)
 	int spinvelocity; // ssqc / csqc (physics)
 }
 prvm_prog_fieldoffsets_t;
