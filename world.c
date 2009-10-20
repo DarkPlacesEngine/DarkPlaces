@@ -476,8 +476,8 @@ typedef void dNearCallback (void *data, dGeomID o1, dGeomID o2);
 #define dSAP_AXES_ZXY  ((2)|(0<<2)|(1<<4))
 #define dSAP_AXES_ZYX  ((2)|(1<<2)|(0<<4))
 
-const char*     (ODE_API *dGetConfiguration)(void);
-int             (ODE_API *dCheckConfiguration)( const char* token );
+//const char*     (ODE_API *dGetConfiguration)(void);
+//int             (ODE_API *dCheckConfiguration)( const char* token );
 int             (ODE_API *dInitODE)(void);
 //int             (ODE_API *dInitODE2)(unsigned int uiInitFlags);
 //int             (ODE_API *dAllocateODEDataForThread)(unsigned int uiAllocateFlags);
@@ -505,7 +505,7 @@ void            (ODE_API *dMassSetBoxTotal)(dMass *, dReal total_mass, dReal lx,
 dWorldID        (ODE_API *dWorldCreate)(void);
 void            (ODE_API *dWorldDestroy)(dWorldID world);
 void            (ODE_API *dWorldSetGravity)(dWorldID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dWorldGetGravity)(dWorldID, dVector3 gravity);
+void            (ODE_API *dWorldGetGravity)(dWorldID, dVector3 gravity);
 //void            (ODE_API *dWorldSetERP)(dWorldID, dReal erp);
 //dReal           (ODE_API *dWorldGetERP)(dWorldID);
 //void            (ODE_API *dWorldSetCFM)(dWorldID, dReal cfm);
@@ -568,7 +568,7 @@ void            (ODE_API *dWorldStepFast1)(dWorldID, dReal stepsize, int maxiter
 dBodyID         (ODE_API *dBodyCreate)(dWorldID);
 void            (ODE_API *dBodyDestroy)(dBodyID);
 void            (ODE_API *dBodySetData)(dBodyID, void *data);
-//void *          (ODE_API *dBodyGetData)(dBodyID);
+void *          (ODE_API *dBodyGetData)(dBodyID);
 void            (ODE_API *dBodySetPosition)(dBodyID, dReal x, dReal y, dReal z);
 void            (ODE_API *dBodySetRotation)(dBodyID, const dMatrix3 R);
 //void            (ODE_API *dBodySetQuaternion)(dBodyID, const dQuaternion q);
@@ -614,8 +614,8 @@ void            (ODE_API *dBodySetMass)(dBodyID, const dMass *mass);
 //void            (ODE_API *dBodyEnable)(dBodyID);
 //void            (ODE_API *dBodyDisable)(dBodyID);
 //int             (ODE_API *dBodyIsEnabled)(dBodyID);
-//void            (ODE_API *dBodySetGravityMode)(dBodyID b, int mode);
-//int             (ODE_API *dBodyGetGravityMode)(dBodyID b);
+void            (ODE_API *dBodySetGravityMode)(dBodyID b, int mode);
+int             (ODE_API *dBodyGetGravityMode)(dBodyID b);
 //void            (*dBodySetMovedCallback)(dBodyID b, void(ODE_API *callback)(dBodyID));
 //dGeomID         (ODE_API *dBodyGetFirstGeom)(dBodyID b);
 //dGeomID         (ODE_API *dBodyGetNextGeom)(dGeomID g);
@@ -797,7 +797,7 @@ int             (ODE_API *dAreConnectedExcluding)(dBodyID body1, dBodyID body2, 
 dSpaceID        (ODE_API *dSimpleSpaceCreate)(dSpaceID space);
 dSpaceID        (ODE_API *dHashSpaceCreate)(dSpaceID space);
 dSpaceID        (ODE_API *dQuadTreeSpaceCreate)(dSpaceID space, const dVector3 Center, const dVector3 Extents, int Depth);
-dSpaceID        (ODE_API *dSweepAndPruneSpaceCreate)( dSpaceID space, int axisorder );
+//dSpaceID        (ODE_API *dSweepAndPruneSpaceCreate)( dSpaceID space, int axisorder );
 void            (ODE_API *dSpaceDestroy)(dSpaceID);
 //void            (ODE_API *dHashSpaceSetLevels)(dSpaceID space, int minlevel, int maxlevel);
 //void            (ODE_API *dHashSpaceGetLevels)(dSpaceID space, int *minlevel, int *maxlevel);
@@ -942,8 +942,8 @@ dGeomID         (ODE_API *dCreateTriMesh)(dSpaceID space, dTriMeshDataID Data, d
 
 static dllfunction_t odefuncs[] =
 {
-	{"dGetConfiguration",							(void **) &dGetConfiguration},
-	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
+//	{"dGetConfiguration",							(void **) &dGetConfiguration},
+//	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
 	{"dInitODE",									(void **) &dInitODE},
 //	{"dInitODE2",									(void **) &dInitODE2},
 //	{"dAllocateODEDataForThread",					(void **) &dAllocateODEDataForThread},
@@ -970,7 +970,7 @@ static dllfunction_t odefuncs[] =
 	{"dWorldCreate",								(void **) &dWorldCreate},
 	{"dWorldDestroy",								(void **) &dWorldDestroy},
 	{"dWorldSetGravity",							(void **) &dWorldSetGravity},
-//	{"dWorldGetGravity",							(void **) &dWorldGetGravity},
+	{"dWorldGetGravity",							(void **) &dWorldGetGravity},
 //	{"dWorldSetERP",								(void **) &dWorldSetERP},
 //	{"dWorldGetERP",								(void **) &dWorldGetERP},
 //	{"dWorldSetCFM",								(void **) &dWorldSetCFM},
@@ -1033,7 +1033,7 @@ static dllfunction_t odefuncs[] =
 	{"dBodyCreate",									(void **) &dBodyCreate},
 	{"dBodyDestroy",								(void **) &dBodyDestroy},
 	{"dBodySetData",								(void **) &dBodySetData},
-//	{"dBodyGetData",								(void **) &dBodyGetData},
+	{"dBodyGetData",								(void **) &dBodyGetData},
 	{"dBodySetPosition",							(void **) &dBodySetPosition},
 	{"dBodySetRotation",							(void **) &dBodySetRotation},
 //	{"dBodySetQuaternion",							(void **) &dBodySetQuaternion},
@@ -1079,8 +1079,8 @@ static dllfunction_t odefuncs[] =
 //	{"dBodyEnable",									(void **) &dBodyEnable},
 //	{"dBodyDisable",								(void **) &dBodyDisable},
 //	{"dBodyIsEnabled",								(void **) &dBodyIsEnabled},
-//	{"dBodySetGravityMode",							(void **) &dBodySetGravityMode},
-//	{"dBodyGetGravityMode",							(void **) &dBodyGetGravityMode},
+	{"dBodySetGravityMode",							(void **) &dBodySetGravityMode},
+	{"dBodyGetGravityMode",							(void **) &dBodyGetGravityMode},
 //	{"dBodySetMovedCallback",						(void **) &dBodySetMovedCallback},
 //	{"dBodyGetFirstGeom",							(void **) &dBodyGetFirstGeom},
 //	{"dBodyGetNextGeom",							(void **) &dBodyGetNextGeom},
@@ -1261,7 +1261,7 @@ static dllfunction_t odefuncs[] =
 	{"dSimpleSpaceCreate",							(void **) &dSimpleSpaceCreate},
 	{"dHashSpaceCreate",							(void **) &dHashSpaceCreate},
 	{"dQuadTreeSpaceCreate",						(void **) &dQuadTreeSpaceCreate},
-	{"dSweepAndPruneSpaceCreate",					(void **) &dSweepAndPruneSpaceCreate},
+//	{"dSweepAndPruneSpaceCreate",					(void **) &dSweepAndPruneSpaceCreate},
 	{"dSpaceDestroy",								(void **) &dSpaceDestroy},
 //	{"dHashSpaceSetLevels",							(void **) &dHashSpaceSetLevels},
 //	{"dHashSpaceGetLevels",							(void **) &dHashSpaceGetLevels},
@@ -1595,6 +1595,7 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	VectorCopy(velocity, ed->priv.server->ode_velocity);
 	VectorCopy(angles, ed->priv.server->ode_angles);
 	VectorCopy(avelocity, ed->priv.server->ode_avelocity);
+	ed->priv.server->ode_gravity = dBodyGetGravityMode(body);
 }
 
 static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
@@ -1639,6 +1640,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec_t radius;
 	vec_t scale = 1.0f;
 	vec_t spinlimit;
+	qboolean gravity;
 #ifdef ODE_DYNAMIC
 	if (!ode_dll)
 		return;
@@ -1781,8 +1783,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			ed->priv.server->ode_geom = (void *)dCreateTriMesh(world->physics.ode_space, dataID, NULL, NULL, NULL);
 			dGeomSetBody(ed->priv.server->ode_geom, body);
 			dMassSetBoxTotal(&mass, massval, geomsize[0], geomsize[1], geomsize[2]);
-			dBodySetMass(body, &mass);
-			dBodySetData(body, (void*)ed);
 			break;
 		case SOLID_BBOX:
 		case SOLID_SLIDEBOX:
@@ -1794,7 +1794,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			dMassSetBoxTotal(&mass, massval, geomsize[0], geomsize[1], geomsize[2]);
 			dGeomSetBody(ed->priv.server->ode_geom, body);
 			dBodySetMass(body, &mass);
-			dBodySetData(body, (void*)ed);
 			break;
 		case SOLID_PHYSICS_SPHERE:
 			Matrix4x4_CreateTranslate(&ed->priv.server->ode_offsetmatrix, geomcenter[0], geomcenter[1], geomcenter[2]);
@@ -1832,7 +1831,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			dMassSetCapsuleTotal(&mass, massval, axisindex+1, radius, length);
 			dGeomSetBody(ed->priv.server->ode_geom, body);
 			dBodySetMass(body, &mass);
-			dBodySetData(body, (void*)ed);
 			break;
 		default:
 			Sys_Error("World_Physics_BodyFromEntity: unrecognized solid value %i was accepted by filter\n", solid);
@@ -1849,6 +1847,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	//VectorClear(spinvelocity);
 	VectorClear(angles);
 	VectorClear(avelocity);
+	gravity = true;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(val->vector, origin);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(val->vector, velocity);
 	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.axis_forward);if (val) VectorCopy(val->vector, forward);
@@ -1857,6 +1856,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	//val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.spinvelocity);if (val) VectorCopy(val->vector, spinvelocity);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(val->vector, avelocity);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.gravity);if (val) { if(val->_float != 0.0f && val->_float < 0.5f) gravity = false; }
 
 	// compatibility for legacy entities
 	//if (!VectorLength2(forward) || solid == SOLID_BSP)
@@ -1938,7 +1938,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	if (!VectorCompare(origin, ed->priv.server->ode_origin)
 	 || !VectorCompare(velocity, ed->priv.server->ode_velocity)
 	 || !VectorCompare(angles, ed->priv.server->ode_angles)
-	 || !VectorCompare(avelocity, ed->priv.server->ode_avelocity))
+	 || !VectorCompare(avelocity, ed->priv.server->ode_avelocity)
+	 || gravity != ed->priv.server->ode_gravity)
 		modified = true;
 
 	// store the qc values into the physics engine
@@ -1965,6 +1966,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		dBodySetRotation(body, r[0]);
 		dBodySetLinearVel(body, velocity[0], velocity[1], velocity[2]);
 		dBodySetAngularVel(body, spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+		dBodySetGravityMode(body, gravity);
+		dBodySetData(body, (void*)ed);
 		// setting body to NULL makes an immovable object
 		if (movetype != MOVETYPE_PHYSICS)
 			dGeomSetBody(ed->priv.server->ode_geom, 0);
@@ -1981,6 +1984,13 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	dJointID c;
 	int i;
 	int numcontacts;
+	prvm_eval_t *val;
+	float bouncefactor1 = 0.0f;
+	float bouncestop1 = 60.0f / 800.0f;
+	float bouncefactor2 = 0.0f;
+	float bouncestop2 = 60.0f / 800.0f;
+	dVector3 grav;
+	prvm_edict_t *ed;
 
 	if (dGeomIsSpace(o1) || dGeomIsSpace(o2))
 	{
@@ -2004,15 +2014,67 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	if (b1 && b2 && dAreConnectedExcluding(b1, b2, dJointTypeContact))
 		return;
 
+	if(b1)
+	{
+		ed = (prvm_edict_t *) dBodyGetData(b1);
+		if(ed)
+		{
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncefactor);
+			if (val!=0 && val->_float)
+				bouncefactor1 = val->_float;
+
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncestop);
+			if (val!=0 && val->_float)
+				bouncestop1 = val->_float;
+		}
+	}
+
+	if(b2)
+	{
+		ed = (prvm_edict_t *) dBodyGetData(b2);
+		if(ed)
+		{
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncefactor);
+			if (val!=0 && val->_float)
+				bouncefactor2 = val->_float;
+
+			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncestop);
+			if (val!=0 && val->_float)
+				bouncestop2 = val->_float;
+		}
+	}
+
+	// merge bounce factors and bounce stop
+	if(bouncefactor2 > 0)
+	{
+		if(bouncefactor1 > 0)
+		{
+			// TODO possibly better logic to merge bounce factor data?
+			if(bouncestop2 < bouncestop1)
+				bouncestop1 = bouncestop2;
+			if(bouncefactor2 > bouncefactor1)
+				bouncefactor1 = bouncefactor2;
+		}
+		else
+		{
+			bouncestop1 = bouncestop2;
+			bouncefactor1 = bouncefactor2;
+		}
+	}
+	dWorldGetGravity(world->physics.ode_world, grav);
+	bouncestop1 *= fabs(grav[2]);
+
 	// generate contact points between the two non-space geoms
 	numcontacts = dCollide(o1, o2, MAX_CONTACTS, &(contact[0].geom), sizeof(contact[0]));
 	// add these contact points to the simulation
 	for (i = 0;i < numcontacts;i++)
 	{
-		contact[i].surface.mode = (physics_ode_contact_mu.value != -1 ? dContactApprox1 : 0) | (physics_ode_contact_erp.value != -1 ? dContactSoftERP : 0) | (physics_ode_contact_cfm.value != -1 ? dContactSoftCFM : 0);
+		contact[i].surface.mode = (physics_ode_contact_mu.value != -1 ? dContactApprox1 : 0) | (physics_ode_contact_erp.value != -1 ? dContactSoftERP : 0) | (physics_ode_contact_cfm.value != -1 ? dContactSoftCFM : 0) | (bouncefactor1 > 0 ? dContactBounce : 0);
 		contact[i].surface.mu = physics_ode_contact_mu.value;
 		contact[i].surface.soft_erp = physics_ode_contact_erp.value;
 		contact[i].surface.soft_cfm = physics_ode_contact_cfm.value;
+		contact[i].surface.bounce = bouncefactor1;
+		contact[i].surface.bounce_vel = bouncestop1;
 		c = dJointCreateContact(world->physics.ode_world, world->physics.ode_contactgroup, contact + i);
 		dJointAttach(c, b1, b2);
 	}

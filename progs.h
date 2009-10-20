@@ -84,6 +84,7 @@ typedef struct edict_engineprivate_s
 	vec3_t ode_velocity;
 	vec3_t ode_angles;
 	vec3_t ode_avelocity;
+	qboolean ode_gravity;
 	int ode_modelindex;
 	vec_t ode_movelimit; // smallest component of (maxs[]-mins[])
 	matrix4x4_t ode_offsetmatrix;
