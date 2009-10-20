@@ -1845,7 +1845,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		VectorClear(angles);
 		VectorClear(avelocity);
 		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
-		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(val->vector, avelocity);
+		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(val->vector, avelocity);
 		AngleVectorsFLU(angles, forward, left, up);
 		// convert single-axis rotations in avelocity to spinvelocity
 		// FIXME: untested math - check signs
