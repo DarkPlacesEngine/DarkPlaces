@@ -1648,6 +1648,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.axis_up                        = PRVM_ED_FindFieldOffset("axis_up");
 	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
 	prog->fieldoffsets.velocity                       = PRVM_ED_FindFieldOffset("velocity");
+	prog->fieldoffsets.avelocity                      = PRVM_ED_FindFieldOffset("avelocity");
 	prog->fieldoffsets.spinvelocity                   = PRVM_ED_FindFieldOffset("spinvelocity");
 
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
