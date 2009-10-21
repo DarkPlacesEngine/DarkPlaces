@@ -1580,7 +1580,7 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	Matrix4x4_ToVectors(&entitymatrix, forward, left, up, origin);
 
 	AnglesFromVectors(angles, forward, up, true);
-	VectorSet(avelocity, RAD2DEG(spinvelocity[PITCH]), RAD2DEG(spinvelocity[YAW]), RAD2DEG(spinvelocity[ROLL]));
+	VectorSet(avelocity, RAD2DEG(spinvelocity[PITCH]), RAD2DEG(spinvelocity[ROLL]), RAD2DEG(spinvelocity[YAW]));
 
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(origin, val->vector);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(velocity, val->vector);
