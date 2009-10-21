@@ -2534,13 +2534,14 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 		countvertices += surface->num_vertices;
 		countfaces += surface->num_triangles;
 		texname = (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default";
-		for (textureindex = 0;textureindex < maxtextures && texturenames[textureindex*MAX_QPATH];textureindex++)
+		for (textureindex = 0;textureindex < counttextures;textureindex++)
 			if (!strcmp(texturenames + textureindex * MAX_QPATH, texname))
 				break;
+		if (textureindex < counttextures)
+			continue; // already wrote this material entry
 		if (textureindex >= maxtextures)
 			continue; // just a precaution
-		if (counttextures < textureindex + 1)
-			counttextures = textureindex + 1;
+		textureindex = counttextures++;
 		strlcpy(texturenames + textureindex * MAX_QPATH, texname, MAX_QPATH);
 		if (outbufferpos >= outbuffermax >> 1)
 		{
