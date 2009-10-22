@@ -1756,6 +1756,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		movedir[0] = CFM;
 		movedir[2] = ERP;
 	}
+	movedir[1] *= H; // make movedir[1] actually "force per second" to allow this to be used for non-springs
 	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment && VectorCompare(movedir, ed->priv.server->ode_joint_movedir))
 		return; // nothing to do
 	AngleVectorsFLU(angles, forward, left, up);
