@@ -1429,18 +1429,21 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 		{
 			touch = touchedicts[touchindex];
 			modelindex = (unsigned int)touch->fields.server->modelindex;
-			model = sv.models[(int)touch->fields.server->modelindex];
-			// get the entity matrix
-			pitchsign = (model->type == mod_alias) ? -1 : 1;
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
-			Matrix4x4_Invert_Simple(&imatrix, &matrix);
-			// see if the ray hits this entity
-			Matrix4x4_Transform(&imatrix, eye, starttransformed);
-			Matrix4x4_Transform(&imatrix, endpoints[traceindex], endtransformed);
-			if (!model->brush.TraceLineOfSight(model, starttransformed, endtransformed))
+			model = (modelindex >= 1 && modelindex < MAX_MODELS) ? sv.models[(int)touch->fields.server->modelindex] : NULL;
+			if(model && model->brush.TraceLineOfSight)
 			{
-				blocked++;
-				break;
+				// get the entity matrix
+				pitchsign = SV_GetPitchSign(touch);
+				Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
+				Matrix4x4_Invert_Simple(&imatrix, &matrix);
+				// see if the ray hits this entity
+				Matrix4x4_Transform(&imatrix, eye, starttransformed);
+				Matrix4x4_Transform(&imatrix, endpoints[traceindex], endtransformed);
+				if (!model->brush.TraceLineOfSight(model, starttransformed, endtransformed))
+				{
+					blocked++;
+					break;
+				}
 			}
 		}
 		// check if the ray was blocked
@@ -3290,6 +3293,7 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	ed->fields.server->solid = 0;
 
 	World_Physics_RemoveFromEntity(&sv.world, ed);
+	World_Physics_RemoveJointFromEntity(&sv.world, ed);
 
 	// make sure csqc networking is aware of the removed entity
 	e = PRVM_NUM_FOR_EDICT(ed);

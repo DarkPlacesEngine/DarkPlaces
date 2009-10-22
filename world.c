@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // world.c -- world query functions
 
 #include "quakedef.h"
+#include "clvm_cmds.h"
 
 /*
 
@@ -1512,16 +1513,49 @@ static void World_Physics_End(world_t *world)
 #endif
 }
 
+void World_Physics_RemoveJointFromEntity(world_t *world, prvm_edict_t *ed)
+{
+	ed->priv.server->ode_joint_type = 0;
+#ifdef USEODE
+	if(ed->priv.server->ode_joint)
+		dJointDestroy((dJointID)ed->priv.server->ode_joint);
+	ed->priv.server->ode_joint = NULL;
+#endif
+}
+
 void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 {
 	// entity is not physics controlled, free any physics data
+	prvm_edict_t *ed2;
 	ed->priv.server->ode_physics = false;
 #ifdef USEODE
 	if (ed->priv.server->ode_geom)
 		dGeomDestroy((dGeomID)ed->priv.server->ode_geom);
 	ed->priv.server->ode_geom = NULL;
 	if (ed->priv.server->ode_body)
+	{
+		dJointID j;
+		dBodyID b1, b2;
+		while(dBodyGetNumJoints((dBodyID)ed->priv.server->ode_body))
+		{
+			j = dBodyGetJoint((dBodyID)ed->priv.server->ode_body, 0);
+			ed2 = (prvm_edict_t *) dJointGetData(j);
+			b1 = dJointGetBody(j, 0);
+			b2 = dJointGetBody(j, 1);
+			if(b1 == (dBodyID)ed->priv.server->ode_body)
+			{
+				b1 = 0;
+				ed2->priv.server->ode_joint_enemy = 0;
+			}
+			if(b2 == (dBodyID)ed->priv.server->ode_body)
+			{
+				b2 = 0;
+				ed2->priv.server->ode_joint_aiment = 0;
+			}
+			dJointAttach(j, b1, b2);
+		}
 		dBodyDestroy((dBodyID)ed->priv.server->ode_body);
+	}
 	ed->priv.server->ode_body = NULL;
 #endif
 	if (ed->priv.server->ode_vertex3f)
@@ -1552,12 +1586,32 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	vec3_t origin;
 	vec3_t spinvelocity;
 	vec3_t velocity;
+	int jointtype;
 	if (!body)
 		return;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);
 	movetype = (int)val->_float;
 	if (movetype != MOVETYPE_PHYSICS)
+	{
+		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.jointtype);if (val) jointtype = (int)val->_float;
+		switch(jointtype)
+		{
+			// TODO feed back data from physics
+			case JOINTTYPE_POINT:
+				break;
+			case JOINTTYPE_HINGE:
+				break;
+			case JOINTTYPE_SLIDER:
+				break;
+			case JOINTTYPE_UNIVERSAL:
+				break;
+			case JOINTTYPE_HINGE2:
+				break;
+			case JOINTTYPE_PISTON:
+				break;
+		}
 		return;
+	}
 	// store the physics engine data into the entity
 	o = dBodyGetPosition(body);
 	r = dBodyGetRotation(body);
@@ -1579,8 +1633,22 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	Matrix4x4_Concat(&entitymatrix, &bodymatrix, &ed->priv.server->ode_offsetimatrix);
 	Matrix4x4_ToVectors(&entitymatrix, forward, left, up, origin);
 
-	AnglesFromVectors(angles, forward, up, true);
+	AnglesFromVectors(angles, forward, up, false);
 	VectorSet(avelocity, RAD2DEG(spinvelocity[PITCH]), RAD2DEG(spinvelocity[ROLL]), RAD2DEG(spinvelocity[YAW]));
+
+	{
+		float pitchsign = 1;
+		if(!strcmp(prog->name, "server")) // FIXME some better way?
+		{
+			pitchsign = SV_GetPitchSign(ed);
+		}
+		else if(!strcmp(prog->name, "client"))
+		{
+			pitchsign = CL_GetPitchSign(ed);
+		}
+		angles[PITCH] *= pitchsign;
+		avelocity[PITCH] *= pitchsign;
+	}
 
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(origin, val->vector);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(velocity, val->vector);
@@ -1597,6 +1665,109 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	VectorCopy(angles, ed->priv.server->ode_angles);
 	VectorCopy(avelocity, ed->priv.server->ode_avelocity);
 	ed->priv.server->ode_gravity = dBodyGetGravityMode(body);
+}
+
+static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed)
+{
+	dJointID j = 0;
+	dBodyID b1 = 0;
+	dBodyID b2 = 0;
+	int movetype = 0;
+	int jointtype = 0;
+	int enemy = 0, aiment = 0;
+	vec3_t origin, velocity, angles, forward, left, up;
+	prvm_eval_t *val;
+	VectorClear(origin);
+	VectorClear(velocity);
+	VectorClear(angles);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val) movetype = (int)val->_float;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.jointtype);if (val) jointtype = (int)val->_float;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.enemy);if (val) enemy = val->_int;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.aiment);if (val) aiment = val->_int;
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(val->vector, origin);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(val->vector, velocity);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
+	if(movetype == MOVETYPE_PHYSICS)
+		jointtype = 0; // can't have both
+	if(enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].priv.required->free || prog->edicts[enemy].priv.server->ode_body == 0)
+		enemy = 0;
+	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].priv.required->free || prog->edicts[aiment].priv.server->ode_body == 0)
+		aiment = 0;
+	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment)
+		return; // nothing to do
+	AngleVectorsFLU(angles, forward, left, up);
+	switch(jointtype)
+	{
+		case JOINTTYPE_POINT:
+			j = dJointCreateBall(world->physics.ode_world, 0);
+			break;
+		case JOINTTYPE_HINGE:
+			j = dJointCreateHinge(world->physics.ode_world, 0);
+			break;
+		case JOINTTYPE_SLIDER:
+			j = dJointCreateSlider(world->physics.ode_world, 0);
+			break;
+		case JOINTTYPE_UNIVERSAL:
+			j = dJointCreateUniversal(world->physics.ode_world, 0);
+			break;
+		case JOINTTYPE_HINGE2:
+			j = dJointCreateHinge2(world->physics.ode_world, 0);
+			break;
+		case JOINTTYPE_PISTON:
+			j = dJointCreatePiston(world->physics.ode_world, 0);
+			break;
+		case 0:
+		default:
+			// no joint
+			j = 0;
+			break;
+	}
+	ed->priv.server->ode_joint = (void *) j;
+	ed->priv.server->ode_joint_type = jointtype;
+	ed->priv.server->ode_joint_enemy = enemy;
+	ed->priv.server->ode_joint_aiment = aiment;
+	VectorCopy(origin, ed->priv.server->ode_joint_origin);
+	VectorCopy(velocity, ed->priv.server->ode_joint_velocity);
+	VectorCopy(angles, ed->priv.server->ode_joint_angles);
+	if(j)
+	{
+		dJointSetData(j, (void *) ed);
+		if(enemy)
+			b1 = (dBodyID)prog->edicts[enemy].priv.server->ode_body;
+		if(aiment)
+			b2 = (dBodyID)prog->edicts[aiment].priv.server->ode_body;
+		dJointAttach(j, b1, b2);
+		switch(jointtype)
+		{
+			case JOINTTYPE_POINT:
+				dJointSetBallAnchor(j, origin[0], origin[1], origin[2]);
+				break;
+			case JOINTTYPE_HINGE:
+				dJointSetHingeAnchor(j, origin[0], origin[1], origin[2]);
+				dJointSetHingeAxis(j, forward[0], forward[1], forward[2]);
+				break;
+			case JOINTTYPE_SLIDER:
+				dJointSetSliderAxis(j, forward[0], forward[1], forward[2]);
+				break;
+			case JOINTTYPE_UNIVERSAL:
+				dJointSetUniversalAnchor(j, origin[0], origin[1], origin[2]);
+				dJointSetUniversalAxis1(j, forward[0], forward[1], forward[2]);
+				dJointSetUniversalAxis2(j, up[0], up[1], up[2]);
+				break;
+			case JOINTTYPE_HINGE2:
+				dJointSetHinge2Anchor(j, origin[0], origin[1], origin[2]);
+				dJointSetHinge2Axis1(j, forward[0], forward[1], forward[2]);
+				dJointSetHinge2Axis2(j, velocity[0], velocity[1], velocity[2]);
+				break;
+			case JOINTTYPE_PISTON:
+				dJointSetPistonAxis(j, forward[0], forward[1], forward[2]);
+				break;
+			case 0:
+			default:
+				Host_Error("what? but above the joint was valid...\n");
+				break;
+		}
+	}
 }
 
 static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
@@ -1858,6 +2029,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.avelocity);if (val) VectorCopy(val->vector, avelocity);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.gravity);if (val) { if(val->_float != 0.0f && val->_float < 0.5f) gravity = false; }
+	if(ed == prog->edicts)
+		gravity = false;
 
 	// compatibility for legacy entities
 	//if (!VectorLength2(forward) || solid == SOLID_BSP)
@@ -1950,6 +2123,21 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		dVector3 r[3];
 		matrix4x4_t entitymatrix;
 		matrix4x4_t bodymatrix;
+
+		{
+			float pitchsign = 1;
+			if(!strcmp(prog->name, "server")) // FIXME some better way?
+			{
+				pitchsign = SV_GetPitchSign(ed);
+			}
+			else if(!strcmp(prog->name, "client"))
+			{
+				pitchsign = CL_GetPitchSign(ed);
+			}
+			angles[PITCH] *= pitchsign;
+			avelocity[PITCH] *= pitchsign;
+		}
+
 		Matrix4x4_FromVectors(&entitymatrix, forward, left, up, origin);
 		Matrix4x4_Concat(&bodymatrix, &entitymatrix, &ed->priv.server->ode_offsetmatrix);
 		Matrix4x4_ToVectors(&bodymatrix, forward, left, up, origin);
@@ -2092,9 +2280,15 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 
 		// copy physics properties from entities to physics engine
 		if (prog)
+		{
 			for (i = 0, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
 				if (!prog->edicts[i].priv.required->free)
 					World_Physics_Frame_BodyFromEntity(world, ed);
+			// oh, and it must be called after all bodies were created
+			for (i = 0, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
+				if (!prog->edicts[i].priv.required->free)
+					World_Physics_Frame_JointFromEntity(world, ed);
+		}
 
 		world->physics.ode_iterations = bound(1, physics_ode_iterationsperframe.integer, 1000);
 		world->physics.ode_step = frametime / world->physics.ode_iterations;

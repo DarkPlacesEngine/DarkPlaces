@@ -732,6 +732,7 @@ void CL_VM_CB_FreeEdict(prvm_edict_t *ed)
 	World_UnlinkEdict(ed);
 	memset(ed->fields.client, 0, sizeof(*ed->fields.client));
 	World_Physics_RemoveFromEntity(&cl.world, ed);
+	World_Physics_RemoveJointFromEntity(&cl.world, ed);
 }
 
 void CL_VM_CB_CountEdicts(void)

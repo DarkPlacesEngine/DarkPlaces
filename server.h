@@ -555,5 +555,7 @@ void SV_VM_End(void);
 
 const char *Host_TimingReport(void); ///< for output in Host_Status_f
 
+int SV_GetPitchSign(prvm_edict_t *ent);
+
 #endif
 

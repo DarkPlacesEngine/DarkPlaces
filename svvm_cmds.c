@@ -2620,8 +2620,6 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	prvm_eval_t *val;
 	float scale;
 	float pitchsign = 1;
-	int modelindex;
-	dp_model_t *model;
 
 	scale = 1;
 	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
@@ -2632,18 +2630,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + ent->fields.server->view_ofs[2], ent->fields.server->v_angle[0], ent->fields.server->v_angle[1], ent->fields.server->v_angle[2], scale * cl_viewmodel_scale.value);
 	else
 	{
-		if (
-			((modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)ent->fields.server->modelindex]))
-			?
-				model->type == mod_alias
-			:
-				(
-					(((unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
-					||
-					((gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32)))
-				)
-		)
-			pitchsign = -1;
+		pitchsign = SV_GetPitchSign(ent);
 		Matrix4x4_CreateFromQuakeEntity(out, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2], pitchsign * ent->fields.server->angles[0], ent->fields.server->angles[1], ent->fields.server->angles[2], scale);
 	}
 }

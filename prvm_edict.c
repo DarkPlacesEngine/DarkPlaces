@@ -1650,6 +1650,9 @@ void PRVM_FindOffsets(void)
 	//prog->fieldoffsets.spinvelocity                   = PRVM_ED_FindFieldOffset("spinvelocity");
 	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
 	prog->fieldoffsets.avelocity                      = PRVM_ED_FindFieldOffset("avelocity");
+	prog->fieldoffsets.aiment                         = PRVM_ED_FindFieldOffset("aiment");
+	prog->fieldoffsets.enemy                          = PRVM_ED_FindFieldOffset("enemy");
+	prog->fieldoffsets.jointtype                      = PRVM_ED_FindFieldOffset("jointtype");
 
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");

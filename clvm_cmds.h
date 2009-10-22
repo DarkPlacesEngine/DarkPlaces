@@ -1,6 +1,7 @@
 #ifndef __CLVM_CMDS_H__
 #define __CLVM_CMDS_H__
 
+int CL_GetPitchSign(prvm_edict_t *ent);
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex);
 
 /* These are VM built-ins that originate in the client-side programs support
