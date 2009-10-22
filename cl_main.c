@@ -864,7 +864,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
 	int j, k, l, frame;
-	float origin[3], angles[3], delta[3], lerp, d;
+	float origin[3], angles[3], lerp, d;
 	entity_t *t;
 	dp_model_t *model;
 	//entity_persistent_t *p = &e->persistent;
@@ -960,11 +960,23 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		// interpolate the origin and angles
 		lerp = max(0, lerp);
 		VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
+#if 0
+		// this fails at the singularity of euler angles
 		VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
 		if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
 		if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
 		if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
 		VectorMA(e->persistent.oldangles, lerp, delta, angles);
+#else
+		{
+			vec3_t f0, u0, f1, u1;
+			AngleVectors(e->persistent.oldangles, f0, NULL, u0);
+			AngleVectors(e->persistent.newangles, f1, NULL, u1);
+			VectorMAM(1-lerp, f0, lerp, f1, f0);
+			VectorMAM(1-lerp, u0, lerp, u1, u0);
+			AnglesFromVectors(angles, f0, u0, false);
+		}
+#endif
 	}
 	else
 	{
