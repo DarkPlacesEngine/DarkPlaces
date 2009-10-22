@@ -102,6 +102,7 @@ typedef struct edict_engineprivate_s
 	vec3_t ode_joint_origin; // joint anchor
 	vec3_t ode_joint_angles; // joint axis
 	vec3_t ode_joint_velocity; // second joint axis
+	vec3_t ode_joint_movedir; // parameters
 }
 edict_engineprivate_t;
 

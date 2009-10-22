@@ -408,6 +408,49 @@ typedef enum dJointType
 }
 dJointType;
 
+#define D_ALL_PARAM_NAMES(start) \
+  /* parameters for limits and motors */ \
+  dParamLoStop = start, \
+  dParamHiStop, \
+  dParamVel, \
+  dParamFMax, \
+  dParamFudgeFactor, \
+  dParamBounce, \
+  dParamCFM, \
+  dParamStopERP, \
+  dParamStopCFM, \
+  /* parameters for suspension */ \
+  dParamSuspensionERP, \
+  dParamSuspensionCFM, \
+  dParamERP, \
+
+#define D_ALL_PARAM_NAMES_X(start,x) \
+  /* parameters for limits and motors */ \
+  dParamLoStop ## x = start, \
+  dParamHiStop ## x, \
+  dParamVel ## x, \
+  dParamFMax ## x, \
+  dParamFudgeFactor ## x, \
+  dParamBounce ## x, \
+  dParamCFM ## x, \
+  dParamStopERP ## x, \
+  dParamStopCFM ## x, \
+  /* parameters for suspension */ \
+  dParamSuspensionERP ## x, \
+  dParamSuspensionCFM ## x, \
+  dParamERP ## x,
+
+enum {
+  D_ALL_PARAM_NAMES(0)
+  D_ALL_PARAM_NAMES_X(0x100,2)
+  D_ALL_PARAM_NAMES_X(0x200,3)
+
+  /* add a multiple of this constant to the basic parameter numbers to get
+   * the parameters for the second, third etc axes.
+   */
+  dParamGroup=0x100
+};
+
 typedef struct dMass
 {
 	dReal mass;
@@ -668,28 +711,28 @@ dBodyID         (ODE_API *dJointGetBody)(dJointID, int index);
 //dJointFeedback *(ODE_API *dJointGetFeedback)(dJointID);
 void            (ODE_API *dJointSetBallAnchor)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetBallAnchor2)(dJointID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dJointSetBallParam)(dJointID, int parameter, dReal value);
+void            (ODE_API *dJointSetBallParam)(dJointID, int parameter, dReal value);
 void            (ODE_API *dJointSetHingeAnchor)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetHingeAnchorDelta)(dJointID, dReal x, dReal y, dReal z, dReal ax, dReal ay, dReal az);
 void            (ODE_API *dJointSetHingeAxis)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetHingeAxisOffset)(dJointID j, dReal x, dReal y, dReal z, dReal angle);
-//void            (ODE_API *dJointSetHingeParam)(dJointID, int parameter, dReal value);
+void            (ODE_API *dJointSetHingeParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddHingeTorque)(dJointID joint, dReal torque);
 void            (ODE_API *dJointSetSliderAxis)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetSliderAxisDelta)(dJointID, dReal x, dReal y, dReal z, dReal ax, dReal ay, dReal az);
-//void            (ODE_API *dJointSetSliderParam)(dJointID, int parameter, dReal value);
+void            (ODE_API *dJointSetSliderParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddSliderForce)(dJointID joint, dReal force);
 void            (ODE_API *dJointSetHinge2Anchor)(dJointID, dReal x, dReal y, dReal z);
 void            (ODE_API *dJointSetHinge2Axis1)(dJointID, dReal x, dReal y, dReal z);
 void            (ODE_API *dJointSetHinge2Axis2)(dJointID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dJointSetHinge2Param)(dJointID, int parameter, dReal value);
+void            (ODE_API *dJointSetHinge2Param)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddHinge2Torques)(dJointID joint, dReal torque1, dReal torque2);
 void            (ODE_API *dJointSetUniversalAnchor)(dJointID, dReal x, dReal y, dReal z);
 void            (ODE_API *dJointSetUniversalAxis1)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetUniversalAxis1Offset)(dJointID, dReal x, dReal y, dReal z, dReal offset1, dReal offset2);
 void            (ODE_API *dJointSetUniversalAxis2)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetUniversalAxis2Offset)(dJointID, dReal x, dReal y, dReal z, dReal offset1, dReal offset2);
-//void            (ODE_API *dJointSetUniversalParam)(dJointID, int parameter, dReal value);
+void            (ODE_API *dJointSetUniversalParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddUniversalTorques)(dJointID joint, dReal torque1, dReal torque2);
 //void            (ODE_API *dJointSetPRAnchor)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetPRAxis1)(dJointID, dReal x, dReal y, dReal z);
@@ -1133,28 +1176,28 @@ static dllfunction_t odefuncs[] =
 //	{"dJointGetFeedback",							(void **) &dJointGetFeedback},
 	{"dJointSetBallAnchor",							(void **) &dJointSetBallAnchor},
 //	{"dJointSetBallAnchor2",						(void **) &dJointSetBallAnchor2},
-//	{"dJointSetBallParam",							(void **) &dJointSetBallParam},
+	{"dJointSetBallParam",							(void **) &dJointSetBallParam},
 	{"dJointSetHingeAnchor",						(void **) &dJointSetHingeAnchor},
 //	{"dJointSetHingeAnchorDelta",					(void **) &dJointSetHingeAnchorDelta},
 	{"dJointSetHingeAxis",							(void **) &dJointSetHingeAxis},
 //	{"dJointSetHingeAxisOffset",					(void **) &dJointSetHingeAxisOffset},
-//	{"dJointSetHingeParam",							(void **) &dJointSetHingeParam},
+	{"dJointSetHingeParam",							(void **) &dJointSetHingeParam},
 //	{"dJointAddHingeTorque",						(void **) &dJointAddHingeTorque},
 	{"dJointSetSliderAxis",							(void **) &dJointSetSliderAxis},
 //	{"dJointSetSliderAxisDelta",					(void **) &dJointSetSliderAxisDelta},
-//	{"dJointSetSliderParam",						(void **) &dJointSetSliderParam},
+	{"dJointSetSliderParam",						(void **) &dJointSetSliderParam},
 //	{"dJointAddSliderForce",						(void **) &dJointAddSliderForce},
 	{"dJointSetHinge2Anchor",						(void **) &dJointSetHinge2Anchor},
 	{"dJointSetHinge2Axis1",						(void **) &dJointSetHinge2Axis1},
 	{"dJointSetHinge2Axis2",						(void **) &dJointSetHinge2Axis2},
-//	{"dJointSetHinge2Param",						(void **) &dJointSetHinge2Param},
+	{"dJointSetHinge2Param",						(void **) &dJointSetHinge2Param},
 //	{"dJointAddHinge2Torques",						(void **) &dJointAddHinge2Torques},
 	{"dJointSetUniversalAnchor",					(void **) &dJointSetUniversalAnchor},
 	{"dJointSetUniversalAxis1",						(void **) &dJointSetUniversalAxis1},
 //	{"dJointSetUniversalAxis1Offset",				(void **) &dJointSetUniversalAxis1Offset},
 	{"dJointSetUniversalAxis2",						(void **) &dJointSetUniversalAxis2},
 //	{"dJointSetUniversalAxis2Offset",				(void **) &dJointSetUniversalAxis2Offset},
-//	{"dJointSetUniversalParam",						(void **) &dJointSetUniversalParam},
+	{"dJointSetUniversalParam",						(void **) &dJointSetUniversalParam},
 //	{"dJointAddUniversalTorques",					(void **) &dJointAddUniversalTorques},
 //	{"dJointSetPRAnchor",							(void **) &dJointSetPRAnchor},
 //	{"dJointSetPRAxis1",							(void **) &dJointSetPRAxis1},
@@ -1680,7 +1723,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	int movetype = 0;
 	int jointtype = 0;
 	int enemy = 0, aiment = 0;
-	vec3_t origin, velocity, angles, forward, left, up;
+	vec3_t origin, velocity, angles, forward, left, up, movedir;
 	prvm_eval_t *val;
 	VectorClear(origin);
 	VectorClear(velocity);
@@ -1692,13 +1735,14 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.origin);if (val) VectorCopy(val->vector, origin);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.velocity);if (val) VectorCopy(val->vector, velocity);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.angles);if (val) VectorCopy(val->vector, angles);
+	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movedir);if (val) VectorCopy(val->vector, movedir);
 	if(movetype == MOVETYPE_PHYSICS)
 		jointtype = 0; // can't have both
 	if(enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].priv.required->free || prog->edicts[enemy].priv.server->ode_body == 0)
 		enemy = 0;
 	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].priv.required->free || prog->edicts[aiment].priv.server->ode_body == 0)
 		aiment = 0;
-	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment)
+	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment && VectorCompare(movedir, ed->priv.server->ode_joint_movedir))
 		return; // nothing to do
 	AngleVectorsFLU(angles, forward, left, up);
 	switch(jointtype)
@@ -1739,6 +1783,21 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		if(aiment)
 			b2 = (dBodyID)prog->edicts[aiment].priv.server->ode_body;
 		dJointAttach(j, b1, b2);
+#define SETPARAMS(t,id) \
+				if(movedir[0] > 0) \
+					dJointSet##t##Param(j, dParamCFM##id, movedir[0]); \
+				else if(movedir[0] < 0) \
+					dJointSet##t##Param(j, dParamCFM##id, 0); \
+				if(movedir[1] > 0) \
+				{ \
+					dJointSet##t##Param(j, dParamLoStop##id, 0); \
+					dJointSet##t##Param(j, dParamHiStop##id, 0); \
+				} \
+				dJointSet##t##Param(j, dParamFMax##id, movedir[1]); \
+				if(movedir[2] > 0) \
+					dJointSet##t##Param(j, dParamStopERP##id, movedir[2]); \
+				else if(movedir[2] < 0) \
+					dJointSet##t##Param(j, dParamStopERP##id, 0)
 		switch(jointtype)
 		{
 			case JOINTTYPE_POINT:
@@ -1747,19 +1806,25 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 			case JOINTTYPE_HINGE:
 				dJointSetHingeAnchor(j, origin[0], origin[1], origin[2]);
 				dJointSetHingeAxis(j, forward[0], forward[1], forward[2]);
+				SETPARAMS(Hinge,);
 				break;
 			case JOINTTYPE_SLIDER:
 				dJointSetSliderAxis(j, forward[0], forward[1], forward[2]);
+				SETPARAMS(Slider,);
 				break;
 			case JOINTTYPE_UNIVERSAL:
 				dJointSetUniversalAnchor(j, origin[0], origin[1], origin[2]);
 				dJointSetUniversalAxis1(j, forward[0], forward[1], forward[2]);
 				dJointSetUniversalAxis2(j, up[0], up[1], up[2]);
+				SETPARAMS(Universal,);
+				SETPARAMS(Universal,2);
 				break;
 			case JOINTTYPE_HINGE2:
 				dJointSetHinge2Anchor(j, origin[0], origin[1], origin[2]);
 				dJointSetHinge2Axis1(j, forward[0], forward[1], forward[2]);
 				dJointSetHinge2Axis2(j, velocity[0], velocity[1], velocity[2]);
+				SETPARAMS(Hinge2,);
+				SETPARAMS(Hinge2,2);
 				break;
 			case 0:
 			default:
