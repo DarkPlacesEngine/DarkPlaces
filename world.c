@@ -1576,7 +1576,6 @@ void World_Physics_RemoveJointFromEntity(world_t *world, prvm_edict_t *ed)
 void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 {
 	// entity is not physics controlled, free any physics data
-	prvm_edict_t *ed2;
 	ed->priv.server->ode_physics = false;
 #ifdef USEODE
 	if (ed->priv.server->ode_geom)
@@ -1586,6 +1585,7 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 	{
 		dJointID j;
 		dBodyID b1, b2;
+		prvm_edict_t *ed2;
 		while(dBodyGetNumJoints((dBodyID)ed->priv.server->ode_body))
 		{
 			j = dBodyGetJoint((dBodyID)ed->priv.server->ode_body, 0);
