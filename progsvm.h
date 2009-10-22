@@ -249,6 +249,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int jointtype; // ssqc / csqc (physics)
 	int enemy; // ssqc / csqc (physics)
 	int aiment; // ssqc / csqc (physics)
+	int movedir; // ssqc / csqc (physics)
 }
 prvm_prog_fieldoffsets_t;
 
