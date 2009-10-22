@@ -332,6 +332,8 @@ cvar_t physics_ode_worldstepfast_iterations = {0, "physics_ode_worldstepfast_ite
 cvar_t physics_ode_contact_mu = {0, "physics_ode_contact_mu", "1", "contact solver mu parameter - friction pyramid approximation 1 (see ODE User Guide)"};
 cvar_t physics_ode_contact_erp = {0, "physics_ode_contact_erp", "0.96", "contact solver erp parameter - Error Restitution Percent (see ODE User Guide)"};
 cvar_t physics_ode_contact_cfm = {0, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
+cvar_t physics_ode_world_erp = {0, "physics_ode_world_erp", "-1", "world solver erp parameter - Error Restitution Percent (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_cfm = {0, "physics_ode_world_cfm", "-1", "world solver cfm parameter - Constraint Force Mixing (see ODE User Guide); not touched when -1"};
 cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "4", "divisor for time step, runs multiple physics steps per frame"};
 cvar_t physics_ode_movelimit = {0, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls"};
 cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
@@ -1424,6 +1426,8 @@ static void World_Physics_Init(void)
 	Cvar_RegisterVariable(&physics_ode_contact_mu);
 	Cvar_RegisterVariable(&physics_ode_contact_erp);
 	Cvar_RegisterVariable(&physics_ode_contact_cfm);
+	Cvar_RegisterVariable(&physics_ode_world_erp);
+	Cvar_RegisterVariable(&physics_ode_world_cfm);
 	Cvar_RegisterVariable(&physics_ode_iterationsperframe);
 	Cvar_RegisterVariable(&physics_ode_movelimit);
 	Cvar_RegisterVariable(&physics_ode_spinlimit);
@@ -1487,7 +1491,10 @@ static void World_Physics_EnableODE(world_t *world)
 	world->physics.ode_world = dWorldCreate();
 	world->physics.ode_space = dQuadTreeSpaceCreate(NULL, center, extents, bound(1, physics_ode_quadtree_depth.integer, 10));
 	world->physics.ode_contactgroup = dJointGroupCreate(0);
-	// we don't currently set dWorldSetCFM or dWorldSetERP because the defaults seem fine
+	if(physics_ode_world_erp.value >= 0)
+		dWorldSetERP(world->physics.ode_world, physics_ode_world_erp.value);
+	if(physics_ode_world_cfm.value >= 0)
+		dWorldSetCFM(world->physics.ode_world, physics_ode_world_cfm.value);
 }
 #endif
 
@@ -1607,8 +1614,6 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 				break;
 			case JOINTTYPE_HINGE2:
 				break;
-			case JOINTTYPE_PISTON:
-				break;
 		}
 		return;
 	}
@@ -1713,9 +1718,6 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		case JOINTTYPE_HINGE2:
 			j = dJointCreateHinge2(world->physics.ode_world, 0);
 			break;
-		case JOINTTYPE_PISTON:
-			j = dJointCreatePiston(world->physics.ode_world, 0);
-			break;
 		case 0:
 		default:
 			// no joint
@@ -1758,9 +1760,6 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 				dJointSetHinge2Anchor(j, origin[0], origin[1], origin[2]);
 				dJointSetHinge2Axis1(j, forward[0], forward[1], forward[2]);
 				dJointSetHinge2Axis2(j, velocity[0], velocity[1], velocity[2]);
-				break;
-			case JOINTTYPE_PISTON:
-				dJointSetPistonAxis(j, forward[0], forward[1], forward[2]);
 				break;
 			case 0:
 			default:

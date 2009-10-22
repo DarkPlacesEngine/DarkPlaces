@@ -30,7 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define JOINTTYPE_SLIDER 3
 #define JOINTTYPE_UNIVERSAL 4
 #define JOINTTYPE_HINGE2 5
-#define JOINTTYPE_PISTON 6
 
 typedef struct edict_engineprivate_s
 {
