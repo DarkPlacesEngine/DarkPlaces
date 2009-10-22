@@ -1725,6 +1725,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	int enemy = 0, aiment = 0;
 	vec3_t origin, velocity, angles, forward, left, up, movedir;
 	prvm_eval_t *val;
+	float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / world->physics.ode_iterations;
 	VectorClear(origin);
 	VectorClear(velocity);
 	VectorClear(angles);
@@ -1749,7 +1750,6 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	{
 		float K = movedir[0];
 		float D = movedir[2];
-		float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / world->physics.ode_iterations;
 		float R = 2.0 * D * sqrt(K); // we assume D is premultiplied by sqrt(sprungMass)
 		float ERP = (H * K) / (H * K + R);
 		float CFM = 1.0 / (H * K + R);
@@ -1807,8 +1807,10 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 				{ \
 					dJointSet##t##Param(j, dParamLoStop##id, 0); \
 					dJointSet##t##Param(j, dParamHiStop##id, 0); \
+					dJointSet##t##Param(j, dParamFMax##id, movedir[1]); \
 				} \
-				dJointSet##t##Param(j, dParamFMax##id, movedir[1]); \
+				else \
+					dJointSet##t##Param(j, dParamFMax##id, -movedir[1]); \
 				if(movedir[2] > 0) \
 					dJointSet##t##Param(j, dParamStopERP##id, movedir[2]); \
 				else if(movedir[2] < 0) \
