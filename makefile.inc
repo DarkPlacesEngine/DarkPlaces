@@ -25,7 +25,7 @@ CPUOPTIMIZATIONS?=
 
 # Additional stuff for libode
 LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ $(DP_ODE_STATIC_LIBDIR)/libode.a\ -lstdc++`
-CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ -I$(DP_ODE_STATIC_LIBDIR)/../include\ -DODE_STATIC || [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC`
+CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ -I$(DP_ODE_STATIC_LIBDIR)/../include\ -DODE_STATIC || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }`
 
 
 SDL_CONFIG?=sdl-config
