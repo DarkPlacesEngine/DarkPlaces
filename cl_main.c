@@ -1001,6 +1001,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
 	else if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
 		angles[0] = -angles[0];
+		// NOTE: this must be synced to SV_GetPitchSign!
 
 	if ((e->render.effects & EF_ROTATE) && !(e->render.flags & RENDER_VIEWMODEL))
 	{

@@ -25,6 +25,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ENTITYGRIDAREAS 16
 #define MAX_ENTITYCLUSTERS 16
 
+#define JOINTTYPE_POINT 1
+#define JOINTTYPE_HINGE 2
+#define JOINTTYPE_SLIDER 3
+#define JOINTTYPE_UNIVERSAL 4
+#define JOINTTYPE_HINGE2 5
+#define JOINTTYPE_PISTON 6
+
 typedef struct edict_engineprivate_s
 {
 	// true if this edict is unused
@@ -73,6 +80,7 @@ typedef struct edict_engineprivate_s
 	qboolean ode_physics;
 	void *ode_body;
 	void *ode_geom;
+	void *ode_joint;
 	float *ode_vertex3f;
 	int *ode_element3i;
 	int ode_numvertices;
@@ -89,6 +97,12 @@ typedef struct edict_engineprivate_s
 	vec_t ode_movelimit; // smallest component of (maxs[]-mins[])
 	matrix4x4_t ode_offsetmatrix;
 	matrix4x4_t ode_offsetimatrix;
+	int ode_joint_type;
+	int ode_joint_enemy;
+	int ode_joint_aiment;
+	vec3_t ode_joint_origin; // joint anchor
+	vec3_t ode_joint_angles; // joint axis
+	vec3_t ode_joint_velocity; // second joint axis
 }
 edict_engineprivate_t;
 

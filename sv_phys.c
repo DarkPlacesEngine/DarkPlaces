@@ -43,6 +43,25 @@ solid_edge items only clip against bsp models.
 
 void SV_Physics_Toss (prvm_edict_t *ent);
 
+int SV_GetPitchSign(prvm_edict_t *ent)
+{
+	dp_model_t *model;
+	int modelindex;
+	if (
+			((modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
+			?
+			model->type == mod_alias
+			:
+			(
+			 (((unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
+			 ||
+			 ((gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32)))
+			)
+	   )
+		return -1;
+	return 1;
+}
+
 /*
 ===============================================================================
 
@@ -199,19 +218,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
-			//pitchsign = 1;
-			if (
-				((modelindex = (int)touch->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)touch->fields.server->modelindex]))
-				?
-					model->type == mod_alias
-				:
-					(
-						(((unsigned char)PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
-						||
-						((gamemode == GAME_TENEBRAE) && ((unsigned int)touch->fields.server->effects & (16 | 32)))
-					)
-			)
-				pitchsign = -1;
+			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
@@ -374,19 +381,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			// if the modelindex is 0, it shouldn't be SOLID_BSP!
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
-			//pitchsign = 1;
-			if (
-				((modelindex = (int)touch->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)touch->fields.server->modelindex]))
-				?
-					model->type == mod_alias
-				:
-					(
-						(((unsigned char)PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
-						||
-						((gamemode == GAME_TENEBRAE) && ((unsigned int)touch->fields.server->effects & (16 | 32)))
-					)
-			)
-				pitchsign = -1;
+			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
@@ -587,18 +582,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			if (modelindex > 0 && modelindex < MAX_MODELS)
 				model = sv.models[(int)touch->fields.server->modelindex];
 			//pitchsign = 1;
-			if (
-				((modelindex = (int)touch->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[(int)touch->fields.server->modelindex]))
-				?
-					model->type == mod_alias
-				:
-					(
-						(((unsigned char)PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
-						||
-						((gamemode == GAME_TENEBRAE) && ((unsigned int)touch->fields.server->effects & (16 | 32)))
-					)
-			)
-				pitchsign = -1;
+			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], pitchsign * touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);

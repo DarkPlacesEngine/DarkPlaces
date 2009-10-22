@@ -246,6 +246,9 @@ typedef struct prvm_prog_fieldoffsets_s
 	//int spinvelocity; // ssqc / csqc (physics)
 	//int angles; // ssqc / csqc (physics)
 	int avelocity; // ssqc / csqc (physics)
+	int jointtype; // ssqc / csqc (physics)
+	int enemy; // ssqc / csqc (physics)
+	int aiment; // ssqc / csqc (physics)
 }
 prvm_prog_fieldoffsets_t;
 

@@ -119,6 +119,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity);
 // this is called by entity removal
 struct prvm_edict_s;
 void World_Physics_RemoveFromEntity(world_t *world, struct prvm_edict_s *ed);
+void World_Physics_RemoveJointFromEntity(world_t *world, struct prvm_edict_s *ed);
 
 #endif
 
