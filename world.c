@@ -1742,6 +1742,20 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		enemy = 0;
 	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].priv.required->free || prog->edicts[aiment].priv.server->ode_body == 0)
 		aiment = 0;
+	// see http://www.ode.org/old_list_archives/2006-January/017614.html
+	if(movedir[0] > 0)
+	// we want to set ERP? make it fps independent and work like a spring constant
+	// note: if movedir[2] is 0, it becomes ERP = 1, CFM = 1.0 / (H * K)
+	{
+		float K = movedir[0];
+		float D = movedir[2];
+		float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / world->physics.ode_iterations;
+		float R = 2.0 * D * sqrt(K); // we assume D is premultiplied by sqrt(sprungMass)
+		float ERP = (H * K) / (H * K + R);
+		float CFM = 1.0 / (H * K + R);
+		movedir[0] = CFM;
+		movedir[2] = ERP;
+	}
 	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment && VectorCompare(movedir, ed->priv.server->ode_joint_movedir))
 		return; // nothing to do
 	AngleVectorsFLU(angles, forward, left, up);
