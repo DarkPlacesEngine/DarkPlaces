@@ -510,9 +510,9 @@ dWorldID        (ODE_API *dWorldCreate)(void);
 void            (ODE_API *dWorldDestroy)(dWorldID world);
 void            (ODE_API *dWorldSetGravity)(dWorldID, dReal x, dReal y, dReal z);
 void            (ODE_API *dWorldGetGravity)(dWorldID, dVector3 gravity);
-//void            (ODE_API *dWorldSetERP)(dWorldID, dReal erp);
+void            (ODE_API *dWorldSetERP)(dWorldID, dReal erp);
 //dReal           (ODE_API *dWorldGetERP)(dWorldID);
-//void            (ODE_API *dWorldSetCFM)(dWorldID, dReal cfm);
+void            (ODE_API *dWorldSetCFM)(dWorldID, dReal cfm);
 //dReal           (ODE_API *dWorldGetCFM)(dWorldID);
 void            (ODE_API *dWorldStep)(dWorldID, dReal stepsize);
 //void            (ODE_API *dWorldImpulseToForce)(dWorldID, dReal stepsize, dReal ix, dReal iy, dReal iz, dVector3 force);
@@ -610,8 +610,8 @@ void            (ODE_API *dBodySetMass)(dBodyID, const dMass *mass);
 //void            (ODE_API *dBodySetFiniteRotationAxis)(dBodyID, dReal x, dReal y, dReal z);
 //int             (ODE_API *dBodyGetFiniteRotationMode)(dBodyID);
 //void            (ODE_API *dBodyGetFiniteRotationAxis)(dBodyID, dVector3 result);
-//int             (ODE_API *dBodyGetNumJoints)(dBodyID b);
-//dJointID        (ODE_API *dBodyGetJoint)(dBodyID, int index);
+int             (ODE_API *dBodyGetNumJoints)(dBodyID b);
+dJointID        (ODE_API *dBodyGetJoint)(dBodyID, int index);
 //void            (ODE_API *dBodySetDynamic)(dBodyID);
 //void            (ODE_API *dBodySetKinematic)(dBodyID);
 //int             (ODE_API *dBodyIsKinematic)(dBodyID);
@@ -637,12 +637,12 @@ int             (ODE_API *dBodyGetGravityMode)(dBodyID b);
 //void            (ODE_API *dBodySetMaxAngularSpeed)(dBodyID b, dReal max_speed);
 //int             (ODE_API *dBodyGetGyroscopicMode)(dBodyID b);
 //void            (ODE_API *dBodySetGyroscopicMode)(dBodyID b, int enabled);
-//dJointID        (ODE_API *dJointCreateBall)(dWorldID, dJointGroupID);
-//dJointID        (ODE_API *dJointCreateHinge)(dWorldID, dJointGroupID);
-//dJointID        (ODE_API *dJointCreateSlider)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateBall)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateHinge)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateSlider)(dWorldID, dJointGroupID);
 dJointID        (ODE_API *dJointCreateContact)(dWorldID, dJointGroupID, const dContact *);
-//dJointID        (ODE_API *dJointCreateHinge2)(dWorldID, dJointGroupID);
-//dJointID        (ODE_API *dJointCreateUniversal)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateHinge2)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateUniversal)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePR)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePU)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePiston)(dWorldID, dJointGroupID);
@@ -651,7 +651,7 @@ dJointID        (ODE_API *dJointCreateContact)(dWorldID, dJointGroupID, const dC
 //dJointID        (ODE_API *dJointCreateAMotor)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreateLMotor)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePlane2D)(dWorldID, dJointGroupID);
-//void            (ODE_API *dJointDestroy)(dJointID);
+void            (ODE_API *dJointDestroy)(dJointID);
 dJointGroupID   (ODE_API *dJointGroupCreate)(int max_size);
 void            (ODE_API *dJointGroupDestroy)(dJointGroupID);
 void            (ODE_API *dJointGroupEmpty)(dJointGroupID);
@@ -660,34 +660,34 @@ void            (ODE_API *dJointAttach)(dJointID, dBodyID body1, dBodyID body2);
 //void            (ODE_API *dJointEnable)(dJointID);
 //void            (ODE_API *dJointDisable)(dJointID);
 //int             (ODE_API *dJointIsEnabled)(dJointID);
-//void            (ODE_API *dJointSetData)(dJointID, void *data);
-//void *          (ODE_API *dJointGetData)(dJointID);
+void            (ODE_API *dJointSetData)(dJointID, void *data);
+void *          (ODE_API *dJointGetData)(dJointID);
 //dJointType      (ODE_API *dJointGetType)(dJointID);
-//dBodyID         (ODE_API *dJointGetBody)(dJointID, int index);
+dBodyID         (ODE_API *dJointGetBody)(dJointID, int index);
 //void            (ODE_API *dJointSetFeedback)(dJointID, dJointFeedback *);
 //dJointFeedback *(ODE_API *dJointGetFeedback)(dJointID);
-//void            (ODE_API *dJointSetBallAnchor)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetBallAnchor)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetBallAnchor2)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetBallParam)(dJointID, int parameter, dReal value);
-//void            (ODE_API *dJointSetHingeAnchor)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetHingeAnchor)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetHingeAnchorDelta)(dJointID, dReal x, dReal y, dReal z, dReal ax, dReal ay, dReal az);
-//void            (ODE_API *dJointSetHingeAxis)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetHingeAxis)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetHingeAxisOffset)(dJointID j, dReal x, dReal y, dReal z, dReal angle);
 //void            (ODE_API *dJointSetHingeParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddHingeTorque)(dJointID joint, dReal torque);
-//void            (ODE_API *dJointSetSliderAxis)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetSliderAxis)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetSliderAxisDelta)(dJointID, dReal x, dReal y, dReal z, dReal ax, dReal ay, dReal az);
 //void            (ODE_API *dJointSetSliderParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddSliderForce)(dJointID joint, dReal force);
-//void            (ODE_API *dJointSetHinge2Anchor)(dJointID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dJointSetHinge2Axis1)(dJointID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dJointSetHinge2Axis2)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetHinge2Anchor)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetHinge2Axis1)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetHinge2Axis2)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetHinge2Param)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddHinge2Torques)(dJointID joint, dReal torque1, dReal torque2);
-//void            (ODE_API *dJointSetUniversalAnchor)(dJointID, dReal x, dReal y, dReal z);
-//void            (ODE_API *dJointSetUniversalAxis1)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetUniversalAnchor)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetUniversalAxis1)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetUniversalAxis1Offset)(dJointID, dReal x, dReal y, dReal z, dReal offset1, dReal offset2);
-//void            (ODE_API *dJointSetUniversalAxis2)(dJointID, dReal x, dReal y, dReal z);
+void            (ODE_API *dJointSetUniversalAxis2)(dJointID, dReal x, dReal y, dReal z);
 //void            (ODE_API *dJointSetUniversalAxis2Offset)(dJointID, dReal x, dReal y, dReal z, dReal offset1, dReal offset2);
 //void            (ODE_API *dJointSetUniversalParam)(dJointID, int parameter, dReal value);
 //void            (ODE_API *dJointAddUniversalTorques)(dJointID joint, dReal torque1, dReal torque2);
@@ -975,9 +975,9 @@ static dllfunction_t odefuncs[] =
 	{"dWorldDestroy",								(void **) &dWorldDestroy},
 	{"dWorldSetGravity",							(void **) &dWorldSetGravity},
 	{"dWorldGetGravity",							(void **) &dWorldGetGravity},
-//	{"dWorldSetERP",								(void **) &dWorldSetERP},
+	{"dWorldSetERP",								(void **) &dWorldSetERP},
 //	{"dWorldGetERP",								(void **) &dWorldGetERP},
-//	{"dWorldSetCFM",								(void **) &dWorldSetCFM},
+	{"dWorldSetCFM",								(void **) &dWorldSetCFM},
 //	{"dWorldGetCFM",								(void **) &dWorldGetCFM},
 	{"dWorldStep",									(void **) &dWorldStep},
 //	{"dWorldImpulseToForce",						(void **) &dWorldImpulseToForce},
@@ -1075,8 +1075,8 @@ static dllfunction_t odefuncs[] =
 //	{"dBodySetFiniteRotationAxis",					(void **) &dBodySetFiniteRotationAxis},
 //	{"dBodyGetFiniteRotationMode",					(void **) &dBodyGetFiniteRotationMode},
 //	{"dBodyGetFiniteRotationAxis",					(void **) &dBodyGetFiniteRotationAxis},
-//	{"dBodyGetNumJoints",							(void **) &dBodyGetNumJoints},
-//	{"dBodyGetJoint",								(void **) &dBodyGetJoint},
+	{"dBodyGetNumJoints",							(void **) &dBodyGetNumJoints},
+	{"dBodyGetJoint",								(void **) &dBodyGetJoint},
 //	{"dBodySetDynamic",								(void **) &dBodySetDynamic},
 //	{"dBodySetKinematic",							(void **) &dBodySetKinematic},
 //	{"dBodyIsKinematic",							(void **) &dBodyIsKinematic},
@@ -1102,12 +1102,12 @@ static dllfunction_t odefuncs[] =
 //	{"dBodySetMaxAngularSpeed",						(void **) &dBodySetMaxAngularSpeed},
 //	{"dBodyGetGyroscopicMode",						(void **) &dBodyGetGyroscopicMode},
 //	{"dBodySetGyroscopicMode",						(void **) &dBodySetGyroscopicMode},
-//	{"dJointCreateBall",							(void **) &dJointCreateBall},
-//	{"dJointCreateHinge",							(void **) &dJointCreateHinge},
-//	{"dJointCreateSlider",							(void **) &dJointCreateSlider},
+	{"dJointCreateBall",							(void **) &dJointCreateBall},
+	{"dJointCreateHinge",							(void **) &dJointCreateHinge},
+	{"dJointCreateSlider",							(void **) &dJointCreateSlider},
 	{"dJointCreateContact",							(void **) &dJointCreateContact},
-//	{"dJointCreateHinge2",							(void **) &dJointCreateHinge2},
-//	{"dJointCreateUniversal",						(void **) &dJointCreateUniversal},
+	{"dJointCreateHinge2",							(void **) &dJointCreateHinge2},
+	{"dJointCreateUniversal",						(void **) &dJointCreateUniversal},
 //	{"dJointCreatePR",								(void **) &dJointCreatePR},
 //	{"dJointCreatePU",								(void **) &dJointCreatePU},
 //	{"dJointCreatePiston",							(void **) &dJointCreatePiston},
@@ -1116,7 +1116,7 @@ static dllfunction_t odefuncs[] =
 //	{"dJointCreateAMotor",							(void **) &dJointCreateAMotor},
 //	{"dJointCreateLMotor",							(void **) &dJointCreateLMotor},
 //	{"dJointCreatePlane2D",							(void **) &dJointCreatePlane2D},
-//	{"dJointDestroy",								(void **) &dJointDestroy},
+	{"dJointDestroy",								(void **) &dJointDestroy},
 	{"dJointGroupCreate",							(void **) &dJointGroupCreate},
 	{"dJointGroupDestroy",							(void **) &dJointGroupDestroy},
 	{"dJointGroupEmpty",							(void **) &dJointGroupEmpty},
@@ -1125,34 +1125,34 @@ static dllfunction_t odefuncs[] =
 //	{"dJointEnable",								(void **) &dJointEnable},
 //	{"dJointDisable",								(void **) &dJointDisable},
 //	{"dJointIsEnabled",								(void **) &dJointIsEnabled},
-//	{"dJointSetData",								(void **) &dJointSetData},
-//	{"dJointGetData",								(void **) &dJointGetData},
+	{"dJointSetData",								(void **) &dJointSetData},
+	{"dJointGetData",								(void **) &dJointGetData},
 //	{"dJointGetType",								(void **) &dJointGetType},
-//	{"dJointGetBody",								(void **) &dJointGetBody},
+	{"dJointGetBody",								(void **) &dJointGetBody},
 //	{"dJointSetFeedback",							(void **) &dJointSetFeedback},
 //	{"dJointGetFeedback",							(void **) &dJointGetFeedback},
-//	{"dJointSetBallAnchor",							(void **) &dJointSetBallAnchor},
+	{"dJointSetBallAnchor",							(void **) &dJointSetBallAnchor},
 //	{"dJointSetBallAnchor2",						(void **) &dJointSetBallAnchor2},
 //	{"dJointSetBallParam",							(void **) &dJointSetBallParam},
-//	{"dJointSetHingeAnchor",						(void **) &dJointSetHingeAnchor},
+	{"dJointSetHingeAnchor",						(void **) &dJointSetHingeAnchor},
 //	{"dJointSetHingeAnchorDelta",					(void **) &dJointSetHingeAnchorDelta},
-//	{"dJointSetHingeAxis",							(void **) &dJointSetHingeAxis},
+	{"dJointSetHingeAxis",							(void **) &dJointSetHingeAxis},
 //	{"dJointSetHingeAxisOffset",					(void **) &dJointSetHingeAxisOffset},
 //	{"dJointSetHingeParam",							(void **) &dJointSetHingeParam},
 //	{"dJointAddHingeTorque",						(void **) &dJointAddHingeTorque},
-//	{"dJointSetSliderAxis",							(void **) &dJointSetSliderAxis},
+	{"dJointSetSliderAxis",							(void **) &dJointSetSliderAxis},
 //	{"dJointSetSliderAxisDelta",					(void **) &dJointSetSliderAxisDelta},
 //	{"dJointSetSliderParam",						(void **) &dJointSetSliderParam},
 //	{"dJointAddSliderForce",						(void **) &dJointAddSliderForce},
-//	{"dJointSetHinge2Anchor",						(void **) &dJointSetHinge2Anchor},
-//	{"dJointSetHinge2Axis1",						(void **) &dJointSetHinge2Axis1},
-//	{"dJointSetHinge2Axis2",						(void **) &dJointSetHinge2Axis2},
+	{"dJointSetHinge2Anchor",						(void **) &dJointSetHinge2Anchor},
+	{"dJointSetHinge2Axis1",						(void **) &dJointSetHinge2Axis1},
+	{"dJointSetHinge2Axis2",						(void **) &dJointSetHinge2Axis2},
 //	{"dJointSetHinge2Param",						(void **) &dJointSetHinge2Param},
 //	{"dJointAddHinge2Torques",						(void **) &dJointAddHinge2Torques},
-//	{"dJointSetUniversalAnchor",					(void **) &dJointSetUniversalAnchor},
-//	{"dJointSetUniversalAxis1",						(void **) &dJointSetUniversalAxis1},
+	{"dJointSetUniversalAnchor",					(void **) &dJointSetUniversalAnchor},
+	{"dJointSetUniversalAxis1",						(void **) &dJointSetUniversalAxis1},
 //	{"dJointSetUniversalAxis1Offset",				(void **) &dJointSetUniversalAxis1Offset},
-//	{"dJointSetUniversalAxis2",						(void **) &dJointSetUniversalAxis2},
+	{"dJointSetUniversalAxis2",						(void **) &dJointSetUniversalAxis2},
 //	{"dJointSetUniversalAxis2Offset",				(void **) &dJointSetUniversalAxis2Offset},
 //	{"dJointSetUniversalParam",						(void **) &dJointSetUniversalParam},
 //	{"dJointAddUniversalTorques",					(void **) &dJointAddUniversalTorques},
