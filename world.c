@@ -314,9 +314,9 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 // physics engine support
 //============================================================================
 
-#ifndef ODE_STATIC
-#define ODE_DYNAMIC 1
-#endif
+//#ifndef ODE_STATIC
+//#define ODE_DYNAMIC 1
+//#endif
 
 #if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
 #define USEODE 1
