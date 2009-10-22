@@ -764,6 +764,14 @@ void CL_RelinkLightFlashes(void)
 			r_refdef.scene.lightstylevalue[j] = 256;
 			continue;
 		}
+		// static lightstyle "=value"
+		if (cl.lightstyle[j].map[0] == '=')
+		{
+			r_refdef.scene.rtlightstylevalue[j] = atof(cl.lightstyle[j].map + 1);
+			if ( r_lerplightstyles.integer || ((int)f - f) < 0.01)
+				r_refdef.scene.lightstylevalue[j] = r_refdef.scene.rtlightstylevalue[j];
+			continue;
+		}
 		k = i % cl.lightstyle[j].length;
 		l = (i-1) % cl.lightstyle[j].length;
 		k = cl.lightstyle[j].map[k] - 'a';
