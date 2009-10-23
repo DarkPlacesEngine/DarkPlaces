@@ -863,8 +863,8 @@ void            (ODE_API *dSpaceDestroy)(dSpaceID);
 //int             (ODE_API *dSpaceGetClass)(dSpaceID space);
 //
 void            (ODE_API *dGeomDestroy)(dGeomID geom);
-//void            (ODE_API *dGeomSetData)(dGeomID geom, void* data);
-//void *          (ODE_API *dGeomGetData)(dGeomID geom);
+void            (ODE_API *dGeomSetData)(dGeomID geom, void* data);
+void *          (ODE_API *dGeomGetData)(dGeomID geom);
 void            (ODE_API *dGeomSetBody)(dGeomID geom, dBodyID body);
 dBodyID         (ODE_API *dGeomGetBody)(dGeomID geom);
 void            (ODE_API *dGeomSetPosition)(dGeomID geom, dReal x, dReal y, dReal z);
@@ -1713,6 +1713,12 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	VectorCopy(angles, ed->priv.server->ode_angles);
 	VectorCopy(avelocity, ed->priv.server->ode_avelocity);
 	ed->priv.server->ode_gravity = dBodyGetGravityMode(body);
+
+	if(!strcmp(prog->name, "server")) // FIXME some better way?
+	{
+		SV_LinkEdict(ed);
+		SV_LinkEdict_TouchAreaGrid(ed);
+	}
 }
 
 static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed)
@@ -2080,6 +2086,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		Matrix4x4_Invert_Simple(&ed->priv.server->ode_offsetimatrix, &ed->priv.server->ode_offsetmatrix);
 	}
 
+	if(ed->priv.server->ode_geom)
+		dGeomSetData(ed->priv.server->ode_geom, (void*)ed);
 	if (movetype == MOVETYPE_PHYSICS && ed->priv.server->ode_geom)
 	{
 		if (ed->priv.server->ode_body == NULL)
@@ -2185,6 +2193,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		matrix4x4_t entitymatrix;
 		matrix4x4_t bodymatrix;
 
+#if 0
 		Con_Printf("entity %i got changed by QC\n", (int) (ed - prog->edicts));
 		if(!VectorCompare(origin, ed->priv.server->ode_origin))
 			Con_Printf("  origin: %f %f %f -> %f %f %f\n", ed->priv.server->ode_origin[0], ed->priv.server->ode_origin[1], ed->priv.server->ode_origin[2], origin[0], origin[1], origin[2]);
@@ -2196,6 +2205,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			Con_Printf("  avelocity: %f %f %f -> %f %f %f\n", ed->priv.server->ode_avelocity[0], ed->priv.server->ode_avelocity[1], ed->priv.server->ode_avelocity[2], avelocity[0], avelocity[1], avelocity[2]);
 		if(gravity != ed->priv.server->ode_gravity)
 			Con_Printf("  gravity: %i -> %i\n", ed->priv.server->ode_gravity, gravity);
+#endif
 
 		// values for BodyFromEntity to check if the qc modified anything later
 		VectorCopy(origin, ed->priv.server->ode_origin);
@@ -2301,7 +2311,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	float bouncefactor2 = 0.0f;
 	float bouncestop2 = 60.0f / 800.0f;
 	dVector3 grav;
-	prvm_edict_t *ed;
+	prvm_edict_t *ed1, *ed2;
 
 	if (dGeomIsSpace(o1) || dGeomIsSpace(o2))
 	{
@@ -2325,33 +2335,43 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	if (b1 && b2 && dAreConnectedExcluding(b1, b2, dJointTypeContact))
 		return;
 
-	if(b1)
+	ed1 = (prvm_edict_t *) dGeomGetData(o1);
+	if(ed1 && ed1->priv.server->free)
+		ed1 = NULL;
+	if(ed1)
 	{
-		ed = (prvm_edict_t *) dBodyGetData(b1);
-		if(ed)
-		{
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncefactor);
-			if (val!=0 && val->_float)
-				bouncefactor1 = val->_float;
+		val = PRVM_EDICTFIELDVALUE(ed1, prog->fieldoffsets.bouncefactor);
+		if (val!=0 && val->_float)
+			bouncefactor1 = val->_float;
 
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncestop);
-			if (val!=0 && val->_float)
-				bouncestop1 = val->_float;
-		}
+		val = PRVM_EDICTFIELDVALUE(ed1, prog->fieldoffsets.bouncestop);
+		if (val!=0 && val->_float)
+			bouncestop1 = val->_float;
 	}
 
-	if(b2)
+	ed2 = (prvm_edict_t *) dGeomGetData(o2);
+	if(ed2 && ed2->priv.server->free)
+		ed2 = NULL;
+	if(ed2)
 	{
-		ed = (prvm_edict_t *) dBodyGetData(b2);
-		if(ed)
-		{
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncefactor);
-			if (val!=0 && val->_float)
-				bouncefactor2 = val->_float;
+		val = PRVM_EDICTFIELDVALUE(ed2, prog->fieldoffsets.bouncefactor);
+		if (val!=0 && val->_float)
+			bouncefactor2 = val->_float;
 
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.bouncestop);
-			if (val!=0 && val->_float)
-				bouncestop2 = val->_float;
+		val = PRVM_EDICTFIELDVALUE(ed2, prog->fieldoffsets.bouncestop);
+		if (val!=0 && val->_float)
+			bouncestop2 = val->_float;
+	}
+
+	if(!strcmp(prog->name, "server"))
+	{
+		if(ed1 && ed1->fields.server->touch)
+		{
+			SV_LinkEdict_TouchAreaGrid_Call(ed1, ed2 ? ed2 : prog->edicts);
+		}
+		if(ed2 && ed2->fields.server->touch)
+		{
+			SV_LinkEdict_TouchAreaGrid_Call(ed2, ed1 ? ed1 : prog->edicts);
 		}
 	}
 
