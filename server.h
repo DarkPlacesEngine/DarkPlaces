@@ -520,6 +520,7 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
  */
 void SV_LinkEdict(prvm_edict_t *ent);
 void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent);
+void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); // if we detected a touch from another source
 
 /*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
  * returns true if it found a better place
