@@ -691,7 +691,7 @@ dJointID        (ODE_API *dJointCreateUniversal)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePR)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePU)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreatePiston)(dWorldID, dJointGroupID);
-//dJointID        (ODE_API *dJointCreateFixed)(dWorldID, dJointGroupID);
+dJointID        (ODE_API *dJointCreateFixed)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreateNull)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreateAMotor)(dWorldID, dJointGroupID);
 //dJointID        (ODE_API *dJointCreateLMotor)(dWorldID, dJointGroupID);
@@ -1156,7 +1156,7 @@ static dllfunction_t odefuncs[] =
 //	{"dJointCreatePR",								(void **) &dJointCreatePR},
 //	{"dJointCreatePU",								(void **) &dJointCreatePU},
 //	{"dJointCreatePiston",							(void **) &dJointCreatePiston},
-//	{"dJointCreateFixed",							(void **) &dJointCreateFixed},
+	{"dJointCreateFixed",							(void **) &dJointCreateFixed},
 //	{"dJointCreateNull",							(void **) &dJointCreateNull},
 //	{"dJointCreateAMotor",							(void **) &dJointCreateAMotor},
 //	{"dJointCreateLMotor",							(void **) &dJointCreateLMotor},
@@ -1659,6 +1659,8 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 				break;
 			case JOINTTYPE_HINGE2:
 				break;
+			case JOINTTYPE_FIXED:
+				break;
 		}
 		return;
 	}
@@ -1785,6 +1787,9 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		case JOINTTYPE_HINGE2:
 			j = dJointCreateHinge2(world->physics.ode_world, 0);
 			break;
+		case JOINTTYPE_FIXED:
+			j = dJointCreateFixed(world->physics.ode_world, 0);
+			break;
 		case 0:
 		default:
 			// no joint
@@ -1856,6 +1861,8 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 				dJointSetHinge2Axis2(j, velocity[0], velocity[1], velocity[2]);
 				SETPARAMS(Hinge2,);
 				SETPARAMS(Hinge2,2);
+				break;
+			case JOINTTYPE_FIXED:
 				break;
 			case 0:
 			default:
