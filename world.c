@@ -371,6 +371,8 @@ struct dxJointNode;
 struct dxJointGroup;
 struct dxTriMeshData;
 
+#define dInfinity FLT_MAX
+
 typedef struct dxWorld *dWorldID;
 typedef struct dxSpace *dSpaceID;
 typedef struct dxBody *dBodyID;
