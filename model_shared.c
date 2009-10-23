@@ -1263,6 +1263,7 @@ void Mod_CreateCollisionMesh(dp_model_t *mod)
 	if (!mempool && mod->brush.parentmodel)
 		mempool = mod->brush.parentmodel->mempool;
 	// make a single combined collision mesh for physics engine use
+	// TODO rewrite this to use the collision brushes as source, to fix issues with e.g. common/caulk which creates no drawsurface
 	numcollisionmeshtriangles = 0;
 	for (k = 0;k < mod->nummodelsurfaces;k++)
 	{
