@@ -5295,7 +5295,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	// figure out how large a bounding box we need to properly compute this brush
 	maxdist = 0;
 	for (w = 0;w < numplanes;w++)
-		maxdist = max(maxdist, planes[w].dist);
+		maxdist = max(maxdist, fabs(planes[w].dist));
 	// now make it large enough to enclose the entire brush, and round it off to a reasonable multiple of 1024
 	maxdist = floor(maxdist * (4.0 / 1024.0) + 1) * 1024.0;
 	for (planenum = 0, plane = planes;planenum < numplanes;planenum++, plane++)
