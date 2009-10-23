@@ -1731,7 +1731,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	int enemy = 0, aiment = 0;
 	vec3_t origin, velocity, angles, forward, left, up, movedir;
 	prvm_eval_t *val;
-	float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / world->physics.ode_iterations;
+	float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / bound(1, physics_ode_iterationsperframe.integer, 1000);
 	VectorClear(origin);
 	VectorClear(velocity);
 	VectorClear(angles);
@@ -1789,6 +1789,12 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 			j = 0;
 			break;
 	}
+	if(ed->priv.server->ode_joint)
+	{
+		//Con_Printf("deleted old joint %i\n", (int) (ed - prog->edicts));
+		dJointAttach(ed->priv.server->ode_joint, 0, 0);
+		dJointDestroy(ed->priv.server->ode_joint);
+	}
 	ed->priv.server->ode_joint = (void *) j;
 	ed->priv.server->ode_joint_type = jointtype;
 	ed->priv.server->ode_joint_enemy = enemy;
@@ -1799,6 +1805,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	VectorCopy(movedir, ed->priv.server->ode_joint_movedir);
 	if(j)
 	{
+		//Con_Printf("made new joint %i\n", (int) (ed - prog->edicts));
 		dJointSetData(j, (void *) ed);
 		if(enemy)
 			b1 = (dBodyID)prog->edicts[enemy].priv.server->ode_body;
@@ -1806,10 +1813,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 			b2 = (dBodyID)prog->edicts[aiment].priv.server->ode_body;
 		dJointAttach(j, b1, b2);
 #define SETPARAMS(t,id) \
-				if(movedir[0] > 0) \
-					dJointSet##t##Param(j, dParamCFM##id, movedir[0]); \
-				else if(movedir[0] < 0) \
-					dJointSet##t##Param(j, dParamCFM##id, 0); \
+				dJointSet##t##Param(j, dParamStopCFM##id, movedir[0]); \
 				if(movedir[1] > 0) \
 				{ \
 					dJointSet##t##Param(j, dParamLoStop##id, 0); \
@@ -1817,11 +1821,12 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 					dJointSet##t##Param(j, dParamFMax##id, movedir[1]); \
 				} \
 				else \
+				{ \
+					dJointSet##t##Param(j, dParamLoStop##id, -dInfinity); \
+					dJointSet##t##Param(j, dParamHiStop##id, dInfinity); \
 					dJointSet##t##Param(j, dParamFMax##id, -movedir[1]); \
-				if(movedir[2] > 0) \
-					dJointSet##t##Param(j, dParamStopERP##id, movedir[2]); \
-				else if(movedir[2] < 0) \
-					dJointSet##t##Param(j, dParamStopERP##id, 0)
+				} \
+				dJointSet##t##Param(j, dParamStopERP##id, movedir[2])
 		switch(jointtype)
 		{
 			case JOINTTYPE_POINT:
