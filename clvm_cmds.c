@@ -4165,8 +4165,8 @@ VM_CL_ParticleThemeSave,		// #525 void() particlethemesave, void(float theme) pa
 VM_CL_ParticleThemeFree,		// #526 void() particlethemefree (DP_CSQC_SPAWNPARTICLE)
 VM_CL_SpawnParticle,			// #527 float(vector org, vector vel, [float theme]) particle (DP_CSQC_SPAWNPARTICLE)
 VM_CL_SpawnParticleDelayed,		// #528 float(vector org, vector vel, float delay, float collisiondelay, [float theme]) delayedparticle (DP_CSQC_SPAWNPARTICLE)
-NULL,							// #529
-NULL,							// #530
+VM_loadfromdata,				// #529
+VM_loadfromfile,				// #530
 NULL,							// #531
 NULL,							// #532
 NULL,							// #533
@@ -4241,15 +4241,15 @@ NULL,							// #601
 NULL,							// #602
 NULL,							// #603
 NULL,							// #604
-NULL,							// #605
-NULL,							// #606
-NULL,							// #607
+VM_callfunction,				// #605
+VM_writetofile,					// #606
+VM_isfunction,					// #607
 NULL,							// #608
 NULL,							// #609
 NULL,							// #610
 NULL,							// #611
 NULL,							// #612
-NULL,							// #613
+VM_parseentitydata,				// #613
 NULL,							// #614
 NULL,							// #615
 NULL,							// #616
