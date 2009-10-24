@@ -146,74 +146,6 @@ void VM_M_getkeydest(void)
 	}
 }
 
-/*
-=========
-VM_M_callfunction
-
-	callfunction(...,string function_name)
-Extension: pass
-=========
-*/
-mfunction_t *PRVM_ED_FindFunction (const char *name);
-void VM_M_callfunction(void)
-{
-	mfunction_t *func;
-	const char *s;
-
-	VM_SAFEPARMCOUNTRANGE(1, 8, VM_M_callfunction);
-
-	s = PRVM_G_STRING(OFS_PARM0+(prog->argc - 1)*3);
-
-	VM_CheckEmptyString(s);
-
-	func = PRVM_ED_FindFunction(s);
-
-	if(!func)
-		PRVM_ERROR("VM_M_callfunciton: function %s not found !", s);
-	else if (func->first_statement < 0)
-	{
-		// negative statements are built in functions
-		int builtinnumber = -func->first_statement;
-		prog->xfunction->builtinsprofile++;
-		if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
-			prog->builtins[builtinnumber]();
-		else
-			PRVM_ERROR("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, PRVM_NAME);
-	}
-	else if(func - prog->functions > 0)
-	{
-		prog->argc--;
-		PRVM_ExecuteProgram(func - prog->functions,"");
-		prog->argc++;
-	}
-}
-
-/*
-=========
-VM_M_isfunction
-
-float	isfunction(string function_name)
-=========
-*/
-mfunction_t *PRVM_ED_FindFunction (const char *name);
-void VM_M_isfunction(void)
-{
-	mfunction_t *func;
-	const char *s;
-
-	VM_SAFEPARMCOUNT(1, VM_M_isfunction);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-
-	VM_CheckEmptyString(s);
-
-	func = PRVM_ED_FindFunction(s);
-
-	if(!func)
-		PRVM_G_FLOAT(OFS_RETURN) = false;
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = true;
-}
 
 /*
 =========
@@ -1450,9 +1382,9 @@ VM_M_setkeydest,					// #601 void setkeydest(float dest)
 VM_M_getkeydest,					// #602 float getkeydest(void)
 VM_M_setmousetarget,				// #603 void setmousetarget(float trg)
 VM_M_getmousetarget,				// #604 float getmousetarget(void)
-VM_M_callfunction,				// #605 void callfunction(...)
+VM_callfunction,				// #605 void callfunction(...)
 VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
-VM_M_isfunction,					// #607 float isfunction(string function_name)
+VM_isfunction,					// #607 float isfunction(string function_name)
 VM_M_getresolution,				// #608 vector getresolution(float number, [float forfullscreen])
 VM_keynumtostring,				// #609 string keynumtostring(float keynum)
 VM_findkeysforcommand,		// #610 string findkeysforcommand(string command)

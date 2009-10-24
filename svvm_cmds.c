@@ -71,6 +71,7 @@ char *vm_sv_extensions =
 "DP_QC_CVAR_TYPE "
 "DP_QC_EDICT_NUM "
 "DP_QC_ENTITYDATA "
+"DP_QC_ENTITYSTRING "
 "DP_QC_ETOS "
 "DP_QC_EXTRESPONSEPACKET "
 "DP_QC_FINDCHAIN "
@@ -3604,8 +3605,8 @@ NULL,							// #525
 NULL,							// #526
 NULL,							// #527
 NULL,							// #528
-NULL,							// #529
-NULL,							// #530
+VM_loadfromdata,				// #529
+VM_loadfromfile,				// #530
 VM_SV_setpause,					// #531 void(float pause) setpause = #531;
 NULL,							// #532
 NULL,							// #533
@@ -3680,15 +3681,15 @@ NULL,							// #601
 NULL,							// #602
 NULL,							// #603
 NULL,							// #604
-NULL,							// #605
-NULL,							// #606
-NULL,							// #607
+VM_callfunction,				// #605
+VM_writetofile,					// #606
+VM_isfunction,					// #607
 NULL,							// #608
 NULL,							// #609
 NULL,							// #610
 NULL,							// #611
 NULL,							// #612
-NULL,							// #613
+VM_parseentitydata,				// #613
 NULL,							// #614
 NULL,							// #615
 NULL,							// #616

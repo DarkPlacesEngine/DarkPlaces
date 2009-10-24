@@ -5295,3 +5295,72 @@ void VM_getextresponse (void)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(net_extresponse[first]);
 	}
 }
+
+/*
+=========
+VM_M_callfunction
+
+	callfunction(...,string function_name)
+Extension: pass
+=========
+*/
+mfunction_t *PRVM_ED_FindFunction (const char *name);
+void VM_callfunction(void)
+{
+	mfunction_t *func;
+	const char *s;
+
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_callfunction);
+
+	s = PRVM_G_STRING(OFS_PARM0+(prog->argc - 1)*3);
+
+	VM_CheckEmptyString(s);
+
+	func = PRVM_ED_FindFunction(s);
+
+	if(!func)
+		PRVM_ERROR("VM_callfunciton: function %s not found !", s);
+	else if (func->first_statement < 0)
+	{
+		// negative statements are built in functions
+		int builtinnumber = -func->first_statement;
+		prog->xfunction->builtinsprofile++;
+		if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
+			prog->builtins[builtinnumber]();
+		else
+			PRVM_ERROR("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, PRVM_NAME);
+	}
+	else if(func - prog->functions > 0)
+	{
+		prog->argc--;
+		PRVM_ExecuteProgram(func - prog->functions,"");
+		prog->argc++;
+	}
+}
+
+/*
+=========
+VM_isfunction
+
+float	isfunction(string function_name)
+=========
+*/
+mfunction_t *PRVM_ED_FindFunction (const char *name);
+void VM_isfunction(void)
+{
+	mfunction_t *func;
+	const char *s;
+
+	VM_SAFEPARMCOUNT(1, VM_isfunction);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+
+	VM_CheckEmptyString(s);
+
+	func = PRVM_ED_FindFunction(s);
+
+	if(!func)
+		PRVM_G_FLOAT(OFS_RETURN) = false;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = true;
+}
