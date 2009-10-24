@@ -1739,6 +1739,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	VectorClear(origin);
 	VectorClear(velocity);
 	VectorClear(angles);
+	VectorClear(movedir);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val) movetype = (int)val->_float;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.jointtype);if (val) jointtype = (int)val->_float;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.enemy);if (val) enemy = val->_int;
