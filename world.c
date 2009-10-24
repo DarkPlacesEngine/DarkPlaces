@@ -1618,6 +1618,9 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 		Mem_Free(ed->priv.server->ode_element3i);
 	ed->priv.server->ode_element3i = NULL;
 	ed->priv.server->ode_numtriangles = 0;
+	if(ed->priv.server->ode_massbuf)
+		Mem_Free(ed->priv.server->ode_massbuf);
+	ed->priv.server->ode_massbuf = NULL;
 }
 
 #ifdef USEODE
@@ -1958,6 +1961,12 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val) movetype = (int)val->_float;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale);if (val && val->_float) scale = val->_float;
 	modelindex = 0;
+	if (world == &sv.world)
+		mempool = sv_mempool;
+	else if (world == &cl.world)
+		mempool = cls.levelmempool;
+	else
+		mempool = NULL;
 	switch(solid)
 	{
 	case SOLID_BSP:
@@ -1967,17 +1976,14 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		if (world == &sv.world && modelindex >= 1 && modelindex < MAX_MODELS)
 		{
 			model = sv.models[modelindex];
-			mempool = sv_mempool;
 		}
 		else if (world == &cl.world && modelindex >= 1 && modelindex < MAX_MODELS)
 		{
 			model = cl.model_precache[modelindex];
-			mempool = cls.levelmempool;
 		}
 		else
 		{
 			model = NULL;
-			mempool = NULL;
 			modelindex = 0;
 		}
 		if (model)
@@ -2133,6 +2139,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			Sys_Error("World_Physics_BodyFromEntity: unrecognized solid value %i was accepted by filter\n", solid);
 		}
 		Matrix4x4_Invert_Simple(&ed->priv.server->ode_offsetimatrix, &ed->priv.server->ode_offsetmatrix);
+		ed->priv.server->ode_massbuf = Mem_Alloc(mempool, sizeof(mass));
+		memcpy(ed->priv.server->ode_massbuf, &mass, sizeof(dMass));
 	}
 
 	if(ed->priv.server->ode_geom)
@@ -2144,12 +2152,20 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			ed->priv.server->ode_body = (void *)(body = dBodyCreate(world->physics.ode_world));
 			dGeomSetBody(ed->priv.server->ode_geom, body);
 			dBodySetData(body, (void*)ed);
-			dBodySetMass(body, &mass);
+			dBodySetMass(body, (dMass *) ed->priv.server->ode_massbuf);
+			modified = true;
 		}
 	}
 	else
 	{
-		// let's keep the body around in case we need it again (in case QC toggles between MOVETYPE_PHYSICS and MOVETYPE_NONE)
+		if (ed->priv.server->ode_body != NULL)
+		{
+			if(ed->priv.server->ode_geom)
+				dGeomSetBody(ed->priv.server->ode_geom, 0);
+			dBodyDestroy((dBodyID) ed->priv.server->ode_body);
+			ed->priv.server->ode_body = NULL;
+			modified = true;
+		}
 	}
 
 	// get current data from entity
@@ -2177,10 +2193,26 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	// compatibility for legacy entities
 	//if (!VectorLength2(forward) || solid == SOLID_BSP)
 	{
-		AngleVectorsFLU(angles, forward, left, up);
+		float pitchsign = 1;
+		vec3_t qangles, qavelocity;
+		VectorCopy(angles, qangles);
+		VectorCopy(avelocity, qavelocity);
+
+		if(!strcmp(prog->name, "server")) // FIXME some better way?
+		{
+			pitchsign = SV_GetPitchSign(ed);
+		}
+		else if(!strcmp(prog->name, "client"))
+		{
+			pitchsign = CL_GetPitchSign(ed);
+		}
+		qangles[PITCH] *= pitchsign;
+		qavelocity[PITCH] *= pitchsign;
+
+		AngleVectorsFLU(qangles, forward, left, up);
 		// convert single-axis rotations in avelocity to spinvelocity
 		// FIXME: untested math - check signs
-		VectorSet(spinvelocity, DEG2RAD(avelocity[PITCH]), DEG2RAD(avelocity[ROLL]), DEG2RAD(avelocity[YAW]));
+		VectorSet(spinvelocity, DEG2RAD(qavelocity[PITCH]), DEG2RAD(qavelocity[ROLL]), DEG2RAD(qavelocity[YAW]));
 	}
 
 	// compatibility for legacy entities
@@ -2236,7 +2268,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 
 	// store the qc values into the physics engine
 	body = ed->priv.server->ode_body;
-	if (modified)
+	if (modified && ed->priv.server->ode_geom)
 	{
 		dVector3 r[3];
 		matrix4x4_t entitymatrix;
@@ -2263,20 +2295,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		VectorCopy(avelocity, ed->priv.server->ode_avelocity);
 		ed->priv.server->ode_gravity = gravity;
 
-		{
-			float pitchsign = 1;
-			if(!strcmp(prog->name, "server")) // FIXME some better way?
-			{
-				pitchsign = SV_GetPitchSign(ed);
-			}
-			else if(!strcmp(prog->name, "client"))
-			{
-				pitchsign = CL_GetPitchSign(ed);
-			}
-			angles[PITCH] *= pitchsign;
-			avelocity[PITCH] *= pitchsign;
-		}
-
 		Matrix4x4_FromVectors(&entitymatrix, forward, left, up, origin);
 		Matrix4x4_Concat(&bodymatrix, &entitymatrix, &ed->priv.server->ode_offsetmatrix);
 		Matrix4x4_ToVectors(&bodymatrix, forward, left, up, origin);
@@ -2293,7 +2311,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		{
 			if(movetype == MOVETYPE_PHYSICS)
 			{
-				dGeomSetBody(ed->priv.server->ode_geom, ed->priv.server->ode_body);
+				dGeomSetBody(ed->priv.server->ode_geom, body);
 				dBodySetPosition(body, origin[0], origin[1], origin[2]);
 				dBodySetRotation(body, r[0]);
 				dBodySetLinearVel(body, velocity[0], velocity[1], velocity[2]);
@@ -2302,9 +2320,13 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			}
 			else
 			{
+				dGeomSetBody(ed->priv.server->ode_geom, body);
+				dBodySetPosition(body, origin[0], origin[1], origin[2]);
+				dBodySetRotation(body, r[0]);
+				dBodySetLinearVel(body, velocity[0], velocity[1], velocity[2]);
+				dBodySetAngularVel(body, spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+				dBodySetGravityMode(body, gravity);
 				dGeomSetBody(ed->priv.server->ode_geom, 0);
-				dGeomSetPosition(ed->priv.server->ode_geom, origin[0], origin[1], origin[2]);
-				dGeomSetRotation(ed->priv.server->ode_geom, r[0]);
 			}
 		}
 		else
