@@ -1734,8 +1734,8 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	int jointtype = 0;
 	int enemy = 0, aiment = 0;
 	vec3_t origin, velocity, angles, forward, left, up, movedir;
+	vec_t CFM, ERP, FMax, Stop, Vel;
 	prvm_eval_t *val;
-	float H = (!strcmp(prog->name, "server") ? sv.frametime : cl.mtime[0] - cl.mtime[1]) / bound(1, physics_ode_iterationsperframe.integer, 1000);
 	VectorClear(origin);
 	VectorClear(velocity);
 	VectorClear(angles);
@@ -1755,19 +1755,35 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].priv.required->free || prog->edicts[aiment].priv.server->ode_body == 0)
 		aiment = 0;
 	// see http://www.ode.org/old_list_archives/2006-January/017614.html
-	if(movedir[0] > 0)
 	// we want to set ERP? make it fps independent and work like a spring constant
 	// note: if movedir[2] is 0, it becomes ERP = 1, CFM = 1.0 / (H * K)
+	if(movedir[0] > 0 && movedir[1] > 0)
 	{
 		float K = movedir[0];
-		float D = movedir[2];
+		float D = movedir[1];
 		float R = 2.0 * D * sqrt(K); // we assume D is premultiplied by sqrt(sprungMass)
-		float ERP = (H * K) / (H * K + R);
-		float CFM = 1.0 / (H * K + R);
-		movedir[0] = CFM;
-		movedir[2] = ERP;
+		CFM = 1.0 / (world->physics.ode_step * K + R); // always > 0
+		ERP = world->physics.ode_step * K * CFM;
+		Vel = 0;
+		FMax = 0;
+		Stop = movedir[2];
 	}
-	movedir[1] *= H; // make movedir[1] actually "force per second" to allow this to be used for non-springs
+	else if(movedir[1] < 0)
+	{
+		CFM = 0;
+		ERP = 0;
+		Vel = movedir[0];
+		FMax = -movedir[1]; // TODO do we need to multiply with world.physics.ode_step?
+		Stop = movedir[2] > 0 ? movedir[2] : dInfinity;
+	}
+	else // movedir[0] > 0, movedir[1] == 0 or movedir[0] < 0, movedir[1] >= 0
+	{
+		CFM = 0;
+		ERP = 0;
+		Vel = 0;
+		FMax = 0;
+		Stop = dInfinity;
+	}
 	if(jointtype == ed->priv.server->ode_joint_type && VectorCompare(origin, ed->priv.server->ode_joint_origin) && VectorCompare(velocity, ed->priv.server->ode_joint_velocity) && VectorCompare(angles, ed->priv.server->ode_joint_angles) && enemy == ed->priv.server->ode_joint_enemy && aiment == ed->priv.server->ode_joint_aiment && VectorCompare(movedir, ed->priv.server->ode_joint_movedir))
 		return; // nothing to do
 	AngleVectorsFLU(angles, forward, left, up);
@@ -1820,21 +1836,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 		if(aiment)
 			b2 = (dBodyID)prog->edicts[aiment].priv.server->ode_body;
 		dJointAttach(j, b1, b2);
-#define SETPARAMS(t,id) \
-				dJointSet##t##Param(j, dParamStopCFM##id, movedir[0]); \
-				if(movedir[1] > 0) \
-				{ \
-					dJointSet##t##Param(j, dParamLoStop##id, 0); \
-					dJointSet##t##Param(j, dParamHiStop##id, 0); \
-					dJointSet##t##Param(j, dParamFMax##id, movedir[1]); \
-				} \
-				else \
-				{ \
-					dJointSet##t##Param(j, dParamLoStop##id, -dInfinity); \
-					dJointSet##t##Param(j, dParamHiStop##id, dInfinity); \
-					dJointSet##t##Param(j, dParamFMax##id, -movedir[1]); \
-				} \
-				dJointSet##t##Param(j, dParamStopERP##id, movedir[2])
+
 		switch(jointtype)
 		{
 			case JOINTTYPE_POINT:
@@ -1843,33 +1845,65 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 			case JOINTTYPE_HINGE:
 				dJointSetHingeAnchor(j, origin[0], origin[1], origin[2]);
 				dJointSetHingeAxis(j, forward[0], forward[1], forward[2]);
-				SETPARAMS(Hinge,);
+				dJointSetHingeParam(j, dParamFMax, FMax);
+				dJointSetHingeParam(j, dParamHiStop, Stop);
+				dJointSetHingeParam(j, dParamLoStop, -Stop);
+				dJointSetHingeParam(j, dParamStopCFM, CFM);
+				dJointSetHingeParam(j, dParamStopERP, ERP);
+				dJointSetHingeParam(j, dParamVel, Vel);
 				break;
 			case JOINTTYPE_SLIDER:
 				dJointSetSliderAxis(j, forward[0], forward[1], forward[2]);
-				SETPARAMS(Slider,);
+				dJointSetSliderParam(j, dParamFMax, FMax);
+				dJointSetSliderParam(j, dParamHiStop, Stop);
+				dJointSetSliderParam(j, dParamLoStop, -Stop);
+				dJointSetSliderParam(j, dParamStopCFM, CFM);
+				dJointSetSliderParam(j, dParamStopERP, ERP);
+				dJointSetSliderParam(j, dParamVel, Vel);
 				break;
 			case JOINTTYPE_UNIVERSAL:
 				dJointSetUniversalAnchor(j, origin[0], origin[1], origin[2]);
 				dJointSetUniversalAxis1(j, forward[0], forward[1], forward[2]);
 				dJointSetUniversalAxis2(j, up[0], up[1], up[2]);
-				SETPARAMS(Universal,);
-				SETPARAMS(Universal,2);
+				dJointSetUniversalParam(j, dParamFMax, FMax);
+				dJointSetUniversalParam(j, dParamHiStop, Stop);
+				dJointSetUniversalParam(j, dParamLoStop, -Stop);
+				dJointSetUniversalParam(j, dParamStopCFM, CFM);
+				dJointSetUniversalParam(j, dParamStopERP, ERP);
+				dJointSetUniversalParam(j, dParamVel, Vel);
+				dJointSetUniversalParam(j, dParamFMax2, FMax);
+				dJointSetUniversalParam(j, dParamHiStop2, Stop);
+				dJointSetUniversalParam(j, dParamLoStop2, -Stop);
+				dJointSetUniversalParam(j, dParamStopCFM2, CFM);
+				dJointSetUniversalParam(j, dParamStopERP2, ERP);
+				dJointSetUniversalParam(j, dParamVel2, Vel);
 				break;
 			case JOINTTYPE_HINGE2:
 				dJointSetHinge2Anchor(j, origin[0], origin[1], origin[2]);
 				dJointSetHinge2Axis1(j, forward[0], forward[1], forward[2]);
 				dJointSetHinge2Axis2(j, velocity[0], velocity[1], velocity[2]);
-				SETPARAMS(Hinge2,);
-				SETPARAMS(Hinge2,2);
+				dJointSetHinge2Param(j, dParamFMax, FMax);
+				dJointSetHinge2Param(j, dParamHiStop, Stop);
+				dJointSetHinge2Param(j, dParamLoStop, -Stop);
+				dJointSetHinge2Param(j, dParamStopCFM, CFM);
+				dJointSetHinge2Param(j, dParamStopERP, ERP);
+				dJointSetHinge2Param(j, dParamVel, Vel);
+				dJointSetHinge2Param(j, dParamFMax2, FMax);
+				dJointSetHinge2Param(j, dParamHiStop2, Stop);
+				dJointSetHinge2Param(j, dParamLoStop2, -Stop);
+				dJointSetHinge2Param(j, dParamStopCFM2, CFM);
+				dJointSetHinge2Param(j, dParamStopERP2, ERP);
+				dJointSetHinge2Param(j, dParamVel2, Vel);
 				break;
 			case JOINTTYPE_FIXED:
 				break;
 			case 0:
 			default:
-				Host_Error("what? but above the joint was valid...\n");
+				Sys_Error("what? but above the joint was valid...\n");
 				break;
 		}
+#undef SETPARAMS
+
 	}
 }
 
@@ -2435,6 +2469,10 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 		int i;
 		prvm_edict_t *ed;
 
+		world->physics.ode_iterations = bound(1, physics_ode_iterationsperframe.integer, 1000);
+		world->physics.ode_step = frametime / world->physics.ode_iterations;
+		world->physics.ode_movelimit = physics_ode_movelimit.value / world->physics.ode_step;
+
 		// copy physics properties from entities to physics engine
 		if (prog)
 		{
@@ -2447,9 +2485,6 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 					World_Physics_Frame_JointFromEntity(world, ed);
 		}
 
-		world->physics.ode_iterations = bound(1, physics_ode_iterationsperframe.integer, 1000);
-		world->physics.ode_step = frametime / world->physics.ode_iterations;
-		world->physics.ode_movelimit = physics_ode_movelimit.value / world->physics.ode_step;
 		for (i = 0;i < world->physics.ode_iterations;i++)
 		{
 			// set the gravity
