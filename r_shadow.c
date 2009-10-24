@@ -4189,8 +4189,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			if ((r_shadow_shadowmapmaxsize >> i) > lodlinear)
 				r_shadow_shadowmaplod = i;
 
-		size = r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE ? r_shadow_shadowmapmaxsize >> r_shadow_shadowmaplod : lodlinear;
-		size = bound(1, size, r_shadow_shadowmapmaxsize);
+		if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
+			size = max(1, r_shadow_shadowmapmaxsize >> r_shadow_shadowmaplod);
+		else
+			size = bound(r_shadow_shadowmapborder, lodlinear, r_shadow_shadowmapmaxsize);
+			
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
 
 		if (numsurfaces)
