@@ -546,8 +546,6 @@ void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, int border, float nearclip, float farclip, const float *nearplane)
 {
 	matrix4x4_t tempmatrix, basematrix;
-	if (border > size - 2)
-		border = size - 2;
 	memset(v, 0, sizeof(*v));
 	v->type = R_VIEWPORTTYPE_PERSPECTIVECUBESIDE;
 	v->cameramatrix = *cameramatrix;
