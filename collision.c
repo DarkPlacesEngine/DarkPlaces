@@ -629,10 +629,10 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 	vec4_t endplane;
 	vec4_t newimpactplane;
 	texture_t *hittexture = NULL;
-	vec_t startdepth = trace->startdepth;
+	vec_t startdepth = 1;
 	vec3_t startdepthnormal;
 
-	VectorCopy(trace->startdepthnormal, startdepthnormal);
+	VectorClear(startdepthnormal);
 	Vector4Clear(newimpactplane);
 
 	// Separating Axis Theorem:
@@ -686,10 +686,10 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
-		if (startdist < 0 && trace->startdepth < startdist)
+		if (startdist < 0 && (startdepth < startdist || startdepth == 1))
 		{
-			trace->startdepth = startdist;
-			VectorCopy(startplane, trace->startdepthnormal);
+			startdepth = startdist;
+			VectorCopy(startplane, startdepthnormal);
 		}
 
 		if (startdist > enddist)
@@ -803,7 +803,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 				trace->allsolid = true;
 			VectorCopy(newimpactplane, trace->plane.normal);
 			trace->plane.dist = newimpactplane[3];
-			if (trace->startdepth < startdepth)
+			if (trace->startdepth > startdepth)
 			{
 				trace->startdepth = startdepth;
 				VectorCopy(startdepthnormal, trace->startdepthnormal);
@@ -822,10 +822,10 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	vec4_t endplane;
 	vec4_t newimpactplane;
 	texture_t *hittexture = NULL;
-	vec_t startdepth = trace->startdepth;
+	vec_t startdepth = 1;
 	vec3_t startdepthnormal;
 
-	VectorCopy(trace->startdepthnormal, startdepthnormal);
+	VectorClear(startdepthnormal);
 	Vector4Clear(newimpactplane);
 
 	// Separating Axis Theorem:
@@ -849,10 +849,10 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
-		if (startdist < 0 && trace->startdepth < startdist)
+		if (startdist < 0 && (startdepth < startdist || startdepth == 1))
 		{
-			trace->startdepth = startdist;
-			VectorCopy(startplane, trace->startdepthnormal);
+			startdepth = startdist;
+			VectorCopy(startplane, startdepthnormal);
 		}
 
 		if (startdist > enddist)
@@ -949,7 +949,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 				trace->allsolid = true;
 			VectorCopy(newimpactplane, trace->plane.normal);
 			trace->plane.dist = newimpactplane[3];
-			if (trace->startdepth < startdepth)
+			if (trace->startdepth > startdepth)
 			{
 				trace->startdepth = startdepth;
 				VectorCopy(startdepthnormal, trace->startdepthnormal);
@@ -1806,6 +1806,11 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 		cliptrace->startsolid = true;
 		if (cliptrace->realfraction == 1)
 			cliptrace->ent = touch;
+		if (cliptrace->startdepth > trace->startdepth)
+		{
+			cliptrace->startdepth = trace->startdepth;
+			VectorCopy(trace->startdepthnormal, cliptrace->startdepthnormal);
+		}
 	}
 	// don't set this except on the world, because it can easily confuse
 	// monsters underwater if there's a bmodel involved in the trace
