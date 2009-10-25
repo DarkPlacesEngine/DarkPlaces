@@ -4385,7 +4385,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 {
 	q3dbrush_t *in;
 	q3mbrush_t *out;
-	int i, j, n, c, count, maxplanes;
+	int i, j, n, c, count, maxplanes, q3surfaceflags;
 	colplanef_t *planes;
 
 	in = (q3dbrush_t *)(mod_base + l->fileofs);
@@ -4421,15 +4421,17 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 				Mem_Free(planes);
 			planes = (colplanef_t *)Mem_Alloc(tempmempool, sizeof(colplanef_t) * maxplanes);
 		}
+		q3surfaceflags = 0;
 		for (j = 0;j < out->numbrushsides;j++)
 		{
 			VectorCopy(out->firstbrushside[j].plane->normal, planes[j].normal);
 			planes[j].dist = out->firstbrushside[j].plane->dist;
 			planes[j].q3surfaceflags = out->firstbrushside[j].texture->surfaceflags;
 			planes[j].texture = out->firstbrushside[j].texture;
+			q3surfaceflags |= planes[j].q3surfaceflags;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, q3surfaceflags, out->texture);
 
 		// this whole loop can take a while (e.g. on redstarrepublic4)
 		CL_KeepaliveMessage(false);
