@@ -1482,8 +1482,11 @@ Returns true if the push did not result in the entity being teleported by QC cod
 static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink)
 {
 	int type;
+	int bump;
+	vec3_t original;
 	vec3_t end;
 
+	VectorCopy(ent->fields.server->origin, original);
 	VectorAdd (ent->fields.server->origin, push, end);
 
 	if (ent->fields.server->movetype == MOVETYPE_FLYMISSILE)
@@ -1494,8 +1497,21 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 		type = MOVE_NORMAL;
 
 	*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
+	bump = 0;
+	while (trace->startsolid && sv_gameplayfix_nudgeoutofsolid.integer)
+	{
+		VectorMA(ent->fields.server->origin, -trace->startdepth, trace->startdepthnormal, ent->fields.server->origin);
+		*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
+		bump++;
+		if (bump > 10)
+		{
+			VectorCopy(original, ent->fields.server->origin);
+			break;
+		}
+	}
 	if (trace->bmodelstartsolid && failonbmodelstartsolid)
 		return true;
+
 
 	VectorCopy (trace->endpos, ent->fields.server->origin);
 	SV_LinkEdict(ent);
