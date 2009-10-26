@@ -24,8 +24,8 @@ CPUOPTIMIZATIONS?=
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
 
 # Additional stuff for libode
-LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ $(DP_ODE_STATIC_LIBDIR)/libode.a\ -lstdc++`
-CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo \ -I$(DP_ODE_STATIC_LIBDIR)/../include\ -DODE_STATIC || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }`
+LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --libs` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -lstdc++`
+CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --cflags || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -DODE_STATIC`
 
 
 SDL_CONFIG?=sdl-config
