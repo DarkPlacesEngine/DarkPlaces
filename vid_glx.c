@@ -1102,7 +1102,10 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 				modes[k].width = vidmodes[i]->hdisplay;
 				modes[k].height = vidmodes[i]->vdisplay;
 				modes[k].bpp = 8;
-				modes[k].refreshrate = vidmodes[i]->dotclock / vidmodes[i]->htotal / vidmodes[i]->vtotal;
+				if(vidmodes[i]->dotclock && vidmodes[i]->htotal && vidmodes[i]->vtotal)
+					modes[k].refreshrate = vidmodes[i]->dotclock / vidmodes[i]->htotal / vidmodes[i]->vtotal;
+				else
+					modes[k].refreshrate = 60;
 				modes[k].pixelheight_num = 1;
 				modes[k].pixelheight_denom = 1; // xvidmode does not provide this
 				++k;
