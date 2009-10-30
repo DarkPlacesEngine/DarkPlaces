@@ -235,13 +235,14 @@ char *Sys_ConsoleInput(void)
 		timeout.tv_usec = 0;
 		if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
 		{
-			len = read (0, text, sizeof(text));
+			len = read (0, text, sizeof(text) - 1);
 			if (len >= 1)
 			{
 				// rip off the \n and terminate
 				// div0: WHY? console code can deal with \n just fine
 				// this caused problems with pasting stuff into a terminal window
-				// text[len-1] = 0;
+				// so, not ripping off the \n, but STILL keeping a NUL terminator
+				text[len] = 0;
 				return text;
 			}
 		}
