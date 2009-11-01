@@ -1500,7 +1500,8 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	bump = 0;
 	while (trace->startsolid && sv_gameplayfix_nudgeoutofsolid.integer)
 	{
-		VectorMA(ent->fields.server->origin, -trace->startdepth, trace->startdepthnormal, ent->fields.server->origin);
+		vec_t nudge = -trace->startdepth + sv_gameplayfix_nudgeoutofsolid_bias.value;
+		VectorMA(ent->fields.server->origin, nudge, trace->startdepthnormal, ent->fields.server->origin);
 		*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
 		bump++;
 		if (bump > 10)
