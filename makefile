@@ -184,7 +184,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 endif
 
 ifeq ($(WIN32RELEASE), 1)
-	CPUOPTIMIZATIONS="-march=i686 -DSUPPORTDIRECTX -DUSE_WSPIAPI_H"
+	CPUOPTIMIZATIONS=-march=i686 -DSUPPORTDIRECTX -DUSE_WSPIAPI_H
 endif
 
 ##### Sound configuration #####
