@@ -3,10 +3,13 @@
 
 #ifdef WIN32
 // Windows XP or higher is required for getaddrinfo, but the inclusion of wspiapi provides fallbacks for older versions
-#define _WIN32_WINNT 0x0501
-#include <winsock2.h>
-#include <ws2tcpip.h>
-//#include <wspiapi.h>
+# define _WIN32_WINNT 0x0501
+# include <winsock2.h>
+# ifdef USE_WSPIAPI_H
+#  include <wspiapi.h>
+# else
+#  include <ws2tcpip.h>
+# endif
 #endif
 
 #ifndef STANDALONETEST
