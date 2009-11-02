@@ -2,7 +2,7 @@
 #include "quakedef.h"
 #include "polygon.h"
 
-#define COLLISION_EDGEDIR_DIST_EPSILON (1.0f / 1048576.0f)
+#define COLLISION_EDGEDIR_DOT_EPSILON (0.999f)
 #define COLLISION_SNAPSCALE (32.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
 #define COLLISION_SNAP2 (2.0f / COLLISION_SNAPSCALE)
@@ -308,9 +308,18 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 
 			// check if there is already a matching edgedir (no duplicates)
 			for (m = 0;m < numedgedirsbuf;m++)
-				if (VectorDistance2(dir, edgedirsbuf[m].v) < COLLISION_EDGEDIR_DIST_EPSILON)
+				if (DotProduct(dir, edgedirsbuf[m].v) >= COLLISION_EDGEDIR_DOT_EPSILON)
 					break;
+			// skip this if there is
+			if (m < numedgedirsbuf)
+				continue;
 
+			// try again with negated edgedir
+			VectorNegate(dir, dir);
+			// check if there is already a matching edgedir (no duplicates)
+			for (m = 0;m < numedgedirsbuf;m++)
+				if (DotProduct(dir, edgedirsbuf[m].v) >= COLLISION_EDGEDIR_DOT_EPSILON)
+					break;
 			// if there is no match, add a new one
 			if (m == numedgedirsbuf)
 			{
@@ -1228,7 +1237,7 @@ static unsigned int brushforbox_index = 0;
 // note: this relies on integer overflow to be consistent with modulo
 // MAX_BRUSHFORBOX, or in other words, MAX_BRUSHFORBOX must be a power of two!
 static colpointf_t brushforbox_point[MAX_BRUSHFORBOX*8];
-static colpointf_t brushforbox_edgedir[MAX_BRUSHFORBOX*6];
+static colpointf_t brushforbox_edgedir[MAX_BRUSHFORBOX*3];
 static colplanef_t brushforbox_plane[MAX_BRUSHFORBOX*6];
 static colbrushf_t brushforbox_brush[MAX_BRUSHFORBOX];
 static colbrushf_t brushforpoint_brush[MAX_BRUSHFORBOX];
@@ -1239,10 +1248,10 @@ void Collision_InitBrushForBox(void)
 	for (i = 0;i < MAX_BRUSHFORBOX;i++)
 	{
 		brushforbox_brush[i].numpoints = 8;
-		brushforbox_brush[i].numedgedirs = 6;
+		brushforbox_brush[i].numedgedirs = 3;
 		brushforbox_brush[i].numplanes = 6;
 		brushforbox_brush[i].points = brushforbox_point + i * 8;
-		brushforbox_brush[i].edgedirs = brushforbox_edgedir + i * 6;
+		brushforbox_brush[i].edgedirs = brushforbox_edgedir + i * 3;
 		brushforbox_brush[i].planes = brushforbox_plane + i * 6;
 		brushforpoint_brush[i].numpoints = 1;
 		brushforpoint_brush[i].numedgedirs = 0;
@@ -1257,6 +1266,7 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 {
 	int i, j;
 	vec3_t v;
+	vec3_t origin;
 	colbrushf_t *brush;
 	if (brushforbox_brush[0].numpoints == 0)
 		Collision_InitBrushForBox();
@@ -1278,17 +1288,23 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 			v[2] = i & 4 ? maxs[2] : mins[2];
 			Matrix4x4_Transform(matrix, v, brush->points[i].v);
 		}
-		// FIXME: optimize!
+
+		// there are only 3 distinct edgedirs for a box, each an axis vector
+		Matrix4x4_ToVectors(matrix, brush->edgedirs[0].v, brush->edgedirs[1].v, brush->edgedirs[2].v, origin);
+
+		// the 6 planes of a brush are based on the axis vectors
+		VectorCopy(brush->edgedirs[0].v, brush->planes[0].normal);
+		VectorNegate(brush->edgedirs[0].v, brush->planes[1].normal);
+		VectorCopy(brush->edgedirs[1].v, brush->planes[2].normal);
+		VectorNegate(brush->edgedirs[1].v, brush->planes[3].normal);
+		VectorCopy(brush->edgedirs[2].v, brush->planes[4].normal);
+		VectorNegate(brush->edgedirs[2].v, brush->planes[5].normal);
 		for (i = 0;i < 6;i++)
 		{
-			VectorClear(v);
-			v[i >> 1] = i & 1 ? 1 : -1;
-			Matrix4x4_Transform3x3(matrix, v, brush->planes[i].normal);
-			VectorNormalize(brush->planes[i].normal);
 			brush->planes[i].q3surfaceflags = q3surfaceflags;
 			brush->planes[i].texture = texture;
-			VectorCopy(brush->planes[i].normal, brush->edgedirs[i].v);
 		}
+
 	}
 	brush->supercontents = supercontents;
 	brush->q3surfaceflags = q3surfaceflags;
