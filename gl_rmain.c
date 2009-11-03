@@ -259,22 +259,6 @@ void FOG_clear(void)
 	r_refdef.fog_end = 0;
 }
 
-float FogForDistance(vec_t dist)
-{
-	unsigned int fogmasktableindex = (unsigned int)(dist * r_refdef.fogmasktabledistmultiplier);
-	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
-}
-
-float FogPoint_World(const vec3_t p)
-{
-	return FogForDistance(VectorDistance((p), r_refdef.view.origin));
-}
-
-float FogPoint_Model(const vec3_t p)
-{
-	return FogForDistance(VectorDistance((p), rsurface.modelorg) * Matrix4x4_ScaleFromMatrix(&rsurface.matrix));
-}
-
 static void R_BuildBlankTextures(void)
 {
 	unsigned char data[4];
@@ -1486,10 +1470,10 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAPRECT = 1<<11, ///< (lightsource) use shadowmap rectangle texture as light filter
 	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<12, ///< (lightsource) use shadowmap cubemap texture as light filter
 	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, //< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<15, //< (lightsource) use higher quality percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<16, //< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<17, //< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, ///< (lightsource) use percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<15, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWSAMPLER = 1<<16, ///< (lightsource) use hardware shadowmap test
+	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<17, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
 	SHADERPERMUTATION_LIMIT = 1<<18, ///< size of permutations array
 	SHADERPERMUTATION_COUNT = 18 ///< size of shaderpermutationinfo array
 }
@@ -2236,7 +2220,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 	}
 	if (r_glsl_permutation->loc_SceneBrightness >= 0) qglUniform1fARB(r_glsl_permutation->loc_SceneBrightness, r_refdef.view.colorscale);
-	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.modelorg[0], rsurface.modelorg[1], rsurface.modelorg[2]);
+	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
 	if (r_glsl_permutation->loc_Color_Pants >= 0)
 	{
 		if (rsurface.texture->currentskinframe->pants)
@@ -4939,6 +4923,9 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
 
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2]; //
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
 	vertex3f[ 6] = mins[0];vertex3f[ 7] = maxs[1];vertex3f[ 8] = mins[2];
@@ -4952,7 +4939,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	{
 		for (i = 0, v = vertex3f, c = color4f;i < 8;i++, v += 3, c += 4)
 		{
-			f1 = FogPoint_World(v);
+			f1 = RSurf_FogVertex(v);
 			f2 = 1 - f1;
 			c[0] = c[0] * f1 + r_refdef.fogcolor[0] * f2;
 			c[1] = c[1] * f1 + r_refdef.fogcolor[1] * f2;
@@ -5071,6 +5058,10 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	int i;
 	float f1, f2, *c;
 	float color4f[6*4];
+
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	// this is only called once per entity so numsurfaces is always 1, and
 	// surfacelist is always {0}, so this code does not handle batches
 	R_Mesh_Matrix(&ent->matrix);
@@ -5102,7 +5093,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 		R_Mesh_ColorPointer(color4f, 0, 0);
 		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-		f1 = FogPoint_World(org);
+		f1 = RSurf_FogVertex(org);
 		f2 = 1 - f1;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 		{
@@ -5173,8 +5164,11 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	float fog = 1.0f;
 	float vertex3f[12];
 
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	if (r_refdef.fogenabled && !depthdisable) // TODO maybe make the unfog effect a separate flag?
-		fog = FogPoint_World(origin);
+		fog = RSurf_FogVertex(origin);
 
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(blendfunc1, blendfunc2);
@@ -5738,7 +5732,7 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.matrix = identitymatrix;
 	rsurface.inversematrix = identitymatrix;
 	R_Mesh_Matrix(&identitymatrix);
-	VectorCopy(r_refdef.view.origin, rsurface.modelorg);
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
 	VectorSet(rsurface.modellight_ambient, 0, 0, 0);
 	VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
 	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
@@ -5805,7 +5799,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.matrix = ent->matrix;
 	rsurface.inversematrix = ent->inversematrix;
 	R_Mesh_Matrix(&rsurface.matrix);
-	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.modelorg);
+	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
 	rsurface.modellight_ambient[0] = ent->modellight_ambient[0] * ent->colormod[0];
 	rsurface.modellight_ambient[1] = ent->modellight_ambient[1] * ent->colormod[1];
 	rsurface.modellight_ambient[2] = ent->modellight_ambient[2] * ent->colormod[2];
@@ -5914,6 +5908,14 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject;
 	rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset;
 	rsurface.texcoordtexture2f = rsurface.modeltexcoordtexture2f;
+}
+
+float RSurf_FogVertex(const float *v)
+{
+	float len = VectorDistance(rsurface.localvieworigin, v);
+	unsigned int fogmasktableindex;
+	fogmasktableindex = (unsigned int)(len * r_refdef.fogmasktabledistmultiplier);
+	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
 static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
@@ -6115,7 +6117,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 					VectorSubtract(end, start, up);
 					VectorNormalize(up);
 					// calculate a forward vector to use instead of the original plane normal (this is how we get a new right vector)
-					VectorSubtract(rsurface.modelorg, center, forward);
+					VectorSubtract(rsurface.localvieworigin, center, forward);
 					//Matrix4x4_Transform3x3(&rsurface.inversematrix, r_refdef.view.forward, forward);
 					VectorNegate(forward, forward);
 					VectorReflect(forward, 0, up, forward);
@@ -6301,7 +6303,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 
 				float viewer[3], d, reflected[3], worldreflected[3];
 
-				VectorSubtract(rsurface.modelorg, vertex, viewer);
+				VectorSubtract(rsurface.localvieworigin, vertex, viewer);
 				// VectorNormalize(viewer);
 
 				d = DotProduct(normal, viewer);
@@ -6651,7 +6653,7 @@ static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **t
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
 			{
-				f = FogPoint_Model(v);
+				f = RSurf_FogVertex(v);
 				c2[0] = c[0] * f;
 				c2[1] = c[1] * f;
 				c2[2] = c[2] * f;
@@ -6666,7 +6668,7 @@ static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **t
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c2 += 4)
 			{
-				f = FogPoint_Model(v);
+				f = RSurf_FogVertex(v);
 				c2[0] = f;
 				c2[1] = f;
 				c2[2] = f;
@@ -6693,7 +6695,7 @@ static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(int texturenumsu
 		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 		for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.lightmapcolor4f + 4 * surface->num_firstvertex), c2 = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4, c2 += 4)
 		{
-			f = FogPoint_Model(v);
+			f = RSurf_FogVertex(v);
 			c2[0] = c[0] * f + r_refdef.fogcolor[0] * (1 - f);
 			c2[1] = c[1] * f + r_refdef.fogcolor[1] * (1 - f);
 			c2[2] = c[2] * f + r_refdef.fogcolor[2] * (1 - f);
@@ -7176,7 +7178,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
-					f = 1 - FogPoint_Model(v);
+					f = 1 - RSurf_FogVertex(v);
 					c[0] = layercolor[0];
 					c[1] = layercolor[1];
 					c[2] = layercolor[2];
@@ -7305,7 +7307,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
-					f = 1 - FogPoint_Model(v);
+					f = 1 - RSurf_FogVertex(v);
 					c[0] = layer->color[0];
 					c[1] = layer->color[1];
 					c[2] = layer->color[2];

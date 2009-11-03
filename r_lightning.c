@@ -219,7 +219,7 @@ void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts,
 	float fog;
 	for (i = 0;i < numverts;i++, v += 3, c += 4)
 	{
-		fog = FogPoint_World(v);
+		fog = RSurf_FogVertex(v);
 		c[0] = r * fog;
 		c[1] = g * fog;
 		c[2] = b * fog;
@@ -236,6 +236,10 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	float vertex3f[12*3];
 	float texcoord2f[12*2];
 	float color4f[12*4];
+
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);

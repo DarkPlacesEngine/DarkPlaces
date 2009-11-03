@@ -315,7 +315,7 @@ typedef struct rsurfacestate_s
 	// special coloring of glow textures
 	vec3_t glowmod;
 	// view location in model space
-	vec3_t modelorg; // TODO: rename this
+	vec3_t localvieworigin;
 	// polygon offset data for submodels
 	float basepolygonfactor;
 	float basepolygonoffset;

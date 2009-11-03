@@ -1410,9 +1410,7 @@ void Debug_PolygonEnd(void);
 
 extern qboolean sb_showscores;
 
-float FogPoint_World(const vec3_t p);
-float FogPoint_Model(const vec3_t p);
-float FogForDistance(vec_t dist);
+float RSurf_FogVertex(const vec3_t p);
 
 typedef struct r_refdef_stats_s
 {

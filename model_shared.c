@@ -1361,9 +1361,9 @@ void Mod_Terrain_SurfaceRecurseChunk(dp_model_t *model, int stepsize, int x, int
 		return;
 	VectorSet(mins, model->terrain.mins[0] +  x    * stepsize * model->terrain.scale[0], model->terrain.mins[1] +  y    * stepsize * model->terrain.scale[1], model->terrain.mins[2]);
 	VectorSet(maxs, model->terrain.mins[0] + (x+1) * stepsize * model->terrain.scale[0], model->terrain.mins[1] + (y+1) * stepsize * model->terrain.scale[1], model->terrain.maxs[2]);
-	viewvector[0] = bound(mins[0], modelorg, maxs[0]) - model->terrain.vieworigin[0];
-	viewvector[1] = bound(mins[1], modelorg, maxs[1]) - model->terrain.vieworigin[1];
-	viewvector[2] = bound(mins[2], modelorg, maxs[2]) - model->terrain.vieworigin[2];
+	viewvector[0] = bound(mins[0], localvieworigin, maxs[0]) - model->terrain.vieworigin[0];
+	viewvector[1] = bound(mins[1], localvieworigin, maxs[1]) - model->terrain.vieworigin[1];
+	viewvector[2] = bound(mins[2], localvieworigin, maxs[2]) - model->terrain.vieworigin[2];
 	if (stepsize > 1 && VectorLength(viewvector) < stepsize*model->terrain.scale[0]*r_terrain_lodscale.value)
 	{
 		// too close for this stepsize, emit as 4 chunks instead
