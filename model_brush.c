@@ -1022,6 +1022,8 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 #if 1
 	colbrushf_t cbox;
 	colplanef_t cbox_planes[6];
+	cbox.isaabb = true;
+	cbox.hasaabbplanes = true;
 	cbox.supercontents = boxsupercontents;
 	cbox.numplanes = 6;
 	cbox.numpoints = 0;
@@ -4431,7 +4433,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			q3surfaceflags |= planes[j].q3surfaceflags;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, q3surfaceflags, out->texture);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, q3surfaceflags, out->texture, true);
 
 		// this whole loop can take a while (e.g. on redstarrepublic4)
 		CL_KeepaliveMessage(false);
@@ -5950,8 +5952,8 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 	VectorAdd(start, boxmaxs, boxstartmaxs);
 	VectorAdd(end, boxmins, boxendmins);
 	VectorAdd(end, boxmaxs, boxendmaxs);
-	thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
-	thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
+	thisbrush_start = Collision_BrushForBox(boxstartmins, boxstartmaxs, 0, 0, NULL);
+	thisbrush_end = Collision_BrushForBox(boxendmins, boxendmaxs, 0, 0, NULL);
 	if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
