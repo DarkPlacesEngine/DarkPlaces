@@ -32,7 +32,7 @@ cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, an
 cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
-cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
 cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure_challengetimeout = {0, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
 cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
@@ -2344,7 +2344,8 @@ ProQuake rcon support
 */
 void Host_PQRcon_f (void)
 {
-	int i;
+	int n;
+	const char *e;
 	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
 	char peer_address[64];
@@ -2355,14 +2356,8 @@ void Host_PQRcon_f (void)
 		return;
 	}
 
-	for (i = 0;rcon_password.string[i];i++)
-	{
-		if (ISWHITESPACE(rcon_password.string[i]))
-		{
-			Con_Printf("rcon_password is not allowed to have any whitespace.\n");
-			return;
-		}
-	}
+	e = strchr(rcon_password.string, ' ');
+	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
 
 	if (cls.netcon)
 	{
@@ -2384,7 +2379,7 @@ void Host_PQRcon_f (void)
 		SZ_Clear(&net_message);
 		MSG_WriteLong (&net_message, 0);
 		MSG_WriteByte (&net_message, CCREQ_RCON);
-		MSG_WriteString (&net_message, rcon_password.string);
+		SZ_Write(&net_message, (void*)rcon_password.string, n);
 		MSG_WriteString (&net_message, Cmd_Args());
 		*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 		NetConn_Write(mysocket, net_message.data, net_message.cursize, &to);
@@ -2406,7 +2401,8 @@ Host_Rcon_f
 */
 void Host_Rcon_f (void) // credit: taken from QuakeWorld
 {
-	int i;
+	int i, n;
+	const char *e;
 	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
 
@@ -2416,14 +2412,8 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		return;
 	}
 
-	for (i = 0;rcon_password.string[i];i++)
-	{
-		if (ISWHITESPACE(rcon_password.string[i]))
-		{
-			Con_Printf("rcon_password is not allowed to have any whitespace.\n");
-			return;
-		}
-	}
+	e = strchr(rcon_password.string, ' ');
+	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
 
 	if (cls.netcon)
 		to = cls.netcon->peeraddress;
@@ -2468,7 +2458,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			char argbuf[1500];
 			dpsnprintf(argbuf, sizeof(argbuf), "%ld.%06d %s", (long) time(NULL), (int) (rand() % 1000000), Cmd_Args());
 			memcpy(buf, "\377\377\377\377srcon HMAC-MD4 TIME ", 24);
-			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string)))
+			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, n))
 			{
 				buf[40] = ' ';
 				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
@@ -2477,7 +2467,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		}
 		else
 		{
-			NetConn_WriteString(mysocket, va("\377\377\377\377rcon %s %s", rcon_password.string, Cmd_Args()), &to);
+			NetConn_WriteString(mysocket, va("\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &to);
 		}
 	}
 }
