@@ -5919,7 +5919,7 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 	float segmentmins[3], segmentmaxs[3];
 	msurface_t *surface;
 	q3mbrush_t *brush;
-	colbrushf_t *thisbrush_start, *thisbrush_end;
+	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
 
 	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxmins, boxmaxs))
@@ -5952,20 +5952,20 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 	VectorAdd(start, boxmaxs, boxstartmaxs);
 	VectorAdd(end, boxmins, boxendmins);
 	VectorAdd(end, boxmaxs, boxendmaxs);
-	thisbrush_start = Collision_BrushForBox(boxstartmins, boxstartmaxs, 0, 0, NULL);
-	thisbrush_end = Collision_BrushForBox(boxendmins, boxendmaxs, 0, 0, NULL);
+	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
+	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
 	if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
 			if (brush->colbrushf)
-				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush->colbrushf, brush->colbrushf);
+				Collision_TraceBrushBrushFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, brush->colbrushf, brush->colbrushf);
 		if (mod_q3bsp_curves_collisions.integer)
 			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 				if (surface->num_collisiontriangles)
-					Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+					Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 	}
 	else
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, &thisbrush_start.brush, &thisbrush_end.brush, ++markframe, segmentmins, segmentmaxs);
 }
 
 static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)

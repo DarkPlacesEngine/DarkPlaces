@@ -108,6 +108,15 @@ typedef struct colbrushf_s
 }
 colbrushf_t;
 
+typedef struct colboxbrushf_s
+{
+	colpointf_t points[8];
+	colpointf_t edgedirs[6];
+	colplanef_t planes[6];
+	colbrushf_t brush;
+}
+colboxbrushf_t;
+
 void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush);
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents, int q3surfaceflags, texture_t *texture);
 colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, texture_t *texture, int hasaabbplanes);
@@ -120,7 +129,7 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush);
 qboolean Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush);
 
-colbrushf_t *Collision_BrushForBox(const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture);
+void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture);
 
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac);
 

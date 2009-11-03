@@ -677,7 +677,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	msurface_t *surface;
 	static int maxvertices = 0;
 	static float *vertex3f = NULL;
-	colbrushf_t *thisbrush_start, *thisbrush_end;
+	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
 
 	if (VectorCompare(boxmins, boxmaxs))
@@ -714,8 +714,8 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	VectorAdd(start, boxmaxs, boxstartmaxs);
 	VectorAdd(end, boxmins, boxendmins);
 	VectorAdd(end, boxmaxs, boxendmaxs);
-	thisbrush_start = Collision_BrushForBox(boxstartmins, boxstartmaxs, 0, 0, NULL);
-	thisbrush_end = Collision_BrushForBox(boxendmins, boxendmaxs, 0, 0, NULL);
+	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
+	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 	{
 		if (maxvertices < model->surfmesh.num_vertices)
@@ -726,7 +726,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 			vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 		}
 		model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
-		Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 	}
 }
 
