@@ -84,7 +84,7 @@ static cvar_t net_slist_favorites = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist
 static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
 static cvar_t gameversion_min = {0, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
 static cvar_t gameversion_max = {0, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
-static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode"};
+static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
 static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
 static cvar_t rcon_secure_maxdiff = {0, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
 extern cvar_t rcon_secure;
@@ -1588,9 +1588,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			{
 				char buf[1500];
 				char argbuf[1500];
+				const char *e;
+				int n;
 				dpsnprintf(argbuf, sizeof(argbuf), "%s %s", string + 10, cls.rcon_commands[i]);
 				memcpy(buf, "\377\377\377\377srcon HMAC-MD4 CHALLENGE ", 29);
-				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, strlen(rcon_password.string)))
+
+				e = strchr(rcon_password.string, ' ');
+				n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
+
+				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, n))
 				{
 					buf[45] = ' ';
 					strlcpy(buf + 46, argbuf, sizeof(buf) - 46);
@@ -2409,15 +2415,51 @@ qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, c
 /// returns a string describing the user level, or NULL for auth failure
 const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *password, const char *s, const char *endpos, rcon_matchfunc_t comparator, const char *cs, int cslen)
 {
-	const char *text;
+	const char *text, *userpass_start, *userpass_end, *userpass_startpass;
+	char buf[MAX_INPUTLINE];
 	qboolean hasquotes;
+	qboolean restricted = false;
+	qboolean have_usernames = false;
 
-	if(comparator(peeraddress, rcon_password.string, password, cs, cslen))
-		return "rcon";
+	userpass_start = rcon_password.string;
+	while((userpass_end = strchr(userpass_start, ' ')))
+	{
+		have_usernames = true;
+		strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
+		if(buf[0])
+			if(comparator(peeraddress, buf, password, cs, cslen))
+				goto allow;
+		userpass_start = userpass_end + 1;
+	}
+	if(userpass_start[0])
+	{
+		userpass_end = userpass_start + strlen(userpass_start);
+		if(comparator(peeraddress, userpass_start, password, cs, cslen))
+			goto allow;
+	}
+
+	restricted = true;
+	have_usernames = false;
+	userpass_start = rcon_restricted_password.string;
+	while((userpass_end = strchr(userpass_start, ' ')))
+	{
+		have_usernames = true;
+		strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
+		if(buf[0])
+			if(comparator(peeraddress, buf, password, cs, cslen))
+				goto check;
+		userpass_start = userpass_end + 1;
+	}
+	if(userpass_start[0])
+	{
+		userpass_end = userpass_start + strlen(userpass_start);
+		if(comparator(peeraddress, userpass_start, password, cs, cslen))
+			goto check;
+	}
 	
-	if(!comparator(peeraddress, rcon_restricted_password.string, password, cs, cslen))
-		return NULL;
+	return NULL; // DENIED
 
+check:
 	for(text = s; text != endpos; ++text)
 		if((signed char) *text > 0 && ((signed char) *text < (signed char) ' ' || *text == ';'))
 			return NULL; // block possible exploits against the parser/alias expansion
@@ -2459,6 +2501,13 @@ const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *password,
 match:
 		s += l + 1;
 	}
+
+allow:
+	userpass_startpass = strchr(userpass_start, ':');
+	if(have_usernames && userpass_startpass && userpass_startpass < userpass_end)
+		return va("%srcon (username %.*s)", restricted ? "restricted " : "", (int)(userpass_startpass-userpass_start), userpass_start);
+	else
+		return va("%srcon", restricted ? "restricted " : "");
 
 	return "restricted rcon";
 }
