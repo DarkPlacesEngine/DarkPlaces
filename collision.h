@@ -102,12 +102,15 @@ typedef struct colbrushf_s
 	// texture data for cases where an edgedir is used
 	struct texture_s *texture;
 	int q3surfaceflags;
+	// optimized collisions for common cases
+	int isaabb; // indicates this is an axis aligned box
+	int hasaabbplanes; // indicates this has precomputed planes for AABB collisions
 }
 colbrushf_t;
 
 void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush);
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents, int q3surfaceflags, texture_t *texture);
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, texture_t *texture);
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, texture_t *texture, int hasaabbplanes);
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
 void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, int supercontents, int q3surfaceflags, texture_t *texture);
 void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs);
@@ -117,9 +120,7 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush);
 qboolean Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush);
 
-void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numpoints, const float *points, const matrix4x4_t *polygonmatrixstart, const matrix4x4_t *polygonmatrixend, int supercontents, int q3surfaceflags, texture_t *texture);
-
-colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture);
+colbrushf_t *Collision_BrushForBox(const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture);
 
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac);
 

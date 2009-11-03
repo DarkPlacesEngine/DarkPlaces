@@ -714,8 +714,8 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	VectorAdd(start, boxmaxs, boxstartmaxs);
 	VectorAdd(end, boxmins, boxendmins);
 	VectorAdd(end, boxmaxs, boxendmaxs);
-	thisbrush_start = Collision_BrushForBox(&identitymatrix, boxstartmins, boxstartmaxs, 0, 0, NULL);
-	thisbrush_end = Collision_BrushForBox(&identitymatrix, boxendmins, boxendmaxs, 0, 0, NULL);
+	thisbrush_start = Collision_BrushForBox(boxstartmins, boxstartmaxs, 0, 0, NULL);
+	thisbrush_end = Collision_BrushForBox(boxendmins, boxendmaxs, 0, 0, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 	{
 		if (maxvertices < model->surfmesh.num_vertices)
