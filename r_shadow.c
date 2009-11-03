@@ -2354,7 +2354,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 				if (r_refdef.fogenabled)
 				{
 					float f;
-					f = FogPoint_Model(vertex3f);
+					f = RSurf_FogVertex(vertex3f);
 					VectorScale(color4f, f, color4f);
 				}
 				color4f[3] = 1;
@@ -2369,7 +2369,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 				{
 					float f;
 					Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-					f = FogPoint_Model(vertex3f);
+					f = RSurf_FogVertex(vertex3f);
 					VectorScale(color4f, f, color4f);
 				}
 				color4f[3] = 1;
@@ -2402,7 +2402,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					if (r_refdef.fogenabled)
 					{
 						float f;
-						f = FogPoint_Model(vertex3f);
+						f = RSurf_FogVertex(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -2424,7 +2424,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					if (r_refdef.fogenabled)
 					{
 						float f;
-						f = FogPoint_Model(vertex3f);
+						f = RSurf_FogVertex(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -2461,7 +2461,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					if (r_refdef.fogenabled)
 					{
 						float f;
-						f = FogPoint_Model(vertex3f);
+						f = RSurf_FogVertex(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -2484,7 +2484,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 					if (r_refdef.fogenabled)
 					{
 						float f;
-						f = FogPoint_Model(vertex3f);
+						f = RSurf_FogVertex(vertex3f);
 						VectorScale(color4f, f, color4f);
 					}
 				}
@@ -2530,7 +2530,7 @@ static void R_Shadow_GenTexCoords_Specular_NormalCubeMap(int firstvertex, int nu
 	{
 		VectorSubtract(rsurface.entitylightorigin, vertex3f, lightdir);
 		VectorNormalize(lightdir);
-		VectorSubtract(rsurface.modelorg, vertex3f, eyedir);
+		VectorSubtract(rsurface.localvieworigin, vertex3f, eyedir);
 		VectorNormalize(eyedir);
 		VectorAdd(lightdir, eyedir, halfdir);
 		// the cubemap normalizes this for us

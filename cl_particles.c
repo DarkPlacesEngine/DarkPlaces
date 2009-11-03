@@ -2133,6 +2133,9 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value * r_refdef.view.colorscale;
 	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	r_refdef.stats.decals += numsurfaces;
 	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
@@ -2155,7 +2158,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 		c4f = particle_color4f + 16*surfacelistindex;
 		ca = d->alpha * alphascale;
 		if (r_refdef.fogenabled)
-			ca *= FogPoint_World(d->org);
+			ca *= RSurf_FogVertex(d->org);
 		Vector4Set(c4f, d->color[0] * ca, d->color[1] * ca, d->color[2] * ca, 1);
 		Vector4Copy(c4f, c4f + 4);
 		Vector4Copy(c4f, c4f + 8);
@@ -2284,6 +2287,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	vec4_t colormultiplier;
 	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
+	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
+	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
 	r_refdef.stats.particles += numsurfaces;
@@ -2317,7 +2323,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		case PBLEND_ADD:
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
-				c4f[3] *= FogPoint_World(p->org);
+				c4f[3] *= RSurf_FogVertex(p->org);
 			// collapse alpha into color for these blends (so that the particlefont does not need alpha on most textures)
 			c4f[0] *= c4f[3];
 			c4f[1] *= c4f[3];
@@ -2336,7 +2342,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			// mix in the fog color
 			if (r_refdef.fogenabled)
 			{
-				fog = FogPoint_World(p->org);
+				fog = RSurf_FogVertex(p->org);
 				ifog = 1 - fog;
 				c4f[0] = c4f[0] * fog + r_refdef.fogcolor[0] * ifog;
 				c4f[1] = c4f[1] * fog + r_refdef.fogcolor[1] * ifog;
