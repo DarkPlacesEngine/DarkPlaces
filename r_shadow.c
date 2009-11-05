@@ -4347,6 +4347,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	size_t lightindex;
 	dlight_t *light;
 	size_t range;
+	float f;
 
 	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, gl_max_size.integer / 4) ||
 		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object) || 
@@ -4381,8 +4382,19 @@ void R_ShadowVolumeLighting(qboolean visible)
 		}
 	}
 	if (r_refdef.scene.rtdlight)
+	{
 		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
 			R_DrawRTLight(r_refdef.scene.lights[lnum], visible);
+	}
+	else if(gl_flashblend.integer)
+	{
+		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
+		{
+			rtlight_t *rtlight = r_refdef.scene.lights[lnum];
+			f = (rtlight->style >= 0 ? r_refdef.scene.lightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
+			VectorScale(rtlight->color, f, rtlight->currentcolor);
+		}
+	}
 
 	R_Shadow_RenderMode_End();
 }
@@ -4573,7 +4585,17 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	}
 	VectorScale(rtlight->currentcolor, cscale, color);
 	if (VectorLength(color) > (1.0f / 256.0f))
+	{
+		qboolean negated = (color[0] + color[1] + color[2] < 0) && gl_support_ext_blend_subtract;
+		if(negated)
+		{
+			VectorNegate(color, color);
+			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
+		}
 		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, color[0], color[1], color[2], 1);
+		if(negated)
+			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
+	}
 }
 
 void R_DrawCoronas(void)
