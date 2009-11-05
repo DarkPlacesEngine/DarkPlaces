@@ -490,6 +490,7 @@ extern int gl_support_ext_blend_subtract;
 #ifndef GL_FUNC_SUBTRACT_EXT
 #define GL_FUNC_SUBTRACT_EXT              0x800A
 #define GL_FUNC_REVERSE_SUBTRACT_EXT      0x800B
+extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EXT_blend_subtract
 #endif
 
 //GL_ARB_texture_non_power_of_two
