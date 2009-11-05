@@ -2149,7 +2149,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 	}
 	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_VERTEX)
 		R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	//GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	CHECKGLERROR
 }
 
@@ -3329,6 +3329,7 @@ extern cvar_t gl_lightmaps;
 void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int element3i_bufferobject, int element3s_bufferobject)
 {
 	float ambientscale, diffusescale, specularscale;
+	qboolean negated;
 	vec3_t lightcolorbase, lightcolorpants, lightcolorshirt;
 	rtexture_t *nmap;
 	// calculate colors to render this texture with
@@ -3346,6 +3347,12 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle
 	}
 	if ((ambientscale + diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
+	negated = (lightcolorbase[0] + lightcolorbase[1] + lightcolorbase[2] < 0) && gl_support_ext_blend_subtract;
+	if(negated)
+	{
+		VectorNegate(lightcolorbase, lightcolorbase);
+		qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
+	}
 	RSurf_SetupDepthAndCulling();
 	nmap = rsurface.texture->currentskinframe->nmap;
 	if (gl_lightmaps.integer)
@@ -3412,6 +3419,8 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle
 			break;
 		}
 	}
+	if(negated)
+		qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 }
 
 void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, int shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
@@ -4816,9 +4825,14 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	light->angles[0] = angles[0] - 360 * floor(angles[0] / 360);
 	light->angles[1] = angles[1] - 360 * floor(angles[1] / 360);
 	light->angles[2] = angles[2] - 360 * floor(angles[2] / 360);
+	/*
 	light->color[0] = max(color[0], 0);
 	light->color[1] = max(color[1], 0);
 	light->color[2] = max(color[2], 0);
+	*/
+	light->color[0] = color[0];
+	light->color[1] = color[1];
+	light->color[2] = color[2];
 	light->radius = max(radius, 0);
 	light->style = style;
 	light->shadow = shadowenable;
