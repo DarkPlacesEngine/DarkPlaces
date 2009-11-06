@@ -6105,10 +6105,6 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
 {
-#if 0
-	static float scale[8];
-	vec3_t worldfogpoint, localfogpoint;
-#endif
 	rsurface.entity = r_refdef.scene.worldentity;
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
@@ -6124,83 +6120,12 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
 	rsurface.inversematrixscale = 1.0f / rsurface.matrixscale;
 	R_Mesh_Matrix(&rsurface.matrix);
-#if 0
-	scale[0] = 1;
-	scale[1] = rsurface.matrixscale;
-	scale[2] = rsurface.inversematrixscale;
-	scale[3] = rsurface.matrixscale * rsurface.matrixscale;
-	scale[4] = rsurface.inversematrixscale * rsurface.inversematrixscale;
-	scale[5] = rsurface.matrixscale * rsurface.matrixscale * rsurface.matrixscale;
-	scale[6] = rsurface.inversematrixscale * rsurface.inversematrixscale * rsurface.inversematrixscale;
-	scale[7] = 0;
-#endif
-#if 0
-	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
-	//Matrix4x4_TransformStandardPlane(&rsurface.inversematrix, r_refdef.fogplane[0], r_refdef.fogplane[1], r_refdef.fogplane[2], r_refdef.fogplane[3], rsurface.fogplane);
-	Matrix4x4_Transform3x3(&rsurface.inversematrix, r_refdef.fogplane, rsurface.fogplane);
-	VectorNormalize(rsurface.fogplane);
-	VectorScale(r_refdef.fogplane, -r_refdef.fogplane[3], worldfogpoint);
-	Matrix4x4_Transform(&rsurface.inversematrix, worldfogpoint, localfogpoint);
-	rsurface.fogplane[3] = -DotProduct(rsurface.fogplane, localfogpoint);
-	rsurface.fogplaneviewdist = DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3];
-	rsurface.fograngerecip = r_refdef.fograngerecip * rsurface.matrixscale;
-	rsurface.fogheightfade = r_refdef.fogheightfade * rsurface.matrixscale;
-	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
-#endif
-#if 1
 	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
 	Matrix4x4_TransformStandardPlane(&rsurface.inversematrix, r_refdef.fogplane[0], r_refdef.fogplane[1], r_refdef.fogplane[2], r_refdef.fogplane[3], rsurface.fogplane);
 	rsurface.fogplaneviewdist *= rsurface.inversematrixscale;
 	rsurface.fograngerecip = r_refdef.fograngerecip * rsurface.matrixscale;
 	rsurface.fogheightfade = r_refdef.fogheightfade * rsurface.matrixscale;
 	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
-#endif
-
-#if 0
-if (r_refdef.fogenabled && memcmp(&rsurface.matrix, &identitymatrix, sizeof(rsurface.matrix)))
-{
-	qboolean fail = false;
-	vec3_t temp, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
-	VectorScale(r_refdef.fogplane, r_refdef.fogplane[3], temp);
-	Matrix4x4_Transform(&rsurface.inversematrix, temp, temp2);
-	//rsurface.fogplane[3] = -DotProduct(temp2, rsurface.fogplane);
-	//rsurface.fogplaneviewdist = DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3];
-	VectorScale(rsurface.fogplane, rsurface.fogplane[3], temp3);
-	Matrix4x4_Transform(&rsurface.matrix, temp3, temp4);
-	VectorSet(temp5, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2] + 1000);
-	Matrix4x4_Transform(&rsurface.inversematrix, temp5, temp6);
-	VectorSet(temp7, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2] - 1000);
-	Matrix4x4_Transform(&rsurface.inversematrix, temp7, temp8);
-	Con_Printf("#%i : %f %f %f %f : %f %f %f : %f %f %f : %f %f\n", r_test.integer,
-		rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3],
-		rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2],
-		rsurface.fogplaneviewdist,
-		DotProduct(rsurface.localvieworigin, rsurface.fogplane) - DotProduct(temp2, rsurface.fogplane),
-		DotProduct(r_refdef.view.origin, r_refdef.fogplane) + r_refdef.fogplane[3],
-		rsurface.fogplane[3] - -DotProduct(temp2, rsurface.fogplane),
-		r_refdef.fogplane[3] - -DotProduct(temp4, r_refdef.fogplane)
-		);
-	//if (fabs(RSurf_FogVertex(temp6) - RSurf_FogPoint(temp5)) > 0.1)
-	//	fail = true;
-	//if (fabs(RSurf_FogVertex(temp8) - RSurf_FogPoint(temp7)) > 0.1)
-	//	fail = true;
-	//if (fabs(rsurface.fogplaneviewdist * rsurface.matrixscale - r_refdef.fogplaneviewdist) > 1)
-	//	fail = true;
-	//if (fabs((DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3]) * rsurface.matrixscale - r_refdef.fogplaneviewdist) > 1)
-	//	fail = true;
-	//if (fabs(-DotProduct(temp2, rsurface.fogplane) - rsurface.fogplane[3]) > 1)
-	//	fail = true;
-	//if (fabs(-DotProduct(temp4, r_refdef.fogplane) - r_refdef.fogplane[3]) > 1)
-	//	fail = true;
-	//if (fabs(rsurface.fogplaneviewdist - DotProduct(rsurface.localvieworigin, rsurface.fogplane) - rsurface.fogplane[3]) > 1)
-	//	fail = true;
-	//if (fabs(DotProduct(rsurface.localvieworigin, rsurface.fogplane) - DotProduct(temp2, rsurface.fogplane) - rsurface.fogplaneviewdist) > 1)
-	//	fail = true;
-	if (fail)
-		Cvar_SetValueQuick(&r_test, r_test.integer + 1);
-}
-#endif
-
 	VectorSet(rsurface.modellight_ambient, 0, 0, 0);
 	VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
 	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
