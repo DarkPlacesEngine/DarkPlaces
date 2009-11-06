@@ -143,8 +143,10 @@ for (y = 0;y < rows - 1;y++)
 }
 */
 
-unsigned short polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
-unsigned short quadelements[QUADELEMENTS_MAXQUADS*6];
+int polygonelement3i[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+int quadelement3i[QUADELEMENTS_MAXQUADS*6];
+unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
 void GL_Backend_AllocArrays(void)
 {
@@ -236,20 +238,25 @@ void gl_backend_init(void)
 
 	for (i = 0;i < POLYGONELEMENTS_MAXPOINTS - 2;i++)
 	{
-		polygonelements[i * 3 + 0] = 0;
-		polygonelements[i * 3 + 1] = i + 1;
-		polygonelements[i * 3 + 2] = i + 2;
+		polygonelement3s[i * 3 + 0] = 0;
+		polygonelement3s[i * 3 + 1] = i + 1;
+		polygonelement3s[i * 3 + 2] = i + 2;
 	}
 	// elements for rendering a series of quads as triangles
 	for (i = 0;i < QUADELEMENTS_MAXQUADS;i++)
 	{
-		quadelements[i * 6 + 0] = i * 4;
-		quadelements[i * 6 + 1] = i * 4 + 1;
-		quadelements[i * 6 + 2] = i * 4 + 2;
-		quadelements[i * 6 + 3] = i * 4;
-		quadelements[i * 6 + 4] = i * 4 + 2;
-		quadelements[i * 6 + 5] = i * 4 + 3;
+		quadelement3s[i * 6 + 0] = i * 4;
+		quadelement3s[i * 6 + 1] = i * 4 + 1;
+		quadelement3s[i * 6 + 2] = i * 4 + 2;
+		quadelement3s[i * 6 + 3] = i * 4;
+		quadelement3s[i * 6 + 4] = i * 4 + 2;
+		quadelement3s[i * 6 + 5] = i * 4 + 3;
 	}
+
+	for (i = 0;i < (POLYGONELEMENTS_MAXPOINTS - 2)*3;i++)
+		polygonelement3i[i] = polygonelement3s[i];
+	for (i = 0;i < QUADELEMENTS_MAXQUADS*3;i++)
+		quadelement3i[i] = quadelement3s[i];
 
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&r_renderview);

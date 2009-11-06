@@ -4520,7 +4520,7 @@ void R_DrawModelShadows(void)
 	qglStencilFunc(GL_NOTEQUAL, 128, ~0);CHECKGLERROR
 
 	// apply the blend to the shadowed areas
-	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 
 	// restore the viewport
 	R_SetViewport(&r_refdef.view.viewport);
