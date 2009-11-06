@@ -2425,7 +2425,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		if (i == -1)
 		{
 			surface->lightmapinfo->samples = NULL;
-#if 0
+#if 1
 			// give non-lightmapped water a 1x white lightmap
 			if (surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
