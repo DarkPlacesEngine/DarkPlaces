@@ -699,8 +699,8 @@ typedef struct model_brush_s
 
 	char skybox[MAX_QPATH];
 
-	rtexture_t *solidskytexture;
-	rtexture_t *alphaskytexture;
+	skinframe_t *solidskyskinframe;
+	skinframe_t *alphaskyskinframe;
 
 	qboolean supportwateralpha;
 

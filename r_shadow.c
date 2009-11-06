@@ -243,7 +243,7 @@ rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuationgradienttexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
-rtexture_t *r_shadow_lightcorona;
+skinframe_t *r_shadow_lightcorona;
 rtexture_t *r_shadow_shadowmaprectangletexture;
 rtexture_t *r_shadow_shadowmap2dtexture;
 rtexture_t *r_shadow_shadowmapcubetexture[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
@@ -359,14 +359,13 @@ void R_Shadow_EditLights_Reload_f(void);
 void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 
-// VorteX: custom editor light sprites
 #define EDLIGHTSPRSIZE			8
-cachepic_t *r_editlights_sprcursor;
-cachepic_t *r_editlights_sprlight;
-cachepic_t *r_editlights_sprnoshadowlight;
-cachepic_t *r_editlights_sprcubemaplight;
-cachepic_t *r_editlights_sprcubemapnoshadowlight;
-cachepic_t *r_editlights_sprselection;
+skinframe_t *r_editlights_sprcursor;
+skinframe_t *r_editlights_sprlight;
+skinframe_t *r_editlights_sprnoshadowlight;
+skinframe_t *r_editlights_sprcubemaplight;
+skinframe_t *r_editlights_sprcubemapnoshadowlight;
+skinframe_t *r_editlights_sprselection;
 extern cvar_t gl_max_size;
 
 void R_Shadow_SetShadowMode(void)
@@ -619,6 +618,13 @@ void r_shadow_shutdown(void)
 
 void r_shadow_newmap(void)
 {
+	if (r_shadow_lightcorona)                 R_SkinFrame_MarkUsed(r_shadow_lightcorona);
+	if (r_editlights_sprcursor)               R_SkinFrame_MarkUsed(r_editlights_sprcursor);
+	if (r_editlights_sprlight)                R_SkinFrame_MarkUsed(r_editlights_sprlight);
+	if (r_editlights_sprnoshadowlight)        R_SkinFrame_MarkUsed(r_editlights_sprnoshadowlight);
+	if (r_editlights_sprcubemaplight)         R_SkinFrame_MarkUsed(r_editlights_sprcubemaplight);
+	if (r_editlights_sprcubemapnoshadowlight) R_SkinFrame_MarkUsed(r_editlights_sprcubemapnoshadowlight);
+	if (r_editlights_sprselection)            R_SkinFrame_MarkUsed(r_editlights_sprselection);
 	if (cl.worldmodel && strncmp(cl.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 }
@@ -1678,7 +1684,7 @@ static void R_Shadow_MakeTextures_MakeCorona(void)
 			pixels[y][x][3] = 255;
 		}
 	}
-	r_shadow_lightcorona = R_LoadTexture2D(r_shadow_texturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
+	r_shadow_lightcorona = R_SkinFrame_LoadInternalBGRA("lightcorona", TEXF_PRECACHE | TEXF_FORCELINEAR, &pixels[0][0][0], 32, 32);
 }
 
 static unsigned int R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
@@ -1732,12 +1738,114 @@ static void R_Shadow_MakeTextures(void)
 	R_Shadow_MakeTextures_MakeCorona();
 
 	// Editor light sprites
-	r_editlights_sprcursor = Draw_CachePic ("gfx/editlights/cursor");
-	r_editlights_sprlight = Draw_CachePic ("gfx/editlights/light");
-	r_editlights_sprnoshadowlight = Draw_CachePic ("gfx/editlights/noshadow");
-	r_editlights_sprcubemaplight = Draw_CachePic ("gfx/editlights/cubemaplight");
-	r_editlights_sprcubemapnoshadowlight = Draw_CachePic ("gfx/editlights/cubemapnoshadowlight");
-	r_editlights_sprselection = Draw_CachePic ("gfx/editlights/selection");
+	r_editlights_sprcursor = R_SkinFrame_LoadInternal8bit("gfx/editlights/cursor", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	"................"
+	".3............3."
+	"..5...2332...5.."
+	"...7.3....3.7..."
+	"....7......7...."
+	"...3.7....7.3..."
+	"..2...7..7...2.."
+	"..3..........3.."
+	"..3..........3.."
+	"..2...7..7...2.."
+	"...3.7....7.3..."
+	"....7......7...."
+	"...7.3....3.7..."
+	"..5...2332...5.."
+	".3............3."
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
+	r_editlights_sprlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/light", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	"................"
+	"................"
+	"......1111......"
+	"....11233211...."
+	"...1234554321..."
+	"...1356776531..."
+	"..124677776421.."
+	"..135777777531.."
+	"..135777777531.."
+	"..124677776421.."
+	"...1356776531..."
+	"...1234554321..."
+	"....11233211...."
+	"......1111......"
+	"................"
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
+	r_editlights_sprnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/noshadow", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	"................"
+	"................"
+	"......1111......"
+	"....11233211...."
+	"...1234554321..."
+	"...1356226531..."
+	"..12462..26421.."
+	"..1352....2531.."
+	"..1352....2531.."
+	"..12462..26421.."
+	"...1356226531..."
+	"...1234554321..."
+	"....11233211...."
+	"......1111......"
+	"................"
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
+	r_editlights_sprcubemaplight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemaplight", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	"................"
+	"................"
+	"......2772......"
+	"....27755772...."
+	"..277533335772.."
+	"..753333333357.."
+	"..777533335777.."
+	"..735775577537.."
+	"..733357753337.."
+	"..733337733337.."
+	"..753337733357.."
+	"..277537735772.."
+	"....27777772...."
+	"......2772......"
+	"................"
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
+	r_editlights_sprcubemapnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemapnoshadowlight", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	"................"
+	"................"
+	"......2772......"
+	"....27722772...."
+	"..2772....2772.."
+	"..72........27.."
+	"..7772....2777.."
+	"..7.27722772.7.."
+	"..7...2772...7.."
+	"..7....77....7.."
+	"..72...77...27.."
+	"..2772.77.2772.."
+	"....27777772...."
+	"......2772......"
+	"................"
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
+	r_editlights_sprselection = R_SkinFrame_LoadInternal8bit("gfx/editlights/selection", TEXF_ALPHA | TEXF_CLAMP, (unsigned char *)
+	"................"
+	".777752..257777."
+	".742........247."
+	".72..........27."
+	".7............7."
+	".5............5."
+	".2............2."
+	"................"
+	"................"
+	".2............2."
+	".5............5."
+	".7............7."
+	".72..........27."
+	".742........247."
+	".777752..257777."
+	"................"
+	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
 }
 
 void R_Shadow_ValidateCvars(void)
@@ -4533,6 +4641,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 {
 	float zdist;
 	vec3_t centerorigin;
+	float vertex3f[12];
 	// if it's too close, skip it
 	if (VectorLength(rtlight->currentcolor) < (1.0f / 256.0f))
 		return;
@@ -4543,22 +4652,29 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 	{
 		rtlight->corona_queryindex_allpixels = r_queries[r_numqueries++];
 		rtlight->corona_queryindex_visiblepixels = r_queries[r_numqueries++];
+		// we count potential samples in the middle of the screen, we count actual samples at the light location, this allows counting potential samples of off-screen lights
 		VectorMA(r_refdef.view.origin, zdist, r_refdef.view.forward, centerorigin);
 
 		CHECKGLERROR
-		// NOTE: we can't disable depth testing using R_DrawSprite's depthdisable argument, which calls GL_DepthTest, as that's broken in the ATI drivers
+		// NOTE: GL_DEPTH_TEST must be enabled or ATI won't count samples, so use qglDepthFunc instead
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
 		qglDepthFunc(GL_ALWAYS);
-		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, centerorigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		R_CalcSprite_Vertex3f(vertex3f, centerorigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
+		R_Mesh_VertexPointer(vertex3f, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 		qglDepthFunc(GL_LEQUAL);
 		qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
-		R_DrawSprite(GL_ONE, GL_ZERO, r_shadow_lightcorona, NULL, false, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, 1, 1, 1, 1);
+		R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
+		R_Mesh_VertexPointer(vertex3f, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 		CHECKGLERROR
 	}
 	rtlight->corona_visibility = bound(0, (zdist - 32) / 32, 1);
 }
+
+static float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
 void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 {
@@ -4586,13 +4702,16 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	VectorScale(rtlight->currentcolor, cscale, color);
 	if (VectorLength(color) > (1.0f / 256.0f))
 	{
+		float vertex3f[12];
 		qboolean negated = (color[0] + color[1] + color[2] < 0) && gl_support_ext_blend_subtract;
 		if(negated)
 		{
 			VectorNegate(color, color);
 			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 		}
-		R_DrawSprite(GL_ONE, GL_ONE, r_shadow_lightcorona, NULL, true, false, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale, color[0], color[1], color[2], 1);
+		R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
+		RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, RENDER_NODEPTHTEST, 0, color[0], color[1], color[2], 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
+		R_DrawCustomSurface(r_shadow_lightcorona, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false);
 		if(negated)
 			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 	}
@@ -4633,6 +4752,16 @@ void R_DrawCoronas(void)
 			qglGenQueriesARB(r_maxqueries - i, r_queries + i);
 			CHECKGLERROR
 		}
+		RSurf_ActiveWorldEntity();
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_CullFace(GL_NONE);
+		GL_DepthMask(false);
+		GL_DepthRange(0, 1);
+		GL_PolygonOffset(0, 0);
+		GL_DepthTest(true);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		R_Mesh_ResetTextureState();
+		R_SetupGenericShader(false);
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
@@ -4906,7 +5035,10 @@ void R_Shadow_SelectLight(dlight_t *light)
 void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	// this is never batched (there can be only one)
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprcursor->tex, r_editlights_sprcursor->tex, false, false, r_editlights_cursorlocation, r_refdef.view.right, r_refdef.view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE, 1, 1, 1, 1);
+	float vertex3f[12];
+	R_CalcSprite_Vertex3f(vertex3f, r_editlights_cursorlocation, r_refdef.view.right, r_refdef.view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE);
+	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, 1, 1, 1, 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
+	R_DrawCustomSurface(r_editlights_sprcursor, &identitymatrix, MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false);
 }
 
 void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -4914,12 +5046,16 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, co
 	float intensity;
 	float s;
 	vec3_t spritecolor;
-	cachepic_t *pic;
+	skinframe_t *skinframe;
+	float vertex3f[12];
 
 	// this is never batched (due to the ent parameter changing every time)
 	// so numsurfaces == 1 and surfacelist[0] == lightnumber
 	const dlight_t *light = (dlight_t *)ent;
 	s = EDLIGHTSPRSIZE;
+
+	R_CalcSprite_Vertex3f(vertex3f, light->origin, r_refdef.view.right, r_refdef.view.up, s, -s, -s, s);
+
 	intensity = 0.5f;
 	VectorScale(light->color, intensity, spritecolor);
 	if (VectorLength(spritecolor) < 0.1732f)
@@ -4929,18 +5065,24 @@ void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, co
 
 	// draw light sprite
 	if (light->cubemapname[0] && !light->shadow)
-		pic = r_editlights_sprcubemapnoshadowlight;
+		skinframe = r_editlights_sprcubemapnoshadowlight;
 	else if (light->cubemapname[0])
-		pic = r_editlights_sprcubemaplight;
+		skinframe = r_editlights_sprcubemaplight;
 	else if (!light->shadow)
-		pic = r_editlights_sprnoshadowlight;
+		skinframe = r_editlights_sprnoshadowlight;
 	else
-		pic = r_editlights_sprlight;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, pic->tex, pic->tex, false, false, light->origin, r_refdef.view.right, r_refdef.view.up, s, -s, -s, s, spritecolor[0], spritecolor[1], spritecolor[2], 1);
+		skinframe = r_editlights_sprlight;
+
+	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, spritecolor[0], spritecolor[1], spritecolor[2], 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
+	R_DrawCustomSurface(skinframe, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false);
+
 	// draw selection sprite if light is selected
 	if (light->selected)
-		R_DrawSprite(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, r_editlights_sprselection->tex, r_editlights_sprselection->tex, false, false, light->origin, r_refdef.view.right, r_refdef.view.up, s, -s, -s, s, 1, 1, 1, 1);
-	// VorteX todo: add normalmode/realtime mode light overlay sprites?
+	{
+		RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, 1, 1, 1, 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
+		R_DrawCustomSurface(r_editlights_sprselection, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false);
+		// VorteX todo: add normalmode/realtime mode light overlay sprites?
+	}
 }
 
 void R_Shadow_DrawLightSprites(void)

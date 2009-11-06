@@ -199,6 +199,8 @@ void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec
 	}
 }
 
+static float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
+
 void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
@@ -207,9 +209,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	float scale, dx, dy, hud_vs_screen;
 	int edge = 0;
 	float dir_angle = 0.0f;
-
-	// R_GetCurrentTexture needs this
-	rsurface.entity = (entity_render_t *)ent;
+	float vertex3f[12];
 
 	// nudge it toward the view to make sure it isn't in a wall
 	Matrix4x4_ToVectors(&ent->matrix, mforward, mleft, mup, org);
@@ -355,18 +355,16 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		break;
 	}
 
-	R_Mesh_Matrix(&identitymatrix);
-
 	// LordHavoc: interpolated sprite rendering
 	for (i = 0;i < MAX_FRAMEBLENDS;i++)
 	{
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
-			mspriteframe_t *frame = model->sprite.sprdata_frames + ent->frameblend[i].subframe;
-			texture_t *texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].subframe);
-#if 0
-			vec3_t o, l, u;
-#endif
+			mspriteframe_t *frame;
+			texture_t *texture;
+			RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, ent->flags, 0, ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha * ent->frameblend[i].lerp, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
+			frame = model->sprite.sprdata_frames + ent->frameblend[i].subframe;
+			texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].subframe);
 
 			// SPR_LABEL should not use depth test AT ALL
 			if(model->sprite.sprnum_type == SPR_LABEL || model->sprite.sprnum_type == SPR_LABEL_SCALE)
@@ -376,26 +374,13 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			if(edge)
 			{
 				// FIXME:: save vectors/origin and re-rotate? necessary if the hotspot can change per frame
-#if 0
-				VectorCopy(org, o);
-				VectorCopy(left, l);
-				VectorCopy(up, u);
-#endif
 				R_RotateSprite(frame, org, left, up, edge, dir_angle);
-#if 1
 				edge = 0;
-#endif
 			}
-			// FIXME: negate left and right in loader
-			R_DrawSprite(texture->currentlayers[0].blendfunc1, texture->currentlayers[0].blendfunc2, texture->basetexture, texture->currentskinframe->fog, (texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) != 0, (texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) != 0, org, left, up, frame->left, frame->right, frame->down, frame->up, texture->currentlayers[0].color[0], texture->currentlayers[0].color[1], texture->currentlayers[0].color[2], ent->alpha * ent->frameblend[i].lerp);
-			if(edge)
-			{
-#if 0
-				VectorCopy(o, org);
-				VectorCopy(l, left);
-				VectorCopy(u, up);
-#endif
-			}
+
+			R_CalcSprite_Vertex3f(vertex3f, org, left, up, frame->left, frame->right, frame->down, frame->up);
+
+			R_DrawCustomSurface(texture->currentskinframe, &identitymatrix, texture->currentmaterialflags, 0, 4, 0, 2, false);
 		}
 	}
 
@@ -409,6 +394,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-	R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_refdef.view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
+	R_MeshQueue_AddTransparent(ent->flags & RENDER_NODEPTHTEST ? r_refdef.view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
 }
 

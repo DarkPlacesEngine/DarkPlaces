@@ -206,7 +206,7 @@ void R_TimeReport(char *name);
 void R_Stain(const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
 
 void R_CalcBeam_Vertex3f(float *vert, const vec3_t org1, const vec3_t org2, float width);
-void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, qboolean depthdisable, qboolean depthshort, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca);
+void R_CalcSprite_Vertex3f(float *vertex3f, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2);
 
 extern mempool_t *r_main_mempool;
 
@@ -337,6 +337,9 @@ typedef struct rsurfacestate_s
 	// fog plane in model space for direct application to vertices
 	float fograngerecip;
 	float fogmasktabledistmultiplier;
+	float fogplane[4];
+	float fogheightfade;
+	float fogplaneviewdist;
 
 	// rtlight rendering
 	// light currently being rendered
@@ -370,6 +373,7 @@ extern rsurfacestate_t rsurface;
 
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
+void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
 void RSurf_SetupDepthAndCulling(void);
 
 void R_Mesh_ResizeArrays(int newvertices);
@@ -378,6 +382,7 @@ texture_t *R_GetCurrentTexture(texture_t *t);
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
 void R_AddWaterPlanes(entity_render_t *ent);
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist);

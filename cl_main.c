@@ -1878,7 +1878,7 @@ static void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)
 	{
-		Con_Printf("\"fog\" is \"%f %f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end);
+		Con_Printf("\"fog\" is \"%f %f %f %f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end, r_refdef.fog_height, r_refdef.fog_fadedepth);
 		return;
 	}
 	r_refdef.fog_start = 0;
@@ -1898,6 +1898,10 @@ static void CL_Fog_f (void)
 		r_refdef.fog_start = atof(Cmd_Argv(6));
 	if(Cmd_Argc() > 7)
 		r_refdef.fog_end = atof(Cmd_Argv(7));
+	if(Cmd_Argc() > 8)
+		r_refdef.fog_height = atof(Cmd_Argv(8));
+	if(Cmd_Argc() > 9)
+		r_refdef.fog_fadedepth = atof(Cmd_Argv(9));
 }
 
 /*

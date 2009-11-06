@@ -263,6 +263,8 @@ void FOG_clear(void)
 	r_refdef.fog_alpha = 1;
 	r_refdef.fog_start = 0;
 	r_refdef.fog_end = 0;
+	r_refdef.fog_height = 1<<30;
+	r_refdef.fog_fadedepth = 128;
 }
 
 static void R_BuildBlankTextures(void)
@@ -446,7 +448,7 @@ static const char *builtinshaderstring =
 "// written by Forest 'LordHavoc' Hale\n"
 "\n"
 "// enable various extensions depending on permutation:\n"
-"\n" 
+"\n"
 "#ifdef USESHADOWMAPRECT\n"
 "# extension GL_ARB_texture_rectangle : enable\n"
 "#endif\n"
@@ -485,6 +487,14 @@ static const char *builtinshaderstring =
 "# define myhalf3 vec3\n"
 "# define myhalf4 vec4\n"
 "//#endif\n"
+"\n"
+"#ifdef USEFOGINSIDE\n"
+"# define USEFOG\n"
+"#else\n"
+"# ifdef USEFOGOUTSIDE\n"
+"#  define USEFOG\n"
+"# endif\n"
+"#endif\n"
 "\n"
 "#ifdef MODE_DEPTH_OR_SHADOW\n"
 "\n"
@@ -631,6 +641,36 @@ static const char *builtinshaderstring =
 "# endif\n"
 "\n"
 "#else // !MODE_GENERIC\n"
+"#ifdef MODE_BLOOMBLUR\n"
+"# ifdef VERTEX_SHADER\n"
+"void main(void)\n"
+"{\n"
+"	gl_FrontColor = gl_Color;\n"
+"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"	gl_Position = ftransform();\n"
+"}\n"
+"# endif\n"
+"# ifdef FRAGMENT_SHADER\n"
+"\n"
+"uniform sampler2D Texture_First;\n"
+"uniform vec4 BloomBlur_Parameters;\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	int i;\n"
+"	vec2 tc = gl_TexCoord[0].xy;\n"
+"	vec3 color = texture2D(Texture_First, tc).rgb;\n"
+"	tc += BloomBlur_Parameters.xy;\n"
+"	for (i = 1;i < SAMPLES;i++)\n"
+"	{\n"
+"		color += texture2D(Texture_First, tc).rgb;\n"
+"		tc += BloomBlur_Parameters.xy;\n"
+"	}\n"
+"	gl_FragColor = vec4(color * BloomBlur_Parameters.z + vec3(BloomBlur_Parameters.w), 1);\n"
+"}\n"
+"# endif\n"
+"\n"
+"#else // !MODE_BLOOMBLUR\n"
 "\n"
 "varying vec2 TexCoord;\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
@@ -652,6 +692,7 @@ static const char *builtinshaderstring =
 "varying vec3 EyeVector;\n"
 "#ifdef USEFOG\n"
 "varying vec3 EyeVectorModelSpace;\n"
+"varying float FogPlaneVertexDist;\n"
 "#endif\n"
 "\n"
 "varying vec3 VectorS; // direction of S texcoord (sometimes crudely called tangent)\n"
@@ -678,6 +719,7 @@ static const char *builtinshaderstring =
 "uniform vec3 LightPosition;\n"
 "uniform vec3 EyePosition;\n"
 "uniform vec3 LightDir;\n"
+"uniform vec4 FogPlane;\n"
 "\n"
 "// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3), this would require sending a 4 component texcoord1 with W as 1 or -1 according to which side the texcoord2 should be on\n"
 "\n"
@@ -723,6 +765,10 @@ static const char *builtinshaderstring =
 "	EyeVector.x = dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz);\n"
 "	EyeVector.y = dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz);\n"
 "	EyeVector.z = dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz);\n"
+"\n"
+"#ifdef USEFOG\n"
+"	FogPlaneVertexDist = dot(FogPlane, gl_Vertex);\n"
+"#endif\n"
 "\n"
 "#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "	VectorS = gl_MultiTexCoord1.xyz;\n"
@@ -852,6 +898,8 @@ static const char *builtinshaderstring =
 "uniform float OffsetMapping_Scale;\n"
 "uniform float OffsetMapping_Bias;\n"
 "uniform float FogRangeRecip;\n"
+"uniform float FogPlaneViewDist;\n"
+"uniform float FogHeightFade;\n"
 "\n"
 "uniform myhalf AmbientScale;\n"
 "uniform myhalf DiffuseScale;\n"
@@ -1058,7 +1106,7 @@ static const char *builtinshaderstring =
 "#      else\n"
 "#        define texval(x, y) texture2D(Texture_ShadowMap2D, center + vec2(x, y)*ShadowMap_TextureScale).r  \n"
 "#      endif\n"
-"#      if USESHADOWMAPPCF > 1\n"       
+"#      if USESHADOWMAPPCF > 1\n"
 "    vec2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
 "    center *= ShadowMap_TextureScale;\n"
 "    vec4 row1 = step(shadowmaptc.z, vec4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
@@ -1074,7 +1122,7 @@ static const char *builtinshaderstring =
 "    vec3 row3 = step(shadowmaptc.z, vec3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
 "    vec3 cols = row2 + mix(row1, row3, offset.y);\n"
 "    f = dot(mix(cols.xy, cols.yz, offset.x), vec2(0.25));\n"
-"#      endif\n"      
+"#      endif\n"
 "#     endif\n"
 "#    else\n"
 "    f = step(shadowmaptc.z, texture2D(Texture_ShadowMap2D, shadowmaptc.xy*ShadowMap_TextureScale).r);\n"
@@ -1378,7 +1426,39 @@ static const char *builtinshaderstring =
 "\n"
 "	// apply fog after Contrastboost/SceneBrightness because its color is already modified appropriately\n"
 "#ifdef USEFOG\n"
-"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhalf2(length(EyeVectorModelSpace)*FogRangeRecip, 0.0))));\n"
+"	float fogfrac;\n"
+"#ifdef USEFOGOUTSIDE\n"
+"	fogfrac = min(0.0, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0, min(0.0, FogPlaneVertexDist) * FogHeightFade);\n"
+"#else\n"
+"	fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0, FogPlaneVertexDist)) * min(1.0, (min(0.0, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade);\n"
+"#endif\n"
+"//	float FogHeightFade1 = -0.5/1024.0;\n"
+"//	if (FogPlaneViewDist >= 0.0)\n"
+"//		fogfrac = min(0.0, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0, min(0.0, FogPlaneVertexDist) * FogHeightFade1);\n"
+"//	else\n"
+"//		fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0, FogPlaneVertexDist)) * min(1.0, (min(0.0, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade1);\n"
+"//# ifdef USEFOGABOVE\n"
+"//	if (FogPlaneViewDist >= 0.0)\n"
+"//		fogfrac = min(0.0, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist);\n"
+"//	else\n"
+"//		fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0, FogPlaneVertexDist));\n"
+"//	fogfrac *= min(1.0, (min(0.0, FogPlaneVertexDist) + min(0.0, FogPlaneViewDist))*FogHeightFade1);\n"
+"//	fogfrac *= min(1.0, (max(0.0, fade*FogPlaneVertexDist) + max(0.0, fade*FogPlaneViewDist)));\n"
+"//	fogfrac *= min(1.0, (max(0.0, FogHeightFade1*FogPlaneVertexDist) + max(0.0, FogHeightFade1*FogPlaneViewDist)));\n"
+"//	fogfrac *= min(1.0, (min(0.0, FogPlaneVertexDist) + min(0.0, FogPlaneViewDist))*FogHeightFade1);\n"
+"\n"
+"	//fogfrac *= min(1.0, max(0.0, (max(-2048, min(0, FogPlaneVertexDist)) + max(-2048, min(0, FogPlaneViewDist)))/-2048.0));\n"
+"	//float fade = -0.5/128.0;\n"
+"	//fogfrac *= max(0.0, min(1.0, fade*FogPlaneVertexDist)) + max(0.0, min(1.0, fade*FogPlaneViewDist));\n"
+"	//fogfrac *= max(0.0, min(1.0, FogHeightFade1*FogPlaneVertexDist)) + max(0.0, min(1.0, FogHeightFade1*FogPlaneViewDist));\n"
+"	//fogfrac *= min(1.0, max(0.0, FogHeightFade1*FogPlaneVertexDist)) + min(1.0, max(0.0, FogHeightFade1*FogPlaneViewDist));\n"
+"	//fogfrac *= min(1.0, max(0.0, FogHeightFade1*FogPlaneVertexDist) + max(0.0, FogHeightFade1*FogPlaneViewDist));\n"
+"	//fogfrac *= min(1.0, min(1.0, max(0.0, FogHeightFade1*FogPlaneVertexDist)) + min(1.0, max(0.0, FogHeightFade1*FogPlaneViewDist)));\n"
+"	//fogfrac *= min(1.0, max(0.0, FogHeightFade1*FogPlaneVertexDist) + max(0.0, FogHeightFade1*FogPlaneViewDist));\n"
+"	//fogfrac *= min(1.0, (min(0.0, FogPlaneVertexDist) + min(0.0, FogPlaneViewDist)) * FogHeightFade1);\n"
+"	//fogfrac *= min(1.0, (min(0.0, FogPlaneVertexDist) + min(0.0, FogPlaneViewDist)) * FogHeightFade1);\n"
+"//# endif\n"
+"	color.rgb = mix(FogColor, color.rgb, myhalf(texture2D(Texture_FogMask, myhalf2(length(EyeVectorModelSpace)*fogfrac*FogRangeRecip, 0.0))));\n"
 "#endif\n"
 "\n"
 "	// reflection must come last because it already contains exactly the correct fog (the reflection render preserves camera distance from the plane, it only flips the side) and ContrastBoost/SceneBrightness\n"
@@ -1432,6 +1512,7 @@ static const char *builtinshaderstring =
 "\n"
 "#endif // FRAGMENT_SHADER\n"
 "\n"
+"#endif // !MODE_BLOOMBLUR\n"
 "#endif // !MODE_GENERIC\n"
 "#endif // !MODE_POSTPROCESS\n"
 "#endif // !MODE_SHOWDEPTH\n"
@@ -1459,29 +1540,30 @@ typedef enum shaderpermutation_e
 {
 	SHADERPERMUTATION_DIFFUSE = 1<<0, ///< (lightsource) whether to use directional shading
 	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-	SHADERPERMUTATION_VIEWTINT = 1<<1, ///< view tint (postprocessing only)
-	SHADERPERMUTATION_COLORMAPPING = 1<<2, ///< indicates this is a colormapped skin
-	SHADERPERMUTATION_SATURATION = 1<<2, ///< saturation (postprocessing only)
-	SHADERPERMUTATION_FOG = 1<<3, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_GAMMARAMPS = 1<<3, ///< gamma (postprocessing only)
-	SHADERPERMUTATION_CUBEFILTER = 1<<4, ///< (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<5, ///< (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_BLOOM = 1<<5, ///< bloom (postprocessing only)
-	SHADERPERMUTATION_SPECULAR = 1<<6, ///< (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_POSTPROCESSING = 1<<6, ///< user defined postprocessing (postprocessing only)
-	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<7, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
-	SHADERPERMUTATION_REFLECTION = 1<<8, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<9, ///< adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<10, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_SHADOWMAPRECT = 1<<11, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<12, ///< (lightsource) use shadowmap cubemap texture as light filter
-	SHADERPERMUTATION_SHADOWMAP2D = 1<<13, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPPCF = 1<<14, ///< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<15, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<16, ///< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<17, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_LIMIT = 1<<18, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 18 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_VIEWTINT = 1<<2, ///< view tint (postprocessing only)
+	SHADERPERMUTATION_COLORMAPPING = 1<<3, ///< indicates this is a colormapped skin
+	SHADERPERMUTATION_SATURATION = 1<<4, ///< saturation (postprocessing only)
+	SHADERPERMUTATION_FOGINSIDE = 1<<5, ///< tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_FOGOUTSIDE = 1<<6, ///< tint the color by fog color or black if using additive blend mode
+	SHADERPERMUTATION_GAMMARAMPS = 1<<7, ///< gamma (postprocessing only)
+	SHADERPERMUTATION_CUBEFILTER = 1<<8, ///< (lightsource) use cubemap light filter
+	SHADERPERMUTATION_GLOW = 1<<9, ///< (lightmap) blend in an additive glow texture
+	SHADERPERMUTATION_BLOOM = 1<<10, ///< bloom (postprocessing only)
+	SHADERPERMUTATION_SPECULAR = 1<<11, ///< (lightsource or deluxemapping) render specular effects
+	SHADERPERMUTATION_POSTPROCESSING = 1<<12, ///< user defined postprocessing (postprocessing only)
+	SHADERPERMUTATION_EXACTSPECULARMATH = 1<<13, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
+	SHADERPERMUTATION_REFLECTION = 1<<14, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+	SHADERPERMUTATION_OFFSETMAPPING = 1<<15, ///< adjust texcoords to roughly simulate a displacement mapped surface
+	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<16, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+	SHADERPERMUTATION_SHADOWMAPRECT = 1<<17, ///< (lightsource) use shadowmap rectangle texture as light filter
+	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<18, ///< (lightsource) use shadowmap cubemap texture as light filter
+	SHADERPERMUTATION_SHADOWMAP2D = 1<<19, ///< (lightsource) use shadowmap rectangle texture as light filter
+	SHADERPERMUTATION_SHADOWMAPPCF = 1<<20, ///< (lightsource) use percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<21, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWSAMPLER = 1<<22, ///< (lightsource) use hardware shadowmap test
+	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<23, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+	SHADERPERMUTATION_LIMIT = 1<<24, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 24 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -1489,12 +1571,18 @@ shaderpermutation_t;
 shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
 	{"#define USEDIFFUSE\n", " diffuse"},
-	{"#define USEVERTEXTEXTUREBLEND\n#define USEVIEWTINT\n", " vertextextureblend/tint"},
-	{"#define USECOLORMAPPING\n#define USESATURATION\n", " colormapping/saturation"},
-	{"#define USEFOG\n#define USEGAMMARAMPS\n", " fog/gammaramps"},
+	{"#define USEVERTEXTEXTUREBLEND\n", " vertextextureblend"},
+	{"#define USEVIEWTINT\n", " viewtint"},
+	{"#define USECOLORMAPPING\n", " colormapping"},
+	{"#define USESATURATION\n", " saturation"},
+	{"#define USEFOGINSIDE\n", " foginside"},
+	{"#define USEFOGOUTSIDE\n", " fogoutside"},
+	{"#define USEGAMMARAMPS\n", " gammaramps"},
 	{"#define USECUBEFILTER\n", " cubefilter"},
-	{"#define USEGLOW\n#define USEBLOOM\n", " glow/bloom"},
-	{"#define USESPECULAR\n#define USEPOSTPROCESSING", " specular/postprocessing"},
+	{"#define USEGLOW\n", " glow"},
+	{"#define USEBLOOM\n", " bloom"},
+	{"#define USESPECULAR\n", " specular"},
+	{"#define USEPOSTPROCESSING\n", " postprocessing"},
 	{"#define USEEXACTSPECULARMATH\n", " exactspecularmath"},
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
@@ -1588,7 +1676,10 @@ typedef struct r_glsl_permutation_s
 	int loc_EyePosition;
 	int loc_Color_Pants;
 	int loc_Color_Shirt;
+	int loc_FogPlane;
+	int loc_FogPlaneViewDist;
 	int loc_FogRangeRecip;
+	int loc_FogHeightFade;
 	int loc_AmbientScale;
 	int loc_DiffuseScale;
 	int loc_SpecularScale;
@@ -1783,7 +1874,10 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_EyePosition                = qglGetUniformLocationARB(p->program, "EyePosition");
 		p->loc_Color_Pants                = qglGetUniformLocationARB(p->program, "Color_Pants");
 		p->loc_Color_Shirt                = qglGetUniformLocationARB(p->program, "Color_Shirt");
+		p->loc_FogPlane                   = qglGetUniformLocationARB(p->program, "FogPlane");
+		p->loc_FogPlaneViewDist           = qglGetUniformLocationARB(p->program, "FogPlaneViewDist");
 		p->loc_FogRangeRecip              = qglGetUniformLocationARB(p->program, "FogRangeRecip");
+		p->loc_FogHeightFade              = qglGetUniformLocationARB(p->program, "FogHeightFade");
 		p->loc_AmbientScale               = qglGetUniformLocationARB(p->program, "AmbientScale");
 		p->loc_DiffuseScale               = qglGetUniformLocationARB(p->program, "DiffuseScale");
 		p->loc_SpecularPower              = qglGetUniformLocationARB(p->program, "SpecularPower");
@@ -2045,7 +2139,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (specularscale > 0)
 			permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
 		if (r_refdef.fogenabled)
-			permutation |= SHADERPERMUTATION_FOG;
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d || r_shadow_usingshadowmapcube)
@@ -2076,7 +2170,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
-			permutation |= SHADERPERMUTATION_FOG;
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (r_glsl_offsetmapping.integer)
@@ -2100,7 +2194,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (specularscale > 0)
 			permutation |= SHADERPERMUTATION_SPECULAR;
 		if (r_refdef.fogenabled)
-			permutation |= SHADERPERMUTATION_FOG;
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
@@ -2115,7 +2209,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
-			permutation |= SHADERPERMUTATION_FOG;
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
@@ -2158,7 +2252,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (rsurface.texture->currentskinframe->glow && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
-			permutation |= SHADERPERMUTATION_FOG;
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
@@ -2241,7 +2335,10 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		else
 			qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 	}
+	if (r_glsl_permutation->loc_FogPlane >= 0) qglUniform4fARB(r_glsl_permutation->loc_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
+	if (r_glsl_permutation->loc_FogPlaneViewDist >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogPlaneViewDist, rsurface.fogplaneviewdist);
 	if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, rsurface.fograngerecip);
+	if (r_glsl_permutation->loc_FogHeightFade >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogHeightFade, rsurface.fogheightfade);
 	if(permutation & SHADERPERMUTATION_EXACTSPECULARMATH)
 	{
 		if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * 0.25);
@@ -4543,6 +4640,11 @@ void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as t
 		r_refdef.fogcolor[1] = r_refdef.fog_green;
 		r_refdef.fogcolor[2] = r_refdef.fog_blue;
 
+		Vector4Set(r_refdef.fogplane, 0, 0, 1, -r_refdef.fog_height);
+		r_refdef.fogplaneviewdist = DotProduct(r_refdef.fogplane, r_refdef.view.origin) + r_refdef.fogplane[3];
+		r_refdef.fogplaneviewabove = r_refdef.fogplaneviewdist >= 0;
+		r_refdef.fogheightfade = -0.5f/max(0.125f, r_refdef.fog_fadedepth);
+
 		{
 			vec3_t fogvec;
 			VectorCopy(r_refdef.fogcolor, fogvec);
@@ -4599,6 +4701,8 @@ void R_UpdateVariables(void)
 			r_refdef.fog_alpha = 1;
 			r_refdef.fog_start = 0;
 			r_refdef.fog_end = gl_skyclip.value;
+			r_refdef.fog_height = 1<<30;
+			r_refdef.fog_fadedepth = 128;
 		}
 		else if (r_refdef.oldgl_fogenable)
 		{
@@ -4610,6 +4714,8 @@ void R_UpdateVariables(void)
 			r_refdef.fog_alpha = 0;
 			r_refdef.fog_start = 0;
 			r_refdef.fog_end = 0;
+			r_refdef.fog_height = 1<<30;
+			r_refdef.fog_fadedepth = 128;
 		}
 	}
 
@@ -5022,16 +5128,14 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 {
 	int i;
 	float *v, *c, f1, f2, vertex3f[8*3], color4f[8*4];
+
+	RSurf_ActiveWorldEntity();
+
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	R_Mesh_Matrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
-
-	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
-	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
-	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2]; //
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
@@ -5178,20 +5282,17 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	float f1, f2, *c;
 	float color4f[6*4];
 
-	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
-	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
-	rsurface.fograngerecip = r_refdef.fograngerecip;
+	RSurf_ActiveCustomEntity(&ent->matrix, &ent->inversematrix, ent->flags, ent->shadertime, ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha, 6, nomodelvertex3f, NULL, NULL, NULL, NULL, 8, nomodelelement3i, nomodelelement3s, false, false);
 
 	// this is only called once per entity so numsurfaces is always 1, and
 	// surfacelist is always {0}, so this code does not handle batches
-	R_Mesh_Matrix(&ent->matrix);
 
 	if (rsurface.ent_flags & RENDER_ADDITIVE)
 	{
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 	}
-	else if (ent->alpha < 1)
+	else if (rsurface.ent_color[3] < 1)
 	{
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_DepthMask(false);
@@ -5201,37 +5302,32 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	GL_DepthRange(0, (ent->flags & RENDER_VIEWMODEL) ? 0.0625 : 1);
-	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
-	GL_CullFace((ent->effects & EF_DOUBLESIDED) ? GL_NONE : r_refdef.view.cullface_back);
+	GL_DepthRange(0, (rsurface.ent_flags & RENDER_VIEWMODEL) ? 0.0625 : 1);
+	GL_PolygonOffset(rsurface.basepolygonfactor, rsurface.basepolygonoffset);
+	GL_DepthTest(!(rsurface.ent_flags & RENDER_NODEPTHTEST));
+	GL_CullFace((rsurface.ent_flags & RENDER_DOUBLESIDED) ? GL_NONE : r_refdef.view.cullface_back);
 	R_SetupGenericShader(false);
-	R_Mesh_VertexPointer(nomodelvertex3f, 0, 0);
+	R_Mesh_VertexPointer(rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset);
+	memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
+	R_Mesh_ColorPointer(color4f, 0, 0);
+	for (i = 0, c = color4f;i < 6;i++, c += 4)
+	{
+		c[0] *= rsurface.ent_color[0];
+		c[1] *= rsurface.ent_color[1];
+		c[2] *= rsurface.ent_color[2];
+		c[3] *= rsurface.ent_color[3];
+	}
 	if (r_refdef.fogenabled)
 	{
-		vec3_t org;
-		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		R_Mesh_ColorPointer(color4f, 0, 0);
-		Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-		f1 = RSurf_FogVertex(org);
-		f2 = 1 - f1;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 		{
+			f1 = RSurf_FogVertex(rsurface.vertex3f + 3*i);
+			f2 = 1 - f1;
 			c[0] = (c[0] * f1 + r_refdef.fogcolor[0] * f2);
 			c[1] = (c[1] * f1 + r_refdef.fogcolor[1] * f2);
 			c[2] = (c[2] * f1 + r_refdef.fogcolor[2] * f2);
-			c[3] *= ent->alpha;
 		}
 	}
-	else if (ent->alpha != 1)
-	{
-		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		R_Mesh_ColorPointer(color4f, 0, 0);
-		for (i = 0, c = color4f;i < 6;i++, c += 4)
-			c[3] *= ent->alpha;
-	}
-	else
-		R_Mesh_ColorPointer(nomodelcolor4f, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_Draw(0, 6, 0, 8, nomodelelement3i, nomodelelement3s, 0, 0);
 }
@@ -5276,31 +5372,8 @@ void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, flo
 	vert[11] = org2[2] + width * right2[2];
 }
 
-float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
-
-void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_t *fogtexture, qboolean depthdisable, qboolean depthshort, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2, float cr, float cg, float cb, float ca)
+void R_CalcSprite_Vertex3f(float *vertex3f, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2)
 {
-	// NOTE: this must not call qglDepthFunc (see r_shadow.c, R_BeginCoronaQuery) thanks to ATI
-	float fog = 1.0f;
-	float vertex3f[12];
-
-	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
-	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
-	rsurface.fograngerecip = r_refdef.fograngerecip;
-
-	if (r_refdef.fogenabled && !depthdisable) // TODO maybe make the unfog effect a separate flag?
-		fog = RSurf_FogVertex(origin);
-
-	R_Mesh_Matrix(&identitymatrix);
-	GL_BlendFunc(blendfunc1, blendfunc2);
-
-	GL_CullFace(GL_NONE);
-
-	GL_DepthMask(false);
-	GL_DepthRange(0, depthshort ? 0.0625 : 1);
-	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	GL_DepthTest(!depthdisable);
-
 	vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
 	vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
 	vertex3f[ 2] = origin[2] + left[2] * scalex2 + up[2] * scaley1;
@@ -5313,25 +5386,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	vertex3f[ 9] = origin[0] + left[0] * scalex1 + up[0] * scaley1;
 	vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
 	vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
-
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_ResetTextureState();
-	R_SetupGenericShader(true);
-	R_Mesh_TexBind(0, R_GetTexture(texture));
-	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f, 0, 0);
-	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
-	GL_Color(cr * fog * r_refdef.view.colorscale, cg * fog * r_refdef.view.colorscale, cb * fog * r_refdef.view.colorscale, ca);
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-
-	if (blendfunc2 == GL_ONE_MINUS_SRC_ALPHA)
-	{
-		R_Mesh_TexBind(0, R_GetTexture(fogtexture));
-		GL_BlendFunc(blendfunc1, GL_ONE);
-		fog = 1 - fog;
-		GL_Color(r_refdef.fogcolor[0] * fog, r_refdef.fogcolor[1] * fog, r_refdef.fogcolor[2] * fog, ca);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-	}
 }
 
 int R_Mesh_AddVertex(rmesh_t *mesh, float x, float y, float z)
@@ -5670,7 +5724,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currenttexmatrix = r_waterscrollmatrix;
 		t->currentbackgroundtexmatrix = r_waterscrollmatrix;
 	}
-	else
+	else if (!(t->currentmaterialflags & MATERIALFLAG_CUSTOMSURFACE))
 	{
 		Matrix4x4_CreateIdentity(&t->currenttexmatrix);
 		Matrix4x4_CreateIdentity(&t->currentbackgroundtexmatrix);
@@ -5860,7 +5914,10 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.inversematrixscale = 1;
 	R_Mesh_Matrix(&identitymatrix);
 	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+	Vector4Copy(r_refdef.fogplane, rsurface.fogplane);
 	rsurface.fograngerecip = r_refdef.fograngerecip;
+	rsurface.fogheightfade = r_refdef.fogheightfade;
+	rsurface.fogplaneviewdist = r_refdef.fogplaneviewdist;
 	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
 	VectorSet(rsurface.modellight_ambient, 0, 0, 0);
 	VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
@@ -5936,7 +5993,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.inversematrixscale = 1.0f / rsurface.matrixscale;
 	R_Mesh_Matrix(&rsurface.matrix);
 	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
+	Matrix4x4_TransformStandardPlane(&rsurface.inversematrix, r_refdef.fogplane[0], r_refdef.fogplane[1], r_refdef.fogplane[2], r_refdef.fogplane[3], rsurface.fogplane);
+	rsurface.fogplaneviewdist *= rsurface.inversematrixscale;
 	rsurface.fograngerecip = r_refdef.fograngerecip * rsurface.matrixscale;
+	rsurface.fogheightfade = r_refdef.fogheightfade * rsurface.matrixscale;
 	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
 	VectorCopy(ent->modellight_ambient, rsurface.modellight_ambient);
 	VectorCopy(ent->modellight_diffuse, rsurface.modellight_diffuse);
@@ -6043,19 +6103,211 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.texcoordtexture2f = rsurface.modeltexcoordtexture2f;
 }
 
+void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
+{
+#if 0
+	static float scale[8];
+	vec3_t worldfogpoint, localfogpoint;
+#endif
+	rsurface.entity = r_refdef.scene.worldentity;
+	rsurface.ent_skinnum = 0;
+	rsurface.ent_qwskin = -1;
+	rsurface.ent_shadertime = shadertime;
+	Vector4Set(rsurface.ent_color, r, g, b, a);
+	rsurface.ent_flags = entflags;
+	rsurface.modelnum_vertices = numvertices;
+	rsurface.modelnum_triangles = numtriangles;
+	if (rsurface.array_size < rsurface.modelnum_vertices)
+		R_Mesh_ResizeArrays(rsurface.modelnum_vertices);
+	rsurface.matrix = *matrix;
+	rsurface.inversematrix = *inversematrix;
+	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
+	rsurface.inversematrixscale = 1.0f / rsurface.matrixscale;
+	R_Mesh_Matrix(&rsurface.matrix);
+#if 0
+	scale[0] = 1;
+	scale[1] = rsurface.matrixscale;
+	scale[2] = rsurface.inversematrixscale;
+	scale[3] = rsurface.matrixscale * rsurface.matrixscale;
+	scale[4] = rsurface.inversematrixscale * rsurface.inversematrixscale;
+	scale[5] = rsurface.matrixscale * rsurface.matrixscale * rsurface.matrixscale;
+	scale[6] = rsurface.inversematrixscale * rsurface.inversematrixscale * rsurface.inversematrixscale;
+	scale[7] = 0;
+#endif
+#if 0
+	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
+	//Matrix4x4_TransformStandardPlane(&rsurface.inversematrix, r_refdef.fogplane[0], r_refdef.fogplane[1], r_refdef.fogplane[2], r_refdef.fogplane[3], rsurface.fogplane);
+	Matrix4x4_Transform3x3(&rsurface.inversematrix, r_refdef.fogplane, rsurface.fogplane);
+	VectorNormalize(rsurface.fogplane);
+	VectorScale(r_refdef.fogplane, -r_refdef.fogplane[3], worldfogpoint);
+	Matrix4x4_Transform(&rsurface.inversematrix, worldfogpoint, localfogpoint);
+	rsurface.fogplane[3] = -DotProduct(rsurface.fogplane, localfogpoint);
+	rsurface.fogplaneviewdist = DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3];
+	rsurface.fograngerecip = r_refdef.fograngerecip * rsurface.matrixscale;
+	rsurface.fogheightfade = r_refdef.fogheightfade * rsurface.matrixscale;
+	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
+#endif
+#if 1
+	Matrix4x4_Transform(&rsurface.inversematrix, r_refdef.view.origin, rsurface.localvieworigin);
+	Matrix4x4_TransformStandardPlane(&rsurface.inversematrix, r_refdef.fogplane[0], r_refdef.fogplane[1], r_refdef.fogplane[2], r_refdef.fogplane[3], rsurface.fogplane);
+	rsurface.fogplaneviewdist *= rsurface.inversematrixscale;
+	rsurface.fograngerecip = r_refdef.fograngerecip * rsurface.matrixscale;
+	rsurface.fogheightfade = r_refdef.fogheightfade * rsurface.matrixscale;
+	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
+#endif
+
+#if 0
+if (r_refdef.fogenabled && memcmp(&rsurface.matrix, &identitymatrix, sizeof(rsurface.matrix)))
+{
+	qboolean fail = false;
+	vec3_t temp, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
+	VectorScale(r_refdef.fogplane, r_refdef.fogplane[3], temp);
+	Matrix4x4_Transform(&rsurface.inversematrix, temp, temp2);
+	//rsurface.fogplane[3] = -DotProduct(temp2, rsurface.fogplane);
+	//rsurface.fogplaneviewdist = DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3];
+	VectorScale(rsurface.fogplane, rsurface.fogplane[3], temp3);
+	Matrix4x4_Transform(&rsurface.matrix, temp3, temp4);
+	VectorSet(temp5, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2] + 1000);
+	Matrix4x4_Transform(&rsurface.inversematrix, temp5, temp6);
+	VectorSet(temp7, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2] - 1000);
+	Matrix4x4_Transform(&rsurface.inversematrix, temp7, temp8);
+	Con_Printf("#%i : %f %f %f %f : %f %f %f : %f %f %f : %f %f\n", r_test.integer,
+		rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3],
+		rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2],
+		rsurface.fogplaneviewdist,
+		DotProduct(rsurface.localvieworigin, rsurface.fogplane) - DotProduct(temp2, rsurface.fogplane),
+		DotProduct(r_refdef.view.origin, r_refdef.fogplane) + r_refdef.fogplane[3],
+		rsurface.fogplane[3] - -DotProduct(temp2, rsurface.fogplane),
+		r_refdef.fogplane[3] - -DotProduct(temp4, r_refdef.fogplane)
+		);
+	//if (fabs(RSurf_FogVertex(temp6) - RSurf_FogPoint(temp5)) > 0.1)
+	//	fail = true;
+	//if (fabs(RSurf_FogVertex(temp8) - RSurf_FogPoint(temp7)) > 0.1)
+	//	fail = true;
+	//if (fabs(rsurface.fogplaneviewdist * rsurface.matrixscale - r_refdef.fogplaneviewdist) > 1)
+	//	fail = true;
+	//if (fabs((DotProduct(rsurface.localvieworigin, rsurface.fogplane) + rsurface.fogplane[3]) * rsurface.matrixscale - r_refdef.fogplaneviewdist) > 1)
+	//	fail = true;
+	//if (fabs(-DotProduct(temp2, rsurface.fogplane) - rsurface.fogplane[3]) > 1)
+	//	fail = true;
+	//if (fabs(-DotProduct(temp4, r_refdef.fogplane) - r_refdef.fogplane[3]) > 1)
+	//	fail = true;
+	//if (fabs(rsurface.fogplaneviewdist - DotProduct(rsurface.localvieworigin, rsurface.fogplane) - rsurface.fogplane[3]) > 1)
+	//	fail = true;
+	//if (fabs(DotProduct(rsurface.localvieworigin, rsurface.fogplane) - DotProduct(temp2, rsurface.fogplane) - rsurface.fogplaneviewdist) > 1)
+	//	fail = true;
+	if (fail)
+		Cvar_SetValueQuick(&r_test, r_test.integer + 1);
+}
+#endif
+
+	VectorSet(rsurface.modellight_ambient, 0, 0, 0);
+	VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
+	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
+	VectorSet(rsurface.colormap_pantscolor, 0, 0, 0);
+	VectorSet(rsurface.colormap_shirtcolor, 0, 0, 0);
+	VectorSet(rsurface.glowmod, 1, 1, 1);
+	memset(rsurface.frameblend, 0, sizeof(rsurface.frameblend));
+	rsurface.frameblend[0].lerp = 1;
+	rsurface.basepolygonfactor = r_refdef.polygonfactor;
+	rsurface.basepolygonoffset = r_refdef.polygonoffset;
+	if (wanttangents)
+	{
+		rsurface.modelvertex3f = vertex3f;
+		rsurface.modelsvector3f = svector3f ? svector3f : rsurface.array_modelsvector3f;
+		rsurface.modeltvector3f = tvector3f ? tvector3f : rsurface.array_modeltvector3f;
+		rsurface.modelnormal3f = normal3f ? normal3f : rsurface.array_modelnormal3f;
+	}
+	else if (wantnormals)
+	{
+		rsurface.modelvertex3f = vertex3f;
+		rsurface.modelsvector3f = NULL;
+		rsurface.modeltvector3f = NULL;
+		rsurface.modelnormal3f = normal3f ? normal3f : rsurface.array_modelnormal3f;
+	}
+	else
+	{
+		rsurface.modelvertex3f = vertex3f;
+		rsurface.modelsvector3f = NULL;
+		rsurface.modeltvector3f = NULL;
+		rsurface.modelnormal3f = NULL;
+	}
+	rsurface.modelvertex3f_bufferobject = 0;
+	rsurface.modelvertex3f_bufferoffset = 0;
+	rsurface.modelsvector3f_bufferobject = 0;
+	rsurface.modelsvector3f_bufferoffset = 0;
+	rsurface.modeltvector3f_bufferobject = 0;
+	rsurface.modeltvector3f_bufferoffset = 0;
+	rsurface.modelnormal3f_bufferobject = 0;
+	rsurface.modelnormal3f_bufferoffset = 0;
+	rsurface.generatedvertex = true;
+	rsurface.modellightmapcolor4f  = NULL;
+	rsurface.modellightmapcolor4f_bufferobject = 0;
+	rsurface.modellightmapcolor4f_bufferoffset = 0;
+	rsurface.modeltexcoordtexture2f  = texcoord2f;
+	rsurface.modeltexcoordtexture2f_bufferobject = 0;
+	rsurface.modeltexcoordtexture2f_bufferoffset = 0;
+	rsurface.modeltexcoordlightmap2f  = NULL;
+	rsurface.modeltexcoordlightmap2f_bufferobject = 0;
+	rsurface.modeltexcoordlightmap2f_bufferoffset = 0;
+	rsurface.modelelement3i = element3i;
+	rsurface.modelelement3s = element3s;
+	rsurface.modelelement3i_bufferobject = 0;
+	rsurface.modelelement3s_bufferobject = 0;
+	rsurface.modellightmapoffsets = NULL;
+	rsurface.modelsurfaces = NULL;
+	rsurface.vertex3f  = rsurface.modelvertex3f;
+	rsurface.vertex3f_bufferobject = rsurface.modelvertex3f_bufferobject;
+	rsurface.vertex3f_bufferoffset = rsurface.modelvertex3f_bufferoffset;
+	rsurface.svector3f = rsurface.modelsvector3f;
+	rsurface.svector3f_bufferobject = rsurface.modelsvector3f_bufferobject;
+	rsurface.svector3f_bufferoffset = rsurface.modelsvector3f_bufferoffset;
+	rsurface.tvector3f = rsurface.modeltvector3f;
+	rsurface.tvector3f_bufferobject = rsurface.modeltvector3f_bufferobject;
+	rsurface.tvector3f_bufferoffset = rsurface.modeltvector3f_bufferoffset;
+	rsurface.normal3f  = rsurface.modelnormal3f;
+	rsurface.normal3f_bufferobject = rsurface.modelnormal3f_bufferobject;
+	rsurface.normal3f_bufferoffset = rsurface.modelnormal3f_bufferoffset;
+	rsurface.texcoordtexture2f = rsurface.modeltexcoordtexture2f;
+
+	if (rsurface.modelnum_vertices && rsurface.modelelement3i)
+	{
+		if ((wantnormals || wanttangents) && !normal3f)
+			Mod_BuildNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modelelement3i, rsurface.array_modelnormal3f, r_smoothnormals_areaweighting.integer != 0);
+		if (wanttangents && !svector3f)
+			Mod_BuildTextureVectorsFromNormals(0, rsurface.modelnum_vertices, rsurface.modelnum_triangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.modelnormal3f, rsurface.modelelement3i, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f, r_smoothnormals_areaweighting.integer != 0);
+	}
+}
+
 float RSurf_FogPoint(const float *v)
 {
-	float len = VectorDistance(r_refdef.view.origin, v);
+	// this code is identical to the USEFOGINSIDE/USEFOGOUTSIDE code in the shader
+	float FogPlaneViewDist = r_refdef.fogplaneviewdist;
+	float FogPlaneVertexDist = DotProduct(r_refdef.fogplane, v) + r_refdef.fogplane[3];
+	float FogHeightFade = r_refdef.fogheightfade;
+	float fogfrac;
 	unsigned int fogmasktableindex;
-	fogmasktableindex = (unsigned int)(len * r_refdef.fogmasktabledistmultiplier);
+	if (r_refdef.fogplaneviewabove)
+		fogfrac = min(0.0f, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0f, min(0.0f, FogPlaneVertexDist) * FogHeightFade);
+	else
+		fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0f, FogPlaneVertexDist)) * min(1.0f, (min(0.0f, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade);
+	fogmasktableindex = (unsigned int)(VectorDistance(r_refdef.view.origin, v) * fogfrac * r_refdef.fogmasktabledistmultiplier);
 	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
 float RSurf_FogVertex(const float *v)
 {
-	float len = VectorDistance(rsurface.localvieworigin, v);
+	// this code is identical to the USEFOGINSIDE/USEFOGOUTSIDE code in the shader
+	float FogPlaneViewDist = rsurface.fogplaneviewdist;
+	float FogPlaneVertexDist = DotProduct(rsurface.fogplane, v) + rsurface.fogplane[3];
+	float FogHeightFade = rsurface.fogheightfade;
+	float fogfrac;
 	unsigned int fogmasktableindex;
-	fogmasktableindex = (unsigned int)(len * rsurface.fogmasktabledistmultiplier);
+	if (r_refdef.fogplaneviewabove)
+		fogfrac = min(0.0f, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0f, min(0.0f, FogPlaneVertexDist) * FogHeightFade);
+	else
+		fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0f, FogPlaneVertexDist)) * min(1.0f, (min(0.0f, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade);
+	fogmasktableindex = (unsigned int)(VectorDistance(rsurface.localvieworigin, v) * fogfrac * rsurface.fogmasktabledistmultiplier);
 	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
@@ -8256,4 +8508,31 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
 	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+}
+
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth)
+{
+	static texture_t texture;
+	static msurface_t surface;
+	const msurface_t *surfacelist = &surface;
+
+	// fake enough texture and surface state to render this geometry
+
+	texture.update_lastrenderframe = -1; // regenerate this texture
+	texture.basematerialflags = materialflags | MATERIALFLAG_CUSTOMSURFACE | MATERIALFLAG_WALL;
+	texture.currentskinframe = skinframe;
+	texture.currenttexmatrix = *texmatrix; // requires MATERIALFLAG_CUSTOMSURFACE
+	texture.specularscalemod = 1;
+	texture.specularpowermod = 1;
+
+	surface.texture = &texture;
+	surface.num_triangles = numtriangles;
+	surface.num_firsttriangle = firsttriangle;
+	surface.num_vertices = numvertices;
+	surface.num_firstvertex = firstvertex;
+
+	// now render it
+	rsurface.texture = R_GetCurrentTexture(surface.texture);
+	rsurface.uselightmaptexture = false;
+	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth);
 }

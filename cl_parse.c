@@ -391,10 +391,12 @@ void CL_ParseEntityLump(char *entdata)
 			r_refdef.fog_start = 0;
 			r_refdef.fog_alpha = 1;
 			r_refdef.fog_end = 16384;
+			r_refdef.fog_height = 1<<30;
+			r_refdef.fog_fadedepth = 128;
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
-			sscanf(value, "%f %f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_alpha, &r_refdef.fog_start, &r_refdef.fog_end);
+			sscanf(value, "%f %f %f %f %f %f %f %f %f", &r_refdef.fog_density, &r_refdef.fog_red, &r_refdef.fog_green, &r_refdef.fog_blue, &r_refdef.fog_alpha, &r_refdef.fog_start, &r_refdef.fog_end, &r_refdef.fog_height, &r_refdef.fog_fadedepth);
 		}
 		else if (!strcmp("fog_density", key))
 			r_refdef.fog_density = atof(value);
@@ -410,6 +412,10 @@ void CL_ParseEntityLump(char *entdata)
 			r_refdef.fog_start = atof(value);
 		else if (!strcmp("fog_end", key))
 			r_refdef.fog_end = atof(value);
+		else if (!strcmp("fog_height", key))
+			r_refdef.fog_height = atof(value);
+		else if (!strcmp("fog_fadedepth", key))
+			r_refdef.fog_fadedepth = atof(value);
 	}
 }
 
