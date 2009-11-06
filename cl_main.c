@@ -88,6 +88,8 @@ cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model wh
 cvar_t cl_locs_enable = {CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
 cvar_t cl_locs_show = {0, "locs_show", "0", "shows defined locations for editing purposes"};
 
+extern cvar_t r_equalize_entities_fullbright;
+
 client_static_t	cls;
 client_state_t	cl;
 
@@ -1080,8 +1082,13 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	if (e->state_current.number == cl.viewentity)
 		e->render.flags |= RENDER_EXTERIORMODEL;
 	// either fullbright or lit
-	if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
-		e->render.flags |= RENDER_LIGHT;
+	if(!r_fullbright.integer)
+	{
+		if (!(e->render.effects & EF_FULLBRIGHT))
+			e->render.flags |= RENDER_LIGHT;
+		else if(r_equalize_entities_fullbright.integer)
+			e->render.flags |= RENDER_LIGHT | RENDER_EQUALIZE;
+	}
 	// hide player shadow during intermission or nehahra movie
 	if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
 	 && (e->render.alpha >= 1)
@@ -1491,8 +1498,13 @@ static void CL_RelinkStaticEntities(void)
 		// need to re-fetch the model pointer
 		e->render.model = cl.model_precache[e->state_baseline.modelindex];
 		// either fullbright or lit
-		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
-			e->render.flags |= RENDER_LIGHT;
+		if(!r_fullbright.integer)
+		{
+			if (!(e->render.effects & EF_FULLBRIGHT))
+				e->render.flags |= RENDER_LIGHT;
+			else if(r_equalize_entities_fullbright.integer)
+				e->render.flags |= RENDER_LIGHT | RENDER_EQUALIZE;
+		}
 		// hide player shadow during intermission or nehahra movie
 		if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (e->render.alpha >= 1))
 			e->render.flags |= RENDER_SHADOW;
