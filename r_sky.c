@@ -6,13 +6,15 @@
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1", "enables sky rendering (black otherwise)"};
 cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1", "speed at which upper clouds layer scrolls in quake sky"};
 cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clouds layer scrolls in quake sky"};
-int skyrendernow;
+int skyrenderlater;
 int skyrendermasked;
 
 static int skyrendersphere;
 static int skyrenderbox;
 static rtexturepool_t *skytexturepool;
 static char skyname[MAX_QPATH];
+static matrix4x4_t skymatrix;
+static matrix4x4_t skyinversematrix;
 
 typedef struct suffixinfo_s
 {
@@ -52,18 +54,17 @@ static rtexture_t *skyboxside[6];
 
 void R_SkyStartFrame(void)
 {
-	skyrendernow = false;
 	skyrendersphere = false;
 	skyrenderbox = false;
 	skyrendermasked = false;
+	// for depth-masked sky, we need to know whether any sky was rendered
+	skyrenderlater = false;
 	if (r_sky.integer && !(r_refdef.fogenabled && r_refdef.fogmasktable[FOGMASKTABLEWIDTH-1] < (1.0f / 256.0f)))
 	{
 		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
 		else if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.solidskytexture)
 			skyrendersphere = true;
-		// for depth-masked sky, render the sky on the first sky surface encountered
-		skyrendernow = true;
 		skyrendermasked = true;
 	}
 }
@@ -330,9 +331,9 @@ static void skyspherecalc(void)
 	unsigned short *e;
 	float a, b, x, ax, ay, v[3], length, *vertex3f, *texcoord2f;
 	float dx, dy, dz;
-	dx = 16;
-	dy = 16;
-	dz = 16 / 3;
+	dx = 16.0f;
+	dy = 16.0f;
+	dz = 16.0f / 3.0f;
 	vertex3f = skysphere_vertex3f;
 	texcoord2f = skysphere_texcoord2f;
 	for (j = 0;j <= skygridy;j++)
@@ -373,7 +374,7 @@ static void skyspherecalc(void)
 
 static void R_SkySphere(void)
 {
-	float speedscale;
+	double speedscale;
 	static qboolean skysphereinitialized = false;
 	matrix4x4_t scroll1matrix, scroll2matrix;
 	if (!skysphereinitialized)
@@ -386,11 +387,11 @@ static void R_SkySphere(void)
 
 	// scroll speed for upper layer
 	speedscale = r_refdef.scene.time*r_skyscroll1.value*8.0/128.0;
-	speedscale -= (int)speedscale;
+	speedscale -= floor(speedscale);
 	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
 	// scroll speed for lower layer (transparent layer)
 	speedscale = r_refdef.scene.time*r_skyscroll2.value*8.0/128.0;
-	speedscale -= (int)speedscale;
+	speedscale -= floor(speedscale);
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
 	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
@@ -448,34 +449,32 @@ static void R_SkySphere(void)
 
 void R_Sky(void)
 {
-	matrix4x4_t skymatrix;
-	if (skyrendermasked)
+	Matrix4x4_CreateFromQuakeEntity(&skymatrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, 0, 0, r_refdef.farclip * (0.5f / 16.0f));
+	Matrix4x4_Invert_Simple(&skyinversematrix, &skymatrix);
+
+	R_Mesh_Matrix(&skymatrix);
+	if (skyrendersphere)
 	{
-		Matrix4x4_CreateTranslate(&skymatrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2]);
-		R_Mesh_Matrix(&skymatrix);
-		if (skyrendersphere)
-		{
-			// this does not modify depth buffer
-			R_SkySphere();
-		}
-		else if (skyrenderbox)
-		{
-			// this does not modify depth buffer
-			R_SkyBox();
-		}
-		/* this will be skyroom someday
-		else
-		{
-			// this modifies the depth buffer so we have to clear it afterward
-			//R_SkyRoom();
-			// clear the depthbuffer that was used while rendering the skyroom
-			//GL_Clear(GL_DEPTH_BUFFER_BIT);
-		}
-		*/
-		GL_DepthRange(0, 1);
-		GL_DepthTest(true);
-		GL_DepthMask(true);
+		// this does not modify depth buffer
+		R_SkySphere();
 	}
+	else if (skyrenderbox)
+	{
+		// this does not modify depth buffer
+		R_SkyBox();
+	}
+	/* this will be skyroom someday
+	else
+	{
+		// this modifies the depth buffer so we have to clear it afterward
+		//R_SkyRoom();
+		// clear the depthbuffer that was used while rendering the skyroom
+		//GL_Clear(GL_DEPTH_BUFFER_BIT);
+	}
+	*/
+	GL_DepthRange(0, 1);
+	GL_DepthTest(true);
+	GL_DepthMask(true);
 }
 
 //===============================================================
