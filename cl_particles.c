@@ -2134,7 +2134,6 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
-	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	r_refdef.stats.decals += numsurfaces;
 	R_Mesh_ResetTextureState();
@@ -2287,7 +2286,6 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
-	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
