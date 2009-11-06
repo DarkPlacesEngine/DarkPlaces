@@ -2332,8 +2332,8 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 
 static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int numverts, int numtriangles, const int *element3i, const float *diffusecolor, const float *ambientcolor)
 {
-	float *vertex3f = rsurface.vertex3f + 3 * firstvertex;
-	float *normal3f = rsurface.normal3f + 3 * firstvertex;
+	const float *vertex3f = rsurface.vertex3f + 3 * firstvertex;
+	const float *normal3f = rsurface.normal3f + 3 * firstvertex;
 	float *color4f = rsurface.array_color4f + 4 * firstvertex;
 	float dist, dot, distintensity, shadeintensity, v[3], n[3];
 	if (r_textureunits.integer >= 3)

@@ -1019,7 +1019,7 @@ extern cvar_t r_polygonoffset_submodel_offset;
 void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
-	msurface_t *surface;
+	const msurface_t *surface;
 	int modelsurfacelistindex;
 	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
 	// check the box in modelspace, it was already checked in worldspace
@@ -1084,7 +1084,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
-	msurface_t *surface, *batch[1024];
+	const msurface_t *surface, *batch[1024];
 	int modelsurfacelistindex, batchsize;
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
@@ -1131,7 +1131,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 {
 	int i, j, endsurface;
 	texture_t *t;
-	msurface_t *surface;
+	const msurface_t *surface;
 	// note: in practice this never actually receives batches), oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
@@ -1161,7 +1161,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs)
 {
 	dp_model_t *model = ent->model;
-	msurface_t *surface;
+	const msurface_t *surface;
 	int i, k, kend, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex, batchfirsttriangle;
 	qboolean usebufferobject, culltriangles;
 	const int *element3i;
