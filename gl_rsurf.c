@@ -1084,7 +1084,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
-	msurface_t *surface, *batch[64];
+	msurface_t *surface, *batch[1024];
 	int modelsurfacelistindex, batchsize;
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
@@ -1103,7 +1103,7 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
 		r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
 		batch[0] = surface;
-        batchsize = 1;
+		batchsize = 1;
 		while(++modelsurfacelistindex < modelnumsurfaces && batchsize < (int)(sizeof(batch)/sizeof(batch[0])))
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
