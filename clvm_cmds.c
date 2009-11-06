@@ -1472,6 +1472,12 @@ static void VM_CL_makestatic (void)
 		// turn off shadows from transparent objects
 		if (!(staticent->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (staticent->render.alpha >= 1))
 			staticent->render.flags |= RENDER_SHADOW;
+		if (staticent->render.effects & EF_NODEPTHTEST)
+			staticent->render.flags |= RENDER_NODEPTHTEST;
+		if (staticent->render.effects & EF_ADDITIVE)
+			staticent->render.flags |= RENDER_ADDITIVE;
+		if (staticent->render.effects & EF_DOUBLESIDED)
+			staticent->render.flags |= RENDER_DOUBLESIDED;
 
 		CL_UpdateRenderEntity(&staticent->render);
 	}

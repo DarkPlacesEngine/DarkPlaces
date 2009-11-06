@@ -1077,7 +1077,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 
 	// tenebrae's sprites are all additive mode (weird)
 	if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
-		e->render.effects |= EF_ADDITIVE;
+		e->render.flags |= RENDER_ADDITIVE;
 	// player model is only shown with chase_active on
 	if (e->state_current.number == cl.viewentity)
 		e->render.flags |= RENDER_EXTERIORMODEL;
@@ -1099,6 +1099,12 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= RENDER_NOSELFSHADOW;
 	if (e->render.effects & EF_NOSELFSHADOW)
 		e->render.flags |= RENDER_NOSELFSHADOW;
+	if (e->render.effects & EF_NODEPTHTEST)
+		e->render.flags |= RENDER_NODEPTHTEST;
+	if (e->render.effects & EF_ADDITIVE)
+		e->render.flags |= RENDER_ADDITIVE;
+	if (e->render.effects & EF_DOUBLESIDED)
+		e->render.flags |= RENDER_DOUBLESIDED;
 
 	// make the other useful stuff
 	CL_UpdateRenderEntity(&e->render);
