@@ -241,35 +241,35 @@ typedef struct rsurfacestate_s
 	// this indicates the model* arrays are pointed at array_model* buffers
 	// (in other words, the model has been animated in software)
 	qboolean generatedvertex;
-	float *modelvertex3f;
+	const float *modelvertex3f;
 	int modelvertex3f_bufferobject;
 	size_t modelvertex3f_bufferoffset;
-	float *modelsvector3f;
+	const float *modelsvector3f;
 	int modelsvector3f_bufferobject;
 	size_t modelsvector3f_bufferoffset;
-	float *modeltvector3f;
+	const float *modeltvector3f;
 	int modeltvector3f_bufferobject;
 	size_t modeltvector3f_bufferoffset;
-	float *modelnormal3f;
+	const float *modelnormal3f;
 	int modelnormal3f_bufferobject;
 	size_t modelnormal3f_bufferoffset;
-	float *modellightmapcolor4f;
+	const float *modellightmapcolor4f;
 	int modellightmapcolor4f_bufferobject;
 	size_t modellightmapcolor4f_bufferoffset;
-	float *modeltexcoordtexture2f;
+	const float *modeltexcoordtexture2f;
 	int modeltexcoordtexture2f_bufferobject;
 	size_t modeltexcoordtexture2f_bufferoffset;
-	float *modeltexcoordlightmap2f;
+	const float *modeltexcoordlightmap2f;
 	int modeltexcoordlightmap2f_bufferobject;
 	size_t modeltexcoordlightmap2f_bufferoffset;
-	int *modelelement3i;
-	unsigned short *modelelement3s;
+	const int *modelelement3i;
+	const unsigned short *modelelement3s;
 	int modelelement3i_bufferobject;
 	int modelelement3s_bufferobject;
-	int *modellightmapoffsets;
+	const int *modellightmapoffsets;
 	int modelnum_vertices;
 	int modelnum_triangles;
-	msurface_t *modelsurfaces;
+	const msurface_t *modelsurfaces;
 	// current rendering array pointers
 	// these may point to any of several different buffers depending on how
 	// much processing was needed to prepare this model for rendering
@@ -280,25 +280,25 @@ typedef struct rsurfacestate_s
 	// the exception is the color array which is often generated based on
 	// colormod, alpha fading, and fogging, it may also come from q3bsp vertex
 	// lighting of certain surfaces
-	float *vertex3f;
+	const float *vertex3f;
 	int vertex3f_bufferobject;
 	size_t vertex3f_bufferoffset;
-	float *svector3f;
+	const float *svector3f;
 	int svector3f_bufferobject;
 	size_t svector3f_bufferoffset;
-	float *tvector3f;
+	const float *tvector3f;
 	int tvector3f_bufferobject;
 	size_t tvector3f_bufferoffset;
-	float *normal3f;
+	const float *normal3f;
 	int normal3f_bufferobject;
 	size_t normal3f_bufferoffset;
-	float *lightmapcolor4f;
+	const float *lightmapcolor4f;
 	int lightmapcolor4f_bufferobject;
 	size_t lightmapcolor4f_bufferoffset;
-	float *texcoordtexture2f;
+	const float *texcoordtexture2f;
 	int texcoordtexture2f_bufferobject;
 	size_t texcoordtexture2f_bufferoffset;
-	float *texcoordlightmap2f;
+	const float *texcoordlightmap2f;
 	int texcoordlightmap2f_bufferobject;
 	size_t texcoordlightmap2f_bufferoffset;
 	// some important fields from the entity
@@ -379,8 +379,8 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
 void R_AddWaterPlanes(entity_render_t *ent);
 
-void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist);
-void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist);
+void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist);
+void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist);
 
 typedef enum rsurfacepass_e
 {

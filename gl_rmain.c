@@ -6060,7 +6060,7 @@ float RSurf_FogVertex(const float *v)
 }
 
 static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
-void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, msurface_t **texturesurfacelist)
+void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int deformindex;
 	int texturesurfaceindex;
@@ -6496,7 +6496,7 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 	R_Mesh_VertexPointer(rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset);
 }
 
-void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacelist)
+void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int i, j;
 	const msurface_t *surface = texturesurfacelist[0];
@@ -6570,14 +6570,14 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, msurface_t **texturesurfacel
 	}
 }
 
-static void RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(int texturenumsurfaces, msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit, int refractiontexunit, int reflectiontexunit)
+static void RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(int texturenumsurfaces, const msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit, int refractiontexunit, int reflectiontexunit)
 {
 	int i, planeindex, vertexindex;
 	float d, bestd;
 	vec3_t vert;
 	const float *v;
 	r_waterstate_waterplane_t *p, *bestp;
-	msurface_t *surface;
+	const msurface_t *surface;
 	if (r_waterstate.renderingscene)
 		return;
 	for (i = 0;i < texturenumsurfaces;i++)
@@ -6623,7 +6623,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(int 
 	}
 }
 
-static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit)
+static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, const msurface_t **texturesurfacelist, int lightmaptexunit, int deluxemaptexunit)
 {
 	int i;
 	int j;
@@ -6729,7 +6729,7 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, msurfa
 	}
 }
 
-static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int j;
 	int texturesurfaceindex;
@@ -6759,11 +6759,12 @@ static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, msurface_t **te
 	}
 }
 
-static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	int i;
-	float *v, *c2;
+	const float *v;
+	float *c2;
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 	{
 		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
@@ -6780,12 +6781,14 @@ static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(int texturenum
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
-static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	int i;
 	float f;
-	float *v, *c, *c2;
+	const float *v;
+	const float *c;
+	float *c2;
 	if (rsurface.lightmapcolor4f)
 	{
 		// generate color arrays for the surfaces in this list
@@ -6822,12 +6825,14 @@ static void RSurf_DrawBatch_GL11_ApplyFog(int texturenumsurfaces, msurface_t **t
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
-static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	int i;
 	float f;
-	float *v, *c, *c2;
+	const float *v;
+	const float *c;
+	float *c2;
 	if (!rsurface.lightmapcolor4f)
 		return;
 	// generate color arrays for the surfaces in this list
@@ -6848,11 +6853,12 @@ static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(int texturenumsu
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
-static void RSurf_DrawBatch_GL11_ApplyColor(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a)
+static void RSurf_DrawBatch_GL11_ApplyColor(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a)
 {
 	int texturesurfaceindex;
 	int i;
-	float *c, *c2;
+	const float *c;
+	float *c2;
 	if (!rsurface.lightmapcolor4f)
 		return;
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -6871,11 +6877,12 @@ static void RSurf_DrawBatch_GL11_ApplyColor(int texturenumsurfaces, msurface_t *
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
-static void RSurf_DrawBatch_GL11_ApplyAmbient(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void RSurf_DrawBatch_GL11_ApplyAmbient(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
 	int i;
-	float *c, *c2;
+	const float *c;
+	float *c2;
 	if (!rsurface.lightmapcolor4f)
 		return;
 	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -6894,7 +6901,7 @@ static void RSurf_DrawBatch_GL11_ApplyAmbient(int texturenumsurfaces, msurface_t
 	rsurface.lightmapcolor4f_bufferoffset = 0;
 }
 
-static void RSurf_DrawBatch_GL11_Lightmap(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
+static void RSurf_DrawBatch_GL11_Lightmap(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
 {
 	// TODO: optimize
 	rsurface.lightmapcolor4f = NULL;
@@ -6907,7 +6914,7 @@ static void RSurf_DrawBatch_GL11_Lightmap(int texturenumsurfaces, msurface_t **t
 	RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist, 0, -1);
 }
 
-static void RSurf_DrawBatch_GL11_Unlit(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
+static void RSurf_DrawBatch_GL11_Unlit(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
 {
 	// TODO: optimize applyfog && applycolor case
 	// just apply fog if necessary, and tint the fog color array if necessary
@@ -6921,7 +6928,7 @@ static void RSurf_DrawBatch_GL11_Unlit(int texturenumsurfaces, msurface_t **text
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
+static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
 {
 	int texturesurfaceindex;
 	int i;
@@ -6982,12 +6989,15 @@ static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, msurface_t 
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-static void RSurf_DrawBatch_GL11_ApplyVertexShade(int texturenumsurfaces, msurface_t **texturesurfacelist, float *r, float *g, float *b, float *a, qboolean *applycolor)
+static void RSurf_DrawBatch_GL11_ApplyVertexShade(int texturenumsurfaces, const msurface_t **texturesurfacelist, float *r, float *g, float *b, float *a, qboolean *applycolor)
 {
 	int texturesurfaceindex;
 	int i;
 	float f;
-	float *v, *c, *c2, alpha;
+	float alpha;
+	const float *v;
+	const float *n;
+	float *c;
 	vec3_t ambientcolor;
 	vec3_t diffusecolor;
 	vec3_t lightdir;
@@ -7010,12 +7020,12 @@ static void RSurf_DrawBatch_GL11_ApplyVertexShade(int texturenumsurfaces, msurfa
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			int numverts = surface->num_vertices;
 			v = rsurface.vertex3f + 3 * surface->num_firstvertex;
-			c2 = rsurface.normal3f + 3 * surface->num_firstvertex;
+			n = rsurface.normal3f + 3 * surface->num_firstvertex;
 			c = rsurface.array_color4f + 4 * surface->num_firstvertex;
 			// q3-style directional shading
-			for (i = 0;i < numverts;i++, v += 3, c2 += 3, c += 4)
+			for (i = 0;i < numverts;i++, v += 3, n += 3, c += 4)
 			{
-				if ((f = DotProduct(c2, lightdir)) > 0)
+				if ((f = DotProduct(n, lightdir)) > 0)
 					VectorMA(ambientcolor, f, diffusecolor, c);
 				else
 					VectorCopy(ambientcolor, c);
@@ -7042,7 +7052,7 @@ static void RSurf_DrawBatch_GL11_ApplyVertexShade(int texturenumsurfaces, msurfa
 	}
 }
 
-static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
+static void RSurf_DrawBatch_GL11_VertexShade(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
 {
 	RSurf_DrawBatch_GL11_ApplyVertexShade(texturenumsurfaces, texturesurfacelist, &r, &g, &b, &a, &applycolor);
 	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
@@ -7063,7 +7073,7 @@ void RSurf_SetupDepthAndCulling(void)
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
 }
 
-static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **texturesurfacelist)
+static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
@@ -7107,7 +7117,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	GL_Color(1, 1, 1, 1);
 }
 
-static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
 		return;
@@ -7210,7 +7220,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, msurface_t **t
 	GL_LockArrays(0, 0);
 }
 
-static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	// OpenGL 1.3 path - anything not completely ancient
 	int texturesurfaceindex;
@@ -7306,7 +7316,9 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				int i;
-				float f, *v, *c;
+				float f;
+				const float *v;
+				float *c;
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
@@ -7332,7 +7344,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, msurface_t **t
 	}
 }
 
-static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	// OpenGL 1.1 - crusty old voodoo path
 	int texturesurfaceindex;
@@ -7435,7 +7447,9 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				int i;
-				float f, *v, *c;
+				float f;
+				const float *v;
+				float *c;
 				const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 				for (i = 0, v = (rsurface.vertex3f + 3 * surface->num_firstvertex), c = (rsurface.array_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 				{
@@ -7461,7 +7475,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, msurface_t **t
 	}
 }
 
-static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	float c[4];
 
@@ -7566,7 +7580,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, msurf
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
-static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -7581,7 +7595,7 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, msurface_t **t
 	CHECKGLERROR
 }
 
-static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -7601,8 +7615,8 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	int i, j;
 	int texturenumsurfaces, endsurface;
 	texture_t *texture;
-	msurface_t *surface;
-	msurface_t *texturesurfacelist[1024];
+	const msurface_t *surface;
+	const msurface_t *texturesurfacelist[1024];
 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
@@ -7642,7 +7656,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	GL_AlphaTest(false);
 }
 
-static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)
+static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly)
 {
 	const entity_render_t *queueentity = r_refdef.scene.worldentity;
 	CHECKGLERROR
@@ -7711,7 +7725,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, msurface_t 
 	CHECKGLERROR
 }
 
-void R_QueueWorldSurfaceList(int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
+void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
 {
 	int i, j;
 	texture_t *texture;
@@ -7741,7 +7755,7 @@ void R_QueueWorldSurfaceList(int numsurfaces, msurface_t **surfacelist, int flag
 	}
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity)
 {
 	CHECKGLERROR
 	if (depthonly)
@@ -7815,7 +7829,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, msurface_t 
 	CHECKGLERROR
 }
 
-void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
+void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly)
 {
 	int i, j;
 	texture_t *texture;
@@ -7927,7 +7941,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 	int i, j, k, l, flagsmask;
 	const int *elements;
 	q3mbrush_t *brush;
-	msurface_t *surface;
+	const msurface_t *surface;
 	dp_model_t *model = ent->model;
 	vec3_t v;
 
@@ -7994,12 +8008,12 @@ void R_DrawDebugModel(entity_render_t *ent)
 						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, r_showtris.value);
 					else
 						GL_Color(0, r_refdef.view.colorscale, 0, r_showtris.value);
-					elements = (ent->model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
+					elements = (model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
 					R_Mesh_VertexPointer(rsurface.vertex3f, 0, 0);
 					R_Mesh_ColorPointer(NULL, 0, 0);
 					R_Mesh_TexCoordPointer(0, 0, NULL, 0, 0);
 					qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-					//R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, ent->model->surfmesh.data_element3i, NULL, 0, 0);
+					//R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, model->surfmesh.data_element3i, NULL, 0, 0);
 					R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 					qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 					CHECKGLERROR
@@ -8066,7 +8080,7 @@ void R_DrawDebugModel(entity_render_t *ent)
 
 extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 int r_maxsurfacelist = 0;
-msurface_t **r_surfacelist = NULL;
+const msurface_t **r_surfacelist = NULL;
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug)
 {
 	int i, j, endj, f, flagsmask;
@@ -8083,7 +8097,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
 			Mem_Free(r_surfacelist);
-		r_surfacelist = (msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+		r_surfacelist = (const msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
 	RSurf_ActiveWorldEntity();
@@ -8170,7 +8184,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
 			Mem_Free(r_surfacelist);
-		r_surfacelist = (msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
+		r_surfacelist = (const msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
 	// if the model is static it doesn't matter what value we give for
