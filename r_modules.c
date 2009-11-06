@@ -85,6 +85,7 @@ void R_Modules_Restart(void)
 void R_Modules_NewMap(void)
 {
 	int i;
+	R_SkinFrame_PrepareForPurge();
 	for (i = 0;i < MAXRENDERMODULES;i++)
 	{
 		if (rendermodule[i].name == NULL)
@@ -93,5 +94,6 @@ void R_Modules_NewMap(void)
 			continue;
 		rendermodule[i].newmap();
 	}
+	R_SkinFrame_Purge();
 }
 
