@@ -1323,8 +1323,11 @@ A sky texture is 256*128, with the right side being a masked overlay
 */
 void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
 {
-	int i, j;
-	unsigned solidpixels[128*128], alphapixels[128*128];
+	int x, y;
+	int w = width/2;
+	int h = height;
+	unsigned *solidpixels = Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
+	unsigned *alphapixels = Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
 
 	// allocate a texture pool if we need it
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
@@ -1332,12 +1335,12 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 
 	if (bytesperpixel == 4)
 	{
-		for (i = 0;i < 128;i++)
+		for (y = 0;y < h;y++)
 		{
-			for (j = 0;j < 128;j++)
+			for (x = 0;x < w;x++)
 			{
-				solidpixels[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
-				alphapixels[(i*128) + j] = ((unsigned *)src)[i*256+j];
+				solidpixels[y*w+x] = ((unsigned *)src)[y*width+x+w];
+				alphapixels[y*w+x] = ((unsigned *)src)[y*width+x];
 			}
 		}
 	}
@@ -1353,33 +1356,35 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 		}
 		bgra;
 		r = g = b = 0;
-		for (i = 0;i < 128;i++)
+		for (y = 0;y < h;y++)
 		{
-			for (j = 0;j < 128;j++)
+			for (x = 0;x < w;x++)
 			{
-				p = src[i*256 + j + 128];
+				p = src[x*width+y+w];
 				r += palette_rgb[p][0];
 				g += palette_rgb[p][1];
 				b += palette_rgb[p][2];
 			}
 		}
-		bgra.b[2] = r/(128*128);
-		bgra.b[1] = g/(128*128);
-		bgra.b[0] = b/(128*128);
+		bgra.b[2] = r/(w*h);
+		bgra.b[1] = g/(w*h);
+		bgra.b[0] = b/(w*h);
 		bgra.b[3] = 0;
-		for (i = 0;i < 128;i++)
+		for (y = 0;y < h;y++)
 		{
-			for (j = 0;j < 128;j++)
+			for (x = 0;x < w;x++)
 			{
-				solidpixels[(i*128) + j] = palette_bgra_complete[src[i*256 + j + 128]];
-				p = src[i*256 + j];
-				alphapixels[(i*128) + j] = p ? palette_bgra_complete[p] : bgra.i;
+				solidpixels[y*w+x] = palette_bgra_complete[src[y*width+x+w]];
+				p = src[y*width+x];
+				alphapixels[y*w+x] = p ? palette_bgra_complete[p] : bgra.i;
 			}
 		}
 	}
 
-	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", 128, 128, (unsigned char *) solidpixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
-	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", 128, 128, (unsigned char *) alphapixels, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", w, h, (unsigned char *) solidpixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
+	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", w, h, (unsigned char *) alphapixels, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	Mem_Free(solidpixels);
+	Mem_Free(alphapixels);
 }
 
 static void Mod_Q1BSP_LoadTextures(lump_t *l)
@@ -1558,10 +1563,10 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		if (cls.state != ca_dedicated)
 		{
 			// LordHavoc: HL sky textures are entirely different than quake
-			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
+			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
 				data = loadimagepixelsbgra(tx->name, false, false);
-				if (data && image_width == 256 && image_height == 128)
+				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
 					Mem_Free(data);
