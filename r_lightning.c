@@ -224,7 +224,6 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 	float texcoord2f[12*2];
 
 	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, r_lightningbeam_color_red.value * r_refdef.view.colorscale, r_lightningbeam_color_green.value * r_refdef.view.colorscale, r_lightningbeam_color_blue.value * r_refdef.view.colorscale, 1, 12, vertex3f, texcoord2f, NULL, NULL, NULL, 6, r_lightningbeamelement3i, r_lightningbeamelement3s, false, false);
-	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
 		r_lightningbeams_setupqmbtexture();
