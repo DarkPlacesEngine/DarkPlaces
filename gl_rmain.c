@@ -46,8 +46,9 @@ cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "ra
 
 // TODO do we want a r_equalize_entities cvar that works on all ents, or would that be a cheat?
 cvar_t r_equalize_entities_fullbright = {CVAR_SAVE, "r_equalize_entities_fullbright", "0", "render fullbright entities by equalizing their lightness, not by not rendering light"};
-cvar_t r_equalize_entities_by = {CVAR_SAVE, "r_equalize_entities_by", "0.7", "equalize entity lighting (exponent)"};
-cvar_t r_equalize_entities_to = {CVAR_SAVE, "r_equalize_entities_to", "0.8", "equalize entity lighting (level)"};
+cvar_t r_equalize_entities_minambient = {CVAR_SAVE, "r_equalize_entities_minambient", "1", "light equalizing: ensure at least this ambient/diffuse ratio"};
+cvar_t r_equalize_entities_by = {CVAR_SAVE, "r_equalize_entities_by", "0.7", "light equalizing: exponent of dynamics compression (0 = no compression, 1 = full compression)"};
+cvar_t r_equalize_entities_to = {CVAR_SAVE, "r_equalize_entities_to", "0.8", "light equalizing: target light level"};
 
 cvar_t r_animcache = {CVAR_SAVE, "r_animcache", "1", "cache animation frames to save CPU usage, primarily optimizes shadows and reflections"};
 
@@ -2832,6 +2833,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_motionblur_randomize);
 	Cvar_RegisterVariable(&r_damageblur);
 	Cvar_RegisterVariable(&r_equalize_entities_fullbright);
+	Cvar_RegisterVariable(&r_equalize_entities_minambient);
 	Cvar_RegisterVariable(&r_equalize_entities_by);
 	Cvar_RegisterVariable(&r_equalize_entities_to);
 	Cvar_RegisterVariable(&r_animcache);
@@ -3233,7 +3235,7 @@ static void R_View_UpdateEntityLighting (void)
 	int i;
 	entity_render_t *ent;
 	vec3_t tempdiffusenormal, avg;
-	vec_t f;
+	vec_t f, fa, fd, fdd;
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
@@ -3262,15 +3264,45 @@ static void R_View_UpdateEntityLighting (void)
 			vec3_t org;
 			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
-			if(r_equalize_entities_by.value != 0 && r_equalize_entities_to.value != 0 && (ent->flags & RENDER_EQUALIZE))
+			if(ent->flags & RENDER_EQUALIZE)
 			{
-				VectorMA(ent->modellight_ambient, 0.25f, ent->modellight_diffuse, avg);
-				f = 0.299f * avg[0] + 0.587f * avg[1] + 0.114f * avg[2];
-				if(f > 0)
+				// first fix up ambient lighting...
+				if(r_equalize_entities_minambient.value > 0)
 				{
-					f = pow(f / r_equalize_entities_to.value, -r_equalize_entities_by.value);
-					VectorScale(ent->modellight_ambient, f, ent->modellight_ambient);
-					VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+					fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
+					if(fd > 0)
+					{
+						fa = (0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2]);
+						if(fa < r_equalize_entities_minambient.value * fd)
+						{
+							// solve:
+							//   fa'/fd' = minambient
+							//   fa'+0.25*fd' = fa+0.25*fd
+							//   ...
+							//   fa' = fd' * minambient
+							//   fd'*(0.25+minambient) = fa+0.25*fd
+							//   ...
+							//   fd' = (fa+0.25*fd) * 1 / (0.25+minambient)
+							//   fa' = (fa+0.25*fd) * minambient / (0.25+minambient)
+							//   ...
+							fdd = (fa + 0.25f * fd) / (0.25f + r_equalize_entities_minambient.value);
+							f = fdd / fd; // f>0 because all this is additive; f<1 because fdd<fd because this follows from fa < r_equalize_entities_minambient.value * fd
+							VectorMA(ent->modellight_ambient, (1-f)*0.25f, ent->modellight_diffuse, ent->modellight_ambient);
+							VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+						}
+					}
+				}
+
+				if(r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
+				{
+					VectorMA(ent->modellight_ambient, 0.25f, ent->modellight_diffuse, avg);
+					f = 0.299f * avg[0] + 0.587f * avg[1] + 0.114f * avg[2];
+					if(f > 0)
+					{
+						f = pow(f / r_equalize_entities_to.value, -r_equalize_entities_by.value);
+						VectorScale(ent->modellight_ambient, f, ent->modellight_ambient);
+						VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+					}
 				}
 			}
 		}
