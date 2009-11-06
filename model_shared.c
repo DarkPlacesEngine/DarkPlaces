@@ -102,10 +102,6 @@ static void mod_newmap(void)
 				for (k = 0;k < mod->data_textures[j].backgroundnumskinframes;k++)
 					R_SkinFrame_MarkUsed(mod->data_textures[j].backgroundskinframes[k]);
 			}
-			if (mod->brush.solidskyskinframe)
-				R_SkinFrame_MarkUsed(mod->brush.solidskyskinframe);
-			if (mod->brush.alphaskyskinframe)
-				R_SkinFrame_MarkUsed(mod->brush.alphaskyskinframe);
 		}
 	}
 
