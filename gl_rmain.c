@@ -2681,6 +2681,52 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	return skinframe;
 }
 
+skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, const unsigned char *skindata, int width, int height, const unsigned int *palette, const unsigned int *alphapalette)
+{
+	int i;
+	skinframe_t *skinframe;
+
+	if (cls.state == ca_dedicated)
+		return NULL;
+
+	// if already loaded just return it, otherwise make a new skinframe
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
+	if (skinframe && skinframe->base)
+		return skinframe;
+
+	skinframe->stain = NULL;
+	skinframe->merged = NULL;
+	skinframe->base = r_texture_notexture;
+	skinframe->pants = NULL;
+	skinframe->shirt = NULL;
+	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->gloss = NULL;
+	skinframe->glow = NULL;
+	skinframe->fog = NULL;
+
+	// if no data was provided, then clearly the caller wanted to get a blank skinframe
+	if (!skindata)
+		return NULL;
+
+	if (developer_loading.integer)
+		Con_Printf("loading embedded 8bit image \"%s\"\n", name);
+
+	skinframe->base = skinframe->merged = R_SkinFrame_TextureForSkinLayer(skindata, width, height, skinframe->basename, palette, skinframe->textureflags, true);
+	if (textureflags & TEXF_ALPHA)
+	{
+		for (i = 0;i < width * height;i++)
+			if (((unsigned char *)alphapalette)[skindata[i]*4+3] < 255)
+				break;
+		if (i < width * height)
+			skinframe->fog = R_SkinFrame_TextureForSkinLayer(skindata, width, height, va("%s_fog", skinframe->basename), alphapalette, skinframe->textureflags, true); // fog mask
+	}
+
+	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, ((unsigned char *)palette)[skindata[pix]*4 + comp]);
+	//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
+
+	return skinframe;
+}
+
 skinframe_t *R_SkinFrame_LoadMissing(void)
 {
 	skinframe_t *skinframe;
