@@ -2135,6 +2135,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 
 	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
 	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	r_refdef.stats.decals += numsurfaces;
 	R_Mesh_Matrix(&identitymatrix);
@@ -2289,6 +2290,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
 	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 

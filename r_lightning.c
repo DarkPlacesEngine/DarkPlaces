@@ -239,6 +239,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 
 	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
 	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+	rsurface.fograngerecip = r_refdef.fograngerecip;
 
 	R_Mesh_Matrix(&identitymatrix);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);

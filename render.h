@@ -301,9 +301,18 @@ typedef struct rsurfacestate_s
 	float *texcoordlightmap2f;
 	int texcoordlightmap2f_bufferobject;
 	size_t texcoordlightmap2f_bufferoffset;
+	// some important fields from the entity
+	int ent_skinnum;
+	int ent_qwskin;
+	int ent_flags;
+	float ent_shadertime;
+	float ent_color[4];
 	// transform matrices to render this entity and effects on this entity
 	matrix4x4_t matrix;
 	matrix4x4_t inversematrix;
+	// scale factors for transforming lengths into/out of entity space
+	float matrixscale;
+	float inversematrixscale;
 	// animation blending state from entity
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	// directional model shading state from entity
@@ -325,6 +334,9 @@ typedef struct rsurfacestate_s
 	// whether lightmapping is active on this batch
 	// (otherwise vertex colored)
 	qboolean uselightmaptexture;
+	// fog plane in model space for direct application to vertices
+	float fograngerecip;
+	float fogmasktabledistmultiplier;
 
 	// rtlight rendering
 	// light currently being rendered

@@ -1411,6 +1411,7 @@ void Debug_PolygonEnd(void);
 extern qboolean sb_showscores;
 
 float RSurf_FogVertex(const vec3_t p);
+float RSurf_FogPoint(const vec3_t p);
 
 typedef struct r_refdef_stats_s
 {
@@ -1618,10 +1619,10 @@ typedef struct r_refdef_s
 
 	r_refdef_scene_t scene;
 
-	vec3_t fogcolor;
-	vec_t fogrange;
-	vec_t fograngerecip;
-	vec_t fogmasktabledistmultiplier;
+	float fogcolor[3];
+	float fogrange;
+	float fograngerecip;
+	float fogmasktabledistmultiplier;
 #define FOGMASKTABLEWIDTH 1024
 	float fogmasktable[FOGMASKTABLEWIDTH];
 	float fogmasktable_start, fogmasktable_alpha, fogmasktable_range, fogmasktable_density;

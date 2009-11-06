@@ -251,11 +251,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 
 	if(renderflags)
 	{
-		if(renderflags & RF_VIEWMODEL)	entrender->flags |= RENDER_VIEWMODEL;
+		if(renderflags & RF_VIEWMODEL)	entrender->flags |= RENDER_VIEWMODEL | RENDER_NODEPTHTEST;
 		if(renderflags & RF_EXTERNALMODEL)entrender->flags |= RENDER_EXTERIORMODEL;
 		if(renderflags & RF_NOCULL)		entrender->flags |= RENDER_NOCULL;
-		if(renderflags & RF_DEPTHHACK)	entrender->effects |= EF_NODEPTHTEST;
-		if(renderflags & RF_ADDITIVE)		entrender->effects |= EF_ADDITIVE;
+		if(renderflags & RF_DEPTHHACK)	entrender->flags |= RENDER_NODEPTHTEST;
+		if(renderflags & RF_ADDITIVE)		entrender->flags |= RENDER_ADDITIVE;
 
 	}
 
@@ -286,6 +286,12 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 		entrender->flags |= RENDER_NOSELFSHADOW;
 	if (entrender->effects & EF_NOSELFSHADOW)
 		entrender->flags |= RENDER_NOSELFSHADOW;
+	if (entrender->effects & EF_NODEPTHTEST)
+		entrender->flags |= RENDER_NODEPTHTEST;
+	if (entrender->effects & EF_ADDITIVE)
+		entrender->flags |= RENDER_ADDITIVE;
+	if (entrender->effects & EF_DOUBLESIDED)
+		entrender->flags |= RENDER_DOUBLESIDED;
 
 	// make the other useful stuff
 	CL_UpdateRenderEntity(entrender);
