@@ -91,21 +91,23 @@ static void mod_newmap(void)
 	int nummodels = Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
-	R_SkinFrame_PrepareForPurge();
 	for (i = 0;i < nummodels;i++)
 	{
-		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool && mod->data_textures)
+		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->mempool)
 		{
-			for (j = 0;j < mod->num_textures;j++)
+			for (j = 0;j < mod->num_textures && mod->data_textures;j++)
 			{
 				for (k = 0;k < mod->data_textures[j].numskinframes;k++)
 					R_SkinFrame_MarkUsed(mod->data_textures[j].skinframes[k]);
 				for (k = 0;k < mod->data_textures[j].backgroundnumskinframes;k++)
 					R_SkinFrame_MarkUsed(mod->data_textures[j].backgroundskinframes[k]);
 			}
+			if (mod->brush.solidskyskinframe)
+				R_SkinFrame_MarkUsed(mod->brush.solidskyskinframe);
+			if (mod->brush.alphaskyskinframe)
+				R_SkinFrame_MarkUsed(mod->brush.alphaskyskinframe);
 		}
 	}
-	R_SkinFrame_Purge();
 
 	if (!cl_stainmaps_clearonload.integer)
 		return;
