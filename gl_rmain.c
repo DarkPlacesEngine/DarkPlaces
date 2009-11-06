@@ -4859,6 +4859,14 @@ void R_RenderScene(void)
 
 		if (R_DrawBrushModelsSky() && r_timereport_active)
 			R_TimeReport("bmodelsky");
+
+		if (skyrendermasked && skyrenderlater)
+		{
+			// we have to force off the water clipping plane while rendering sky
+			R_SetupView(false);
+			R_Sky();
+			R_SetupView(true);
+		}
 	}
 
 	R_AnimCache_CacheVisibleEntities();
@@ -7026,16 +7034,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, msurface_t **te
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
 	R_SetupGenericShader(false);
-	if (skyrendernow)
-	{
-		skyrendernow = false;
-		// we have to force off the water clipping plane while rendering sky
-		R_SetupView(false);
-		R_Sky();
-		R_SetupView(true);
-		// restore entity matrix
-		R_Mesh_Matrix(&rsurface.matrix);
-	}
+	skyrenderlater = true;
 	RSurf_SetupDepthAndCulling();
 	GL_DepthMask(true);
 	// LordHavoc: HalfLife maps have freaky skypolys so don't use
