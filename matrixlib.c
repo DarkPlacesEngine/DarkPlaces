@@ -1511,31 +1511,35 @@ void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[
 
 void Matrix4x4_TransformPositivePlane(const matrix4x4_t *in, float x, float y, float z, float d, float *o)
 {
+	float scale = sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
+	float iscale = 1.0f / scale;
 #ifdef MATRIX4x4_OPENGLORIENTATION
-	o[0] = x * in->m[0][0] + y * in->m[1][0] + z * in->m[2][0];
-	o[1] = x * in->m[0][1] + y * in->m[1][1] + z * in->m[2][1];
-	o[2] = x * in->m[0][2] + y * in->m[1][2] + z * in->m[2][2];
-	o[3] = d + (x * in->m[3][0] + y * in->m[3][1] + z * in->m[3][2]);
+	o[0] = (x * in->m[0][0] + y * in->m[1][0] + z * in->m[2][0]) * iscale;
+	o[1] = (x * in->m[0][1] + y * in->m[1][1] + z * in->m[2][1]) * iscale;
+	o[2] = (x * in->m[0][2] + y * in->m[1][2] + z * in->m[2][2]) * iscale;
+	o[3] = d * scale + (o[0] * in->m[3][0] + o[1] * in->m[3][1] + o[2] * in->m[3][2]);
 #else
-	o[0] = x * in->m[0][0] + y * in->m[0][1] + z * in->m[0][2];
-	o[1] = x * in->m[1][0] + y * in->m[1][1] + z * in->m[1][2];
-	o[2] = x * in->m[2][0] + y * in->m[2][1] + z * in->m[2][2];
-	o[3] = d + (x * in->m[0][3] + y * in->m[1][3] + z * in->m[2][3]);
+	o[0] = (x * in->m[0][0] + y * in->m[0][1] + z * in->m[0][2]) * iscale;
+	o[1] = (x * in->m[1][0] + y * in->m[1][1] + z * in->m[1][2]) * iscale;
+	o[2] = (x * in->m[2][0] + y * in->m[2][1] + z * in->m[2][2]) * iscale;
+	o[3] = d * scale + (o[0] * in->m[0][3] + o[1] * in->m[1][3] + o[2] * in->m[2][3]);
 #endif
 }
 
 void Matrix4x4_TransformStandardPlane(const matrix4x4_t *in, float x, float y, float z, float d, float *o)
 {
+	float scale = sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
+	float iscale = 1.0f / scale;
 #ifdef MATRIX4x4_OPENGLORIENTATION
-	o[0] = x * in->m[0][0] + y * in->m[1][0] + z * in->m[2][0];
-	o[1] = x * in->m[0][1] + y * in->m[1][1] + z * in->m[2][1];
-	o[2] = x * in->m[0][2] + y * in->m[1][2] + z * in->m[2][2];
-	o[3] = d - (x * in->m[3][0] + y * in->m[3][1] + z * in->m[3][2]);
+	o[0] = (x * in->m[0][0] + y * in->m[1][0] + z * in->m[2][0]) * iscale;
+	o[1] = (x * in->m[0][1] + y * in->m[1][1] + z * in->m[2][1]) * iscale;
+	o[2] = (x * in->m[0][2] + y * in->m[1][2] + z * in->m[2][2]) * iscale;
+	o[3] = d * scale - (o[0] * in->m[3][0] + o[1] * in->m[3][1] + o[2] * in->m[3][2]);
 #else
-	o[0] = x * in->m[0][0] + y * in->m[0][1] + z * in->m[0][2];
-	o[1] = x * in->m[1][0] + y * in->m[1][1] + z * in->m[1][2];
-	o[2] = x * in->m[2][0] + y * in->m[2][1] + z * in->m[2][2];
-	o[3] = d - (x * in->m[0][3] + y * in->m[1][3] + z * in->m[2][3]);
+	o[0] = (x * in->m[0][0] + y * in->m[0][1] + z * in->m[0][2]) * iscale;
+	o[1] = (x * in->m[1][0] + y * in->m[1][1] + z * in->m[1][2]) * iscale;
+	o[2] = (x * in->m[2][0] + y * in->m[2][1] + z * in->m[2][2]) * iscale;
+	o[3] = d * scale - (o[0] * in->m[0][3] + o[1] * in->m[1][3] + o[2] * in->m[2][3]);
 #endif
 }
 
