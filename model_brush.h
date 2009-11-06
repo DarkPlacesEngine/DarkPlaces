@@ -108,6 +108,8 @@ mplane_t;
 #define MATERIALFLAG_MODELLIGHT 4194304
 // add directional model lighting to this material (q3bsp lightgrid only)
 #define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 8388608
+// causes RSurf_GetCurrentTexture to leave alone certain fields
+#define MATERIALFLAG_CUSTOMSURFACE 16777216
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency

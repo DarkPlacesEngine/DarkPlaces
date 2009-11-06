@@ -1619,6 +1619,10 @@ typedef struct r_refdef_s
 
 	r_refdef_scene_t scene;
 
+	float fogplane[4];
+	float fogplaneviewdist;
+	qboolean fogplaneviewabove;
+	float fogheightfade;
 	float fogcolor[3];
 	float fogrange;
 	float fograngerecip;
@@ -1633,6 +1637,8 @@ typedef struct r_refdef_s
 	float fog_alpha;
 	float fog_start;
 	float fog_end;
+	float fog_height;
+	float fog_fadedepth;
 	qboolean fogenabled;
 	qboolean oldgl_fogenable;
 

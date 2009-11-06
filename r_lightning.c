@@ -10,22 +10,21 @@ cvar_t r_lightningbeam_color_green = {CVAR_SAVE, "r_lightningbeam_color_green", 
 cvar_t r_lightningbeam_color_blue = {CVAR_SAVE, "r_lightningbeam_color_blue", "1", "color of the lightning beam effect"};
 cvar_t r_lightningbeam_qmbtexture = {CVAR_SAVE, "r_lightningbeam_qmbtexture", "0", "load the qmb textures/particles/lightning.pcx texture instead of generating one, can look better"};
 
-rtexture_t *r_lightningbeamtexture;
-rtexture_t *r_lightningbeamqmbtexture;
-rtexturepool_t *r_lightningbeamtexturepool;
+skinframe_t *r_lightningbeamtexture;
+skinframe_t *r_lightningbeamqmbtexture;
 
-unsigned short r_lightningbeamelements[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
+int r_lightningbeamelement3i[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
+unsigned short r_lightningbeamelement3s[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
 
 void r_lightningbeams_start(void)
 {
-	r_lightningbeamtexturepool = R_AllocTexturePool();
 	r_lightningbeamtexture = NULL;
 	r_lightningbeamqmbtexture = NULL;
 }
 
 void r_lightningbeams_setupqmbtexture(void)
 {
-	r_lightningbeamqmbtexture = loadtextureimage(r_lightningbeamtexturepool, "textures/particles/lightning.pcx", false, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, false);
+	r_lightningbeamqmbtexture = R_SkinFrame_LoadExternal("textures/particles/lightning.pcx", TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, false);
 	if (r_lightningbeamqmbtexture == NULL)
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
@@ -145,7 +144,7 @@ void r_lightningbeams_setuptexture(void)
 		}
 	}
 
-	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
+	r_lightningbeamtexture = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_PRECACHE | TEXF_FORCELINEAR, data, BEAMWIDTH, BEAMHEIGHT);
 	Mem_Free(noise1);
 	Mem_Free(noise2);
 	Mem_Free(data);
@@ -156,11 +155,14 @@ void r_lightningbeams_shutdown(void)
 {
 	r_lightningbeamtexture = NULL;
 	r_lightningbeamqmbtexture = NULL;
-	R_FreeTexturePool(&r_lightningbeamtexturepool);
 }
 
 void r_lightningbeams_newmap(void)
 {
+	if (r_lightningbeamtexture)
+		R_SkinFrame_MarkUsed(r_lightningbeamtexture);
+	if (r_lightningbeamqmbtexture)
+		R_SkinFrame_MarkUsed(r_lightningbeamqmbtexture);
 }
 
 void R_LightningBeams_Init(void)
@@ -232,48 +234,16 @@ float beamrepeatscale;
 void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
-	rmeshstate_t m;
 	float vertex3f[12*3];
 	float texcoord2f[12*2];
-	float color4f[12*4];
 
-	// set up global fogging in worldspace (RSurf_FogVertex depends on this)
-	VectorCopy(r_refdef.view.origin, rsurface.localvieworigin);
+	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, r_lightningbeam_color_red.value * r_refdef.view.colorscale, r_lightningbeam_color_green.value * r_refdef.view.colorscale, r_lightningbeam_color_blue.value * r_refdef.view.colorscale, 1, 12, vertex3f, texcoord2f, NULL, NULL, NULL, 6, r_lightningbeamelement3i, r_lightningbeamelement3s, false, false);
 	rsurface.fograngerecip = r_refdef.fograngerecip;
 
-	R_Mesh_Matrix(&identitymatrix);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	GL_DepthMask(false);
-	GL_DepthRange(0, 1);
-	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	GL_DepthTest(true);
-	GL_CullFace(GL_NONE);
 	if (r_lightningbeam_qmbtexture.integer && r_lightningbeamqmbtexture == NULL)
 		r_lightningbeams_setupqmbtexture();
 	if (!r_lightningbeam_qmbtexture.integer && r_lightningbeamtexture == NULL)
 		r_lightningbeams_setuptexture();
-
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
-	R_SetupGenericShader(true);
-	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
-	if (r_refdef.fogenabled)
-	{
-		// per vertex colors if fog is used
-		R_Mesh_ColorPointer(color4f, 0, 0);
-	}
-	else
-	{
-		// solid color if fog is not used
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		GL_Color(r_lightningbeam_color_red.value * r_refdef.view.colorscale, r_lightningbeam_color_green.value * r_refdef.view.colorscale, r_lightningbeam_color_blue.value * r_refdef.view.colorscale, 1);
-	}
-	memset(&m, 0, sizeof(m));
-	if (r_lightningbeam_qmbtexture.integer)
-		m.tex[0] = R_GetTexture(r_lightningbeamqmbtexture);
-	else
-		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
-	m.pointer_texcoord[0] = texcoord2f;
-	R_Mesh_TextureState(&m);
 
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
@@ -336,16 +306,9 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 0, t1, t2);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 8, t1 + 0.33, t2 + 0.33);
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
-		if (r_refdef.fogenabled)
-		{
-			// per vertex colors if fog is used
-			R_FogLightningBeam_Vertex3f_Color4f(vertex3f, color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
-		}
 
 		// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
-		GL_LockArrays(0, 12);
-		R_Mesh_Draw(0, 12, 0, 6, NULL, r_lightningbeamelements, 0, 0);
-		GL_LockArrays(0, 0);
+		R_DrawCustomSurface(r_lightningbeam_qmbtexture.integer ? r_lightningbeamqmbtexture : r_lightningbeamtexture, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 12, 0, 6, false);
 	}
 }
 

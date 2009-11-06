@@ -1381,8 +1381,8 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 		}
 	}
 
-	loadmodel->brush.solidskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_solidtexture", w, h, (unsigned char *) solidpixels, TEXTYPE_BGRA, TEXF_PRECACHE, NULL);
-	loadmodel->brush.alphaskytexture = R_LoadTexture2D(loadmodel->texturepool, "sky_alphatexture", w, h, (unsigned char *) alphapixels, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture",              TEXF_PRECACHE, (unsigned char *) solidpixels, w, h);
+	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA | TEXF_PRECACHE, (unsigned char *) alphapixels, w, h);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
 }
