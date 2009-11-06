@@ -2434,10 +2434,12 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	vec3_t move;
 	vec_t movetime;
 	int bump;
+	prvm_edict_t *groundentity;
 
 // if onground, return without moving
 	if ((int)ent->fields.server->flags & FL_ONGROUND)
 	{
+		groundentity = PRVM_PROG_TO_EDICT(ent->fields.server->groundentity);
 		if (ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer)
 		{
 			// don't stick to ground if onground and moving upward
@@ -2448,7 +2450,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			// we can trust FL_ONGROUND if groundentity is world because it never moves
 			return;
 		}
-		else if (ent->priv.server->suspendedinairflag && PRVM_PROG_TO_EDICT(ent->fields.server->groundentity)->priv.server->free)
+		else if (ent->priv.server->suspendedinairflag && groundentity->priv.server->free)
 		{
 			// if ent was supported by a brush model on previous frame,
 			// and groundentity is now freed, set groundentity to 0 (world)
@@ -2456,6 +2458,11 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			ent->fields.server->groundentity = 0;
 			if (sv_gameplayfix_noairborncorpse_allowsuspendeditems.integer)
 				return;
+		}
+		else if (BoxesOverlap(ent->priv.server->cullmins, ent->priv.server->cullmaxs, groundentity->priv.server->cullmins, groundentity->priv.server->cullmaxs))
+		{
+			// don't slide if still touching the groundentity
+			return;
 		}
 	}
 	ent->priv.server->suspendedinairflag = false;
@@ -2608,7 +2615,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 		{
 			// freefall if onground and moving upward
 			// freefall if not standing on a world surface (it may be a lift or trap door)
-			if ((ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer) || ent->fields.server->groundentity)
+			if (ent->fields.server->velocity[2] >= (1.0 / 32.0) && sv_gameplayfix_upwardvelocityclearsongroundflag.integer)
 			{
 				ent->fields.server->flags -= FL_ONGROUND;
 				SV_CheckVelocity(ent);
