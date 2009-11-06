@@ -4147,7 +4147,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 	R_SetupGenericShader(true);
 	R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 	R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 	// we now have a bloom image in the framebuffer
@@ -4192,7 +4192,7 @@ void R_Bloom_MakeTexture(void)
 		GL_Color(r, r, r, 1);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 		// copy the vertically blurred bloom view to a texture
@@ -4242,7 +4242,7 @@ void R_Bloom_MakeTexture(void)
 			if(range >= 1)
 				r *= (1 - x*x/(float)(range*range));
 			GL_Color(r, r, r, 1);
-			R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
@@ -4262,7 +4262,7 @@ void R_Bloom_MakeTexture(void)
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		GL_Color(1, 1, 1, 1);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 		GL_BlendFunc(GL_ONE, GL_ONE);
@@ -4270,7 +4270,7 @@ void R_Bloom_MakeTexture(void)
 		R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
 		GL_Color(r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 1);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 		qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 
@@ -4386,7 +4386,7 @@ static void R_BlendView(void)
 				GL_Color(1, 1, 1, cl.motionbluralpha);
 				R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 				R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
-				R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+				R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 				r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 			}
 		}
@@ -4461,7 +4461,7 @@ static void R_BlendView(void)
 		}
 		if (r_glsl_permutation->loc_Saturation >= 0)
 			qglUniform1fARB(r_glsl_permutation->loc_Saturation, r_glsl_saturation.value);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 		return;
 	}
@@ -4481,7 +4481,7 @@ static void R_BlendView(void)
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
 		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 	}
 	else if (r_bloomstate.texture_bloom)
@@ -4510,14 +4510,14 @@ static void R_BlendView(void)
 		else
 		{
 			R_SetupGenericShader(true);
-			R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 			r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 			// now blend on the bloom texture
 			GL_BlendFunc(GL_ONE, GL_ONE);
 			R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
 			R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		}
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 	}
 	if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
@@ -4529,7 +4529,7 @@ static void R_BlendView(void)
 		R_SetupGenericShader(false);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	}
 }
 
@@ -5128,7 +5128,7 @@ static void R_DrawEntityBBoxes(void)
 	prog = prog_save;
 }
 
-unsigned short nomodelelements[24] =
+static const int nomodelelement3i[24] =
 {
 	5, 2, 0,
 	5, 1, 2,
@@ -5140,7 +5140,19 @@ unsigned short nomodelelements[24] =
 	1, 3, 4
 };
 
-float nomodelvertex3f[6*3] =
+static const unsigned short nomodelelement3s[24] =
+{
+	5, 2, 0,
+	5, 1, 2,
+	5, 0, 3,
+	5, 3, 1,
+	0, 2, 4,
+	2, 1, 4,
+	3, 0, 4,
+	1, 3, 4
+};
+
+static const float nomodelvertex3f[6*3] =
 {
 	-16,   0,   0,
 	 16,   0,   0,
@@ -5150,7 +5162,7 @@ float nomodelvertex3f[6*3] =
 	  0,   0,  16
 };
 
-float nomodelcolor4f[6*4] =
+static const float nomodelcolor4f[6*4] =
 {
 	0.0f, 0.0f, 0.5f, 1.0f,
 	0.0f, 0.0f, 0.5f, 1.0f,
@@ -5221,7 +5233,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	else
 		R_Mesh_ColorPointer(nomodelcolor4f, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_Draw(0, 6, 0, 8, NULL, nomodelelements, 0, 0);
+	R_Mesh_Draw(0, 6, 0, 8, nomodelelement3i, nomodelelement3s, 0, 0);
 }
 
 void R_DrawNoModel(entity_render_t *ent)
@@ -5310,7 +5322,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 	R_Mesh_TexCoordPointer(0, 2, spritetexcoord2f, 0, 0);
 	// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 	GL_Color(cr * fog * r_refdef.view.colorscale, cg * fog * r_refdef.view.colorscale, cb * fog * r_refdef.view.colorscale, ca);
-	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 
 	if (blendfunc2 == GL_ONE_MINUS_SRC_ALPHA)
 	{
@@ -5318,7 +5330,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, rtexture_
 		GL_BlendFunc(blendfunc1, GL_ONE);
 		fog = 1 - fog;
 		GL_Color(r_refdef.fogcolor[0] * fog, r_refdef.fogcolor[1] * fog, r_refdef.fogcolor[2] * fog, ca);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	}
 }
 

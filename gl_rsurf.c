@@ -364,7 +364,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 			 isvis ? 0.125f : 0.03125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
-	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, NULL, polygonelements, 0, 0);
+	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, polygonelement3s, 0, 0);
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow

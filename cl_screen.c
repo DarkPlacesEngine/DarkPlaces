@@ -1812,7 +1812,7 @@ static void SCR_DrawLoadingStack(void)
 			//                                        ^^^^^^^^^^ blue component
 			//                              ^^^^^^ bottom row
 			//          ^^^^^^^^^^^^ alpha is always on
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 
 		// make sure everything is cleared, including the progress indicator
 		if(loadingscreenheight < 8)
@@ -1875,13 +1875,13 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 		R_Mesh_ResetTextureState();
 		R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
 		R_Mesh_TexCoordPointer(0, 2, loadingscreentexture_texcoord2f, 0, 0);
-		R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	}
 	R_Mesh_VertexPointer(loadingscreenpic_vertex3f, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_Mesh_TexBind(0, R_GetTexture(loadingscreenpic->tex));
 	R_Mesh_TexCoordPointer(0, 2, loadingscreenpic_texcoord2f, 0, 0);
-	R_Mesh_Draw(0, 4, 0, 2, NULL, polygonelements, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	SCR_DrawLoadingStack();
 }
 

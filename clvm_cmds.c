@@ -3078,7 +3078,8 @@ void VMPolygons_Store(vmpolygons_t *polys)
 		mesh.texture = polys->begin_texture;
 		mesh.num_vertices = polys->begin_vertices;
 		mesh.num_triangles = polys->begin_vertices-2;
-		mesh.data_element3s = polygonelements;
+		mesh.data_element3i = polygonelement3i;
+		mesh.data_element3s = polygonelement3s;
 		mesh.data_vertex3f = polys->begin_vertex[0];
 		mesh.data_color4f = polys->begin_color[0];
 		mesh.data_texcoord2f = polys->begin_texcoord[0];

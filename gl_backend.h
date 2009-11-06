@@ -6,9 +6,11 @@
 #define MAX_TEXTUREUNITS 64
 
 #define POLYGONELEMENTS_MAXPOINTS 258
-extern unsigned short polygonelements[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+extern int polygonelement3i[(POLYGONELEMENTS_MAXPOINTS-2)*3];
+extern unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 #define QUADELEMENTS_MAXQUADS 128
-extern unsigned short quadelements[QUADELEMENTS_MAXQUADS*6];
+extern int quadelement3i[QUADELEMENTS_MAXQUADS*6];
+extern unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
 void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t out);
 void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double x1, double y1, double x2, double y2, double zNear, double zFar, const double *nearplane);
