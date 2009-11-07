@@ -653,11 +653,16 @@ with the archive flag set to true.
 void Cvar_WriteVariables (qfile_t *f)
 {
 	cvar_t	*var;
+	char buf1[MAX_INPUTLINE], buf2[MAX_INPUTLINE];
 
 	// don't save cvars that match their default value
 	for (var = cvar_vars ; var ; var = var->next)
 		if ((var->flags & CVAR_SAVE) && (strcmp(var->string, var->defstring) || (var->flags & CVAR_ALLOCATED)))
-			FS_Printf(f, "%s%s \"%s\"\n", var->flags & CVAR_ALLOCATED ? "seta " : "", var->name, var->string);
+		{
+			Cmd_QuoteString(buf1, sizeof(buf1), var->name, "\"\\$");
+			Cmd_QuoteString(buf2, sizeof(buf2), var->string, "\"\\$");
+			FS_Printf(f, "%s\"%s\" \"%s\"\n", var->flags & CVAR_ALLOCATED ? "seta " : "", buf1, buf2);
+		}
 }
 
 
