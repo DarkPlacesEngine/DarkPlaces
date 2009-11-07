@@ -1039,7 +1039,7 @@ qboolean CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t
 	if(!model)
 		return false;
 	// blend the matrices
-	memset(&blendmatrix, 0, sizeof(blendmatrix));
+	memset(blendmatrix, 0, sizeof(*blendmatrix));
 	for (j = 0;j < MAX_FRAMEBLENDS && entrender->frameblend[j].lerp > 0;j++)
 	{
 		matrix4x4_t tagmatrix;
