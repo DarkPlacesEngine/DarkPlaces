@@ -262,7 +262,7 @@ void FOG_clear(void)
 	r_refdef.fog_blue = 0;
 	r_refdef.fog_alpha = 1;
 	r_refdef.fog_start = 0;
-	r_refdef.fog_end = 0;
+	r_refdef.fog_end = 16384;
 	r_refdef.fog_height = 1<<30;
 	r_refdef.fog_fadedepth = 128;
 }
