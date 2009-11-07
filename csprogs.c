@@ -1043,7 +1043,7 @@ qboolean CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t
 	for (j = 0;j < MAX_FRAMEBLENDS && entrender->frameblend[j].lerp > 0;j++)
 	{
 		matrix4x4_t tagmatrix;
-		if(!Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix))
+		if(Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix))
 			return false;
 		d = entrender->frameblend[j].lerp;
 		for (l = 0;l < 4;l++)
