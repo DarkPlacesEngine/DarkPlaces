@@ -920,7 +920,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		// FIXME: use a model function to get tag info (need to handle skeletal)
 		if (e->state_current.tagentity && e->state_current.tagindex >= 1)
 		{
-			if(CL_BlendTagMatrix(&t->render, e->state_current.tagindex - 1, &blendmatrix))
+			if(!CL_BlendTagMatrix(&t->render, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
 			{
 				// concat the tag matrices onto the entity matrix
 				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);

@@ -2276,6 +2276,7 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 int CL_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
 {
 	int frame;
+	int ret;
 	dp_model_t *model;
 	entity_render_t cheatentity;
 	if (tagindex >= 0
@@ -2291,15 +2292,13 @@ int CL_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out
 		cheatentity.model = model;
 		CL_LoadFrameGroupBlend(ent, &cheatentity);
 		R_LerpAnimation(&cheatentity);
-		if(!CL_BlendTagMatrix(&cheatentity, tagindex, out))
-		{
+		ret = CL_BlendTagMatrix(&cheatentity, tagindex, out);
+		if(ret)
 			*out = identitymatrix;
-			return false;
-		}
-		return true;
+		return ret;
 	}
 	*out = identitymatrix;
-	return false;
+	return 0;
 }
 
 // Warnings/errors code:
