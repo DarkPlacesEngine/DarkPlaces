@@ -918,7 +918,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
 		// if a valid tagindex is used, make it relative to that tag instead
 		// FIXME: use a model function to get tag info (need to handle skeletal)
-		if (e->state_current.tagentity && e->state_current.tagindex >= 1)
+		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && e->render.model)
 		{
 			if(!CL_BlendTagMatrix(&t->render, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
 			{
