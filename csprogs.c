@@ -219,28 +219,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	}
 
 	// set up the animation data
-	// self.frame is the interpolation target (new frame)
-	// self.frame1time is the animation base time for the interpolation target
-	// self.frame2 is the interpolation start (previous frame)
-	// self.frame2time is the animation base time for the interpolation start
-	// self.lerpfrac is the interpolation strength for self.frame
-	// 3+ are for additional blends (the main use for this feature is lerping
-	// pitch angle on a player model where the animator set up 5 sets of
-	// animations and the csqc simply lerps between sets)
-	entrender->framegroupblend[0].frame = entrender->framegroupblend[1].frame = (int) ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->framegroupblend[1].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3))) entrender->framegroupblend[2].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4))) entrender->framegroupblend[3].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->framegroupblend[0].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->framegroupblend[1].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3time))) entrender->framegroupblend[2].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4time))) entrender->framegroupblend[3].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framegroupblend[0].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) entrender->framegroupblend[2].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) entrender->framegroupblend[3].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
-	// assume that the (missing) lerpfrac2 is whatever remains after lerpfrac+lerpfrac3+lerpfrac4 are summed
-	entrender->framegroupblend[1].lerp = 1 - entrender->framegroupblend[0].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
+	CL_LoadFrameGroupBlend(ed, entrender);
 
 	// concat the matrices to make the entity relative to its tag
 	Matrix4x4_Concat(&entrender->matrix, &tagmatrix, &matrix2);
@@ -1023,4 +1002,53 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	CSQC_END;
 
 	return r;
+}
+
+void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
+{
+	prvm_eval_t *val;
+	// self.frame is the interpolation target (new frame)
+	// self.frame1time is the animation base time for the interpolation target
+	// self.frame2 is the interpolation start (previous frame)
+	// self.frame2time is the animation base time for the interpolation start
+	// self.lerpfrac is the interpolation strength for self.frame
+	// 3+ are for additional blends (the main use for this feature is lerping
+	// pitch angle on a player model where the animator set up 5 sets of
+	// animations and the csqc simply lerps between sets)
+	entrender->framegroupblend[0].frame = entrender->framegroupblend[1].frame = (int) ed->fields.client->frame;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->framegroupblend[1].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3))) entrender->framegroupblend[2].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4))) entrender->framegroupblend[3].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->framegroupblend[0].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->framegroupblend[1].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3time))) entrender->framegroupblend[2].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4time))) entrender->framegroupblend[3].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framegroupblend[0].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) entrender->framegroupblend[2].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) entrender->framegroupblend[3].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
+	// assume that the (missing) lerpfrac2 is whatever remains after lerpfrac+lerpfrac3+lerpfrac4 are summed
+	entrender->framegroupblend[1].lerp = 1 - entrender->framegroupblend[0].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
+}
+
+qboolean CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix)
+{
+	int j, l, k;
+	float d;
+	dp_model_t *model = entrender->model;
+	if(!model)
+		return false;
+	// blend the matrices
+	memset(&blendmatrix, 0, sizeof(blendmatrix));
+	for (j = 0;j < MAX_FRAMEBLENDS && entrender->frameblend[j].lerp > 0;j++)
+	{
+		matrix4x4_t tagmatrix;
+		if(!Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix))
+			return false;
+		d = entrender->frameblend[j].lerp;
+		for (l = 0;l < 4;l++)
+			for (k = 0;k < 4;k++)
+				blendmatrix->m[l][k] += d * tagmatrix.m[l][k];
+	}
+	return true;
 }
