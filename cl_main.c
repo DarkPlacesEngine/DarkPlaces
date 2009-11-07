@@ -873,10 +873,9 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
-	int j, k, l, frame;
-	float origin[3], angles[3], lerp, d;
+	int frame;
+	float origin[3], angles[3], lerp;
 	entity_t *t;
-	dp_model_t *model;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
 	// skip inactive entities and world
@@ -919,23 +918,15 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
 		// if a valid tagindex is used, make it relative to that tag instead
 		// FIXME: use a model function to get tag info (need to handle skeletal)
-		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model))
+		if (e->state_current.tagentity && e->state_current.tagindex >= 1)
 		{
-			// blend the matrices
-			memset(&blendmatrix, 0, sizeof(blendmatrix));
-			for (j = 0;j < MAX_FRAMEBLENDS && t->render.frameblend[j].lerp > 0;j++)
+			if(CL_BlendTagMatrix(&t->render, e->state_current.tagindex - 1, &blendmatrix))
 			{
-				matrix4x4_t tagmatrix;
-				Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].subframe, e->state_current.tagindex - 1, &tagmatrix);
-				d = t->render.frameblend[j].lerp;
-				for (l = 0;l < 4;l++)
-					for (k = 0;k < 4;k++)
-						blendmatrix.m[l][k] += d * tagmatrix.m[l][k];
+				// concat the tag matrices onto the entity matrix
+				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
+				// use the constructed tag matrix
+				matrix = &tempmatrix;
 			}
-			// concat the tag matrices onto the entity matrix
-			Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
-			// use the constructed tag matrix
-			matrix = &tempmatrix;
 		}
 	}
 	else if (e->render.flags & RENDER_VIEWMODEL)
@@ -1881,9 +1872,7 @@ static void CL_Fog_f (void)
 		Con_Printf("\"fog\" is \"%f %f %f %f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end, r_refdef.fog_height, r_refdef.fog_fadedepth);
 		return;
 	}
-	r_refdef.fog_start = 0;
-	r_refdef.fog_end = 16384;
-	r_refdef.fog_alpha = 1;
+	FOG_clear(); // so missing values get good defaults
 	if(Cmd_Argc() > 1)
 		r_refdef.fog_density = atof(Cmd_Argv(1));
 	if(Cmd_Argc() > 2)

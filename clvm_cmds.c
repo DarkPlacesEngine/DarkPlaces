@@ -2273,11 +2273,11 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	}
 }
 
-
 int CL_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
 {
 	int frame;
 	dp_model_t *model;
+	entity_render_t cheatentity;
 	if (tagindex >= 0
 	 && (model = CL_GetModelFromEdict(ent))
 	 && model->animscenes)
@@ -2286,10 +2286,20 @@ int CL_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out
 		frame = (int)ent->fields.client->frame;
 		if (frame < 0 || frame >= model->numframes)
 			frame = 0;
-		return Mod_Alias_GetTagMatrix(model, model->animscenes[frame].firstframe, tagindex, out);
+		// now we'll do some CHEATING
+		memset(&cheatentity, 0, sizeof(cheatentity));
+		cheatentity.model = model;
+		CL_LoadFrameGroupBlend(ent, &cheatentity);
+		R_LerpAnimation(&cheatentity);
+		if(!CL_BlendTagMatrix(&cheatentity, tagindex, out))
+		{
+			*out = identitymatrix;
+			return false;
+		}
+		return true;
 	}
 	*out = identitymatrix;
-	return 0;
+	return false;
 }
 
 // Warnings/errors code:

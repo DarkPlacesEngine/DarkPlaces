@@ -61,4 +61,7 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned 
 
 qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
 
+void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender);
+qboolean CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix);
+
 #endif
