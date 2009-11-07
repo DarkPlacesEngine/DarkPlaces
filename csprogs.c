@@ -1031,24 +1031,24 @@ void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
 	entrender->framegroupblend[1].lerp = 1 - entrender->framegroupblend[0].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
 }
 
-qboolean CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix)
+int CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix)
 {
 	int j, l, k;
+	int ret;
 	float d;
 	dp_model_t *model = entrender->model;
-	if(!model)
-		return false;
 	// blend the matrices
 	memset(blendmatrix, 0, sizeof(*blendmatrix));
 	for (j = 0;j < MAX_FRAMEBLENDS && entrender->frameblend[j].lerp > 0;j++)
 	{
 		matrix4x4_t tagmatrix;
-		if(Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix))
-			return false;
+		ret = Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix);
+		if(ret)
+			return ret;
 		d = entrender->frameblend[j].lerp;
 		for (l = 0;l < 4;l++)
 			for (k = 0;k < 4;k++)
 				blendmatrix->m[l][k] += d * tagmatrix.m[l][k];
 	}
-	return true;
+	return 0;
 }
