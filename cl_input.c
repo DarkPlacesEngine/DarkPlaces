@@ -1469,13 +1469,16 @@ void CL_ClientMovement_Replay(void)
 				s.cmd.canjump = cl.movecmd[i+1].canjump;
 			// if a move is more than 50ms, do it as two moves (matching qwsv)
 			//Con_Printf("%i ", s.cmd.msec);
-			if (s.cmd.frametime > 0.05)
+			if(s.cmd.frametime > 0.0005)
 			{
-				s.cmd.frametime /= 2;
+				if (s.cmd.frametime > 0.05)
+				{
+					s.cmd.frametime /= 2;
+					CL_ClientMovement_PlayerMove(&s);
+				}
 				CL_ClientMovement_PlayerMove(&s);
+				cl.movecmd[i].canjump = s.cmd.canjump;
 			}
-			CL_ClientMovement_PlayerMove(&s);
-			cl.movecmd[i].canjump = s.cmd.canjump;
 		}
 		//Con_Printf("\n");
 		CL_ClientMovement_UpdateStatus(&s);
