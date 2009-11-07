@@ -181,6 +181,7 @@ particletexture_t;
 static rtexturepool_t *particletexturepool;
 static rtexture_t *particlefonttexture;
 static particletexture_t particletexture[MAX_PARTICLETEXTURES];
+skinframe_t *decalskinframe;
 
 // texture numbers in particle font
 static const int tex_smoke[8] = {0, 1, 2, 3, 4, 5, 6, 7};
@@ -1836,9 +1837,10 @@ static void R_InitParticleTexture (void)
 	// we invert it again during the blendfunc to make it work...
 
 #ifndef DUMPPARTICLEFONT
-	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", false, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, true);
-	if (particlefonttexture)
+	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, false);
+	if (decalskinframe)
 	{
+		particlefonttexture = decalskinframe->base;
 		// TODO maybe allow custom grid size?
 		particlefontwidth = image_width;
 		particlefontheight = image_height;
@@ -1979,7 +1981,8 @@ static void R_InitParticleTexture (void)
 		Image_WriteTGABGRA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
-		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
+		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE);
+		particlefonttexture = decalskinframe->base;
 
 		Mem_Free(particletexturedata);
 	}
@@ -2097,6 +2100,8 @@ static void r_part_shutdown(void)
 
 static void r_part_newmap(void)
 {
+	if (decalskinframe)
+		R_SkinFrame_MarkUsed(decalskinframe);
 	CL_Particles_LoadEffectInfo();
 }
 
