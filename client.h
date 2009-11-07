@@ -35,6 +35,34 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define LIGHTFLAG_NORMALMODE 1
 #define LIGHTFLAG_REALTIMEMODE 2
 
+typedef struct tridecal_s
+{
+	// color and initial alpha value
+	unsigned char	colors[3][4];
+	// alpha of this decal, starting at 1 (cl_decals_fadetime)
+	float			alpha;
+	// timer before fade begins (cl_decals_time)
+	float			fade;
+	// if >= 0 this indicates the decal should follow an animated triangle
+	int				triangleindex;
+}
+tridecal_t;
+
+typedef struct decalsystem_s
+{
+	double lastupdatetime;
+	int maxdecals;
+	int freedecal;
+	int numdecals;
+	tridecal_t *decals;
+	float *vertex3f;
+	float *texcoord2f;
+	float *color4f;
+	int *element3i;
+	unsigned short *element3s;
+}
+decalsystem_t;
+
 typedef struct effect_s
 {
 	int active;
@@ -317,6 +345,11 @@ typedef struct entity_render_s
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse; // q3bsp
 	vec3_t modellight_lightdir; // q3bsp
+
+	// storage of decals on this entity
+	// (note: if allowdecals is set, be sure to call R_DecalSystem_Reset on removal!)
+	int allowdecals;
+	decalsystem_t decalsystem;
 
 	// FIELDS UPDATED BY RENDERER:
 	// last time visible during trace culling
