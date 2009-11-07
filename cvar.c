@@ -493,6 +493,13 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 		return cvar;
 	}
 
+// check for pure evil
+	if (!*name)
+	{
+		Con_Printf("Cvar_Get: invalid variable name\n");
+		return NULL;
+	}
+
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
