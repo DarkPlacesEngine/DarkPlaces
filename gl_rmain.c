@@ -5688,7 +5688,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		{
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
-			if (rsurface.frameblend[0].subframe != 0 && t->anim_total[1])
+			if (rsurface.ent_alttextures && t->anim_total[1])
 				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[1]) : 0];
 			else
 				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[0]) : 0];
@@ -5963,6 +5963,7 @@ void RSurf_ActiveWorldEntity(void)
 	VectorSet(rsurface.glowmod, 1, 1, 1);
 	memset(rsurface.frameblend, 0, sizeof(rsurface.frameblend));
 	rsurface.frameblend[0].lerp = 1;
+	rsurface.ent_alttextures = false;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	rsurface.modelvertex3f  = model->surfmesh.data_vertex3f;
@@ -6041,6 +6042,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	VectorCopy(ent->colormap_shirtcolor, rsurface.colormap_shirtcolor);
 	VectorCopy(ent->glowmod, rsurface.glowmod);
 	memcpy(rsurface.frameblend, ent->frameblend, sizeof(ent->frameblend));
+	rsurface.ent_alttextures = ent->framegroupblend[0].frame != 0;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	if (ent->model->brush.submodel)
@@ -6170,6 +6172,7 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	VectorSet(rsurface.glowmod, 1, 1, 1);
 	memset(rsurface.frameblend, 0, sizeof(rsurface.frameblend));
 	rsurface.frameblend[0].lerp = 1;
+	rsurface.ent_alttextures = false;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	if (wanttangents)
