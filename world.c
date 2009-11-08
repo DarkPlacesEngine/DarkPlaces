@@ -1484,7 +1484,7 @@ static void World_Physics_Init(void)
 	{
 		dInitODE();
 //		dInitODE2(0);
-#ifdef ODE_DNYAMIC
+#ifdef ODE_DYNAMIC
 # ifdef dSINGLE
 		if (!dCheckConfiguration("ODE_single_precision"))
 # else
