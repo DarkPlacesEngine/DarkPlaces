@@ -218,6 +218,7 @@ cvar_t cl_decals_visculling = {CVAR_SAVE, "cl_decals_visculling", "1", "perform 
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
 cvar_t cl_decals_newsystem = {CVAR_SAVE, "cl_decals_newsystem", "0", "enables new advanced decal system"};
+cvar_t cl_decals_models = {CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
 cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
 
 
@@ -500,6 +501,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_decals_time);
 	Cvar_RegisterVariable (&cl_decals_fadetime);
 	Cvar_RegisterVariable (&cl_decals_newsystem);
+	Cvar_RegisterVariable (&cl_decals_models);
 	Cvar_RegisterVariable (&cl_decals_bias);
 }
 
