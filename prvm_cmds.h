@@ -277,6 +277,7 @@ void VM_min (void);
 void VM_max (void);
 void VM_bound (void);
 void VM_pow (void);
+void VM_log (void);
 void VM_asin (void);
 void VM_acos (void);
 void VM_atan (void);

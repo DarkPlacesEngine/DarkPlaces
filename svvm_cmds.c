@@ -88,6 +88,7 @@ char *vm_sv_extensions =
 "DP_QC_GETTAGINFO_BONEPROPERTIES "
 "DP_QC_GETTIME "
 "DP_QC_GETTIME_CDTRACK "
+"DP_QC_LOG "
 "DP_QC_MINMAXBOUND "
 "DP_QC_MULTIPLETEMPSTRINGS "
 "DP_QC_NUM_FOR_EDICT "
@@ -3608,7 +3609,7 @@ NULL,							// #528
 VM_loadfromdata,				// #529
 VM_loadfromfile,				// #530
 VM_SV_setpause,					// #531 void(float pause) setpause = #531;
-NULL,							// #532
+VM_log,							// #532
 NULL,							// #533
 NULL,							// #534
 NULL,							// #535

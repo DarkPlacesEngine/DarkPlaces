@@ -1568,6 +1568,12 @@ void VM_pow (void)
 	PRVM_G_FLOAT(OFS_RETURN) = pow(PRVM_G_FLOAT(OFS_PARM0), PRVM_G_FLOAT(OFS_PARM1));
 }
 
+void VM_log (void)
+{
+	VM_SAFEPARMCOUNT(1,VM_log);
+	PRVM_G_FLOAT(OFS_RETURN) = log(PRVM_G_FLOAT(OFS_PARM0));
+}
+
 void VM_Files_Init(void)
 {
 	int i;

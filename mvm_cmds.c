@@ -21,6 +21,7 @@ char *vm_m_extensions =
 "DP_QC_CVAR_TYPE "
 "DP_QC_CVAR_DESCRIPTION "
 "DP_QC_FINDCHAIN_TOFIELD "
+"DP_QC_LOG "
 "DP_QC_RENDER_SCENE "
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
@@ -1309,7 +1310,7 @@ NULL,									// #528
 NULL,									// #529
 NULL,									// #530
 NULL,									// #531
-NULL,									// #532
+VM_log,									// #532
 NULL,									// #533
 NULL,									// #534
 NULL,									// #535
