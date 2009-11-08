@@ -4191,7 +4191,7 @@ VM_CL_SpawnParticleDelayed,		// #528 float(vector org, vector vel, float delay, 
 VM_loadfromdata,				// #529
 VM_loadfromfile,				// #530
 NULL,							// #531
-NULL,							// #532
+VM_log,							// #532
 NULL,							// #533
 NULL,							// #534
 NULL,							// #535
