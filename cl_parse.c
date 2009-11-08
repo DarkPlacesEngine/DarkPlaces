@@ -2144,6 +2144,7 @@ void CL_ParseStatic (int large)
 	//VectorCopy (ent->state_baseline.angles, ent->render.angles);
 
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, ent->state_baseline.origin[0], ent->state_baseline.origin[1], ent->state_baseline.origin[2], ent->state_baseline.angles[0], ent->state_baseline.angles[1], ent->state_baseline.angles[2], 1);
+	ent->render.allowdecals = true;
 	CL_UpdateRenderEntity(&ent->render);
 }
 

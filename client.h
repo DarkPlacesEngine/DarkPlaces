@@ -39,10 +39,8 @@ typedef struct tridecal_s
 {
 	// color and initial alpha value
 	unsigned char	colors[3][4];
-	// alpha of this decal, starting at 1 (cl_decals_fadetime)
-	float			alpha;
-	// timer before fade begins (cl_decals_time)
-	float			fade;
+	// how long this decal has lived so far (the actual fade begins at cl_decals_time)
+	float			lived;
 	// if >= 0 this indicates the decal should follow an animated triangle
 	int				triangleindex;
 }
@@ -50,6 +48,7 @@ tridecal_t;
 
 typedef struct decalsystem_s
 {
+	dp_model_t *model;
 	double lastupdatetime;
 	int maxdecals;
 	int freedecal;

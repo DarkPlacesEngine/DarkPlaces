@@ -387,6 +387,8 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist);
 
+void R_DecalSystem_SplatEntities(const vec3_t org, const vec3_t normal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float size);
+
 typedef enum rsurfacepass_e
 {
 	RSURFPASS_BASE,

@@ -856,8 +856,6 @@ typedef struct model_s
 	// range of collision brush numbers in this (sub)model
 	int				firstmodelbrush;
 	int				nummodelbrushes;
-	// list of surface numbers in this (sub)model
-	int				*surfacelist;
 	// for md3 models
 	int				num_tags;
 	int				num_tagframes;
