@@ -85,7 +85,9 @@ cvar_t r_shadows_drawafterrtlighting = {CVAR_SAVE, "r_shadows_drawafterrtlightin
 cvar_t r_shadows_castfrombmodels = {CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
-cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "4", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "14", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_decals_factor = {0, "r_polygonoffset_decals_factor", "0", "biases depth values of decals to prevent z-fighting artifacts"};
+cvar_t r_polygonoffset_decals_offset = {0, "r_polygonoffset_decals_offset", "-14", "biases depth values of decals to prevent z-fighting artifacts"};
 cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 
@@ -3014,6 +3016,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
+	Cvar_RegisterVariable(&r_polygonoffset_decals_factor);
+	Cvar_RegisterVariable(&r_polygonoffset_decals_offset);
 	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_textureunits);
@@ -3642,6 +3646,28 @@ static void R_DrawModelsAddWaterPlanes(void)
 		ent = r_refdef.scene.entities[i];
 		if (ent->model && ent->model->DrawAddWaterPlanes != NULL)
 			ent->model->DrawAddWaterPlanes(ent);
+	}
+}
+
+static void R_DrawModelDecals_Entity(entity_render_t *ent);
+static void R_DrawModelDecals(void)
+{
+	int i;
+	entity_render_t *ent;
+
+	R_DrawModelDecals_Entity(r_refdef.scene.worldentity);
+
+	if (!r_drawentities.integer || r_showsurfaces.integer)
+		return;
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+	{
+		if (!r_refdef.viewcache.entityvisible[i])
+			continue;
+		ent = r_refdef.scene.entities[i];
+		r_refdef.stats.entities++;
+		if (ent->decalsystem.numdecals)
+			R_DrawModelDecals_Entity(ent);
 	}
 }
 
@@ -4934,6 +4960,7 @@ extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
+extern cvar_t cl_decals_newsystem;
 void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
@@ -5037,13 +5064,18 @@ void R_RenderScene(void)
 
 	if (cl.csqc_vidvars.drawworld)
 	{
-		R_DrawLightningBeams();
-		if (r_timereport_active)
-			R_TimeReport("lightning");
-
-		R_DrawDecals();
-		if (r_timereport_active)
-			R_TimeReport("decals");
+		if (cl_decals_newsystem.integer)
+		{
+			R_DrawModelDecals();
+			if (r_timereport_active)
+				R_TimeReport("modeldecals");
+		}
+		else
+		{
+			R_DrawDecals();
+			if (r_timereport_active)
+				R_TimeReport("decals");
+		}
 
 		R_DrawParticles();
 		if (r_timereport_active)
@@ -5052,6 +5084,10 @@ void R_RenderScene(void)
 		R_DrawExplosions();
 		if (r_timereport_active)
 			R_TimeReport("explosions");
+
+		R_DrawLightningBeams();
+		if (r_timereport_active)
+			R_TimeReport("lightning");
 	}
 
 	R_SetupGenericShader(true);
@@ -8124,6 +8160,8 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 {
 	float *v3f;
 	float *tc2f;
+	float *c4f;
+	float ca;
 	tridecal_t *decal;
 	tridecal_t *decals;
 	int i;
@@ -8136,12 +8174,12 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 		qboolean useshortelements;
 		decalsystem->maxdecals = max(16, decalsystem->maxdecals * 2);
 		useshortelements = decalsystem->maxdecals * 3 <= 65536;
-		decalsystem->decals = Mem_Alloc(r_main_mempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + useshortelements ? sizeof(unsigned short[3]) : 0));
-		decalsystem->vertex3f = (float *)(decalsystem->decals + decalsystem->maxdecals);
-		decalsystem->texcoord2f = (float *)(decalsystem->vertex3f + decalsystem->maxdecals*9);
-		decalsystem->color4f = (float *)(decalsystem->texcoord2f + decalsystem->maxdecals*6);
-		decalsystem->element3i = (int *)(decalsystem->color4f + decalsystem->maxdecals*12);
-		decalsystem->element3s = useshortelements ? (unsigned short *)(decalsystem->element3i + decalsystem->maxdecals*3) : NULL;
+		decalsystem->decals = Mem_Alloc(cls.levelmempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + (useshortelements ? sizeof(unsigned short[3]) : 0)));
+		decalsystem->color4f = (float *)(decalsystem->decals + decalsystem->maxdecals);
+		decalsystem->texcoord2f = (float *)(decalsystem->color4f + decalsystem->maxdecals*12);
+		decalsystem->vertex3f = (float *)(decalsystem->texcoord2f + decalsystem->maxdecals*6);
+		decalsystem->element3i = (int *)(decalsystem->vertex3f + decalsystem->maxdecals*9);
+		decalsystem->element3s = (useshortelements ? ((unsigned short *)(decalsystem->element3i + decalsystem->maxdecals*3)) : NULL);
 		if (decalsystem->numdecals)
 		{
 			memcpy(decalsystem->decals, old.decals, decalsystem->numdecals * sizeof(tridecal_t));
@@ -8149,6 +8187,7 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 			memcpy(decalsystem->texcoord2f, old.texcoord2f, decalsystem->numdecals * sizeof(float[3][2]));
 			memcpy(decalsystem->color4f, old.color4f, decalsystem->numdecals * sizeof(float[3][4]));
 		}
+		Mem_Free(old.decals);
 		for (i = 0;i < decalsystem->maxdecals*3;i++)
 			decalsystem->element3i[i] = i;
 		if (useshortelements)
@@ -8162,27 +8201,28 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 	decal = decalsystem->decals + (i = decalsystem->freedecal++);
 	v3f = decalsystem->vertex3f + 9*i;
 	tc2f = decalsystem->texcoord2f + 6*i;
-	for (i = decalsystem->freedecal;i < maxdecals && decals[i].alpha;i++)
+	c4f = decalsystem->color4f + 12*i;
+	for (i = decalsystem->freedecal;i < maxdecals && decals[i].colors[0][3];i++)
 		;
 	decalsystem->freedecal = i;
 	if (decalsystem->numdecals <= i)
 		decalsystem->numdecals = i + 1;
 
 	// initialize the decal
-	decal->fade = cl_decals_time.value;
-	decal->alpha = 1.0f;
+	decal->lived = 0;
+	decal->triangleindex = triangleindex;
 	decal->colors[0][0] = (unsigned char)(c0[0]*255.0f);
 	decal->colors[0][1] = (unsigned char)(c0[1]*255.0f);
 	decal->colors[0][2] = (unsigned char)(c0[2]*255.0f);
-	decal->colors[0][3] = (unsigned char)(c0[3]*255.0f);
+	decal->colors[0][3] = 255;
 	decal->colors[1][0] = (unsigned char)(c1[0]*255.0f);
 	decal->colors[1][1] = (unsigned char)(c1[1]*255.0f);
 	decal->colors[1][2] = (unsigned char)(c1[2]*255.0f);
-	decal->colors[1][3] = (unsigned char)(c1[3]*255.0f);
+	decal->colors[1][3] = 255;
 	decal->colors[2][0] = (unsigned char)(c2[0]*255.0f);
 	decal->colors[2][1] = (unsigned char)(c2[1]*255.0f);
 	decal->colors[2][2] = (unsigned char)(c2[2]*255.0f);
-	decal->colors[2][3] = (unsigned char)(c2[3]*255.0f);
+	decal->colors[2][3] = 255;
 	v3f[0] = v0[0];
 	v3f[1] = v0[1];
 	v3f[2] = v0[2];
@@ -8198,146 +8238,280 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 	tc2f[3] = t1[1];
 	tc2f[4] = t2[0];
 	tc2f[5] = t2[1];
+	ca = (1.0f/255.0f);
+	c4f[ 0] = decal->colors[0][0] * ca;
+	c4f[ 1] = decal->colors[0][1] * ca;
+	c4f[ 2] = decal->colors[0][2] * ca;
+	c4f[ 3] = 1;
+	c4f[ 4] = decal->colors[1][0] * ca;
+	c4f[ 5] = decal->colors[1][1] * ca;
+	c4f[ 6] = decal->colors[1][2] * ca;
+	c4f[ 7] = 1;
+	c4f[ 8] = decal->colors[2][0] * ca;
+	c4f[ 9] = decal->colors[2][1] * ca;
+	c4f[10] = decal->colors[2][2] * ca;
+	c4f[11] = 1;
 }
 
-void R_DecalSystem_Splat(decalsystem_t *decalsystem, int numvertices, const float *vertex3f, int numtriangles, const int *element3i, const matrix4x4_t *projection, float r, float g, float b, float a, qboolean dynamic)
+extern cvar_t cl_decals_bias;
+void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
-	int vertexindex;
+	matrix4x4_t projection;
+	decalsystem_t *decalsystem;
+	qboolean dynamic;
+	dp_model_t *model;
+	const float *vertex3f;
+	const msurface_t *surface;
+	const msurface_t *surfaces;
+	const int *surfacelist;
+	int numvertices;
+	int numtriangles;
+	int numsurfacelist;
+	int surfacelistindex;
 	int triangleindex;
 	int cornerindex;
 	int index;
 	int numpoints;
 	const int *e;
+	float localorigin[3];
+	float localnormal[3];
+	float localmins[3];
+	float localmaxs[3];
+	float localsize;
+	float ilocalsize;
 	float v[9][3];
-	float tc[9][3]; // third coord is distance fade
+	float tc[9][2];
 	float c[9][4];
-	float *temp;
-	float origin[3];
-	float normal[3];
-	float planes[6][3];
+	//float normal[3];
+	float planes[6][4];
 	float f;
 	float points[2][9][3];
-	temp = Mem_Alloc(tempmempool, numvertices * sizeof(float[3]));
-	for (vertexindex = 0;vertexindex < numvertices;vertexindex++)
-		Matrix4x4_Transform(projection, vertex3f + 3*vertexindex, temp + 3*vertexindex);
-	for (triangleindex = 0, e = element3i;triangleindex < numtriangles;triangleindex++, e += 3)
+	float angles[3];
+	float temp[3];
+
+	model = ent->model;
+	if (!model || !ent->allowdecals || ent->alpha < 1 || (ent->flags & (RENDER_ADDITIVE | RENDER_NODEPTHTEST)))
 	{
-		for (cornerindex = 0;cornerindex < 3;cornerindex++)
+		R_DecalSystem_Reset(&ent->decalsystem);
+		return;
+	}
+
+	decalsystem = &ent->decalsystem;
+	if (decalsystem->model != model)
+		R_DecalSystem_Reset(decalsystem);
+	decalsystem->model = model;
+
+	RSurf_ActiveModelEntity(ent, false, false);
+
+	Matrix4x4_Transform(&rsurface.inversematrix, worldorigin, localorigin);
+	Matrix4x4_Transform3x3(&rsurface.inversematrix, worldnormal, localnormal);
+	VectorNormalize(localnormal);
+	localsize = worldsize*rsurface.inversematrixscale;
+	ilocalsize = 1.0f / localsize;
+	localmins[0] = localorigin[0] - localsize;
+	localmins[1] = localorigin[1] - localsize;
+	localmins[2] = localorigin[2] - localsize;
+	localmaxs[0] = localorigin[0] + localsize;
+	localmaxs[1] = localorigin[1] + localsize;
+	localmaxs[2] = localorigin[2] + localsize;
+
+	//VectorCopy(localnormal, planes[4]);
+	//VectorVectors(planes[4], planes[2], planes[0]);
+	AnglesFromVectors(angles, localnormal, NULL, false);
+	AngleVectors(angles, planes[0], planes[2], planes[4]);
+	VectorNegate(planes[0], planes[1]);
+	VectorNegate(planes[2], planes[3]);
+	VectorNegate(planes[4], planes[5]);
+	planes[0][3] = DotProduct(planes[0], localorigin) - localsize;
+	planes[1][3] = DotProduct(planes[1], localorigin) - localsize;
+	planes[2][3] = DotProduct(planes[2], localorigin) - localsize;
+	planes[3][3] = DotProduct(planes[3], localorigin) - localsize;
+	planes[4][3] = DotProduct(planes[4], localorigin) - localsize;
+	planes[5][3] = DotProduct(planes[5], localorigin) - localsize;
+
+#if 1
+// works
+{
+	matrix4x4_t forwardprojection;
+	Matrix4x4_CreateFromQuakeEntity(&forwardprojection, localorigin[0], localorigin[1], localorigin[2], angles[0], angles[1], angles[2], localsize);
+	Matrix4x4_Invert_Simple(&projection, &forwardprojection);
+}
+#else
+// broken
+{
+	float projectionvector[4][3];
+	VectorScale(planes[0], ilocalsize, projectionvector[0]);
+	VectorScale(planes[2], ilocalsize, projectionvector[1]);
+	VectorScale(planes[4], ilocalsize, projectionvector[2]);
+	projectionvector[0][0] = planes[0][0] * ilocalsize;
+	projectionvector[0][1] = planes[1][0] * ilocalsize;
+	projectionvector[0][2] = planes[2][0] * ilocalsize;
+	projectionvector[1][0] = planes[0][1] * ilocalsize;
+	projectionvector[1][1] = planes[1][1] * ilocalsize;
+	projectionvector[1][2] = planes[2][1] * ilocalsize;
+	projectionvector[2][0] = planes[0][2] * ilocalsize;
+	projectionvector[2][1] = planes[1][2] * ilocalsize;
+	projectionvector[2][2] = planes[2][2] * ilocalsize;
+	projectionvector[3][0] = -(localorigin[0]*projectionvector[0][0]+localorigin[1]*projectionvector[1][0]+localorigin[2]*projectionvector[2][0]);
+	projectionvector[3][1] = -(localorigin[0]*projectionvector[0][1]+localorigin[1]*projectionvector[1][1]+localorigin[2]*projectionvector[2][1]);
+	projectionvector[3][2] = -(localorigin[0]*projectionvector[0][2]+localorigin[1]*projectionvector[1][2]+localorigin[2]*projectionvector[2][2]);
+	Matrix4x4_FromVectors(&projection, projectionvector[0], projectionvector[1], projectionvector[2], projectionvector[3]);
+}
+#endif
+
+	dynamic = model->surfmesh.isanimated;
+	vertex3f = rsurface.modelvertex3f;
+	numsurfacelist = model->nummodelsurfaces;
+	surfacelist = model->sortedmodelsurfaces;
+	surfaces = model->data_surfaces;
+	for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
+	{
+		surface = surfaces + surfacelist[surfacelistindex];
+		// skip transparent surfaces
+		if ((surface->texture->surfaceflags & Q3SURFACEFLAG_NOMARKS) || surface->texture->currentalpha < 1 || (surface->texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)))
+			continue;
+		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
+			continue;
+		numvertices = surface->num_vertices;
+		numtriangles = surface->num_triangles;
+		for (triangleindex = 0, e = model->surfmesh.data_element3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
 		{
-			index = 3*e[cornerindex];
-			VectorCopy(temp + index, tc[cornerindex]);
-		}
-		// cull triangles that are entirely outside the projection
-		if (min(tc[0][0], min(tc[1][0], tc[2][0])) >=  1)
-			continue;
-		if (min(tc[0][1], min(tc[1][1], tc[2][1])) >=  1)
-			continue;
-		if (min(tc[0][2], min(tc[1][2], tc[2][2])) >=  1)
-			continue;
-		if (max(tc[0][0], max(tc[1][0], tc[2][0])) <= -1)
-			continue;
-		if (max(tc[0][1], max(tc[1][1], tc[2][1])) <= -1)
-			continue;
-		if (max(tc[0][2], max(tc[1][2], tc[2][2])) <= -1)
-			continue;
-		// cull backfaces
-		TriangleNormal(tc[0], tc[1], tc[2], normal);
-		if (normal[2] < 0)
-			continue;
-		// we accept this triangle
-		for (cornerindex = 0;cornerindex < 3;cornerindex++)
-		{
-			index = 3*e[cornerindex];
-			VectorCopy(vertex3f + index, v[cornerindex]);
-			// calculate distance fade from the projection origin
-			f = a * (1-fabs(tc[cornerindex][2]));
-			c[cornerindex][0] = r * f;
-			c[cornerindex][1] = g * f;
-			c[cornerindex][2] = b * f;
-			c[cornerindex][3] = 1;
-		}
-		if (dynamic)
-		{
-			R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex);
-		}
-		else
-		{
+			for (cornerindex = 0;cornerindex < 3;cornerindex++)
+			{
+				index = 3*e[cornerindex];
+				VectorCopy(vertex3f + index, v[cornerindex]);
+			}
+			// cull backfaces
+			//TriangleNormal(v[0], v[1], v[2], normal);
+			//if (DotProduct(normal, localnormal) < 0.0f)
+			//	continue;
 			// clip by each of the box planes formed from the projection matrix
-			Matrix4x4_ToVectors(projection, planes[0], planes[2], planes[4], origin);
-			VectorNegate(planes[0], planes[1]);
-			VectorNegate(planes[2], planes[3]);
-			VectorNegate(planes[4], planes[5]);
-			VectorCopy(planes[4], normal);
-			VectorNormalize(normal);
-			VectorMA(v[0], 0.125f, planes[4], v[0]);
-			VectorMA(v[1], 0.125f, planes[4], v[1]);
-			VectorMA(v[2], 0.125f, planes[4], v[2]);
-			numpoints = PolygonF_Clip(3        , v[0]        , planes[0][0], planes[0][1], planes[0][2], DotProduct(planes[0], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[1][0], planes[1][1], planes[1][2], DotProduct(planes[1], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
-			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[2][0], planes[2][1], planes[2][2], DotProduct(planes[2], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[3][0], planes[3][1], planes[3][2], DotProduct(planes[3], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
-			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[4][0], planes[4][1], planes[4][2], DotProduct(planes[4], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[5][0], planes[5][1], planes[5][2], DotProduct(planes[5], origin) - 1, 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), v[0]);
+			// if anything survives, we emit the decal
+			numpoints = PolygonF_Clip(3        , v[0]        , planes[0][0], planes[0][1], planes[0][2], planes[0][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[1][0], planes[1][1], planes[1][2], planes[1][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[2][0], planes[2][1], planes[2][2], planes[2][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[3][0], planes[3][1], planes[3][2], planes[3][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[4][0], planes[4][1], planes[4][2], planes[4][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[5][0], planes[5][1], planes[5][2], planes[5][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), v[0]);
+			if (numpoints < 3)
+				continue;
+			// some part of the triangle survived, so we have to accept it...
+			if (dynamic)
+			{
+				// dynamic always uses the original triangle
+				numpoints = 3;
+				for (cornerindex = 0;cornerindex < 3;cornerindex++)
+				{
+					index = 3*e[cornerindex];
+					VectorCopy(vertex3f + index, v[cornerindex]);
+				}
+			}
 			for (cornerindex = 0;cornerindex < numpoints;cornerindex++)
 			{
 				// convert vertex positions to texcoords
-				Matrix4x4_Transform(projection, v[cornerindex], tc[cornerindex]);
+				Matrix4x4_Transform(&projection, v[cornerindex], temp);
+				tc[cornerindex][0] = (temp[1]+1.0f)*0.5f * (s2-s1) + s1;
+				tc[cornerindex][1] = (temp[2]+1.0f)*0.5f * (t2-t1) + t1;
 				// calculate distance fade from the projection origin
-				f = a * (1-fabs(tc[cornerindex][2]));
+				f = a * (1.0f-fabs(temp[0]));
+				f = max(0.0f, f);
 				c[cornerindex][0] = r * f;
 				c[cornerindex][1] = g * f;
 				c[cornerindex][2] = b * f;
-				c[cornerindex][3] = 1;
+				c[cornerindex][3] = 1.0f;
+				//VectorMA(v[cornerindex], cl_decals_bias.value, localnormal, v[cornerindex]);
 			}
-			for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
-				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1);
+			if (dynamic)
+				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex);
+			else
+				for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
+					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1);
 		}
 	}
 }
 
+void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+{
+	int renderentityindex;
+	float worldmins[3];
+	float worldmaxs[3];
+	entity_render_t *ent;
+
+	worldmins[0] = worldorigin[0] - worldsize;
+	worldmins[1] = worldorigin[1] - worldsize;
+	worldmins[2] = worldorigin[2] - worldsize;
+	worldmaxs[0] = worldorigin[0] + worldsize;
+	worldmaxs[1] = worldorigin[1] + worldsize;
+	worldmaxs[2] = worldorigin[2] + worldsize;
+
+	R_DecalSystem_SplatEntity(r_refdef.scene.worldentity, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize);
+
+	for (renderentityindex = 0;renderentityindex < r_refdef.scene.numentities;renderentityindex++)
+	{
+		ent = r_refdef.scene.entities[renderentityindex];
+		if (!BoxesOverlap(ent->mins, ent->maxs, worldmins, worldmaxs))
+			continue;
+
+		R_DecalSystem_SplatEntity(ent, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize);
+	}
+}
+
 extern skinframe_t *decalskinframe;
-void RSurf_DrawTriDecals(void)
+static void R_DrawModelDecals_Entity(entity_render_t *ent)
 {
 	int i;
-	decalsystem_t *decalsystem = &rsurface.entity->decalsystem;
-	int numdecals = decalsystem->numdecals;
-	tridecal_t *decal = decalsystem->decals;
-	float frametime = cl.time - decalsystem->lastupdatetime;
-	float decalfade;
-	float alphascale;
-	float ca;
+	decalsystem_t *decalsystem = &ent->decalsystem;
+	int numdecals;
+	tridecal_t *decal;
+	float frametime;
+	float fadedelay;
+	float faderate;
+	float alpha;
 	float *v3f;
 	float *c4f;
 	const int *e;
 
-	decalsystem->lastupdatetime = cl.time;
-
 	if (!decalsystem->numdecals)
 		return;
 
-	decalfade = 1.0f / max(0.001f, cl_decals_fadetime.value);
-	alphascale = (1.0f / 255.0f);
+	if (r_showsurfaces.integer)
+		return;
 
-	if (rsurface.ent_color[3] < 1 || (rsurface.ent_flags & RENDER_ADDITIVE))
+	if (ent->model != decalsystem->model || ent->alpha < 1 || (ent->flags & RENDER_ADDITIVE))
 	{
-		Mem_Free(decalsystem->decals);
-		memset(decalsystem, 0, sizeof(*decalsystem));
+		R_DecalSystem_Reset(decalsystem);
 		return;
 	}
 
-	if (decalfade < 0)
-		decalfade = 0;
+	// if the model is static it doesn't matter what value we give for
+	// wantnormals and wanttangents, so this logic uses only rules applicable
+	// to a model, knowing that they are meaningless otherwise
+	if (ent == r_refdef.scene.worldentity)
+		RSurf_ActiveWorldEntity();
+	else
+		RSurf_ActiveModelEntity(ent, false, false);
+
+	if (decalsystem->lastupdatetime)
+		frametime = cl.time - decalsystem->lastupdatetime;
+	else
+		frametime = 0;
+	decalsystem->lastupdatetime = cl.time;
+	decal = decalsystem->decals;
+	numdecals = decalsystem->numdecals;
+
+	fadedelay = cl_decals_time.value;
+	faderate = 1.0f / max(0.001f, cl_decals_fadetime.value);
 
 	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
 	{
-		if (!decal->alpha)
+		if (!decal->colors[0][3])
 			continue;
 
-		decal->fade -= frametime;
-		if (decal->fade <= 0)
+		decal->lived += frametime;
+		if (decal->lived >= fadedelay)
 		{
-			decal->alpha -= decalfade;
-			if (decal->alpha <= 0)
+			alpha = 1 - faderate * (decal->lived - cl_decals_time.value);
+			if (alpha <= 0)
 			{
 				// kill the decal by zeroing vertex data
 				memset(decalsystem->vertex3f + 9*i, 0, sizeof(float[3][3]));
@@ -8348,44 +8522,43 @@ void RSurf_DrawTriDecals(void)
 					decalsystem->freedecal = i;
 				continue;
 			}
-		}
 
-		// update color values for fading decals
-		ca = decal->alpha * alphascale;
-		c4f = decalsystem->color4f + 12*i;
-		c4f[ 0] = decal->colors[0][0] * ca;
-		c4f[ 1] = decal->colors[0][1] * ca;
-		c4f[ 2] = decal->colors[0][2] * ca;
-		c4f[ 3] = 1;
-		c4f[ 4] = decal->colors[1][0] * ca;
-		c4f[ 5] = decal->colors[1][1] * ca;
-		c4f[ 6] = decal->colors[1][2] * ca;
-		c4f[ 7] = 1;
-		c4f[ 8] = decal->colors[2][0] * ca;
-		c4f[ 9] = decal->colors[2][1] * ca;
-		c4f[10] = decal->colors[2][2] * ca;
-		c4f[11] = 1;
+			// update color values for fading decals
+			alpha *= (1.0f/255.0f);
+			c4f = decalsystem->color4f + 12*i;
+			c4f[ 0] = decal->colors[0][0] * alpha;
+			c4f[ 1] = decal->colors[0][1] * alpha;
+			c4f[ 2] = decal->colors[0][2] * alpha;
+			c4f[ 3] = 1;
+			c4f[ 4] = decal->colors[1][0] * alpha;
+			c4f[ 5] = decal->colors[1][1] * alpha;
+			c4f[ 6] = decal->colors[1][2] * alpha;
+			c4f[ 7] = 1;
+			c4f[ 8] = decal->colors[2][0] * alpha;
+			c4f[ 9] = decal->colors[2][1] * alpha;
+			c4f[10] = decal->colors[2][2] * alpha;
+			c4f[11] = 1;
+		}
 
 		// update vertex positions for animated models
 		if (decal->triangleindex >= 0 && decal->triangleindex < rsurface.modelnum_triangles)
 		{
 			e = rsurface.modelelement3i + 3*decal->triangleindex;
-			v3f = decalsystem->vertex3f + i*i;
+			v3f = decalsystem->vertex3f + 9*i;
 			VectorCopy(rsurface.vertex3f + 3*e[0], v3f);
 			VectorCopy(rsurface.vertex3f + 3*e[1], v3f + 3);
 			VectorCopy(rsurface.vertex3f + 3*e[2], v3f + 6);
 		}
-
-		r_refdef.stats.decals++;
 	}
 
 	// reduce numdecals if possible
-	while (numdecals > 0 && !decalsystem->decals[numdecals - 1].alpha)
+	while (numdecals > 0 && !decalsystem->decals[numdecals - 1].colors[0][3])
 		numdecals--;
 	decalsystem->numdecals = numdecals;
 
 	if (numdecals > 0)
 	{
+		r_refdef.stats.decals += numdecals;
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
 		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numdecals, decalsystem->element3i, decalsystem->element3s, false, false);
@@ -8396,16 +8569,18 @@ void RSurf_DrawTriDecals(void)
 		R_SetupGenericShader(true);
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
-		GL_PolygonOffset(0, 0);
+		GL_PolygonOffset(rsurface.basepolygonfactor + r_polygonoffset_decals_factor.value, rsurface.basepolygonoffset + r_polygonoffset_decals_offset.value);
 		GL_DepthTest(true);
 		GL_CullFace(GL_NONE);
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 		R_Mesh_TexBind(0, R_GetTexture(decalskinframe->base));
+		//R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
 		GL_LockArrays(0, numdecals * 3);
 		R_Mesh_Draw(0, numdecals * 3, 0, numdecals, decalsystem->element3i, decalsystem->element3s, 0, 0);
 		GL_LockArrays(0, 0);
 	}
-	else
+
+	if (numdecals <= 0)
 	{
 		// if there are no decals left, reset decalsystem
 		R_DecalSystem_Reset(decalsystem);
@@ -8643,9 +8818,6 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 			r_refdef.stats.world_triangles += r_surfacelist[j]->num_triangles;
 	}
 
-	// draw decals
-	RSurf_DrawTriDecals();
-
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
@@ -8736,9 +8908,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		for (j = 0;j < numsurfacelist;j++)
 			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
 	}
-
-	// draw decals
-	RSurf_DrawTriDecals();
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }

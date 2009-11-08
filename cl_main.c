@@ -190,6 +190,7 @@ void CL_ClearState(void)
 	ent->render.alpha = 1;
 	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
+	ent->render.allowdecals = true;
 	CL_UpdateRenderEntity(&ent->render);
 
 	// noclip is turned off at start
@@ -1098,6 +1099,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		e->render.flags |= RENDER_DOUBLESIDED;
 
 	// make the other useful stuff
+	e->render.allowdecals = true;
 	CL_UpdateRenderEntity(&e->render);
 }
 
@@ -1236,6 +1238,8 @@ void CL_UpdateNetworkCollisionEntities(void)
 	}
 }
 
+extern void R_DecalSystem_Reset(decalsystem_t *decalsystem);
+
 /*
 ===============
 CL_UpdateNetworkEntities
@@ -1260,7 +1264,10 @@ void CL_UpdateNetworkEntities(void)
 					CL_UpdateNetworkEntityTrail(ent);
 			}
 			else
+			{
+				R_DecalSystem_Reset(&ent->render.decalsystem);
 				cl.entities_active[i] = false;
+			}
 		}
 	}
 }
@@ -1479,6 +1486,7 @@ void CL_RelinkWorld(void)
 		ent->render.flags |= RENDER_LIGHT;
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	VectorSet(ent->render.glowmod, 1, 1, 1);
+	ent->render.allowdecals = true;
 	CL_UpdateRenderEntity(&ent->render);
 	r_refdef.scene.worldentity = &ent->render;
 	r_refdef.scene.worldmodel = cl.worldmodel;
@@ -1508,6 +1516,7 @@ static void CL_RelinkStaticEntities(void)
 		VectorSet(e->render.colormod, 1, 1, 1);
 		VectorSet(e->render.glowmod, 1, 1, 1);
 		R_LerpAnimation(&e->render);
+		e->render.allowdecals = true;
 		CL_UpdateRenderEntity(&e->render);
 		r_refdef.scene.entities[r_refdef.scene.numentities++] = &e->render;
 	}

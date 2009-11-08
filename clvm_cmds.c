@@ -1479,6 +1479,7 @@ static void VM_CL_makestatic (void)
 		if (staticent->render.effects & EF_DOUBLESIDED)
 			staticent->render.flags |= RENDER_DOUBLESIDED;
 
+		staticent->render.allowdecals = true;
 		CL_UpdateRenderEntity(&staticent->render);
 	}
 	else
