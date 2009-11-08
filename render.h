@@ -307,6 +307,7 @@ typedef struct rsurfacestate_s
 	int ent_flags;
 	float ent_shadertime;
 	float ent_color[4];
+	int ent_alttextures; // used by q1bsp animated textures (pressed buttons)
 	// transform matrices to render this entity and effects on this entity
 	matrix4x4_t matrix;
 	matrix4x4_t inversematrix;
