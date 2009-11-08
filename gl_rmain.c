@@ -54,6 +54,8 @@ cvar_t r_animcache = {CVAR_SAVE, "r_animcache", "1", "cache animation frames to 
 
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
+cvar_t r_farclip_base = {0, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
+cvar_t r_farclip_world = {0, "r_farclip_world", "2", "adds map size to farclip multiplied by this value"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -2984,6 +2986,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_animcache);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
+	Cvar_RegisterVariable(&r_farclip_base);
+	Cvar_RegisterVariable(&r_farclip_world);
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -4689,9 +4693,9 @@ void R_UpdateVariables(void)
 
 	r_refdef.scene.ambient = r_ambient.value;
 
-	r_refdef.farclip = 4096;
+	r_refdef.farclip = r_farclip_base.value;
 	if (r_refdef.scene.worldmodel)
-		r_refdef.farclip += r_refdef.scene.worldmodel->radius * 2;
+		r_refdef.farclip += r_refdef.scene.worldmodel->radius * r_farclip_world.value * 2;
 	r_refdef.nearclip = bound (0.001f, r_nearclip.value, r_refdef.farclip - 1.0f);
 
 	if (r_shadow_frontsidecasting.integer < 0 || r_shadow_frontsidecasting.integer > 1)
@@ -8257,6 +8261,7 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 }
 
 extern cvar_t cl_decals_bias;
+extern cvar_t cl_decals_models;
 void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
 	matrix4x4_t projection;
@@ -8292,6 +8297,7 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 	float angles[3];
 	float temp[3];
 
+	decalsystem = &ent->decalsystem;
 	model = ent->model;
 	if (!model || !ent->allowdecals || ent->alpha < 1 || (ent->flags & (RENDER_ADDITIVE | RENDER_NODEPTHTEST)))
 	{
@@ -8299,7 +8305,13 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 		return;
 	}
 
-	decalsystem = &ent->decalsystem;
+	if (!model->brush.data_nodes && !cl_decals_models.integer)
+	{
+		if (decalsystem->model)
+			R_DecalSystem_Reset(decalsystem);
+		return;
+	}
+
 	if (decalsystem->model != model)
 		R_DecalSystem_Reset(decalsystem);
 	decalsystem->model = model;
