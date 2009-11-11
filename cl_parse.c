@@ -1380,7 +1380,7 @@ void CL_StopDownload(int size, int crc)
 void CL_ParseDownload(void)
 {
 	int i, start, size;
-	unsigned char data[65536];
+	unsigned char data[NET_MAXMESSAGE];
 	start = MSG_ReadLong();
 	size = (unsigned short)MSG_ReadShort();
 
