@@ -6329,6 +6329,7 @@ void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Host_Error("Mod_MAP_Load: not yet implemented");
 }
 
+#ifdef OBJWORKS
 typedef struct objvertex_s
 {
 	float v[3];
@@ -6341,12 +6342,405 @@ typedef struct objtriangle_s
 {
 	objvertex_t vertex[3];
 	int textureindex;
+	// these fields are used only in conversion to surfaces
+	int axis;
+	int surfaceindex;
+	int surfacevertexindex[3];
+	float edgeplane[3][4];
 }
 objtriangle_t;
 
+typedef objnode_s
+{
+	struct objnode_s *children[2];
+	struct objnode_s *parent;
+	objtriangle_t *triangles;
+	float normal[3];
+	float dist;
+	float mins[3];
+	float maxs[3];
+	int numtriangles;
+}
+objnode_t;
+
+objnode_t *Mod_OBJ_BSPNodeForTriangles(objnode_t *parent, objtriangle_t *triangles, int numtriangles, const float *mins, const float *maxs, mem_expandablearray_t *nodesarray, int maxclippedtriangles, objtriangle_t *clippedfronttriangles, objtriangle_t *clippedbacktriangles)
+{
+	int i, j;
+	float normal[3];
+	float dist;
+	int score;
+	float bestnormal[3];
+	float bestdist;
+	int bestscore;
+	float mins[3];
+	float maxs[3];
+	int numfronttriangles;
+	int numbacktriangles;
+	int count_front;
+	int count_back;
+	int count_both;
+	int count_on;
+	float outfrontpoints[5][3];
+	float outbackpoints[5][3];
+	int neededfrontpoints;
+	int neededbackpoints;
+	int countonpoints;
+	objnode_t *node;
+
+	node = (objnode_t *)Mem_ExpandableArray_AllocRecord(array);
+	node->parent = parent;
+	if (numtriangles)
+	{
+		VectorCopy(triangles[0].vertex[0].v, mins);
+		VectorCopy(triangles[0].vertex[0].v, maxs);
+	}
+	else if (parent && parent->children[0] == node)
+	{
+		VectorCopy(parent->mins, mins);
+		Vectorcopy(parent->maxs, maxs);
+	}
+	else if (parent && parent->children[1] == node)
+	{
+		VectorCopy(parent->mins, mins);
+		Vectorcopy(parent->maxs, maxs);
+	}
+	else
+	{
+		VectorClear(mins);
+		VectorClear(maxs);
+	}
+	for (i = 0;i < numtriangles;i++)
+	{
+		for (j = 0;j < 3;j++)
+		{
+			mins[0] = min(mins[0], triangles[i].vertex[j].v[0]);
+			mins[1] = min(mins[1], triangles[i].vertex[j].v[1]);
+			mins[2] = min(mins[2], triangles[i].vertex[j].v[2]);
+			maxs[0] = max(maxs[0], triangles[i].vertex[j].v[0]);
+			maxs[1] = max(maxs[1], triangles[i].vertex[j].v[1]);
+			maxs[2] = max(maxs[2], triangles[i].vertex[j].v[2]);
+		}
+	}
+	VectorCopy(mins, node->mins);
+	VectorCopy(maxs, node->maxs);
+	if (numtriangles <= mod_obj_leaftriangles.integer)
+	{
+		// create a leaf
+		loadmodel->brush.num_leafs++;
+		node->triangles = triangles;
+		node->numtriangles = numtriangles;
+		return node;
+	}
+
+	// create a node
+	loadmodel->brush.num_nodes++;
+	// pick a splitting plane from the various choices available to us...
+	// early splits simply halve the interval
+	bestscore = 0;
+	VectorClear(bestnormal);
+	bestdist = 0;
+	if (numtriangles <= mod_obj_splitterlimit.integer)
+		limit = numtriangles;
+	else
+		limit = 0;
+	for (i = -3;i < limit;i++)
+	{
+		if (i < 0)
+		{
+			// first we try 3 axial splits (kdtree-like)
+			j = i + 3;
+			VectorClear(normal);
+			normal[j] = 1;
+			dist = (mins[j] + maxs[j]) * 0.5f;
+		}
+		else
+		{
+			// then we try each triangle plane
+			TriangleNormal(triangles[i].vertex[0].v, triangles[i].vertex[1].v, triangles[i].vertex[2].v, normal);
+			VectorNormalize(normal);
+			dist = DotProduct(normal, triangles[i].vertex[0].v);
+			// use positive axial values whenever possible
+			if (normal[0] == -1)
+				normal[0] = 1;
+			if (normal[1] == -1)
+				normal[1] = 1;
+			if (normal[2] == -1)
+				normal[2] = 1;
+			// skip planes that match the current best
+			if (VectorCompare(normal, bestnormal) && dist == bestdist)
+				continue;
+		}
+		count_on = 0;
+		count_front = 0;
+		count_back = 0;
+		count_both = 0;
+		for (j = 0;j < numtriangles;j++)
+		{
+			dists[0] = DotProduct(normal, triangles[j].vertex[0].v) - dist;
+			dists[1] = DotProduct(normal, triangles[j].vertex[1].v) - dist;
+			dists[2] = DotProduct(normal, triangles[j].vertex[2].v) - dist;
+			if (dists[0] < -DIST_EPSILON || dists[1] < -DIST_EPSILON || dists[2] < -DIST_EPSILON)
+			{
+				if (dists[0] > DIST_EPSILON || dists[1] > DIST_EPSILON || dists[2] > DIST_EPSILON)
+					count_both++;
+				else
+					count_back++;
+			}
+			else if (dists[0] > DIST_EPSILON || dists[1] > DIST_EPSILON || dists[2] > DIST_EPSILON)
+				count_front++;
+			else
+				count_on++;
+		}
+		// score is supposed to:
+		// prefer axial splits
+		// prefer evenly dividing the input triangles
+		// prefer triangles on the plane
+		// avoid triangles crossing the plane
+		score = count_on*count_on - count_both*count_both + min(count_front, count_back)*(count_front+count_back);
+		if (normal[0] == 1 || normal[1] == 1 || normal[2] == 1)
+			score *= 2;
+		if (i == -3 || bestscore < score)
+		{
+			VectorCopy(normal, bestnormal);
+			bestdist = dist;
+			bestscore = score;
+		}
+	}
+
+	// now we have chosen an optimal split plane...
+
+	// divide triangles by the splitting plane
+	numfronttriangles = 0;
+	numbacktriangles = 0;
+	for (i = 0;i < numtriangles;i++)
+	{
+		neededfrontpoints = 0;
+		neededbackpoints = 0;
+		countonpoints = 0;
+		PolygonF_Divide(3, triangles[i].vertex[0].v, bestnormal[0], bestnormal[1], bestnormal[2], bestdist, DIST_EPSILON, 5, outfrontpoints[0], &neededfrontpoints, 5, outbackpoints[0], &neededbackpoints, &countonpoints);
+		if (countonpoints > 1)
+		{
+			// triangle lies on plane, assign it to one child only
+			TriangleNormal(triangles[i].vertex[0].v, triangles[i].vertex[1].v, triangles[i].vertex[2].v, normal);
+			if (DotProduct(bestnormal, normal) >= 0)
+			{
+				// assign to front side child
+				obj_fronttriangles[numfronttriangles++] = triangles[i];
+			}
+			else
+			{
+				// assign to back side child
+				obj_backtriangles[numbacktriangles++] = triangles[i];
+			}
+		}
+		else
+		{
+			// convert clipped polygons to triangles
+			for (j = 0;j < neededfrontpoints-2;j++)
+			{
+				obj_fronttriangles[numfronttriangles] = triangles[i];
+				VectorCopy(outfrontpoints[0], obj_fronttriangles[numfronttriangles].vertex[0].v);
+				VectorCopy(outfrontpoints[j+1], obj_fronttriangles[numfronttriangles].vertex[1].v);
+				VectorCopy(outfrontpoints[j+2], obj_fronttriangles[numfronttriangles].vertex[2].v);
+				numfronttriangles++;
+			}
+			for (j = 0;j < neededbackpoints-2;j++)
+			{
+				obj_backtriangles[numbacktriangles] = triangles[i];
+				VectorCopy(outbackpoints[0], obj_backtriangles[numbacktriangles].vertex[0].v);
+				VectorCopy(outbackpoints[j+1], obj_backtriangles[numbacktriangles].vertex[1].v);
+				VectorCopy(outbackpoints[j+2], obj_backtriangles[numbacktriangles].vertex[2].v);
+				numbacktriangles++;
+			}
+		}
+	}
+
+	// now copy the triangles out of the big buffer
+	if (numfronttriangles)
+	{
+		fronttriangles = Mem_Alloc(loadmodel->mempool, fronttriangles * sizeof(*fronttriangles));
+		memcpy(fronttriangles, obj_fronttriangles, numfronttriangles * sizeof(*fronttriangles));
+	}
+	else
+		fronttriangles = NULL;
+	if (numbacktriangles)
+	{
+		backtriangles = Mem_Alloc(loadmodel->mempool, backtriangles * sizeof(*backtriangles));
+		memcpy(backtriangles, obj_backtriangles, numbacktriangles * sizeof(*backtriangles));
+	}
+	else
+		backtriangles = NULL;
+
+	// free the original triangles we were given
+	if (triangles)
+		Mem_Free(triangles);
+	triangles = NULL;
+	numtriangles = 0;
+
+	// now create the children...
+	node->children[0] = Mod_OBJ_BSPNodeForTriangles(node, fronttriangles, numfronttriangles, frontmins, frontmaxs, nodesarray, maxclippedtriangles, clippedfronttriangles, clippedbacktriangles);
+	node->children[1] = Mod_OBJ_BSPNodeForTriangles(node, backtriangles, numbacktriangles, backmins, backmaxs, nodesarray, maxclippedtriangles, clippedfronttriangles, clippedbacktriangles);
+	return node;
+}
+
+void Mod_OBJ_SnapVertex(float *v)
+{
+	int i;
+	float a = mod_obj_vertexprecision.value;
+	float b = 1.0f / a;
+	v[0] -= floor(v[0] * a + 0.5f) * b;
+	v[1] -= floor(v[1] * a + 0.5f) * b;
+	v[2] -= floor(v[2] * a + 0.5f) * b;
+}
+
+void Mod_OBJ_ConvertBSPNode(objnode_t *objnode, mnode_t *mnodeparent)
+{
+	if (objnode->children[0])
+	{
+		// convert to mnode_t
+		mnode_t *mnode = loadmodel->brush.data_nodes + loadmodel->brush.num_nodes++;
+		mnode->parent = mnodeparent;
+		mnode->plane = loadmodel->brush.data_planes + loadmodel->brush.num_planes++;
+		VectorCopy(objnode->normal, mnode->plane->normal);
+		mnode->plane->dist = objnode->dist;
+		PlaneClassify(mnode->plane);
+		VectorCopy(objnode->mins, mnode->mins);
+		VectorCopy(objnode->maxs, mnode->maxs);
+		// push combinedsupercontents up to the parent
+		if (mnodeparent)
+			mnodeparent->combinedsupercontents |= mnode->combinedsupercontents;
+		mnode->children[0] = Mod_OBJ_ConvertBSPNode(objnode->children[0], mnode);
+		mnode->children[1] = Mod_OBJ_ConvertBSPNode(objnode->children[1], mnode);
+	}
+	else
+	{
+		// convert to mleaf_t
+		mleaf_t *mleaf = loadmodel->brush.data_leafs + loadmodel->brush.num_leafs++;
+		mleaf->parent = mnodeparent;
+		VectorCopy(objnode->mins, mleaf->mins);
+		VectorCopy(objnode->maxs, mleaf->maxs);
+		mleaf->clusterindex = loadmodel->brush.num_leafs - 1;
+		if (objnode->numtriangles)
+		{
+			objtriangle_t *triangles = objnode->triangles;
+			int numtriangles = objnode->numtriangles;
+			texture_t *texture;
+			float edge[3][3];
+			float normal[3];
+			objvertex_t vertex[3];
+			numsurfaces = 0;
+			maxsurfaces = numtriangles;
+			surfaces = NULL;
+			// calculate some more data on each triangle for surface gathering
+			for (i = 0;i < numtriangles;i++)
+			{
+				triangle = triangles + i;
+				texture = loadmodel->data_textures + triangle->textureindex;
+				Mod_OBJ_SnapVertex(triangle->vertex[0].v);
+				Mod_OBJ_SnapVertex(triangle->vertex[1].v);
+				Mod_OBJ_SnapVertex(triangle->vertex[2].v);
+				TriangleNormal(triangle->vertex[0].v, triangle->vertex[1].v, triangle->vertex[2].v, normal);
+				axis = 0;
+				if (fabs(normal[axis]) < fabs(normal[1]))
+					axis = 1;
+				if (fabs(normal[axis]) < fabs(normal[2]))
+					axis = 2;
+				VectorClear(normal);
+				normal[axis] = 1;
+				triangle->axis = axis;
+				VectorSubtract(triangle->vertex[1].v, triangle->vertex[0].v, edge[0]);
+				VectorSubtract(triangle->vertex[2].v, triangle->vertex[1].v, edge[1]);
+				VectorSubtract(triangle->vertex[0].v, triangle->vertex[2].v, edge[2]);
+				CrossProduct(edge[0], normal, triangle->edgeplane[0]);
+				CrossProduct(edge[1], normal, triangle->edgeplane[1]);
+				CrossProduct(edge[2], normal, triangle->edgeplane[2]);
+				VectorNormalize(triangle->edgeplane[0]);
+				VectorNormalize(triangle->edgeplane[1]);
+				VectorNormalize(triangle->edgeplane[2]);
+				triangle->edgeplane[0][3] = DotProduct(triangle->edgeplane[0], triangle->vertex[0].v);
+				triangle->edgeplane[1][3] = DotProduct(triangle->edgeplane[1], triangle->vertex[1].v);
+				triangle->edgeplane[2][3] = DotProduct(triangle->edgeplane[2], triangle->vertex[2].v);
+				triangle->surfaceindex = 0;
+				// add to the combined supercontents while we're here...
+				mleaf->combinedsupercontents |= texture->supercontents;
+			}
+			surfaceindex = 1;
+			for (i = 0;i < numtriangles;i++)
+			{
+				// skip already-assigned triangles
+				if (triangles[i].surfaceindex)
+					continue;
+				texture = loadmodel->data_textures + triangles[i].textureindex;
+				// assign a new surface to this triangle
+				triangles[i].surfaceindex = surfaceindex++;
+				axis = triangles[i].axis;
+				numvertices = 3;
+				// find the triangle's neighbors, this can take multiple passes
+				retry = true;
+				while (retry)
+				{
+					retry = false;
+					for (j = i+1;j < numtriangles;j++)
+					{
+						if (triangles[j].surfaceindex || triangles[j].axis != axis || triangles[j].texture != texture)
+							continue;
+						triangle = triangles + j;
+						for (k = i;k < j;k++)
+						{
+							if (triangles[k].surfaceindex != surfaceindex)
+								continue;
+							if (VectorCompare(triangles[k].vertex[0].v, triangles[j].vertex[0].v)
+							 || VectorCompare(triangles[k].vertex[0].v, triangles[j].vertex[1].v)
+							 || VectorCompare(triangles[k].vertex[0].v, triangles[j].vertex[2].v)
+							 || VectorCompare(triangles[k].vertex[1].v, triangles[j].vertex[0].v)
+							 || VectorCompare(triangles[k].vertex[1].v, triangles[j].vertex[1].v)
+							 || VectorCompare(triangles[k].vertex[1].v, triangles[j].vertex[2].v)
+							 || VectorCompare(triangles[k].vertex[2].v, triangles[j].vertex[0].v)
+							 || VectorCompare(triangles[k].vertex[2].v, triangles[j].vertex[1].v)
+							 || VectorCompare(triangles[k].vertex[2].v, triangles[j].vertex[2].v))
+							{
+								// shares a vertex position
+								--- FIXME ---
+							}
+						}
+						for (k = 0;k < numvertices;k++)
+							if (!VectorCompare(vertex[k].v, triangles[j].vertex[0].v) || !VectorCompare(vertex[k].v, triangles[j].vertex[1].v) || !VectorCompare(vertex[k].v, triangles[j].vertex[2].v))
+								break;
+						if (k == numvertices)
+							break; // not a neighbor
+						// this triangle is a neighbor and has the same axis and texture
+						// check now if it overlaps in lightmap projection space
+						triangles[j].surfaceindex;
+						if (triangles[j].
+					}
+				}
+				//triangles[i].surfaceindex = surfaceindex++;
+				for (surfaceindex = 0;surfaceindex < numsurfaces;surfaceindex++)
+				{
+					if (surfaces[surfaceindex].texture != texture)
+						continue;
+					// check if any triangles already in this surface overlap in lightmap projection space
+					
+					{
+					}
+					break;
+				}
+			}
+			// let the collision code simply use the surfaces
+			mleaf->containscollisionsurfaces = mleaf->combinedsupercontents != 0;
+			mleaf->numleafsurfaces = ?;
+			mleaf->firstleafsurface = ?;
+		}
+		// push combinedsupercontents up to the parent
+		if (mnodeparent)
+			mnodeparent->combinedsupercontents |= mleaf->combinedsupercontents;
+	}
+}
+#endif
+
 void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-#if 0
+#ifdef OBJWORKS
 	const char *textbase = (char *)buffer, *text = textbase;
 	char *s;
 	char *argv[512];
@@ -6368,6 +6762,8 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	float *vt = Mem_Alloc(tempmempool, maxvt * sizeof(float[2]));
 	float *vn = Mem_Alloc(tempmempool, maxvn * sizeof(float[3]));
 	objvertex_t vfirst, vprev, vcurrent;
+	float mins[3];
+	float maxs[3];
 #if 0
 	int hashindex;
 	int maxverthash = 65536, numverthash = 0;
@@ -6416,6 +6812,9 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
 	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+
+	VectorClear(mins);
+	VectorClear(maxs);
 
 	// parse the OBJ text now
 	for(;;)
@@ -6528,6 +6927,20 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				VectorCopy(v + 3*index1, vcurrent.v);
 				Vector2Copy(vt + 2*index2, vcurrent.vt);
 				VectorCopy(vn + 3*index3, vcurrent.vn);
+				if (numtriangles == 0)
+				{
+					VectorCopy(vcurrent.v, mins);
+					VectorCopy(vcurrent.v, maxs);
+				}
+				else
+				{
+					mins[0] = min(mins[0], vcurrent.v[0]);
+					mins[1] = min(mins[1], vcurrent.v[1]);
+					mins[2] = min(mins[2], vcurrent.v[2]);
+					maxs[0] = max(maxs[0], vcurrent.v[0]);
+					maxs[1] = max(maxs[1], vcurrent.v[1]);
+					maxs[2] = max(maxs[2], vcurrent.v[2]);
+				}
 				if (j == 1)
 					vfirst = vcurrent;
 				else if (j >= 3)
@@ -6604,9 +7017,55 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mem_Free(texturenames);
 	texturenames = NULL;
 
-	// generate a rough BSP tree from triangle data, we don't have to be too careful here, it only has to define the basic areas of the map
+	// copy the model bounds, then enlarge the yaw and rotated bounds according to radius
+	VectorCopy(mins, loadmodel->normalmins);
+	VectorCopy(maxs, loadmodel->normalmaxs);
+	dist = max(fabs(loadmodel->normalmins[0]), fabs(loadmodel->normalmaxs[0]));
+	modelyawradius = max(fabs(loadmodel->normalmins[1]), fabs(loadmodel->normalmaxs[1]));
+	modelyawradius = dist*dist+modelyawradius*modelyawradius;
+	modelradius = max(fabs(loadmodel->normalmins[2]), fabs(loadmodel->normalmaxs[2]));
+	modelradius = modelyawradius + modelradius * modelradius;
+	modelyawradius = sqrt(modelyawradius);
+	modelradius = sqrt(modelradius);
+	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -modelyawradius;
+	loadmodel->yawmins[2] = loadmodel->normalmins[2];
+	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] =  modelyawradius;
+	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -modelradius;
+	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] =  modelradius;
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
 
-	// generate surfaces by recursing triangles into BSP tree and ensuring they do not overlap in the lightmap projection axis
+	// make sure the temp triangle buffer is big enough for BSP building
+	maxclippedtriangles = numtriangles*4;
+	if (numtriangles > 0)
+	{
+		clippedfronttriangles = Mem_Alloc(loadmodel->mempool, maxclippedtriangles * 2 * sizeof(objtriangle_t));
+		clippedbacktriangles = clippedfronttriangles + maxclippedtriangles;
+	}
+
+	// generate a rough BSP tree from triangle data, we don't have to be too careful here, it only has to define the basic areas of the map
+	loadmodel->brush.num_leafs = 0;
+	loadmodel->brush.num_nodes = 0;
+	Mem_ExpandableArray_NewArray(&nodesarray, loadmodel->mempool, sizeof(objnode_t), 1024);
+	rootnode = Mod_OBJ_BSPNodeForTriangles(triangles, numtriangles, mins, maxs, &nodesarray, maxclippedtriangles, clippedfronttriangles, clippedbacktriangles);
+
+	// convert the BSP tree to mnode_t and mleaf_t structures and convert the triangles to msurface_t...
+	loadmodel->brush.data_leafs = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_leafs * sizeof(mleaf_t));
+	loadmodel->brush.data_nodes = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(mnode_t));
+	loadmodel->brush.data_planes = Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_nodes * sizeof(mplane_t));
+	loadmodel->brush.num_leafs = 0;
+	loadmodel->brush.num_nodes = 0;
+	loadmodel->brush.num_planes = 0;
+	Mod_OBJ_ConvertAndFreeBSPNode(rootnode);
+
+	if (clippedfronttriangles)
+		Mem_Free(clippedfronttriangles);
+	maxclippedtriangles = 0;
+	clippedfronttriangles = NULL;
+	clippedbacktriangles = NULL;
+
+--- NOTHING DONE PAST THIS POINT ---
 
 	loadmodel->numskins = LittleLong(pinmodel->num_skins);
 	numxyz = LittleLong(pinmodel->num_xyz);
