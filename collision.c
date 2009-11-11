@@ -1159,6 +1159,8 @@ void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const ve
 {
 	int i;
 	memset(boxbrush, 0, sizeof(*boxbrush));
+	boxbrush->brush.isaabb = true;
+	boxbrush->brush.hasaabbplanes = true;
 	boxbrush->brush.points = boxbrush->points;
 	boxbrush->brush.edgedirs = boxbrush->edgedirs;
 	boxbrush->brush.planes = boxbrush->planes;
