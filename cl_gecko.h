@@ -6,7 +6,6 @@
 #include "cl_dyntexture.h"
 
 #define CLGECKOPREFIX			CLDYNTEXTUREPREFIX "gecko/"
-#define MAX_GECKO_INSTANCES	16
 
 typedef enum clgecko_buttoneventtype_e {
 	CLG_BET_DOWN,

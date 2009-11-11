@@ -986,7 +986,7 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 
 	// FIXME consider attachments here!
 
-	ed = PRVM_EDICT_NUM(entnum - 32768);
+	ed = PRVM_EDICT_NUM(entnum - MAX_EDICTS);
 
 	if(!ed->priv.required->free)
 	{

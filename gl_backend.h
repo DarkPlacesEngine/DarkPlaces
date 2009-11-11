@@ -3,7 +3,7 @@
 #define GL_BACKEND_H
 
 // how many texture units to track state on (backendunits/backendimageunits/backendarrayunits are limited to this value)
-#define MAX_TEXTUREUNITS 64
+#define MAX_TEXTUREUNITS 16
 
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelement3i[(POLYGONELEMENTS_MAXPOINTS-2)*3];

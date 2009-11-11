@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "cl_collision.h"
 
-#define MAX_EXPLOSIONS 64
+#ifdef MAX_EXPLOSIONS
 #define EXPLOSIONGRID 8
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
@@ -53,8 +53,10 @@ static rtexture_t	*explosiontexture;
 static rtexture_t	*explosiontexturefog;
 
 static rtexturepool_t	*explosiontexturepool;
+#endif
 
 cvar_t r_explosionclip = {CVAR_SAVE, "r_explosionclip", "1", "enables collision detection for explosion shell (so that it flattens against walls and floors)"};
+#ifdef MAX_EXPLOSIONS
 static cvar_t r_drawexplosions = {0, "r_drawexplosions", "1", "enables rendering of explosion shells (see also cl_particles_explosions_shell)"};
 
 static void r_explosion_start(void)
@@ -118,9 +120,11 @@ static int R_ExplosionVert(int column, int row)
 	explosionnoiseindex[i] = (row % EXPLOSIONGRID) * EXPLOSIONGRID + (column % EXPLOSIONGRID);
 	return i;
 }
+#endif
 
 void R_Explosion_Init(void)
 {
+#ifdef MAX_EXPLOSIONS
 	int i, x, y;
 	i = 0;
 	for (y = 0;y < EXPLOSIONGRID;y++)
@@ -138,14 +142,18 @@ void R_Explosion_Init(void)
 		}
 	}
 
+#endif
 	Cvar_RegisterVariable(&r_explosionclip);
+#ifdef MAX_EXPLOSIONS
 	Cvar_RegisterVariable(&r_drawexplosions);
 
 	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown, r_explosion_newmap);
+#endif
 }
 
 void R_NewExplosion(const vec3_t org)
 {
+#ifdef MAX_EXPLOSIONS
 	int i, j;
 	float dist, n;
 	explosion_t *e;
@@ -182,8 +190,10 @@ void R_NewExplosion(const vec3_t org)
 			break;
 		}
 	}
+#endif
 }
 
+#ifdef MAX_EXPLOSIONS
 static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex = 0;
@@ -250,9 +260,11 @@ static void R_MoveExplosion(explosion_t *e)
 		}
 	}
 }
+#endif
 
 void R_DrawExplosions(void)
 {
+#ifdef MAX_EXPLOSIONS
 	int i;
 
 	if (!r_drawexplosions.integer)
@@ -269,5 +281,6 @@ void R_DrawExplosions(void)
 	}
 	while (numexplosions > 0 && explosion[i-1].alpha <= 0)
 		numexplosions--;
+#endif
 }
 

@@ -24,8 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cdaudio.h"
 #include "sound.h"
 
-#define MAXTRACKS	256
-
 // Prototypes of the system dependent functions
 extern void CDAudio_SysEject (void);
 extern void CDAudio_SysCloseDoor (void);
@@ -50,7 +48,9 @@ static qboolean initialized = false;
 static qboolean enabled = false;
 static float cdvolume;
 typedef char filename_t[MAX_QPATH];
+#ifdef MAXTRACKS
 static filename_t remap[MAXTRACKS];
+#endif
 static unsigned char maxTrack;
 static int faketrack = -1;
 
@@ -156,6 +156,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	if(strspn(trackname, "0123456789") == strlen(trackname))
 	{
 		track = (unsigned char) atoi(trackname);
+#ifdef MAXTRACKS
 		if(track > 0 && track < MAXTRACKS)
 			if(*remap[track])
 			{
@@ -183,6 +184,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 					}
 				}
 			}
+#endif
 	}
 
 	if(strspn(trackname, "0123456789") == strlen(trackname))
@@ -366,8 +368,10 @@ void CDAudio_Resume (void)
 static void CD_f (void)
 {
 	const char *command;
+#ifdef MAXTRACKS
 	int ret;
 	int n;
+#endif
 
 	command = Cmd_Argv (1);
 
@@ -391,8 +395,10 @@ static void CD_f (void)
 	{
 		enabled = true;
 		CDAudio_Stop();
+#ifdef MAXTRACKS
 		for (n = 0; n < MAXTRACKS; n++)
 			*remap[n] = 0; // empty string, that is, unremapped
+#endif
 		CDAudio_GetAudioDiskInfo();
 		return;
 	}
@@ -406,6 +412,7 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "remap") == 0)
 	{
+#ifdef MAXTRACKS
 		ret = Cmd_Argc() - 2;
 		if (ret <= 0)
 		{
@@ -416,6 +423,7 @@ static void CD_f (void)
 		}
 		for (n = 1; n <= ret; n++)
 			strlcpy(remap[n], Cmd_Argv (n+1), sizeof(*remap));
+#endif
 		return;
 	}
 
@@ -535,7 +543,9 @@ void CDAudio_Update (void)
 
 int CDAudio_Init (void)
 {
+#ifdef MAXTRACKS
 	int i;
+#endif
 
 	if (cls.state == ca_dedicated)
 		return -1;
@@ -546,8 +556,10 @@ int CDAudio_Init (void)
 
 	CDAudio_SysInit();
 
+#ifdef MAXTRACKS
 	for (i = 0; i < MAXTRACKS; i++)
 		*remap[i] = 0;
+#endif
 
 	Cvar_RegisterVariable(&cdaudio);
 	Cvar_RegisterVariable(&cdaudioinitialized);

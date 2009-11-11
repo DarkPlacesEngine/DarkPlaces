@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 char *cvar_dummy_description = "custom cvar";
 
 cvar_t *cvar_vars = NULL;
-cvar_t *cvar_hashtable[65536];
+cvar_t *cvar_hashtable[CVAR_HASHSIZE];
 char *cvar_null_string = "";
 
 /*

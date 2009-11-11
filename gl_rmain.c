@@ -2854,8 +2854,40 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	return skinframe;
 }
 
+void R_Main_FreeViewCache(void)
+{
+	if (r_refdef.viewcache.entityvisible)
+		Mem_Free(r_refdef.viewcache.entityvisible);
+	if (r_refdef.viewcache.world_pvsbits)
+		Mem_Free(r_refdef.viewcache.world_pvsbits);
+	if (r_refdef.viewcache.world_leafvisible)
+		Mem_Free(r_refdef.viewcache.world_leafvisible);
+	if (r_refdef.viewcache.world_surfacevisible)
+		Mem_Free(r_refdef.viewcache.world_surfacevisible);
+	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
+}
+
+void R_Main_AllocViewCache(void)
+{
+	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
+	r_refdef.viewcache.maxentities = r_refdef.scene.maxentities;
+	if (r_refdef.viewcache.maxentities)
+		r_refdef.viewcache.entityvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
+	if (cl.worldmodel)
+	{	
+		r_refdef.viewcache.world_numclusters = cl.worldmodel->brush.num_pvsclusters;
+		r_refdef.viewcache.world_numleafs = cl.worldmodel->brush.num_leafs;
+		r_refdef.viewcache.world_numsurfaces = cl.worldmodel->num_surfaces;
+		r_refdef.viewcache.world_pvsbits = Mem_Alloc(r_main_mempool, (r_refdef.viewcache.world_numclusters+7)>>3);
+		r_refdef.viewcache.world_leafvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numleafs);
+		r_refdef.viewcache.world_surfacevisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numsurfaces);
+	}
+}
+
 void gl_main_start(void)
 {
+	R_Main_AllocViewCache();
+
 	r_numqueries = 0;
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
@@ -2891,6 +2923,8 @@ void gl_main_start(void)
 extern rtexture_t *loadingscreentexture;
 void gl_main_shutdown(void)
 {
+	R_Main_FreeViewCache();
+
 	if (r_maxqueries)
 		qglDeleteQueriesARB(r_maxqueries, r_queries);
 
@@ -2951,6 +2985,8 @@ void gl_main_newmap(void)
 		if (cl.worldmodel->brush.entities)
 			CL_ParseEntityLump(cl.worldmodel->brush.entities);
 	}
+	R_Main_FreeViewCache();
+	R_Main_AllocViewCache();
 }
 
 void GL_Main_Init(void)

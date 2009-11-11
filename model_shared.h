@@ -75,8 +75,6 @@ typedef struct skinframe_s
 }
 skinframe_t;
 
-#define MAX_SKINS 256
-
 struct md3vertex_s;
 struct trivertx_s;
 typedef struct texvecvertex_s
