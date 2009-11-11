@@ -21,17 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define	MAX_ALIAS_NAME	32
-// this is the largest script file that can be executed in one step
-// LordHavoc: inreased this from 8192 to 32768
-// div0: increased this from 32k to 128k
-// div0: increased this from 128k to 640k which ought to be enough for anyone
-#define CMDBUFSIZE 655360
-// maximum number of parameters to a command
-#define	MAX_ARGS 80
-// maximum tokenizable commandline length (counting NUL terminations)
-#define CMD_TOKENIZELENGTH (MAX_INPUTLINE + MAX_ARGS)
-
 typedef struct cmdalias_s
 {
 	struct cmdalias_s *next;

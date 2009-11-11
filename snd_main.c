@@ -1239,13 +1239,13 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	// update sound origin if we know about the entity
 	if (ch->entnum > 0 && cls.state == ca_connected && cl_gameplayfix_soundsmovewithentities.integer)
 	{
-		if (ch->entnum >= 32768)
+		if (ch->entnum >= MAX_EDICTS)
 		{
 			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
 
-			if (ch->entnum > 32768)
+			if (ch->entnum > MAX_EDICTS)
 				if (!CL_VM_GetEntitySoundOrigin(ch->entnum, ch->origin))
-					ch->entnum = 32768; // entity was removed, disown sound
+					ch->entnum = MAX_EDICTS; // entity was removed, disown sound
 		}
 		else if (cl.entities[ch->entnum].state_current.active)
 		{
@@ -1264,7 +1264,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		mastervol *= snd_staticvolume.value;
 	else if(!(ch->flags & CHANNELFLAG_FULLVOLUME)) // same as SND_PaintChannel uses
 	{
-		if(ch->entnum >= 32768)
+		if(ch->entnum >= MAX_EDICTS)
 		{
 			switch(ch->entchannel)
 			{

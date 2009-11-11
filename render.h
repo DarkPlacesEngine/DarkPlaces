@@ -451,12 +451,10 @@ typedef struct r_waterstate_waterplane_s
 	rtexture_t *texture_reflection;
 	mplane_t plane;
 	int materialflags; // combined flags of all water surfaces on this plane
-	unsigned char pvsbits[(32768+7)>>3]; // FIXME: buffer overflow on huge maps
+	unsigned char pvsbits[(MAX_MAP_LEAFS+7)>>3]; // FIXME: buffer overflow on huge maps
 	qboolean pvsvalid;
 }
 r_waterstate_waterplane_t;
-
-#define MAX_WATERPLANES 16
 
 typedef struct r_waterstate_s
 {

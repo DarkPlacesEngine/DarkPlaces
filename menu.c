@@ -812,7 +812,6 @@ static void M_SinglePlayer_Key (int key, int ascii)
 
 static int		load_cursor;		///< 0 < load_cursor < MAX_SAVEGAMES
 
-#define	MAX_SAVEGAMES		12
 static char	m_filenames[MAX_SAVEGAMES][SAVEGAME_COMMENT_LENGTH+1];
 static int		loadable[MAX_SAVEGAMES];
 

@@ -37,8 +37,6 @@ extern cvar_t v_glslgamma;
 /* Support Routines */
 
 #define FONT_FILESIZE 13468
-#define MAX_CACHED_PICS 1024
-#define CACHEPICHASHSIZE 256
 static cachepic_t *cachepichash[CACHEPICHASHSIZE];
 static cachepic_t cachepics[MAX_CACHED_PICS];
 static int numcachepics;

@@ -19,13 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 
-#define	MAX_MAP_HULLS		16		// was 4
-#define	MAX_MAP_LEAFS		65536	// was 8192
-
-// key / value pair sizes
-
-#define	MAX_KEY		32
-#define	MAX_VALUE	1024
+#define MAX_MAP_HULLS 16 // Q1BSP has 4, Hexen2 Q1BSP has 8, MCBSP has 16
 
 //=============================================================================
 

@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-#define MAXRENDERMODULES 64
+#define MAXRENDERMODULES 20
 
 typedef struct rendermodule_s
 {

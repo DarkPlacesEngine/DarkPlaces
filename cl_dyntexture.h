@@ -3,7 +3,6 @@
 #define CL_DYNTEXTURE_H
 
 #define CLDYNTEXTUREPREFIX			"_dynamic/"
-#define MAX_DYNAMIC_TEXTURE_COUNT			64
 
 // always path fully specified names to the dynamic texture functions! (ie. with the _dynamic/ prefix, etc.!)
 

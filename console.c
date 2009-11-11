@@ -28,9 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 float con_cursorspeed = 4;
 
-#define		CON_TEXTSIZE	1048576
-#define		CON_MAXLINES	  16384
-
 // lines up from bottom to display
 int con_backscroll;
 

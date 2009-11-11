@@ -21,9 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
-/// many buffers use this size
-#define MAX_INPUTLINE 16384
-
 
 /// MSVC has a different name for several standard functions
 #ifdef WIN32

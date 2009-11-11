@@ -189,7 +189,7 @@ static void VM_CL_sound (void)
 		return;
 	}
 
-	S_StartSound(32768 + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), entity->fields.client->origin, volume, attenuation);
+	S_StartSound(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), entity->fields.client->origin, volume, attenuation);
 }
 
 // #483 void(vector origin, string sample, float volume, float attenuation) pointsound
@@ -219,8 +219,8 @@ static void VM_CL_pointsound(void)
 		return;
 	}
 
-	// Send World Entity as Entity to Play Sound (for CSQC, that is 32768)
-	S_StartSound(32768, 0, S_FindName(sample), org, volume, attenuation);
+	// Send World Entity as Entity to Play Sound (for CSQC, that is MAX_EDICTS)
+	S_StartSound(MAX_EDICTS, 0, S_FindName(sample), org, volume, attenuation);
 }
 
 // #14 entity() spawn
@@ -3594,8 +3594,8 @@ static void VM_CL_checkpvs (void)
 #if 1
 	unsigned char *pvs;
 #else
-	static int fatpvsbytes;
-	static unsigned char fatpvs[MAX_MAP_LEAFS/8];
+	int fatpvsbytes;
+	unsigned char fatpvs[MAX_MAP_LEAFS/8];
 #endif
 
 	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);

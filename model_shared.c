@@ -2266,7 +2266,7 @@ tag_weapon,
 tag_torso,
 */
 	memset(word, 0, sizeof(word));
-	for (i = 0;i < MAX_SKINS && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
+	for (i = 0;i < 256 && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
 	{
 		// If it's the first file we parse
 		if (skinfile == NULL)

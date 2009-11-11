@@ -68,8 +68,6 @@ typedef struct server_connectfloodaddress_s
 }
 server_connectfloodaddress_t;
 
-#define MAX_CLIENTNETWORKEYES 256
-
 typedef struct server_s
 {
 	/// false if only a net client

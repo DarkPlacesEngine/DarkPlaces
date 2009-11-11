@@ -38,8 +38,6 @@ char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 int         history_line;
 char		history_savedline[MAX_INPUTLINE];
 conbuffer_t history;
-#define HIST_TEXTSIZE 262144
-#define HIST_MAXLINES 4096
 
 extern cvar_t	con_textsize;
 

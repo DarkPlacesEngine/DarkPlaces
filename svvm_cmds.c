@@ -819,8 +819,8 @@ static void VM_SV_checkpvs (void)
 #if 1
 	unsigned char *pvs;
 #else
-	static int fatpvsbytes;
-	static unsigned char fatpvs[MAX_MAP_LEAFS/8];
+	int fatpvsbytes;
+	unsigned char fatpvs[MAX_MAP_LEAFS/8];
 #endif
 
 	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);

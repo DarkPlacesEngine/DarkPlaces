@@ -120,10 +120,8 @@ typedef struct particleeffectinfo_s
 }
 particleeffectinfo_t;
 
-#define MAX_PARTICLEEFFECTNAME 256
 char particleeffectname[MAX_PARTICLEEFFECTNAME][64];
 
-#define MAX_PARTICLEEFFECTINFO 4096
 
 particleeffectinfo_t particleeffectinfo[MAX_PARTICLEEFFECTINFO];
 
@@ -169,7 +167,6 @@ int		ramp3[8] = {0x6d, 0x6b, 6, 5, 4, 3};
 
 //static int explosparkramp[8] = {0x4b0700, 0x6f0f00, 0x931f07, 0xb7330f, 0xcf632b, 0xe3974f, 0xffe7b5, 0xffffff};
 
-#define MAX_PARTICLETEXTURES 1024
 // particletexture_t is a rectangle in the particlefonttexture
 typedef struct particletexture_s
 {

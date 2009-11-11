@@ -345,7 +345,6 @@ typedef struct cubemapinfo_s
 }
 cubemapinfo_t;
 
-#define MAX_CUBEMAPS 256
 static int numcubemaps;
 static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
