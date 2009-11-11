@@ -8272,6 +8272,7 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 	const msurface_t *surface;
 	const msurface_t *surfaces;
 	const int *surfacelist;
+	const texture_t *texture;
 	int numvertices;
 	int numtriangles;
 	int numsurfacelist;
@@ -8383,7 +8384,12 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 	{
 		surface = surfaces + surfacelist[surfacelistindex];
 		// skip transparent surfaces
-		if ((surface->texture->surfaceflags & Q3SURFACEFLAG_NOMARKS) || surface->texture->currentalpha < 1 || (surface->texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)))
+		texture = surface->texture;
+		if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
+			continue;
+		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
+			continue;
+		if (texture->currentalpha < 1)
 			continue;
 		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
 			continue;
@@ -8403,10 +8409,20 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 			// clip by each of the box planes formed from the projection matrix
 			// if anything survives, we emit the decal
 			numpoints = PolygonF_Clip(3        , v[0]        , planes[0][0], planes[0][1], planes[0][2], planes[0][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			if (numpoints < 3)
+				continue;
 			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[1][0], planes[1][1], planes[1][2], planes[1][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+			if (numpoints < 3)
+				continue;
 			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[2][0], planes[2][1], planes[2][2], planes[2][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			if (numpoints < 3)
+				continue;
 			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[3][0], planes[3][1], planes[3][2], planes[3][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+			if (numpoints < 3)
+				continue;
 			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[4][0], planes[4][1], planes[4][2], planes[4][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+			if (numpoints < 3)
+				continue;
 			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[5][0], planes[5][1], planes[5][2], planes[5][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), v[0]);
 			if (numpoints < 3)
 				continue;
