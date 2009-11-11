@@ -197,7 +197,7 @@ rtexture_t *r_texture_gammaramps;
 unsigned int r_texture_gammaramps_serial;
 //rtexture_t *r_texture_fogintensity;
 
-unsigned int r_queries[R_MAX_OCCLUSION_QUERIES];
+unsigned int r_queries[MAX_OCCLUSION_QUERIES];
 unsigned int r_numqueries;
 unsigned int r_maxqueries;
 

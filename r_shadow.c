@@ -4742,11 +4742,11 @@ void R_DrawCoronas(void)
 	{
 		GL_ColorMask(0,0,0,0);
 		if (r_maxqueries < (range + r_refdef.scene.numlights) * 2)
-		if (r_maxqueries < R_MAX_OCCLUSION_QUERIES)
+		if (r_maxqueries < MAX_OCCLUSION_QUERIES)
 		{
 			i = r_maxqueries;
 			r_maxqueries = (range + r_refdef.scene.numlights) * 4;
-			r_maxqueries = min(r_maxqueries, R_MAX_OCCLUSION_QUERIES);
+			r_maxqueries = min(r_maxqueries, MAX_OCCLUSION_QUERIES);
 			CHECKGLERROR
 			qglGenQueriesARB(r_maxqueries - i, r_queries + i);
 			CHECKGLERROR
