@@ -28,10 +28,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //#define MEMPARANOIA 1
 
 #if MEMCLUMPING
-// give malloc padding so we can't waste most of a page at the end
-#define MEMCLUMPSIZE (65536 - 1536)
 // smallest unit we care about is this many bytes
-#define MEMUNIT 8
+#define MEMUNIT 64
+#define MEMUNITSPERINT (MEMUNIT*32)
+#define MEMUNITSPERBYTE (MEMUNIT*8)
+// 1MB clumps
+#define MEMWANTCLUMPSIZE 1048576
+// give malloc padding so we can't waste most of a page at the end
+#define MEMCLUMPSIZE (MEMWANTCLUMPSIZE - MEMWANTCLUMPSIZE/MEMUNITSPERBYTE - 128)
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
 #define MEMBITINTS (MEMBITS / 32)
 #endif
