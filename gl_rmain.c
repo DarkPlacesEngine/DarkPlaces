@@ -1717,7 +1717,7 @@ typedef struct r_glsl_permutation_s
 }
 r_glsl_permutation_t;
 
-#define SHADERPERMUTATION_HASHSIZE 4096
+#define SHADERPERMUTATION_HASHSIZE 256
 
 /// information about each possible shader permutation
 r_glsl_permutation_t *r_glsl_permutationhash[SHADERMODE_COUNT][SHADERPERMUTATION_HASHSIZE];
@@ -3293,7 +3293,7 @@ r_animcache_entity_t;
 
 typedef struct r_animcache_s
 {
-	r_animcache_entity_t entity[MAX_EDICTS*2];
+	r_animcache_entity_t entity[MAX_EDICTS];
 	int maxindex;
 	int currentindex;
 }
