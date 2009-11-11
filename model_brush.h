@@ -51,8 +51,8 @@ typedef struct mplane_s
 	vec3_t normal;
 	float dist;
 	// for texture axis selection and fast side tests
-	int type;
-	int signbits;
+	int type; // set by PlaneClassify()
+	int signbits; // set by PlaneClassify()
 }
 mplane_t;
 
