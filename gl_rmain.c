@@ -2856,6 +2856,7 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 void R_Main_FreeViewCache(void)
 {
+#ifdef VIEWCACHEDYNAMIC
 	if (r_refdef.viewcache.entityvisible)
 		Mem_Free(r_refdef.viewcache.entityvisible);
 	if (r_refdef.viewcache.world_pvsbits)
@@ -2865,10 +2866,12 @@ void R_Main_FreeViewCache(void)
 	if (r_refdef.viewcache.world_surfacevisible)
 		Mem_Free(r_refdef.viewcache.world_surfacevisible);
 	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
+#endif
 }
 
 void R_Main_AllocViewCache(void)
 {
+#ifdef VIEWCACHEDYNAMIC
 	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
 	r_refdef.viewcache.maxentities = r_refdef.scene.maxentities;
 	if (r_refdef.viewcache.maxentities)
@@ -2882,6 +2885,7 @@ void R_Main_AllocViewCache(void)
 		r_refdef.viewcache.world_leafvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numleafs);
 		r_refdef.viewcache.world_surfacevisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numsurfaces);
 	}
+#endif
 }
 
 void gl_main_start(void)
