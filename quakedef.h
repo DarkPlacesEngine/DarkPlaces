@@ -84,7 +84,7 @@ extern char engineversion[128];
 #define	MAX_DEMONAME			16
 #define	MAX_SAVEGAMES			12
 #define	SAVEGAME_COMMENT_LENGTH	39
-#define	MAX_CLIENTNETWORKEYES	1
+#define	MAX_CLIENTNETWORKEYES	2
 #define	MAX_OCCLUSION_QUERIES	256
 
 #define	MAX_WATERPLANES			2
@@ -133,7 +133,7 @@ extern char engineversion[128];
 #define	MAX_DEMONAME			16 ///< max demo name length for demos command
 #define	MAX_SAVEGAMES			12 ///< max savegames listed in savegame menu
 #define	SAVEGAME_COMMENT_LENGTH	39 ///< max comment length of savegame in menu
-#define	MAX_CLIENTNETWORKEYES	1 ///< max number of locations that can be added to pvs when culling network entities
+#define	MAX_CLIENTNETWORKEYES	2 ///< max number of locations that can be added to pvs when culling network entities (must be at least 2 for prediction)
 #define	MAX_OCCLUSION_QUERIES	4096 ///< max number of GL_ARB_occlusion_query objects that can be used in one frame
 
 #define	MAX_WATERPLANES			16 ///< max number of water planes visible (each one causes additional view renders)
