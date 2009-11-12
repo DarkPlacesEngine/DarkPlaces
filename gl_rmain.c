@@ -2856,7 +2856,6 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 void R_Main_FreeViewCache(void)
 {
-#ifdef VIEWCACHEDYNAMIC
 	if (r_refdef.viewcache.entityvisible)
 		Mem_Free(r_refdef.viewcache.entityvisible);
 	if (r_refdef.viewcache.world_pvsbits)
@@ -2866,32 +2865,46 @@ void R_Main_FreeViewCache(void)
 	if (r_refdef.viewcache.world_surfacevisible)
 		Mem_Free(r_refdef.viewcache.world_surfacevisible);
 	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
-#endif
 }
 
-void R_Main_AllocViewCache(void)
+void R_Main_ResizeViewCache(void)
 {
-#ifdef VIEWCACHEDYNAMIC
-	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
-	r_refdef.viewcache.maxentities = r_refdef.scene.maxentities;
-	if (r_refdef.viewcache.maxentities)
+	int numentities = r_refdef.scene.numentities;
+	int numclusters = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusters : 1;
+	int numleafs = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_leafs : 1;
+	int numsurfaces = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->num_surfaces : 1;
+	if (r_refdef.viewcache.maxentities < numentities)
+	{
+		r_refdef.viewcache.maxentities = numentities;
+		if (r_refdef.viewcache.entityvisible)
+			Mem_Free(r_refdef.viewcache.entityvisible);
 		r_refdef.viewcache.entityvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
-	if (cl.worldmodel)
-	{	
-		r_refdef.viewcache.world_numclusters = cl.worldmodel->brush.num_pvsclusters;
-		r_refdef.viewcache.world_numleafs = cl.worldmodel->brush.num_leafs;
-		r_refdef.viewcache.world_numsurfaces = cl.worldmodel->num_surfaces;
+	}
+	if (r_refdef.viewcache.world_numclusters != numclusters)
+	{
+		r_refdef.viewcache.world_numclusters = numclusters;
+		if (r_refdef.viewcache.world_pvsbits)
+			Mem_Free(r_refdef.viewcache.world_pvsbits);
 		r_refdef.viewcache.world_pvsbits = Mem_Alloc(r_main_mempool, (r_refdef.viewcache.world_numclusters+7)>>3);
+	}
+	if (r_refdef.viewcache.world_numleafs != numleafs)
+	{
+		r_refdef.viewcache.world_numleafs = numleafs;
+		if (r_refdef.viewcache.world_leafvisible)
+			Mem_Free(r_refdef.viewcache.world_leafvisible);
 		r_refdef.viewcache.world_leafvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numleafs);
+	}
+	if (r_refdef.viewcache.world_numsurfaces != numsurfaces)
+	{
+		r_refdef.viewcache.world_numsurfaces = numsurfaces;
+		if (r_refdef.viewcache.world_surfacevisible)
+			Mem_Free(r_refdef.viewcache.world_surfacevisible);
 		r_refdef.viewcache.world_surfacevisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numsurfaces);
 	}
-#endif
 }
 
 void gl_main_start(void)
 {
-	R_Main_AllocViewCache();
-
 	r_numqueries = 0;
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
@@ -2990,7 +3003,6 @@ void gl_main_newmap(void)
 			CL_ParseEntityLump(cl.worldmodel->brush.entities);
 	}
 	R_Main_FreeViewCache();
-	R_Main_AllocViewCache();
 }
 
 void GL_Main_Init(void)
@@ -5008,6 +5020,8 @@ extern cvar_t cl_decals_newsystem;
 void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
+
+	R_Main_ResizeViewCache();
 
 	R_UpdateFogColor();
 
