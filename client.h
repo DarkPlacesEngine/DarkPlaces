@@ -1553,6 +1553,7 @@ typedef struct r_refdef_view_s
 }
 r_refdef_view_t;
 
+#define VIEWCACHEDYNAMIC 1
 typedef struct r_refdef_viewcache_s
 {
 #ifdef VIEWCACHEDYNAMIC
