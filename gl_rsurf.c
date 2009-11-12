@@ -433,7 +433,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
 	// if possible fetch the visible cluster bits
 	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, sizeof(r_refdef.viewcache.world_pvsbits), false);
+		model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
 
 	if (!r_lockvisibility.integer)
 	{
