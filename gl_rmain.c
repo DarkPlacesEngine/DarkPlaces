@@ -3891,6 +3891,7 @@ static void R_View_SetFrustum(void)
 
 void R_View_Update(void)
 {
+	R_Main_ResizeViewCache();
 	R_View_SetFrustum();
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
@@ -5027,8 +5028,6 @@ extern cvar_t cl_decals_newsystem;
 void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
-
-	R_Main_ResizeViewCache();
 
 	R_UpdateFogColor();
 
