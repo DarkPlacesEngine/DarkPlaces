@@ -71,7 +71,8 @@ cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating poly
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
 cvar_t r_cullentities_trace = {0, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
-cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling"};
+cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
+cvar_t r_cullentities_trace_tempentitysamples = {0, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
 cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
@@ -3055,6 +3056,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_cullentities_trace);
 	Cvar_RegisterVariable(&r_cullentities_trace_samples);
+	Cvar_RegisterVariable(&r_cullentities_trace_tempentitysamples);
 	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
 	Cvar_RegisterVariable(&r_cullentities_trace_delay);
 	Cvar_RegisterVariable(&r_drawviewmodel);
@@ -3561,7 +3563,9 @@ static qboolean R_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t en
 
 static void R_View_UpdateEntityVisible (void)
 {
-	int i, renderimask;
+	int i;
+	int renderimask;
+	int samples;
 	entity_render_t *ent;
 
 	if (!r_drawentities.integer)
@@ -3587,7 +3591,10 @@ static void R_View_UpdateEntityVisible (void)
 				ent = r_refdef.scene.entities[i];
 				if(r_refdef.viewcache.entityvisible[i] && !(ent->flags & (RENDER_VIEWMODEL | RENDER_NOCULL | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
 				{
-					if(R_CanSeeBox(r_cullentities_trace_samples.integer, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
+					samples = ent->entitynumber ? r_cullentities_trace_samples.integer : r_cullentities_trace_tempentitysamples.integer;
+					if (samples < 0)
+						continue; // temp entities do pvs only
+					if(R_CanSeeBox(samples, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
 						ent->last_trace_visibility = realtime;
 					if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
 						r_refdef.viewcache.entityvisible[i] = 0;
