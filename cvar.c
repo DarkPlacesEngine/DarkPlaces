@@ -38,7 +38,7 @@ cvar_t *Cvar_FindVar (const char *var_name)
 	cvar_t *var;
 
 	// use hash lookup to minimize search time
-	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name));
+	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
 	for (var = cvar_hashtable[hashindex];var;var = var->nextonhashchain)
 		if (!strcmp (var_name, var->name))
 			return var;
@@ -449,7 +449,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->next = next;
 
 	// link to head of list in this hash table index
-	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name));
+	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name)) % CVAR_HASHSIZE;
 	variable->nextonhashchain = cvar_hashtable[hashindex];
 	cvar_hashtable[hashindex] = variable;
 }
@@ -543,7 +543,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 	cvar->next = next;
 
 	// link to head of list in this hash table index
-	hashindex = CRC_Block((const unsigned char *)cvar->name, strlen(cvar->name));
+	hashindex = CRC_Block((const unsigned char *)cvar->name, strlen(cvar->name)) % CVAR_HASHSIZE;
 	cvar->nextonhashchain = cvar_hashtable[hashindex];
 	cvar_hashtable[hashindex] = cvar;
 
