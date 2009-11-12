@@ -1555,6 +1555,7 @@ r_refdef_view_t;
 
 typedef struct r_refdef_viewcache_s
 {
+#ifdef VIEWCACHEDYNAMIC
 	// updated by gl_main_newmap()
 	int maxentities;
 	int world_numclusters;
@@ -1574,6 +1575,13 @@ typedef struct r_refdef_viewcache_s
 	unsigned char *world_surfacevisible;
 	// if true, the view is currently in a leaf without pvs data
 	qboolean world_novis;
+#else
+	unsigned char entityvisible[MAX_EDICTS+512+256];
+	unsigned char world_pvsbits[8192];
+	unsigned char world_leafvisible[65536];
+	unsigned char world_surfacevisible[262144];
+	qboolean world_novis;
+#endif
 }
 r_refdef_viewcache_t;
 
