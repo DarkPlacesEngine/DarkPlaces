@@ -1558,6 +1558,7 @@ typedef struct r_refdef_viewcache_s
 	// updated by gl_main_newmap()
 	int maxentities;
 	int world_numclusters;
+	int world_numclusterbytes;
 	int world_numleafs;
 	int world_numsurfaces;
 
