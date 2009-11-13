@@ -265,41 +265,6 @@ static void R_UpdateDynamicTexture(gltexture_t *glt) {
 	}
 }
 
-static void R_UploadTexture(gltexture_t *t);
-
-static void R_PrecacheTexture(gltexture_t *glt)
-{
-	int precache;
-	precache = false;
-	if (glt->flags & TEXF_ALWAYSPRECACHE)
-		precache = true;
-	else if (r_precachetextures.integer >= 2)
-		precache = true;
-	else if (r_precachetextures.integer >= 1)
-		if (glt->flags & TEXF_PRECACHE)
-			precache = true;
-
-	if (precache)
-		R_UploadTexture(glt);
-}
-
-int R_RealGetTexture(rtexture_t *rt)
-{
-	if (rt)
-	{
-		gltexture_t *glt;
-		glt = (gltexture_t *)rt;
-		if (glt->flags & GLTEXF_DYNAMIC)
-			R_UpdateDynamicTexture(glt);
-		if (glt->flags & GLTEXF_UPLOAD)
-			R_UploadTexture(glt);
-
-		return glt->texnum;
-	}
-	else
-		return 0;
-}
-
 void R_PurgeTexture(rtexture_t *rt)
 {
 	if(rt && !(((gltexture_t*) rt)->flags & TEXF_PERSISTENT)) {
@@ -973,22 +938,33 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
 
-static void R_UploadTexture (gltexture_t *glt)
+int R_RealGetTexture(rtexture_t *rt)
 {
-	if (!(glt->flags & GLTEXF_UPLOAD))
-		return;
-
-	CHECKGLERROR
-	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
-	R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
-	if (glt->inputtexels)
+	if (rt)
 	{
-		Mem_Free(glt->inputtexels);
-		glt->inputtexels = NULL;
-		glt->flags |= GLTEXF_DESTROYED;
+		gltexture_t *glt;
+		glt = (gltexture_t *)rt;
+		if (glt->flags & GLTEXF_DYNAMIC)
+			R_UpdateDynamicTexture(glt);
+		if (glt->flags & GLTEXF_UPLOAD)
+		{
+			CHECKGLERROR
+			qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+			R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
+			if (glt->inputtexels)
+			{
+				Mem_Free(glt->inputtexels);
+				glt->inputtexels = NULL;
+				glt->flags |= GLTEXF_DESTROYED;
+			}
+			else if (glt->flags & GLTEXF_DESTROYED)
+				Con_Printf("R_GetTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
+		}
+
+		return glt->texnum;
 	}
-	else if (glt->flags & GLTEXF_DESTROYED)
-		Con_Printf("R_UploadTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
+	else
+		return 0;
 }
 
 static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
@@ -997,6 +973,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	gltexture_t *glt;
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
 	textypeinfo_t *texinfo;
+	int precache;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -1094,16 +1071,45 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->updatecallback = NULL;
 	glt->updatacallback_data = NULL;
 
-	if (data)
-	{
-		glt->inputtexels = (unsigned char *)Mem_Alloc(texturemempool, size);
-		memcpy(glt->inputtexels, data, size);
-	}
-	else
-		glt->inputtexels = NULL;
-
 	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
-	R_PrecacheTexture(glt);
+
+	precache = false;
+	if (glt->flags & TEXF_ALWAYSPRECACHE)
+		precache = true;
+	else if (r_precachetextures.integer >= 2)
+		precache = true;
+	else if (r_precachetextures.integer >= 1)
+		if (glt->flags & TEXF_PRECACHE)
+			precache = true;
+
+	if (precache)
+	{
+		// immediate upload (most common case)
+		// data may be NULL (blank texture for dynamic rendering)
+		CHECKGLERROR
+		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+		R_Upload(glt, data, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
+	}
+	else if (data)
+	{
+		// deferred texture upload (menu graphics)
+		// optimize first if possible
+		if ((textype == TEXTYPE_BGRA || textype == TEXTYPE_RGBA) && glt->inputwidth * glt->inputheight * glt->inputdepth > glt->tilewidth * glt->tileheight * glt->tiledepth)
+		{
+			glt->inputtexels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+			Image_Resample32(data, glt->inputwidth, glt->inputheight, glt->inputdepth, glt->inputtexels, glt->tilewidth, glt->tileheight, glt->tiledepth, r_lerpimages.integer);
+			// change texture size accordingly
+			glt->inputwidth = glt->tilewidth;
+			glt->inputheight = glt->tileheight;
+			glt->inputdepth = glt->tiledepth;
+			GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
+		}
+		else
+		{
+			glt->inputtexels = (unsigned char *)Mem_Alloc(texturemempool, size);
+			memcpy(glt->inputtexels, data, size);
+		}
+	}
 
 	// texture converting and uploading can take a while, so make sure we're sending keepalives
 	CL_KeepaliveMessage(false);
@@ -1180,13 +1186,12 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		Host_Error("R_UpdateTexture: no texture supplied");
 	if (data == NULL)
 		Host_Error("R_UpdateTexture: no data supplied");
-	glt = (gltexture_t *)rt;
 
 	// we need it to be uploaded before we can update a part of it
-	if (glt->flags & GLTEXF_UPLOAD)
-		R_UploadTexture(glt);
+	R_RealGetTexture(rt);
 
 	// update part of the texture
+	glt = (gltexture_t *)rt;
 	R_Upload(glt, data, x, y, 0, width, height, 1);
 }
 
