@@ -62,10 +62,10 @@ extern char engineversion[128];
 #define	HIST_TEXTSIZE			2048
 #define	HIST_MAXLINES			16
 #define	MAX_ALIAS_NAME			32
-#define	CMDBUFSIZE				8192
+#define	CMDBUFSIZE				131072
 #define	MAX_ARGS				10
 
-#define	NET_MAXMESSAGE			8192
+#define	NET_MAXMESSAGE			16384
 #define	MAX_PACKETFRAGMENT		1024
 #define	MAX_EDICTS				4096
 #define	MAX_MODELS				1024
@@ -89,9 +89,9 @@ extern char engineversion[128];
 
 #define	MAX_WATERPLANES			2
 #define	MAX_CUBEMAPS			64
-//#define	MAX_EXPLOSIONS			64
+#define	MAX_EXPLOSIONS			8
 #define	MAX_DLIGHTS				16
-#define	MAX_CACHED_PICS			128 // this is 144 bytes each (or 152 on 64bit)
+#define	MAX_CACHED_PICS			512 // this is 144 bytes each (or 152 on 64bit)
 #define	CACHEPICHASHSIZE		256
 #define	MAX_PARTICLEEFFECTNAME	64
 #define	MAX_PARTICLEEFFECTINFO	256
@@ -101,7 +101,7 @@ extern char engineversion[128];
 #define	MAX_DYNAMIC_TEXTURE_COUNT	2
 #define	MAX_MAP_LEAFS			8192
 
-//#define	MAXTRACKS				256
+#define	MAXTRACKS				256
 #define	MAX_DYNAMIC_CHANNELS	64
 #define	MAX_CHANNELS			260
 #else
