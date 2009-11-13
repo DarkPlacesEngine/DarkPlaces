@@ -2872,6 +2872,7 @@ void R_Main_ResizeViewCache(void)
 {
 	int numentities = r_refdef.scene.numentities;
 	int numclusters = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusters : 1;
+	int numclusterbytes = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusterbytes : 1
 	int numleafs = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_leafs : 1;
 	int numsurfaces = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->num_surfaces : 1;
 	if (r_refdef.viewcache.maxentities < numentities)
@@ -2886,7 +2887,7 @@ void R_Main_ResizeViewCache(void)
 		r_refdef.viewcache.world_numclusters = numclusters;
 		if (r_refdef.viewcache.world_pvsbits)
 			Mem_Free(r_refdef.viewcache.world_pvsbits);
-		r_refdef.viewcache.world_pvsbits = Mem_Alloc(r_main_mempool, (r_refdef.viewcache.world_numclusters+7)>>3);
+		r_refdef.viewcache.world_pvsbits = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numclusterbytes);
 	}
 	if (r_refdef.viewcache.world_numleafs != numleafs)
 	{
