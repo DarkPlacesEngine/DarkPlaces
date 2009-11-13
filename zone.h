@@ -21,24 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef ZONE_H
 #define ZONE_H
 
-// LordHavoc: this is pointless with a good C library
-//#define MEMCLUMPING
-
 // div0: heap overflow detection paranoia
-//#define MEMPARANOIA 1
-
-#if MEMCLUMPING
-// smallest unit we care about is this many bytes
-#define MEMUNIT 64
-#define MEMUNITSPERINT (MEMUNIT*32)
-#define MEMUNITSPERBYTE (MEMUNIT*8)
-// 1MB clumps
-#define MEMWANTCLUMPSIZE 1048576
-// give malloc padding so we can't waste most of a page at the end
-#define MEMCLUMPSIZE (MEMWANTCLUMPSIZE - MEMWANTCLUMPSIZE/MEMUNITSPERBYTE - 128)
-#define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
-#define MEMBITINTS (MEMBITS / 32)
-#endif
+#define MEMPARANOIA 0
 
 #define POOLNAMESIZE 128
 // if set this pool will be printed in memlist reports
@@ -51,54 +35,23 @@ typedef struct memheader_s
 	struct memheader_s *prev;
 	// pool this memheader belongs to
 	struct mempool_s *pool;
-#if MEMCLUMPING
-	// clump this memheader lives in, NULL if not in a clump
-	struct memclump_s *clump;
-#endif
 	// size of the memory after the header (excluding header and sentinel2)
 	size_t size;
 	// file name and line where Mem_Alloc was called
 	const char *filename;
 	int fileline;
-	// should always be MEMHEADER_SENTINEL1
-	unsigned int sentinel1;
-	// immediately followed by data, which is followed by a MEMHEADER_SENTINEL2 byte
+	// should always be equal to MEMHEADER_SENTINEL_FOR_ADDRESS()
+	unsigned int sentinel;
+	// immediately followed by data, which is followed by another copy of mem_sentinel[]
 }
 memheader_t;
 
-#if MEMCLUMPING
-typedef struct memclump_s
-{
-	// contents of the clump
-	unsigned char block[MEMCLUMPSIZE];
-	// should always be MEMCLUMP_SENTINEL
-	unsigned int sentinel1;
-	// if a bit is on, it means that the MEMUNIT bytes it represents are
-	// allocated, otherwise free
-	int bits[MEMBITINTS];
-	// should always be MEMCLUMP_SENTINEL
-	unsigned int sentinel2;
-	// if this drops to 0, the clump is freed
-	size_t blocksinuse;
-	// largest block of memory available (this is reset to an optimistic
-	// number when anything is freed, and updated when alloc fails the clump)
-	size_t largestavailable;
-	// next clump in the chain
-	struct memclump_s *chain;
-}
-memclump_t;
-#endif
-
 typedef struct mempool_s
 {
-	// should always be MEMHEADER_SENTINEL1
+	// should always be MEMPOOL_SENTINEL
 	unsigned int sentinel1;
 	// chain of individual memory allocations
 	struct memheader_s *chain;
-#if MEMCLUMPING
-	// chain of clumps (if any)
-	struct memclump_s *clumpchain;
-#endif
 	// POOLFLAG_*
 	int flags;
 	// total memory allocated in this pool (inside memheaders)
@@ -116,7 +69,7 @@ typedef struct mempool_s
 	int fileline;
 	// name of the pool
 	char name[POOLNAMESIZE];
-	// should always be MEMHEADER_SENTINEL1
+	// should always be MEMPOOL_SENTINEL
 	unsigned int sentinel2;
 }
 mempool_t;
