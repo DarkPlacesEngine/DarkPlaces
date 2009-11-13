@@ -852,8 +852,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	imageformat_t *firstformat, *format;
 	unsigned char *f, *data = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], *c;
-	if (developer_memorydebug.integer)
-		Mem_CheckSentinelsGlobal();
+	//if (developer_memorydebug.integer)
+	//	Mem_CheckSentinelsGlobal();
 	if (developer_texturelogging.integer)
 		Log_Printf("textures.log", "%s\n", filename);
 	Image_StripImageExtension(filename, basename, sizeof(basename)); // strip filename extensions to allow replacement by other types
@@ -894,8 +894,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 			{
 				if (developer.integer >= 10)
 					Con_Printf("loaded image %s (%dx%d)\n", name, image_width, image_height);
-				if (developer_memorydebug.integer)
-					Mem_CheckSentinelsGlobal();
+				//if (developer_memorydebug.integer)
+				//	Mem_CheckSentinelsGlobal();
 				if(allowFixtrans && r_fixtrans_auto.integer)
 				{
 					int n = fixtransparentpixels(data, image_width, image_height);
@@ -931,8 +931,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	// texture loading can take a while, so make sure we're sending keepalives
 	CL_KeepaliveMessage(false);
 
-	if (developer_memorydebug.integer)
-		Mem_CheckSentinelsGlobal();
+	//if (developer_memorydebug.integer)
+	//	Mem_CheckSentinelsGlobal();
 	return NULL;
 }
 
