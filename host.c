@@ -935,6 +935,9 @@ void Host_Main(void)
 
 #if MEMPARANOIA
 		Mem_CheckSentinelsGlobal();
+#else
+		if (developer_memorydebug.integer)
+			Mem_CheckSentinelsGlobal();
 #endif
 
 		// if there is some time remaining from this frame, reset the timers
