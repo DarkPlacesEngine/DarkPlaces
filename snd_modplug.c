@@ -329,16 +329,17 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 
 	per_ch->sb_offset = real_start;
 
-	// We add exactly 1 sec of sound to the buffer:
-	// 1- to ensure we won't lose any sample during the resampling process
-	// 2- to force one call to ModPlug_FetchSound per second to regulate the workload
-	if ((int)(sb->format.speed * STREAM_BUFFER_FILL) + sb->nbframes > sb->maxframes)
+	// We add more than one frame of sound to the buffer:
+	// 1- to ensure we won't lose many samples during the resampling process
+	// 2- to reduce calls to ModPlug_FetchSound to regulate workload
+	newlength = (int)(per_sfx->format.speed*STREAM_BUFFER_FILL);
+	if (newlength + sb->nbframes > sb->maxframes)
 	{
 		Con_Printf ("ModPlug_FetchSound: stream buffer overflow (%u sample frames / %u)\n",
 					sb->format.speed + sb->nbframes, sb->maxframes);
 		return NULL;
 	}
-	newlength = (int)(per_sfx->format.speed*STREAM_BUFFER_FILL) * factor;  // -> 1 sec of sound before resampling
+	newlength *= factor; // convert from sample frames to bytes
 	if(newlength > (int)sizeof(resampling_buffer))
 		newlength = sizeof(resampling_buffer);
 

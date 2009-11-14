@@ -9,7 +9,6 @@ cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
 cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
-cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory)"};
 static cvar_t snd_precache = {0, "snd_precache", "1", "loads sounds before they are used"};
 
 static dllhandle_t   ras_dll = NULL;
