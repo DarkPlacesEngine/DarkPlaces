@@ -373,6 +373,10 @@ extern char net_extresponse[NET_EXTRESPONSE_MAX][1400];
 extern int net_extresponse_count;
 extern int net_extresponse_last;
 
+extern char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
+extern int sv_net_extresponse_count;
+extern int sv_net_extresponse_last;
+
 extern double masterquerytime;
 extern int masterquerycount;
 extern int masterreplycount;

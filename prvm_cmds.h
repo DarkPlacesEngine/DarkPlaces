@@ -443,7 +443,8 @@ void VM_argv_end_index (void);
 void VM_buf_cvarlist(void);
 void VM_cvar_description(void);
 
-void VM_getextresponse (void);
+void VM_CL_getextresponse (void);
+void VM_SV_getextresponse (void);
 
 void VM_isfunction(void);
 void VM_callfunction(void);

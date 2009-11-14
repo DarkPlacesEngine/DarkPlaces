@@ -3701,7 +3701,7 @@ NULL,							// #620
 NULL,							// #621
 NULL,							// #622
 NULL,							// #623
-VM_getextresponse,				// #624 string getextresponse(void)
+VM_SV_getextresponse,			// #624 string getextresponse(void)
 NULL,							// #625
 };
 
