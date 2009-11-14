@@ -681,7 +681,7 @@ static void VM_CL_getlight (void)
 
 //============================================================================
 //[515]: SCENE MANAGER builtins
-extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed);//csprogs.c
+extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed, int edictnum);//csprogs.c
 
 static void CSQC_R_RecalcView (void)
 {
@@ -750,7 +750,7 @@ void VM_CL_R_AddEntities (void)
 			continue;
 		if(!((int)ed->fields.client->drawmask & drawmask))
 			continue;
-		CSQC_AddRenderEdict(ed);
+		CSQC_AddRenderEdict(ed, i);
 	}
 
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
@@ -762,7 +762,7 @@ void VM_CL_R_AddEntity (void)
 {
 	double t = Sys_DoubleTime();
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntity);
-	CSQC_AddRenderEdict(PRVM_G_EDICT(OFS_PARM0));
+	CSQC_AddRenderEdict(PRVM_G_EDICT(OFS_PARM0), 0);
 	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
 }
 
