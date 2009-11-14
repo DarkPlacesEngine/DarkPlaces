@@ -8324,6 +8324,7 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 
 extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
+extern cvar_t cl_decals_newsystem_intensitymultiplier;
 void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
 	matrix4x4_t projection;
@@ -8451,8 +8452,6 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 			continue;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
 			continue;
-		if (texture->currentalpha < 1)
-			continue;
 		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
 			continue;
 		numvertices = surface->num_vertices;
@@ -8506,8 +8505,8 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 				tc[cornerindex][0] = (temp[1]+1.0f)*0.5f * (s2-s1) + s1;
 				tc[cornerindex][1] = (temp[2]+1.0f)*0.5f * (t2-t1) + t1;
 				// calculate distance fade from the projection origin
-				f = a * (1.0f-fabs(temp[0]));
-				f = max(0.0f, f);
+				f = a * (1.0f-fabs(temp[0])) * cl_decals_newsystem_intensitymultiplier.value;
+				f = bound(0.0f, f, 1.0f);
 				c[cornerindex][0] = r * f;
 				c[cornerindex][1] = g * f;
 				c[cornerindex][2] = b * f;
@@ -8515,7 +8514,7 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 				//VectorMA(v[cornerindex], cl_decals_bias.value, localnormal, v[cornerindex]);
 			}
 			if (dynamic)
-				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex);
+				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex+surface->num_firsttriangle);
 			else
 				for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
 					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1);
