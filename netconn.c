@@ -136,6 +136,10 @@ char net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int net_extresponse_count = 0;
 int net_extresponse_last = 0;
 
+char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
+int sv_net_extresponse_count = 0;
+int sv_net_extresponse_last = 0;
+
 // ServerList interface
 serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
@@ -2789,11 +2793,11 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (!strncmp(string, "extResponse ", 12))
 		{
-			++net_extresponse_count;
-			if(net_extresponse_count > NET_EXTRESPONSE_MAX)
-				net_extresponse_count = NET_EXTRESPONSE_MAX;
-			net_extresponse_last = (net_extresponse_last + 1) % NET_EXTRESPONSE_MAX;
-			dpsnprintf(net_extresponse[net_extresponse_last], sizeof(net_extresponse[net_extresponse_last]), "'%s' %s", addressstring2, string + 12);
+			++sv_net_extresponse_count;
+			if(sv_net_extresponse_count > NET_EXTRESPONSE_MAX)
+				sv_net_extresponse_count = NET_EXTRESPONSE_MAX;
+			sv_net_extresponse_last = (net_extresponse_last + 1) % NET_EXTRESPONSE_MAX;
+			dpsnprintf(sv_net_extresponse[sv_net_extresponse_last], sizeof(sv_net_extresponse[net_extresponse_last]), "'%s' %s", addressstring2, string + 12);
 			return true;
 		}
 		if (!strncmp(string, "ping", 4))
