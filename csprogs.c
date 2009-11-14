@@ -154,7 +154,7 @@ void CSQC_Think (prvm_edict_t *ed)
 
 extern cvar_t cl_noplayershadow;
 extern cvar_t r_equalize_entities_fullbright;
-qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
+qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 {
 	int renderflags;
 	int c;
@@ -168,9 +168,26 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed)
 	if (!model)
 		return false;
 
-	entrender = CL_NewTempEntity(0);
-	if (!entrender)
-		return false;
+	if (edictnum)
+	{
+		if (r_refdef.scene.numentities >= r_refdef.scene.maxentities)
+			return false;
+		entrender = cl.csqcrenderentities + edictnum;
+		r_refdef.scene.entities[r_refdef.scene.numentities++] = entrender;
+		entrender->entitynumber = edictnum;
+		//entrender->shadertime = 0; // shadertime was set by spawn()
+		entrender->alpha = 1;
+		entrender->scale = 1;
+		VectorSet(entrender->colormod, 1, 1, 1);
+		VectorSet(entrender->glowmod, 1, 1, 1);
+		entrender->allowdecals = true;
+	}
+	else
+	{
+		entrender = CL_NewTempEntity(0);
+		if (!entrender)
+			return false;
+	}
 
 	entrender->model = model;
 	entrender->skinnum = (int)ed->fields.client->skin;
@@ -715,11 +732,22 @@ void CL_VM_CB_EndIncreaseEdicts(void)
 
 void CL_VM_CB_InitEdict(prvm_edict_t *e)
 {
+	int edictnum = PRVM_NUM_FOR_EDICT(e);
+	entity_render_t *entrender;
+	CL_ExpandCSQCRenderEntities(edictnum);
+	entrender = cl.csqcrenderentities + edictnum;
 	e->priv.server->move = false; // don't move on first frame
+	memset(entrender, 0, sizeof(*entrender));
+	entrender->shadertime = cl.time;
 }
+
+extern void R_DecalSystem_Reset(decalsystem_t *decalsystem);
 
 void CL_VM_CB_FreeEdict(prvm_edict_t *ed)
 {
+	entity_render_t *entrender = cl.csqcrenderentities + PRVM_NUM_FOR_EDICT(ed);
+	R_DecalSystem_Reset(&entrender->decalsystem);
+	memset(entrender, 0, sizeof(*entrender));
 	World_UnlinkEdict(ed);
 	memset(ed->fields.client, 0, sizeof(*ed->fields.client));
 	World_Physics_RemoveFromEntity(&cl.world, ed);

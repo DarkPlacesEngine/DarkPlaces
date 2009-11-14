@@ -1023,6 +1023,7 @@ typedef struct client_state_s
 	vec3_t playercrouchmaxs;
 
 	int max_entities;
+	int max_csqcrenderentities;
 	int max_static_entities;
 	int max_effects;
 	int max_beams;
@@ -1034,6 +1035,7 @@ typedef struct client_state_s
 	int max_showlmps;
 
 	entity_t *entities;
+	entity_render_t *csqcrenderentities;
 	unsigned char *entities_active;
 	entity_t *static_entities;
 	cl_effect_t *effects;
@@ -1289,6 +1291,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 
 void CL_ClearState (void);
 void CL_ExpandEntities(int num);
+void CL_ExpandCSQCRenderEntities(int num);
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet);
 
 

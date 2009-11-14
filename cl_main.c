@@ -130,6 +130,7 @@ void CL_ClearState(void)
 	cl.num_brushmodel_entities = 0;
 
 	// tweak these if the game runs out
+	cl.max_csqcrenderentities = 0;
 	cl.max_entities = 256;
 	cl.max_static_entities = 256;
 	cl.max_effects = 256;
@@ -145,6 +146,7 @@ void CL_ClearState(void)
 	cl.num_effects = 0;
 	cl.num_beams = 0;
 
+	cl.csqcrenderentities = NULL;
 	cl.entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_entities * sizeof(entity_t));
 	cl.entities_active = (unsigned char *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(unsigned char));
 	cl.static_entities = (entity_t *)Mem_Alloc(cls.levelmempool, cl.max_static_entities * sizeof(entity_t));
@@ -285,6 +287,26 @@ void CL_ExpandEntities(int num)
 			cl.entities[i].state_baseline = defaultstate;
 			cl.entities[i].state_previous = defaultstate;
 			cl.entities[i].state_current = defaultstate;
+		}
+	}
+}
+
+void CL_ExpandCSQCRenderEntities(int num)
+{
+	int oldmaxcsqcrenderentities;
+	entity_render_t *oldcsqcrenderentities;
+	if (num >= cl.max_csqcrenderentities)
+	{
+		if (num >= MAX_EDICTS)
+			Host_Error("CL_ExpandEntities: num %i >= %i", num, MAX_EDICTS);
+		oldmaxcsqcrenderentities = cl.max_csqcrenderentities;
+		oldcsqcrenderentities = cl.csqcrenderentities;
+		cl.max_csqcrenderentities = (num & ~255) + 256;
+		cl.csqcrenderentities = (entity_render_t *)Mem_Alloc(cls.levelmempool, cl.max_csqcrenderentities * sizeof(entity_render_t));
+		if (oldcsqcrenderentities)
+		{
+			memcpy(cl.csqcrenderentities, oldcsqcrenderentities, oldmaxcsqcrenderentities * sizeof(entity_render_t));
+			Mem_Free(oldcsqcrenderentities);
 		}
 	}
 }
