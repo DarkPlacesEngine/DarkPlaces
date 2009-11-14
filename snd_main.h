@@ -136,6 +136,15 @@ extern mempool_t *snd_mempool;
 extern qboolean simsound;
 
 
+#define STREAM_BUFFER_DURATION 0.3f // in seconds
+#define STREAM_BUFFER_FILL 0.2f // in seconds
+#define STREAM_BUFFER_SIZE(format_ptr) ((int)ceil (STREAM_BUFFER_DURATION * (format_ptr)->speed) * (format_ptr)->width * (format_ptr)->channels)
+
+// We work with 1 sec sequences, so this buffer must be able to contain
+// 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
+extern unsigned char resampling_buffer [48000 * 2 * 2];
+
+
 // ====================================================================
 //         Architecture-independent functions
 // ====================================================================

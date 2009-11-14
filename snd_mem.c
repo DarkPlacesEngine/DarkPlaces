@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_wav.h"
 #include "snd_modplug.h"
 
+unsigned char resampling_buffer [48000 * 2 * 2];
+
 
 /*
 ====================
