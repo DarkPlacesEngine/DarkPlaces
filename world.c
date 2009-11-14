@@ -526,7 +526,7 @@ typedef void dNearCallback (void *data, dGeomID o1, dGeomID o2);
 #define dSAP_AXES_ZYX  ((2)|(1<<2)|(0<<4))
 
 //const char*     (ODE_API *dGetConfiguration)(void);
-//int             (ODE_API *dCheckConfiguration)( const char* token );
+int             (ODE_API *dCheckConfiguration)( const char* token );
 int             (ODE_API *dInitODE)(void);
 //int             (ODE_API *dInitODE2)(unsigned int uiInitFlags);
 //int             (ODE_API *dAllocateODEDataForThread)(unsigned int uiAllocateFlags);
@@ -992,7 +992,7 @@ dGeomID         (ODE_API *dCreateTriMesh)(dSpaceID space, dTriMeshDataID Data, d
 static dllfunction_t odefuncs[] =
 {
 //	{"dGetConfiguration",							(void **) &dGetConfiguration},
-//	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
+	{"dCheckConfiguration",							(void **) &dCheckConfiguration},
 	{"dInitODE",									(void **) &dInitODE},
 //	{"dInitODE2",									(void **) &dInitODE2},
 //	{"dAllocateODEDataForThread",					(void **) &dAllocateODEDataForThread},
