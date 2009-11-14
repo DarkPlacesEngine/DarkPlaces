@@ -298,8 +298,8 @@ Draw_CachePic
 cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 {
 	int crc, hashkey;
+	unsigned char *pixels;
 	cachepic_t *pic;
-	int flags;
 	fs_offset_t lmpsize;
 	unsigned char *lmpdata;
 	char lmpname[MAX_QPATH];
@@ -333,27 +333,30 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		return pic;
 	}
 
-	flags = TEXF_ALPHA;
-	if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
-		flags |= TEXF_PRECACHE;
+	pic->texflags = TEXF_ALPHA | TEXF_PRECACHE;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
-		flags |= TEXF_CLAMP;
+		pic->texflags |= TEXF_CLAMP;
 	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
-		flags |= TEXF_COMPRESS;
+		pic->texflags |= TEXF_COMPRESS;
+
+	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
-	pic->tex = loadtextureimage(drawtexturepool, path, false, flags, true);
-	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
+	pixels = loadimagepixelsbgra(path, false, true);
+	if (pixels == NULL && !strncmp(path, "gfx/", 4))
+		pixels = loadimagepixelsbgra(path+4, false, true);
+	if (pixels)
 	{
-		// compatibility with older versions which did not require gfx/ prefix
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, false, flags, true);
+		pic->width = image_width;
+		pic->height = image_height;
+		if (!pic->autoload)
+			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, TEXTYPE_BGRA, pic->texflags, NULL);
 	}
-	// if a high quality image was loaded, set the pic's size to match it, just
-	// in case there's no low quality version to get the size from
-	if (pic->tex)
+	else
 	{
-		pic->width = R_TextureWidth(pic->tex);
-		pic->height = R_TextureHeight(pic->tex);
+		pic->autoload = false;
+		// never compress the fallback images
+		pic->texflags &= ~TEXF_COMPRESS;
 	}
 
 	// now read the low quality version (wad or lmp file), and take the pic
@@ -371,8 +374,8 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags & ~TEXF_COMPRESS, palette_bgra_transparent);
+			if (!pixels)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, palette_bgra_transparent);
 		}
 		Mem_Free(lmpdata);
 	}
@@ -387,22 +390,27 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 			pic->width = 128;
 			pic->height = 128;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, flags & ~TEXF_COMPRESS, palette_bgra_font);
+			if (!pixels)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, pic->texflags, palette_bgra_font);
 		}
 		else
 		{
 			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pic->tex)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, flags & ~TEXF_COMPRESS, palette_bgra_transparent);
+			if (!pixels)
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, palette_bgra_transparent);
 		}
 	}
 
-	// if it's not found on disk, generate an image
-	if (pic->tex == NULL)
+	if (pixels)
 	{
+		Mem_Free(pixels);
+		pixels = NULL;
+	}
+	else if (pic->tex == NULL)
+	{
+		// if it's not found on disk, generate an image
 		pic->tex = draw_generatepic(path, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
@@ -414,6 +422,43 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 cachepic_t *Draw_CachePic (const char *path)
 {
 	return Draw_CachePic_Flags (path, 0);
+}
+
+int draw_frame = 1;
+
+rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
+{
+	if (pic->autoload && !pic->tex)
+	{
+		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true);
+		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true);
+		if (pic->tex == NULL)
+			pic->tex = draw_generatepic(pic->name, true);
+	}
+	pic->lastusedframe = draw_frame;
+	return pic->tex;
+}
+
+void Draw_Frame(void)
+{
+	int i;
+	cachepic_t *pic;
+	static double nextpurgetime;
+	int purgeframe;
+	if (nextpurgetime > realtime)
+		return;
+	nextpurgetime = realtime + 0.05;
+	purgeframe = draw_frame - 1;
+	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
+	{
+		if (pic->autoload && pic->tex && pic->lastusedframe < draw_frame)
+		{
+			R_FreeTexture(pic->tex);
+			pic->tex = NULL;
+		}
+	}
+	draw_frame++;
 }
 
 cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels_bgra)
@@ -721,7 +766,7 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexBind(0, R_GetTexture(Draw_GetPicTexture(pic)));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 
 #if 1
@@ -775,7 +820,7 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexBind(0, R_GetTexture(Draw_GetPicTexture(pic)));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 
 		floats[12] = 0.0f;floats[13] = 0.0f;
@@ -1188,7 +1233,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		R_Mesh_TexBind(0, R_GetTexture(pic->tex));
+		R_Mesh_TexBind(0, R_GetTexture(Draw_GetPicTexture(pic)));
 		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 		floats[12] = s1;floats[13] = t1;
 		floats[14] = s2;floats[15] = t2;

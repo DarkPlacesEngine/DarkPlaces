@@ -1499,6 +1499,8 @@ int r_stereo_side;
 extern void Sbar_ShowFPS(void);
 void SCR_DrawScreen (void)
 {
+	Draw_Frame();
+
 	R_Mesh_Start();
 
 	R_TimeReport_BeginFrame();
