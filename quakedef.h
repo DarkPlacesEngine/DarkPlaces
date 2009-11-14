@@ -63,7 +63,7 @@ extern char engineversion[128];
 #define	HIST_MAXLINES			16
 #define	MAX_ALIAS_NAME			32
 #define	CMDBUFSIZE				131072
-#define	MAX_ARGS				10
+#define	MAX_ARGS				80
 
 #define	NET_MAXMESSAGE			16384
 #define	MAX_PACKETFRAGMENT		1024
@@ -93,8 +93,8 @@ extern char engineversion[128];
 #define	MAX_DLIGHTS				16
 #define	MAX_CACHED_PICS			1024 // this is 144 bytes each (or 152 on 64bit)
 #define	CACHEPICHASHSIZE		256
-#define	MAX_PARTICLEEFFECTNAME	64
-#define	MAX_PARTICLEEFFECTINFO	256
+#define	MAX_PARTICLEEFFECTNAME	256
+#define	MAX_PARTICLEEFFECTINFO	2048
 #define	MAX_PARTICLETEXTURES	96
 #define	MAXCLVIDEOS				1
 #define	MAX_GECKO_INSTANCES		1
