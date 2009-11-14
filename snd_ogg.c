@@ -379,14 +379,6 @@ void OGG_CloseLibrary (void)
 =================================================================
 */
 
-#define STREAM_BUFFER_DURATION 1.5f	// 1.5 sec
-#define STREAM_BUFFER_SIZE(format_ptr) ((int)(ceil (STREAM_BUFFER_DURATION * ((format_ptr)->speed * (format_ptr)->width * (format_ptr)->channels))))
-
-// We work with 1 sec sequences, so this buffer must be able to contain
-// 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
-static unsigned char resampling_buffer [48000 * 2 * 2];
-
-
 // Per-sfx data structure
 typedef struct
 {
@@ -526,13 +518,13 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 	// We add exactly 1 sec of sound to the buffer:
 	// 1- to ensure we won't lose any sample during the resampling process
 	// 2- to force one call to OGG_FetchSound per second to regulate the workload
-	if (sb->format.speed + sb->nbframes > sb->maxframes)
+	if ((int)(sb->format.speed * STREAM_BUFFER_FILL) + sb->nbframes > sb->maxframes)
 	{
 		Con_Printf ("OGG_FetchSound: stream buffer overflow (%u sample frames / %u)\n",
 					sb->format.speed + sb->nbframes, sb->maxframes);
 		return NULL;
 	}
-	newlength = per_sfx->format.speed * factor;  // -> 1 sec of sound before resampling
+	newlength = (int)(per_sfx->format.speed*STREAM_BUFFER_FILL) * factor;  // -> 1 sec of sound before resampling
 	if(newlength > (int)sizeof(resampling_buffer))
 		newlength = sizeof(resampling_buffer);
 
@@ -711,7 +703,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	len = qov_pcm_total (&vf, -1) * vi->channels * 2;  // 16 bits => "* 2"
 
 	// Decide if we go for a stream or a simple PCM cache
-	buff_len = (int)ceil (STREAM_BUFFER_DURATION * (snd_renderbuffer->format.speed * 2 * vi->channels));
+	buff_len = (int)ceil (STREAM_BUFFER_DURATION * snd_renderbuffer->format.speed) * 2 * vi->channels;
 	if (snd_streaming.integer && len > (ogg_int64_t)filesize + 3 * buff_len)
 	{
 		ogg_stream_persfx_t* per_sfx;
