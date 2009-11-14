@@ -29,6 +29,12 @@ typedef struct cachepic_s
 {
 	// size of pic
 	int width, height;
+	// this flag indicates that it should be loaded and unloaded on demand
+	int autoload;
+	// texture flags to upload with
+	int texflags;
+	// texture may be freed after a while
+	int lastusedframe;
 	// renderer texture to use
 	rtexture_t *tex;
 	// used for hash lookups
@@ -48,6 +54,7 @@ typedef enum cachepicflags_e
 cachepicflags_t;
 
 void Draw_Init (void);
+void Draw_Frame (void);
 cachepic_t *Draw_CachePic_Flags (const char *path, unsigned int cachepicflags);
 cachepic_t *Draw_CachePic (const char *path); // standard function with no options, used throughout engine
 // create or update a pic's image
