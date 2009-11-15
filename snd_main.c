@@ -921,12 +921,16 @@ void S_UnloadAllSounds_f (void)
 S_FindName
 ==================
 */
+sfx_t changevolume_sfx = {""};
 sfx_t *S_FindName (const char *name)
 {
 	sfx_t *sfx;
 
 	if (!snd_initialized.integer)
 		return NULL;
+
+	if(!strcmp(name, changevolume_sfx.name))
+		return &changevolume_sfx;
 
 	if (strlen (name) >= sizeof (sfx->name))
 	{
@@ -1100,7 +1104,7 @@ S_IsSoundPrecached
 */
 qboolean S_IsSoundPrecached (const sfx_t *sfx)
 {
-	return (sfx != NULL && sfx->fetcher != NULL);
+	return (sfx != NULL && sfx->fetcher != NULL) || (sfx == &changevolume_sfx);
 }
 
 /*
@@ -1443,11 +1447,28 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
-	channel_t *target_chan, *check;
+	channel_t *target_chan, *check, *ch;
 	int		ch_idx;
 
 	if (snd_renderbuffer == NULL || sfx == NULL || nosound.integer)
 		return -1;
+
+	if(sfx == &changevolume_sfx)
+	{
+		if(entchannel == 0)
+			return -1;
+		for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
+		{
+			ch = &channels[ch_idx];
+			if (ch->entnum == entnum && (ch->entchannel == entchannel || entchannel == -1) )
+			{
+				S_SetChannelVolume(ch_idx, fvol);
+				ch->dist_mult = attenuation / (64.0f * snd_soundradius.value);
+				return ch_idx;
+			}
+		}
+		return -1;
+	}
 
 	if (sfx->fetcher == NULL)
 		return -1;

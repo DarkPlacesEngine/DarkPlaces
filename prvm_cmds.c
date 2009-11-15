@@ -1088,7 +1088,7 @@ void VM_precache_sound (void)
 
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-	VM_CheckEmptyString(s);
+	//VM_CheckEmptyString(s);
 
 	if(snd_initialized.integer && !S_PrecacheSound(s, true, true))
 	{
