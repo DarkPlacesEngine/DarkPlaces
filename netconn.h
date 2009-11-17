@@ -369,9 +369,9 @@ void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspoint
 //
 //============================================================================
 
-extern char net_extresponse[NET_EXTRESPONSE_MAX][1400];
-extern int net_extresponse_count;
-extern int net_extresponse_last;
+extern char cl_net_extresponse[NET_EXTRESPONSE_MAX][1400];
+extern int cl_net_extresponse_count;
+extern int cl_net_extresponse_last;
 
 extern char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
 extern int sv_net_extresponse_count;

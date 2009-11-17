@@ -5291,14 +5291,14 @@ void VM_CL_getextresponse (void)
 {
 	VM_SAFEPARMCOUNT(0,VM_argv);
 
-	if (net_extresponse_count <= 0)
+	if (cl_net_extresponse_count <= 0)
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	else
 	{
 		int first;
-		--net_extresponse_count;
-		first = (net_extresponse_last + NET_EXTRESPONSE_MAX - net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(net_extresponse[first]);
+		--cl_net_extresponse_count;
+		first = (cl_net_extresponse_last + NET_EXTRESPONSE_MAX - cl_net_extresponse_count) % NET_EXTRESPONSE_MAX;
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl_net_extresponse[first]);
 	}
 }
 
