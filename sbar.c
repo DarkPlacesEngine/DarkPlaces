@@ -1118,12 +1118,16 @@ void Sbar_ShowFPS(void)
 	char fpsstring[32];
 	char timestring[32];
 	char datestring[32];
+	char timedemostring1[32];
+	char timedemostring2[32];
 	char speedstring[32];
 	char blurstring[32];
 	char topspeedstring[48];
 	qboolean red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
+	timedemostring1[0] = 0;
+	timedemostring2[0] = 0;
 	timestring[0] = 0;
 	datestring[0] = 0;
 	speedstring[0] = 0;
@@ -1138,6 +1142,11 @@ void Sbar_ShowFPS(void)
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0 / showfps_framerate + 0.5));
 		else
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i fps", (int)(showfps_framerate + 0.5));
+		if (cls.timedemo)
+		{
+			dpsnprintf(timedemostring1, sizeof(timedemostring1), "frame%4i %f", cls.td_frames, realtime - cls.td_starttime);
+			dpsnprintf(timedemostring2, sizeof(timedemostring2), "%i seconds %3.0f/%3.0f/%3.0f fps", cls.td_onesecondavgcount, cls.td_onesecondminfps, cls.td_onesecondavgfps / max(1, cls.td_onesecondavgcount), cls.td_onesecondmaxfps);
+		}
 	}
 	if (showtime.integer)
 		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));
@@ -1183,11 +1192,11 @@ void Sbar_ShowFPS(void)
 			time(&current_time);
 		}
 	}
-	if (fpsstring[0] || timestring[0] || datestring[0] || speedstring[0] || blurstring[0] || topspeedstring[0])
+	if (fpsstring[0] || timedemostring1[0] || timedemostring2[0] || timestring[0] || datestring[0] || speedstring[0] || blurstring[0] || topspeedstring[0])
 	{
 		fps_scalex = 12;
 		fps_scaley = 12;
-		fps_height = fps_scaley * ((soundstring[0] != 0) + (blurstring[0] != 0) + (fpsstring[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0) + (speedstring[0] != 0) + (topspeedstring[0] != 0));
+		fps_height = fps_scaley * ((soundstring[0] != 0) + (blurstring[0] != 0) + (fpsstring[0] != 0) + (timedemostring1[0] != 0) + (timedemostring2[0] != 0) + (timestring[0] != 0) + (datestring[0] != 0) + (speedstring[0] != 0) + (topspeedstring[0] != 0));
 		//fps_y = vid_conheight.integer - sb_lines; // yes this may draw over the sbar
 		//fps_y = bound(0, fps_y, vid_conheight.integer - fps_height);
 		fps_y = vid_conheight.integer - sbar_info_pos.integer - fps_height;
@@ -1206,6 +1215,20 @@ void Sbar_ShowFPS(void)
 				DrawQ_String_Font(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
 			else
 				DrawQ_String_Font(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			fps_y += fps_scaley;
+		}
+		if (timedemostring1[0])
+		{
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timedemostring1, 0, true, FONT_INFOBAR) * fps_scalex;
+			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String_Font(fps_x, fps_y, timedemostring1, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			fps_y += fps_scaley;
+		}
+		if (timedemostring2[0])
+		{
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timedemostring2, 0, true, FONT_INFOBAR) * fps_scalex;
+			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String_Font(fps_x, fps_y, timedemostring2, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (timestring[0])
