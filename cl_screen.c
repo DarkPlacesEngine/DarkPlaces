@@ -58,6 +58,7 @@ cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off 
 cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
+cvar_t timedemo_screenshotframelist = {0, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
 
 extern cvar_t r_glsl;
 extern cvar_t v_glslgamma;
@@ -886,6 +887,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_refresh);
 	Cvar_RegisterVariable(&shownetgraph);
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
+	Cvar_RegisterVariable(&timedemo_screenshotframelist);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1587,6 +1589,41 @@ void SCR_DrawScreen (void)
 		r_refdef.view.y = 0;
 		r_refdef.view.z = 0;
 		r_refdef.view.useperspective = false;
+	}
+
+	if (cls.timedemo && cls.td_frames > 0 && timedemo_screenshotframelist.string && timedemo_screenshotframelist.string[0])
+	{
+		const char *t;
+		int framenum;
+		t = timedemo_screenshotframelist.string;
+		while (*t)
+		{
+			while (*t == ' ')
+				t++;
+			if (!*t)
+				break;
+			framenum = atof(t);
+			if (framenum == cls.td_frames)
+				break;
+			while (*t && *t != ' ')
+				t++;
+		}
+		if (*t)
+		{
+			// we need to take a screenshot of this frame...
+			char filename[MAX_QPATH];
+			unsigned char *buffer1;
+			unsigned char *buffer2;
+			unsigned char *buffer3;
+			dpsnprintf(filename, sizeof(filename), "timedemoscreenshots/%s%06d.tga", cls.demoname, cls.td_frames);
+			buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+			buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+			buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
+			SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, true);
+			Mem_Free(buffer1);
+			Mem_Free(buffer2);
+			Mem_Free(buffer3);
+		}
 	}
 
 	// draw 2D stuff
