@@ -1039,8 +1039,9 @@ void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
 	// self.frame1time is the animation base time for the interpolation target
 	// self.frame2 is the interpolation start (previous frame)
 	// self.frame2time is the animation base time for the interpolation start
-	// self.lerpfrac is the interpolation strength for self.frame
-	// 3+ are for additional blends (the main use for this feature is lerping
+	// self.lerpfrac is the interpolation strength for self.frame2
+	// self.lerpfrac3 is the interpolation strength for self.frame3
+	// self.lerpfrac4 is the interpolation strength for self.frame4
 	// pitch angle on a player model where the animator set up 5 sets of
 	// animations and the csqc simply lerps between sets)
 	entrender->framegroupblend[0].frame = entrender->framegroupblend[1].frame = (int) ed->fields.client->frame;
@@ -1055,8 +1056,8 @@ void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) entrender->framegroupblend[2].lerp = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) entrender->framegroupblend[3].lerp = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
-	// assume that the (missing) lerpfrac2 is whatever remains after lerpfrac+lerpfrac3+lerpfrac4 are summed
-	entrender->framegroupblend[1].lerp = 1 - entrender->framegroupblend[0].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
+	// assume that the (missing) lerpfrac1 is whatever remains after lerpfrac2+lerpfrac3+lerpfrac4 are summed
+	entrender->framegroupblend[0].lerp = 1 - entrender->framegroupblend[1].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
 }
 
 int CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix)
