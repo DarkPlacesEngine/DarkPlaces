@@ -1052,7 +1052,7 @@ void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->framegroupblend[1].start = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3time))) entrender->framegroupblend[2].start = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4time))) entrender->framegroupblend[3].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framegroupblend[0].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framegroupblend[1].lerp = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) entrender->framegroupblend[2].lerp = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) entrender->framegroupblend[3].lerp = val->_float;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
