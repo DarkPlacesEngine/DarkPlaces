@@ -218,6 +218,7 @@ cvar_t cl_decals_newsystem = {CVAR_SAVE, "cl_decals_newsystem", "0", "enables ne
 cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
 cvar_t cl_decals_models = {CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
 cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
+cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
 
 
 void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
@@ -502,6 +503,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_decals_newsystem_intensitymultiplier);
 	Cvar_RegisterVariable (&cl_decals_models);
 	Cvar_RegisterVariable (&cl_decals_bias);
+	Cvar_RegisterVariable (&cl_decals_max);
 }
 
 void CL_Particles_Shutdown (void)
@@ -707,6 +709,7 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	if (cl.num_decals < cl.free_decal)
 		cl.num_decals = cl.free_decal;
 	memset(decal, 0, sizeof(*decal));
+	decal->decalsequence = cl.decalsequence++;
 	decal->typeindex = pt_decal;
 	decal->texnum = texnum;
 	VectorMA(org, cl_decals_bias.value, normal, decal->org);
@@ -2206,7 +2209,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 
 	RSurf_ActiveWorldEntity();
 
-	r_refdef.stats.decals += numsurfaces;
+	r_refdef.stats.drawndecals += numsurfaces;
 	R_Mesh_ResetTextureState();
 	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
@@ -2278,6 +2281,7 @@ void R_DrawDecals (void)
 	float frametime;
 	float decalfade;
 	float drawdist2;
+	int killsequence = cl.decalsequence - max(0, cl_decals_max.integer);
 
 	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
 	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
@@ -2294,6 +2298,9 @@ void R_DrawDecals (void)
 	{
 		if (!decal->typeindex)
 			continue;
+
+		if (killsequence - decal->decalsequence > 0)
+			goto killdecal;
 
 		if (cl.time > decal->time2 + cl_decals_time.value)
 		{
@@ -2340,6 +2347,8 @@ killdecal:
 		memcpy(cl.decals, olddecals, cl.num_decals * sizeof(decal_t));
 		Mem_Free(olddecals);
 	}
+
+	r_refdef.stats.totaldecals = cl.num_decals;
 }
 
 void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)

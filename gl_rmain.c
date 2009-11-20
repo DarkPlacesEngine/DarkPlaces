@@ -3714,31 +3714,6 @@ static void R_DrawModelsAddWaterPlanes(void)
 	}
 }
 
-static void R_DrawModelDecals_Entity(entity_render_t *ent);
-static void R_DecalSystem_ApplySplatEntitiesQueue(void);
-static void R_DrawModelDecals(void)
-{
-	int i;
-	entity_render_t *ent;
-
-	R_DecalSystem_ApplySplatEntitiesQueue();
-
-	R_DrawModelDecals_Entity(r_refdef.scene.worldentity);
-
-	if (!r_drawentities.integer || r_showsurfaces.integer)
-		return;
-
-	for (i = 0;i < r_refdef.scene.numentities;i++)
-	{
-		if (!r_refdef.viewcache.entityvisible[i])
-			continue;
-		ent = r_refdef.scene.entities[i];
-		r_refdef.stats.entities++;
-		if (ent->decalsystem.numdecals)
-			R_DrawModelDecals_Entity(ent);
-	}
-}
-
 static void R_View_SetFrustum(void)
 {
 	int i;
@@ -5029,6 +5004,7 @@ extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
+static void R_DrawModelDecals(void);
 extern cvar_t cl_decals_newsystem;
 void R_RenderScene(void)
 {
@@ -8228,12 +8204,8 @@ void R_DecalSystem_Reset(decalsystem_t *decalsystem)
 	memset(decalsystem, 0, sizeof(*decalsystem));
 }
 
-static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex)
+static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex, int surfaceindex, int decalsequence)
 {
-	float *v3f;
-	float *tc2f;
-	float *c4f;
-	float ca;
 	tridecal_t *decal;
 	tridecal_t *decals;
 	int i;
@@ -8253,12 +8225,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 		decalsystem->element3i = (int *)(decalsystem->vertex3f + decalsystem->maxdecals*9);
 		decalsystem->element3s = (useshortelements ? ((unsigned short *)(decalsystem->element3i + decalsystem->maxdecals*3)) : NULL);
 		if (decalsystem->numdecals)
-		{
 			memcpy(decalsystem->decals, old.decals, decalsystem->numdecals * sizeof(tridecal_t));
-			memcpy(decalsystem->vertex3f, old.vertex3f, decalsystem->numdecals * sizeof(float[3][3]));
-			memcpy(decalsystem->texcoord2f, old.texcoord2f, decalsystem->numdecals * sizeof(float[3][2]));
-			memcpy(decalsystem->color4f, old.color4f, decalsystem->numdecals * sizeof(float[3][4]));
-		}
 		Mem_Free(old.decals);
 		for (i = 0;i < decalsystem->maxdecals*3;i++)
 			decalsystem->element3i[i] = i;
@@ -8271,10 +8238,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	maxdecals = decalsystem->maxdecals;
 	decals = decalsystem->decals;
 	decal = decalsystem->decals + (i = decalsystem->freedecal++);
-	v3f = decalsystem->vertex3f + 9*i;
-	tc2f = decalsystem->texcoord2f + 6*i;
-	c4f = decalsystem->color4f + 12*i;
-	for (i = decalsystem->freedecal;i < maxdecals && decals[i].colors[0][3];i++)
+	for (i = decalsystem->freedecal;i < decalsystem->numdecals && decals[i].color4ub[0][3];i++)
 		;
 	decalsystem->freedecal = i;
 	if (decalsystem->numdecals <= i)
@@ -8283,52 +8247,41 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	// initialize the decal
 	decal->lived = 0;
 	decal->triangleindex = triangleindex;
-	decal->colors[0][0] = (unsigned char)(c0[0]*255.0f);
-	decal->colors[0][1] = (unsigned char)(c0[1]*255.0f);
-	decal->colors[0][2] = (unsigned char)(c0[2]*255.0f);
-	decal->colors[0][3] = 255;
-	decal->colors[1][0] = (unsigned char)(c1[0]*255.0f);
-	decal->colors[1][1] = (unsigned char)(c1[1]*255.0f);
-	decal->colors[1][2] = (unsigned char)(c1[2]*255.0f);
-	decal->colors[1][3] = 255;
-	decal->colors[2][0] = (unsigned char)(c2[0]*255.0f);
-	decal->colors[2][1] = (unsigned char)(c2[1]*255.0f);
-	decal->colors[2][2] = (unsigned char)(c2[2]*255.0f);
-	decal->colors[2][3] = 255;
-	v3f[0] = v0[0];
-	v3f[1] = v0[1];
-	v3f[2] = v0[2];
-	v3f[3] = v1[0];
-	v3f[4] = v1[1];
-	v3f[5] = v1[2];
-	v3f[6] = v2[0];
-	v3f[7] = v2[1];
-	v3f[8] = v2[2];
-	tc2f[0] = t0[0];
-	tc2f[1] = t0[1];
-	tc2f[2] = t1[0];
-	tc2f[3] = t1[1];
-	tc2f[4] = t2[0];
-	tc2f[5] = t2[1];
-	ca = (1.0f/255.0f);
-	c4f[ 0] = decal->colors[0][0] * ca;
-	c4f[ 1] = decal->colors[0][1] * ca;
-	c4f[ 2] = decal->colors[0][2] * ca;
-	c4f[ 3] = 1;
-	c4f[ 4] = decal->colors[1][0] * ca;
-	c4f[ 5] = decal->colors[1][1] * ca;
-	c4f[ 6] = decal->colors[1][2] * ca;
-	c4f[ 7] = 1;
-	c4f[ 8] = decal->colors[2][0] * ca;
-	c4f[ 9] = decal->colors[2][1] * ca;
-	c4f[10] = decal->colors[2][2] * ca;
-	c4f[11] = 1;
+	decal->surfaceindex = surfaceindex;
+	decal->decalsequence = decalsequence;
+	decal->color4ub[0][0] = (unsigned char)(c0[0]*255.0f);
+	decal->color4ub[0][1] = (unsigned char)(c0[1]*255.0f);
+	decal->color4ub[0][2] = (unsigned char)(c0[2]*255.0f);
+	decal->color4ub[0][3] = 255;
+	decal->color4ub[1][0] = (unsigned char)(c1[0]*255.0f);
+	decal->color4ub[1][1] = (unsigned char)(c1[1]*255.0f);
+	decal->color4ub[1][2] = (unsigned char)(c1[2]*255.0f);
+	decal->color4ub[1][3] = 255;
+	decal->color4ub[2][0] = (unsigned char)(c2[0]*255.0f);
+	decal->color4ub[2][1] = (unsigned char)(c2[1]*255.0f);
+	decal->color4ub[2][2] = (unsigned char)(c2[2]*255.0f);
+	decal->color4ub[2][3] = 255;
+	decal->vertex3f[0][0] = v0[0];
+	decal->vertex3f[0][1] = v0[1];
+	decal->vertex3f[0][2] = v0[2];
+	decal->vertex3f[1][0] = v1[0];
+	decal->vertex3f[1][1] = v1[1];
+	decal->vertex3f[1][2] = v1[2];
+	decal->vertex3f[2][0] = v2[0];
+	decal->vertex3f[2][1] = v2[1];
+	decal->vertex3f[2][2] = v2[2];
+	decal->texcoord2f[0][0] = t0[0];
+	decal->texcoord2f[0][1] = t0[1];
+	decal->texcoord2f[1][0] = t1[0];
+	decal->texcoord2f[1][1] = t1[1];
+	decal->texcoord2f[2][0] = t2[0];
+	decal->texcoord2f[2][1] = t2[1];
 }
 
 extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
-static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, int decalsequence)
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
@@ -8343,7 +8296,9 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	int numtriangles;
 	int numsurfacelist;
 	int surfacelistindex;
+	int surfaceindex;
 	int triangleindex;
+	int decalsurfaceindex;
 	int cornerindex;
 	int index;
 	int numpoints;
@@ -8448,7 +8403,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	surfaces = model->data_surfaces;
 	for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
 	{
-		surface = surfaces + surfacelist[surfacelistindex];
+		surfaceindex = surfacelist[surfacelistindex];
+		surface = surfaces + surfaceindex;
 		// skip transparent surfaces
 		texture = surface->texture;
 		if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
@@ -8457,6 +8413,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 			continue;
 		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
 			continue;
+		decalsurfaceindex = ent == r_refdef.scene.worldentity ? surfaceindex : -1;
 		numvertices = surface->num_vertices;
 		numtriangles = surface->num_triangles;
 		for (triangleindex = 0, e = model->surfmesh.data_element3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
@@ -8517,16 +8474,16 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 				//VectorMA(v[cornerindex], cl_decals_bias.value, localnormal, v[cornerindex]);
 			}
 			if (dynamic)
-				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex+surface->num_firsttriangle);
+				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex+surface->num_firsttriangle, surfaceindex, decalsequence);
 			else
 				for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
-					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1);
+					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, surfaceindex, decalsequence);
 		}
 	}
 }
 
 // do not call this outside of rendering code - use R_DecalSystem_SplatEntities instead
-static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, int decalsequence)
 {
 	int renderentityindex;
 	float worldmins[3];
@@ -8543,7 +8500,7 @@ static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec
 	worldmaxs[1] = worldorigin[1] + worldsize;
 	worldmaxs[2] = worldorigin[2] + worldsize;
 
-	R_DecalSystem_SplatEntity(r_refdef.scene.worldentity, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize);
+	R_DecalSystem_SplatEntity(r_refdef.scene.worldentity, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize, decalsequence);
 
 	for (renderentityindex = 0;renderentityindex < r_refdef.scene.numentities;renderentityindex++)
 	{
@@ -8551,7 +8508,7 @@ static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec
 		if (!BoxesOverlap(ent->mins, ent->maxs, worldmins, worldmaxs))
 			continue;
 
-		R_DecalSystem_SplatEntity(ent, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize);
+		R_DecalSystem_SplatEntity(ent, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize, decalsequence);
 	}
 }
 
@@ -8562,38 +8519,107 @@ typedef struct r_decalsystem_splatqueue_s
 	float color[4];
 	float tcrange[4];
 	float worldsize;
+	int decalsequence;
 }
 r_decalsystem_splatqueue_t;
 
-int r_decalsystem_queuestart = 0;
-int r_decalsystem_queueend = 0;
-#define MAX_DECALSYSTEM_QUEUE 128
+int r_decalsystem_numqueued = 0;
+#define MAX_DECALSYSTEM_QUEUE 1024
 r_decalsystem_splatqueue_t r_decalsystem_queue[MAX_DECALSYSTEM_QUEUE];
 
 void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
 	r_decalsystem_splatqueue_t *queue;
 
-	if (!cl_decals_newsystem.integer)
+	if (!cl_decals_newsystem.integer || r_decalsystem_numqueued == MAX_DECALSYSTEM_QUEUE)
 		return;
 
-	queue = &r_decalsystem_queue[(r_decalsystem_queueend++) % MAX_DECALSYSTEM_QUEUE];
+	queue = &r_decalsystem_queue[r_decalsystem_numqueued++];
 	VectorCopy(worldorigin, queue->worldorigin);
 	VectorCopy(worldnormal, queue->worldnormal);
 	Vector4Set(queue->color, r, g, b, a);
 	Vector4Set(queue->tcrange, s1, t1, s2, t2);
 	queue->worldsize = worldsize;
+	queue->decalsequence = cl.decalsequence++;
 }
 
 static void R_DecalSystem_ApplySplatEntitiesQueue(void)
 {
+	int i;
 	r_decalsystem_splatqueue_t *queue;
 
-	r_decalsystem_queuestart = max(r_decalsystem_queuestart, r_decalsystem_queueend - MAX_DECALSYSTEM_QUEUE);
-	while (r_decalsystem_queuestart < r_decalsystem_queueend)
+	for (i = 0, queue = r_decalsystem_queue;i < r_decalsystem_numqueued;i++, queue++)
+		R_DecalSystem_ApplySplatEntities(queue->worldorigin, queue->worldnormal, queue->color[0], queue->color[1], queue->color[2], queue->color[3], queue->tcrange[0], queue->tcrange[1], queue->tcrange[2], queue->tcrange[3], queue->worldsize, queue->decalsequence);
+	r_decalsystem_numqueued = 0;
+}
+
+extern cvar_t cl_decals_max;
+static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
+{
+	int i;
+	decalsystem_t *decalsystem = &ent->decalsystem;
+	int numdecals;
+	int killsequence;
+	tridecal_t *decal;
+	float frametime;
+	float lifetime;
+
+	if (!decalsystem->numdecals)
+		return;
+
+	if (r_showsurfaces.integer)
+		return;
+
+	if (ent->model != decalsystem->model || ent->alpha < 1 || (ent->flags & RENDER_ADDITIVE))
 	{
-		queue = &r_decalsystem_queue[(r_decalsystem_queuestart++) % MAX_DECALSYSTEM_QUEUE];
-		R_DecalSystem_ApplySplatEntities(queue->worldorigin, queue->worldnormal, queue->color[0], queue->color[1], queue->color[2], queue->color[3], queue->tcrange[0], queue->tcrange[1], queue->tcrange[2], queue->tcrange[3], queue->worldsize);
+		R_DecalSystem_Reset(decalsystem);
+		return;
+	}
+
+	killsequence = cl.decalsequence - max(1, cl_decals_max.integer);
+	lifetime = cl_decals_time.value + cl_decals_fadetime.value;
+
+	if (decalsystem->lastupdatetime)
+		frametime = (cl.time - decalsystem->lastupdatetime);
+	else
+		frametime = 0;
+	decalsystem->lastupdatetime = cl.time;
+	decal = decalsystem->decals;
+	numdecals = decalsystem->numdecals;
+
+	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
+	{
+		if (decal->color4ub[0][3])
+		{
+			decal->lived += frametime;
+			if (killsequence - decal->decalsequence > 0 || decal->lived >= lifetime)
+			{
+				memset(decal, 0, sizeof(*decal));
+				if (decalsystem->freedecal > i)
+					decalsystem->freedecal = i;
+			}
+		}
+	}
+	decal = decalsystem->decals;
+	while (numdecals > 0 && !decal[numdecals-1].color4ub[0][3])
+		numdecals--;
+
+	// collapse the array by shuffling the tail decals into the gaps
+	for (;;)
+	{
+		while (decalsystem->freedecal < numdecals && decal[decalsystem->freedecal].color4ub[0][3])
+			decalsystem->freedecal++;
+		if (decalsystem->freedecal == numdecals)
+			break;
+		decal[decalsystem->freedecal] = decal[--numdecals];
+	}
+
+	decalsystem->numdecals = numdecals;
+
+	if (numdecals <= 0)
+	{
+		// if there are no decals left, reset decalsystem
+		R_DecalSystem_Reset(decalsystem);
 	}
 }
 
@@ -8604,15 +8630,18 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	decalsystem_t *decalsystem = &ent->decalsystem;
 	int numdecals;
 	tridecal_t *decal;
-	float frametime;
 	float fadedelay;
 	float faderate;
 	float alpha;
 	float *v3f;
 	float *c4f;
+	float *t2f;
 	const int *e;
+	const unsigned char *surfacevisible = r_refdef.viewcache.world_surfacevisible;
+	int numtris = 0;
 
-	if (!decalsystem->numdecals)
+	numdecals = decalsystem->numdecals;
+	if (!numdecals)
 		return;
 
 	if (r_showsurfaces.integer)
@@ -8632,77 +8661,80 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	else
 		RSurf_ActiveModelEntity(ent, false, false);
 
-	if (decalsystem->lastupdatetime)
-		frametime = cl.time - decalsystem->lastupdatetime;
-	else
-		frametime = 0;
 	decalsystem->lastupdatetime = cl.time;
 	decal = decalsystem->decals;
-	numdecals = decalsystem->numdecals;
 
 	fadedelay = cl_decals_time.value;
 	faderate = 1.0f / max(0.001f, cl_decals_fadetime.value);
 
+	// update vertex positions for animated models
+	v3f = decalsystem->vertex3f;
+	c4f = decalsystem->color4f;
+	t2f = decalsystem->texcoord2f;
 	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
 	{
-		if (!decal->colors[0][3])
+		if (!decal->color4ub[0][3])
 			continue;
 
-		decal->lived += frametime;
-		if (decal->lived >= fadedelay)
+		if (decal->surfaceindex >= 0 && !surfacevisible[decal->surfaceindex])
+			continue;
+
+		// update color values for fading decals
+		if (decal->lived >= cl_decals_time.value)
 		{
 			alpha = 1 - faderate * (decal->lived - cl_decals_time.value);
-			if (alpha <= 0)
-			{
-				// kill the decal by zeroing vertex data
-				memset(decalsystem->vertex3f + 9*i, 0, sizeof(float[3][3]));
-				memset(decalsystem->texcoord2f + 6*i, 0, sizeof(float[3][2]));
-				memset(decalsystem->color4f + 12*i, 0, sizeof(float[3][4]));
-				memset(decal, 0, sizeof(*decal));
-				if (decalsystem->freedecal > i)
-					decalsystem->freedecal = i;
-				continue;
-			}
-
-			// update color values for fading decals
 			alpha *= (1.0f/255.0f);
-			c4f = decalsystem->color4f + 12*i;
-			c4f[ 0] = decal->colors[0][0] * alpha;
-			c4f[ 1] = decal->colors[0][1] * alpha;
-			c4f[ 2] = decal->colors[0][2] * alpha;
-			c4f[ 3] = 1;
-			c4f[ 4] = decal->colors[1][0] * alpha;
-			c4f[ 5] = decal->colors[1][1] * alpha;
-			c4f[ 6] = decal->colors[1][2] * alpha;
-			c4f[ 7] = 1;
-			c4f[ 8] = decal->colors[2][0] * alpha;
-			c4f[ 9] = decal->colors[2][1] * alpha;
-			c4f[10] = decal->colors[2][2] * alpha;
-			c4f[11] = 1;
 		}
+		else
+			alpha = 1.0f/255.0f;
+
+		c4f[ 0] = decal->color4ub[0][0] * alpha;
+		c4f[ 1] = decal->color4ub[0][1] * alpha;
+		c4f[ 2] = decal->color4ub[0][2] * alpha;
+		c4f[ 3] = 1;
+		c4f[ 4] = decal->color4ub[1][0] * alpha;
+		c4f[ 5] = decal->color4ub[1][1] * alpha;
+		c4f[ 6] = decal->color4ub[1][2] * alpha;
+		c4f[ 7] = 1;
+		c4f[ 8] = decal->color4ub[2][0] * alpha;
+		c4f[ 9] = decal->color4ub[2][1] * alpha;
+		c4f[10] = decal->color4ub[2][2] * alpha;
+		c4f[11] = 1;
+
+		t2f[0] = decal->texcoord2f[0][0];
+		t2f[1] = decal->texcoord2f[0][1];
+		t2f[2] = decal->texcoord2f[1][0];
+		t2f[3] = decal->texcoord2f[1][1];
+		t2f[4] = decal->texcoord2f[2][0];
+		t2f[5] = decal->texcoord2f[2][1];
 
 		// update vertex positions for animated models
 		if (decal->triangleindex >= 0 && decal->triangleindex < rsurface.modelnum_triangles)
 		{
 			e = rsurface.modelelement3i + 3*decal->triangleindex;
-			v3f = decalsystem->vertex3f + 9*i;
 			VectorCopy(rsurface.vertex3f + 3*e[0], v3f);
 			VectorCopy(rsurface.vertex3f + 3*e[1], v3f + 3);
 			VectorCopy(rsurface.vertex3f + 3*e[2], v3f + 6);
 		}
+		else
+		{
+			VectorCopy(decal->vertex3f[0], v3f);
+			VectorCopy(decal->vertex3f[1], v3f + 3);
+			VectorCopy(decal->vertex3f[2], v3f + 6);
+		}
+
+		v3f += 9;
+		c4f += 12;
+		t2f += 6;
+		numtris++;
 	}
 
-	// reduce numdecals if possible
-	while (numdecals > 0 && !decalsystem->decals[numdecals - 1].colors[0][3])
-		numdecals--;
-	decalsystem->numdecals = numdecals;
-
-	if (numdecals > 0)
+	if (numtris > 0)
 	{
-		r_refdef.stats.decals += numdecals;
+		r_refdef.stats.drawndecals += numtris;
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
-		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numdecals, decalsystem->element3i, decalsystem->element3s, false, false);
+		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numtris, decalsystem->element3i, decalsystem->element3s, false, false);
 		R_Mesh_ResetTextureState();
 		R_Mesh_VertexPointer(decalsystem->vertex3f, 0, 0);
 		R_Mesh_TexCoordPointer(0, 2, decalsystem->texcoord2f, 0, 0);
@@ -8716,15 +8748,48 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 		R_Mesh_TexBind(0, R_GetTexture(decalskinframe->base));
 		//R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-		GL_LockArrays(0, numdecals * 3);
-		R_Mesh_Draw(0, numdecals * 3, 0, numdecals, decalsystem->element3i, decalsystem->element3s, 0, 0);
+		GL_LockArrays(0, numtris * 3);
+		R_Mesh_Draw(0, numtris * 3, 0, numtris, decalsystem->element3i, decalsystem->element3s, 0, 0);
 		GL_LockArrays(0, 0);
 	}
+}
 
-	if (numdecals <= 0)
+static void R_DrawModelDecals(void)
+{
+	int i, numdecals;
+
+	// fade faster when there are too many decals
+	numdecals = r_refdef.scene.worldentity->decalsystem.numdecals;
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+		numdecals += r_refdef.scene.entities[i]->decalsystem.numdecals;
+
+	R_DrawModelDecals_FadeEntity(r_refdef.scene.worldentity);
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+		if (r_refdef.scene.entities[i]->decalsystem.numdecals)
+			R_DrawModelDecals_FadeEntity(r_refdef.scene.entities[i]);
+
+	R_DecalSystem_ApplySplatEntitiesQueue();
+
+	numdecals = r_refdef.scene.worldentity->decalsystem.numdecals;
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+		numdecals += r_refdef.scene.entities[i]->decalsystem.numdecals;
+
+	r_refdef.stats.totaldecals += numdecals;
+
+	if (r_showsurfaces.integer)
+		return;
+
+	R_DrawModelDecals_Entity(r_refdef.scene.worldentity);
+
+	if (!r_drawentities.integer)
+		return;
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
-		// if there are no decals left, reset decalsystem
-		R_DecalSystem_Reset(decalsystem);
+		if (!r_refdef.viewcache.entityvisible[i])
+			continue;
+		if (r_refdef.scene.entities[i]->decalsystem.numdecals)
+			R_DrawModelDecals_Entity(r_refdef.scene.entities[i]);
 	}
 }
 
