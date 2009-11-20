@@ -3715,10 +3715,13 @@ static void R_DrawModelsAddWaterPlanes(void)
 }
 
 static void R_DrawModelDecals_Entity(entity_render_t *ent);
+static void R_DecalSystem_ApplySplatEntitiesQueue(void);
 static void R_DrawModelDecals(void)
 {
 	int i;
 	entity_render_t *ent;
+
+	R_DecalSystem_ApplySplatEntitiesQueue();
 
 	R_DrawModelDecals_Entity(r_refdef.scene.worldentity);
 
@@ -8225,7 +8228,7 @@ void R_DecalSystem_Reset(decalsystem_t *decalsystem)
 	memset(decalsystem, 0, sizeof(*decalsystem));
 }
 
-void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex)
+static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex)
 {
 	float *v3f;
 	float *tc2f;
@@ -8325,7 +8328,7 @@ void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, co
 extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
-void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
@@ -8522,12 +8525,16 @@ void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, c
 	}
 }
 
-void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+// do not call this outside of rendering code - use R_DecalSystem_SplatEntities instead
+static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
 {
 	int renderentityindex;
 	float worldmins[3];
 	float worldmaxs[3];
 	entity_render_t *ent;
+
+	if (!cl_decals_newsystem.integer)
+		return;
 
 	worldmins[0] = worldorigin[0] - worldsize;
 	worldmins[1] = worldorigin[1] - worldsize;
@@ -8545,6 +8552,48 @@ void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnor
 			continue;
 
 		R_DecalSystem_SplatEntity(ent, worldorigin, worldnormal, r, g, b, a, s1, t1, s2, t2, worldsize);
+	}
+}
+
+typedef struct r_decalsystem_splatqueue_s
+{
+	vec3_t worldorigin;
+	vec3_t worldnormal;
+	float color[4];
+	float tcrange[4];
+	float worldsize;
+}
+r_decalsystem_splatqueue_t;
+
+int r_decalsystem_queuestart = 0;
+int r_decalsystem_queueend = 0;
+#define MAX_DECALSYSTEM_QUEUE 128
+r_decalsystem_splatqueue_t r_decalsystem_queue[MAX_DECALSYSTEM_QUEUE];
+
+void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
+{
+	r_decalsystem_splatqueue_t *queue;
+
+	if (!cl_decals_newsystem.integer)
+		return;
+
+	queue = &r_decalsystem_queue[(r_decalsystem_queueend++) % MAX_DECALSYSTEM_QUEUE];
+	VectorCopy(worldorigin, queue->worldorigin);
+	VectorCopy(worldnormal, queue->worldnormal);
+	Vector4Set(queue->color, r, g, b, a);
+	Vector4Set(queue->tcrange, s1, t1, s2, t2);
+	queue->worldsize = worldsize;
+}
+
+static void R_DecalSystem_ApplySplatEntitiesQueue(void)
+{
+	r_decalsystem_splatqueue_t *queue;
+
+	r_decalsystem_queuestart = max(r_decalsystem_queuestart, r_decalsystem_queueend - MAX_DECALSYSTEM_QUEUE);
+	while (r_decalsystem_queuestart < r_decalsystem_queueend)
+	{
+		queue = &r_decalsystem_queue[(r_decalsystem_queuestart++) % MAX_DECALSYSTEM_QUEUE];
+		R_DecalSystem_ApplySplatEntities(queue->worldorigin, queue->worldnormal, queue->color[0], queue->color[1], queue->color[2], queue->color[3], queue->tcrange[0], queue->tcrange[1], queue->tcrange[2], queue->tcrange[3], queue->worldsize);
 	}
 }
 
