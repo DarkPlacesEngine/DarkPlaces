@@ -32,11 +32,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct tridecal_s
 {
 	// color and initial alpha value
-	unsigned char	colors[3][4];
+	float			texcoord2f[3][2];
+	float			vertex3f[3][3];
+	unsigned char	color4ub[3][4];
 	// how long this decal has lived so far (the actual fade begins at cl_decals_time)
 	float			lived;
 	// if >= 0 this indicates the decal should follow an animated triangle
 	int				triangleindex;
+	// for visibility culling
+	int				surfaceindex;
+	// old decals are killed to obey cl_decals_max
+	int				decalsequence;
 }
 tridecal_t;
 
@@ -733,6 +739,7 @@ typedef struct decal_s
 	// fields used by rendering:  (44 bytes)
 	unsigned short	typeindex;
 	unsigned short	texnum;
+	int				decalsequence;
 	vec3_t			org;
 	vec3_t			normal;
 	float			size;
@@ -1021,6 +1028,9 @@ typedef struct client_state_s
 	vec3_t playerstandmaxs;
 	vec3_t playercrouchmins;
 	vec3_t playercrouchmaxs;
+
+	// old decals are killed based on this
+	int decalsequence;
 
 	int max_entities;
 	int max_csqcrenderentities;
@@ -1452,7 +1462,8 @@ typedef struct r_refdef_stats_s
 	int lightmapupdates;
 	int lightmapupdatepixels;
 	int particles;
-	int decals;
+	int drawndecals;
+	int totaldecals;
 	int meshes;
 	int meshes_elements;
 	int lights;

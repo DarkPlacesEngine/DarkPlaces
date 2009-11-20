@@ -765,7 +765,7 @@ void R_TimeReport_EndFrame(void)
 , r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]
 , viewleaf ? (int)(viewleaf - r_refdef.scene.worldmodel->brush.data_leafs) : -1, viewleaf ? viewleaf->clusterindex : -1, viewleaf ? viewleaf->areaindex : -1, viewleaf ? viewleaf->numleafbrushes : 0, viewleaf ? viewleaf->numleafsurfaces : 0, viewleaf ? R_CountLeafTriangles(r_refdef.scene.worldmodel, viewleaf) : 0
 , r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles
-, r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.decals, cl.num_decals, (int)(100 * r_refdef.view.quality)
+, r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.drawndecals, r_refdef.stats.totaldecals, (int)(100 * r_refdef.view.quality)
 , r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
 , r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
