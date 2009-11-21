@@ -39,8 +39,8 @@ cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess"
 cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
-cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "16", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first"};
-cvar_t mod_q3bsp_curves_stride = {0, "mod_q3bsp_curves_stride", "16", "particle effect collisions against curves: optimize performance by doing a combined collision check for this triangle amount first"};
+cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "16", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
+cvar_t mod_q3bsp_curves_stride = {0, "mod_q3bsp_curves_stride", "16", "particle effect collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1", "whether to use optimized traceline code for line traces (as opposed to tracebox code)"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "selects different tracebrush bsp recursion algorithms (for debugging purposes only)"};
 cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "4", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
@@ -522,7 +522,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		surface = info->model->data_surfaces + *mark;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
-			if(surface->num_bboxstride)
+			if(surface->num_bboxstride > 0)
 			{
 				int i, cnt, tri;
 				cnt = (surface->num_triangles + surface->num_bboxstride - 1) / surface->num_bboxstride;
@@ -4775,9 +4775,9 @@ static void Mod_Q3BSP_BuildBBoxes(const int *element3i, int num_triangles, const
 	int j, k, cnt, tri;
 	float *mins, *maxs;
 	const float *vert;
+	*collisionstride = stride;
 	if(stride > 0)
 	{
-		*collisionstride = stride;
 		cnt = (num_triangles + stride - 1) / stride;
 		*collisionbbox6f = (float *) Mem_Alloc(loadmodel->mempool, sizeof(float[6]) * cnt);
 		for(j = 0; j < cnt; ++j)
@@ -4814,10 +4814,7 @@ static void Mod_Q3BSP_BuildBBoxes(const int *element3i, int num_triangles, const
 		}
 	}
 	else
-	{
-		*collisionstride = 0;
 		*collisionbbox6f = NULL;
-	}
 }
 
 typedef struct patchtess_s

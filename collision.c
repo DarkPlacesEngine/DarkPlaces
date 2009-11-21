@@ -1044,7 +1044,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 		brush.planes[i].q3surfaceflags = q3surfaceflags;
 		brush.planes[i].texture = texture;
 	}
-	if(stride)
+	if(stride > 0)
 	{
 		int k, cnt, tri;
 		cnt = (numtriangles + stride - 1) / stride;
@@ -1069,7 +1069,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 			}
 		}
 	}
-	else
+	else if(stride == 0)
 	{
 		for (i = 0;i < numtriangles;i++, element3i += 3)
 		{
@@ -1086,14 +1086,27 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 			}
 		}
 	}
+	else
+	{
+		for (i = 0;i < numtriangles;i++, element3i += 3)
+		{
+			VectorCopy(vertex3f + element3i[0] * 3, points[0].v);
+			VectorCopy(vertex3f + element3i[1] * 3, points[1].v);
+			VectorCopy(vertex3f + element3i[2] * 3, points[2].v);
+			Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
+			Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
+			Collision_CalcPlanesForPolygonBrushFloat(&brush);
+			//Collision_PrintBrushAsQHull(&brush, "brush");
+			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
+		}
+	}
 }
 
 void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
-#if 1
 	// FIXME: snap vertices?
-	if(stride)
+	if(stride > 0)
 	{
 		int k, cnt, tri;
 		cnt = (numtriangles + stride - 1) / stride;
@@ -1116,43 +1129,6 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 		for (i = 0;i < numtriangles;i++, element3i += 3)
 			Collision_TraceLineTriangleFloat(trace, linestart, lineend, vertex3f + element3i[0] * 3, vertex3f + element3i[1] * 3, vertex3f + element3i[2] * 3, supercontents, q3surfaceflags, texture);
 	}
-#else
-	colpointf_t points[3];
-	colpointf_t edgedirs[3];
-	colplanef_t planes[5];
-	colbrushf_t brush;
-	memset(&brush, 0, sizeof(brush));
-	brush.isaabb = false;
-	brush.hasaabbplanes = false;
-	brush.numpoints = 3;
-	brush.numedgedirs = 3;
-	brush.numplanes = 5;
-	brush.points = points;
-	brush.edgedirs = edgedirs;
-	brush.planes = planes;
-	brush.supercontents = supercontents;
-	brush.q3surfaceflags = q3surfaceflags;
-	brush.texture = texture;
-	for (i = 0;i < brush.numplanes;i++)
-	{
-		brush.planes[i].q3surfaceflags = q3surfaceflags;
-		brush.planes[i].texture = texture;
-	}
-	for (i = 0;i < numtriangles;i++, element3i += 3)
-	{
-		if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3 + [element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
-		{
-			VectorCopy(vertex3f + element3i[0] * 3, points[0].v);
-			VectorCopy(vertex3f + element3i[1] * 3, points[1].v);
-			VectorCopy(vertex3f + element3i[2] * 3, points[2].v);
-			Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
-			Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
-			Collision_CalcPlanesForPolygonBrushFloat(&brush);
-			//Collision_PrintBrushAsQHull(&brush, "brush");
-			Collision_TraceLineBrushFloat(trace, linestart, lineend, &brush, &brush);
-		}
-	}
-#endif
 }
 
 void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture)
