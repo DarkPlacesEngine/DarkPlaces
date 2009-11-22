@@ -1558,7 +1558,7 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 
 //===========================================
 
-void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
+void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	float starttransformed[3], endtransformed[3];
 
@@ -1572,7 +1572,7 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, int frame,
 #endif
 
 	if (model && model->TraceBox)
-		model->TraceBox(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
+		model->TraceBox(model, frameblend, skeleton, trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
 	else
 		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
 	trace->fraction = bound(0, trace->fraction, 1);
@@ -1589,13 +1589,13 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
 	if (model && model->TraceBox)
-		model->TraceBox(model, 0, trace, start, mins, maxs, end, hitsupercontents);
+		model->TraceBox(model, NULL, NULL, trace, start, mins, maxs, end, hitsupercontents);
 	trace->fraction = bound(0, trace->fraction, 1);
 	trace->realfraction = bound(0, trace->realfraction, 1);
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 }
 
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	float starttransformed[3], endtransformed[3];
 
@@ -1609,7 +1609,7 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, int fr
 #endif
 
 	if (model && model->TraceLine)
-		model->TraceLine(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, endtransformed, hitsupercontentsmask);
+		model->TraceLine(model, frameblend, skeleton, trace, starttransformed, endtransformed, hitsupercontentsmask);
 	else
 		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
 	trace->fraction = bound(0, trace->fraction, 1);
@@ -1626,13 +1626,13 @@ void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t s
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
 	if (model && model->TraceLine)
-		model->TraceLine(model, 0, trace, start, end, hitsupercontents);
+		model->TraceLine(model, NULL, NULL, trace, start, end, hitsupercontents);
 	trace->fraction = bound(0, trace->fraction, 1);
 	trace->realfraction = bound(0, trace->realfraction, 1);
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 }
 
-void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int frame, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask)
+void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask)
 {
 	float starttransformed[3];
 
@@ -1645,7 +1645,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, int f
 #endif
 
 	if (model && model->TracePoint)
-		model->TracePoint(model, bound(0, frame, (model->numframes - 1)), trace, starttransformed, hitsupercontentsmask);
+		model->TracePoint(model, NULL, NULL, trace, starttransformed, hitsupercontentsmask);
 	else
 		Collision_ClipTrace_Point(trace, bodymins, bodymaxs, starttransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
 
@@ -1660,7 +1660,7 @@ void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
 	if (model && model->TracePoint)
-		model->TracePoint(model, 0, trace, start, hitsupercontents);
+		model->TracePoint(model, NULL, NULL, trace, start, hitsupercontents);
 	VectorCopy(start, trace->endpos);
 }
 

@@ -46,7 +46,7 @@ void Mod_AliasInit (void)
 		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
 }
 
-void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
 {
 #define MAX_BONES 256
 	// vertex weighted skeletal
@@ -56,41 +56,64 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	float boneposerelative[MAX_BONES][12];
 	float *matrix, m[12], bonepose[MAX_BONES][12];
 
-	// interpolate matrices and concatenate them to their parents
-	for (i = 0;i < model->num_bones;i++)
+	if (skeleton && !skeleton->relativetransforms)
+		skeleton = NULL;
+
+	// interpolate matrices
+	if (skeleton)
 	{
-		for (k = 0;k < 12;k++)
-			m[k] = 0;
-		VectorClear(desiredscale);
-		for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
+		for (i = 0;i < model->num_bones;i++)
 		{
-			matrix = model->data_poses + (frameblend[blends].subframe * model->num_bones + i) * 12;
-			for (k = 0;k < 12;k++)
-				m[k] += matrix[k] * frameblend[blends].lerp;
-			desiredscale[0] += frameblend[blends].lerp * VectorLength(matrix    );
-			desiredscale[1] += frameblend[blends].lerp * VectorLength(matrix + 4);
-			desiredscale[2] += frameblend[blends].lerp * VectorLength(matrix + 8);
+			Matrix4x4_ToArray12FloatD3D(&skeleton->relativetransforms[i], m);
+			if (model->data_bones[i].parent >= 0)
+				R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
+			else
+				for (k = 0;k < 12;k++)
+					bonepose[i][k] = m[k];
+	
+			// create a relative deformation matrix to describe displacement
+			// from the base mesh, which is used by the actual weighting
+			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
 		}
-		VectorNormalize(m    );
-		VectorNormalize(m + 4);
-		VectorNormalize(m + 8);
-		VectorScale(m    , desiredscale[0], m    );
-		VectorScale(m + 4, desiredscale[1], m + 4);
-		VectorScale(m + 8, desiredscale[2], m + 8);
-		if (i == r_skeletal_debugbone.integer)
-			m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
-		m[3] *= r_skeletal_debugtranslatex.value;
-		m[7] *= r_skeletal_debugtranslatey.value;
-		m[11] *= r_skeletal_debugtranslatez.value;
-		if (model->data_bones[i].parent >= 0)
-			R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
-		else
-			for (k = 0;k < 12;k++)
-				bonepose[i][k] = m[k];
-		// create a relative deformation matrix to describe displacement
-		// from the base mesh, which is used by the actual weighting
-		R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
 	}
+	else
+	{
+		for (i = 0;i < model->num_bones;i++)
+		{
+			for (k = 0;k < 12;k++)
+				m[k] = 0;
+			VectorClear(desiredscale);
+			for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
+			{
+				matrix = model->data_poses + (frameblend[blends].subframe * model->num_bones + i) * 12;
+				for (k = 0;k < 12;k++)
+					m[k] += matrix[k] * frameblend[blends].lerp;
+				desiredscale[0] += frameblend[blends].lerp * VectorLength(matrix    );
+				desiredscale[1] += frameblend[blends].lerp * VectorLength(matrix + 4);
+				desiredscale[2] += frameblend[blends].lerp * VectorLength(matrix + 8);
+			}
+			VectorNormalize(m    );
+			VectorNormalize(m + 4);
+			VectorNormalize(m + 8);
+			VectorScale(m    , desiredscale[0], m    );
+			VectorScale(m + 4, desiredscale[1], m + 4);
+			VectorScale(m + 8, desiredscale[2], m + 8);
+			if (i == r_skeletal_debugbone.integer)
+				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
+			m[3] *= r_skeletal_debugtranslatex.value;
+			m[7] *= r_skeletal_debugtranslatey.value;
+			m[11] *= r_skeletal_debugtranslatez.value;
+			if (model->data_bones[i].parent >= 0)
+				R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
+			else
+				for (k = 0;k < 12;k++)
+					bonepose[i][k] = m[k];
+			// create a relative deformation matrix to describe displacement
+			// from the base mesh, which is used by the actual weighting
+			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
+		}
+	}
+
 	// blend the vertex bone weights
 	// special case for the extremely common wf[0] == 1 because it saves 3 multiplies per array when compared to the other case (w[0] is always 1 if only one bone controls this vertex, artists only use multiple bones for certain special cases)
 	// special case for the first bone because it avoids the need to memset the arrays before filling
@@ -228,7 +251,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	}
 }
 
-void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -317,7 +340,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	}
 }
 
-void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -414,34 +437,68 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	}
 }
 
-int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix)
+int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, matrix4x4_t *outmatrix)
 {
+	matrix4x4_t temp;
 	const float *boneframe;
-	float tempbonematrix[12], bonematrix[12];
+	const float *input;
+	int blendindex;
+	int parenttagindex;
+	int k;
+	float lerp;
+	float tempbonematrix[12], bonematrix[12], blendmatrix[12];
 	*outmatrix = identitymatrix;
-	if (model->num_bones)
+	if (skeleton && skeleton->relativetransforms)
+	{
+		if (tagindex < 0 || tagindex >= skeleton->model->num_bones)
+			return 4;
+		*outmatrix = skeleton->relativetransforms[tagindex];
+		while ((tagindex = model->data_bones[tagindex].parent) >= 0)
+		{
+			temp = *outmatrix;
+			Matrix4x4_Concat(outmatrix, &skeleton->relativetransforms[tagindex], &temp);
+		}
+	}
+	else if (model->num_bones)
 	{
 		if (tagindex < 0 || tagindex >= model->num_bones)
 			return 4;
-		if (poseframe >= model->num_poses)
-			return 6;
-		boneframe = model->data_poses + poseframe * model->num_bones * 12;
-		memcpy(bonematrix, boneframe + tagindex * 12, sizeof(float[12]));
-		while (model->data_bones[tagindex].parent >= 0)
+		for (k = 0;k < 12;k++)
+			blendmatrix[k] = 0;
+		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
-			memcpy(tempbonematrix, bonematrix, sizeof(float[12]));
-			R_ConcatTransforms(boneframe + model->data_bones[tagindex].parent * 12, tempbonematrix, bonematrix);
-			tagindex = model->data_bones[tagindex].parent;
+			lerp = frameblend[blendindex].lerp;
+			boneframe = model->data_poses + frameblend[blendindex].subframe * model->num_bones * 12;
+			input = boneframe + tagindex * 12;
+			for (k = 0;k < 12;k++)
+				bonematrix[k] = input[k];
+			parenttagindex = tagindex;
+			while ((parenttagindex = model->data_bones[parenttagindex].parent) >= 0)
+			{
+				for (k = 0;k < 12;k++)
+					tempbonematrix[k] = bonematrix[k];
+				input = boneframe + parenttagindex * 12;
+				R_ConcatTransforms(input, tempbonematrix, bonematrix);
+			}
+			for (k = 0;k < 12;k++)
+				blendmatrix[k] += bonematrix[k] * lerp;
 		}
-		Matrix4x4_FromArray12FloatD3D(outmatrix, bonematrix);
+		Matrix4x4_FromArray12FloatD3D(outmatrix, blendmatrix);
 	}
 	else if (model->num_tags)
 	{
 		if (tagindex < 0 || tagindex >= model->num_tags)
 			return 4;
-		if (poseframe >= model->num_tagframes)
-			return 6;
-		Matrix4x4_FromArray12FloatGL(outmatrix, model->data_tags[poseframe * model->num_tags + tagindex].matrixgl);
+		for (k = 0;k < 12;k++)
+			blendmatrix[k] = 0;
+		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
+		{
+			lerp = frameblend[blendindex].lerp;
+			input = model->data_tags[frameblend[blendindex].subframe * model->num_tags + tagindex].matrixgl;
+			for (k = 0;k < 12;k++)
+				blendmatrix[k] += input[k] * lerp;
+		}
+		Matrix4x4_FromArray12FloatGL(outmatrix, blendmatrix);
 	}
 
 	if(!mod_alias_supporttagscale.integer)
@@ -450,35 +507,55 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex,
 	return 0;
 }
 
-int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, int poseframe, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
+int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
 	const float *boneframe;
+	const float *input;
+	int blendindex;
+	int k;
+	float lerp;
+	float blendmatrix[12];
 
-	if(skin >= (unsigned int)model->numskins)
-		skin = 0;
-
-	if (model->num_bones)
+	if (skeleton && skeleton->relativetransforms)
+	{
+		if (tagindex < 0 || tagindex >= skeleton->model->num_bones)
+			return 1;
+		*parentindex = skeleton->model->data_bones[tagindex].parent;
+		*tagname = skeleton->model->data_bones[tagindex].name;
+		*tag_localmatrix = skeleton->relativetransforms[tagindex];
+		return 0;
+	}
+	else if (model->num_bones)
 	{
 		if(tagindex >= model->num_bones || tagindex < 0)
 			return 1;
-		if (poseframe >= model->num_poses)
-			return 2;
-
-		boneframe = model->data_poses + poseframe * model->num_bones * 12;
 		*parentindex = model->data_bones[tagindex].parent;
 		*tagname = model->data_bones[tagindex].name;
-		Matrix4x4_FromArray12FloatD3D(tag_localmatrix, boneframe + tagindex * 12);
+		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
+		{
+			lerp = frameblend[blendindex].lerp;
+			boneframe = model->data_poses + frameblend[blendindex].subframe * model->num_bones * 12;
+			input = boneframe + tagindex * 12;
+			for (k = 0;k < 12;k++)
+				blendmatrix[k] += input[k] * lerp;
+		}
+		Matrix4x4_FromArray12FloatD3D(tag_localmatrix, blendmatrix);
 		return 0;
 	}
-
-	if (model->num_tags)
+	else if (model->num_tags)
 	{
 		if(tagindex >= model->num_tags || tagindex < 0)
 			return 1;
-		if (poseframe >= model->num_tagframes)
-			return 2;
+		*parentindex = -1;
 		*tagname = model->data_tags[tagindex].name;
-		Matrix4x4_FromArray12FloatGL(tag_localmatrix, model->data_tags[poseframe * model->num_tags + tagindex].matrixgl);
+		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
+		{
+			lerp = frameblend[blendindex].lerp;
+			input = model->data_tags[frameblend[blendindex].subframe * model->num_tags + tagindex].matrixgl;
+			for (k = 0;k < 12;k++)
+				blendmatrix[k] += input[k] * lerp;
+		}
+		Matrix4x4_FromArray12FloatGL(tag_localmatrix, blendmatrix);
 		return 0;
 	}
 
@@ -565,7 +642,7 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	radius = 0;
 	for (frameblend[0].subframe = 0;frameblend[0].subframe < loadmodel->num_poses;frameblend[0].subframe++)
 	{
-		loadmodel->AnimateVertices(loadmodel, frameblend, vertex3f, NULL, NULL, NULL);
+		loadmodel->AnimateVertices(loadmodel, frameblend, NULL, vertex3f, NULL, NULL, NULL);
 		for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
 		{
 			if (firstvertex)
@@ -622,7 +699,7 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	for (i = loadmodel->surfmesh.num_morphframes-1;i >= 0;i--)
 	{
 		frameblend[0].subframe = i;
-		loadmodel->AnimateVertices(loadmodel, frameblend, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, NULL, NULL);
+		loadmodel->AnimateVertices(loadmodel, frameblend, NULL, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_normal3f, NULL, NULL);
 		Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 		// encode the svector and tvector in 3 byte format for permanent storage
 		for (j = 0;j < loadmodel->surfmesh.num_vertices;j++)
@@ -633,11 +710,10 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	}
 }
 
-static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
-	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	msurface_t *surface;
 	static int maxvertices = 0;
 	static float *vertex3f = NULL;
@@ -645,9 +721,6 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, int frame, trace_t *trace
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	memset(frameblend, 0, sizeof(frameblend));
-	frameblend[0].subframe = frame;
-	frameblend[0].lerp = 1;
 	if (maxvertices < model->surfmesh.num_vertices)
 	{
 		if (vertex3f)
@@ -661,22 +734,20 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, int frame, trace_t *trace
 	segmentmaxs[0] = max(start[0], end[0]) + 1;
 	segmentmaxs[1] = max(start[1], end[1]) + 1;
 	segmentmaxs[2] = max(start[2], end[2]) + 1;
+	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
-	{
-		model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
 		Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
-	}
 }
 
-static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+static int maxvertices = 0;
+static float *vertex3f = NULL;
+
+static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
 	vec3_t shiftstart, shiftend;
 	float segmentmins[3], segmentmaxs[3];
-	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	msurface_t *surface;
-	static int maxvertices = 0;
-	static float *vertex3f = NULL;
 	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
 
@@ -684,7 +755,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	{
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
-		Mod_MDLMD2MD3_TraceLine(model, frame, trace, start, end, hitsupercontentsmask);
+		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 		VectorSubtract(trace->endpos, boxmins, trace->endpos);
 		return;
 	}
@@ -694,9 +765,6 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	memset(frameblend, 0, sizeof(frameblend));
-	frameblend[0].subframe = frame;
-	frameblend[0].lerp = 1;
 	if (maxvertices < model->surfmesh.num_vertices)
 	{
 		if (vertex3f)
@@ -716,18 +784,16 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, int frame, trace_t *trace,
 	VectorAdd(end, boxmaxs, boxendmaxs);
 	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
 	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
-	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+	if (maxvertices < model->surfmesh.num_vertices)
 	{
-		if (maxvertices < model->surfmesh.num_vertices)
-		{
-			if (vertex3f)
-				Z_Free(vertex3f);
-			maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-			vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
-		}
-		model->AnimateVertices(model, frameblend, vertex3f, NULL, NULL, NULL);
-		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+		if (vertex3f)
+			Z_Free(vertex3f);
+		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
+		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
 	}
+	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
+	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
+		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 }
 
 static void Mod_ConvertAliasVerts (int inverts, trivertx_t *v, trivertx_t *out, int *vertremap)

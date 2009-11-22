@@ -426,7 +426,7 @@ static const vec3_t defaultmaxs = {4096, 4096, 4096};
 static void CL_SetupWorldModel(void)
 {
 	// update the world model
-	cl.entities[0].render.model = cl.worldmodel = cl.model_precache[1];
+	cl.entities[0].render.model = cl.worldmodel = CL_GetModelByIndex(1);
 	CL_UpdateRenderEntity(&cl.entities[0].render);
 
 	// set up csqc world for collision culling
@@ -1846,7 +1846,7 @@ void CL_ValidateState(entity_state_t *s)
 	if (!(s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
 		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)\n", s->colormap, cl.maxclients);
 
-	model = cl.model_precache[s->modelindex];
+	model = CL_GetModelByIndex(s->modelindex);
 	if (model && model->type && s->frame >= model->numframes)
 		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);
 	if (model && model->type && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
@@ -2131,7 +2131,7 @@ void CL_ParseStatic (int large)
 	}
 
 // copy it to the current state
-	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
+	ent->render.model = CL_GetModelByIndex(ent->state_baseline.modelindex);
 	ent->render.framegroupblend[0].frame = ent->state_baseline.frame;
 	ent->render.framegroupblend[0].lerp = 1;
 	// make torchs play out of sync

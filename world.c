@@ -1973,19 +1973,12 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.modelindex);
 		if (val)
 			modelindex = (int)val->_float;
-		if (world == &sv.world && modelindex >= 1 && modelindex < MAX_MODELS)
-		{
-			model = sv.models[modelindex];
-		}
-		else if (world == &cl.world && modelindex >= 1 && modelindex < MAX_MODELS)
-		{
-			model = cl.model_precache[modelindex];
-		}
+		if (world == &sv.world)
+			model = SV_GetModelByIndex(modelindex);
+		else if (world == &cl.world)
+			model = CL_GetModelByIndex(modelindex);
 		else
-		{
 			model = NULL;
-			modelindex = 0;
-		}
 		if (model)
 		{
 			VectorScale(model->normalmins, scale, entmins);

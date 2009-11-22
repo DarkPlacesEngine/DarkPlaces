@@ -76,6 +76,10 @@ typedef struct edict_engineprivate_s
 	vec3_t moved_from;
 	vec3_t moved_fromangles;
 
+	framegroupblend_t framegroupblend[MAX_FRAMEGROUPBLENDS];
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
+	skeleton_t skeleton;
+
 	// physics parameters
 	qboolean ode_physics;
 	void *ode_body;

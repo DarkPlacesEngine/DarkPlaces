@@ -808,6 +808,7 @@ typedef struct model_brushq3_s
 model_brushq3_t;
 
 struct frameblend_s;
+struct skeleton_s;
 
 typedef struct model_s
 {
@@ -878,7 +879,7 @@ typedef struct model_s
 	// data type of model
 	const char		*modeldatatypestring;
 	// generates vertex data for a given frameblend
-	void(*AnimateVertices)(const struct model_s *model, const struct frameblend_s *frameblend, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
+	void(*AnimateVertices)(const struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
@@ -902,11 +903,11 @@ typedef struct model_s
 	// draw the lighting on a model (through stencil)
 	void(*DrawLight)(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
 	// trace a box against this model
-	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
+	void (*TraceBox)(struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
 	// trace a box against this model
-	void (*TraceLine)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+	void (*TraceLine)(struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
 	// trace a point against this model (like PointSuperContents)
-	void (*TracePoint)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask);
+	void (*TracePoint)(struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask);
 	// find the supercontents value at a point in this model
 	int (*PointSuperContents)(struct model_s *model, int frame, const vec3_t point);
 	// fields belonging to some types of model
@@ -974,6 +975,13 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 
 extern cvar_t r_mipskins;
 
+typedef struct skeleton_s
+{
+	const dp_model_t *model;
+	matrix4x4_t *relativetransforms;
+}
+skeleton_t;
+
 typedef struct skinfileitem_s
 {
 	struct skinfileitem_s *next;
@@ -1019,10 +1027,11 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 
 // alias models
 struct frameblend_s;
+struct skeleton_s;
 void Mod_AliasInit(void);
-int Mod_Alias_GetTagMatrix(const dp_model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
+int Mod_Alias_GetTagMatrix(const dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname);
-int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, int poseframe, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
+int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
 
 // sprite models
 void Mod_SpriteInit(void);

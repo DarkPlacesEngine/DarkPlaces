@@ -49,6 +49,189 @@ void VM_CheckEmptyString (const char *s)
 		PRVM_ERROR ("%s: Bad string", PRVM_NAME);
 }
 
+void VM_GenerateFrameGroupBlend(framegroupblend_t *framegroupblend, const prvm_edict_t *ed)
+{
+	prvm_eval_t *val;
+	// self.frame is the interpolation target (new frame)
+	// self.frame1time is the animation base time for the interpolation target
+	// self.frame2 is the interpolation start (previous frame)
+	// self.frame2time is the animation base time for the interpolation start
+	// self.lerpfrac is the interpolation strength for self.frame2
+	// self.lerpfrac3 is the interpolation strength for self.frame3
+	// self.lerpfrac4 is the interpolation strength for self.frame4
+	// pitch angle on a player model where the animator set up 5 sets of
+	// animations and the csqc simply lerps between sets)
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame))) framegroupblend[0].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) framegroupblend[1].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3))) framegroupblend[2].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4))) framegroupblend[3].frame = (int) val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) framegroupblend[0].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) framegroupblend[1].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3time))) framegroupblend[2].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4time))) framegroupblend[3].start = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) framegroupblend[1].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) framegroupblend[2].lerp = val->_float;
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) framegroupblend[3].lerp = val->_float;
+	// assume that the (missing) lerpfrac1 is whatever remains after lerpfrac2+lerpfrac3+lerpfrac4 are summed
+	framegroupblend[0].lerp = 1 - framegroupblend[1].lerp - framegroupblend[2].lerp - framegroupblend[3].lerp;
+}
+
+// LordHavoc: quite tempting to break apart this function to reuse the
+//            duplicated code, but I suspect it is better for performance
+//            this way
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model)
+{
+	int sub2, numframes, f, i, k;
+	int isfirstframegroup = true;
+	int nolerp;
+	double sublerp, lerp, d;
+	const animscene_t *scene;
+	const framegroupblend_t *g;
+	frameblend_t *blend = frameblend;
+
+	memset(blend, 0, MAX_FRAMEBLENDS * sizeof(*blend));
+
+	if (!model || !model->surfmesh.isanimated)
+	{
+		blend[0].lerp = 1;
+		return;
+	}
+
+	nolerp = (model->type == mod_sprite) ? !r_lerpsprites.integer : !r_lerpmodels.integer;
+	numframes = model->numframes;
+	for (k = 0, g = framegroupblend;k < MAX_FRAMEGROUPBLENDS;k++, g++)
+	{
+		f = g->frame;
+		if ((unsigned int)f >= (unsigned int)numframes)
+		{
+			Con_DPrintf("VM_FrameBlendFromFrameGroupBlend: no such frame %d in model %s\n", f, model->name);
+			f = 0;
+		}
+		d = lerp = g->lerp;
+		if (lerp <= 0)
+			continue;
+		if (nolerp)
+		{
+			if (isfirstframegroup)
+			{
+				d = lerp = 1;
+				isfirstframegroup = false;
+			}
+			else
+				continue;
+		}
+		if (model->animscenes)
+		{
+			scene = model->animscenes + f;
+			f = scene->firstframe;
+			if (scene->framecount > 1)
+			{
+				// this code path is only used on .zym models and torches
+				sublerp = scene->framerate * (cl.time - g->start);
+				f = (int) floor(sublerp);
+				sublerp -= f;
+				sub2 = f + 1;
+				if (sublerp < (1.0 / 65536.0f))
+					sublerp = 0;
+				if (sublerp > (65535.0f / 65536.0f))
+					sublerp = 1;
+				if (nolerp)
+					sublerp = 0;
+				if (scene->loop)
+				{
+					f = (f % scene->framecount);
+					sub2 = (sub2 % scene->framecount);
+				}
+				f = bound(0, f, (scene->framecount - 1)) + scene->firstframe;
+				sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
+				d = sublerp * lerp;
+				// two framelerps produced from one animation
+				if (d > 0)
+				{
+					for (i = 0;i < MAX_FRAMEBLENDS;i++)
+					{
+						if (blend[i].lerp <= 0 || blend[i].subframe == sub2)
+						{
+							blend[i].subframe = sub2;
+							blend[i].lerp += d;
+							break;
+						}
+					}
+				}
+				d = (1 - sublerp) * lerp;
+			}
+		}
+		if (d > 0)
+		{
+			for (i = 0;i < MAX_FRAMEBLENDS;i++)
+			{
+				if (blend[i].lerp <= 0 || blend[i].subframe == f)
+				{
+					blend[i].subframe = f;
+					blend[i].lerp += d;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend)
+{
+	if (ed->priv.server->skeleton.model != edmodel)
+	{
+		VM_RemoveEdictSkeleton(ed);
+		ed->priv.server->skeleton.model = edmodel;
+	}
+	if (!ed->priv.server->skeleton.relativetransforms && ed->priv.server->skeleton.model && ed->priv.server->skeleton.model->num_bones)
+		ed->priv.server->skeleton.relativetransforms = Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
+	if (ed->priv.server->skeleton.relativetransforms)
+	{
+		int skeletonindex = 0;
+		skeleton_t *skeleton;
+		prvm_eval_t *val;
+		if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float;
+		if (skeletonindex > 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones)
+		{
+			// custom skeleton controlled by the game (FTE_CSQC_SKELETONOBJECTS)
+			memcpy(ed->priv.server->skeleton.relativetransforms, skeleton->relativetransforms, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
+		}
+		else
+		{
+			// generated skeleton from frame animation
+			int blendindex;
+			int bonenum;
+			int numbones = ed->priv.server->skeleton.model->num_bones;
+			const float *poses = ed->priv.server->skeleton.model->data_poses;
+			const float *framebones;
+			float lerp;
+			matrix4x4_t *relativetransforms = ed->priv.server->skeleton.relativetransforms;
+			matrix4x4_t matrix;
+			memset(relativetransforms, 0, numbones * sizeof(matrix4x4_t));
+			for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
+			{
+				lerp = frameblend[blendindex].lerp;
+				framebones = poses + 12 * frameblend[blendindex].subframe * numbones;
+				for (bonenum = 0;bonenum < numbones;bonenum++)
+				{
+					Matrix4x4_FromArray12FloatD3D(&matrix, framebones + 12 * bonenum);
+					Matrix4x4_Accumulate(&ed->priv.server->skeleton.relativetransforms[bonenum], &matrix, lerp);
+				}
+			}
+		}
+	}
+}
+
+void VM_RemoveEdictSkeleton(prvm_edict_t *ed)
+{
+	if (ed->priv.server->skeleton.relativetransforms)
+		Mem_Free(ed->priv.server->skeleton.relativetransforms);
+	memset(&ed->priv.server->skeleton, 0, sizeof(ed->priv.server->skeleton));
+}
+
+
+
+
 //============================================================================
 //BUILT-IN FUNCTIONS
 
