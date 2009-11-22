@@ -222,6 +222,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int rendermode; // ssqc - HalfLife support
 	int scale; // ssqc / csqc
 	int shadertime; // csqc
+	int skeletonindex; // csqc / ssqc FTE_CSQC_SKELETONOBJECTS / DP_SKELETONOBJECTS
 	int style; // ssqc
 	int tag_entity; // ssqc / csqc
 	int tag_index; // ssqc / csqc
@@ -422,6 +423,7 @@ typedef struct prvm_prog_s
 	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
 	const char *         opensearches_origin[PRVM_MAX_OPENSEARCHES];
 	struct clgecko_s		*opengeckoinstances[PRVM_MAX_GECKOINSTANCES];
+	skeleton_t			*skeletons[MAX_EDICTS];
 
 	// copies of some vars that were former read from sv
 	int					num_edicts;
@@ -678,5 +680,10 @@ void VM_Warning(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 // TODO: fill in the params
 //void PRVM_Create();
+
+void VM_GenerateFrameGroupBlend(framegroupblend_t *framegroupblend, const prvm_edict_t *ed);
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model);
+void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
+void VM_RemoveEdictSkeleton(prvm_edict_t *ed);
 
 #endif

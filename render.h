@@ -315,6 +315,7 @@ typedef struct rsurfacestate_s
 	float inversematrixscale;
 	// animation blending state from entity
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
+	skeleton_t *skeleton;
 	// directional model shading state from entity
 	vec3_t modellight_ambient;
 	vec3_t modellight_diffuse;

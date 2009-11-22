@@ -46,9 +46,8 @@ void SV_Physics_Toss (prvm_edict_t *ent);
 int SV_GetPitchSign(prvm_edict_t *ent)
 {
 	dp_model_t *model;
-	int modelindex;
 	if (
-			((modelindex = (int)ent->fields.server->modelindex) >= 1 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
+			(model = SV_GetModelFromEdict(ent))
 			?
 			model->type == mod_alias
 			:
@@ -214,10 +213,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		model = NULL;
 		if ((int) touch->fields.server->solid == SOLID_BSP || type == MOVE_HITMODEL)
 		{
-			unsigned int modelindex = (unsigned int)touch->fields.server->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = sv.models[(int)touch->fields.server->modelindex];
+			model = SV_GetModelFromEdict(touch);
 			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
@@ -225,10 +221,13 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
+		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)touch->fields.server->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
 		else
-			Collision_ClipPointToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
@@ -377,10 +376,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		model = NULL;
 		if ((int) touch->fields.server->solid == SOLID_BSP || type == MOVE_HITMODEL)
 		{
-			unsigned int modelindex = (unsigned int)touch->fields.server->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = sv.models[(int)touch->fields.server->modelindex];
+			model = SV_GetModelFromEdict(touch);
 			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
@@ -388,10 +384,13 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
+		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)touch->fields.server->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipLineToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask);
+			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask);
 
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
@@ -577,11 +576,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		model = NULL;
 		if ((int) touch->fields.server->solid == SOLID_BSP || type == MOVE_HITMODEL)
 		{
-			unsigned int modelindex = (unsigned int)touch->fields.server->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = sv.models[(int)touch->fields.server->modelindex];
-			//pitchsign = 1;
+			model = SV_GetModelFromEdict(touch);
 			pitchsign = SV_GetPitchSign(touch);
 		}
 		if (model)
@@ -589,10 +584,13 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
+		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)touch->fields.server->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.server->frame, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.server->mins, touch->fields.server->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
 
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.server->solid == SOLID_BSP);
 	}
@@ -635,7 +633,6 @@ int SV_PointSuperContents(const vec3_t point)
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
 	dp_model_t *model;
-	unsigned int modelindex;
 	int frame;
 	// list of entities to test for collisions
 	int numtouchedicts;
@@ -666,10 +663,7 @@ int SV_PointSuperContents(const vec3_t point)
 			continue;
 
 		// might interact, so do an exact clip
-		modelindex = (unsigned int)touch->fields.server->modelindex;
-		if (modelindex >= MAX_MODELS)
-			continue;
-		model = sv.models[(int)touch->fields.server->modelindex];
+		model = SV_GetModelFromEdict(touch);
 		if (!model || !model->PointSuperContents)
 			continue;
 		Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.server->origin[0], touch->fields.server->origin[1], touch->fields.server->origin[2], touch->fields.server->angles[0], touch->fields.server->angles[1], touch->fields.server->angles[2], 1);
@@ -795,12 +789,25 @@ void SV_LinkEdict (prvm_edict_t *ent)
 {
 	dp_model_t *model;
 	vec3_t mins, maxs;
+	int modelindex;
 
 	if (ent == prog->edicts)
 		return;		// don't add the world
 
 	if (ent->priv.server->free)
 		return;
+
+	modelindex = (int)ent->fields.server->modelindex;
+	if (modelindex < 0 || modelindex >= MAX_MODELS)
+	{
+		Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
+		modelindex = 0;
+	}
+	model = SV_GetModelByIndex(modelindex);
+
+	VM_GenerateFrameGroupBlend(ent->priv.server->framegroupblend, ent);
+	VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
+	VM_UpdateEdictSkeleton(ent, model, ent->priv.server->frameblend);
 
 // set the abs box
 
@@ -814,13 +821,6 @@ void SV_LinkEdict (prvm_edict_t *ent)
 	}
 	else if (ent->fields.server->solid == SOLID_BSP)
 	{
-		int modelindex = (int)ent->fields.server->modelindex;
-		if (modelindex < 0 || modelindex >= MAX_MODELS)
-		{
-			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
-			modelindex = 0;
-		}
-		model = sv.models[modelindex];
 		if (model != NULL)
 		{
 			if (!model->TraceBox && developer.integer >= 1)
@@ -1592,7 +1592,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		Con_Printf("SV_PushMove: entity #%i has an invalid modelindex %f\n", PRVM_NUM_FOR_EDICT(pusher), pusher->fields.server->modelindex);
 		return;
 	}
-	pushermodel = sv.models[index];
+	pushermodel = SV_GetModelByIndex(index);
 	pusherowner = pusher->fields.server->owner;
 	pusherprog = PRVM_EDICT_TO_PROG(pusher);
 
@@ -1664,9 +1664,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	pusher->fields.server->ltime += movetime;
 	SV_LinkEdict(pusher);
 
-	pushermodel = NULL;
-	if (pusher->fields.server->modelindex >= 1 && pusher->fields.server->modelindex < MAX_MODELS)
-		pushermodel = sv.models[(int)pusher->fields.server->modelindex];
+	pushermodel = SV_GetModelFromEdict(pusher);
 	Matrix4x4_CreateFromQuakeEntity(&pusherfinalmatrix, pusher->fields.server->origin[0], pusher->fields.server->origin[1], pusher->fields.server->origin[2], pusher->fields.server->angles[0], pusher->fields.server->angles[1], pusher->fields.server->angles[2], 1);
 	Matrix4x4_Invert_Simple(&pusherfinalimatrix, &pusherfinalmatrix);
 
@@ -1710,7 +1708,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		// final position, move it
 		if (!((int)check->fields.server->flags & FL_ONGROUND) || PRVM_PROG_TO_EDICT(check->fields.server->groundentity) != pusher)
 		{
-			Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 			//trace = SV_TraceBox(check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, MOVE_NOMONSTERS, check, checkcontents);
 			if (!trace.startsolid)
 			{
@@ -1768,7 +1766,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			check->fields.server->flags = (int)check->fields.server->flags & ~FL_ONGROUND;
 
 		// if it is still inside the pusher, block
-		Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
+		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 		if (trace.startsolid)
 		{
 			// try moving the contacted entity a tiny bit further to account for precision errors
@@ -1783,7 +1781,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				continue;
 			}
 			pusher->fields.server->solid = savesolid;
-			Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
+			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 			if (trace.startsolid)
 			{
 				// try moving the contacted entity a tiny bit less to account for precision errors
@@ -1797,7 +1795,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 					continue;
 				}
 				pusher->fields.server->solid = savesolid;
-				Collision_ClipToGenericEntity(&trace, pushermodel, (int) pusher->fields.server->frame, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
+				Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, pusher->fields.server->mins, pusher->fields.server->maxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, check->fields.server->origin, check->fields.server->mins, check->fields.server->maxs, check->fields.server->origin, checkcontents);
 				if (trace.startsolid)
 				{
 					// still inside pusher, so it's really blocked

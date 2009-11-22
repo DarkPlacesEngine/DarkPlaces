@@ -1063,7 +1063,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// LordHavoc: this could kill tags attached to an invisible entity, I
 	// just hope we never have to support that case
 	i = (int)ent->fields.server->modelindex;
-	modelindex = (i >= 1 && i < MAX_MODELS && ent->fields.server->model && *PRVM_GetString(ent->fields.server->model)) ? i : 0;
+	modelindex = (i >= 1 && i < MAX_MODELS && ent->fields.server->model && *PRVM_GetString(ent->fields.server->model) && sv.models[i]) ? i : 0;
 
 	flags = 0;
 	i = (int)(PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glow_size)->_float * 0.25f);
@@ -1235,7 +1235,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// calculate the visible box of this entity (don't use the physics box
 	// as that is often smaller than a model, and would not count
 	// specialvisibilityradius)
-	if ((model = sv.models[modelindex]) && (model->type != mod_null))
+	if ((model = SV_GetModelByIndex(modelindex)) && (model->type != mod_null))
 	{
 		float scale = cs->scale * (1.0f / 16.0f);
 		if (cs->angles[0] || cs->angles[2]) // pitch and roll
@@ -1353,7 +1353,6 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 	dp_model_t *model;
 	prvm_edict_t *touch;
 	prvm_edict_t *touchedicts[MAX_EDICTS];
-	unsigned int modelindex;
 	vec3_t boxmins, boxmaxs;
 	vec3_t clipboxmins, clipboxmaxs;
 	vec3_t endpoints[MAX_LINEOFSIGHTTRACES];
@@ -1402,13 +1401,8 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 		touch = touchedicts[touchindex];
 		if (touch->fields.server->solid != SOLID_BSP)
 			continue;
-		modelindex = (unsigned int)touch->fields.server->modelindex;
-		if (!modelindex)
-			continue;
-		if (modelindex >= MAX_MODELS)
-			continue; // error?
-		model = sv.models[(int)touch->fields.server->modelindex];
-		if (!model->brush.TraceLineOfSight)
+		model = SV_GetModelFromEdict(touch);
+		if (!model || !model->brush.TraceLineOfSight)
 			continue;
 		// skip obviously transparent entities
 		alpha = PRVM_EDICTFIELDVALUE(touch, prog->fieldoffsets.alpha)->_float;
@@ -1432,8 +1426,7 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 		for (touchindex = 0;touchindex < numtouchedicts;touchindex++)
 		{
 			touch = touchedicts[touchindex];
-			modelindex = (unsigned int)touch->fields.server->modelindex;
-			model = (modelindex >= 1 && modelindex < MAX_MODELS) ? sv.models[(int)touch->fields.server->modelindex] : NULL;
+			model = SV_GetModelFromEdict(touch);
 			if(model && model->brush.TraceLineOfSight)
 			{
 				// get the entity matrix
@@ -1494,7 +1487,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		if (!s->modelindex && s->specialvisibilityradius == 0)
 			return;
 
-		isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*';
+		isbmodel = (model = SV_GetModelByIndex(s->modelindex)) != NULL && model->name[0] == '*';
 		// viewmodels don't have visibility checking
 		if (s->viewmodelforclient)
 		{
@@ -2770,6 +2763,20 @@ int SV_ParticleEffectIndex(const char *name)
 	return 0;
 }
 
+dp_model_t *SV_GetModelByIndex(int modelindex)
+{
+	return (modelindex > 0 && modelindex < MAX_MODELS) ? sv.models[modelindex] : NULL;
+}
+
+dp_model_t *SV_GetModelFromEdict(prvm_edict_t *ed)
+{
+	int modelindex;
+	if (!ed || ed->priv.server->free)
+		return NULL;
+	modelindex = (int)ed->fields.server->modelindex;
+	return (modelindex > 0 && modelindex < MAX_MODELS) ? sv.models[modelindex] : NULL;
+}
+
 /*
 ================
 SV_CreateBaseline
@@ -3296,6 +3303,7 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	ed->fields.server->nextthink = -1;
 	ed->fields.server->solid = 0;
 
+	VM_RemoveEdictSkeleton(ed);
 	World_Physics_RemoveFromEntity(&sv.world, ed);
 	World_Physics_RemoveJointFromEntity(&sv.world, ed);
 

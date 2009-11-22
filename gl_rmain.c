@@ -3393,7 +3393,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		if (c->wanttangents)
 			wanttangents = false;
 		if (wantnormals || wanttangents)
-			model->AnimateVertices(model, ent->frameblend, NULL, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
+			model->AnimateVertices(model, ent->frameblend, ent->skeleton, NULL, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
 	}
 	else
 	{
@@ -3408,7 +3408,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		c = r_animcachestate.entity + ent->animcacheindex;
 		c->wantnormals = wantnormals;
 		c->wanttangents = wanttangents;
-		model->AnimateVertices(model, ent->frameblend, c->vertex3f, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
+		model->AnimateVertices(model, ent->frameblend, ent->skeleton, c->vertex3f, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
 	}
 	return true;
 }
@@ -5982,6 +5982,7 @@ void RSurf_ActiveWorldEntity(void)
 	//if (rsurface.entity == r_refdef.scene.worldentity)
 	//	return;
 	rsurface.entity = r_refdef.scene.worldentity;
+	rsurface.skeleton = NULL;
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
 	rsurface.ent_shadertime = 0;
@@ -6062,6 +6063,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
 	//	return;
 	rsurface.entity = (entity_render_t *)ent;
+	rsurface.skeleton = ent->skeleton;
 	rsurface.ent_skinnum = ent->skinnum;
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
 	rsurface.ent_shadertime = ent->shadertime;
@@ -6110,7 +6112,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = rsurface.array_modelsvector3f;
 			rsurface.modeltvector3f = rsurface.array_modeltvector3f;
 			rsurface.modelnormal3f = rsurface.array_modelnormal3f;
-			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, rsurface.array_modelsvector3f, rsurface.array_modeltvector3f);
 		}
 		else if (wantnormals)
 		{
@@ -6118,7 +6120,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
 			rsurface.modelnormal3f = rsurface.array_modelnormal3f;
-			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, NULL, NULL);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.array_modelvertex3f, rsurface.array_modelnormal3f, NULL, NULL);
 		}
 		else
 		{
@@ -6126,7 +6128,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
 			rsurface.modelnormal3f = NULL;
-			model->AnimateVertices(model, rsurface.frameblend, rsurface.array_modelvertex3f, NULL, NULL, NULL);
+			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.array_modelvertex3f, NULL, NULL, NULL);
 		}
 		rsurface.modelvertex3f_bufferobject = 0;
 		rsurface.modelvertex3f_bufferoffset = 0;
@@ -6189,6 +6191,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
 {
 	rsurface.entity = r_refdef.scene.worldentity;
+	rsurface.skeleton = NULL;
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
 	rsurface.ent_shadertime = shadertime;

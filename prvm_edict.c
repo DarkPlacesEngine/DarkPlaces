@@ -1626,6 +1626,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.rendermode                     = PRVM_ED_FindFieldOffset("rendermode"); // HalfLife support
 	prog->fieldoffsets.scale                          = PRVM_ED_FindFieldOffset("scale");
 	prog->fieldoffsets.shadertime                     = PRVM_ED_FindFieldOffset("shadertime");
+	prog->fieldoffsets.skeletonindex                  = PRVM_ED_FindFieldOffset("skeletonindex");
 	prog->fieldoffsets.style                          = PRVM_ED_FindFieldOffset("style");
 	prog->fieldoffsets.tag_entity                     = PRVM_ED_FindFieldOffset("tag_entity");
 	prog->fieldoffsets.tag_index                      = PRVM_ED_FindFieldOffset("tag_index");

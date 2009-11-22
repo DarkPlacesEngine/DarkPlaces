@@ -481,17 +481,19 @@ List information on all models in the client modelindex
 */
 static void CL_ModelIndexList_f(void)
 {
-	int i = 1;
+	int i;
+	dp_model_t *model;
 
 	// Print Header
 	Con_Printf("%3s: %-30s %-8s %-8s\n", "ID", "Name", "Type", "Triangles");
 
-	while(cl.model_precache[i] && i != MAX_MODELS)
-	{ // Valid Model
-		if(cl.model_precache[i]->loaded || i == 1)
-			Con_Printf("%3i: %-30s %-8s %-10i\n", i, cl.model_precache[i]->name, cl.model_precache[i]->modeldatatypestring, cl.model_precache[i]->surfmesh.num_triangles);
+	for (i = -MAX_MODELS;i < MAX_MODELS;i++)
+	{
+		model = CL_GetModelByIndex(i);
+		if(model->loaded || i == 1)
+			Con_Printf("%3i: %-30s %-8s %-10i\n", i, model->name, model->modeldatatypestring, model->surfmesh.num_triangles);
 		else
-			Con_Printf("%3i: %-30s %-30s\n", i, cl.model_precache[i]->name, "--no local model found--");
+			Con_Printf("%3i: %-30s %-30s\n", i, model->name, "--no local model found--");
 		i++;
 	}
 }
@@ -529,7 +531,7 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 	// update the inverse matrix for the renderer
 	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 	// update the animation blend state
-	R_LerpAnimation(ent);
+	VM_FrameBlendFromFrameGroupBlend(ent->frameblend, ent->framegroupblend, ent->model);
 	// we need the matrix origin to center the box
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	// update entity->render.scale because the renderer needs it
@@ -854,7 +856,7 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	if (!flagrender)
 		return;
 
-	flagrender->model = cl.model_precache[cl.qw_modelindex_flag];
+	flagrender->model = CL_GetModelByIndex(cl.qw_modelindex_flag);
 	flagrender->skinnum = skin;
 	flagrender->alpha = 1;
 	VectorSet(flagrender->colormod, 1, 1, 1);
@@ -943,7 +945,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 		// FIXME: use a model function to get tag info (need to handle skeletal)
 		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && t->render.model)
 		{
-			if(!CL_BlendTagMatrix(&t->render, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
+			if(!Mod_Alias_GetTagMatrix(t->render.model, t->render.frameblend, t->render.skeleton, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
 			{
 				// concat the tag matrices onto the entity matrix
 				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
@@ -1011,10 +1013,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 
 	// model setup and some modelflags
 	frame = e->state_current.frame;
-	if (e->state_current.modelindex < MAX_MODELS)
-		e->render.model = cl.model_precache[e->state_current.modelindex];
-	else
-		e->render.model = NULL;
+	e->render.model = CL_GetModelByIndex(e->state_current.modelindex);
 	if (e->render.model)
 	{
 		if (e->render.skinnum >= e->render.model->numskins)
@@ -1523,7 +1522,7 @@ static void CL_RelinkStaticEntities(void)
 		e->render.flags = 0;
 		// if the model was not loaded when the static entity was created we
 		// need to re-fetch the model pointer
-		e->render.model = cl.model_precache[e->state_baseline.modelindex];
+		e->render.model = CL_GetModelByIndex(e->state_baseline.modelindex);
 		// either fullbright or lit
 		if(!r_fullbright.integer)
 		{
@@ -1537,7 +1536,7 @@ static void CL_RelinkStaticEntities(void)
 			e->render.flags |= RENDER_SHADOW;
 		VectorSet(e->render.colormod, 1, 1, 1);
 		VectorSet(e->render.glowmod, 1, 1, 1);
-		R_LerpAnimation(&e->render);
+		VM_FrameBlendFromFrameGroupBlend(e->render.frameblend, e->render.framegroupblend, e->render.model);
 		e->render.allowdecals = true;
 		CL_UpdateRenderEntity(&e->render);
 		r_refdef.scene.entities[r_refdef.scene.numentities++] = &e->render;
@@ -1618,10 +1617,7 @@ static void CL_RelinkEffects(void)
 				}
 
 				// normal stuff
-				if(e->modelindex < MAX_MODELS)
-					entrender->model = cl.model_precache[e->modelindex];
-				else
-					entrender->model = cl.csqc_model_precache[-(e->modelindex+1)];
+				entrender->model = CL_GetModelByIndex(e->modelindex);
 				entrender->alpha = 1;
 				VectorSet(entrender->colormod, 1, 1, 1);
 				VectorSet(entrender->glowmod, 1, 1, 1);
@@ -1768,7 +1764,7 @@ static void CL_RelinkQWNails(void)
 			continue;
 
 		// normal stuff
-		entrender->model = cl.model_precache[cl.qw_modelindex_spike];
+		entrender->model = CL_GetModelByIndex(cl.qw_modelindex_spike);
 		entrender->alpha = 1;
 		VectorSet(entrender->colormod, 1, 1, 1);
 		VectorSet(entrender->glowmod, 1, 1, 1);

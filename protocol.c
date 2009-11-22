@@ -2033,7 +2033,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	{
 		bits = changedbits;
 		if ((bits & E5_ORIGIN) && (!(s->flags & RENDER_LOWPRECISION) || s->exteriormodelforclient || s->tagentity || s->viewmodelforclient || (s->number >= 1 && s->number <= svs.maxclients) || s->origin[0] <= -4096.0625 || s->origin[0] >= 4095.9375 || s->origin[1] <= -4096.0625 || s->origin[1] >= 4095.9375 || s->origin[2] <= -4096.0625 || s->origin[2] >= 4095.9375))
-		// maybe also add: ((model = sv.models[s->modelindex]) != NULL && model->name[0] == '*')
+		// maybe also add: ((model = SV_GetModelByIndex(s->modelindex)) != NULL && model->name[0] == '*')
 			bits |= E5_ORIGIN32;
 			// possible values:
 			//   negative origin:

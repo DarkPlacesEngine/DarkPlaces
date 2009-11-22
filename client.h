@@ -336,6 +336,8 @@ typedef struct entity_render_s
 	vec3_t mins, maxs;
 	// subframe numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use subframeblend[0].subframe
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
+	// skeletal animation data (if skeleton.relativetransforms is not NULL, it overrides frameblend)
+	skeleton_t *skeleton;
 
 	// animation cache index
 	int animcacheindex;

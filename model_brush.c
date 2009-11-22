@@ -853,7 +853,7 @@ static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, i
 }
 //#endif
 
-static void Mod_Q1BSP_TracePoint(struct model_s *model, int frame, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
+static void Mod_Q1BSP_TracePoint(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
 {
 	RecursiveHullCheckTraceInfo_t rhc;
 
@@ -869,13 +869,13 @@ static void Mod_Q1BSP_TracePoint(struct model_s *model, int frame, trace_t *trac
 	Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
 }
 
-static void Mod_Q1BSP_TraceLine(struct model_s *model, int frame, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+static void Mod_Q1BSP_TraceLine(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	RecursiveHullCheckTraceInfo_t rhc;
 
 	if (VectorCompare(start, end))
 	{
-		Mod_Q1BSP_TracePoint(model, frame, trace, start, hitsupercontentsmask);
+		Mod_Q1BSP_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
 		return;
 	}
 
@@ -921,7 +921,7 @@ static void Mod_Q1BSP_TraceLine(struct model_s *model, int frame, trace_t *trace
 #endif
 }
 
-static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+static void Mod_Q1BSP_TraceBox(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	// this function currently only supports same size start and end
 	double boxsize[3];
@@ -930,9 +930,9 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	if (VectorCompare(boxmins, boxmaxs))
 	{
 		if (VectorCompare(start, end))
-			Mod_Q1BSP_TracePoint(model, frame, trace, start, hitsupercontentsmask);
+			Mod_Q1BSP_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
 		else
-			Mod_Q1BSP_TraceLine(model, frame, trace, start, end, hitsupercontentsmask);
+			Mod_Q1BSP_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 		return;
 	}
 
@@ -1142,7 +1142,7 @@ void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t 
 static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end)
 {
 	trace_t trace;
-	model->TraceLine(model, 0, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK);
+	model->TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK);
 	return trace.fraction == 1;
 }
 
@@ -5656,7 +5656,7 @@ static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t s
 	if (model->brush.submodel || mod_q3bsp_tracelineofsight_brushes.integer)
 	{
 		trace_t trace;
-		model->TraceLine(model, 0, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK);
+		model->TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK);
 		return trace.fraction == 1;
 	}
 	else
@@ -5860,7 +5860,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 
 static int markframe = 0;
 
-static void Mod_Q3BSP_TracePoint(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
+static void Mod_Q3BSP_TracePoint(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
 {
 	int i;
 	q3mbrush_t *brush;
@@ -5878,7 +5878,7 @@ static void Mod_Q3BSP_TracePoint(dp_model_t *model, int frame, trace_t *trace, c
 		Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, ++markframe);
 }
 
-static void Mod_Q3BSP_TraceLine(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
@@ -5887,7 +5887,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, int frame, trace_t *trace, co
 
 	if (VectorCompare(start, end))
 	{
-		Mod_Q3BSP_TracePoint(model, frame, trace, start, hitsupercontentsmask);
+		Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
 		return;
 	}
 
@@ -5915,7 +5915,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, int frame, trace_t *trace, co
 		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
 }
 
-static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
@@ -5930,10 +5930,10 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, int frame, trace_t *trace, con
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
 		if (VectorCompare(start, end))
-			Mod_Q3BSP_TracePoint(model, frame, trace, shiftstart, hitsupercontentsmask);
+			Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, shiftstart, hitsupercontentsmask);
 		else
 		{
-			Mod_Q3BSP_TraceLine(model, frame, trace, shiftstart, shiftend, hitsupercontentsmask);
+			Mod_Q3BSP_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
 			VectorSubtract(trace->endpos, boxmins, trace->endpos);
 		}
 		return;

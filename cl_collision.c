@@ -37,7 +37,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	if (hitent)
 		*hitent = 0;
 	if (cl.worldmodel && cl.worldmodel->TraceLine)
-		cl.worldmodel->TraceLine(cl.worldmodel, 0, &trace, start, end, SUPERCONTENTS_SOLID);
+		cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, start, end, SUPERCONTENTS_SOLID);
 
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
@@ -78,7 +78,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		if (maxrealfrac < trace.realfraction)
 			continue;
 
-		ent->model->TraceLine(ent->model, ent->frameblend[0].subframe, &trace, starttransformed, endtransformed, SUPERCONTENTS_SOLID);
+		ent->model->TraceLine(ent->model, ent->frameblend, ent->skeleton, &trace, starttransformed, endtransformed, SUPERCONTENTS_SOLID);
 
 		if (maxrealfrac > trace.realfraction)
 		{
@@ -308,7 +308,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipPointToGenericEntity(&trace, ent->model, ent->frameblend[0].subframe, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
@@ -354,7 +354,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 				continue;
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
-			Collision_ClipPointToGenericEntity(&trace, NULL, 0, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
@@ -409,21 +409,16 @@ skipnetworkplayers:
 		// might interact, so do an exact clip
 		model = NULL;
 		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
-		{
-			unsigned int modelindex = (unsigned int)touch->fields.client->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = cl.model_precache[(int)touch->fields.client->modelindex];
-		}
+			model = CL_GetModelFromEdict(touch);
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
 		if ((int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
 		else
-			Collision_ClipPointToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -543,7 +538,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipLineToGenericEntity(&trace, ent->model, ent->frameblend[0].subframe, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask);
+			Collision_ClipLineToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
@@ -589,7 +584,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 				continue;
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
-			Collision_ClipLineToGenericEntity(&trace, NULL, 0, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask);
+			Collision_ClipLineToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
@@ -644,21 +639,16 @@ skipnetworkplayers:
 		// might interact, so do an exact clip
 		model = NULL;
 		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
-		{
-			unsigned int modelindex = (unsigned int)touch->fields.client->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = cl.model_precache[(int)touch->fields.client->modelindex];
-		}
+			model = CL_GetModelFromEdict(touch);
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
 		if (type == MOVE_MISSILE && (int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipLineToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask);
+			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -809,7 +799,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend[0].subframe, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
@@ -855,7 +845,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				continue;
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
-			Collision_ClipToGenericEntity(&trace, NULL, 0, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
@@ -910,21 +900,16 @@ skipnetworkplayers:
 		// might interact, so do an exact clip
 		model = NULL;
 		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
-		{
-			unsigned int modelindex = (unsigned int)touch->fields.client->modelindex;
-			// if the modelindex is 0, it shouldn't be SOLID_BSP!
-			if (modelindex > 0 && modelindex < MAX_MODELS)
-				model = cl.model_precache[(int)touch->fields.client->modelindex];
-		}
+			model = CL_GetModelFromEdict(touch);
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
 		if ((int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, (int) touch->fields.client->frame, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;

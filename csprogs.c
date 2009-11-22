@@ -236,7 +236,10 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	}
 
 	// set up the animation data
-	CL_LoadFrameGroupBlend(ed, entrender);
+	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
+	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
+	VM_UpdateEdictSkeleton(ed, model, ed->priv.server->frameblend);
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
 
 	// concat the matrices to make the entity relative to its tag
 	Matrix4x4_Concat(&entrender->matrix, &tagmatrix, &matrix2);
@@ -290,7 +293,14 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		entrender->flags |= RENDER_DOUBLESIDED;
 
 	// make the other useful stuff
+	memcpy(entrender->framegroupblend, ed->priv.server->framegroupblend, sizeof(ed->priv.server->framegroupblend));
 	CL_UpdateRenderEntity(entrender);
+	// override animation data with full control
+	memcpy(entrender->frameblend, ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend));
+	if (ed->priv.server->skeleton.relativetransforms)
+		entrender->skeleton = &ed->priv.server->skeleton;
+	else
+		entrender->skeleton = NULL;
 
 	return true;
 }
@@ -750,6 +760,7 @@ void CL_VM_CB_FreeEdict(prvm_edict_t *ed)
 	memset(entrender, 0, sizeof(*entrender));
 	World_UnlinkEdict(ed);
 	memset(ed->fields.client, 0, sizeof(*ed->fields.client));
+	VM_RemoveEdictSkeleton(ed);
 	World_Physics_RemoveFromEntity(&cl.world, ed);
 	World_Physics_RemoveJointFromEntity(&cl.world, ed);
 }
@@ -1030,54 +1041,4 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	CSQC_END;
 
 	return r;
-}
-
-void CL_LoadFrameGroupBlend(prvm_edict_t *ed, entity_render_t *entrender)
-{
-	prvm_eval_t *val;
-	// self.frame is the interpolation target (new frame)
-	// self.frame1time is the animation base time for the interpolation target
-	// self.frame2 is the interpolation start (previous frame)
-	// self.frame2time is the animation base time for the interpolation start
-	// self.lerpfrac is the interpolation strength for self.frame2
-	// self.lerpfrac3 is the interpolation strength for self.frame3
-	// self.lerpfrac4 is the interpolation strength for self.frame4
-	// pitch angle on a player model where the animator set up 5 sets of
-	// animations and the csqc simply lerps between sets)
-	entrender->framegroupblend[0].frame = entrender->framegroupblend[1].frame = (int) ed->fields.client->frame;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2))) entrender->framegroupblend[1].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3))) entrender->framegroupblend[2].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4))) entrender->framegroupblend[3].frame = (int) val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame1time))) entrender->framegroupblend[0].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame2time))) entrender->framegroupblend[1].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame3time))) entrender->framegroupblend[2].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.frame4time))) entrender->framegroupblend[3].start = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac))) entrender->framegroupblend[1].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac3))) entrender->framegroupblend[2].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.lerpfrac4))) entrender->framegroupblend[3].lerp = val->_float;
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
-	// assume that the (missing) lerpfrac1 is whatever remains after lerpfrac2+lerpfrac3+lerpfrac4 are summed
-	entrender->framegroupblend[0].lerp = 1 - entrender->framegroupblend[1].lerp - entrender->framegroupblend[2].lerp - entrender->framegroupblend[3].lerp;
-}
-
-int CL_BlendTagMatrix(entity_render_t *entrender, int tagindex, matrix4x4_t *blendmatrix)
-{
-	int j, l, k;
-	int ret;
-	float d;
-	dp_model_t *model = entrender->model;
-	// blend the matrices
-	memset(blendmatrix, 0, sizeof(*blendmatrix));
-	for (j = 0;j < MAX_FRAMEBLENDS && entrender->frameblend[j].lerp > 0;j++)
-	{
-		matrix4x4_t tagmatrix;
-		ret = Mod_Alias_GetTagMatrix(model, entrender->frameblend[j].subframe, tagindex, &tagmatrix);
-		if(ret)
-			return ret;
-		d = entrender->frameblend[j].lerp;
-		for (l = 0;l < 4;l++)
-			for (k = 0;k < 4;k++)
-				blendmatrix->m[l][k] += d * tagmatrix.m[l][k];
-	}
-	return 0;
 }
