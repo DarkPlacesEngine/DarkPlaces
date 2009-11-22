@@ -139,6 +139,7 @@ static void Mod_Print(void);
 static void Mod_Precache (void);
 static void Mod_Decompile_f(void);
 static void Mod_BuildVBOs(void);
+static void Mod_GenerateLightmaps_f(void);
 void Mod_Init (void)
 {
 	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
@@ -152,6 +153,7 @@ void Mod_Init (void)
 	Cmd_AddCommand ("modellist", Mod_Print, "prints a list of loaded models");
 	Cmd_AddCommand ("modelprecache", Mod_Precache, "load a model");
 	Cmd_AddCommand ("modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
+	Cmd_AddCommand ("mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
 }
 
 void Mod_RenderInit(void)
@@ -2913,3 +2915,103 @@ static void Mod_Decompile_f(void)
 	}
 }
 
+typedef struct lightmapsample_s
+{
+	float pos[3];
+	float normal[3];
+	float sh1[4][3];
+	float *vertex_color;
+	unsigned char *lm_bgr;
+	unsigned char *lm_dir;
+}
+lightmapsample_t;
+
+typedef struct lightmapvertex_s
+{
+	float pos[3];
+	float normal[3];
+	float texcoordbase[2];
+	float texcoordlightmap[2];
+	lightmapsample_t sample;
+}
+lightmapvertex_t;
+
+typedef struct lightmaptriangle_s
+{
+	int surfaceindex;
+	lightmapvertex_t vertex[3];
+}
+lightmaptriangle_t;
+
+//static void Mod_GenerateLightmaps_AddSample(const float *pos, const float *normal, float *vertex_color, unsigned char *lm_bgr, unsigned char *lm_dir)
+//{
+//}
+
+static void Mod_GenerateLightmaps_DestroyLightmaps(dp_model_t *model)
+{
+	msurface_t *surface;
+	int surfaceindex;
+	int i;
+	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
+	{
+		surface = model->data_surfaces + surfaceindex;
+		surface->lightmaptexture = NULL;
+		surface->deluxemaptexture = NULL;
+	}
+	if (model->brushq3.data_lightmaps)
+	{
+		for (i = 0;i < model->brushq3.num_mergedlightmaps;i++)
+			R_FreeTexture(model->brushq3.data_lightmaps[i]);
+		Mem_Free(model->brushq3.data_lightmaps);
+		model->brushq3.data_lightmaps = NULL;
+	}
+	if (model->brushq3.data_deluxemaps)
+	{
+		for (i = 0;i < model->brushq3.num_mergedlightmaps;i++)
+			R_FreeTexture(model->brushq3.data_deluxemaps[i]);
+		Mem_Free(model->brushq3.data_deluxemaps);
+		model->brushq3.data_deluxemaps = NULL;
+	}
+}
+
+static void Mod_GenerateLightmaps(dp_model_t *model)
+{
+	//lightmaptriangle_t *lightmaptriangles = Mem_Alloc(model->mempool, model->surfmesh.num_triangles * sizeof(lightmaptriangle_t));
+	dp_model_t *oldloadmodel = loadmodel;
+	loadmodel = model;
+
+	Mod_GenerateLightmaps_DestroyLightmaps(model);
+#if 0
+	// stage 1:
+	// first step is deleting the lightmaps
+	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
+	{
+		surface = model->data_surfaces + surfaceindex;
+		surface->lightmap = NULL;
+		surface->deluxemap = NULL;
+		// add a sample for each vertex of surface
+		for (i = 0, vertexindex = surface->num_firstvertex;i < surface->num_vertices;i++, vertexindex++)
+			Mod_GenerateLightmaps_AddSample(model->surfmesh.data_vertex3f + 3*vertexindex, model->surfmesh.data_normal3f + 3*vertexindex, model->surfmesh.data_lightmapcolor4f + 4*vertexindex, NULL, NULL);
+		// generate lightmaptriangle_t for each triangle of surface
+		for (i = 0, triangleindex = surface->num_firstvertex;i < surface->num_triangles;i++, triangleindex++)
+		{
+	}
+#endif
+
+	loadmodel = oldloadmodel;
+}
+
+static void Mod_GenerateLightmaps_f(void)
+{
+	if (Cmd_Argc() != 1)
+	{
+		Con_Printf("usage: mod_generatelightmaps\n");
+		return;
+	}
+	if (!cl.worldmodel)
+	{
+		Con_Printf("no worldmodel loaded\n");
+		return;
+	}
+	Mod_GenerateLightmaps(cl.worldmodel);
+}
