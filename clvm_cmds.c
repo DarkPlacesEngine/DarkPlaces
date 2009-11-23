@@ -162,6 +162,7 @@ static void VM_CL_sound (void)
 	prvm_edict_t		*entity;
 	float 				volume;
 	float				attenuation;
+	vec3_t				org;
 
 	VM_SAFEPARMCOUNT(5, VM_CL_sound);
 
@@ -189,7 +190,8 @@ static void VM_CL_sound (void)
 		return;
 	}
 
-	S_StartSound(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), entity->fields.client->origin, volume, attenuation);
+	CL_VM_GetEntitySoundOrigin(PRVM_NUM_FOR_EDICT(entity), org);
+	S_StartSound(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation);
 }
 
 // #483 void(vector origin, string sample, float volume, float attenuation) pointsound
