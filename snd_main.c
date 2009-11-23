@@ -1467,7 +1467,7 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 			{
 				S_SetChannelVolume(ch_idx, fvol);
 				ch->dist_mult = attenuation / snd_soundradius.value;
-				SND_Spatialize(ch_idx, false);
+				SND_Spatialize(ch, false);
 				return ch_idx;
 			}
 		}
