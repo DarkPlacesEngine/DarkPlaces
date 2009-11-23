@@ -190,7 +190,7 @@ static void VM_CL_sound (void)
 		return;
 	}
 
-	CL_VM_GetEntitySoundOrigin(PRVM_NUM_FOR_EDICT(entity), org);
+	CL_VM_GetEntitySoundOrigin(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), org);
 	S_StartSound(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation);
 }
 
