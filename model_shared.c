@@ -3032,29 +3032,69 @@ lightmaptriangle_t;
 
 lightmaptriangle_t *mod_generatelightmaps_lightmaptriangles;
 
-static void Mod_GenerateLightmaps_Sample(const float *pos, const float *normal, float *vertex_color, unsigned char *lm_bgr, unsigned char *lm_dir)
+extern void R_SampleRTLights(const float *pos, float *sh1);
+
+static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sh1)
 {
-	
-/*
-	if (mod_generatelightmaps_maxsamples <= mod_generatelightmaps_numsamples)
-	{
-		lightmapsample_t *oldsamples = mod_generatelightmaps_samples;
-		mod_generatelightmaps_maxsamples = max(65536, mod_generatelightmaps_maxsamples * 2);
-		
-		
-	}
-	sample = &mod_generatelightmaps_samples[mod_generatelightmaps_numsamples++];
-	memset(sample, 0, sizeof(*sample));
-	sample->pos[0] = pos[0];
-	sample->pos[1] = pos[1];
-	sample->pos[2] = pos[2];
-	sample->normal[0] = normal[0];
-	sample->normal[1] = normal[1];
-	sample->normal[2] = normal[2];
-	sample->vertex_color = vertex_color;
-	sample->lm_bgr = lm_bgr;
-	sample->lm_dir = lm_dir;
-	*/
+	int i;
+	for (i = 0;i < 4*3;i++)
+		sh1[i] = 0.0f;
+	R_SampleRTLights(pos, sh1);
+}
+
+static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *normal, unsigned char *lm_bgr, unsigned char *lm_dir)
+{
+	float sh1[4*3];
+	float color[3];
+	float dir[3];
+	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
+	VectorSet(dir, VectorLength(sh1 + 3), VectorLength(sh1 + 6), VectorLength(sh1 + 9));
+	VectorNormalize(dir);
+	VectorScale(sh1, 127.5f, color);
+	VectorSet(dir, (dir[0]+1.0f)*127.5f, (dir[1]+1.0f)*127.5f, (dir[2]+1.0f)*127.5f);
+	lm_bgr[0] = (unsigned char)bound(0.0f, color[2], 255.0f);
+	lm_bgr[1] = (unsigned char)bound(0.0f, color[1], 255.0f);
+	lm_bgr[2] = (unsigned char)bound(0.0f, color[0], 255.0f);
+	lm_bgr[3] = 255;
+	lm_dir[0] = (unsigned char)dir[0];
+	lm_dir[1] = (unsigned char)dir[1];
+	lm_dir[2] = (unsigned char)dir[2];
+	lm_dir[3] = 255;
+}
+
+static void Mod_GenerateLightmaps_VertexSample(const float *pos, const float *normal, float *vertex_color)
+{
+	float sh1[4*3];
+	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
+	VectorCopy(sh1, vertex_color);
+}
+
+static void Mod_GenerateLightmaps_GridSample(const float *pos, q3dlightgrid_t *s)
+{
+	float sh1[4*3];
+	float ambient[3];
+	float diffuse[3];
+	float dir[3];
+	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
+	// calculate the direction we'll use to reduce the sh1 to a directional light source
+	VectorSet(dir, VectorLength(sh1 + 3), VectorLength(sh1 + 6), VectorLength(sh1 + 9));
+	VectorNormalize(dir);
+	// scale the ambient from 0-2 to 0-255
+	VectorScale(sh1, 127.5f, ambient);
+	// extract the diffuse color along the chosen direction and scale it
+	diffuse[0] = (dir[0]*sh1[3] + dir[1]*sh1[6] + dir[2]*sh1[ 9] + sh1[0]) * 127.5f;
+	diffuse[1] = (dir[0]*sh1[4] + dir[1]*sh1[7] + dir[2]*sh1[10] + sh1[1]) * 127.5f;
+	diffuse[2] = (dir[0]*sh1[5] + dir[1]*sh1[8] + dir[2]*sh1[11] + sh1[2]) * 127.5f;
+	// encode to the grid format
+	s->ambientrgb[0] = (unsigned char)bound(0.0f, ambient[0], 255.0f);
+	s->ambientrgb[1] = (unsigned char)bound(0.0f, ambient[1], 255.0f);
+	s->ambientrgb[2] = (unsigned char)bound(0.0f, ambient[2], 255.0f);
+	s->diffusergb[0] = (unsigned char)bound(0.0f, diffuse[0], 255.0f);
+	s->diffusergb[1] = (unsigned char)bound(0.0f, diffuse[1], 255.0f);
+	s->diffusergb[2] = (unsigned char)bound(0.0f, diffuse[2], 255.0f);
+	if (dir[2] >= 0.99f) {s->diffuseyaw = 0;s->diffusepitch = 0;}
+	else if (dir[2] <= -0.99f) {s->diffuseyaw = 0;s->diffusepitch = 128;}
+	else {s->diffuseyaw = (unsigned char)(acos(dir[2]) * (127.5f/M_PI));s->diffusepitch = (unsigned char)(atan2(dir[1], dir[0]) * (127.5f/M_PI));}
 }
 
 static void Mod_GenerateLightmaps_DestroyLightmaps(dp_model_t *model)
@@ -3250,7 +3290,7 @@ static void Mod_GenerateLightmaps_ClassifyTriangles(dp_model_t *model)
 	}
 }
 
-static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
+static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 {
 	msurface_t *surface;
 	int surfaceindex;
@@ -3354,6 +3394,7 @@ static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
 			Mod_AllocLightmap_Reset(&lmstate);
 		}
 	}
+	lightmapnumber++;
 	Mod_AllocLightmap_Free(&lmstate);
 
 	// now together lightmap textures
@@ -3362,7 +3403,6 @@ static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
 	model->brushq3.data_deluxemaps = Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	lightmappixels = Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
 	deluxemappixels = Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
-	lightmapnumber = 0;
 	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
 	{
 		surface = model->data_surfaces + surfaceindex;
@@ -3454,7 +3494,7 @@ static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
 					f = 1.0f / column_numpoints;
 					VectorScale(samplecenter, f, samplecenter);
 					VectorMA(samplecenter, 0.125f, trianglenormal, samplecenter);
-					Mod_GenerateLightmaps_Sample(samplecenter, samplenormal, NULL, lightmappixels + pixeloffset, deluxemappixels + pixeloffset);
+					Mod_GenerateLightmaps_LightmapSample(samplecenter, samplenormal, lightmappixels + pixeloffset, deluxemappixels + pixeloffset);
 				}
 			}
 		}
@@ -3462,8 +3502,8 @@ static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
 
 	for (lightmapindex = 0;lightmapindex < model->brushq3.num_mergedlightmaps;lightmapindex++)
 	{
-		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapnumber), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapnumber), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 	}
 
 	if (lightmappixels)
@@ -3477,20 +3517,42 @@ static void Mod_GenerateLightmaps_AllocateLightmaps(dp_model_t *model)
 		e = model->surfmesh.data_element3i + surface->num_firsttriangle*3;
 		if (!surface->num_triangles)
 			continue;
-		if (model->brushq3.num_mergedlightmaps)
+		lightmapindex = mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle].lightmapindex;
+		surface->lightmaptexture = model->brushq3.data_lightmaps[lightmapindex];
+		surface->deluxemaptexture = model->brushq3.data_deluxemaps[lightmapindex];
+	}
+}
+
+static void Mod_GenerateLightmaps_UpdateVertexColors(dp_model_t *model)
+{
+	int i;
+	for (i = 0;i < model->surfmesh.num_vertices;i++)
+		Mod_GenerateLightmaps_VertexSample(model->surfmesh.data_vertex3f + 3*i, model->surfmesh.data_normal3f + 3*i, model->surfmesh.data_lightmapcolor4f + 4*i);
+}
+
+static void Mod_GenerateLightmaps_UpdateLightGrid(dp_model_t *model)
+{
+	int x;
+	int y;
+	int z;
+	int index = 0;
+	float pos[3];
+	for (z = 0;z < model->brushq3.num_lightgrid_isize[2];z++)
+	{
+		pos[2] = (model->brushq3.num_lightgrid_imins[2] + z + 0.5f) * model->brushq3.num_lightgrid_cellsize[2];
+		for (y = 0;y < model->brushq3.num_lightgrid_isize[1];y++)
 		{
-			lightmapindex = mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle].lightmapindex;
-			surface->lightmaptexture = model->brushq3.data_lightmaps[lightmapindex];
-			surface->deluxemaptexture = model->brushq3.data_deluxemaps[lightmapindex];
-		}
-		else
-		{
-			surface->lightmaptexture = NULL;
-			surface->deluxemaptexture = NULL;
+			pos[1] = (model->brushq3.num_lightgrid_imins[1] + y + 0.5f) * model->brushq3.num_lightgrid_cellsize[1];
+			for (x = 0;x < model->brushq3.num_lightgrid_isize[0];x++, index++)
+			{
+				pos[0] = (model->brushq3.num_lightgrid_imins[0] + x + 0.5f) * model->brushq3.num_lightgrid_cellsize[0];
+				Mod_GenerateLightmaps_GridSample(pos, model->brushq3.data_lightgrid + index);
+			}
 		}
 	}
 }
 
+extern cvar_t mod_q3bsp_nolightmaps;
 static void Mod_GenerateLightmaps(dp_model_t *model)
 {
 	//lightmaptriangle_t *lightmaptriangles = Mem_Alloc(model->mempool, model->surfmesh.num_triangles * sizeof(lightmaptriangle_t));
@@ -3501,7 +3563,10 @@ static void Mod_GenerateLightmaps(dp_model_t *model)
 	Mod_GenerateLightmaps_UnweldTriangles(model);
 	Mod_GenerateLightmaps_CreateTriangleInformation(model);
 	Mod_GenerateLightmaps_ClassifyTriangles(model);
-	Mod_GenerateLightmaps_AllocateLightmaps(model);
+	if(!mod_q3bsp_nolightmaps.integer)
+		Mod_GenerateLightmaps_CreateLightmaps(model);
+	Mod_GenerateLightmaps_UpdateVertexColors(model);
+	Mod_GenerateLightmaps_UpdateLightGrid(model);
 #if 0
 	// stage 1:
 	// first step is deleting the lightmaps

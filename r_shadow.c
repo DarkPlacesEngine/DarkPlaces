@@ -5098,6 +5098,48 @@ void R_Shadow_DrawLightSprites(void)
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
+void R_SampleRTLights(const float *pos, float *sh1)
+{
+	int flag;
+	size_t lightindex;
+	dlight_t *light;
+	rtlight_t *rtlight;
+	size_t range;
+	vec3_t relativepoint;
+	vec3_t localpoint;
+	vec3_t color;
+	vec_t dist;
+	vec_t intensity;
+	flag = LIGHTFLAG_REALTIMEMODE;
+	R_Mesh_Matrix(&identitymatrix);
+
+	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+	for (lightindex = 0;lightindex < range;lightindex++)
+	{
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (!light)
+			continue;
+		rtlight = &light->rtlight;
+		if (!(rtlight->flags & flag))
+			continue;
+		VectorSubtract(rtlight->shadoworigin, pos, relativepoint);
+		// early out
+		if (VectorLength2(relativepoint) >= rtlight->radius*rtlight->radius)
+			continue;
+		Matrix4x4_Transform(&rtlight->matrix_worldtolight, pos, localpoint);
+		dist = VectorLength(localpoint);
+		intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
+		if (intensity <= 0)
+			continue;
+		VectorNormalize(relativepoint);
+		VectorScale(rtlight->color, intensity, color);
+		VectorMA(sh1    , 0.5f            , color, sh1    );
+		VectorMA(sh1 + 3, relativepoint[0], color, sh1 + 3);
+		VectorMA(sh1 + 6, relativepoint[1], color, sh1 + 6);
+		VectorMA(sh1 + 9, relativepoint[2], color, sh1 + 9);
+	}
+}
+
 void R_Shadow_SelectLightInView(void)
 {
 	float bestrating, rating, temp[3];
