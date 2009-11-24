@@ -5111,8 +5111,6 @@ void R_SampleRTLights(const float *pos, float *sh1)
 	vec_t dist;
 	vec_t intensity;
 	flag = LIGHTFLAG_REALTIMEMODE;
-	R_Mesh_Matrix(&identitymatrix);
-
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
