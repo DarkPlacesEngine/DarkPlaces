@@ -3236,14 +3236,7 @@ static void Mod_GenerateLightmaps_CreateTriangleInformation(dp_model_t *model)
 	}
 }
 
-#if 0
-float lmprojection[3][3][3] =
-{
-	{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}},
-	{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}},
-	{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
-};
-#endif
+float lmaxis[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 
 static void Mod_GenerateLightmaps_ClassifyTriangles(dp_model_t *model)
 {
@@ -3301,18 +3294,20 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	int k;
 	int x;
 	int y;
+	int axis;
+	int axis1;
+	int axis2;
 	int retry;
 	int pixeloffset;
-	int row_numpoints;
-	int column_numpoints;
-	float f;
-	float row_plane[3];
-	float column_plane[3];
 	float trianglenormal[3];
-	float clipbuf[5][8][3];
 	float samplecenter[3];
 	float samplenormal[3];
 	float mins[3];
+	float temp[3];
+	float lmiscale[2];
+	float slopex;
+	float slopey;
+	float slopebase;
 	float lmscalepixels;
 	float lmmins;
 	float lmmaxs;
@@ -3410,10 +3405,25 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 		for (i = 0;i < surface->num_triangles;i++)
 		{
 			triangle = &mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle+i];
-			VectorClear(row_plane);
-			VectorClear(column_plane);
-			row_plane[triangle->axis] = 1.0f;
-			column_plane[!triangle->axis] = 1.0f;
+			TriangleNormal(triangle->vertex[0], triangle->vertex[1], triangle->vertex[2], trianglenormal);
+			VectorNormalize(trianglenormal);
+			axis = triangle->axis;
+			axis1 = axis == 0 ? 1 : 0;
+			axis2 = axis == 2 ? 1 : 2;
+			lmiscale[0] = 1.0f / triangle->lmscale[0];
+			lmiscale[1] = 1.0f / triangle->lmscale[1];
+			for (j = 0;j < 3;j++)
+			{
+				model->surfmesh.data_texcoordlightmap2f[e[i*3+j]*2+0] = ((triangle->vertex[j][axis1] - triangle->lmbase[0]) * triangle->lmscale[0] + triangle->lmoffset[0]) / lm_texturesize;
+				model->surfmesh.data_texcoordlightmap2f[e[i*3+j]*2+1] = ((triangle->vertex[j][axis2] - triangle->lmbase[1]) * triangle->lmscale[1] + triangle->lmoffset[1]) / lm_texturesize;
+			}
+			if (trianglenormal[axis] < 0)
+				VectorNegate(trianglenormal, trianglenormal);
+			CrossProduct(lmaxis[axis2], trianglenormal, temp);
+			slopex = temp[axis] / temp[axis1];
+			CrossProduct(lmaxis[axis1], trianglenormal, temp);
+			slopey = temp[axis] / temp[axis2];
+			slopebase = triangle->vertex[0][axis] - triangle->vertex[0][axis1]*slopex - triangle->vertex[0][axis2]*slopey;
 #if 0
 			switch (axis)
 			{
@@ -3464,36 +3474,18 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 			Matrix4x4_FromVectors(&backmatrix, forward, left, up, origin);
 #endif
 #define LM_DIST_EPSILON (1.0f / 32.0f)
-			TriangleNormal(triangle->vertex[0], triangle->vertex[1], triangle->vertex[2], trianglenormal);
-			VectorNormalize(trianglenormal);
-			PolygonF_QuadForPlane(clipbuf[0][0], trianglenormal[0], trianglenormal[1], trianglenormal[2], DotProduct(trianglenormal, triangle->vertex[0]), model->radius * 2);
 			VectorCopy(trianglenormal, samplenormal); // FIXME!
 			for (y = 0;y < triangle->lmsize[1];y++)
 			{
-				row_numpoints = PolygonF_Clip(4            , clipbuf[0][0],  row_plane[0],  row_plane[1],  row_plane[2],   triangle->lmbase[1] +  y    / triangle->lmscale[1] , LM_DIST_EPSILON, 8, clipbuf[1][0]);
-				if (!row_numpoints)
-					continue;
-				row_numpoints = PolygonF_Clip(row_numpoints, clipbuf[1][0], -row_plane[0], -row_plane[1], -row_plane[2], -(triangle->lmbase[1] + (y+1) / triangle->lmscale[1]), LM_DIST_EPSILON, 8, clipbuf[2][0]);
-				if (!row_numpoints)
-					continue;
-				pixeloffset = triangle->lightmapindex * lm_texturesize * lm_texturesize * 4 + (y+triangle->lmoffset[1]) * lm_texturesize * 4 + triangle->lmoffset[0] * 4;
+				pixeloffset = ((triangle->lightmapindex * lm_texturesize + y + triangle->lmoffset[1]) * lm_texturesize + triangle->lmoffset[0]) * 4;
 				for (x = 0;x < triangle->lmsize[0];x++, pixeloffset += 4)
 				{
-					column_numpoints = PolygonF_Clip(row_numpoints   , clipbuf[2][0],  column_plane[0],  column_plane[1],  column_plane[2],   triangle->lmbase[0] +  x    / triangle->lmscale[0] , LM_DIST_EPSILON, 8, clipbuf[3][0]);
-					if (!column_numpoints)
-						continue;
-					column_numpoints = PolygonF_Clip(column_numpoints, clipbuf[3][0], -column_plane[0], -column_plane[1], -column_plane[2], -(triangle->lmbase[0] + (x+1) / triangle->lmscale[0]), LM_DIST_EPSILON, 8, clipbuf[4][0]);
-					if (!column_numpoints)
-						continue;
-					// we now have a polygon fragment in clipbuf[4], we can
-					// sample its center or subdivide it further for
-					// antialiasing
-					VectorClear(samplecenter);
-					for (j = 0;j < column_numpoints;j++)
-						VectorAdd(samplecenter, clipbuf[4][j], samplecenter);
-					f = 1.0f / column_numpoints;
-					VectorScale(samplecenter, f, samplecenter);
-					VectorMA(samplecenter, 0.125f, trianglenormal, samplecenter);
+					samplecenter[axis1] = x*lmiscale[0] + triangle->lmbase[0];
+					samplecenter[axis2] = y*lmiscale[1] + triangle->lmbase[1];
+					samplecenter[axis] = samplecenter[axis1]*slopex + samplecenter[axis2]*slopey + slopebase;
+					//(triangle->vertex[j][axis1] - triangle->lmbase[0]) * triangle->lmscale[0] + triangle->lmoffset[0];
+					//(triangle->vertex[j][axis2] - triangle->lmbase[1]) * triangle->lmscale[1] + triangle->lmoffset[1];
+					VectorMA(samplecenter, 0.125f, samplenormal, samplecenter);
 					Mod_GenerateLightmaps_LightmapSample(samplecenter, samplenormal, lightmappixels + pixeloffset, deluxemappixels + pixeloffset);
 				}
 			}
@@ -3502,8 +3494,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 
 	for (lightmapindex = 0;lightmapindex < model->brushq3.num_mergedlightmaps;lightmapindex++)
 	{
-		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 	}
 
 	if (lightmappixels)
