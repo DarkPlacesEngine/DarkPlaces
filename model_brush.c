@@ -2228,70 +2228,6 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 }
 #endif
 
-/* Maximum size of a single LM */
-#define MAX_SINGLE_LM_SIZE    256
-
-struct alloc_lm_row
-{
-	int rowY;
-	int currentX;
-};
-
-struct alloc_lm_state
-{
-	int currentY;
-	struct alloc_lm_row rows[MAX_SINGLE_LM_SIZE];
-};
-
-static void init_alloc_lm_state (struct alloc_lm_state* state)
-{
-	int r;
-
-	state->currentY = 0;
-	for (r = 0; r < MAX_SINGLE_LM_SIZE; r++)
-	{
-	  state->rows[r].currentX = 0;
-	  state->rows[r].rowY = -1;
-	}
-}
-
-static qboolean Mod_Q1BSP_AllocLightmapBlock(struct alloc_lm_state* state, int totalwidth, int totalheight, int blockwidth, int blockheight, int *outx, int *outy)
-{
-	struct alloc_lm_row* row;
-	int r;
-
-	row = &(state->rows[blockheight]);
-	if ((row->rowY < 0) || (row->currentX + blockwidth > totalwidth))
-	{
-		if (state->currentY + blockheight <= totalheight)
-		{
-			row->rowY = state->currentY;
-			row->currentX = 0;
-			state->currentY += blockheight;
-		}
-		else
-		{
-			/* See if we can stuff the block into a higher row */
-			row = NULL;
-			for (r = blockheight; r < MAX_SINGLE_LM_SIZE; r++)
-			{
-				if ((state->rows[r].rowY >= 0)
-				  && (state->rows[r].currentX + blockwidth <= totalwidth))
-				{
-					row = &(state->rows[r]);
-					break;
-				}
-			}
-			if (row == NULL) return false;
-		}
-	}
-	*outy = row->rowY;
-	*outx = row->currentX;
-	row->currentX += blockwidth;
-
-	return true;
-}
-
 extern cvar_t gl_max_size;
 static void Mod_Q1BSP_LoadFaces(lump_t *l)
 {
@@ -2481,8 +2417,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	if (cls.state != ca_dedicated)
 	{
 		int stainmapsize = 0;
-		struct alloc_lm_state allocState;
+		mod_alloclightmap_state_t allocState;
 
+		Mod_AllocLightmap_Init(&allocState, lightmapsize, lightmapsize);
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 		{
 			int i, iu, iv, lightmapx = 0, lightmapy = 0;
@@ -2497,7 +2434,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			tsize = (surface->lightmapinfo->extents[1] >> 4) + 1;
 			stainmapsize += ssize * tsize * 3;
 
-			if (!lightmaptexture || !Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy))
+			if (!lightmaptexture || !Mod_AllocLightmap_Block(&allocState, ssize, tsize, &lightmapx, &lightmapy))
 			{
 				// allocate a texture pool if we need it
 				if (loadmodel->texturepool == NULL)
@@ -2507,8 +2444,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				if (loadmodel->brushq1.nmaplightdata)
 					deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 				lightmapnumber++;
-				init_alloc_lm_state (&allocState);
-				Mod_Q1BSP_AllocLightmapBlock(&allocState, lightmapsize, lightmapsize, ssize, tsize, &lightmapx, &lightmapy);
+				Mod_AllocLightmap_Reset(&allocState);
+				Mod_AllocLightmap_Block(&allocState, ssize, tsize, &lightmapx, &lightmapy);
 			}
 			surface->lightmaptexture = lightmaptexture;
 			surface->deluxemaptexture = deluxemaptexture;
@@ -6216,6 +6153,9 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.num_leafs = 0;
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
 
+	if (loadmodel->brush.numsubmodels)
+		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
 	{
@@ -6243,6 +6183,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
 		mod->brush.submodel = i;
+		if (loadmodel->brush.submodels)
+			loadmodel->brush.submodels[i] = mod;
 
 		// make the model surface list (used by shadowing/lighting)
 		mod->firstmodelsurface = mod->brushq3.data_models[i].firstface;
