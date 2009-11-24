@@ -1005,6 +1005,27 @@ void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
 void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firstvertexpointer, int *lastvertexpointer);
 
+typedef struct mod_alloclightmap_row_s
+{
+	int rowY;
+	int currentX;
+}
+mod_alloclightmap_row_t;
+
+typedef struct mod_alloclightmap_state_s
+{
+	int width;
+	int height;
+	int currentY;
+	mod_alloclightmap_row_t *rows;
+}
+mod_alloclightmap_state_t;
+
+void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, int width, int height);
+void Mod_AllocLightmap_Free(mod_alloclightmap_state_t *state);
+void Mod_AllocLightmap_Reset(mod_alloclightmap_state_t *state);
+qboolean Mod_AllocLightmap_Block(mod_alloclightmap_state_t *state, int blockwidth, int blockheight, int *outx, int *outy);
+
 // bsp models
 void Mod_BrushInit(void);
 // used for talking to the QuakeC mainly
