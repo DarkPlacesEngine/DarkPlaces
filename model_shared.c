@@ -3027,6 +3027,8 @@ typedef struct lightmaptriangle_s
 	// 2D modelspace to lightmap coordinate scale
 	float lmscale[2];
 	float vertex[3][3];
+	float mins[3];
+	float maxs[3];
 }
 lightmaptriangle_t;
 
@@ -3051,6 +3053,10 @@ static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *
 	VectorSet(dir, VectorLength(sh1 + 3), VectorLength(sh1 + 6), VectorLength(sh1 + 9));
 	VectorNormalize(dir);
 	VectorScale(sh1, 127.5f, color);
+	//VectorCopy(normal, dir);
+	if (r_test.integer & 1) dir[0] *= -1.0f;
+	if (r_test.integer & 2) dir[1] *= -1.0f;
+	if (r_test.integer & 4) dir[2] *= -1.0f;
 	VectorSet(dir, (dir[0]+1.0f)*127.5f, (dir[1]+1.0f)*127.5f, (dir[2]+1.0f)*127.5f);
 	lm_bgr[0] = (unsigned char)bound(0.0f, color[2], 255.0f);
 	lm_bgr[1] = (unsigned char)bound(0.0f, color[1], 255.0f);
@@ -3244,9 +3250,7 @@ static void Mod_GenerateLightmaps_ClassifyTriangles(dp_model_t *model)
 	int surfaceindex;
 	int i;
 	int axis;
-	float mins[3];
-	float maxs[3];
-	float aabbsize[3];
+	float normal[3];
 	const int *e;
 	lightmaptriangle_t *triangle;
 
@@ -3258,25 +3262,18 @@ static void Mod_GenerateLightmaps_ClassifyTriangles(dp_model_t *model)
 		{
 			triangle = &mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle+i];
 			// calculate bounds of triangle
-			mins[0] = min(triangle->vertex[0][0], min(triangle->vertex[1][0], triangle->vertex[2][0]));
-			mins[1] = min(triangle->vertex[0][1], min(triangle->vertex[1][1], triangle->vertex[2][1]));
-			mins[2] = min(triangle->vertex[0][2], min(triangle->vertex[1][2], triangle->vertex[2][2]));
-			maxs[0] = max(triangle->vertex[0][0], max(triangle->vertex[1][0], triangle->vertex[2][0]));
-			maxs[1] = max(triangle->vertex[0][1], max(triangle->vertex[1][1], triangle->vertex[2][1]));
-			maxs[2] = max(triangle->vertex[0][2], max(triangle->vertex[1][2], triangle->vertex[2][2]));
-			// pick an axial projection based on the shortest dimension of the
-			// axially aligned bounding box, this is almost equivalent to
-			// calculating a triangle normal and classifying its primary axis.
-			//
-			// one difference is that this method can pick a workable
-			// projection axis even for a degenerate triangle whose only shape
-			// is a line (where the chosen projection will always map the line
-			// to non-zero coordinates in texture space)
-			VectorSubtract(maxs, mins, aabbsize);
+			triangle->mins[0] = min(triangle->vertex[0][0], min(triangle->vertex[1][0], triangle->vertex[2][0]));
+			triangle->mins[1] = min(triangle->vertex[0][1], min(triangle->vertex[1][1], triangle->vertex[2][1]));
+			triangle->mins[2] = min(triangle->vertex[0][2], min(triangle->vertex[1][2], triangle->vertex[2][2]));
+			triangle->maxs[0] = max(triangle->vertex[0][0], max(triangle->vertex[1][0], triangle->vertex[2][0]));
+			triangle->maxs[1] = max(triangle->vertex[0][1], max(triangle->vertex[1][1], triangle->vertex[2][1]));
+			triangle->maxs[2] = max(triangle->vertex[0][2], max(triangle->vertex[1][2], triangle->vertex[2][2]));
+			// pick an axial projection based on the triangle normal
+			TriangleNormal(triangle->vertex[0], triangle->vertex[1], triangle->vertex[2], normal);
 			axis = 0;
-			if (aabbsize[1] < aabbsize[axis])
+			if (fabs(normal[1]) > fabs(normal[axis]))
 				axis = 1;
-			if (aabbsize[2] < aabbsize[axis])
+			if (fabs(normal[2]) > fabs(normal[axis]))
 				axis = 2;
 			triangle->axis = axis;
 		}
@@ -3302,7 +3299,6 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	float trianglenormal[3];
 	float samplecenter[3];
 	float samplenormal[3];
-	float mins[3];
 	float temp[3];
 	float lmiscale[2];
 	float slopex;
@@ -3355,8 +3351,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 				{
 					if (j == triangle->axis)
 						continue;
-					lmmins = floor(mins[j]*lmscalepixels)-lm_borderpixels;
-					lmmaxs = floor(mins[j]*lmscalepixels)+lm_borderpixels;
+					lmmins = floor(triangle->mins[j]*lmscalepixels)-lm_borderpixels;
+					lmmaxs = floor(triangle->maxs[j]*lmscalepixels)+lm_borderpixels;
 					triangle->lmsize[k] = (int)(lmmaxs-lmmins);
 					triangle->lmbase[k] = lmmins/lmscalepixels;
 					triangle->lmscale[k] = lmscalepixels;
@@ -3393,6 +3389,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	Mod_AllocLightmap_Free(&lmstate);
 
 	// now together lightmap textures
+	model->brushq3.deluxemapping_modelspace = true;
+	model->brushq3.deluxemapping = true;
 	model->brushq3.num_mergedlightmaps = lightmapnumber;
 	model->brushq3.data_lightmaps = Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	model->brushq3.data_deluxemaps = Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
@@ -3407,23 +3405,30 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 			triangle = &mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle+i];
 			TriangleNormal(triangle->vertex[0], triangle->vertex[1], triangle->vertex[2], trianglenormal);
 			VectorNormalize(trianglenormal);
+			VectorCopy(trianglenormal, samplenormal); // FIXME: this is supposed to be interpolated per pixel from vertices
 			axis = triangle->axis;
 			axis1 = axis == 0 ? 1 : 0;
 			axis2 = axis == 2 ? 1 : 2;
 			lmiscale[0] = 1.0f / triangle->lmscale[0];
 			lmiscale[1] = 1.0f / triangle->lmscale[1];
-			for (j = 0;j < 3;j++)
-			{
-				model->surfmesh.data_texcoordlightmap2f[e[i*3+j]*2+0] = ((triangle->vertex[j][axis1] - triangle->lmbase[0]) * triangle->lmscale[0] + triangle->lmoffset[0]) / lm_texturesize;
-				model->surfmesh.data_texcoordlightmap2f[e[i*3+j]*2+1] = ((triangle->vertex[j][axis2] - triangle->lmbase[1]) * triangle->lmscale[1] + triangle->lmoffset[1]) / lm_texturesize;
-			}
 			if (trianglenormal[axis] < 0)
 				VectorNegate(trianglenormal, trianglenormal);
-			CrossProduct(lmaxis[axis2], trianglenormal, temp);
-			slopex = temp[axis] / temp[axis1];
-			CrossProduct(lmaxis[axis1], trianglenormal, temp);
-			slopey = temp[axis] / temp[axis2];
+			CrossProduct(lmaxis[axis2], trianglenormal, temp);slopex = temp[axis] / temp[axis1];
+			CrossProduct(lmaxis[axis1], trianglenormal, temp);slopey = temp[axis] / temp[axis2];
 			slopebase = triangle->vertex[0][axis] - triangle->vertex[0][axis1]*slopex - triangle->vertex[0][axis2]*slopey;
+			for (j = 0;j < 3;j++)
+			{
+				float *t2f = model->surfmesh.data_texcoordlightmap2f + e[i*3+j]*2;
+				t2f[0] = ((triangle->vertex[j][axis1] - triangle->lmbase[0]) * triangle->lmscale[0] + triangle->lmoffset[0]) / lm_texturesize;
+				t2f[1] = ((triangle->vertex[j][axis2] - triangle->lmbase[1]) * triangle->lmscale[1] + triangle->lmoffset[1]) / lm_texturesize;
+#if 0
+				samplecenter[axis1] = (t2f[0]*lm_texturesize-triangle->lmoffset[0])*lmiscale[0] + triangle->lmbase[0];
+				samplecenter[axis2] = (t2f[1]*lm_texturesize-triangle->lmoffset[1])*lmiscale[1] + triangle->lmbase[1];
+				samplecenter[axis] = samplecenter[axis1]*slopex + samplecenter[axis2]*slopey + slopebase;
+				Con_Printf("%f:%f %f:%f %f:%f = %f %f\n", triangle->vertex[j][axis1], samplecenter[axis1], triangle->vertex[j][axis2], samplecenter[axis2], triangle->vertex[j][axis], samplecenter[axis], t2f[0], t2f[1]);
+#endif
+			}
+
 #if 0
 			switch (axis)
 			{
@@ -3474,7 +3479,6 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 			Matrix4x4_FromVectors(&backmatrix, forward, left, up, origin);
 #endif
 #define LM_DIST_EPSILON (1.0f / 32.0f)
-			VectorCopy(trianglenormal, samplenormal); // FIXME!
 			for (y = 0;y < triangle->lmsize[1];y++)
 			{
 				pixeloffset = ((triangle->lightmapindex * lm_texturesize + y + triangle->lmoffset[1]) * lm_texturesize + triangle->lmoffset[0]) * 4;
@@ -3483,8 +3487,6 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 					samplecenter[axis1] = x*lmiscale[0] + triangle->lmbase[0];
 					samplecenter[axis2] = y*lmiscale[1] + triangle->lmbase[1];
 					samplecenter[axis] = samplecenter[axis1]*slopex + samplecenter[axis2]*slopey + slopebase;
-					//(triangle->vertex[j][axis1] - triangle->lmbase[0]) * triangle->lmscale[0] + triangle->lmoffset[0];
-					//(triangle->vertex[j][axis2] - triangle->lmbase[1]) * triangle->lmscale[1] + triangle->lmoffset[1];
 					VectorMA(samplecenter, 0.125f, samplenormal, samplecenter);
 					Mod_GenerateLightmaps_LightmapSample(samplecenter, samplenormal, lightmappixels + pixeloffset, deluxemappixels + pixeloffset);
 				}
