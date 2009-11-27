@@ -3053,6 +3053,7 @@ typedef struct lightmaplight_s
 	float iradius;
 	float radius2;
 	float color[3];
+	svbsp_t svbsp;
 }
 lightmaplight_t;
 
@@ -3064,6 +3065,70 @@ static float mod_generatelightmaps_offsets[3][MAX_LIGHTMAPSAMPLES][3];
 
 static int mod_generatelightmaps_numlights;
 static lightmaplight_t *mod_generatelightmaps_lightinfo;
+
+static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP_InsertSurfaces(const dp_model_t *model, svbsp_t *svbsp, const float *mins, const float *maxs)
+{
+	int surfaceindex;
+	int triangleindex;
+	const msurface_t *surface;
+	const float *vertex3f = model->surfmesh.data_vertex3f;
+	const int *element3i = model->surfmesh.data_element3i;
+	const int *e;
+	double v2[3][3];
+	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->nummodelsurfaces;surfaceindex++, surface++)
+	{
+		if (!BoxesOverlap(surface->mins, surface->maxs, mins, maxs))
+			continue;
+		if (R_GetCurrentTexture(surface->texture)->currentmaterialflags & MATERIALFLAG_NOSHADOW)
+			continue;
+		for (triangleindex = 0, e = element3i + 3*surface->num_firsttriangle;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+		{
+			VectorCopy(vertex3f + 3*e[0], v2[0]);
+			VectorCopy(vertex3f + 3*e[1], v2[1]);
+			VectorCopy(vertex3f + 3*e[2], v2[2]);
+			SVBSP_AddPolygon(svbsp, 3, v2[0], true, NULL, NULL, 0);
+		}
+	}
+}
+
+static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(dp_model_t *model, lightmaplight_t *lightinfo)
+{
+	int maxnodes = 1<<14;
+	svbsp_node_t *nodes;
+	double origin[3];
+	float mins[3];
+	float maxs[3];
+	svbsp_t svbsp;
+	VectorSet(mins, lightinfo->origin[0] - lightinfo->radius, lightinfo->origin[1] - lightinfo->radius, lightinfo->origin[2] - lightinfo->radius);
+	VectorSet(maxs, lightinfo->origin[0] + lightinfo->radius, lightinfo->origin[1] + lightinfo->radius, lightinfo->origin[2] + lightinfo->radius);
+	VectorCopy(lightinfo->origin, origin);
+	nodes = Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
+	for (;;)
+	{
+		SVBSP_Init(&svbsp, origin, maxnodes, nodes);
+		Mod_GenerateLightmaps_CreateLights_ComputeSVBSP_InsertSurfaces(model, &svbsp, mins, maxs);
+		if (svbsp.ranoutofnodes)
+		{
+			maxnodes *= 2;
+			if (maxnodes >= 1<<22)
+			{
+				Mem_Free(nodes);
+				return;
+			}
+			Mem_Free(nodes);
+			nodes = Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
+		}
+		else
+			break;
+	}
+	if (svbsp.numnodes > 0)
+	{
+		svbsp.nodes = Mem_Alloc(tempmempool, svbsp.numnodes * sizeof(*nodes));
+		memcpy(svbsp.nodes, nodes, svbsp.numnodes * sizeof(*nodes));
+		lightinfo->svbsp = svbsp;
+	}
+	Mem_Free(nodes);
+}
 
 extern int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);
 static void Mod_GenerateLightmaps_CreateLights(dp_model_t *model)
@@ -3101,20 +3166,40 @@ static void Mod_GenerateLightmaps_CreateLights(dp_model_t *model)
 		lightinfo->iradius = 1.0f / lightinfo->radius;
 		lightinfo->radius2 = lightinfo->radius * lightinfo->radius;
 		// TODO: compute svbsp
+		Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(model, lightinfo);
 	}
 }
 
 static void Mod_GenerateLightmaps_DestroyLights(dp_model_t *model)
 {
+	int i;
 	if (mod_generatelightmaps_lightinfo)
+	{
+		for (i = 0;i < mod_generatelightmaps_numlights;i++)
+			if (mod_generatelightmaps_lightinfo[i].svbsp.nodes)
+				Mem_Free(mod_generatelightmaps_lightinfo[i].svbsp.nodes);
 		Mem_Free(mod_generatelightmaps_lightinfo);
+	}
 	mod_generatelightmaps_lightinfo = NULL;
 	mod_generatelightmaps_numlights = 0;
 }
 
+static qboolean Mod_GenerateLightmaps_SamplePoint_SVBSP(const svbsp_t *svbsp, const float *pos)
+{
+	const svbsp_node_t *node;
+	const svbsp_node_t *nodes = svbsp->nodes;
+	int num = 0;
+	while (num >= 0)
+	{
+		node = nodes + num;
+		num = node->children[DotProduct(node->plane, pos) < node->plane[3]];
+	}
+	return num == -1; // true if empty, false if solid (shadowed)
+}
+
 extern cvar_t r_shadow_lightattenuationdividebias;
 extern cvar_t r_shadow_lightattenuationlinearscale;
-static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sample, int numoffsets, const float *offsets)
+static void Mod_GenerateLightmaps_SamplePoint(const float *pos, const float *normal, float *sample, int numoffsets, const float *offsets)
 {
 	int i;
 	float relativepoint[3];
@@ -3123,11 +3208,11 @@ static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sample, i
 	float dist;
 	float dist2;
 	float intensity;
-	trace_t trace;
 	int offsetindex;
 	int hits;
 	int tests;
 	const lightmaplight_t *lightinfo;
+	trace_t trace;
 	for (i = 0;i < 5*3;i++)
 		sample[i] = 0.0f;
 	for (i = 0, lightinfo = mod_generatelightmaps_lightinfo;i < mod_generatelightmaps_numlights;i++, lightinfo++)
@@ -3144,33 +3229,40 @@ static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sample, i
 		if (cl.worldmodel && cl.worldmodel->TraceLine && numoffsets > 0)
 		{
 			hits = 0;
-			tests = 0;
-			for (offsetindex = 0;offsetindex < numoffsets;offsetindex++)
+			tests = 1;
+			if (Mod_GenerateLightmaps_SamplePoint_SVBSP(&lightinfo->svbsp, pos))
+				hits++;
+			for (offsetindex = 1;offsetindex < numoffsets;offsetindex++)
 			{
-				// test line of sight through the collision system (slow)
 				VectorAdd(pos, offsets + 3*offsetindex, offsetpos);
-				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK);
-				// don't count samples that start in solid
-				if (trace.startsolid || trace.fraction < 1)
-					continue;
+				if (!normal)
+				{
+					// for light grid we'd better check visibility of the offset point
+					cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK);
+					if (trace.fraction < 1)
+						VectorLerp(pos, trace.fraction, offsetpos, offsetpos);
+				}
 				tests++;
-				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, offsetpos, lightinfo->origin, SUPERCONTENTS_VISBLOCKERMASK);
-				if (trace.fraction == 1)
+				if (Mod_GenerateLightmaps_SamplePoint_SVBSP(&lightinfo->svbsp, offsetpos))
 					hits++;
 			}
 			if (!hits)
 				continue;
 			// scale intensity according to how many rays succeeded
+			// we know one test is valid, half of the rest will fail...
+			//if (normal && tests > 1)
+			//	intensity *= (tests - 1.0f) / tests;
 			intensity *= (float)hits / tests;
 		}
 		// scale down intensity to add to both ambient and diffuse
-		intensity *= 0.5f;
+		//intensity *= 0.5f;
 		VectorNormalize(relativepoint);
 		VectorScale(lightinfo->color, intensity, color);
-		VectorMA(sample    , 1.0f            , color, sample    );
+		VectorMA(sample    , 0.5f            , color, sample    );
 		VectorMA(sample + 3, relativepoint[0], color, sample + 3);
 		VectorMA(sample + 6, relativepoint[1], color, sample + 6);
 		VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+		// calculate a weighted average light direction as well
 		intensity *= VectorLength(color);
 		VectorMA(sample + 12, intensity, relativepoint, sample + 12);
 	}
@@ -3182,14 +3274,14 @@ static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *
 	float color[3];
 	float dir[3];
 	float f;
-	Mod_GenerateLightmaps_SamplePoint(pos, sample, mod_generatelightmaps_numoffsets[0], mod_generatelightmaps_offsets[0][0]);
+	Mod_GenerateLightmaps_SamplePoint(pos, normal, sample, mod_generatelightmaps_numoffsets[0], mod_generatelightmaps_offsets[0][0]);
 	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
 	VectorCopy(sample + 12, dir);
 	VectorNormalize(dir);
-	VectorAdd(dir, normal, dir);
-	VectorNormalize(dir);
+	//VectorAdd(dir, normal, dir);
+	//VectorNormalize(dir);
 	f = DotProduct(dir, normal);
-	f = max(0, f) * 127.5f;
+	f = max(0, f) * 255.0f;
 	VectorScale(sample, f, color);
 	//VectorCopy(normal, dir);
 	VectorSet(dir, (dir[0]+1.0f)*127.5f, (dir[1]+1.0f)*127.5f, (dir[2]+1.0f)*127.5f);
@@ -3206,7 +3298,7 @@ static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *
 static void Mod_GenerateLightmaps_VertexSample(const float *pos, const float *normal, float *vertex_color)
 {
 	float sample[5*3];
-	Mod_GenerateLightmaps_SamplePoint(pos, sample, mod_generatelightmaps_numoffsets[1], mod_generatelightmaps_offsets[1][0]);
+	Mod_GenerateLightmaps_SamplePoint(pos, normal, sample, mod_generatelightmaps_numoffsets[1], mod_generatelightmaps_offsets[1][0]);
 	VectorCopy(sample, vertex_color);
 }
 
@@ -3216,17 +3308,18 @@ static void Mod_GenerateLightmaps_GridSample(const float *pos, q3dlightgrid_t *s
 	float ambient[3];
 	float diffuse[3];
 	float dir[3];
-	Mod_GenerateLightmaps_SamplePoint(pos, sample, mod_generatelightmaps_numoffsets[2], mod_generatelightmaps_offsets[2][0]);
+	Mod_GenerateLightmaps_SamplePoint(pos, NULL, sample, mod_generatelightmaps_numoffsets[2], mod_generatelightmaps_offsets[2][0]);
 	// calculate the direction we'll use to reduce the sample to a directional light source
 	VectorCopy(sample + 12, dir);
 	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
 	VectorNormalize(dir);
-	// scale the ambient from 0-2 to 0-255
-	VectorScale(sample, 127.5f, ambient);
 	// extract the diffuse color along the chosen direction and scale it
-	diffuse[0] = (dir[0]*sample[3] + dir[1]*sample[6] + dir[2]*sample[ 9]) * 127.5f;
-	diffuse[1] = (dir[0]*sample[4] + dir[1]*sample[7] + dir[2]*sample[10]) * 127.5f;
-	diffuse[2] = (dir[0]*sample[5] + dir[1]*sample[8] + dir[2]*sample[11]) * 127.5f;
+	diffuse[0] = (dir[0]*sample[3] + dir[1]*sample[6] + dir[2]*sample[ 9] + sample[ 0]) * 127.5f;
+	diffuse[1] = (dir[0]*sample[4] + dir[1]*sample[7] + dir[2]*sample[10] + sample[ 1]) * 127.5f;
+	diffuse[2] = (dir[0]*sample[5] + dir[1]*sample[8] + dir[2]*sample[11] + sample[ 2]) * 127.5f;
+	// scale the ambient from 0-2 to 0-255 and subtract some of diffuse
+	VectorScale(sample, 127.5f, ambient);
+	VectorMA(ambient, -0.333f, diffuse, ambient);
 	// encode to the grid format
 	s->ambientrgb[0] = (unsigned char)bound(0.0f, ambient[0], 255.0f);
 	s->ambientrgb[1] = (unsigned char)bound(0.0f, ambient[1], 255.0f);
@@ -3234,9 +3327,9 @@ static void Mod_GenerateLightmaps_GridSample(const float *pos, q3dlightgrid_t *s
 	s->diffusergb[0] = (unsigned char)bound(0.0f, diffuse[0], 255.0f);
 	s->diffusergb[1] = (unsigned char)bound(0.0f, diffuse[1], 255.0f);
 	s->diffusergb[2] = (unsigned char)bound(0.0f, diffuse[2], 255.0f);
-	if (dir[2] >= 0.99f) {s->diffuseyaw = 0;s->diffusepitch = 0;}
-	else if (dir[2] <= -0.99f) {s->diffuseyaw = 0;s->diffusepitch = 128;}
-	else {s->diffuseyaw = (unsigned char)(acos(dir[2]) * (127.5f/M_PI));s->diffusepitch = (unsigned char)(atan2(dir[1], dir[0]) * (127.5f/M_PI));}
+	if (dir[2] >= 0.99f) {s->diffusepitch = 0;s->diffuseyaw = 0;}
+	else if (dir[2] <= -0.99f) {s->diffusepitch = 128;s->diffuseyaw = 0;}
+	else {s->diffusepitch = (unsigned char)(acos(dir[2]) * (127.5f/M_PI));s->diffuseyaw = (unsigned char)(atan2(dir[1], dir[0]) * (127.5f/M_PI));}
 }
 
 static void Mod_GenerateLightmaps_InitSampleOffsets(dp_model_t *model)
