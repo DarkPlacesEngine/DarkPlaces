@@ -3046,20 +3046,134 @@ typedef struct lightmaptriangle_s
 }
 lightmaptriangle_t;
 
+typedef struct lightmaplight_s
+{
+	float origin[3];
+	float radius;
+	float iradius;
+	float radius2;
+	float color[3];
+}
+lightmaplight_t;
+
 lightmaptriangle_t *mod_generatelightmaps_lightmaptriangles;
 
 #define MAX_LIGHTMAPSAMPLES 64
 static int mod_generatelightmaps_numoffsets[3];
 static float mod_generatelightmaps_offsets[3][MAX_LIGHTMAPSAMPLES][3];
 
-extern void R_SampleRTLights(const float *pos, float *sample, int numoffsets, const float *offsets);
+static int mod_generatelightmaps_numlights;
+static lightmaplight_t *mod_generatelightmaps_lightinfo;
 
+extern int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);
+static void Mod_GenerateLightmaps_CreateLights(dp_model_t *model)
+{
+	int index;
+	int result;
+	lightmaplight_t *lightinfo;
+	float origin[3];
+	float radius;
+	float color[3];
+	mod_generatelightmaps_numlights = 0;
+	for (index = 0;;index++)
+	{
+		result = R_Shadow_GetRTLightInfo(index, origin, &radius, color);
+		if (result < 0)
+			break;
+		if (result > 0)
+			mod_generatelightmaps_numlights++;
+	}
+	if (mod_generatelightmaps_numlights > 0)
+	{
+		mod_generatelightmaps_lightinfo = Mem_Alloc(tempmempool, mod_generatelightmaps_numlights * sizeof(*mod_generatelightmaps_lightinfo));
+		lightinfo = mod_generatelightmaps_lightinfo;
+		for (index = 0;;index++)
+		{
+			result = R_Shadow_GetRTLightInfo(index, lightinfo->origin, &lightinfo->radius, lightinfo->color);
+			if (result < 0)
+				break;
+			if (result > 0)
+				lightinfo++;
+		}
+	}
+	for (index = 0, lightinfo = mod_generatelightmaps_lightinfo;index < mod_generatelightmaps_numlights;index++, lightinfo++)
+	{
+		lightinfo->iradius = 1.0f / lightinfo->radius;
+		lightinfo->radius2 = lightinfo->radius * lightinfo->radius;
+		// TODO: compute svbsp
+	}
+}
+
+static void Mod_GenerateLightmaps_DestroyLights(dp_model_t *model)
+{
+	if (mod_generatelightmaps_lightinfo)
+		Mem_Free(mod_generatelightmaps_lightinfo);
+	mod_generatelightmaps_lightinfo = NULL;
+	mod_generatelightmaps_numlights = 0;
+}
+
+extern cvar_t r_shadow_lightattenuationdividebias;
+extern cvar_t r_shadow_lightattenuationlinearscale;
 static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sample, int numoffsets, const float *offsets)
 {
 	int i;
+	float relativepoint[3];
+	float color[3];
+	float offsetpos[3];
+	float dist;
+	float dist2;
+	float intensity;
+	trace_t trace;
+	int offsetindex;
+	int hits;
+	int tests;
+	const lightmaplight_t *lightinfo;
 	for (i = 0;i < 5*3;i++)
 		sample[i] = 0.0f;
-	R_SampleRTLights(pos, sample, numoffsets, offsets);
+	for (i = 0, lightinfo = mod_generatelightmaps_lightinfo;i < mod_generatelightmaps_numlights;i++, lightinfo++)
+	{
+		//R_SampleRTLights(pos, sample, numoffsets, offsets);
+		VectorSubtract(lightinfo->origin, pos, relativepoint);
+		dist2 = VectorLength2(relativepoint);
+		if (dist2 >= lightinfo->radius2)
+			continue;
+		dist = sqrt(dist2) * lightinfo->iradius;
+		intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
+		if (intensity <= 0)
+			continue;
+		if (cl.worldmodel && cl.worldmodel->TraceLine && numoffsets > 0)
+		{
+			hits = 0;
+			tests = 0;
+			for (offsetindex = 0;offsetindex < numoffsets;offsetindex++)
+			{
+				// test line of sight through the collision system (slow)
+				VectorAdd(pos, offsets + 3*offsetindex, offsetpos);
+				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK);
+				// don't count samples that start in solid
+				if (trace.startsolid || trace.fraction < 1)
+					continue;
+				tests++;
+				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, offsetpos, lightinfo->origin, SUPERCONTENTS_VISBLOCKERMASK);
+				if (trace.fraction == 1)
+					hits++;
+			}
+			if (!hits)
+				continue;
+			// scale intensity according to how many rays succeeded
+			intensity *= (float)hits / tests;
+		}
+		// scale down intensity to add to both ambient and diffuse
+		intensity *= 0.5f;
+		VectorNormalize(relativepoint);
+		VectorScale(lightinfo->color, intensity, color);
+		VectorMA(sample    , 1.0f            , color, sample    );
+		VectorMA(sample + 3, relativepoint[0], color, sample + 3);
+		VectorMA(sample + 6, relativepoint[1], color, sample + 6);
+		VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+		intensity *= VectorLength(color);
+		VectorMA(sample + 12, intensity, relativepoint, sample + 12);
+	}
 }
 
 static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *normal, unsigned char *lm_bgr, unsigned char *lm_dir)
@@ -3145,14 +3259,6 @@ static void Mod_GenerateLightmaps_InitSampleOffsets(dp_model_t *model)
 			VectorScale(temp, radius[i], mod_generatelightmaps_offsets[i][j]);
 		}
 	}
-}
-
-static void Mod_GenerateLightmaps_CreateLights(dp_model_t *model)
-{
-}
-
-static void Mod_GenerateLightmaps_DestroyLights(dp_model_t *model)
-{
 }
 
 static void Mod_GenerateLightmaps_DestroyLightmaps(dp_model_t *model)
@@ -3524,8 +3630,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 				pixeloffset = ((triangle->lightmapindex * lm_texturesize + y + triangle->lmoffset[1]) * lm_texturesize + triangle->lmoffset[0]) * 4;
 				for (x = 0;x < triangle->lmsize[0];x++, pixeloffset += 4)
 				{
-					samplecenter[axis1] = x*lmiscale[0] + triangle->lmbase[0];
-					samplecenter[axis2] = y*lmiscale[1] + triangle->lmbase[1];
+					samplecenter[axis1] = (x+0.5f)*lmiscale[0] + triangle->lmbase[0];
+					samplecenter[axis2] = (y+0.5f)*lmiscale[1] + triangle->lmbase[1];
 					samplecenter[axis] = samplecenter[axis1]*slopex + samplecenter[axis2]*slopey + slopebase;
 					VectorMA(samplecenter, 0.125f, samplenormal, samplecenter);
 					Mod_GenerateLightmaps_LightmapSample(samplecenter, samplenormal, lightmappixels + pixeloffset, deluxemappixels + pixeloffset);
