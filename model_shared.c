@@ -3219,6 +3219,9 @@ static void Mod_GenerateLightmaps_SamplePoint(const float *pos, const float *nor
 	{
 		//R_SampleRTLights(pos, sample, numoffsets, offsets);
 		VectorSubtract(lightinfo->origin, pos, relativepoint);
+		// don't accept light from behind a surface, it causes bad shading
+		if (normal && DotProduct(relativepoint, normal) <= 0)
+			continue;
 		dist2 = VectorLength2(relativepoint);
 		if (dist2 >= lightinfo->radius2)
 			continue;
