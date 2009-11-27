@@ -5098,7 +5098,7 @@ void R_Shadow_DrawLightSprites(void)
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
-void R_SampleRTLights(const float *pos, float *sample)
+void R_SampleRTLights(const float *pos, float *sample, int numoffsets, const float *offsets)
 {
 	int flag;
 	size_t lightindex;
@@ -5108,8 +5108,13 @@ void R_SampleRTLights(const float *pos, float *sample)
 	vec3_t relativepoint;
 	vec3_t localpoint;
 	vec3_t color;
+	vec3_t offsetpos;
 	vec_t dist;
 	vec_t intensity;
+	trace_t trace;
+	int offsetindex;
+	int hits;
+	int tests;
 	flag = LIGHTFLAG_REALTIMEMODE;
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
 	for (lightindex = 0;lightindex < range;lightindex++)
@@ -5129,6 +5134,30 @@ void R_SampleRTLights(const float *pos, float *sample)
 		intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
 		if (intensity <= 0)
 			continue;
+		if (cl.worldmodel && cl.worldmodel->TraceLine && numoffsets > 0)
+		{
+			hits = 0;
+			tests = 0;
+			for (offsetindex = 0;offsetindex < numoffsets;offsetindex++)
+			{
+				// test line of sight through the collision system (slow)
+				VectorAdd(pos, offsets + 3*offsetindex, offsetpos);
+				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK);
+				if (trace.startsolid || trace.fraction < 1)
+					continue;
+				cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, offsetpos, rtlight->shadoworigin, SUPERCONTENTS_VISBLOCKERMASK);
+				// don't count samples that start in solid
+				if (trace.startsolid)
+					continue;
+				tests++;
+				if (trace.fraction == 1)
+					hits++;
+			}
+			if (!hits)
+				continue;
+			// scale intensity according to how many rays succeeded
+			intensity *= (float)hits / tests;
+		}
 		// scale down intensity to add to both ambient and diffuse
 		intensity *= 0.5f;
 		VectorNormalize(relativepoint);
