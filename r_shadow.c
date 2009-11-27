@@ -5098,7 +5098,7 @@ void R_Shadow_DrawLightSprites(void)
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
-void R_SampleRTLights(const float *pos, float *sh1)
+void R_SampleRTLights(const float *pos, float *sample)
 {
 	int flag;
 	size_t lightindex;
@@ -5129,12 +5129,16 @@ void R_SampleRTLights(const float *pos, float *sh1)
 		intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
 		if (intensity <= 0)
 			continue;
+		// scale down intensity to add to both ambient and diffuse
+		intensity *= 0.5f;
 		VectorNormalize(relativepoint);
 		VectorScale(rtlight->color, intensity, color);
-		VectorMA(sh1    , 0.5f            , color, sh1    );
-		VectorMA(sh1 + 3, relativepoint[0], color, sh1 + 3);
-		VectorMA(sh1 + 6, relativepoint[1], color, sh1 + 6);
-		VectorMA(sh1 + 9, relativepoint[2], color, sh1 + 9);
+		VectorMA(sample    , 1.0f            , color, sample    );
+		VectorMA(sample + 3, relativepoint[0], color, sample + 3);
+		VectorMA(sample + 6, relativepoint[1], color, sample + 6);
+		VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+		intensity *= VectorLength(color);
+		VectorMA(sample + 12, intensity, relativepoint, sample + 12);
 	}
 }
 

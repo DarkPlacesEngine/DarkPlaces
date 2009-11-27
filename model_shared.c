@@ -3034,25 +3034,31 @@ lightmaptriangle_t;
 
 lightmaptriangle_t *mod_generatelightmaps_lightmaptriangles;
 
-extern void R_SampleRTLights(const float *pos, float *sh1);
+extern void R_SampleRTLights(const float *pos, float *sample);
 
-static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sh1)
+static void Mod_GenerateLightmaps_SamplePoint(const float *pos, float *sample)
 {
 	int i;
-	for (i = 0;i < 4*3;i++)
-		sh1[i] = 0.0f;
-	R_SampleRTLights(pos, sh1);
+	for (i = 0;i < 5*3;i++)
+		sample[i] = 0.0f;
+	R_SampleRTLights(pos, sample);
 }
 
 static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *normal, unsigned char *lm_bgr, unsigned char *lm_dir)
 {
-	float sh1[4*3];
+	float sample[5*3];
 	float color[3];
 	float dir[3];
-	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
-	VectorSet(dir, VectorLength(sh1 + 3), VectorLength(sh1 + 6), VectorLength(sh1 + 9));
+	float f;
+	Mod_GenerateLightmaps_SamplePoint(pos, sample);
+	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
+	VectorCopy(sample + 12, dir);
 	VectorNormalize(dir);
-	VectorScale(sh1, 127.5f, color);
+	VectorAdd(dir, normal, dir);
+	VectorNormalize(dir);
+	f = DotProduct(dir, normal);
+	f = max(0, f) * 255.0f;
+	VectorScale(sample, f, color);
 	//VectorCopy(normal, dir);
 	if (r_test.integer & 1) dir[0] *= -1.0f;
 	if (r_test.integer & 2) dir[1] *= -1.0f;
@@ -3062,35 +3068,36 @@ static void Mod_GenerateLightmaps_LightmapSample(const float *pos, const float *
 	lm_bgr[1] = (unsigned char)bound(0.0f, color[1], 255.0f);
 	lm_bgr[2] = (unsigned char)bound(0.0f, color[0], 255.0f);
 	lm_bgr[3] = 255;
-	lm_dir[0] = (unsigned char)dir[0];
+	lm_dir[0] = (unsigned char)dir[2];
 	lm_dir[1] = (unsigned char)dir[1];
-	lm_dir[2] = (unsigned char)dir[2];
+	lm_dir[2] = (unsigned char)dir[0];
 	lm_dir[3] = 255;
 }
 
 static void Mod_GenerateLightmaps_VertexSample(const float *pos, const float *normal, float *vertex_color)
 {
-	float sh1[4*3];
-	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
-	VectorCopy(sh1, vertex_color);
+	float sample[5*3];
+	Mod_GenerateLightmaps_SamplePoint(pos, sample);
+	VectorCopy(sample, vertex_color);
 }
 
 static void Mod_GenerateLightmaps_GridSample(const float *pos, q3dlightgrid_t *s)
 {
-	float sh1[4*3];
+	float sample[5*3];
 	float ambient[3];
 	float diffuse[3];
 	float dir[3];
-	Mod_GenerateLightmaps_SamplePoint(pos, sh1);
-	// calculate the direction we'll use to reduce the sh1 to a directional light source
-	VectorSet(dir, VectorLength(sh1 + 3), VectorLength(sh1 + 6), VectorLength(sh1 + 9));
+	Mod_GenerateLightmaps_SamplePoint(pos, sample);
+	// calculate the direction we'll use to reduce the sample to a directional light source
+	VectorCopy(sample + 12, dir);
+	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
 	VectorNormalize(dir);
 	// scale the ambient from 0-2 to 0-255
-	VectorScale(sh1, 127.5f, ambient);
+	VectorScale(sample, 255.0f, ambient);
 	// extract the diffuse color along the chosen direction and scale it
-	diffuse[0] = (dir[0]*sh1[3] + dir[1]*sh1[6] + dir[2]*sh1[ 9] + sh1[0]) * 127.5f;
-	diffuse[1] = (dir[0]*sh1[4] + dir[1]*sh1[7] + dir[2]*sh1[10] + sh1[1]) * 127.5f;
-	diffuse[2] = (dir[0]*sh1[5] + dir[1]*sh1[8] + dir[2]*sh1[11] + sh1[2]) * 127.5f;
+	diffuse[0] = (dir[0]*sample[3] + dir[1]*sample[6] + dir[2]*sample[ 9] + sample[0]) * 255.0f;
+	diffuse[1] = (dir[0]*sample[4] + dir[1]*sample[7] + dir[2]*sample[10] + sample[1]) * 255.0f;
+	diffuse[2] = (dir[0]*sample[5] + dir[1]*sample[8] + dir[2]*sample[11] + sample[2]) * 255.0f;
 	// encode to the grid format
 	s->ambientrgb[0] = (unsigned char)bound(0.0f, ambient[0], 255.0f);
 	s->ambientrgb[1] = (unsigned char)bound(0.0f, ambient[1], 255.0f);
