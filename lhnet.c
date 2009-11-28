@@ -1,6 +1,7 @@
 
 // Written by Forest Hale 2003-06-15 and placed into public domain.
 
+#ifdef SUPPORTIPV6
 #ifdef WIN32
 // Windows XP or higher is required for getaddrinfo, but the inclusion of wspiapi provides fallbacks for older versions
 # define _WIN32_WINNT 0x0501
@@ -9,6 +10,7 @@
 # ifdef USE_WSPIAPI_H
 #  include <wspiapi.h>
 # endif
+#endif
 #endif
 
 #ifndef STANDALONETEST
@@ -19,7 +21,10 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#ifndef WIN32
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -28,7 +33,9 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifdef SUPPORTIPV6
 #include <net/if.h>
+#endif
 #endif
 
 #ifdef __MORPHOS__
@@ -134,6 +141,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 	return 0;
 }
 
+#ifdef SUPPORTIPV6
 int LHNETADDRESS_Resolve(lhnetaddressnative_t *address, const char *name, int port)
 {
 	char port_buff [16];
@@ -351,6 +359,157 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
 	return resolved;
 }
+#else
+int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int defaultport)
+{
+	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
+	int i, port, namelen, d1, d2, d3, d4;
+	struct hostent *hostentry;
+	unsigned char *a;
+	const char *colon;
+	char name[128];
+#ifdef STANDALONETEST
+	char string2[128];
+#endif
+	if (!address || !string || !*string)
+		return 0;
+	memset(address, 0, sizeof(*address));
+	address->addresstype = LHNETADDRESSTYPE_NONE;
+	port = 0;
+	colon = strrchr(string, ':');
+	if (colon)
+		port = atoi(colon + 1);
+	else
+		colon = string + strlen(string);
+	if (port == 0)
+		port = defaultport;
+	namelen = colon - string;
+	if (namelen > 127)
+		namelen = 127;
+	if (string[0] == '[' && namelen > 0 && string[namelen-1] == ']') // ipv6
+	{
+		string++;
+		namelen -= 2;
+	}
+	memcpy(name, string, namelen);
+	name[namelen] = 0;
+	// handle loopback
+	if (!strcmp(name, "local"))
+	{
+		address->addresstype = LHNETADDRESSTYPE_LOOP;
+		address->port = port;
+		return 1;
+	}
+	// try to parse as dotted decimal ipv4 address first
+	// note this supports partial ip addresses
+	d1 = d2 = d3 = d4 = 0;
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
+	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) >= 1 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
+	{
+		// parsed a valid ipv4 address
+		address->addresstype = LHNETADDRESSTYPE_INET4;
+		address->port = port;
+		address->addr.in.sin_family = AF_INET;
+		address->addr.in.sin_port = htons((unsigned short)port);
+		a = (unsigned char *)&address->addr.in.sin_addr;
+		a[0] = d1;
+		a[1] = d2;
+		a[2] = d3;
+		a[3] = d4;
+#ifdef STANDALONETEST
+		LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %s\n", string, string2);
+#endif
+		return 1;
+	}
+	for (i = 0;i < MAX_NAMECACHE;i++)
+		if (!strcmp(namecache[i].name, name))
+			break;
+#ifdef STANDALONETEST
+	if (i < MAX_NAMECACHE)
+#else
+	if (i < MAX_NAMECACHE && realtime < namecache[i].expirationtime)
+#endif
+	{
+		*address = namecache[i].address;
+		address->port = port;
+		if (address->addresstype == LHNETADDRESSTYPE_INET6)
+		{
+			address->addr.in6.sin6_port = htons((unsigned short)port);
+			return 1;
+		}
+		else if (address->addresstype == LHNETADDRESSTYPE_INET4)
+		{
+			address->addr.in.sin_port = htons((unsigned short)port);
+			return 1;
+		}
+		return 0;
+	}
+	// try gethostbyname (handles dns and other ip formats)
+	hostentry = gethostbyname(name);
+	if (hostentry)
+	{
+		if (hostentry->h_addrtype == AF_INET6)
+		{
+			// great it worked
+			address->addresstype = LHNETADDRESSTYPE_INET6;
+			address->port = port;
+			address->addr.in6.sin6_family = hostentry->h_addrtype;
+			address->addr.in6.sin6_port = htons((unsigned short)port);
+			memcpy(&address->addr.in6.sin6_addr, hostentry->h_addr_list[0], sizeof(address->addr.in6.sin6_addr));
+			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+				namecache[namecacheposition].name[i] = name[i];
+			namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
+			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+#endif
+			namecache[namecacheposition].address = *address;
+			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
+#ifdef STANDALONETEST
+			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+			printf("gethostbyname(\"%s\") returned ipv6 address %s\n", string, string2);
+#endif
+			return 1;
+		}
+		else if (hostentry->h_addrtype == AF_INET)
+		{
+			// great it worked
+			address->addresstype = LHNETADDRESSTYPE_INET4;
+			address->port = port;
+			address->addr.in.sin_family = hostentry->h_addrtype;
+			address->addr.in.sin_port = htons((unsigned short)port);
+			memcpy(&address->addr.in.sin_addr, hostentry->h_addr_list[0], sizeof(address->addr.in.sin_addr));
+			for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+				namecache[namecacheposition].name[i] = name[i];
+			namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
+			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+#endif
+			namecache[namecacheposition].address = *address;
+			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
+#ifdef STANDALONETEST
+			LHNETADDRESS_ToString(address, string2, sizeof(string2), 1);
+			printf("gethostbyname(\"%s\") returned ipv4 address %s\n", string, string2);
+#endif
+			return 1;
+		}
+	}
+#ifdef STANDALONETEST
+	printf("gethostbyname failed on address \"%s\"\n", name);
+#endif
+	for (i = 0;i < (int)sizeof(namecache[namecacheposition].name)-1 && name[i];i++)
+		namecache[namecacheposition].name[i] = name[i];
+	namecache[namecacheposition].name[i] = 0;
+#ifndef STANDALONETEST
+	namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+#endif
+	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
+	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
+	return 0;
+}
+#endif
 
 int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stringbuffersize, int includeport)
 {
@@ -433,6 +592,7 @@ int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
 
 const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
 {
+#ifdef SUPPORTIPV6
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 
 	if (address && address->addresstype == LHNETADDRESSTYPE_INET6)
@@ -456,6 +616,7 @@ const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
 
 #endif
 	}
+#endif
 
 	return NULL;
 }
