@@ -105,7 +105,6 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap, int texrectangle);
 // sets these are like TexBindAll with only one of the texture indices non-zero
 // (binds one texture type and unbinds all other types)
-void R_Mesh_TexBind1D(unsigned int unitnum, int texnum);
 void R_Mesh_TexBind(unsigned int unitnum, int texnum);
 void R_Mesh_TexBind3D(unsigned int unitnum, int texnum);
 void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum);
