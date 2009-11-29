@@ -607,7 +607,7 @@ typedef struct gltextureunit_s
 	const void *pointer_texcoord;
 	size_t pointer_texcoord_offset;
 	int pointer_texcoord_buffer;
-	int t1d, t2d, t3d, tcubemap, trectangle;
+	int t2d, t3d, tcubemap, trectangle;
 	int arrayenabled;
 	unsigned int arraycomponents;
 	int rgbscale, alphascale;
@@ -683,7 +683,6 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		unit = gl_state.units + i;
-		unit->t1d = 0;
 		unit->t2d = 0;
 		unit->t3d = 0;
 		unit->tcubemap = 0;
@@ -703,7 +702,6 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < backendimageunits;i++)
 	{
 		GL_ActiveTexture(i);
-		qglBindTexture(GL_TEXTURE_1D, 0);CHECKGLERROR
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
 		if (gl_texture3d)
 		{
@@ -730,7 +728,6 @@ void GL_SetupTextureState(void)
 	for (i = 0;i < backendunits;i++)
 	{
 		GL_ActiveTexture(i);
-		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
 		{
@@ -1457,7 +1454,6 @@ void R_Mesh_Finish(void)
 	for (i = 0;i < backendimageunits;i++)
 	{
 		GL_ActiveTexture(i);
-		qglBindTexture(GL_TEXTURE_1D, 0);CHECKGLERROR
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
 		if (gl_texture3d)
 		{
@@ -1480,7 +1476,6 @@ void R_Mesh_Finish(void)
 	for (i = 0;i < backendunits;i++)
 	{
 		GL_ActiveTexture(backendunits - 1 - i);
-		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
 		{
@@ -1695,30 +1690,6 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
 		return;
-	// update 1d texture binding
-	if (unit->t1d != tex1d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (tex1d)
-			{
-				if (unit->t1d == 0)
-				{
-					qglEnable(GL_TEXTURE_1D);CHECKGLERROR
-				}
-			}
-			else
-			{
-				if (unit->t1d)
-				{
-					qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-				}
-			}
-		}
-		unit->t1d = tex1d;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
 	// update 2d texture binding
 	if (unit->t2d != tex2d)
 	{
@@ -1817,112 +1788,11 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, in
 	}
 }
 
-void R_Mesh_TexBind1D(unsigned int unitnum, int texnum)
-{
-	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
-		return;
-	// update 1d texture binding
-	if (unit->t1d != texnum)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (texnum)
-			{
-				if (unit->t1d == 0)
-				{
-					qglEnable(GL_TEXTURE_1D);CHECKGLERROR
-				}
-			}
-			else
-			{
-				if (unit->t1d)
-				{
-					qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-				}
-			}
-		}
-		unit->t1d = texnum;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
-	// update 2d texture binding
-	if (unit->t2d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t2d)
-			{
-				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-			}
-		}
-		unit->t2d = 0;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
-	}
-	// update 3d texture binding
-	if (unit->t3d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t3d)
-			{
-				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
-			}
-		}
-		unit->t3d = 0;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
-	}
-	// update cubemap texture binding
-	if (unit->tcubemap)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->tcubemap)
-			{
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-			}
-		}
-		unit->tcubemap = 0;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
-	}
-	// update rectangle texture binding
-	if (unit->trectangle)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->trectangle)
-			{
-				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-			}
-		}
-		unit->trectangle = 0;
-		qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
-	}
-}
-
 void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
 		return;
-	// update 1d texture binding
-	if (unit->t1d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t1d)
-			{
-				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-			}
-		}
-		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
 	// update 2d texture binding
 	if (unit->t2d != texnum)
 	{
@@ -1996,20 +1866,6 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
 		return;
-	// update 1d texture binding
-	if (unit->t1d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t1d)
-			{
-				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-			}
-		}
-		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
 	// update 2d texture binding
 	if (unit->t2d)
 	{
@@ -2083,20 +1939,6 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
 		return;
-	// update 1d texture binding
-	if (unit->t1d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t1d)
-			{
-				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-			}
-		}
-		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
 	// update 2d texture binding
 	if (unit->t2d)
 	{
@@ -2170,20 +2012,6 @@ void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
 		return;
-	// update 1d texture binding
-	if (unit->t1d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
-		{
-			if (unit->t1d)
-			{
-				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-			}
-		}
-		unit->t1d = 0;
-		qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-	}
 	// update 2d texture binding
 	if (unit->t2d)
 	{
@@ -2389,17 +2217,6 @@ void R_Mesh_ResetTextureState(void)
 	for (unitnum = 0;unitnum < backendimageunits;unitnum++)
 	{
 		gltextureunit_t *unit = gl_state.units + unitnum;
-		// update 1d texture binding
-		if (unit->t1d)
-		{
-			GL_ActiveTexture(unitnum);
-			if (unitnum < backendunits)
-			{
-				qglDisable(GL_TEXTURE_1D);CHECKGLERROR
-			}
-			unit->t1d = 0;
-			qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
-		}
 		// update 2d texture binding
 		if (unit->t2d)
 		{

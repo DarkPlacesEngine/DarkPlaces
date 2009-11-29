@@ -255,13 +255,13 @@ GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
 void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
-void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+//void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-void (GLAPIENTRY *qglTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
+//void (GLAPIENTRY *qglTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border);
+//void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border);
 void (GLAPIENTRY *qglCopyTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
-void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
+//void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
 void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 
 
@@ -401,7 +401,7 @@ void (GLAPIENTRY *qglBindFramebufferEXT)(GLenum target, GLuint framebuffer);
 void (GLAPIENTRY *qglDeleteFramebuffersEXT)(GLsizei n, const GLuint *framebuffers);
 void (GLAPIENTRY *qglGenFramebuffersEXT)(GLsizei n, GLuint *framebuffers);
 GLenum (GLAPIENTRY *qglCheckFramebufferStatusEXT)(GLenum target);
-void (GLAPIENTRY *qglFramebufferTexture1DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+//void (GLAPIENTRY *qglFramebufferTexture1DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 void (GLAPIENTRY *qglFramebufferTexture2DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 void (GLAPIENTRY *qglFramebufferTexture3DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
 void (GLAPIENTRY *qglFramebufferRenderbufferEXT)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
@@ -410,10 +410,10 @@ void (GLAPIENTRY *qglGenerateMipmapEXT)(GLenum target);
 
 void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
-void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
+//void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglCompressedTexSubImage3DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglCompressedTexSubImage2DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
-void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
+//void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
 void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, void *img);
 
 void (GLAPIENTRY *qglGenQueriesARB)(GLsizei n, GLuint *ids);
@@ -584,13 +584,13 @@ static dllfunction_t opengl110funcs[] =
 //	{"glPrioritizeTextures", (void **) &qglPrioritizeTextures},
 //	{"glAreTexturesResident", (void **) &qglAreTexturesResident},
 	{"glIsTexture", (void **) &qglIsTexture},
-	{"glTexImage1D", (void **) &qglTexImage1D},
+//	{"glTexImage1D", (void **) &qglTexImage1D},
 	{"glTexImage2D", (void **) &qglTexImage2D},
-	{"glTexSubImage1D", (void **) &qglTexSubImage1D},
+//	{"glTexSubImage1D", (void **) &qglTexSubImage1D},
 	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
-	{"glCopyTexImage1D", (void **) &qglCopyTexImage1D},
+//	{"glCopyTexImage1D", (void **) &qglCopyTexImage1D},
 	{"glCopyTexImage2D", (void **) &qglCopyTexImage2D},
-	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
+//	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
 	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
 	{"glScissor", (void **) &qglScissor},
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
@@ -786,7 +786,7 @@ static dllfunction_t fbofuncs[] =
 	{"glDeleteFramebuffersEXT"                  , (void **) &qglDeleteFramebuffersEXT},
 	{"glGenFramebuffersEXT"                     , (void **) &qglGenFramebuffersEXT},
 	{"glCheckFramebufferStatusEXT"              , (void **) &qglCheckFramebufferStatusEXT},
-	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1DEXT},
+//	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1DEXT},
 	{"glFramebufferTexture2DEXT"                , (void **) &qglFramebufferTexture2DEXT},
 	{"glFramebufferTexture3DEXT"                , (void **) &qglFramebufferTexture3DEXT},
 	{"glFramebufferRenderbufferEXT"             , (void **) &qglFramebufferRenderbufferEXT},
@@ -799,10 +799,10 @@ static dllfunction_t texturecompressionfuncs[] =
 {
 	{"glCompressedTexImage3DARB",    (void **) &qglCompressedTexImage3DARB},
 	{"glCompressedTexImage2DARB",    (void **) &qglCompressedTexImage2DARB},
-	{"glCompressedTexImage1DARB",    (void **) &qglCompressedTexImage1DARB},
+//	{"glCompressedTexImage1DARB",    (void **) &qglCompressedTexImage1DARB},
 	{"glCompressedTexSubImage3DARB", (void **) &qglCompressedTexSubImage3DARB},
 	{"glCompressedTexSubImage2DARB", (void **) &qglCompressedTexSubImage2DARB},
-	{"glCompressedTexSubImage1DARB", (void **) &qglCompressedTexSubImage1DARB},
+//	{"glCompressedTexSubImage1DARB", (void **) &qglCompressedTexSubImage1DARB},
 	{"glGetCompressedTexImageARB",   (void **) &qglGetCompressedTexImageARB},
 	{NULL, NULL}
 };

@@ -65,7 +65,6 @@ static textypeinfo_t textype_shadowmap24            = {TEXTYPE_SHADOWMAP,4,4, 4.
 
 typedef enum gltexturetype_e
 {
-	GLTEXTURETYPE_1D,
 	GLTEXTURETYPE_2D,
 	GLTEXTURETYPE_3D,
 	GLTEXTURETYPE_CUBEMAP,
@@ -74,9 +73,9 @@ typedef enum gltexturetype_e
 }
 gltexturetype_t;
 
-static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_RECTANGLE_ARB};
-static int gltexturetypebindingenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_BINDING_1D, GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_3D, GL_TEXTURE_BINDING_CUBE_MAP_ARB, GL_TEXTURE_BINDING_RECTANGLE_ARB};
-static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {1, 2, 3, 2, 2};
+static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_RECTANGLE_ARB};
+static int gltexturetypebindingenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_BINDING_2D, GL_TEXTURE_BINDING_3D, GL_TEXTURE_BINDING_CUBE_MAP_ARB, GL_TEXTURE_BINDING_RECTANGLE_ARB};
+static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {2, 3, 2, 2};
 static int cubemapside[6] =
 {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
@@ -420,7 +419,6 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 	switch (texturetype)
 	{
 	default:
-	case GLTEXTURETYPE_1D:
 	case GLTEXTURETYPE_2D:
 		maxsize = gl_max_texture_size;
 		break;
@@ -813,9 +811,6 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		// update a portion of the image
 		switch(glt->texturetype)
 		{
-		case GLTEXTURETYPE_1D:
-			qglTexSubImage1D(GL_TEXTURE_1D, 0, fragx, fragwidth, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-			break;
 		case GLTEXTURETYPE_2D:
 			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			break;
@@ -823,7 +818,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			break;
 		default:
-			Host_Error("R_Upload: partial update of type other than 1D, 2D, or 3D");
+			Host_Error("R_Upload: partial update of type other than 2D");
 			break;
 		}
 	}
@@ -861,18 +856,6 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		}
 		switch(glt->texturetype)
 		{
-		case GLTEXTURETYPE_1D:
-			qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-			if (glt->flags & TEXF_MIPMAP)
-			{
-				while (width > 1 || height > 1 || depth > 1)
-				{
-					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-					prevbuffer = resizebuffer;
-					qglTexImage1D(GL_TEXTURE_1D, mip++, glt->glinternalformat, width, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-				}
-			}
-			break;
 		case GLTEXTURETYPE_2D:
 			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
@@ -1115,11 +1098,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	CL_KeepaliveMessage(false);
 
 	return (rtexture_t *)glt;
-}
-
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
-{
-	return R_SetupTexture(rtexturepool, identifier, width, 1, 1, 1, flags, textype, GLTEXTURETYPE_1D, data, palette);
 }
 
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
