@@ -2091,28 +2091,34 @@ void CL_UpdateScreen(void)
 	f = pow((float)cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value;
 	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, f, cl_minfps_qualitymax.value);
 
-	if(scr_stipple.integer)
+	if (qglPolygonStipple)
 	{
-		GLubyte stipple[128];
-		int i, s, width, parts;
-		static int frame = 0;
-		++frame;
-
-		s = scr_stipple.integer;
-		parts = (s & 007);
-		width = (s & 070) >> 3;
-
-		qglEnable(GL_POLYGON_STIPPLE); // 0x0B42
-		for(i = 0; i < 128; ++i)
+		if(scr_stipple.integer)
 		{
-			int line = i/4;
-			stipple[i] = (((line >> width) + frame) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
+			GLubyte stipple[128];
+			int i, s, width, parts;
+			static int frame = 0;
+			++frame;
+	
+			s = scr_stipple.integer;
+			parts = (s & 007);
+			width = (s & 070) >> 3;
+	
+			qglEnable(GL_POLYGON_STIPPLE);CHECKGLERROR // 0x0B42
+			for(i = 0; i < 128; ++i)
+			{
+				int line = i/4;
+				stipple[i] = (((line >> width) + frame) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
+			}
+			qglPolygonStipple(stipple);CHECKGLERROR
 		}
-		qglPolygonStipple(stipple);
+		else
+		{
+			qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
+		}
 	}
-	else
-		qglDisable(GL_POLYGON_STIPPLE);
 
+	CHECKGLERROR
 	if (R_Stereo_Active())
 	{
 		matrix4x4_t originalmatrix = r_refdef.view.matrix;
@@ -2157,11 +2163,13 @@ void CL_UpdateScreen(void)
 	}
 	else
 		SCR_DrawScreen();
+	CHECKGLERROR
 
 	SCR_CaptureVideo();
 
 	// quality adjustment according to render time
-	qglFlush();
+	CHECKGLERROR
+	qglFlush(); // FIXME: should we really be using qglFlush here?
 	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
 	if (cl_minfps.value > 0 && cl_updatescreen_rendertime > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
 		cl_updatescreen_quality = 1 / (cl_updatescreen_rendertime * cl_minfps.value);
