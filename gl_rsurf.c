@@ -1285,7 +1285,8 @@ void R_ReplaceWorldTexture (void)
 	skinframe_t *skinframe;
 	if (!r_refdef.scene.worldmodel)
 	{
-		Con_Printf("There is no worldmodel\n");
+		if (gamemode != GAME_BLOODOMNICIDE)
+			Con_Printf("There is no worldmodel\n");
 		return;
 	}
 	m = r_refdef.scene.worldmodel;
@@ -1298,7 +1299,8 @@ void R_ReplaceWorldTexture (void)
 	}
 	if(!cl.islocalgame || !cl.worldmodel)
 	{
-		Con_Print("This command works only in singleplayer\n");
+		if (gamemode != GAME_BLOODOMNICIDE)
+			Con_Print("This command works only in singleplayer\n");
 		return;
 	}
 	r = Cmd_Argv(1);
@@ -1314,11 +1316,13 @@ void R_ReplaceWorldTexture (void)
 //				t->skinframes[0] = skinframe;
 				t->currentskinframe = skinframe;
 				t->currentskinframe = skinframe;
-				Con_Printf("%s replaced with %s\n", r, newt);
+				if (gamemode != GAME_BLOODOMNICIDE)
+					Con_Printf("%s replaced with %s\n", r, newt);
 			}
 			else
 			{
-				Con_Printf("%s was not found\n", newt);
+				if (gamemode != GAME_BLOODOMNICIDE)
+					Con_Printf("%s was not found\n", newt);
 				return;
 			}
 		}
