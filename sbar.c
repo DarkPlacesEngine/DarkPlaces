@@ -155,7 +155,7 @@ void sbar_start(void)
 {
 	int i;
 
-	if (gamemode == GAME_DELUXEQUAKE)
+	if (gamemode == GAME_DELUXEQUAKE || gamemode == GAME_BLOODOMNICIDE)
 	{
 	}
 	else if (gamemode == GAME_SOM)
