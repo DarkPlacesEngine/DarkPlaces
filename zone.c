@@ -95,11 +95,7 @@ static void *attempt_malloc(size_t size)
 		base = (void *)malloc(size);
 		if (base)
 			return base;
-#ifdef WIN32
-		Sleep(1);
-#else
-		usleep(1000);
-#endif
+		Sys_Sleep(1000);
 	}
 	return NULL;
 }
@@ -307,14 +303,23 @@ static void Clump_FreeBlock(void *base, size_t size)
 #endif
 }
 
-void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int fileline)
+void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, const char *filename, int fileline)
 {
 	unsigned int sentinel1;
 	unsigned int sentinel2;
 	size_t realsize;
+	size_t sharedsize;
+	size_t remainsize;
 	memheader_t *mem;
+	memheader_t *oldmem;
+	unsigned char *base;
+
 	if (size <= 0)
+	{
+		if (olddata)
+			_Mem_Free(olddata, filename, fileline);
 		return NULL;
+	}
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	if (developer.integer && developer_memory.integer)
@@ -322,11 +327,14 @@ void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int filelin
 	//if (developer.integer && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
-	realsize = sizeof(memheader_t) + size + sizeof(sentinel2);
+	realsize = alignment + sizeof(memheader_t) + size + sizeof(sentinel2);
 	pool->realsize += realsize;
-	mem = (memheader_t *)Clump_AllocBlock(realsize);
-	if (mem == NULL)
+	base = (unsigned char *)Clump_AllocBlock(realsize);
+	if (base== NULL)
 		Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+	// calculate address that aligns the end of the memheader_t to the specified alignment
+	mem = (memheader_t*)((((size_t)base + sizeof(memheader_t) + (alignment-1)) & ~(alignment-1)) - sizeof(memheader_t));
+	mem->baseaddress = (void*)base;
 	mem->filename = filename;
 	mem->fileline = fileline;
 	mem->size = size;
@@ -344,7 +352,19 @@ void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int filelin
 	pool->chain = mem;
 	if (mem->next)
 		mem->next->prev = mem;
-	memset((void *)((unsigned char *) mem + sizeof(memheader_t)), 0, mem->size);
+
+	// copy the shared portion in the case of a realloc, then memset the rest
+	sharedsize = 0;
+	remainsize = size;
+	if (olddata)
+	{
+		oldmem = (memheader_t*)olddata - 1;
+		sharedsize = min(oldmem->size, size);
+		memcpy((void *)((unsigned char *) mem + sizeof(memheader_t)), olddata, sharedsize);
+		remainsize -= sharedsize;
+		_Mem_Free(olddata, filename, fileline);
+	}
+	memset((void *)((unsigned char *) mem + sizeof(memheader_t) + sharedsize), 0, remainsize);
 	return (void *)((unsigned char *) mem + sizeof(memheader_t));
 }
 
@@ -382,7 +402,7 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	realsize = sizeof(memheader_t) + size + sizeof(sentinel2);
 	pool->totalsize -= size;
 	pool->realsize -= realsize;
-	Clump_FreeBlock(mem, realsize);
+	Clump_FreeBlock(mem->baseaddress, realsize);
 }
 
 void _Mem_Free(void *data, const char *filename, int fileline)

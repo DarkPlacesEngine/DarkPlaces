@@ -2376,7 +2376,7 @@ int PRVM_GetProgNr(void)
 
 void *_PRVM_Alloc(size_t buffersize, const char *filename, int fileline)
 {
-	return _Mem_Alloc(prog->progs_mempool, buffersize, filename, fileline);
+	return _Mem_Alloc(prog->progs_mempool, NULL, buffersize, 16, filename, fileline);
 }
 
 void _PRVM_Free(void *buffer, const char *filename, int fileline)
