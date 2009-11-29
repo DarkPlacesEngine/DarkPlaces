@@ -30,6 +30,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct memheader_s
 {
+	// address returned by Chunk_Alloc (may be significantly before this header to satisify alignment)
+	void *baseaddress;
 	// next and previous memheaders in chain belonging to pool
 	struct memheader_s *next;
 	struct memheader_s *prev;
@@ -74,7 +76,9 @@ typedef struct mempool_s
 }
 mempool_t;
 
-#define Mem_Alloc(pool,size) _Mem_Alloc(pool, size, __FILE__, __LINE__)
+#define Mem_Alloc(pool,size) _Mem_Alloc(pool, NULL, size, 16, __FILE__, __LINE__)
+#define Mem_Memalign(pool,alignment,size) _Mem_Alloc(pool, NULL, size, alignment, __FILE__, __LINE__)
+#define Mem_Realloc(pool,data,size) _Mem_Alloc(pool, data, size, 16, __FILE__, __LINE__)
 #define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
 #define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
@@ -82,7 +86,7 @@ mempool_t;
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
-void *_Mem_Alloc(mempool_t *pool, size_t size, const char *filename, int fileline);
+void *_Mem_Alloc(mempool_t *pool, void *data, size_t size, size_t alignment, const char *filename, int fileline);
 void _Mem_Free(void *data, const char *filename, int fileline);
 mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline);
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
