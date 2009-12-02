@@ -917,34 +917,52 @@ void SCR_ScreenShot_f (void)
 	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	// TODO maybe make capturevideo and screenshot use similar name patterns?
-	if (scr_screenshot_name_in_mapdir.integer && cl.worldmodel && *cl.worldmodel->name) {
-		// figure out the map's filename without path or extension
-		strlcpy(mapname, FS_FileWithoutPath(cl.worldmodel->name), sizeof(mapname));
-		if (strrchr(mapname, '.'))
-			*(strrchr(mapname, '.')) = 0;
-		dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", mapname, Sys_TimeString(scr_screenshot_name.string));
-	} else {
-		dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
-	}
-
-	if (strcmp(old_prefix_name, prefix_name))
+	if (Cmd_Argc() == 2)
 	{
-		dpsnprintf(old_prefix_name, sizeof(old_prefix_name), "%s", prefix_name );
-		shotnumber = 0;
+		const char *ext;
+		strlcpy(filename, Cmd_Argv(1), sizeof(filename));
+		ext = FS_FileExtension(filename);
+		if (!strcasecmp(ext, "jpg"))
+			jpeg = true;
+		else if (!strcasecmp(ext, "tga"))
+			jpeg = false;
+		else
+		{
+			Con_Printf("screenshot: supplied filename must end in .jpg or .tga\n");
+			return;
+		}
 	}
-
-	// find a file name to save it to
-	for (;shotnumber < 1000000;shotnumber++)
-		if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)))
-			break;
-	if (shotnumber >= 1000000)
+	else
 	{
-		Con_Print("Couldn't create the image file\n");
-		return;
- 	}
+		// TODO maybe make capturevideo and screenshot use similar name patterns?
+		if (scr_screenshot_name_in_mapdir.integer && cl.worldmodel && *cl.worldmodel->name) {
+			// figure out the map's filename without path or extension
+			strlcpy(mapname, FS_FileWithoutPath(cl.worldmodel->name), sizeof(mapname));
+			if (strrchr(mapname, '.'))
+				*(strrchr(mapname, '.')) = 0;
+			dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", mapname, Sys_TimeString(scr_screenshot_name.string));
+		} else {
+			dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
+		}
 
-	dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : "tga");
+		if (strcmp(old_prefix_name, prefix_name))
+		{
+			dpsnprintf(old_prefix_name, sizeof(old_prefix_name), "%s", prefix_name );
+			shotnumber = 0;
+		}
+
+		// find a file name to save it to
+		for (;shotnumber < 1000000;shotnumber++)
+			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)))
+				break;
+		if (shotnumber >= 1000000)
+		{
+			Con_Print("Couldn't create the image file\n");
+			return;
+		}
+
+		dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : "tga");
+	}
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
