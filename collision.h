@@ -172,7 +172,7 @@ void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t e
 #define COLLISIONPARANOID 0
 
 // make every trace 1qu longer, and shorten the result, to work around a stupid bug somewhere
-#define COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+//#define COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 
 
 #endif
