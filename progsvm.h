@@ -80,7 +80,7 @@ typedef struct prvm_edict_s
 	union
 	{
 		prvm_edict_private_t *required;
-		void *vp;
+		vec_t *vp;
 		// FIXME: this server pointer really means world, not server
 		// (it is used by both server qc and client qc, but not menu qc)
 		edict_engineprivate_t *server;
@@ -104,7 +104,7 @@ typedef struct prvm_edict_s
 	// QuakeC fields (stored in dynamically resized array)
 	union
 	{
-		void *vp;
+		vec_t *vp;
 		entvars_t		*server;
 		cl_entvars_t	*client;
 	} fields;
@@ -365,15 +365,15 @@ typedef struct prvm_prog_s
 	ddef_t				*fielddefs;
 	ddef_t				*globaldefs;
 	dstatement_t		*statements;
-	int					edict_size;			// in bytes
-	int					edictareasize;		// LordHavoc: in bytes (for bound checking)
+	int					entityfields;			// number of vec_t fields in progs (some variables are 3)
+	int					entityfieldsarea;		// LordHavoc: equal to max_edicts * entityfields (for bounds checking)
 
 	int					*statement_linenums; // NULL if not available
 
 	double				*statement_profile; // only incremented if prvm_statementprofiling is on
 
 	union {
-		float *generic;
+		vec_t *generic;
 		globalvars_t *server;
 		cl_globalvars_t *client;
 	} globals;
@@ -436,7 +436,7 @@ typedef struct prvm_prog_s
 	int					reserved_edicts; // [INIT]
 
 	prvm_edict_t		*edicts;
-	void					*edictsfields;
+	vec_t				*edictsfields;
 	void					*edictprivate;
 
 	// size of the engine private struct
