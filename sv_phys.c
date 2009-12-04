@@ -271,12 +271,12 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	vec3_t end;
 	vec_t len = 0;
 
-	if(!VectorCompare(start, pEnd))
+	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
 		VectorSubtract(pEnd, start, end);
 		len = VectorNormalizeLength(end);
-		VectorAdd(pEnd, end, end);
+		VectorMA(pEnd, collision_endposnudge.value, end, end);
 	}
 	else
 		VectorCopy(pEnd, end);
@@ -397,7 +397,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	if(!VectorCompare(start, pEnd))
+	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
 #endif
 	return cliptrace;
@@ -450,12 +450,12 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	vec3_t end;
 	vec_t len = 0;
 
-	if(!VectorCompare(start, pEnd))
+	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
 		VectorSubtract(pEnd, start, end);
 		len = VectorNormalizeLength(end);
-		VectorAdd(pEnd, end, end);
+		VectorMA(pEnd, collision_endposnudge.value, end, end);
 	}
 	else
 		VectorCopy(pEnd, end);
@@ -597,7 +597,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	if(!VectorCompare(start, pEnd))
+	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
 #endif
 	return cliptrace;
