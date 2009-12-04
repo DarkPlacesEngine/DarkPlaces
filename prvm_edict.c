@@ -77,13 +77,14 @@ void PRVM_MEM_Alloc(void)
 	prog->edictprivate = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edictprivate_size);
 
 	// alloc edict fields
-	prog->edictsfields = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edict_size);
+	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
+	prog->edictsfields = (vec_t *)Mem_Alloc(prog->progs_mempool, prog->entityfieldsarea * sizeof(vec_t));
 
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = (void*)((unsigned char *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].fields.vp = prog->edictsfields + i * prog->entityfields;
 	}
 }
 
@@ -95,9 +96,6 @@ PRVM_MEM_IncreaseEdicts
 void PRVM_MEM_IncreaseEdicts(void)
 {
 	int		i;
-	int		oldmaxedicts = prog->max_edicts;
-	void	*oldedictsfields = prog->edictsfields;
-	void	*oldedictprivate = prog->edictprivate;
 
 	if(prog->max_edicts >= prog->limit_edicts)
 		return;
@@ -107,23 +105,18 @@ void PRVM_MEM_IncreaseEdicts(void)
 	// increase edicts
 	prog->max_edicts = min(prog->max_edicts + 256, prog->limit_edicts);
 
-	prog->edictsfields = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edict_size);
-	prog->edictprivate = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edictprivate_size);
-
-	memcpy(prog->edictsfields, oldedictsfields, oldmaxedicts * prog->edict_size);
-	memcpy(prog->edictprivate, oldedictprivate, oldmaxedicts * prog->edictprivate_size);
+	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
+	prog->edictsfields = (vec_t*)Mem_Realloc(prog->progs_mempool, (void *)prog->edictsfields, prog->entityfieldsarea * sizeof(vec_t));
+	prog->edictprivate = (void *)Mem_Realloc(prog->progs_mempool, (void *)prog->edictprivate, prog->max_edicts * prog->edictprivate_size);
 
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = (void*)((unsigned char *)prog->edictsfields + i * prog->edict_size);
+		prog->edicts[i].fields.vp = prog->edictsfields + i * prog->entityfields;
 	}
 
 	PRVM_GCALL(end_increase_edicts)();
-
-	Mem_Free(oldedictsfields);
-	Mem_Free(oldedictprivate);
 }
 
 //============================================================================
@@ -452,7 +445,7 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 		break;
 	case ev_entity:
 		n = val->edict;
-		if (n < 0 || n >= prog->limit_edicts)
+		if (n < 0 || n >= prog->max_edicts)
 			dpsnprintf (line, sizeof(line), "entity %i (invalid!)", n);
 		else
 			dpsnprintf (line, sizeof(line), "entity %i", n);
@@ -663,7 +656,7 @@ void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname)
 				// Didn't match; skip
 				continue;
 
-		v = (int *)((char *)ed->fields.vp + d->ofs*4);
+		v = (int *)(ed->fields.vp + d->ofs);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -741,7 +734,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
-		v = (int *)((char *)ed->fields.vp + d->ofs*4);
+		v = (int *)(ed->fields.vp + d->ofs);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
@@ -995,9 +988,9 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 	mfunction_t *func;
 
 	if (ent)
-		val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
+		val = (prvm_eval_t *)(ent->fields.vp + key->ofs);
 	else
-		val = (prvm_eval_t *)((int *)prog->globals.generic + key->ofs);
+		val = (prvm_eval_t *)(prog->globals.generic + key->ofs);
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
@@ -1046,12 +1039,12 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qbool
 			s++;
 		i = atoi(s);
 		if (i >= prog->limit_edicts)
-			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %u >= MAX_EDICTS %u) on %s\n", (unsigned int)i, (unsigned int)MAX_EDICTS, PRVM_NAME);
+			Con_Printf("PRVM_ED_ParseEpair: ev_entity reference too large (edict %u >= MAX_EDICTS %u) on %s\n", (unsigned int)i, prog->limit_edicts, PRVM_NAME);
 		while (i >= prog->max_edicts)
 			PRVM_MEM_IncreaseEdicts();
 		// if IncreaseEdicts was called the base pointer needs to be updated
 		if (ent)
-			val = (prvm_eval_t *)((int *)ent->fields.vp + key->ofs);
+			val = (prvm_eval_t *)(ent->fields.vp + key->ofs);
 		val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM((int)i));
 		break;
 
@@ -1187,7 +1180,7 @@ void PRVM_ED_EdictGet_f(void)
 		goto fail;
 	}
 
-	v = (prvm_eval_t *)((char *)ed->fields.vp + key->ofs*4);
+	v = (prvm_eval_t *)(ed->fields.vp + key->ofs);
 	s = PRVM_UglyValueString(key->type, v);
 	if(Cmd_Argc() == 5)
 	{
@@ -1875,8 +1868,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	prog->statement_profile = (double *)Mem_Alloc(prog->progs_mempool, prog->progs->numstatements * sizeof(*prog->statement_profile));
 
-	// moved edict_size calculation down below field adding code
-
 	//pr_global_struct = (globalvars_t *)((unsigned char *)progs + progs->ofs_globals);
 	prog->globals.generic = (float *)((unsigned char *)prog->progs + prog->progs->ofs_globals);
 
@@ -1936,6 +1927,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 			prog->progs->entityfields++;
 		prog->progs->numfielddefs++;
 	}
+	prog->entityfields = prog->progs->entityfields;
 
 	// check required functions
 	for(i=0 ; i < numrequiredfunc ; i++)
@@ -1949,11 +1941,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	for (i=0 ; i<prog->progs->numglobals ; i++)
 		((int *)prog->globals.generic)[i] = LittleLong (((int *)prog->globals.generic)[i]);
-
-	// moved edict_size calculation down here, below field adding code
-	// LordHavoc: this no longer includes the prvm_edict_t header
-	prog->edict_size = prog->progs->entityfields * 4;
-	prog->edictareasize = prog->edict_size * prog->limit_edicts;
 
 	// LordHavoc: bounds check anything static
 	for (i = 0,st = prog->statements;i < prog->progs->numstatements;i++,st++)
@@ -2128,7 +2115,7 @@ void PRVM_Fields_f (void)
 			name = PRVM_GetString(d->s_name);
 			if (name[strlen(name)-2] == '_')
 				continue;	// skip _x, _y, _z vars
-			v = (int *)((char *)ed->fields.vp + d->ofs*4);
+			v = (int *)(ed->fields.vp + d->ofs);
 			// if the value is still all 0, skip the field
 			for (j = 0;j < prvm_type_size[d->type & ~DEF_SAVEGLOBAL];j++)
 			{
@@ -2399,48 +2386,6 @@ unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline)
 	return 0;
 }
 
-/*
-int NUM_FOR_EDICT_ERROR(prvm_edict_t *e)
-{
-	PRVM_ERROR ("PRVM_NUM_FOR_EDICT: bad pointer %p (world is %p, entity number would be %i)", e, prog->edicts, e - prog->edicts);
-	return 0;
-}
-
-int PRVM_NUM_FOR_EDICT(prvm_edict_t *e)
-{
-	int n;
-	n = e - prog->edicts;
-	if ((unsigned int)n >= prog->limit_edicts)
-		Host_Error ("PRVM_NUM_FOR_EDICT: bad pointer");
-	return n;
-}
-
-//int NoCrash_NUM_FOR_EDICT(prvm_edict_t *e)
-//{
-//	return e - prog->edicts;
-//}
-
-//#define	PRVM_EDICT_TO_PROG(e) ((unsigned char *)(((prvm_edict_t *)e)->v) - (unsigned char *)(prog->edictsfields))
-//#define PRVM_PROG_TO_EDICT(e) (prog->edicts + ((e) / (progs->entityfields * 4)))
-int PRVM_EDICT_TO_PROG(prvm_edict_t *e)
-{
-	int n;
-	n = e - prog->edicts;
-	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_EDICT_TO_PROG: invalid edict %8p (number %i compared to world at %8p)", e, n, prog->edicts);
-	return n;// EXPERIMENTAL
-	//return (unsigned char *)e->v - (unsigned char *)prog->edictsfields;
-}
-prvm_edict_t *PRVM_PROG_TO_EDICT(int n)
-{
-	if ((unsigned int)n >= (unsigned int)prog->max_edicts)
-		Host_Error("PRVM_PROG_TO_EDICT: invalid edict number %i", n);
-	return prog->edicts + n; // EXPERIMENTAL
-	//return prog->edicts + ((n) / (progs->entityfields * 4));
-}
-*/
-
-
 sizebuf_t vm_tempstringsbuf;
 
 const char *PRVM_GetString(int num)
@@ -2691,7 +2636,7 @@ static qboolean PRVM_IsStringReferenced(string_t string)
 			ddef_t *d = &prog->fielddefs[i];
 			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_string)
 				continue;
-			if(string == ((prvm_eval_t *) &((float*)ed->fields.vp)[d->ofs])->string)
+			if(string == ((prvm_eval_t *) &ed->fields.vp[d->ofs])->string)
 				return true;
 		}
 	}
@@ -2798,7 +2743,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 			ddef_t *d = &prog->fielddefs[i];
 			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
 				continue;
-			if(edictnum == ((prvm_eval_t *) &((float*)ed->fields.vp)[d->ofs])->edict)
+			if(edictnum == ((prvm_eval_t *) &ed->fields.vp[d->ofs])->edict)
 				return true;
 		}
 	}

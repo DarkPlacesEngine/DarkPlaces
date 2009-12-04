@@ -153,7 +153,7 @@
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
 #if PRVMBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int + 1 > prog->edictareasize)
+				if (OPB->_int < 0 || OPB->_int + 1 > prog->entityfieldsarea)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -163,12 +163,12 @@
 #endif
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
 					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
-				ptr = (prvm_eval_t *)((float *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
 #if PRVMBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int + 3 > prog->edictareasize)
+				if (OPB->_int < 0 || OPB->_int + 3 > prog->entityfieldsarea)
 				{
 					prog->xfunction->profile += (st - startst);
 					prog->xstatement = st - prog->statements;
@@ -178,7 +178,7 @@
 #endif
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
 					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
-				ptr = (prvm_eval_t *)((float *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
 				ptr->ivector[2] = OPA->ivector[2];
@@ -211,7 +211,7 @@
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = (float *)((float *)ed->fields.vp + OPB->_int) - (float *)prog->edictsfields;
+				OPC->_int = ed->fields.vp - prog->edictsfields + OPB->_int;
 				break;
 
 			case OP_LOAD_F:
@@ -561,7 +561,7 @@
 					goto cleanup;
 				}
 #endif
-				ptr = (prvm_eval_t *)((unsigned char *)prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_LOAD_I:
