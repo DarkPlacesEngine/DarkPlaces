@@ -8957,7 +8957,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	{
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
-			Mem_Free(r_surfacelist);
+			Mem_Free((msurface_t**)r_surfacelist);
 		r_surfacelist = (const msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
@@ -9045,7 +9045,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	{
 		r_maxsurfacelist = model->num_surfaces;
 		if (r_surfacelist)
-			Mem_Free(r_surfacelist);
+			Mem_Free((msurface_t **)r_surfacelist);
 		r_surfacelist = (const msurface_t **) Mem_Alloc(r_main_mempool, r_maxsurfacelist * sizeof(*r_surfacelist));
 	}
 
