@@ -8229,7 +8229,8 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 		decalsystem->element3s = (useshortelements ? ((unsigned short *)(decalsystem->element3i + decalsystem->maxdecals*3)) : NULL);
 		if (decalsystem->numdecals)
 			memcpy(decalsystem->decals, old.decals, decalsystem->numdecals * sizeof(tridecal_t));
-		Mem_Free(old.decals);
+		if (old.decals)
+			Mem_Free(old.decals);
 		for (i = 0;i < decalsystem->maxdecals*3;i++)
 			decalsystem->element3i[i] = i;
 		if (useshortelements)
