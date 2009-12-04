@@ -15,6 +15,9 @@ cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias col
 cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
 cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
 cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+cvar_t collision_endposnudge = {0, "collision_endposnudge", "0", "workaround to fix trace_endpos sometimes being returned where it would be inside solid by making that collision hit (recommended: values like 1)"};
+#endif
 
 void Collision_Init (void)
 {
@@ -24,6 +27,9 @@ void Collision_Init (void)
 	Cvar_RegisterVariable(&collision_enternudge);
 	Cvar_RegisterVariable(&collision_leavenudge);
 	Cvar_RegisterVariable(&collision_prefernudgedfraction);
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	Cvar_RegisterVariable(&collision_endposnudge);
+#endif
 }
 
 
