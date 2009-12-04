@@ -717,12 +717,16 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
-		if (startdist < 0 && (startdepth < startdist || startdepth == 1))
+		if (startdist < collision_impactnudge.value && nplane < numplanes1 && (startdepth < startdist || startdepth == 1))
 		{
 			startdepth = startdist;
 			VectorCopy(startplane, startdepthnormal);
 		}
 
+		if (startdist >= -collision_impactnudge.value && enddist >= startdist)
+			return;
+		if (startdist <= 0 && enddist <= 0)
+			continue;
 		if (startdist > enddist)
 		{
 			// moving into brush
@@ -880,12 +884,16 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
-		if (startdist < 0 && (startdepth < startdist || startdepth == 1))
+		if (startdist < collision_impactnudge.value && (startdepth < startdist || startdepth == 1))
 		{
 			startdepth = startdist;
 			VectorCopy(startplane, startdepthnormal);
 		}
 
+		if (startdist >= -collision_impactnudge.value && enddist >= startdist)
+			return;
+		if (startdist <= 0 && enddist <= 0)
+			continue;
 		if (startdist > enddist)
 		{
 			// moving into brush
