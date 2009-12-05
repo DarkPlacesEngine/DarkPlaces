@@ -2183,12 +2183,12 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask);
 
-	// if the move did not hit the ground at any point, we're not on ground
+	if(sv_gameplayfix_downtracesupportsongroundflag.integer)
 	if(!(clip & 1))
+	{
 		// only try this if there was no floor in the way in the trace (no,
 		// this check seems to be not REALLY necessary, because if clip & 1,
 		// our trace will hit that thing too)
-	{
 		VectorSet(upmove, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] + 1);
 		VectorSet(downmove, ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2] - 1);
 		if (ent->fields.server->movetype == MOVETYPE_FLYMISSILE)
@@ -2198,9 +2198,13 @@ void SV_WalkMove (prvm_edict_t *ent)
 		else
 			type = MOVE_NORMAL;
 		trace = SV_TraceBox(upmove, ent->fields.server->mins, ent->fields.server->maxs, downmove, type, ent, SV_GenericHitSuperContentsMask(ent));
-		if(trace.fraction >= 1 || trace.plane.normal[2] <= 0.7)
-			ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
+		if(trace.fraction < 1 && trace.plane.normal[2] > 0.7)
+			clip |= 1; // but we HAVE found a floor
 	}
+
+	// if the move did not hit the ground at any point, we're not on ground
+	if(!(clip & 1))
+		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
 
 	SV_CheckVelocity(ent);
 	SV_LinkEdict(ent);
