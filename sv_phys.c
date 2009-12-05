@@ -398,7 +398,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
 #endif
 	return cliptrace;
 }
@@ -598,7 +598,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
 #endif
 	return cliptrace;
 }

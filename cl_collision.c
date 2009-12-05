@@ -73,7 +73,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 		if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-			Collision_ShortenTrace(&trace, len / (len + 1), pEnd);
+			Collision_ShortenTrace(&trace, len / (len + collision_endposnudge.value), pEnd);
 #endif
 		if (maxrealfrac < trace.realfraction)
 			continue;
@@ -658,7 +658,7 @@ skipnetworkplayers:
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
 #endif
 	return cliptrace;
 }
@@ -919,7 +919,7 @@ skipnetworkplayers:
 finished:
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + 1), pEnd);
+		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
 #endif
 	return cliptrace;
 }
