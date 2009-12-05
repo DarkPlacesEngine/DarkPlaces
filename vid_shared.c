@@ -87,6 +87,15 @@ qboolean vid_activewindow = true;
 
 // we don't know until we try it!
 cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1", "indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)"};
+
+// VorteX: more info cvars, mostly set in VID_CheckExtensions
+cvar_t gl_info_vendor = {CVAR_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
+cvar_t gl_info_renderer = {CVAR_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
+cvar_t gl_info_version = {CVAR_READONLY, "gl_info_version", "", "indicates version of current renderer. begins with 1.0.0, 1.1.0, 1.2.0, 1.3.1 etc."};
+cvar_t gl_info_extensions = {CVAR_READONLY, "gl_info_extensions", "", "indicates extension list found by engine, space separated."};
+cvar_t gl_info_platform = {CVAR_READONLY, "gl_info_platform", "", "indicates GL platform: WGL, GLX, or AGL."};
+cvar_t gl_info_driver = {CVAR_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
+
 // whether hardware gamma ramps are currently in effect
 qboolean vid_usinghwgamma = false;
 
@@ -434,6 +443,7 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 	int failed = false;
 	const dllfunction_t *func;
 	struct { int major, minor; } min_version, curr_version;
+	char extstr[MAX_INPUTLINE];
 	int ext;
 
 	if(sscanf(minglver_or_ext, "%d.%d", &min_version.major, &min_version.minor) == 2)
@@ -497,6 +507,10 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 	// delay the return so it prints all missing functions
 	if (failed)
 		return false;
+	// VorteX: add to found extension list
+	dpsnprintf(extstr, sizeof(extstr), "%s %s ", gl_info_extensions.string, minglver_or_ext);
+	Cvar_SetQuick(&gl_info_extensions, extstr);
+
 	Con_DPrint("enabled\n");
 	return true;
 }
@@ -824,6 +838,9 @@ void VID_CheckExtensions(void)
 {
 	gl_stencil = vid_bitsperpixel.integer == 32;
 
+	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
+	Cvar_SetQuick(&gl_info_extensions, "");
+
 	// reset all the gl extension variables here
 	// this should match the declarations
 	gl_max_texture_size = 0;
@@ -960,6 +977,13 @@ void VID_CheckExtensions(void)
     gl_support_amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
 // COMMANDLINEOPTION: GL: -notexturegather disables GL_ARB_texture_gather (which provides fetch4 sampling)
     gl_support_arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
+
+	// VorteX: set other info (maybe place them in VID_InitMode?)
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver ? gl_driver : "");
 }
 
 void Force_CenterView_f (void)
@@ -1170,6 +1194,12 @@ void VID_RestoreSystemGamma(void)
 void VID_Shared_Init(void)
 {
 	Cvar_RegisterVariable(&vid_hardwaregammasupported);
+	Cvar_RegisterVariable(&gl_info_vendor);
+	Cvar_RegisterVariable(&gl_info_renderer);
+	Cvar_RegisterVariable(&gl_info_version);
+	Cvar_RegisterVariable(&gl_info_extensions);
+	Cvar_RegisterVariable(&gl_info_platform);
+	Cvar_RegisterVariable(&gl_info_driver);
 	Cvar_RegisterVariable(&v_gamma);
 	Cvar_RegisterVariable(&v_brightness);
 	Cvar_RegisterVariable(&v_contrastboost);
