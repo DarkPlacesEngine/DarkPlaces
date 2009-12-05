@@ -358,6 +358,7 @@ prvm_stringbuffer_t;
 typedef struct prvm_prog_s
 {
 	double              starttime;
+	unsigned int		id; // increasing unique id of progs instance
 	dprograms_t			*progs;
 	mfunction_t			*functions;
 	char				*strings;
@@ -628,6 +629,7 @@ void PRVM_ED_PrintNum (int ent, const char *wildcard_fieldname);
 
 const char *PRVM_GetString(int num);
 int PRVM_SetEngineString(const char *s);
+const char *PRVM_ChangeEngineString(int i, const char *s);
 int PRVM_SetTempString(const char *s);
 int PRVM_AllocString(size_t bufferlength, char **pointer);
 void PRVM_FreeString(int num);

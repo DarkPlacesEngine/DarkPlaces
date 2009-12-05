@@ -124,6 +124,10 @@ typedef struct cvar_s
 
 	char *defstring;
 
+	unsigned int globaldefindex_progid[3];
+	int globaldefindex[3];
+	int globaldefindex_stringno[3];
+
 	//menucvar_t menuinfo;
 	struct cvar_s *next;
 	struct cvar_s *nextonhashchain;

@@ -2059,6 +2059,74 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	PRVM_Init_Exec();
 
+	for (i=0 ; i<prog->progs->numglobaldefs ; i++)
+	{
+		const char *name;
+		cvar_t *cvar;
+		name = PRVM_GetString(prog->globaldefs[i].s_name);
+		if(name
+			&& !strncmp(name, "autocvar_", 9)
+			// && !(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z'))
+		)
+		{
+			
+			cvar = Cvar_FindVar(name + 9);
+			if(!cvar)
+			{
+				Con_Printf("PRVM_LoadProgs: no cvar for autocvar global %s in %s\n", name, PRVM_NAME);
+				cvar = Cvar_Get(name + 9, "", 0, NULL);
+				if(!cvar)
+					PRVM_ERROR("PRVM_LoadProgs: could not create cvar for autocvar global %s in %s", name, PRVM_NAME);
+			}
+			if(cvar && ((cvar->flags & CVAR_PRIVATE) == 0))
+			{
+				// MUST BE SYNCED WITH cvar.c Cvar_Set
+				int j;
+				const char *s;
+				prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
+				switch(prog->globaldefs[i].type & ~DEF_SAVEGLOBAL)
+				{
+					case ev_float:
+						val->_float = cvar->value;
+						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
+						cvar->globaldefindex[prog - prog_list] = i;
+						break;
+					case ev_vector:
+						s = cvar->string;
+						VectorClear(val->vector);
+						for (j = 0;j < 3;j++)
+						{
+							while (*s && ISWHITESPACE(*s))
+								s++;
+							if (!*s)
+								break;
+							val->vector[j] = atof(s);
+							while (!ISWHITESPACE(*s))
+								s++;
+							if (!*s)
+								break;
+						}
+						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
+						cvar->globaldefindex[prog - prog_list] = i;
+						break;
+					case ev_string:
+						val->string = PRVM_SetEngineString(cvar->string);
+						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
+						cvar->globaldefindex[prog - prog_list] = i;
+						cvar->globaldefindex_stringno[prog - prog_list] = val->string;
+						break;
+					default:
+						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, PRVM_NAME);
+						break;
+				}
+			}
+			else
+				Con_Printf("PRVM_LoadProgs: private cvar for autocvar global %s in %s\n", name, PRVM_NAME);
+		}
+		if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_vector)
+			i += 3; // skip the _x _y _z floats
+	}
+
 	prog->loaded = TRUE;
 
 	// set flags & ddef_ts in prog
@@ -2341,6 +2409,8 @@ PRVM_InitProg
 */
 void PRVM_InitProg(int prognr)
 {
+	static unsigned int progid = 0;
+
 	if(prognr < 0 || prognr >= PRVM_MAXPROGS)
 		Sys_Error("PRVM_InitProg: Invalid program number %i",prognr);
 
@@ -2351,6 +2421,7 @@ void PRVM_InitProg(int prognr)
 
 	memset(prog, 0, sizeof(prvm_prog_t));
 	prog->starttime = Sys_DoubleTime();
+	prog->id = ++progid;
 
 	prog->error_cmd = Host_Error;
 	prog->leaktest_active = prvm_leaktest.integer != 0;
@@ -2447,6 +2518,17 @@ const char *PRVM_GetString(int num)
 			return "";
 		}
 	}
+}
+
+const char *PRVM_ChangeEngineString(int i, const char *s)
+{
+	const char *old;
+	i = -1 - i;
+	if(i < 0 || i >= prog->numknownstrings)
+		PRVM_ERROR("PRVM_ChangeEngineString: s is not an engine string");
+	old = prog->knownstrings[i];
+	prog->knownstrings[i] = s;
+	return old;
 }
 
 int PRVM_SetEngineString(const char *s)

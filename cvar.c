@@ -233,6 +233,8 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
 	qboolean changed;
 	size_t valuelen;
+	prvm_prog_t *tmpprog;
+	int i;
 
 	changed = strcmp(var->string, value) != 0;
 	// LordHavoc: don't reallocate when there is no change
@@ -305,6 +307,49 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		else if (!strcmp(var->name, "net_slist_favorites"))
 			NetConn_UpdateFavorites();
 	}
+
+	tmpprog = prog;
+	for(i = 0; i < PRVM_MAXPROGS; ++i)
+	{
+		if(PRVM_ProgLoaded(i))
+		{
+			PRVM_SetProg(i);
+			if(var->globaldefindex_progid[i] == prog->id)
+			{
+				// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
+				int j;
+				const char *s;
+				prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[var->globaldefindex[i]].ofs);
+				switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
+				{
+					case ev_float:
+						val->_float = var->value;
+						break;
+					case ev_vector:
+						s = var->string;
+						VectorClear(val->vector);
+						for (j = 0;j < 3;j++)
+						{
+							while (*s && ISWHITESPACE(*s))
+								s++;
+							if (!*s)
+								break;
+							val->vector[j] = atof(s);
+							while (!ISWHITESPACE(*s))
+								s++;
+							if (!*s)
+								break;
+						}
+						break;
+					case ev_string:
+						PRVM_ChangeEngineString(var->globaldefindex_stringno[i], var->string);
+						val->string = var->globaldefindex_stringno[i];
+						break;
+				}
+			}
+		}
+	}
+	prog = tmpprog;
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)
