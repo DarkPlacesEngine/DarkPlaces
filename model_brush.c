@@ -4189,13 +4189,21 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 			if (!COM_ParseToken_Simple(&data, false, false))
 				break; // error
 			strlcpy(value, com_token, sizeof(value));
-			if (!strcmp("gridsize", key))
+			if (!strcasecmp("gridsize", key)) // this one is case insensitive to 100% match q3map2
 			{
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
+#if 0
 				if (sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) == 3 && v[0] != 0 && v[1] != 0 && v[2] != 0)
 					VectorCopy(v, loadmodel->brushq3.num_lightgrid_cellsize);
+#else
+				VectorSet(v, 64, 64, 128);
+				if(sscanf(value, "%f %f %f", &v[0], &v[1], &v[2]) != 3)
+					Con_Printf("Mod_Q3BSP_LoadEntities: funny gridsize \"%s\" in %s, interpreting as \"%f %f %f\" to match q3map2's parsing\n", value, loadmodel->name, v[0], v[1], v[2]);
+				if (v[0] != 0 && v[1] != 0 && v[2] != 0)
+					VectorCopy(v, loadmodel->brushq3.num_lightgrid_cellsize);
+#endif
 			}
 			else if (!strcmp("deluxeMaps", key))
 			{
