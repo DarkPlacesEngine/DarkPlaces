@@ -2062,34 +2062,58 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	for (i=0 ; i<prog->progs->numglobaldefs ; i++)
 	{
 		const char *name;
-		cvar_t *cvar;
 		name = PRVM_GetString(prog->globaldefs[i].s_name);
 		if(name
 			&& !strncmp(name, "autocvar_", 9)
 			// && !(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z'))
 		)
 		{
-			
-			cvar = Cvar_FindVar(name + 9);
+			prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
+			cvar_t *cvar = Cvar_FindVar(name + 9);
 			if(!cvar)
 			{
-				Con_Printf("PRVM_LoadProgs: no cvar for autocvar global %s in %s\n", name, PRVM_NAME);
-				cvar = Cvar_Get(name + 9, "", 0, NULL);
+				const char *value;
+				char buf[64];
+				Con_Printf("PRVM_LoadProgs: no cvar for autocvar global %s in %s, creating...\n", name, PRVM_NAME);
+				switch(prog->globaldefs[i].type & ~DEF_SAVEGLOBAL)
+				{
+					case ev_float:
+						if((float)((int)(val->_float)) == val->_float)
+							dpsnprintf(buf, sizeof(buf), "%i", (int)(val->_float));
+						else
+							dpsnprintf(buf, sizeof(buf), "%f", val->_float);
+						value = buf;
+						break;
+					case ev_vector:
+						dpsnprintf(buf, sizeof(buf), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]); value = buf;
+						break;
+					case ev_string:
+						value = PRVM_GetString(val->string);
+						break;
+					default:
+						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, PRVM_NAME);
+						goto fail;
+				}
+				cvar = Cvar_Get(name + 9, value, 0, NULL);
+				if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
+				{
+					val->string = PRVM_SetEngineString(cvar->string);
+					cvar->globaldefindex_stringno[prog - prog_list] = val->string;
+				}
 				if(!cvar)
 					PRVM_ERROR("PRVM_LoadProgs: could not create cvar for autocvar global %s in %s", name, PRVM_NAME);
+				cvar->globaldefindex_progid[prog - prog_list] = prog->id;
+				cvar->globaldefindex[prog - prog_list] = i;
 			}
-			if(cvar && ((cvar->flags & CVAR_PRIVATE) == 0))
+			else if((cvar->flags & CVAR_PRIVATE) == 0)
 			{
 				// MUST BE SYNCED WITH cvar.c Cvar_Set
 				int j;
 				const char *s;
-				prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
 				switch(prog->globaldefs[i].type & ~DEF_SAVEGLOBAL)
 				{
 					case ev_float:
 						val->_float = cvar->value;
-						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
-						cvar->globaldefindex[prog - prog_list] = i;
 						break;
 					case ev_vector:
 						s = cvar->string;
@@ -2106,23 +2130,22 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 							if (!*s)
 								break;
 						}
-						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
-						cvar->globaldefindex[prog - prog_list] = i;
 						break;
 					case ev_string:
 						val->string = PRVM_SetEngineString(cvar->string);
-						cvar->globaldefindex_progid[prog - prog_list] = prog->id;
-						cvar->globaldefindex[prog - prog_list] = i;
 						cvar->globaldefindex_stringno[prog - prog_list] = val->string;
 						break;
 					default:
 						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, PRVM_NAME);
-						break;
+						goto fail;
 				}
+				cvar->globaldefindex_progid[prog - prog_list] = prog->id;
+				cvar->globaldefindex[prog - prog_list] = i;
 			}
 			else
 				Con_Printf("PRVM_LoadProgs: private cvar for autocvar global %s in %s\n", name, PRVM_NAME);
 		}
+fail:
 		if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_vector)
 			i += 3; // skip the _x _y _z floats
 	}
