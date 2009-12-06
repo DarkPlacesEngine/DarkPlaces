@@ -2063,13 +2063,15 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	{
 		const char *name;
 		name = PRVM_GetString(prog->globaldefs[i].s_name);
+		//Con_Printf("found var %s\n", name);
 		if(name
 			&& !strncmp(name, "autocvar_", 9)
-			// && !(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z'))
+			&& !(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z'))
 		)
 		{
 			prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
 			cvar_t *cvar = Cvar_FindVar(name + 9);
+			//Con_Printf("PRVM_LoadProgs: autocvar global %s in %s, processing...\n", name, PRVM_NAME);
 			if(!cvar)
 			{
 				const char *value;
@@ -2146,8 +2148,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				Con_Printf("PRVM_LoadProgs: private cvar for autocvar global %s in %s\n", name, PRVM_NAME);
 		}
 fail:
-		if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_vector)
-			i += 3; // skip the _x _y _z floats
+		;
 	}
 
 	prog->loaded = TRUE;
