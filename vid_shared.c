@@ -29,8 +29,6 @@ int gl_combine_extension = false;
 int gl_supportslockarrays = false;
 // GLX_SGI_swap_control or WGL_EXT_swap_control
 int gl_videosyncavailable = false;
-// stencil available
-int gl_stencil = false;
 // 3D textures available
 int gl_texture3d = false;
 // GL_ARB_texture_cubemap
@@ -1265,7 +1263,7 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		vid.userefreshrate = vid.mode.userefreshrate;
 		vid.stereobuffer   = vid.mode.stereobuffer;
 		vid.samples        = vid.mode.samples;
-		gl_stencil         = vid.mode.bitsperpixel > 16;
+		vid.stencil        = vid.mode.bitsperpixel > 16;
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(" (%ix AA)", mode.samples) : "");
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);

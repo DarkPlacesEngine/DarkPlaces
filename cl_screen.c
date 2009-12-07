@@ -1492,7 +1492,7 @@ void R_ClearScreen(qboolean fogcolor)
 		qglClearColor(0,0,0,0);CHECKGLERROR
 	}
 	qglClearDepth(1);CHECKGLERROR
-	if (gl_stencil)
+	if (vid.stencil)
 	{
 		// LordHavoc: we use a stencil centered around 128 instead of 0,
 		// to avoid clamping interfering with strange shadow volume
@@ -1500,7 +1500,7 @@ void R_ClearScreen(qboolean fogcolor)
 		qglClearStencil(128);CHECKGLERROR
 	}
 	// clear the screen
-	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0));
 	// set dithering mode
 	if (gl_dither.integer)
 	{

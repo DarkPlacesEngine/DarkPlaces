@@ -1902,7 +1902,7 @@ void R_Shadow_RenderMode_Begin(void)
 
 	if (r_glsl.integer && gl_support_fragment_shader)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
-	else if (gl_dot3arb && gl_texturecubemap && r_shadow_dot3.integer && gl_stencil)
+	else if (gl_dot3arb && gl_texturecubemap && r_shadow_dot3.integer && vid.stencil)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
 	else
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
@@ -4391,7 +4391,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numlightentities;i++)
 			R_Shadow_DrawEntityLight(lightentities[i]);
 	}
-	else if (castshadows && gl_stencil)
+	else if (castshadows && vid.stencil)
 	{
 		// draw stencil shadow volumes to mask off pixels that are in shadow
 		// so that they won't receive lighting
@@ -4526,7 +4526,7 @@ void R_DrawModelShadows(void)
 	vec3_t relativeshadowmins, relativeshadowmaxs;
 	vec3_t tmp, shadowdir;
 
-	if (!r_drawentities.integer || !gl_stencil)
+	if (!r_drawentities.integer || !vid.stencil)
 		return;
 
 	CHECKGLERROR

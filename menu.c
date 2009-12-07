@@ -2884,7 +2884,7 @@ static void M_Video_Draw (void)
 	// Current and Proposed Resolution
 	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
 	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
-		M_Print(220, video_cursor_table[t] - 12, va("%dx%d %dhz", vid.width, vid.height, vid.refreshrate));
+		M_Print(220, video_cursor_table[t] - 12, va("%dx%d %.2fhz", vid.width, vid.height, vid.refreshrate));
 	else
 		M_Print(220, video_cursor_table[t] - 12, va("%dx%d", vid.width, vid.height));
 	M_Print(16, video_cursor_table[t], "        New Resolution");
@@ -2909,7 +2909,7 @@ static void M_Video_Draw (void)
 
 	// Refresh Rate
 	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
-	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.integer, 60, 150);
+	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 150);
 	t++;
 
 	// Fullscreen
@@ -2972,7 +2972,7 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
 	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_refreshrate, bound(60, vid_refreshrate.integer + dir, 150));
+		Cvar_SetValueQuick (&vid_refreshrate, bound(50, vid_refreshrate.value + dir, 150));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
 	else if (video_cursor == t++)
