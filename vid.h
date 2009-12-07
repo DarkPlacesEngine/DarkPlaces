@@ -26,9 +26,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int cl_available;
 
+typedef struct viddef_mode_s
+{
+	int width;
+	int height;
+	int bitsperpixel;
+	qboolean fullscreen;
+	float refreshrate;
+	qboolean userefreshrate;
+	qboolean stereobuffer;
+	int samples;
+}
+viddef_mode_t;
+
 typedef struct viddef_s
 {
 	// these are set by VID_Mode
+	viddef_mode_t mode;
 	int width;
 	int height;
 	int bitsperpixel;
@@ -127,7 +141,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples);
+qboolean VID_InitMode(viddef_mode_t *mode);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 

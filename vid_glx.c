@@ -759,7 +759,7 @@ void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, in
 	*attrib++ = None;
 }
 
-int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
+qboolean VID_InitMode(viddef_mode_t *mode)
 {
 	int i;
 	int attrib[32];
@@ -834,7 +834,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 		return false;
 	}
 
-	VID_BuildGLXAttrib(attrib, bpp == 32, stereobuffer, samples);
+	VID_BuildGLXAttrib(attrib, mode->bitsperpixel == 32, mode->stereobuffer, mode->samples);
 	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
 	if (!visinfo)
 	{
@@ -842,7 +842,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 		return false;
 	}
 
-	if (fullscreen)
+	if (mode->fullscreen)
 	{
 		if(vid_netwmfullscreen.integer)
 		{
@@ -872,11 +872,11 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 
 			for (i = 0; i < num_vidmodes; i++)
 			{
-				if (*width > vidmodes[i]->hdisplay || *height > vidmodes[i]->vdisplay)
+				if (mode->width > vidmodes[i]->hdisplay || mode->height > vidmodes[i]->vdisplay)
 					continue;
 
-				x = *width - vidmodes[i]->hdisplay;
-				y = *height - vidmodes[i]->vdisplay;
+				x = mode->width - vidmodes[i]->hdisplay;
+				y = mode->height - vidmodes[i]->vdisplay;
 				dist = (x * x) + (y * y);
 				if (best_fit == -1 || dist < best_dist)
 				{
@@ -890,8 +890,8 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 				// LordHavoc: changed from ActualWidth/ActualHeight =,
 				// to width/height =, so the window will take the full area of
 				// the mode chosen
-				*width = vidmodes[best_fit]->hdisplay;
-				*height = vidmodes[best_fit]->vdisplay;
+				mode->width = vidmodes[best_fit]->hdisplay;
+				mode->height = vidmodes[best_fit]->vdisplay;
 
 				// change to the mode
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
@@ -901,7 +901,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 
 				// Move the viewport to top left
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
-				Con_DPrintf("Using XVidMode fullscreen mode at %dx%d\n", *width, *height);
+				Con_DPrintf("Using XVidMode fullscreen mode at %dx%d\n", mode->width, mode->height);
 			}
 
 			free(vidmodes);
@@ -913,9 +913,9 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 			// use the full desktop resolution
 			vid_isfullscreen = true;
 			// width and height will be filled in later
-			*width = DisplayWidth(vidx11_display, vidx11_screen);
-			*height = DisplayHeight(vidx11_display, vidx11_screen);
-			Con_DPrintf("Using X11 fullscreen mode at %dx%d\n", *width, *height);
+			mode->width = DisplayWidth(vidx11_display, vidx11_screen);
+			mode->height = DisplayHeight(vidx11_display, vidx11_screen);
+			Con_DPrintf("Using X11 fullscreen mode at %dx%d\n", mode->width, mode->height);
 		}
 	}
 
@@ -929,7 +929,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, visinfo->visual, AllocNone);
 	attr.event_mask = X_MASK;
 
-	if (fullscreen)
+	if (mode->fullscreen)
 	{
 		if(vid_isnetwmfullscreen)
 		{
@@ -951,7 +951,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
 	}
 
-	win = XCreateWindow(vidx11_display, root, 0, 0, *width, *height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
+	win = XCreateWindow(vidx11_display, root, 0, 0, mode->width, mode->height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
 	wmhints = XAllocWMHints();
 	if(XpmCreatePixmapFromData(vidx11_display, win,
@@ -966,8 +966,8 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	szhints = XAllocSizeHints();
 	if(vid_resizable.integer == 0 && !vid_isnetwmfullscreen)
 	{
-		szhints->min_width = szhints->max_width = *width;
-		szhints->min_height = szhints->max_height = *height;
+		szhints->min_width = szhints->max_width = mode->width;
+		szhints->min_height = szhints->max_height = mode->height;
 		szhints->flags |= PMinSize | PMaxSize;
 	}
 
@@ -1021,8 +1021,6 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
 	gl_platform = "GLX";
 	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, vidx11_screen);
-
-	gl_videosyncavailable = false;
 
 // COMMANDLINEOPTION: Linux GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
 // COMMANDLINEOPTION: BSD GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
