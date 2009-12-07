@@ -114,6 +114,8 @@ cvar_t vid_grabkeyboard = {CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab 
 cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
 cvar_t gl_combine = {0, "gl_combine", "1", "enables faster rendering using GL_ARB_texture_env_combine extension (part of OpenGL 1.3 and above)"};
+cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.3 features (such as GL_ARB_texture_env_combine extension)"};
+cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
@@ -832,145 +834,176 @@ static dllfunction_t occlusionqueryfuncs[] =
 
 void VID_CheckExtensions(void)
 {
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+
 	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
 	Cvar_SetQuick(&gl_info_extensions, "");
-
-	// reset all the gl extension variables here
-	// this should match the declarations
-	gl_max_texture_size = 0;
-	gl_max_3d_texture_size = 0;
-	gl_max_cube_map_texture_size = 0;
-	gl_textureunits = 1;
-	gl_combine_extension = false;
-	gl_supportslockarrays = false;
-	gl_texture3d = false;
-	gl_texturecubemap = false;
-	gl_texturerectangle = false;
-	gl_support_arb_texture_non_power_of_two = false;
-	gl_dot3arb = false;
-	gl_depthtexture = false;
-	gl_support_arb_shadow = false;
-	gl_support_clamptoedge = false;
-	gl_support_anisotropy = false;
-	gl_max_anisotropy = 1;
-	gl_support_separatestencil = false;
-	gl_support_stenciltwoside = false;
-	gl_support_ext_blend_minmax = false;
-	gl_support_ext_blend_subtract = false;
-	gl_support_shader_objects = false;
-	gl_support_shading_language_100 = false;
-	gl_support_vertex_shader = false;
-	gl_support_fragment_shader = false;
-	gl_support_arb_vertex_buffer_object = false;
-	gl_support_ext_framebuffer_object = false;
-	gl_support_texture_compression = false;
-	gl_support_arb_occlusion_query = false;
-	gl_support_amd_texture_texture4 = false;
-	gl_support_arb_texture_gather = false;
-
 	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 
 	CHECKGLERROR
-	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &gl_max_texture_size);
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
-// COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
-	if (!GL_CheckExtension("1.2", drawrangeelementsfuncs, "-nodrawrangeelements", true))
-		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
-
-// COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
-	if (GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
-	{
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
-// COMMANDLINEOPTION: GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
-		gl_combine_extension = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
-// COMMANDLINEOPTION: GL: -nodot3 disables GL_ARB_texture_env_dot3 (required for bumpmapping)
-		if (gl_combine_extension)
-			gl_dot3arb = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
-	}
-
-// COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
-	if ((gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false)))
-	{
-		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &gl_max_3d_texture_size);
-		if (gl_max_3d_texture_size < 32)
-		{
-			gl_texture3d = false;
-			Con_Printf("GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
-		}
-	}
-// COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
-	if ((gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false)))
-		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, &gl_max_cube_map_texture_size);
-// COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
-	if ((gl_texturerectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false)))
-		qglGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB, &gl_max_rectangle_texture_size);
-// COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
-	gl_depthtexture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
-// COMMANDLINEOPTION: GL: -noshadow disables use of GL_ARB_shadow (required for hardware shadowmap filtering)
-	gl_support_arb_shadow = GL_CheckExtension("GL_ARB_shadow", NULL, "-noshadow", false);
-
-// COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
-	gl_support_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
-// COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
-	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
-// COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
-	gl_support_clamptoedge = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
-
+	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
+	vid.support.arb_depth_texture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
+	vid.support.arb_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
+	vid.support.arb_multitexture = GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false);
+	vid.support.arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
+	vid.support.arb_shader_objects = GL_CheckExtension("GL_ARB_shader_objects", shaderobjectsfuncs, "-noshaderobjects", false);
+	vid.support.arb_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false);
+	vid.support.arb_shadow = GL_CheckExtension("GL_ARB_shadow", NULL, "-noshadow", false);
+	vid.support.arb_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
+	vid.support.arb_texture_cube_map = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
+	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
+	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
+	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
+	vid.support.arb_texture_rectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false);
+	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
+	vid.support.arb_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false);
+	vid.support.ati_separate_stencil = GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
+	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
+	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
+	vid.support.ext_compiled_vertex_array = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
+	vid.support.ext_draw_range_elements = GL_CheckExtension("1.2", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
+	vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
+	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
+	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
+	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
+	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
+	vid.support.nv_blend_square = GL_CheckExtension("GL_NV_blend_square", NULL, "-noblendsquare", false);
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
-	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
-		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
-
-	gl_support_ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
-	gl_support_ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
-
+// COMMANDLINEOPTION: GL: -noblendminmax disables GL_EXT_blend_minmax
+// COMMANDLINEOPTION: GL: -noblendsquare disables GL_NV_blend_square
+// COMMANDLINEOPTION: GL: -noblendsubtract disables GL_EXT_blend_subtract
+// COMMANDLINEOPTION: GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
+// COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
+// COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
+// COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
+// COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
+// COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
+// COMMANDLINEOPTION: GL: -nofbo disables GL_EXT_framebuffer_object (which accelerates rendering), only used if GL_ARB_fragment_shader is also available
+// COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (allows pixel shader effects, can improve per pixel lighting performance and capabilities)
+// COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
+// COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
+// COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
 // COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
-	if (!(gl_support_separatestencil = (GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true))))
-		gl_support_separatestencil = GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
+// COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
+// COMMANDLINEOPTION: GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
+// COMMANDLINEOPTION: GL: -noshadow disables use of GL_ARB_shadow (required for hardware shadowmap filtering)
 // COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (which accelerate shadow rendering)
-	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
-
+// COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
+// COMMANDLINEOPTION: GL: -notexture4 disables GL_AMD_texture_texture4 (which provides fetch4 sampling)
+// COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)
+// COMMANDLINEOPTION: GL: -notexturegather disables GL_ARB_texture_gather (which provides fetch4 sampling)
+// COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
 // COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
-	gl_support_arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
+// COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (allows vertex shader effects)
 
-// COMMANDLINEOPTION: GL: -nofbo disables GL_EXT_framebuffer_object (which accelerates rendering)
-	gl_support_ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
+	vid.maxtexturesize_2d = 0;
+	vid.maxtexturesize_3d = 0;
+	vid.maxtexturesize_cubemap = 0;
+	vid.texunits = 1;
+	vid.teximageunits = 1;
+	vid.texarrayunits = 1;
+	vid.max_anisotropy = 1;
+
+	// disable non-power-of-two textures on Radeon X1600 and other cards that do not accelerate it with some filtering modes / repeat modes that we use
+	// we detect these cards by checking if the hardware supports vertex texture fetch (Geforce6 does, Radeon X1600 does not, all GL3-class hardware does)
+	if(vid.support.arb_texture_non_power_of_two)
+	{
+		int val = 0;
+		if (vid.support.arb_vertex_shader)
+			qglGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB, &val);CHECKGLERROR
+		if (val < 1)
+			vid.support.arb_texture_non_power_of_two = false;
+	}
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
 
-// COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
-// COMMANDLINEOPTION: GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
-// COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (allows vertex shader effects)
-// COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (allows pixel shader effects, can improve per pixel lighting performance and capabilities)
-	if ((gl_support_shader_objects = GL_CheckExtension("GL_ARB_shader_objects", shaderobjectsfuncs, "-noshaderobjects", false)))
-		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
-			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
-				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
-	CHECKGLERROR
-#ifndef __APPLE__
-	// LordHavoc: this is blocked on Mac OS X because the drivers claim support but often can't accelerate it or crash when used.
-// COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
-	
+	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
+	if (vid.support.ext_texture_filter_anisotropic)
+		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
+	if (vid.support.arb_texture_cube_map)
+		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_cubemap);
+	if (vid.support.arb_texture_rectangle)
+		qglGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_rectangle);
+	if (vid.support.ext_texture_3d)
+		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
+
+	// verify that 3d textures are really supported
+	if (vid.support.ext_texture_3d && vid.maxtexturesize_3d < 32)
 	{
-		// blacklist this extension on Radeon X1600-X1950 hardware (they support it only with certain filtering/repeat modes)
-		int val = 0;
-		if(gl_support_vertex_shader)
-			qglGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB, &val);
-		gl_support_arb_texture_non_power_of_two = val > 0 && GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
+		vid.support.ext_texture_3d = false;
+		Con_Printf("GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
 	}
-#endif
 
-// COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
-	gl_support_arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
+	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
+	if (vid.support.arb_fragment_shader && vid_gl20.integer)
+	{
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&vid.teximageunits);CHECKGLERROR
+		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&vid.texarrayunits);CHECKGLERROR
+		vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
+		vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
+		vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
+		Con_DPrintf("Using GL2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
+		vid.renderpath = RENDERPATH_GL20;
+	}
+	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
+	{
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
+		vid.teximageunits = vid.texunits;
+		vid.texarrayunits = vid.texunits;
+		Con_DPrintf("Using GL1.3 rendering path - %i texture units, single pass rendering\n", vid.texunits);
+		vid.renderpath = RENDERPATH_GL13;
+	}
+	else
+	{
+		if (vid.support.arb_multitexture)
+			qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
+		vid.teximageunits = vid.texunits;
+		vid.texarrayunits = vid.texunits;
+		Con_DPrintf("Using GL1.1 rendering path - %i texture units, two pass rendering\n", vid.texunits);
+		vid.renderpath = RENDERPATH_GL11;
+	}
 
-// COMMANDLINEOPTION: GL: -notexture4 disables GL_AMD_texture_texture4 (which provides fetch4 sampling)
-    gl_support_amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
-// COMMANDLINEOPTION: GL: -notexturegather disables GL_ARB_texture_gather (which provides fetch4 sampling)
-    gl_support_arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
+	gl_max_texture_size = vid.maxtexturesize_2d;
+	gl_max_3d_texture_size = vid.maxtexturesize_3d;
+	gl_max_cube_map_texture_size = vid.maxtexturesize_cubemap;
+	gl_textureunits = vid.texunits;
+	gl_max_anisotropy = vid.max_anisotropy;
+
+	gl_combine_extension = vid.support.arb_texture_env_combine;
+	gl_supportslockarrays = vid.support.ext_compiled_vertex_array;
+	gl_texture3d = vid.support.ext_texture_3d;
+	gl_texturecubemap = vid.support.arb_texture_cube_map;
+	gl_texturerectangle = vid.support.arb_texture_rectangle;
+	gl_support_arb_texture_non_power_of_two = vid.support.arb_texture_non_power_of_two;
+	gl_dot3arb = vid.support.arb_texture_env_dot3;
+	gl_depthtexture = vid.support.arb_depth_texture;
+	gl_support_arb_shadow = vid.support.arb_shadow;
+	gl_support_clamptoedge = vid.support.ext_texture_edge_clamp;
+	gl_support_anisotropy = vid.support.ext_texture_filter_anisotropic;
+	gl_support_separatestencil = vid.support.ati_separate_stencil;
+	gl_support_stenciltwoside = vid.support.ext_stencil_two_side;
+	gl_support_ext_blend_minmax = vid.support.ext_blend_minmax;
+	gl_support_ext_blend_subtract = vid.support.ext_blend_subtract;
+	gl_support_shader_objects = vid.support.arb_shader_objects;
+	gl_support_shading_language_100 = vid.support.arb_shading_language_100;
+	gl_support_vertex_shader = vid.support.arb_vertex_shader;
+	gl_support_fragment_shader = vid.support.arb_fragment_shader;
+	gl_support_arb_vertex_buffer_object = vid.support.arb_vertex_buffer_object;
+	gl_support_ext_framebuffer_object = vid.support.ext_framebuffer_object;
+	gl_support_texture_compression = vid.support.arb_texture_compression;
+	gl_support_arb_occlusion_query = vid.support.arb_occlusion_query;
+	gl_support_amd_texture_texture4 = vid.support.amd_texture_texture4;
+	gl_support_arb_texture_gather = vid.support.arb_texture_gather;
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
@@ -1231,6 +1264,8 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&gl_combine);
+	Cvar_RegisterVariable(&vid_gl13);
+	Cvar_RegisterVariable(&vid_gl20);
 	Cvar_RegisterVariable(&gl_finish);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
