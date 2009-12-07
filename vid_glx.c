@@ -689,8 +689,8 @@ void InitSig(void)
 
 void VID_Finish (void)
 {
-	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
-	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
+	vid_usevsync = vid_vsync.integer && !cls.timedemo && qglXSwapIntervalSGI;
+	if (vid_usingvsync != vid_usevsync)
 	{
 		vid_usingvsync = vid_usevsync;
 		if (qglXSwapIntervalSGI (vid_usevsync))
@@ -1029,7 +1029,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 // COMMANDLINEOPTION: Linux GLX: -novideosync disables GLX_SGI_swap_control
 // COMMANDLINEOPTION: BSD GLX: -novideosync disables GLX_SGI_swap_control
 // COMMANDLINEOPTION: MacOSX GLX: -novideosync disables GLX_SGI_swap_control
-	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_swap_control", swapcontrolfuncs, "-novideosync", false);
+	GL_CheckExtension("GLX_SGI_swap_control", swapcontrolfuncs, "-novideosync", false);
 
 	vid_usingmousegrab = false;
 	vid_usingmouse = false;

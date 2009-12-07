@@ -27,8 +27,6 @@ int gl_textureunits = 1;
 int gl_combine_extension = false;
 // GL_EXT_compiled_vertex_array
 int gl_supportslockarrays = false;
-// GLX_SGI_swap_control or WGL_EXT_swap_control
-int gl_videosyncavailable = false;
 // 3D textures available
 int gl_texture3d = false;
 // GL_ARB_texture_cubemap

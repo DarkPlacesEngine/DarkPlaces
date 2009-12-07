@@ -250,8 +250,8 @@ static void IN_StartupMouse (void);
 
 void VID_Finish (void)
 {
-	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
-	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
+	vid_usevsync = vid_vsync.integer && !cls.timedemo && qwglSwapIntervalEXT;
+	if (vid_usingvsync != vid_usevsync)
 	{
 		vid_usingvsync = vid_usevsync;
 		qwglSwapIntervalEXT (vid_usevsync);
@@ -1223,7 +1223,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	ClearAllStates ();
 
 // COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
-	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
+	GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
 
 	GL_Init ();
 
@@ -1238,7 +1238,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	IN_StartupMouse ();
 	IN_StartupJoystick ();
 
-	if (gl_videosyncavailable)
+	if (qwglSwapIntervalEXT)
 	{
 		vid_usevsync = vid_vsync.integer != 0;
 		vid_usingvsync = vid_vsync.integer != 0;
