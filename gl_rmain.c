@@ -2951,9 +2951,8 @@ void R_Main_ResizeViewCache(void)
 
 void gl_main_start(void)
 {
-	r_loadnormalmap = r_glsl.integer || gl_combine.integer;
-	r_loadgloss = r_glsl.integer || gl_combine.integer;
-	r_loadfog = !r_glsl.integer;
+	r_loadnormalmap = r_loadgloss = gl_dot3arb || gl_support_fragment_shader;
+	r_loadfog = true;
 
 	r_numqueries = 0;
 	r_maxqueries = 0;
