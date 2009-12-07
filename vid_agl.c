@@ -694,8 +694,6 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 		}
 	}
 
-	memset(&vid.support, 0, sizeof(vid.support));
-
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 		Sys_Error("glGetString not found in %s", gl_driver);
 
