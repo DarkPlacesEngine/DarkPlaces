@@ -43,14 +43,16 @@ typedef struct viddef_s
 {
 	// these are set by VID_Mode
 	viddef_mode_t mode;
+	// used in many locations in the renderer
 	int width;
 	int height;
 	int bitsperpixel;
 	qboolean fullscreen;
-	int refreshrate;
+	float refreshrate;
 	qboolean userefreshrate;
 	qboolean stereobuffer;
 	int samples;
+	qboolean stencil;
 } viddef_t;
 
 // global video state
@@ -96,8 +98,6 @@ extern cvar_t v_color_white_r;
 extern cvar_t v_color_white_g;
 extern cvar_t v_color_white_b;
 extern cvar_t v_hwgamma;
-
-extern int gl_stencil;
 
 // brand of graphics chip
 extern const char *gl_vendor;
