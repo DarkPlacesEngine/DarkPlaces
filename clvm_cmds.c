@@ -3174,7 +3174,7 @@ void VM_CL_R_PolygonBegin (void)
 	sf = NULL;
 	if(*picname)
 	{
-		tf = TEXF_ALPHA;
+		tf = TEXF_PRECACHE | TEXF_ALPHA;
 		if((int)PRVM_G_FLOAT(OFS_PARM1) & DRAWFLAG_MIPMAP)
 			tf |= TEXF_MIPMAP;
 

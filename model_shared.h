@@ -68,10 +68,19 @@ typedef struct skinframe_s
 	// on each level change for the used skinframes, if some are not used they
 	// are freed
 	int loadsequence;
-	// on 32bit systems this makes the struct 128 bytes long
-	int padding;
+	// indicates whether this texture has transparent pixels
+	qboolean hasalpha;
 	// average texture color, if applicable
 	float avgcolor[4];
+	// for mdl skins, we actually only upload on first use (many are never used, and they are almost never used in both base+pants+shirt and merged modes)
+	unsigned char *qpixels;
+	int qwidth;
+	int qheight;
+	qboolean qhascolormapping;
+	qboolean qgeneratebase;
+	qboolean qgeneratemerged;
+	qboolean qgeneratenmap;
+	qboolean qgenerateglow;
 }
 skinframe_t;
 

@@ -20,6 +20,7 @@ unsigned int palette_bgra_pantsaswhite[256];
 unsigned int palette_bgra_shirtaswhite[256];
 unsigned int palette_bgra_transparent[256];
 unsigned int palette_bgra_embeddedpic[256];
+unsigned char palette_featureflags[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -107,6 +108,19 @@ void Palette_SetupSpecialPalettes(void)
 	reversed_start = 128;
 	reversed_end = 224;
 	transparentcolor = 255;
+
+	for (i = 0;i < 256;i++)
+		palette_featureflags[i] = PALETTEFEATURE_STANDARD;
+	for (i = reversed_start;i < reversed_end;i++)
+		palette_featureflags[i] = PALETTEFEATURE_REVERSED;
+	for (i = pants_start;i < pants_end;i++)
+		palette_featureflags[i] = PALETTEFEATURE_PANTS;
+	for (i = shirt_start;i < shirt_end;i++)
+		palette_featureflags[i] = PALETTEFEATURE_SHIRT;
+	for (i = fullbright_start;i < fullbright_end;i++)
+		palette_featureflags[i] = PALETTEFEATURE_GLOW;
+	palette_featureflags[0] = PALETTEFEATURE_ZERO;
+	palette_featureflags[transparentcolor] = PALETTEFEATURE_TRANSPARENT;
 
 	for (i = 0;i < 256;i++)
 		palette_bgra_transparent[i] = palette_bgra_complete[i];

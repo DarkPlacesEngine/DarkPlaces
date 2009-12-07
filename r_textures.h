@@ -99,7 +99,6 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 int R_RealGetTexture (rtexture_t *rt);
 
 // returns true if the texture is transparent (useful for rendering code)
-int R_TextureHasAlpha(rtexture_t *rt);
 
 // returns width of texture, as was specified when it was uploaded
 int R_TextureWidth(rtexture_t *rt);

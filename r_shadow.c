@@ -1737,7 +1737,7 @@ static void R_Shadow_MakeTextures(void)
 	R_Shadow_MakeTextures_MakeCorona();
 
 	// Editor light sprites
-	r_editlights_sprcursor = R_SkinFrame_LoadInternal8bit("gfx/editlights/cursor", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	r_editlights_sprcursor = R_SkinFrame_LoadInternal8bit("gfx/editlights/cursor", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
 	"................"
 	".3............3."
 	"..5...2332...5.."
@@ -1755,7 +1755,7 @@ static void R_Shadow_MakeTextures(void)
 	".3............3."
 	"................"
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
-	r_editlights_sprlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/light", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	r_editlights_sprlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/light", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
 	"................"
 	"................"
 	"......1111......"
@@ -1773,7 +1773,7 @@ static void R_Shadow_MakeTextures(void)
 	"................"
 	"................"
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
-	r_editlights_sprnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/noshadow", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	r_editlights_sprnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/noshadow", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
 	"................"
 	"................"
 	"......1111......"
@@ -1791,7 +1791,7 @@ static void R_Shadow_MakeTextures(void)
 	"................"
 	"................"
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
-	r_editlights_sprcubemaplight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemaplight", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	r_editlights_sprcubemaplight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemaplight", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
 	"................"
 	"................"
 	"......2772......"
@@ -1809,7 +1809,7 @@ static void R_Shadow_MakeTextures(void)
 	"................"
 	"................"
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
-	r_editlights_sprcubemapnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemapnoshadowlight", TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
+	r_editlights_sprcubemapnoshadowlight = R_SkinFrame_LoadInternal8bit("gfx/editlights/cubemapnoshadowlight", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (const unsigned char *)
 	"................"
 	"................"
 	"......2772......"
@@ -1827,7 +1827,7 @@ static void R_Shadow_MakeTextures(void)
 	"................"
 	"................"
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
-	r_editlights_sprselection = R_SkinFrame_LoadInternal8bit("gfx/editlights/selection", TEXF_ALPHA | TEXF_CLAMP, (unsigned char *)
+	r_editlights_sprselection = R_SkinFrame_LoadInternal8bit("gfx/editlights/selection", TEXF_PRECACHE | TEXF_ALPHA | TEXF_CLAMP, (unsigned char *)
 	"................"
 	".777752..257777."
 	".742........247."
