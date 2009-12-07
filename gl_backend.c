@@ -1685,7 +1685,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 	}
 }
 
-void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap, int texrectangle)
+void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	if (unitnum >= backendimageunits)
@@ -2184,7 +2184,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	}
 
 	for (i = 0;i < backendimageunits;i++)
-		R_Mesh_TexBindAll(i, m->tex1d[i], m->tex[i], m->tex3d[i], m->texcubemap[i], m->texrectangle[i]);
+		R_Mesh_TexBindAll(i, m->tex[i], m->tex3d[i], m->texcubemap[i], m->texrectangle[i]);
 	for (i = 0;i < backendarrayunits;i++)
 	{
 		if (m->pointer_texcoord3f[i])
