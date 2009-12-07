@@ -983,7 +983,7 @@ void VID_CheckExtensions(void)
 	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
 	Cvar_SetQuick(&gl_info_version, gl_version);
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
-	Cvar_SetQuick(&gl_info_driver, gl_driver ? gl_driver : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
 }
 
 void Force_CenterView_f (void)
