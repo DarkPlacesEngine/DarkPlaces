@@ -24,6 +24,7 @@ cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when fra
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
 cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
 cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
+cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
@@ -848,6 +849,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
+	Cvar_RegisterVariable (&scr_loadingscreen_background);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
@@ -1959,6 +1961,9 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	// don't do anything if not initialized yet
 	if (vid_hidden || cls.state == ca_dedicated)
 		return;
+
+	if(!scr_loadingscreen_background.integer)
+		clear = true;
 	
 	if(loadingscreentime == realtime)
 		clear |= loadingscreencleared;
