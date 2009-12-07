@@ -98,8 +98,6 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 #define R_GetTexture(rt) ((rt) ? ((rt)->texnum > 0 ? (rt)->texnum : R_RealGetTexture(rt)) : r_texture_white->texnum)
 int R_RealGetTexture (rtexture_t *rt);
 
-// returns true if the texture is transparent (useful for rendering code)
-
 // returns width of texture, as was specified when it was uploaded
 int R_TextureWidth(rtexture_t *rt);
 
