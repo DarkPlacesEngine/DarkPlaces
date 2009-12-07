@@ -1154,17 +1154,14 @@ int R_TextureHeight(rtexture_t *rt)
 
 void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int width, int height)
 {
-	gltexture_t *glt;
-	if (rt == NULL)
-		Host_Error("R_UpdateTexture: no texture supplied");
+	gltexture_t *glt = (gltexture_t *)rt;
 	if (data == NULL)
 		Host_Error("R_UpdateTexture: no data supplied");
-
-	// we need it to be uploaded before we can update a part of it
-	R_RealGetTexture(rt);
-
+	if (glt == NULL)
+		Host_Error("R_UpdateTexture: no texture supplied");
+	if (!glt->texnum)
+		Host_Error("R_UpdateTexture: texture has not been uploaded yet");
 	// update part of the texture
-	glt = (gltexture_t *)rt;
 	R_Upload(glt, data, x, y, 0, width, height, 1);
 }
 
