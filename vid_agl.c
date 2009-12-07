@@ -68,8 +68,6 @@ static qboolean vid_usingvsync = false;
 
 static qboolean sound_active = true;
 
-static int scr_width, scr_height;
-
 static cvar_t apple_multithreadedgl = {CVAR_SAVE, "apple_multithreadedgl", "1", "makes use of a second thread for the OpenGL driver (if possible) rather than using the engine thread (note: this is done automatically on most other operating systems)"};
 static cvar_t apple_mouse_noaccel = {CVAR_SAVE, "apple_mouse_noaccel", "1", "disables mouse acceleration while DarkPlaces is active"};
 
@@ -97,13 +95,6 @@ io_connect_t IN_GetIOHandle(void)
 	IOObjectRelease(iohidsystem);
 
 	return iohandle;
-}
-
-void VID_GetWindowSize (int *x, int *y, int *width, int *height)
-{
-	*x = *y = 0;
-	*width = scr_width;
-	*height = scr_height;
 }
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
@@ -539,9 +530,9 @@ static void VID_BuildAGLAttrib(GLint *attrib, qboolean stencil, qboolean fullscr
 	*attrib++ = AGL_NONE;
 }
 
-int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
+qboolean VID_InitMode(viddef_mode_t *mode)
 {
-    const EventTypeSpec winEvents[] =
+	const EventTypeSpec winEvents[] =
 	{
 		{ kEventClassWindow, kEventWindowClosed },
 		{ kEventClassWindow, kEventWindowCollapsing },
@@ -591,8 +582,8 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	// Create the window, a bit towards the center of the screen
 	windowBounds.left = 100;
 	windowBounds.top = 100;
-	windowBounds.right = *width + 100;
-	windowBounds.bottom = *height + 100;
+	windowBounds.right = mode->width + 100;
+	windowBounds.bottom = mode->height + 100;
 	carbonError = CreateNewWindow(kDocumentWindowClass, kWindowStandardFloatingAttributes | kWindowStandardHandlerAttribute, &windowBounds, &window);
 	if (carbonError != noErr || window == NULL)
 	{
@@ -610,9 +601,9 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 							   GetEventTypeCount(winEvents), winEvents, window, NULL);
 
 	// Create the desired attribute list
-	VID_BuildAGLAttrib(attributes, bpp == 32, fullscreen, stereobuffer, samples);
+	VID_BuildAGLAttrib(attributes, mode->bitsperpixel == 32, mode->fullscreen, mode->stereobuffer, mode->samples);
 
-	if (!fullscreen)
+	if (!mode->fullscreen)
 	{
 		// Output to Window
 		pixelFormat = qaglChoosePixelFormat(NULL, 0, attributes);
@@ -637,7 +628,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 
 		// TOCHECK: not sure whether or not it's necessary to change the resolution
 		// "by hand", or if aglSetFullscreen does the job anyway
-		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRateWithProperty(mainDisplay, bpp, *width, *height, refreshrate, kCGDisplayModeIsSafeForHardware, NULL);
+		refDisplayMode = CGDisplayBestModeForParametersAndRefreshRateWithProperty(mainDisplay, mode->bitsperpixel, mode->width, mode->height, mode->refreshrate, kCGDisplayModeIsSafeForHardware, NULL);
 		CGDisplaySwitchToMode(mainDisplay, refDisplayMode);
 		DMGetGDeviceByDisplayID((DisplayIDType)mainDisplay, &gdhDisplay, false);
 
@@ -678,9 +669,9 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	qaglDestroyPixelFormat(pixelFormat);
 
 	// Attempt fullscreen if requested
-	if (fullscreen)
+	if (mode->fullscreen)
 	{
-		qaglSetFullScreen (context, *width, *height, refreshrate, 0);
+		qaglSetFullScreen (context, mode->width, mode->height, mode->refreshrate, 0);
 		error = qaglGetError();
 		if (error != AGL_NO_ERROR)
 		{
@@ -703,8 +694,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 		}
 	}
 
-	scr_width = *width;
-	scr_height = *height;
+	memset(&vid.support, 0, sizeof(vid.support));
 
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 		Sys_Error("glGetString not found in %s", gl_driver);
@@ -714,7 +704,7 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	gl_videosyncavailable = true;
 
 	multithreadedgl = false;
-	vid_isfullscreen = fullscreen;
+	vid_isfullscreen = mode->fullscreen;
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 	vid_hidden = false;

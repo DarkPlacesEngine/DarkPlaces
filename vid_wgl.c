@@ -787,7 +787,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
+qboolean VID_InitMode(viddef_mode_t *mode)
 {
 	int i;
 	HDC hdc;
@@ -827,6 +827,13 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 	float *af;
 	int attribs[128];
 	float attribsf[16];
+	int bpp = mode->bitsperpixel;
+	int width = mode->width;
+	int height = mode->height;
+	int refreshrate = (int)floor(mode->refreshrate+0.5);
+	int stereobuffer = mode->stereobuffer;
+	int samples = mode->samples;
+	int fullscreen = mode->fullscreen;
 
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised");
@@ -928,8 +935,8 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 			foundmode = true;
 			gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 			gdevmode.dmBitsPerPel = bpp;
-			gdevmode.dmPelsWidth = *width;
-			gdevmode.dmPelsHeight = *height;
+			gdevmode.dmPelsWidth = width;
+			gdevmode.dmPelsHeight = height;
 			gdevmode.dmSize = sizeof (gdevmode);
 			if(refreshrate)
 			{
@@ -962,13 +969,13 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 						Con_Printf("wrong bpp\n");
 					continue;
 				}
-				if(thismode.dmPelsWidth != (DWORD)*width)
+				if(thismode.dmPelsWidth != (DWORD)width)
 				{
 					if(developer.integer >= 100)
 						Con_Printf("wrong width\n");
 					continue;
 				}
-				if(thismode.dmPelsHeight != (DWORD)*height)
+				if(thismode.dmPelsHeight != (DWORD)height)
 				{
 					if(developer.integer >= 100)
 						Con_Printf("wrong height\n");
@@ -1020,13 +1027,13 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 		if (!foundmode)
 		{
 			VID_Shutdown();
-			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", *width, *height, bpp);
+			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", width, height, bpp);
 			return false;
 		}
 		else if(ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
 		{
 			VID_Shutdown();
-			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", *width, *height, bpp);
+			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", width, height, bpp);
 			return false;
 		}
 
@@ -1059,8 +1066,8 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 
 	rect.top = 0;
 	rect.left = 0;
-	rect.right = *width;
-	rect.bottom = *height;
+	rect.right = width;
+	rect.bottom = height;
 	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
 
 	if (fullscreen)
@@ -1214,8 +1221,6 @@ int VID_InitMode (int fullscreen, int *width, int *height, int bpp, int refreshr
 
 	// fix the leftover Alt from any Alt-Tab or the like that switched us away
 	ClearAllStates ();
-
-	gl_videosyncavailable = false;
 
 // COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);

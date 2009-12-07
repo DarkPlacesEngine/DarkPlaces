@@ -656,15 +656,15 @@ static void VID_OutputVersion(void)
 					version->major, version->minor, version->patch );
 }
 
-int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshrate, int stereobuffer, int samples)
+qboolean VID_InitMode(viddef_mode_t *mode)
 {
 	int i;
 	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
 	const char *drivername;
 
-	win_half_width = *width>>1;
-	win_half_height = *height>>1;
+	win_half_width = mode->width>>1;
+	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
 		flags |= SDL_RESIZABLE;
@@ -703,14 +703,14 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
-	if (fullscreen) {
+	if (mode->fullscreen) {
 		flags |= SDL_FULLSCREEN;
 		vid_isfullscreen = true;
 	}
 	//flags |= SDL_HWSURFACE;
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
-	if (bpp >= 32)
+	if (mode->bitsperpixel >= 32)
 	{
 		SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
 		SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 8);
@@ -726,26 +726,26 @@ int VID_InitMode(int fullscreen, int *width, int *height, int bpp, int refreshra
 		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5);
 		SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 16);
 	}
-	if (stereobuffer)
+	if (mode->stereobuffer)
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
 	if (vid_vsync.integer)
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
 	else
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
-	if (samples > 1)
+	if (mode->samples > 1)
 	{
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLEBUFFERS, 1);
-		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, samples);
+		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, mode->samples);
 	}
 
-	video_bpp = bpp;
+	video_bpp = mode->bitsperpixel;
 	video_flags = flags;
 	VID_SetIcon();
-	screen = SDL_SetVideoMode(*width, *height, bpp, flags);
+	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 
 	if (screen == NULL)
 	{
-		Con_Printf("Failed to set video mode to %ix%i: %s\n", *width, *height, SDL_GetError());
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
