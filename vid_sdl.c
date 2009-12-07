@@ -761,7 +761,6 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	gl_platform = "SDL";
 	gl_platformextensions = "";
-	gl_videosyncavailable = true;
 
 	GL_Init();
 

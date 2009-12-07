@@ -119,9 +119,6 @@ extern char gl_driver[256];
 extern qboolean isG200;
 extern qboolean isRagePro;
 
-// LordHavoc: GLX_SGI_swap_control and WGL_EXT_swap_control
-extern int gl_videosyncavailable;
-
 void *GL_GetProcAddress(const char *name);
 int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
 

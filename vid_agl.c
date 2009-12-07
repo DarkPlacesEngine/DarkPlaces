@@ -701,7 +701,6 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	gl_platformextensions = "";
 	gl_platform = "AGL";
-	gl_videosyncavailable = true;
 
 	multithreadedgl = false;
 	vid_isfullscreen = mode->fullscreen;
