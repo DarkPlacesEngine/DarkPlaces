@@ -26,6 +26,49 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int cl_available;
 
+#define MAX_TEXTUREUNITS 16
+
+typedef enum renderpath_e
+{
+	RENDERPATH_GL11,
+	RENDERPATH_GL13,
+	RENDERPATH_GL20,
+}
+renderpath_t;
+
+typedef struct viddef_support_s
+{
+	qboolean amd_texture_texture4;
+	qboolean arb_depth_texture;
+	qboolean arb_fragment_shader;
+	qboolean arb_multitexture;
+	qboolean arb_occlusion_query;
+	qboolean arb_shader_objects;
+	qboolean arb_shading_language_100;
+	qboolean arb_shadow;
+	qboolean arb_texture_compression;
+	qboolean arb_texture_cube_map;
+	qboolean arb_texture_env_combine;
+	qboolean arb_texture_env_dot3;
+	qboolean arb_texture_gather;
+	qboolean arb_texture_non_power_of_two;
+	qboolean arb_texture_rectangle;
+	qboolean arb_vertex_buffer_object;
+	qboolean arb_vertex_shader;
+	qboolean ati_separate_stencil;
+	qboolean ext_blend_minmax;
+	qboolean ext_blend_subtract;
+	qboolean ext_compiled_vertex_array;
+	qboolean ext_draw_range_elements;
+	qboolean ext_framebuffer_object;
+	qboolean ext_stencil_two_side;
+	qboolean ext_texture_3d;
+	qboolean ext_texture_edge_clamp;
+	qboolean ext_texture_filter_anisotropic;
+	qboolean nv_blend_square;
+}
+viddef_support_t;
+
 typedef struct viddef_mode_s
 {
 	int width;
@@ -53,6 +96,22 @@ typedef struct viddef_s
 	qboolean stereobuffer;
 	int samples;
 	qboolean stencil;
+
+	renderpath_t renderpath;
+
+	unsigned int texunits;
+	unsigned int teximageunits;
+	unsigned int texarrayunits;
+	unsigned int drawrangeelements_maxvertices;
+	unsigned int drawrangeelements_maxindices;
+
+	unsigned int maxtexturesize_2d;
+	unsigned int maxtexturesize_3d;
+	unsigned int maxtexturesize_cubemap;
+	unsigned int maxtexturesize_rectangle;
+	unsigned int max_anisotropy;
+
+	viddef_support_t support;
 } viddef_t;
 
 // global video state
