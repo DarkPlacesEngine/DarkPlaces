@@ -1601,7 +1601,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_PRECACHE | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
 				// if skinframe is still NULL the "missing" texture will be used
 				if (skinframe)
@@ -1625,7 +1625,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 				else
 					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
-				if (tx->skinframes[0] && tx->skinframes[0]->fog)
+				if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
 					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 			}
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
@@ -1638,7 +1638,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 			else if (!strcmp(tx->name, "caulk"))
 				tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-			else if (tx->skinframes[0] && tx->skinframes[0]->fog)
+			else if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 
 			// start out with no animation

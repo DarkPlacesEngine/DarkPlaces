@@ -2238,10 +2238,9 @@ nothing                GL_ZERO GL_ONE
 		{
 			if (fallback)
 			{
-				qboolean has_alpha;
-				if ((texture->skinframes[0] = R_SkinFrame_LoadExternal_CheckAlpha(texture->name, defaulttexflags, false, &has_alpha)))
+				if ((texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false)))
 				{
-					if(has_alpha && (defaulttexflags & TEXF_ALPHA))
+					if(texture->skinframes[0]->hasalpha)
 						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 				}
 				else

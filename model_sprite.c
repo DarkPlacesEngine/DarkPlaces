@@ -52,7 +52,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)
 		texture->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-	else if (skinframe->fog)
+	else if (skinframe->hasalpha)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
 	texture->numskinframes = 1;

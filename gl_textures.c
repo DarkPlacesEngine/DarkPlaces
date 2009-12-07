@@ -1142,11 +1142,6 @@ rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char 
     return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
-int R_TextureHasAlpha(rtexture_t *rt)
-{
-	return rt ? (((gltexture_t *)rt)->flags & TEXF_ALPHA) != 0 : false;
-}
-
 int R_TextureWidth(rtexture_t *rt)
 {
 	return rt ? ((gltexture_t *)rt)->inputwidth : 0;
