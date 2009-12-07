@@ -46,7 +46,6 @@ extern cvar_t gl_printcheckerror;
 typedef struct rmeshstate_s
 {
 	// textures
-	int tex1d[MAX_TEXTUREUNITS];
 	int tex[MAX_TEXTUREUNITS];
 	int tex3d[MAX_TEXTUREUNITS];
 	int texcubemap[MAX_TEXTUREUNITS];
@@ -99,7 +98,7 @@ void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferof
 // sets the texcoord array pointer for an array unit
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset);
 // sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
-void R_Mesh_TexBindAll(unsigned int unitnum, int tex1d, int tex2d, int tex3d, int texcubemap, int texrectangle);
+void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle);
 // sets these are like TexBindAll with only one of the texture indices non-zero
 // (binds one texture type and unbinds all other types)
 void R_Mesh_TexBind(unsigned int unitnum, int texnum);
