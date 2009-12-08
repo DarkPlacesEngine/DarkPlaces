@@ -1719,7 +1719,7 @@ static void SCR_SetLoadingScreenTexture(void)
 
 	SCR_ClearLoadingScreenTexture();
 
-	if (gl_support_arb_texture_non_power_of_two)
+	if (vid.support.arb_texture_non_power_of_two)
 	{
 		w = vid.width; h = vid.height;
 		loadingscreentexture_w = loadingscreentexture_h = 1;
@@ -2073,13 +2073,13 @@ void CL_UpdateScreen(void)
 		Cvar_Set ("fov","170");
 
 	// validate r_textureunits cvar
-	if (r_textureunits.integer > gl_textureunits)
-		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
+	if (r_textureunits.integer > (int)vid.texunits)
+		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
 	if (r_textureunits.integer < 1)
 		Cvar_SetValueQuick(&r_textureunits, 1);
 
 	// validate gl_combine cvar
-	if (gl_combine.integer && !gl_combine_extension)
+	if (gl_combine.integer && !vid.support.arb_texture_env_combine)
 		Cvar_SetValueQuick(&gl_combine, 0);
 
 	// intermission is always full screen

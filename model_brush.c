@@ -4639,7 +4639,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		;
 	// i is now 0 for 128, 1 for 256, etc
 
-	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= gl_max_texture_size && (1 << (power * 2)) < 4 * (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)); power++)
+	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= (int)vid.maxtexturesize_2d && (1 << (power * 2)) < 4 * (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)); power++)
 		loadmodel->brushq3.num_lightmapmergepower = power;
 
 	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;

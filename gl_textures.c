@@ -122,7 +122,7 @@ typedef struct gltexture_s
 	// palette if the texture is TEXTYPE_PALETTE
 	const unsigned int *palette;
 	// actual stored texture size after gl_picmip and gl_max_size are applied
-	// (power of 2 if gl_support_arb_texture_non_power_of_two is not supported)
+	// (power of 2 if vid.support.arb_texture_non_power_of_two is not supported)
 	int tilewidth, tileheight, tiledepth;
 	// 1 or 6 depending on texturetype
 	int sides;
@@ -156,7 +156,7 @@ static int texturebuffersize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 {
-	if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && gl_support_texture_compression)
+	if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.arb_texture_compression)
 	{
 		if (flags & TEXF_ALPHA)
 		{
@@ -413,20 +413,20 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 {
 	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1;
 
-	if (gl_max_size.integer > gl_max_texture_size)
-		Cvar_SetValue("gl_max_size", gl_max_texture_size);
+	if (gl_max_size.integer > (int)vid.maxtexturesize_2d)
+		Cvar_SetValue("gl_max_size", vid.maxtexturesize_2d);
 
 	switch (texturetype)
 	{
 	default:
 	case GLTEXTURETYPE_2D:
-		maxsize = gl_max_texture_size;
+		maxsize = vid.maxtexturesize_2d;
 		break;
 	case GLTEXTURETYPE_3D:
-		maxsize = gl_max_3d_texture_size;
+		maxsize = vid.maxtexturesize_3d;
 		break;
 	case GLTEXTURETYPE_CUBEMAP:
-		maxsize = gl_max_cube_map_texture_size;
+		maxsize = vid.maxtexturesize_cubemap;
 		break;
 	}
 
@@ -438,7 +438,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 
 	if (outwidth)
 	{
-		if (gl_support_arb_texture_non_power_of_two)
+		if (vid.support.arb_texture_non_power_of_two)
 			width2 = min(inwidth >> picmip, maxsize);
 		else
 		{
@@ -449,7 +449,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 	}
 	if (outheight)
 	{
-		if (gl_support_arb_texture_non_power_of_two)
+		if (vid.support.arb_texture_non_power_of_two)
 			height2 = min(inheight >> picmip, maxsize);
 		else
 		{
@@ -460,7 +460,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 	}
 	if (outdepth)
 	{
-		if (gl_support_arb_texture_non_power_of_two)
+		if (vid.support.arb_texture_non_power_of_two)
 			depth2 = min(indepth >> picmip, maxsize);
 		else
 		{
@@ -638,7 +638,7 @@ void R_Textures_Frame (void)
 		gltexturepool_t *pool;
 		GLint oldbindtexnum;
 
-		old_aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
+		old_aniso = bound(1, gl_texture_anisotropy.integer, (int)vid.max_anisotropy);
 
 		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
 
@@ -681,13 +681,13 @@ void R_MakeResizeBufferBigger(int size)
 static void GL_SetupTextureParameters(int flags, textype_t textype, int texturetype)
 {
 	int textureenum = gltexturetypeenums[texturetype];
-	int wrapmode = ((flags & TEXF_CLAMP) && gl_support_clamptoedge) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+	int wrapmode = (flags & TEXF_CLAMP) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
 
 	CHECKGLERROR
 
-	if (gl_support_anisotropy && (flags & TEXF_MIPMAP))
+	if (vid.support.ext_texture_filter_anisotropic && (flags & TEXF_MIPMAP))
 	{
-		int aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
+		int aniso = bound(1, gl_texture_anisotropy.integer, (int)vid.max_anisotropy);
 		if (gl_texture_anisotropy.integer != aniso)
 			Cvar_SetValueQuick(&gl_texture_anisotropy, aniso);
 		qglTexParameteri(textureenum, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);CHECKGLERROR
@@ -746,7 +746,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 
 	if (textype == TEXTYPE_SHADOWMAP)
 	{
-		if (gl_support_arb_shadow)
+		if (vid.support.arb_shadow)
 		{
 			if (flags & TEXF_COMPARE)
 			{
@@ -778,7 +778,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 	// these are rounded up versions of the size to do better resampling
-	if (gl_support_arb_texture_non_power_of_two || glt->texturetype == GLTEXTURETYPE_RECTANGLE)
+	if (vid.support.arb_texture_non_power_of_two || glt->texturetype == GLTEXTURETYPE_RECTANGLE)
 	{
 		width = glt->inputwidth;
 		height = glt->inputheight;
@@ -846,7 +846,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			}
 		}
 		mip = 0;
-		if (gl_support_texture_compression)
+		if (vid.support.arb_texture_compression)
 		{
 			if (gl_texturecompression.integer >= 2)
 				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
@@ -961,17 +961,17 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	if (texturetype == GLTEXTURETYPE_RECTANGLE && !gl_texturerectangle)
+	if (texturetype == GLTEXTURETYPE_RECTANGLE && !vid.support.arb_texture_rectangle)
 	{
 		Con_Printf ("R_LoadTexture: rectangle texture not supported by driver\n");
 		return NULL;
 	}
-	if (texturetype == GLTEXTURETYPE_CUBEMAP && !gl_texturecubemap)
+	if (texturetype == GLTEXTURETYPE_CUBEMAP && !vid.support.arb_texture_cube_map)
 	{
 		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
 		return NULL;
 	}
-	if (texturetype == GLTEXTURETYPE_3D && !gl_texture3d)
+	if (texturetype == GLTEXTURETYPE_3D && !vid.support.ext_texture_3d)
 	{
 		Con_Printf ("R_LoadTexture: 3d texture not supported by driver\n");
 		return NULL;
