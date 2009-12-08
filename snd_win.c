@@ -82,13 +82,14 @@ static const GUID MY_KSDATAFORMAT_SUBTYPE_PCM =
 // ==============================================================================
 
 extern HWND mainwindow;
+static cvar_t snd_wav_partitionsize = {CVAR_SAVE, "snd_wav_partitionsize", "1024", "controls sound delay in samples, values too low will cause crackling, too high will cause delayed sounds"};
+static qboolean sndsys_registeredcvars = false;
 
 #ifdef SUPPORTDIRECTX
 HRESULT (WINAPI *pDirectSoundCreate)(GUID FAR *lpGUID, LPDIRECTSOUND FAR *lplpDS, IUnknown FAR *pUnkOuter);
 #endif
 
-// Wave output: how much buffer time, and how many partitions in that time
-#define WAV_BUFFERTIME	0.125
+// Wave output: queue of this many sound buffers to play, reused cyclically
 #define	WAV_BUFFERS		16
 #define	WAV_MASK		(WAV_BUFFERS - 1)
 static unsigned int wav_buffer_size;
@@ -458,7 +459,7 @@ static qboolean SndSys_InitMmsystem (const snd_format_t* requested)
 		}
 	}
 
-	wav_buffer_size = ((int)(requested->speed * WAV_BUFFERTIME) / WAV_BUFFERS) * requested->channels * requested->width;
+	wav_buffer_size = bound(128, snd_wav_partitionsize.integer, 8192) * requested->channels * requested->width;
 
 	/*
 	 * Allocate and lock memory for the waveform data. The memory
@@ -549,6 +550,12 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 	qboolean wavonly;
 #endif
 	sndinitstat	stat;
+
+	if (!sndsys_registeredcvars)
+	{
+		sndsys_registeredcvars = true;
+		Cvar_RegisterVariable(&snd_wav_partitionsize);
+	}
 
 	Con_Print ("SndSys_Init: using the Win32 module\n");
 
