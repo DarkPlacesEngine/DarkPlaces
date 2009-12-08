@@ -138,17 +138,19 @@ typedef struct gl_state_s
 	size_t pointer_color_offset;
 	int pointer_vertex_buffer;
 	int pointer_color_buffer;
+
+	memexpandablearray_t bufferobjectinfoarray;
+
+	r_viewport_t viewport;
+	matrix4x4_t modelmatrix;
+	matrix4x4_t modelviewmatrix;
+
 	qboolean active;
 }
 gl_state_t;
 
 static gl_state_t gl_state;
 
-static memexpandablearray_t gl_bufferobjectinfoarray;
-
-static r_viewport_t backend_viewport;
-static matrix4x4_t backend_modelmatrix;
-static matrix4x4_t backend_modelviewmatrix;
 
 /*
 note: here's strip order for a terrain row:
@@ -218,44 +220,22 @@ static void GL_Backend_ResetState(void);
 
 static void gl_backend_start(void)
 {
-	CHECKGLERROR
+	memset(&gl_state, 0, sizeof(gl_state));
 
-	if (qglDrawRangeElements != NULL)
-	{
-		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
-		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
-		CHECKGLERROR
-		Con_DPrintf("GL_MAX_ELEMENTS_VERTICES = %i\nGL_MAX_ELEMENTS_INDICES = %i\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
-	}
-
-	if (vid.support.arb_fragment_shader)
-	{
-		Con_DPrintf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", vid.texunits, vid.teximageunits, vid.texarrayunits);
-		vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
-		vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
-	}
-	else
-		Con_DPrintf("GL_MAX_TEXTUREUNITS = %i\n", vid.texunits);
-
-	Mem_ExpandableArray_NewArray(&gl_bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
+	Mem_ExpandableArray_NewArray(&gl_state.bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
 
 	Con_DPrintf("OpenGL backend started.\n");
 
 	CHECKGLERROR
 
-	gl_state.active = true;
 	GL_Backend_ResetState();
 }
 
 static void gl_backend_shutdown(void)
 {
-	gl_state.active = false;
-
 	Con_DPrint("OpenGL Backend shutting down\n");
 
-	Mem_ExpandableArray_FreeArray(&gl_bufferobjectinfoarray);
+	Mem_ExpandableArray_FreeArray(&gl_state.bufferobjectinfoarray);
 
 	memset(&gl_state, 0, sizeof(gl_state));
 }
@@ -610,28 +590,28 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 void R_SetViewport(const r_viewport_t *v)
 {
 	float glmatrix[16];
-	backend_viewport = *v;
+	gl_state.viewport = *v;
 
 	CHECKGLERROR
 	qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 
 	// Load the projection matrix into OpenGL
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadMatrixd(backend_viewport.m);CHECKGLERROR
+	qglLoadMatrixd(gl_state.viewport.m);CHECKGLERROR
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 
 	// FIXME: v_flipped_state is evil, this probably breaks somewhere
 	GL_SetMirrorState(v_flipped.integer && (v->type == R_VIEWPORTTYPE_PERSPECTIVE || v->type == R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP));
 
 	// directly force an update of the modelview matrix
-	Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewport.viewmatrix, &backend_modelmatrix);
-	Matrix4x4_ToArrayFloatGL(&backend_modelviewmatrix, glmatrix);
+	Matrix4x4_Concat(&gl_state.modelviewmatrix, &gl_state.viewport.viewmatrix, &gl_state.modelmatrix);
+	Matrix4x4_ToArrayFloatGL(&gl_state.modelviewmatrix, glmatrix);
 	qglLoadMatrixf(glmatrix);CHECKGLERROR
 }
 
 void R_GetViewport(r_viewport_t *v)
 {
-	*v = backend_viewport;
+	*v = gl_state.viewport;
 }
 
 static void GL_BindVBO(int bufferobject)
@@ -659,7 +639,6 @@ static void GL_BindEBO(int bufferobject)
 static void GL_Backend_ResetState(void)
 {
 	unsigned int i;
-	memset(&gl_state, 0, sizeof(gl_state));
 	gl_state.active = true;
 	gl_state.depthtest = true;
 	gl_state.alphatest = false;
@@ -1396,7 +1375,7 @@ int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size
 	}
 	qglBufferDataARB(target, size, data, GL_STATIC_DRAW_ARB);
 
-	info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_AllocRecord(&gl_bufferobjectinfoarray);
+	info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_AllocRecord(&gl_state.bufferobjectinfoarray);
 	memset(info, 0, sizeof(*info));
 	info->target = target;
 	info->object = bufferobject;
@@ -1413,15 +1392,15 @@ void R_Mesh_DestroyBufferObject(int bufferobject)
 
 	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
 
-	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
+	endindex = Mem_ExpandableArray_IndexRange(&gl_state.bufferobjectinfoarray);
 	for (i = 0;i < endindex;i++)
 	{
-		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.bufferobjectinfoarray, i);
 		if (!info)
 			continue;
 		if (info->object == bufferobject)
 		{
-			Mem_ExpandableArray_FreeRecord(&gl_bufferobjectinfoarray, (void *)info);
+			Mem_ExpandableArray_FreeRecord(&gl_state.bufferobjectinfoarray, (void *)info);
 			break;
 		}
 	}
@@ -1433,10 +1412,10 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 	size_t ebocount = 0, ebomemory = 0;
 	size_t vbocount = 0, vbomemory = 0;
 	gl_bufferobjectinfo_t *info;
-	endindex = Mem_ExpandableArray_IndexRange(&gl_bufferobjectinfoarray);
+	endindex = Mem_ExpandableArray_IndexRange(&gl_state.bufferobjectinfoarray);
 	for (i = 0;i < endindex;i++)
 	{
-		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_bufferobjectinfoarray, i);
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.bufferobjectinfoarray, i);
 		if (!info)
 			continue;
 		switch(info->target)
@@ -1451,12 +1430,12 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 
 void R_Mesh_Matrix(const matrix4x4_t *matrix)
 {
-	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
+	if (memcmp(matrix, &gl_state.modelmatrix, sizeof(matrix4x4_t)))
 	{
 		float glmatrix[16];
-		backend_modelmatrix = *matrix;
-		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewport.viewmatrix, &backend_modelmatrix);
-		Matrix4x4_ToArrayFloatGL(&backend_modelviewmatrix, glmatrix);
+		gl_state.modelmatrix = *matrix;
+		Matrix4x4_Concat(&gl_state.modelviewmatrix, &gl_state.viewport.viewmatrix, &gl_state.modelmatrix);
+		Matrix4x4_ToArrayFloatGL(&gl_state.modelviewmatrix, glmatrix);
 		CHECKGLERROR
 		qglLoadMatrixf(glmatrix);CHECKGLERROR
 	}
@@ -1935,41 +1914,11 @@ void R_Mesh_ResetTextureState(void)
 			qglLoadIdentity();CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
-		if (gl_combine.integer)
+		if (unit->combine != GL_MODULATE)
 		{
-			// GL_ARB_texture_env_combine
-			if (unit->combinergb != GL_MODULATE)
-			{
-				unit->combinergb = GL_MODULATE;
-				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
-			}
-			if (unit->combinealpha != GL_MODULATE)
-			{
-				unit->combinealpha = GL_MODULATE;
-				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
-			}
-			if (unit->rgbscale != 1)
-			{
-				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (unit->rgbscale = 1));CHECKGLERROR
-			}
-			if (unit->alphascale != 1)
-			{
-				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = 1));CHECKGLERROR
-			}
-		}
-		else
-		{
-			// normal GL texenv
-			if (unit->combinergb != GL_MODULATE)
-			{
-				unit->combinergb = GL_MODULATE;
-				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
-			}
+			unit->combine = GL_MODULATE;
+			GL_ActiveTexture(unitnum);
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 		}
 	}
 }
