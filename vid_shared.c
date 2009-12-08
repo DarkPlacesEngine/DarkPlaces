@@ -54,9 +54,6 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in wi
 cvar_t vid_grabkeyboard = {CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
 cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
-cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
-cvar_t gl_combine = {0, "gl_combine", "1", "enables the OpenGL 1.3 rendering path"};
-cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables the OpenGL 2.0 rendering path"};
 cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.3 features (such as GL_ARB_texture_env_combine extension)"};
 cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
@@ -1174,9 +1171,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_resizable);
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
-	Cvar_RegisterVariable(&r_textureunits);
-	Cvar_RegisterVariable(&gl_combine);
-	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&vid_gl13);
 	Cvar_RegisterVariable(&vid_gl20);
 	Cvar_RegisterVariable(&gl_finish);

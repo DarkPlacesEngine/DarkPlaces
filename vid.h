@@ -140,7 +140,6 @@ extern cvar_t vid_resizable;
 extern cvar_t vid_minwidth;
 extern cvar_t vid_minheight;
 
-extern cvar_t gl_combine;
 extern cvar_t gl_finish;
 
 extern cvar_t v_gamma;

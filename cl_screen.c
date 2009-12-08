@@ -61,7 +61,6 @@ cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet 
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 cvar_t timedemo_screenshotframelist = {0, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
 
-extern cvar_t r_glsl;
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
 #define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && vid_usinghwgamma)
