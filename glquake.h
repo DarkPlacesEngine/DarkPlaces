@@ -416,7 +416,6 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_DEPTH_TEXTURE_MODE_ARB      0x884B
 #endif
 
-
 #ifndef GL_DOT3_RGB_ARB
 #define GL_DOT3_RGB_ARB				0x86AE
 #define GL_DOT3_RGBA_ARB				0x86AF
@@ -424,7 +423,6 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 
 /*
 // uncomment if this is actually needed by anyone
-extern int gl_dot3ext;
 #ifndef GL_DOT3_RGB_EXT
 #define GL_DOT3_RGB_EXT				0x8740
 #define GL_DOT3_RGBA_EXT			0x8741
