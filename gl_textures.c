@@ -4,7 +4,8 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, note: this is automatically reduced to match video card capabilities (such as 256 on 3Dfx cards before Voodoo4/5)"};
+cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
+cvar_t gl_max_lightmapsize = {CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
 cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
 cvar_t r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
 cvar_t r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1", "0 = never upload textures until used, 1 = upload most textures before use (exceptions: rarely used skin colormap layers), 2 = upload all textures before use (can increase texture memory usage significantly)"};
@@ -413,14 +414,16 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 {
 	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1;
 
-	if (gl_max_size.integer > (int)vid.maxtexturesize_2d)
-		Cvar_SetValue("gl_max_size", vid.maxtexturesize_2d);
-
 	switch (texturetype)
 	{
 	default:
 	case GLTEXTURETYPE_2D:
 		maxsize = vid.maxtexturesize_2d;
+		if (flags & TEXF_PICMIP)
+		{
+			maxsize = bound(1, gl_max_size.integer, maxsize);
+			picmip = gl_picmip.integer;
+		}
 		break;
 	case GLTEXTURETYPE_3D:
 		maxsize = vid.maxtexturesize_3d;
@@ -428,12 +431,6 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 	case GLTEXTURETYPE_CUBEMAP:
 		maxsize = vid.maxtexturesize_cubemap;
 		break;
-	}
-
-	if (flags & TEXF_PICMIP)
-	{
-		maxsize = min(maxsize, gl_max_size.integer);
-		picmip = gl_picmip.integer;
 	}
 
 	if (outwidth)
