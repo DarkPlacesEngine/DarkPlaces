@@ -170,7 +170,7 @@ cvar_t snd_spatialization_control = {CVAR_SAVE, "snd_spatialization_control", "0
 cvar_t snd_spatialization_occlusion = {CVAR_SAVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
-cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.11", "how much sound to mix ahead of time"};
+cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
 cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
