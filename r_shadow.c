@@ -365,11 +365,10 @@ skinframe_t *r_editlights_sprnoshadowlight;
 skinframe_t *r_editlights_sprcubemaplight;
 skinframe_t *r_editlights_sprcubemapnoshadowlight;
 skinframe_t *r_editlights_sprselection;
-extern cvar_t gl_max_size;
 
 void R_Shadow_SetShadowMode(void)
 {
-	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, gl_max_size.integer / 4);
+	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4);
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
 	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
@@ -415,25 +414,25 @@ void R_Shadow_SetShadowMode(void)
 				break;
 			}
 		}
-        switch (r_shadow_shadowmaptexturetype)
-        {
-        case 0:
-            r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-            break;
-        case 1:
-            r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
-            break;
-        case 2:
-            r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
-            break;
-        default:
+		switch (r_shadow_shadowmaptexturetype)
+		{
+		case 0:
+			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
+			break;
+		case 1:
+			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
+			break;
+		case 2:
+			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
+			break;
+		default:
 			if((vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			else if(vid.support.arb_texture_rectangle) 
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
 			else
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-            break;
+			break;
 		}
 	}
 }
@@ -444,20 +443,22 @@ void R_Shadow_FreeShadowMaps(void)
 
 	R_Shadow_SetShadowMode();
 
-	if (r_shadow_fborectangle)
-		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);
-	r_shadow_fborectangle = 0;
+	if (!vid.support.ext_framebuffer_object || !vid.support.arb_fragment_shader)
+		return;
+
 	CHECKGLERROR
 
+	if (r_shadow_fborectangle)
+		qglDeleteFramebuffersEXT(1, &r_shadow_fborectangle);CHECKGLERROR
+	r_shadow_fborectangle = 0;
+
 	if (r_shadow_fbo2d)
-		qglDeleteFramebuffersEXT(1, &r_shadow_fbo2d);
+		qglDeleteFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
 	r_shadow_fbo2d = 0;
-	CHECKGLERROR
 	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
 		if (r_shadow_fbocubeside[i])
-			qglDeleteFramebuffersEXT(1, &r_shadow_fbocubeside[i]);
+			qglDeleteFramebuffersEXT(1, &r_shadow_fbocubeside[i]);CHECKGLERROR
 	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
-	CHECKGLERROR
 
 	if (r_shadow_shadowmaprectangletexture)
 		R_FreeTexture(r_shadow_shadowmaprectangletexture);
@@ -628,41 +629,6 @@ void r_shadow_newmap(void)
 		R_Shadow_EditLights_Reload_f();
 }
 
-void R_Shadow_Help_f(void)
-{
-	Con_Printf(
-"Documentation on r_shadow system:\n"
-"Settings:\n"
-"r_shadow_bumpscale_basetexture : base texture as bumpmap with this scale\n"
-"r_shadow_bumpscale_bumpmap : depth scale for bumpmap conversion\n"
-"r_shadow_debuglight : render only this light number (-1 = all)\n"
-"r_shadow_gloss 0/1/2 : no gloss, gloss textures only, force gloss\n"
-"r_shadow_gloss2intensity : brightness of forced gloss\n"
-"r_shadow_glossintensity : brightness of textured gloss\n"
-"r_shadow_lightattenuationlinearscale : used to generate attenuation texture\n"
-"r_shadow_lightattenuationdividebias : used to generate attenuation texture\n"
-"r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
-"r_shadow_lightradiusscale : scale rendering radius of all lights\n"
-"r_shadow_portallight : use portal visibility for static light precomputation\n"
-"r_shadow_projectdistance : shadow volume projection distance\n"
-"r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
-"r_shadow_realtime_dlight_shadows : cast shadows from dlights\n"
-"r_shadow_realtime_world : use high quality world lighting mode\n"
-"r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
-"r_shadow_realtime_world_shadows : cast shadows from world lights\n"
-"r_shadow_realtime_world_compile : compile surface/visibility information\n"
-"r_shadow_realtime_world_compileshadow : compile shadow geometry\n"
-"r_shadow_scissor : use scissor optimization\n"
-"r_shadow_polygonfactor : nudge shadow volumes closer/further\n"
-"r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
-"r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
-"r_showlighting : useful for performance testing; bright = slow!\n"
-"r_showshadowvolumes : useful for performance testing; bright = slow!\n"
-"Commands:\n"
-"r_shadow_help : this help\n"
-	);
-}
-
 void R_Shadow_Init(void)
 {
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
@@ -725,7 +691,6 @@ void R_Shadow_Init(void)
 		Cvar_SetValue("r_shadow_gloss", 2);
 		Cvar_SetValue("r_shadow_bumpscale_basetexture", 4);
 	}
-	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f, "prints documentation on console commands and variables used by realtime lighting and shadowing system");
 	R_Shadow_EditLights_Init();
 	Mem_ExpandableArray_NewArray(&r_shadow_worldlightsarray, r_main_mempool, sizeof(dlight_t), 128);
 	maxshadowtriangles = 0;
@@ -1884,12 +1849,12 @@ void R_Shadow_RenderMode_Begin(void)
 
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
-	if (gl_ext_separatestencil.integer)
+	if (gl_ext_separatestencil.integer && vid.support.ati_separate_stencil)
 	{
 		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL;
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL;
 	}
-	else if (gl_ext_stenciltwoside.integer)
+	else if (gl_ext_stenciltwoside.integer && vid.support.ext_stencil_two_side)
 	{
 		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE;
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE;
@@ -2254,8 +2219,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 			}
 		}
 	}
-	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_VERTEX)
-		R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
+	R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 	//GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	CHECKGLERROR
 }
@@ -2443,7 +2407,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 	const float *normal3f = rsurface.normal3f + 3 * firstvertex;
 	float *color4f = rsurface.array_color4f + 4 * firstvertex;
 	float dist, dot, distintensity, shadeintensity, v[3], n[3];
-	if (r_textureunits.integer >= 3)
+	if (r_textureunits.integer >= 3 && vid.texunits >= 3)
 	{
 		if (VectorLength2(diffusecolor) > 0)
 		{
@@ -2483,7 +2447,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int nu
 			}
 		}
 	}
-	else if (r_textureunits.integer >= 2)
+	else if (r_textureunits.integer >= 2 && vid.texunits >= 2)
 	{
 		if (VectorLength2(diffusecolor) > 0)
 		{
@@ -2673,7 +2637,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS, R_GetTexture(rsurface.texture->backgroundglosstexture));
 		R_Mesh_TexBind(GL20TU_SECONDARY_GLOW, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->glow));
 	}
-	//R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap));
+	//R_Mesh_TexBindAll(GL20TU_CUBE, 0, 0, R_GetTexture(rsurface.rtlight->currentcubemap), 0);
 	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
 	if(rsurface.texture->colormapping)
 	{
@@ -3399,7 +3363,7 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
 	m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
 	m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-	if (r_textureunits.integer >= 2)
+	if (r_textureunits.integer >= 2 && vid.texunits >= 2)
 	{
 		// voodoo2 or TNT
 		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
@@ -3407,7 +3371,7 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 		m.pointer_texcoord3f[1] = rsurface.vertex3f;
 		m.pointer_texcoord_bufferobject[1] = rsurface.vertex3f_bufferobject;
 		m.pointer_texcoord_bufferoffset[1] = rsurface.vertex3f_bufferoffset;
-		if (r_textureunits.integer >= 3)
+		if (r_textureunits.integer >= 3 && vid.texunits >= 3)
 		{
 			// Voodoo4 or Kyro (or Geforce3/Radeon with r_shadow_dot3 off)
 			m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
@@ -4011,8 +3975,14 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
 	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
-	if (r_shadow_lightingrendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
+	switch(r_shadow_lightingrendermode)
+	{
+	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
 		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
+		break;
+	default:
+		break;
+	}
 }
 
 void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
@@ -4027,8 +3997,14 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
 	VectorCopy(rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
-	if (r_shadow_lightingrendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
+	switch(r_shadow_lightingrendermode)
+	{
+	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
 		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
+		break;
+	default:
+		break;
+	}
 
 	r_refdef.scene.worldmodel->DrawLight(r_refdef.scene.worldentity, numsurfaces, surfacelist, trispvs);
 
@@ -4458,8 +4434,8 @@ void R_ShadowVolumeLighting(qboolean visible)
 	size_t range;
 	float f;
 
-	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, gl_max_size.integer / 4) ||
-		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer && r_glsl.integer && vid.support.arb_fragment_shader && vid.support.ext_framebuffer_object) || 
+	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4) ||
+		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != r_shadow_shadowmapping.integer ||
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 

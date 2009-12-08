@@ -107,9 +107,6 @@ cvar_t gl_fogstart = {0, "gl_fogstart", "0", "nehahra fog start distance (for Ne
 cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
 cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
 
-cvar_t r_textureunits = {0, "r_textureunits", "32", "number of hardware texture units reported by driver (note: setting this to 1 turns off gl_combine)"};
-
-cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables use of OpenGL 2.0 pixel shaders for lighting"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
@@ -3121,8 +3118,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_polygonoffset_decals_offset);
 	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_drawfog);
-	Cvar_RegisterVariable(&r_textureunits);
-	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_reliefmapping);
