@@ -101,6 +101,7 @@ typedef struct gltextureunit_s
 	int arrayenabled;
 	unsigned int arraycomponents;
 	int rgbscale, alphascale;
+	int combine;
 	int combinergb, combinealpha;
 	// texmatrixenabled exists only to avoid unnecessary texmatrix compares
 	int texmatrixenabled;
@@ -658,7 +659,6 @@ static void GL_BindEBO(int bufferobject)
 static void GL_Backend_ResetState(void)
 {
 	unsigned int i;
-	gltextureunit_t *unit;
 	memset(&gl_state, 0, sizeof(gl_state));
 	gl_state.active = true;
 	gl_state.depthtest = true;
@@ -713,16 +713,6 @@ static void GL_Backend_ResetState(void)
 
 	gl_state.unit = MAX_TEXTUREUNITS;
 	gl_state.clientunit = MAX_TEXTUREUNITS;
-	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-	{
-		unit = gl_state.units + i;
-		unit->rgbscale = 1;
-		unit->alphascale = 1;
-		unit->combinergb = GL_MODULATE;
-		unit->combinealpha = GL_MODULATE;
-		unit->matrix = identitymatrix;
-	}
-
 	for (i = 0;i < vid.teximageunits;i++)
 	{
 		GL_ActiveTexture(i);
@@ -768,30 +758,7 @@ static void GL_Backend_ResetState(void)
 		qglMatrixMode(GL_TEXTURE);CHECKGLERROR
 		qglLoadIdentity();CHECKGLERROR
 		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-		if (gl_combine.integer)
-		{
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_CONSTANT_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
-		}
-		else
-		{
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-		}
+		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		CHECKGLERROR
 	}
 	CHECKGLERROR
@@ -1809,17 +1776,25 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	CHECKGLERROR
-	if (gl_combine.integer)
+	if (!combinergb)
+		combinergb = GL_MODULATE;
+	if (!combinealpha)
+		combinealpha = GL_MODULATE;
+	if (!rgbscale)
+		rgbscale = 1;
+	if (!alphascale)
+		alphascale = 1;
+	if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1 || combinergb == GL_DOT3_RGBA_ARB || combinergb == GL_DOT3_RGB_ARB)
 	{
-		// GL_ARB_texture_env_combine
-		if (!combinergb)
-			combinergb = GL_MODULATE;
-		if (!combinealpha)
-			combinealpha = GL_MODULATE;
-		if (!rgbscale)
-			rgbscale = 1;
-		if (!alphascale)
-			alphascale = 1;
+		if (combinergb == GL_DECAL)
+			combinergb = GL_INTERPOLATE_ARB;
+		if (unit->combine != GL_COMBINE_ARB)
+		{
+			unit->combine = GL_COMBINE_ARB;
+			GL_ActiveTexture(unitnum);
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
+		}
 		if (unit->combinergb != combinergb)
 		{
 			unit->combinergb = combinergb;
@@ -1834,25 +1809,24 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 		}
 		if (unit->rgbscale != rgbscale)
 		{
+			unit->rgbscale = rgbscale;
 			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (unit->rgbscale = rgbscale));CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, unit->rgbscale);CHECKGLERROR
 		}
 		if (unit->alphascale != alphascale)
 		{
+			unit->alphascale = alphascale;
 			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = alphascale));CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, unit->alphascale);CHECKGLERROR
 		}
 	}
 	else
 	{
-		// normal GL texenv
-		if (!combinergb)
-			combinergb = GL_MODULATE;
-		if (unit->combinergb != combinergb)
+		if (unit->combine != combinergb)
 		{
-			unit->combinergb = combinergb;
+			unit->combine = combinergb;
 			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 		}
 	}
 }
