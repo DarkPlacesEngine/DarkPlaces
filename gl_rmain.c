@@ -119,7 +119,6 @@ cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", 
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4 = {CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_usegeneric = {CVAR_SAVE, "r_glsl_usegeneric", "1", "use shaders for rendering simple geometry (rather than conventional fixed-function rendering for this purpose)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
@@ -1877,7 +1876,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_ShadowMapRect      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapRect");
 		p->loc_Texture_ShadowMapCube      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapCube");
 		p->loc_Texture_ShadowMap2D        = qglGetUniformLocationARB(p->program, "Texture_ShadowMap2D");
-		p->loc_Texture_CubeProjection     = qglGetUniformLocationARB(p->program, "Texture_CubeProjection");  
+		p->loc_Texture_CubeProjection     = qglGetUniformLocationARB(p->program, "Texture_CubeProjection");
 		p->loc_FogColor                   = qglGetUniformLocationARB(p->program, "FogColor");
 		p->loc_LightPosition              = qglGetUniformLocationARB(p->program, "LightPosition");
 		p->loc_EyePosition                = qglGetUniformLocationARB(p->program, "EyePosition");
@@ -2027,10 +2026,10 @@ void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 				}
 				if (i >= SHADERPERMUTATION_COUNT)
 				{
-					Con_Printf("OpenGL 2.0 shaders disabled - unable to find a working shader permutation fallback on this driver (set r_glsl 1 if you want to try again)\n");
-					Cvar_SetValueQuick(&r_glsl, 0);
-					R_GLSL_Restart_f(); // unload shaders
-					return; // no bit left to clear
+					Con_Printf("Could not find a working OpenGL 2.0 shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
+					r_glsl_permutation = R_GLSL_FindPermutation(mode, permutation);
+					qglUseProgramObjectARB(0);CHECKGLERROR
+					return; // no bit left to clear, entire mode is broken
 				}
 			}
 		}
@@ -2043,7 +2042,7 @@ void R_SetupGenericShader(qboolean usetexture)
 {
 	if (vid.support.arb_fragment_shader)
 	{
-		if (r_glsl.integer && r_glsl_usegeneric.integer)
+		if (r_glsl.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, usetexture ? SHADERPERMUTATION_DIFFUSE : 0);
 		else if (r_glsl_permutation)
 		{
@@ -2057,7 +2056,7 @@ void R_SetupGenericTwoTextureShader(int texturemode)
 {
 	if (vid.support.arb_fragment_shader)
 	{
-		if (r_glsl.integer && r_glsl_usegeneric.integer)
+		if (r_glsl.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
 		else if (r_glsl_permutation)
 		{
@@ -2066,18 +2065,14 @@ void R_SetupGenericTwoTextureShader(int texturemode)
 		}
 	}
 	if (!r_glsl_permutation)
-	{
-		if (texturemode == GL_DECAL && gl_combine.integer)
-			texturemode = GL_INTERPOLATE_ARB;
-		R_Mesh_TexCombine(1, texturemode, texturemode, 1, 1);
-	}
+		R_Mesh_TexCombine(1, GL_DECAL, GL_DECAL, 1, 1);
 }
 
 void R_SetupDepthOrShadowShader(void)
 {
 	if (vid.support.arb_fragment_shader)
 	{
-		if (r_glsl.integer && r_glsl_usegeneric.integer)
+		if (r_glsl.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_DEPTH_OR_SHADOW, 0);
 		else if (r_glsl_permutation)
 		{
@@ -2091,7 +2086,7 @@ void R_SetupShowDepthShader(void)
 {
 	if (vid.support.arb_fragment_shader)
 	{
-		if (r_glsl.integer && r_glsl_usegeneric.integer)
+		if (r_glsl.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_SHOWDEPTH, 0);
 		else if (r_glsl_permutation)
 		{
@@ -3137,7 +3132,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4);
-	Cvar_RegisterVariable(&r_glsl_usegeneric);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
