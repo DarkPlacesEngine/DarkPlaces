@@ -99,12 +99,8 @@ void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferof
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset);
 // sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle);
-// sets these are like TexBindAll with only one of the texture indices non-zero
-// (binds one texture type and unbinds all other types)
+// equivalent to R_Mesh_TexBindAll(unitnum,tex2d,0,0,0)
 void R_Mesh_TexBind(unsigned int unitnum, int texnum);
-void R_Mesh_TexBind3D(unsigned int unitnum, int texnum);
-void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum);
-void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum);
 // sets the texcoord matrix for a texenv unit
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 // sets the combine state for a texenv unit
