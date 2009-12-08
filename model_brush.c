@@ -2228,7 +2228,7 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surface)
 }
 #endif
 
-extern cvar_t gl_max_size;
+extern cvar_t gl_max_lightmapsize;
 static void Mod_Q1BSP_LoadFaces(lump_t *l)
 {
 	dface_t *in;
@@ -2262,7 +2262,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	lightmaptexture = NULL;
 	deluxemaptexture = r_texture_blanknormalmap;
 	lightmapnumber = 1;
-	lightmapsize = max(256, gl_max_size.integer);
+	lightmapsize = bound(256, gl_max_lightmapsize.integer, (int)vid.maxtexturesize_2d);
 	totallightmapsamples = 0;
 
 	totalverts = 0;
@@ -2405,12 +2405,11 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// small maps (such as ammo boxes especially) don't need big lightmap
 	// textures, so this code tries to guess a good size based on
 	// totallightmapsamples (size of the lightmaps lump basically), as well as
-	// trying to max out the gl_max_size if there is a lot of lightmap data to
-	// store
+	// trying to max out the size if there is a lot of lightmap data to store
 	// additionally, never choose a lightmapsize that is smaller than the
 	// largest surface encountered (as it would fail)
 	i = lightmapsize;
-	for (lightmapsize = 64; (lightmapsize < i) && (lightmapsize < gl_max_size.integer) && (totallightmapsamples > lightmapsize*lightmapsize); lightmapsize*=2)
+	for (lightmapsize = 64; (lightmapsize < i) && (lightmapsize < bound(128, gl_max_lightmapsize.integer, (int)vid.maxtexturesize_2d)) && (totallightmapsamples > lightmapsize*lightmapsize); lightmapsize*=2)
 		;
 
 	// now that we've decided the lightmap texture size, we can do the rest
