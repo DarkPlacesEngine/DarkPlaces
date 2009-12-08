@@ -83,11 +83,72 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 void SCR_ScreenShot_f (void);
 
+typedef struct gl_bufferobjectinfo_s
+{
+	int target;
+	int object;
+	size_t size;
+	char name[MAX_QPATH];
+}
+gl_bufferobjectinfo_t;
+
+typedef struct gltextureunit_s
+{
+	const void *pointer_texcoord;
+	size_t pointer_texcoord_offset;
+	int pointer_texcoord_buffer;
+	int t2d, t3d, tcubemap, trectangle;
+	int arrayenabled;
+	unsigned int arraycomponents;
+	int rgbscale, alphascale;
+	int combinergb, combinealpha;
+	// texmatrixenabled exists only to avoid unnecessary texmatrix compares
+	int texmatrixenabled;
+	matrix4x4_t matrix;
+}
+gltextureunit_t;
+
+typedef struct gl_state_s
+{
+	int cullface;
+	int cullfaceenable;
+	int blendfunc1;
+	int blendfunc2;
+	int blend;
+	GLboolean depthmask;
+	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
+	int depthtest;
+	float depthrange[2];
+	float polygonoffset[2];
+	int alphatest;
+	int scissortest;
+	unsigned int unit;
+	unsigned int clientunit;
+	gltextureunit_t units[MAX_TEXTUREUNITS];
+	float color4f[4];
+	int lockrange_first;
+	int lockrange_count;
+	int vertexbufferobject;
+	int elementbufferobject;
+	qboolean pointer_color_enabled;
+	const void *pointer_vertex;
+	const void *pointer_color;
+	size_t pointer_vertex_offset;
+	size_t pointer_color_offset;
+	int pointer_vertex_buffer;
+	int pointer_color_buffer;
+}
+gl_state_t;
+
+static gl_state_t gl_state;
+
+static memexpandablearray_t gl_bufferobjectinfoarray;
+
 static r_viewport_t backend_viewport;
 static matrix4x4_t backend_modelmatrix;
 static matrix4x4_t backend_modelviewmatrix;
 
-static unsigned int backendunits, backendimageunits, backendarrayunits, backendactive;
+static unsigned int backendactive;
 
 /*
 note: here's strip order for a terrain row:
@@ -148,29 +209,10 @@ unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
-void GL_Backend_AllocArrays(void)
-{
-}
-
-void GL_Backend_FreeArrays(void)
-{
-}
-
 void GL_VBOStats_f(void)
 {
 	GL_Mesh_ListVBOs(true);
 }
-
-typedef struct gl_bufferobjectinfo_s
-{
-	int target;
-	int object;
-	size_t size;
-	char name[MAX_QPATH];
-}
-gl_bufferobjectinfo_t;
-
-memexpandablearray_t gl_bufferobjectinfoarray;
 
 static void gl_backend_start(void)
 {
@@ -186,24 +228,14 @@ static void gl_backend_start(void)
 		Con_DPrintf("GL_MAX_ELEMENTS_VERTICES = %i\nGL_MAX_ELEMENTS_INDICES = %i\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	}
 
-	backendunits = bound(1, gl_textureunits, MAX_TEXTUREUNITS);
-	backendimageunits = backendunits;
-	backendarrayunits = backendunits;
 	if (gl_support_fragment_shader)
 	{
-		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&backendimageunits);
-		CHECKGLERROR
-		qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&backendarrayunits);
-		CHECKGLERROR
-		Con_DPrintf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", backendunits, backendimageunits, backendarrayunits);
-		backendimageunits = bound(1, backendimageunits, MAX_TEXTUREUNITS);
-		backendarrayunits = bound(1, backendarrayunits, MAX_TEXTUREUNITS);
+		Con_DPrintf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", vid.texunits, vid.teximageunits, vid.texarrayunits);
+		vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
+		vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
 	}
 	else
-		Con_DPrintf("GL_MAX_TEXTUREUNITS = %i\n", backendunits);
-
-	GL_Backend_AllocArrays();
+		Con_DPrintf("GL_MAX_TEXTUREUNITS = %i\n", vid.texunits);
 
 	Mem_ExpandableArray_NewArray(&gl_bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
 
@@ -216,16 +248,11 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
-	backendunits = 0;
-	backendimageunits = 0;
-	backendarrayunits = 0;
 	backendactive = false;
 
 	Con_DPrint("OpenGL Backend shutting down\n");
 
 	Mem_ExpandableArray_FreeArray(&gl_bufferobjectinfoarray);
-
-	GL_Backend_FreeArrays();
 }
 
 static void gl_backend_newmap(void)
@@ -602,55 +629,6 @@ void R_GetViewport(r_viewport_t *v)
 	*v = backend_viewport;
 }
 
-typedef struct gltextureunit_s
-{
-	const void *pointer_texcoord;
-	size_t pointer_texcoord_offset;
-	int pointer_texcoord_buffer;
-	int t2d, t3d, tcubemap, trectangle;
-	int arrayenabled;
-	unsigned int arraycomponents;
-	int rgbscale, alphascale;
-	int combinergb, combinealpha;
-	// FIXME: add more combine stuff
-	// texmatrixenabled exists only to avoid unnecessary texmatrix compares
-	int texmatrixenabled;
-	matrix4x4_t matrix;
-}
-gltextureunit_t;
-
-static struct gl_state_s
-{
-	int cullface;
-	int cullfaceenable;
-	int blendfunc1;
-	int blendfunc2;
-	int blend;
-	GLboolean depthmask;
-	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
-	int depthtest;
-	float depthrange[2];
-	float polygonoffset[2];
-	int alphatest;
-	int scissortest;
-	unsigned int unit;
-	unsigned int clientunit;
-	gltextureunit_t units[MAX_TEXTUREUNITS];
-	float color4f[4];
-	int lockrange_first;
-	int lockrange_count;
-	int vertexbufferobject;
-	int elementbufferobject;
-	qboolean pointer_color_enabled;
-	const void *pointer_vertex;
-	const void *pointer_color;
-	size_t pointer_vertex_offset;
-	size_t pointer_color_offset;
-	int pointer_vertex_buffer;
-	int pointer_color_buffer;
-}
-gl_state;
-
 static void GL_BindVBO(int bufferobject)
 {
 	if (gl_state.vertexbufferobject != bufferobject)
@@ -699,7 +677,7 @@ void GL_SetupTextureState(void)
 		unit->matrix = identitymatrix;
 	}
 
-	for (i = 0;i < backendimageunits;i++)
+	for (i = 0;i < vid.teximageunits;i++)
 	{
 		GL_ActiveTexture(i);
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
@@ -717,7 +695,7 @@ void GL_SetupTextureState(void)
 		}
 	}
 
-	for (i = 0;i < backendarrayunits;i++)
+	for (i = 0;i < vid.texarrayunits;i++)
 	{
 		GL_ClientActiveTexture(i);
 		GL_BindVBO(0);
@@ -725,7 +703,7 @@ void GL_SetupTextureState(void)
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
 
-	for (i = 0;i < backendunits;i++)
+	for (i = 0;i < vid.texunits;i++)
 	{
 		GL_ActiveTexture(i);
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
@@ -1178,8 +1156,6 @@ void GL_Backend_FreeProgram(unsigned int prog)
 	CHECKGLERROR
 }
 
-int gl_backend_rebindtextures;
-
 void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 {
 	int i;
@@ -1255,7 +1231,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
 					paranoidblah += *p;
 		}
-		for (i = 0;i < backendarrayunits;i++)
+		for (i = 0;i < vid.texarrayunits;i++)
 		{
 			if (gl_state.units[i].arrayenabled)
 			{
@@ -1303,11 +1279,11 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 			{
 				element = element3i ? element3i[i] : element3s[i];
-				for (j = 0;j < backendarrayunits;j++)
+				for (j = 0;j < vid.texarrayunits;j++)
 				{
 					if (gl_state.units[j].pointer_texcoord && gl_state.units[j].arrayenabled)
 					{
-						if (backendarrayunits > 1)
+						if (vid.texarrayunits > 1)
 						{
 							if (gl_state.units[j].arraycomponents == 4)
 							{
@@ -1451,7 +1427,7 @@ void R_Mesh_Finish(void)
 	GL_LockArrays(0, 0);
 	CHECKGLERROR
 
-	for (i = 0;i < backendimageunits;i++)
+	for (i = 0;i < vid.teximageunits;i++)
 	{
 		GL_ActiveTexture(i);
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
@@ -1468,14 +1444,14 @@ void R_Mesh_Finish(void)
 			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
 		}
 	}
-	for (i = 0;i < backendarrayunits;i++)
+	for (i = 0;i < vid.texarrayunits;i++)
 	{
-		GL_ActiveTexture(backendarrayunits - 1 - i);
+		GL_ActiveTexture(vid.texarrayunits - 1 - i);
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
-	for (i = 0;i < backendunits;i++)
+	for (i = 0;i < vid.texunits;i++)
 	{
-		GL_ActiveTexture(backendunits - 1 - i);
+		GL_ActiveTexture(vid.texunits - 1 - i);
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
 		{
@@ -1688,13 +1664,13 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
+	if (unitnum >= vid.teximageunits)
 		return;
 	// update 2d texture binding
 	if (unit->t2d != tex2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (tex2d)
 			{
@@ -1718,7 +1694,7 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 	if (unit->t3d != tex3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (tex3d)
 			{
@@ -1742,7 +1718,7 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 	if (unit->tcubemap != texcubemap)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texcubemap)
 			{
@@ -1766,7 +1742,7 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 	if (unit->trectangle != texrectangle)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texrectangle)
 			{
@@ -1791,13 +1767,13 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
+	if (unitnum >= vid.teximageunits)
 		return;
 	// update 2d texture binding
 	if (unit->t2d != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texnum)
 			{
@@ -1821,7 +1797,7 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t3d)
 			{
@@ -1835,7 +1811,7 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->tcubemap)
 			{
@@ -1849,7 +1825,7 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 	if (unit->trectangle != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->trectangle)
 			{
@@ -1864,13 +1840,13 @@ void R_Mesh_TexBind(unsigned int unitnum, int texnum)
 void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
+	if (unitnum >= vid.teximageunits)
 		return;
 	// update 2d texture binding
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t2d)
 			{
@@ -1884,7 +1860,7 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->t3d != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texnum)
 			{
@@ -1908,7 +1884,7 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->tcubemap)
 			{
@@ -1922,7 +1898,7 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 	if (unit->trectangle != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->trectangle)
 			{
@@ -1937,13 +1913,13 @@ void R_Mesh_TexBind3D(unsigned int unitnum, int texnum)
 void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
+	if (unitnum >= vid.teximageunits)
 		return;
 	// update 2d texture binding
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t2d)
 			{
@@ -1957,7 +1933,7 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t3d)
 			{
@@ -1971,7 +1947,7 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texnum)
 			{
@@ -1995,7 +1971,7 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 	if (unit->trectangle != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->trectangle)
 			{
@@ -2010,13 +1986,13 @@ void R_Mesh_TexBindCubeMap(unsigned int unitnum, int texnum)
 void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= backendimageunits)
+	if (unitnum >= vid.teximageunits)
 		return;
 	// update 2d texture binding
 	if (unit->t2d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t2d)
 			{
@@ -2030,7 +2006,7 @@ void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 	if (unit->t3d)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->t3d)
 			{
@@ -2044,7 +2020,7 @@ void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 	if (unit->tcubemap != 0)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (unit->tcubemap)
 			{
@@ -2058,7 +2034,7 @@ void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 	if (unit->trectangle != texnum)
 	{
 		GL_ActiveTexture(unitnum);
-		if (unitnum < backendunits)
+		if (unitnum < vid.texunits)
 		{
 			if (texnum)
 			{
@@ -2080,7 +2056,7 @@ void R_Mesh_TexBindRectangle(unsigned int unitnum, int texnum)
 	}
 }
 
-static const double gl_identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+static const float gl_identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
@@ -2090,14 +2066,14 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		// texmatrix specified, check if it is different
 		if (!unit->texmatrixenabled || memcmp(&unit->matrix, matrix, sizeof(matrix4x4_t)))
 		{
-			double glmatrix[16];
+			float glmatrix[16];
 			unit->texmatrixenabled = true;
 			unit->matrix = *matrix;
 			CHECKGLERROR
-			Matrix4x4_ToArrayDoubleGL(&unit->matrix, glmatrix);
+			Matrix4x4_ToArrayFloatGL(&unit->matrix, glmatrix);
 			GL_ActiveTexture(unitnum);
 			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			qglLoadMatrixd(glmatrix);CHECKGLERROR
+			qglLoadMatrixf(glmatrix);CHECKGLERROR
 			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 		}
 	}
@@ -2176,23 +2152,16 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 	BACKENDACTIVECHECK
 
 	CHECKGLERROR
-	if (gl_backend_rebindtextures)
-	{
-		gl_backend_rebindtextures = false;
-		GL_SetupTextureState();
-		CHECKGLERROR
-	}
-
-	for (i = 0;i < backendimageunits;i++)
+	for (i = 0;i < vid.teximageunits;i++)
 		R_Mesh_TexBindAll(i, m->tex[i], m->tex3d[i], m->texcubemap[i], m->texrectangle[i]);
-	for (i = 0;i < backendarrayunits;i++)
+	for (i = 0;i < vid.texarrayunits;i++)
 	{
 		if (m->pointer_texcoord3f[i])
 			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
 		else
 			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
 	}
-	for (i = 0;i < backendunits;i++)
+	for (i = 0;i < vid.texunits;i++)
 	{
 		R_Mesh_TexMatrix(i, &m->texmatrix[i]);
 		R_Mesh_TexCombine(i, m->texcombinergb[i], m->texcombinealpha[i], m->texrgbscale[i], m->texalphascale[i]);
@@ -2207,21 +2176,14 @@ void R_Mesh_ResetTextureState(void)
 	BACKENDACTIVECHECK
 
 	CHECKGLERROR
-	if (gl_backend_rebindtextures)
-	{
-		gl_backend_rebindtextures = false;
-		GL_SetupTextureState();
-		CHECKGLERROR
-	}
-
-	for (unitnum = 0;unitnum < backendimageunits;unitnum++)
+	for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
 	{
 		gltextureunit_t *unit = gl_state.units + unitnum;
 		// update 2d texture binding
 		if (unit->t2d)
 		{
 			GL_ActiveTexture(unitnum);
-			if (unitnum < backendunits)
+			if (unitnum < vid.texunits)
 			{
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 			}
@@ -2232,7 +2194,7 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->t3d)
 		{
 			GL_ActiveTexture(unitnum);
-			if (unitnum < backendunits)
+			if (unitnum < vid.texunits)
 			{
 				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 			}
@@ -2243,7 +2205,7 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->tcubemap)
 		{
 			GL_ActiveTexture(unitnum);
-			if (unitnum < backendunits)
+			if (unitnum < vid.texunits)
 			{
 				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 			}
@@ -2254,7 +2216,7 @@ void R_Mesh_ResetTextureState(void)
 		if (unit->trectangle)
 		{
 			GL_ActiveTexture(unitnum);
-			if (unitnum < backendunits)
+			if (unitnum < vid.texunits)
 			{
 				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
 			}
@@ -2262,7 +2224,7 @@ void R_Mesh_ResetTextureState(void)
 			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
 		}
 	}
-	for (unitnum = 0;unitnum < backendarrayunits;unitnum++)
+	for (unitnum = 0;unitnum < vid.texarrayunits;unitnum++)
 	{
 		gltextureunit_t *unit = gl_state.units + unitnum;
 		// texture array unit is disabled, disable the array
@@ -2273,7 +2235,7 @@ void R_Mesh_ResetTextureState(void)
 			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
-	for (unitnum = 0;unitnum < backendunits;unitnum++)
+	for (unitnum = 0;unitnum < vid.texunits;unitnum++)
 	{
 		gltextureunit_t *unit = gl_state.units + unitnum;
 		// no texmatrix specified, revert to identity
