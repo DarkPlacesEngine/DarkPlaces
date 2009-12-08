@@ -79,7 +79,7 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 }
 #endif
 
-#define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active");
+#define BACKENDACTIVECHECK if (!gl_state.active) Sys_Error("GL backend function called when backend is not active");
 
 void SCR_ScreenShot_f (void);
 
@@ -137,6 +137,7 @@ typedef struct gl_state_s
 	size_t pointer_color_offset;
 	int pointer_vertex_buffer;
 	int pointer_color_buffer;
+	qboolean active;
 }
 gl_state_t;
 
@@ -147,8 +148,6 @@ static memexpandablearray_t gl_bufferobjectinfoarray;
 static r_viewport_t backend_viewport;
 static matrix4x4_t backend_modelmatrix;
 static matrix4x4_t backend_modelviewmatrix;
-
-static unsigned int backendactive;
 
 /*
 note: here's strip order for a terrain row:
@@ -214,6 +213,8 @@ void GL_VBOStats_f(void)
 	GL_Mesh_ListVBOs(true);
 }
 
+static void GL_Backend_ResetState(void);
+
 static void gl_backend_start(void)
 {
 	CHECKGLERROR
@@ -243,16 +244,19 @@ static void gl_backend_start(void)
 
 	CHECKGLERROR
 
-	backendactive = true;
+	gl_state.active = true;
+	GL_Backend_ResetState();
 }
 
 static void gl_backend_shutdown(void)
 {
-	backendactive = false;
+	gl_state.active = false;
 
 	Con_DPrint("OpenGL Backend shutting down\n");
 
 	Mem_ExpandableArray_FreeArray(&gl_bufferobjectinfoarray);
+
+	memset(&gl_state, 0, sizeof(gl_state));
 }
 
 static void gl_backend_newmap(void)
@@ -651,29 +655,71 @@ static void GL_BindEBO(int bufferobject)
 	}
 }
 
-void GL_SetupTextureState(void)
+static void GL_Backend_ResetState(void)
 {
 	unsigned int i;
 	gltextureunit_t *unit;
+	memset(&gl_state, 0, sizeof(gl_state));
+	gl_state.active = true;
+	gl_state.depthtest = true;
+	gl_state.alphatest = false;
+	gl_state.blendfunc1 = GL_ONE;
+	gl_state.blendfunc2 = GL_ZERO;
+	gl_state.blend = false;
+	gl_state.depthmask = GL_TRUE;
+	gl_state.colormask = 15;
+	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
+	gl_state.lockrange_first = 0;
+	gl_state.lockrange_count = 0;
+	gl_state.cullface = v_flipped_state ? GL_BACK : GL_FRONT; // quake is backwards, this culls back faces
+	gl_state.cullfaceenable = true;
+	gl_state.polygonoffset[0] = 0;
+	gl_state.polygonoffset[1] = 0;
+
 	CHECKGLERROR
+
+	qglColorMask(1, 1, 1, 1);
+	qglAlphaFunc(GL_GEQUAL, 0.5);CHECKGLERROR
+	qglDisable(GL_ALPHA_TEST);CHECKGLERROR
+	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+	qglDisable(GL_BLEND);CHECKGLERROR
+	qglCullFace(gl_state.cullface);CHECKGLERROR
+	qglEnable(GL_CULL_FACE);CHECKGLERROR
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+	qglDepthMask(gl_state.depthmask);CHECKGLERROR
+	qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+
+	if (vid.support.arb_vertex_buffer_object)
+	{
+		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+	}
+
+	if (vid.support.ext_framebuffer_object)
+	{
+		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	}
+
+	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
+	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+
+	qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
+	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+
+	GL_Color(0, 0, 0, 0);
+	GL_Color(1, 1, 1, 1);
+
 	gl_state.unit = MAX_TEXTUREUNITS;
 	gl_state.clientunit = MAX_TEXTUREUNITS;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		unit = gl_state.units + i;
-		unit->t2d = 0;
-		unit->t3d = 0;
-		unit->tcubemap = 0;
-		unit->arrayenabled = false;
-		unit->arraycomponents = 0;
-		unit->pointer_texcoord = NULL;
-		unit->pointer_texcoord_buffer = 0;
-		unit->pointer_texcoord_offset = 0;
 		unit->rgbscale = 1;
 		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
-		unit->texmatrixenabled = false;
 		unit->matrix = identitymatrix;
 	}
 
@@ -749,62 +795,6 @@ void GL_SetupTextureState(void)
 		CHECKGLERROR
 	}
 	CHECKGLERROR
-}
-
-void GL_Backend_ResetState(void)
-{
-	memset(&gl_state, 0, sizeof(gl_state));
-	gl_state.depthtest = true;
-	gl_state.alphatest = false;
-	gl_state.blendfunc1 = GL_ONE;
-	gl_state.blendfunc2 = GL_ZERO;
-	gl_state.blend = false;
-	gl_state.depthmask = GL_TRUE;
-	gl_state.colormask = 15;
-	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
-	gl_state.lockrange_first = 0;
-	gl_state.lockrange_count = 0;
-	gl_state.cullface = v_flipped_state ? GL_BACK : GL_FRONT; // quake is backwards, this culls back faces
-	gl_state.cullfaceenable = true;
-	gl_state.polygonoffset[0] = 0;
-	gl_state.polygonoffset[1] = 0;
-
-	CHECKGLERROR
-
-	qglColorMask(1, 1, 1, 1);
-	qglAlphaFunc(GL_GEQUAL, 0.5);CHECKGLERROR
-	qglDisable(GL_ALPHA_TEST);CHECKGLERROR
-	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
-	qglDisable(GL_BLEND);CHECKGLERROR
-	qglCullFace(gl_state.cullface);CHECKGLERROR
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
-	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
-	qglDepthMask(gl_state.depthmask);CHECKGLERROR
-	qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
-
-	if (vid.support.arb_vertex_buffer_object)
-	{
-		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-	}
-
-	if (vid.support.ext_framebuffer_object)
-	{
-		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	}
-
-	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
-	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-
-	qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
-	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-
-	GL_Color(0, 0, 0, 0);
-	GL_Color(1, 1, 1, 1);
-
-	GL_SetupTextureState();
 }
 
 void GL_ActiveTexture(unsigned int num)
@@ -1070,7 +1060,6 @@ void R_Mesh_Start(void)
 		Con_Printf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
 		Cvar_SetValueQuick(&gl_paranoid, 1);
 	}
-	GL_Backend_ResetState();
 }
 
 qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
@@ -1421,64 +1410,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 // restores backend state, used when done with 3D rendering
 void R_Mesh_Finish(void)
 {
-	unsigned int i;
-	BACKENDACTIVECHECK
-	CHECKGLERROR
-	GL_LockArrays(0, 0);
-	CHECKGLERROR
-
-	for (i = 0;i < vid.teximageunits;i++)
-	{
-		GL_ActiveTexture(i);
-		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-		if (vid.support.ext_texture_3d)
-		{
-			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_cube_map)
-		{
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_rectangle)
-		{
-			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
-		}
-	}
-	for (i = 0;i < vid.texarrayunits;i++)
-	{
-		GL_ActiveTexture(vid.texarrayunits - 1 - i);
-		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-	}
-	for (i = 0;i < vid.texunits;i++)
-	{
-		GL_ActiveTexture(vid.texunits - 1 - i);
-		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-		if (vid.support.ext_texture_3d)
-		{
-			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_cube_map)
-		{
-			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_rectangle)
-		{
-			qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-		}
-		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
-		if (gl_combine.integer)
-		{
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
-		}
-	}
-	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-	qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-
-	qglDisable(GL_BLEND);CHECKGLERROR
-	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
-	qglDepthMask(GL_TRUE);CHECKGLERROR
-	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
 }
 
 int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size, const char *name)
