@@ -2223,7 +2223,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 	// do global setup needed for the chosen lighting mode
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 	{
-		R_Mesh_TexBindCubeMap(GL20TU_CUBE, R_GetTexture(rsurface.rtlight->currentcubemap)); // light filter
+		R_Mesh_TexBindAll(GL20TU_CUBE, 0, 0, R_GetTexture(rsurface.rtlight->currentcubemap), 0); // light filter
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 		CHECKGLERROR
 		if (shadowmapping)
@@ -2237,19 +2237,19 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
 			{
 				r_shadow_usingshadowmaprect = true;
-				R_Mesh_TexBindRectangle(GL20TU_SHADOWMAPRECT, R_GetTexture(r_shadow_shadowmaprectangletexture));
+				R_Mesh_TexBindAll(GL20TU_SHADOWMAPRECT, 0, 0, 0, R_GetTexture(r_shadow_shadowmaprectangletexture));
 				CHECKGLERROR
 			}
 			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
 			{
 				r_shadow_usingshadowmapcube = true;
-				R_Mesh_TexBindCubeMap(GL20TU_SHADOWMAPCUBE, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));
+				R_Mesh_TexBindAll(GL20TU_SHADOWMAPCUBE, 0, 0, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);
 				CHECKGLERROR
 			}
 
 			if (r_shadow_shadowmapvsdct && (r_shadow_usingshadowmap2d || r_shadow_usingshadowmaprect))
 			{
-				R_Mesh_TexBindCubeMap(GL20TU_CUBEPROJECTION, R_GetTexture(r_shadow_shadowmapvsdcttexture));
+				R_Mesh_TexBindAll(GL20TU_CUBEPROJECTION, 0, 0, R_GetTexture(r_shadow_shadowmapvsdcttexture), 0);
 				CHECKGLERROR
 			}
 		}
