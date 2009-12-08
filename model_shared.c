@@ -1146,7 +1146,7 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 
 static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 {
-	if (!gl_support_arb_vertex_buffer_object)
+	if (!vid.support.arb_vertex_buffer_object)
 		return;
 
 	// element buffer is easy because it's just one array
@@ -2492,7 +2492,7 @@ static void Mod_BuildVBOs(void)
 		}
 	}
 
-	if (!gl_support_arb_vertex_buffer_object)
+	if (!vid.support.arb_vertex_buffer_object)
 		return;
 
 	// element buffer is easy because it's just one array
@@ -3563,7 +3563,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 		model->texturepool = R_AllocTexturePool();
 	lm_basescalepixels = 1.0f / max(0.0001f, mod_generatelightmaps_unitspersample.value);
 	lm_borderpixels = mod_generatelightmaps_borderpixels.integer;
-	lm_texturesize = bound(lm_borderpixels*2+1, 64, gl_max_texture_size);
+	lm_texturesize = bound(lm_borderpixels*2+1, 64, (int)vid.maxtexturesize_2d);
 	lm_maxpixels = lm_texturesize-(lm_borderpixels*2+1);
 	Mod_AllocLightmap_Init(&lmstate, lm_texturesize, lm_texturesize);
 	lightmapnumber = 0;
@@ -3607,7 +3607,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 				break;
 			// if we haven't maxed out the lightmap size yet, we retry the
 			// entire surface batch...
-			if (lm_texturesize * 2 <= min(mod_generatelightmaps_texturesize.integer, gl_max_texture_size))
+			if (lm_texturesize * 2 <= min(mod_generatelightmaps_texturesize.integer, (int)vid.maxtexturesize_2d))
 			{
 				lm_texturesize *= 2;
 				surfaceindex = -1;

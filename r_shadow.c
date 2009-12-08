@@ -380,31 +380,31 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
-	if(r_shadow_shadowmapping.integer && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object)
+	if(r_shadow_shadowmapping.integer && r_glsl.integer && vid.support.arb_fragment_shader && vid.support.ext_framebuffer_object)
 	{
 		if(r_shadow_shadowmapfilterquality < 0)
 		{
 			if(strstr(gl_vendor, "NVIDIA")) 
 			{
-				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmapsampler = vid.support.arb_shadow;
 				r_shadow_shadowmappcf = 1;
 			}
-			else if(gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) 
+			else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) 
 				r_shadow_shadowmappcf = 1;
 			else if(strstr(gl_vendor, "ATI")) 
 				r_shadow_shadowmappcf = 1;
 			else 
-				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmapsampler = vid.support.arb_shadow;
 		}
 		else 
 		{
 			switch (r_shadow_shadowmapfilterquality)
 			{
 			case 1:
-				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmapsampler = vid.support.arb_shadow;
 				break;
 			case 2:
-				r_shadow_shadowmapsampler = gl_support_arb_shadow;
+				r_shadow_shadowmapsampler = vid.support.arb_shadow;
 				r_shadow_shadowmappcf = 1;
 				break;
 			case 3:
@@ -427,9 +427,9 @@ void R_Shadow_SetShadowMode(void)
             r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
             break;
         default:
-			if((gl_support_amd_texture_texture4 || gl_support_arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
+			if((vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			else if(gl_texturerectangle) 
+			else if(vid.support.arb_texture_rectangle) 
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
 			else
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
@@ -1722,7 +1722,7 @@ static void R_Shadow_MakeTextures(void)
 			data[y*ATTEN2DSIZE+x] = R_Shadow_MakeTextures_SamplePoint(((x + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), ((y + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), 0);
 	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", ATTEN2DSIZE, ATTEN2DSIZE, (unsigned char *)data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
 	// 3D sphere texture
-	if (r_shadow_texture3d.integer && gl_texture3d)
+	if (r_shadow_texture3d.integer && vid.support.ext_texture_3d)
 	{
 		for (z = 0;z < ATTEN3DSIZE;z++)
 			for (y = 0;y < ATTEN3DSIZE;y++)
@@ -1849,11 +1849,11 @@ static void R_Shadow_MakeTextures(void)
 
 void R_Shadow_ValidateCvars(void)
 {
-	if (r_shadow_texture3d.integer && !gl_texture3d)
+	if (r_shadow_texture3d.integer && !vid.support.ext_texture_3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
-	if (gl_ext_separatestencil.integer && !gl_support_separatestencil)
+	if (gl_ext_separatestencil.integer && !vid.support.ati_separate_stencil)
 		Cvar_SetValueQuick(&gl_ext_separatestencil, 0);
-	if (gl_ext_stenciltwoside.integer && !gl_support_stenciltwoside)
+	if (gl_ext_stenciltwoside.integer && !vid.support.ext_stencil_two_side)
 		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 }
 
@@ -1900,9 +1900,9 @@ void R_Shadow_RenderMode_Begin(void)
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
 	}
 
-	if (r_glsl.integer && gl_support_fragment_shader)
+	if (r_glsl.integer && vid.support.arb_fragment_shader)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
-	else if (gl_dot3arb && gl_texturecubemap && r_shadow_dot3.integer && vid.stencil)
+	else if (vid.support.arb_texture_env_dot3 && vid.support.arb_texture_cube_map && r_shadow_dot3.integer && vid.stencil)
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
 	else
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
@@ -1930,7 +1930,7 @@ void R_Shadow_RenderMode_Reset(void)
 	{
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 	}
-	if (gl_support_ext_framebuffer_object)
+	if (vid.support.ext_framebuffer_object)
 	{
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);CHECKGLERROR
 	}
@@ -2070,7 +2070,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 		if (!r_shadow_shadowmap2dtexture)
 		{
 #if 1
-			int w = maxsize*2, h = gl_support_arb_texture_non_power_of_two ? maxsize*3 : maxsize*4;
+			int w = maxsize*2, h = vid.support.arb_texture_non_power_of_two ? maxsize*3 : maxsize*4;
 			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", w, h, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
 			qglGenFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbo2d);CHECKGLERROR
@@ -3454,7 +3454,7 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle
 	}
 	if ((ambientscale + diffusescale) * VectorLength2(lightcolorbase) + specularscale * VectorLength2(lightcolorbase) < (1.0f / 1048576.0f))
 		return;
-	negated = (lightcolorbase[0] + lightcolorbase[1] + lightcolorbase[2] < 0) && gl_support_ext_blend_subtract;
+	negated = (lightcolorbase[0] + lightcolorbase[1] + lightcolorbase[2] < 0) && vid.support.ext_blend_subtract;
 	if(negated)
 	{
 		VectorNegate(lightcolorbase, lightcolorbase);
@@ -4241,7 +4241,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	}
 
 	// return if there's nothing at all to light
-	if (!numlightentities && !numsurfaces)
+	if (numsurfaces + numlightentities + numlightentities_noselfshadow == 0)
 		return;
 
 	// don't let sound skip if going slow
@@ -4397,10 +4397,15 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		// so that they won't receive lighting
 		GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
 		R_Shadow_ClearStencil();
-		if (numsurfaces)
-			R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
-		for (i = 0;i < numshadowentities;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[i]);
+
+		if (numsurfaces + numshadowentities)
+		{
+			if (numsurfaces)
+				R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
+			for (i = 0;i < numshadowentities;i++)
+				R_Shadow_DrawEntityShadow(shadowentities[i]);
+		}
+
 		if (numlightentities_noselfshadow)
 		{
 			// draw lighting in the unmasked areas
@@ -4416,9 +4421,9 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				for (i = 0;i < numlightentities_noselfshadow;i++)
 					R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 			}
+			for (i = 0;i < numshadowentities_noselfshadow;i++)
+				R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
 		}
-		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
 
 		if (numsurfaces + numlightentities)
 		{
@@ -4432,17 +4437,14 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	}
 	else
 	{
-		if (numsurfaces + numlightentities)
-		{
-			// draw lighting in the unmasked areas
-			R_Shadow_RenderMode_Lighting(false, false, false);
-			if (numsurfaces)
-				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
-			for (i = 0;i < numlightentities;i++)
-				R_Shadow_DrawEntityLight(lightentities[i]);
-			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
-		}
+		// draw lighting in the unmasked areas
+		R_Shadow_RenderMode_Lighting(false, false, false);
+		if (numsurfaces)
+			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
+		for (i = 0;i < numlightentities;i++)
+			R_Shadow_DrawEntityLight(lightentities[i]);
+		for (i = 0;i < numlightentities_noselfshadow;i++)
+			R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
 	}
 }
 
@@ -4457,7 +4459,7 @@ void R_ShadowVolumeLighting(qboolean visible)
 	float f;
 
 	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, gl_max_size.integer / 4) ||
-		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer && r_glsl.integer && gl_support_fragment_shader && gl_support_ext_framebuffer_object) || 
+		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer && r_glsl.integer && vid.support.arb_fragment_shader && vid.support.ext_framebuffer_object) || 
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
@@ -4702,7 +4704,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	if (VectorLength(color) > (1.0f / 256.0f))
 	{
 		float vertex3f[12];
-		qboolean negated = (color[0] + color[1] + color[2] < 0) && gl_support_ext_blend_subtract;
+		qboolean negated = (color[0] + color[1] + color[2] < 0) && vid.support.ext_blend_subtract;
 		if(negated)
 		{
 			VectorNegate(color, color);
@@ -4737,7 +4739,7 @@ void R_DrawCoronas(void)
 	// use GL_ARB_occlusion_query if available
 	// otherwise use raytraces
 	r_numqueries = 0;
-	usequery = gl_support_arb_occlusion_query && r_coronas_occlusionquery.integer;
+	usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
 	if (usequery)
 	{
 		GL_ColorMask(0,0,0,0);

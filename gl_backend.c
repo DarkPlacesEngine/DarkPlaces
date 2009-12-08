@@ -228,7 +228,7 @@ static void gl_backend_start(void)
 		Con_DPrintf("GL_MAX_ELEMENTS_VERTICES = %i\nGL_MAX_ELEMENTS_INDICES = %i\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	}
 
-	if (gl_support_fragment_shader)
+	if (vid.support.arb_fragment_shader)
 	{
 		Con_DPrintf("GLSL shader support detected: texture units = %i texenv, %i image, %i array\n", vid.texunits, vid.teximageunits, vid.texarrayunits);
 		vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
@@ -681,15 +681,15 @@ void GL_SetupTextureState(void)
 	{
 		GL_ActiveTexture(i);
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-		if (gl_texture3d)
+		if (vid.support.ext_texture_3d)
 		{
 			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
 		}
-		if (gl_texturecubemap)
+		if (vid.support.arb_texture_cube_map)
 		{
 			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
 		}
-		if (gl_texturerectangle)
+		if (vid.support.arb_texture_rectangle)
 		{
 			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
 		}
@@ -707,15 +707,15 @@ void GL_SetupTextureState(void)
 	{
 		GL_ActiveTexture(i);
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-		if (gl_texture3d)
+		if (vid.support.ext_texture_3d)
 		{
 			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 		}
-		if (gl_texturecubemap)
+		if (vid.support.arb_texture_cube_map)
 		{
 			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 		}
-		if (gl_texturerectangle)
+		if (vid.support.arb_texture_rectangle)
 		{
 			qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
 		}
@@ -783,13 +783,13 @@ void GL_Backend_ResetState(void)
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
 	qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
 
-	if (gl_support_arb_vertex_buffer_object)
+	if (vid.support.arb_vertex_buffer_object)
 	{
 		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
 	}
 
-	if (gl_support_ext_framebuffer_object)
+	if (vid.support.ext_framebuffer_object)
 	{
 		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
@@ -1023,7 +1023,7 @@ void GL_LockArrays(int first, int count)
 			qglUnlockArraysEXT();
 			CHECKGLERROR
 		}
-		if (count && gl_supportslockarrays && gl_lockarrays.integer)
+		if (count && vid.support.ext_compiled_vertex_array && gl_lockarrays.integer)
 		{
 			gl_state.lockrange_first = first;
 			gl_state.lockrange_count = count;
@@ -1431,15 +1431,15 @@ void R_Mesh_Finish(void)
 	{
 		GL_ActiveTexture(i);
 		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-		if (gl_texture3d)
+		if (vid.support.ext_texture_3d)
 		{
 			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
 		}
-		if (gl_texturecubemap)
+		if (vid.support.arb_texture_cube_map)
 		{
 			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
 		}
-		if (gl_texturerectangle)
+		if (vid.support.arb_texture_rectangle)
 		{
 			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
 		}
@@ -1453,15 +1453,15 @@ void R_Mesh_Finish(void)
 	{
 		GL_ActiveTexture(vid.texunits - 1 - i);
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-		if (gl_texture3d)
+		if (vid.support.ext_texture_3d)
 		{
 			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 		}
-		if (gl_texturecubemap)
+		if (vid.support.arb_texture_cube_map)
 		{
 			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 		}
-		if (gl_texturerectangle)
+		if (vid.support.arb_texture_rectangle)
 		{
 			qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
 		}

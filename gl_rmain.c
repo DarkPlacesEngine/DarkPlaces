@@ -2041,7 +2041,7 @@ void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 
 void R_SetupGenericShader(qboolean usetexture)
 {
-	if (gl_support_fragment_shader)
+	if (vid.support.arb_fragment_shader)
 	{
 		if (r_glsl.integer && r_glsl_usegeneric.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, usetexture ? SHADERPERMUTATION_DIFFUSE : 0);
@@ -2055,7 +2055,7 @@ void R_SetupGenericShader(qboolean usetexture)
 
 void R_SetupGenericTwoTextureShader(int texturemode)
 {
-	if (gl_support_fragment_shader)
+	if (vid.support.arb_fragment_shader)
 	{
 		if (r_glsl.integer && r_glsl_usegeneric.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
@@ -2075,7 +2075,7 @@ void R_SetupGenericTwoTextureShader(int texturemode)
 
 void R_SetupDepthOrShadowShader(void)
 {
-	if (gl_support_fragment_shader)
+	if (vid.support.arb_fragment_shader)
 	{
 		if (r_glsl.integer && r_glsl_usegeneric.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_DEPTH_OR_SHADOW, 0);
@@ -2089,7 +2089,7 @@ void R_SetupDepthOrShadowShader(void)
 
 void R_SetupShowDepthShader(void)
 {
-	if (gl_support_fragment_shader)
+	if (vid.support.arb_fragment_shader)
 	{
 		if (r_glsl.integer && r_glsl_usegeneric.integer)
 			R_SetupShader_SetPermutation(SHADERMODE_SHOWDEPTH, 0);
@@ -2951,7 +2951,7 @@ void R_Main_ResizeViewCache(void)
 
 void gl_main_start(void)
 {
-	r_loadnormalmap = r_loadgloss = gl_dot3arb || gl_support_fragment_shader;
+	r_loadnormalmap = r_loadgloss = vid.support.arb_texture_env_dot3 || vid.support.arb_fragment_shader;
 	r_loadfog = true;
 
 	r_numqueries = 0;
@@ -2969,7 +2969,7 @@ void gl_main_start(void)
 	r_main_texturepool = R_AllocTexturePool();
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
-	if (gl_texturecubemap)
+	if (vid.support.arb_texture_cube_map)
 	{
 		R_BuildWhiteCube();
 		R_BuildNormalizationCube();
@@ -3579,7 +3579,7 @@ static qboolean R_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t en
 	vec3_t start;
 	vec3_t end;
 	dp_model_t *model = r_refdef.scene.worldmodel;
-	
+
 	if (!model || !model->brush.TraceLineOfSight)
 		return true;
 
@@ -4024,9 +4024,9 @@ static void R_Water_StartFrame(void)
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
-	if (!r_water.integer || !r_glsl.integer || !gl_support_fragment_shader || waterwidth > gl_max_texture_size || waterheight > gl_max_texture_size || r_showsurfaces.integer)
+	if (!r_water.integer || !r_glsl.integer || !vid.support.arb_fragment_shader || waterwidth > (int)vid.maxtexturesize_2d || waterheight > (int)vid.maxtexturesize_2d || r_showsurfaces.integer)
 		texturewidth = textureheight = waterwidth = waterheight = 0;
-	else if (gl_support_arb_texture_non_power_of_two)
+	else if (vid.support.arb_texture_non_power_of_two)
 	{
 		texturewidth = waterwidth;
 		textureheight = waterheight;
@@ -4255,11 +4255,11 @@ void R_Bloom_StartFrame(void)
 	r_bloomstate.bloomwidth = bound(1, r_bloom_resolution.integer, vid.height);
 	r_bloomstate.bloomheight = r_bloomstate.bloomwidth * vid.height / vid.width;
 	r_bloomstate.bloomheight = bound(1, r_bloomstate.bloomheight, vid.height);
-	r_bloomstate.bloomwidth = bound(1, r_bloomstate.bloomwidth, gl_max_texture_size);
-	r_bloomstate.bloomheight = bound(1, r_bloomstate.bloomheight, gl_max_texture_size);
+	r_bloomstate.bloomwidth = bound(1, r_bloomstate.bloomwidth, (int)vid.maxtexturesize_2d);
+	r_bloomstate.bloomheight = bound(1, r_bloomstate.bloomheight, (int)vid.maxtexturesize_2d);
 
 	// calculate desired texture sizes
-	if (gl_support_arb_texture_non_power_of_two)
+	if (vid.support.arb_texture_non_power_of_two)
 	{
 		screentexturewidth = r_refdef.view.width;
 		screentextureheight = r_refdef.view.height;
@@ -4274,7 +4274,7 @@ void R_Bloom_StartFrame(void)
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_bloomstate.bloomheight;bloomtextureheight  *= 2);
 	}
 
-	if ((r_hdr.integer || r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > gl_max_texture_size || r_refdef.view.height > gl_max_texture_size))
+	if ((r_hdr.integer || r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > (int)vid.maxtexturesize_2d || r_refdef.view.height > (int)vid.maxtexturesize_2d))
 	{
 		Cvar_SetValueQuick(&r_hdr, 0);
 		Cvar_SetValueQuick(&r_bloom, 0);
@@ -4469,7 +4469,7 @@ void R_Bloom_MakeTexture(void)
 
 	// apply subtract last
 	// (just like it would be in a GLSL shader)
-	if (r_bloom_colorsubtract.value > 0 && gl_support_ext_blend_subtract)
+	if (r_bloom_colorsubtract.value > 0 && vid.support.ext_blend_subtract)
 	{
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
@@ -4609,7 +4609,7 @@ static void R_BlendView(void)
 		r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 	}
 
-	if (r_glsl.integer && gl_support_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
+	if (r_glsl.integer && vid.support.arb_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
 	{
 		unsigned int permutation =
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
@@ -4994,7 +4994,7 @@ void R_RenderView(void)
 	r_refdef.view.clear = true;
 
 	// this produces a bloom texture to be used in R_BlendView() later
-	if (r_hdr.integer)
+	if (r_hdr.integer && r_bloomstate.bloomwidth)
 		R_HDR_RenderBloomTexture();
 
 	r_refdef.view.showdebug = true;
@@ -7898,7 +7898,7 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 	RSurf_SetupDepthAndCulling();
 	if (r_showsurfaces.integer == 3)
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (r_glsl.integer && gl_support_fragment_shader)
+	else if (r_glsl.integer && vid.support.arb_fragment_shader)
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
 	else if (gl_combine.integer && r_textureunits.integer >= 2)
 		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
@@ -7913,7 +7913,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	RSurf_SetupDepthAndCulling();
 	if (r_showsurfaces.integer == 3)
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (r_glsl.integer && gl_support_fragment_shader)
+	else if (r_glsl.integer && vid.support.arb_fragment_shader)
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
 	else if (gl_combine.integer && r_textureunits.integer >= 2)
 		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
@@ -7938,7 +7938,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader);
+		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && vid.support.arb_fragment_shader);
 
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -9105,8 +9105,10 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		RSurf_ActiveWorldEntity();
 	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
 		RSurf_ActiveModelEntity(ent, false, false);
+	else if (depthonly)
+		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && gl_support_fragment_shader && !depthonly);
+		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && vid.support.arb_fragment_shader);
 
 	surfaces = model->data_surfaces;
 	update = model->brushq1.lightmapupdateflags;

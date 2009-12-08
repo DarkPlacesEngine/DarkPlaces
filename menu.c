@@ -2922,15 +2922,15 @@ static void M_Video_Draw (void)
 	M_DrawCheckbox(220, video_cursor_table[t], vid_vsync.integer);
 	t++;
 
-	M_ItemPrint(16, video_cursor_table[t], "    Anisotropic Filter", gl_support_anisotropy);
-	M_DrawSlider(220, video_cursor_table[t], gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
+	M_ItemPrint(16, video_cursor_table[t], "    Anisotropic Filter", vid.support.ext_texture_filter_anisotropic);
+	M_DrawSlider(220, video_cursor_table[t], gl_texture_anisotropy.integer, 1, vid.max_anisotropy);
 	t++;
 
 	M_ItemPrint(16, video_cursor_table[t], "       Texture Quality", true);
 	M_DrawSlider(220, video_cursor_table[t], gl_picmip.value, 3, 0);
 	t++;
 
-	M_ItemPrint(16, video_cursor_table[t], "   Texture Compression", gl_support_texture_compression);
+	M_ItemPrint(16, video_cursor_table[t], "   Texture Compression", vid.support.arb_texture_compression);
 	M_DrawCheckbox(220, video_cursor_table[t], gl_texturecompression.integer);
 	t++;
 
@@ -2978,7 +2978,7 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
 	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), gl_max_anisotropy));
+		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), vid.max_anisotropy));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&gl_picmip, bound(0, gl_picmip.value - dir, 3));
 	else if (video_cursor == t++)

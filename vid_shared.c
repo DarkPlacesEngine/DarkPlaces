@@ -16,65 +16,6 @@ qboolean in_client_mouse = true;
 float in_mouse_x, in_mouse_y;
 float in_windowmouse_x, in_windowmouse_y;
 
-// value of GL_MAX_TEXTURE_<various>_SIZE
-int gl_max_texture_size = 0;
-int gl_max_3d_texture_size = 0;
-int gl_max_cube_map_texture_size = 0;
-int gl_max_rectangle_texture_size = 0;
-// GL_ARB_multitexture
-int gl_textureunits = 1;
-// GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
-int gl_combine_extension = false;
-// GL_EXT_compiled_vertex_array
-int gl_supportslockarrays = false;
-// 3D textures available
-int gl_texture3d = false;
-// GL_ARB_texture_cubemap
-int gl_texturecubemap = false;
-// GL_ARB_texture_rectangle
-int gl_texturerectangle = false;
-// GL_ARB_texture_non_power_of_two
-int gl_support_arb_texture_non_power_of_two = false;
-// GL_ARB_texture_env_dot3
-int gl_dot3arb = false;
-// GL_ARB_depth_texture
-int gl_depthtexture = false;
-// GL_ARB_shadow
-int gl_support_arb_shadow = false;
-// GL_SGIS_texture_edge_clamp
-int gl_support_clamptoedge = false;
-// GL_EXT_texture_filter_anisotropic
-int gl_support_anisotropy = false;
-int gl_max_anisotropy = 1;
-// OpenGL2.0 core glStencilOpSeparate, or GL_ATI_separate_stencil
-int gl_support_separatestencil = false;
-// GL_EXT_stencil_two_side
-int gl_support_stenciltwoside = false;
-// GL_EXT_blend_minmax
-int gl_support_ext_blend_minmax = false;
-// GL_EXT_blend_subtract
-int gl_support_ext_blend_subtract = false;
-// GL_ARB_shader_objects
-int gl_support_shader_objects = false;
-// GL_ARB_shading_language_100
-int gl_support_shading_language_100 = false;
-// GL_ARB_vertex_shader
-int gl_support_vertex_shader = false;
-// GL_ARB_fragment_shader
-int gl_support_fragment_shader = false;
-//GL_ARB_vertex_buffer_object
-int gl_support_arb_vertex_buffer_object = false;
-//GL_EXT_framebuffer_object
-int gl_support_ext_framebuffer_object = false;
-//GL_ARB_texture_compression
-int gl_support_texture_compression = false;
-//GL_ARB_occlusion_query
-int gl_support_arb_occlusion_query = false;
-//GL_AMD_texture_texture4
-int gl_support_amd_texture_texture4 = false;
-//GL_ARB_texture_gather
-int gl_support_arb_texture_gather = false;
-
 // LordHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
@@ -972,38 +913,6 @@ void VID_CheckExtensions(void)
 		Con_DPrintf("Using GL1.1 rendering path - %i texture units, two pass rendering\n", vid.texunits);
 		vid.renderpath = RENDERPATH_GL11;
 	}
-
-	gl_max_texture_size = vid.maxtexturesize_2d;
-	gl_max_3d_texture_size = vid.maxtexturesize_3d;
-	gl_max_cube_map_texture_size = vid.maxtexturesize_cubemap;
-	gl_textureunits = vid.texunits;
-	gl_max_anisotropy = vid.max_anisotropy;
-
-	gl_combine_extension = vid.support.arb_texture_env_combine;
-	gl_supportslockarrays = vid.support.ext_compiled_vertex_array;
-	gl_texture3d = vid.support.ext_texture_3d;
-	gl_texturecubemap = vid.support.arb_texture_cube_map;
-	gl_texturerectangle = vid.support.arb_texture_rectangle;
-	gl_support_arb_texture_non_power_of_two = vid.support.arb_texture_non_power_of_two;
-	gl_dot3arb = vid.support.arb_texture_env_dot3;
-	gl_depthtexture = vid.support.arb_depth_texture;
-	gl_support_arb_shadow = vid.support.arb_shadow;
-	gl_support_clamptoedge = vid.support.ext_texture_edge_clamp;
-	gl_support_anisotropy = vid.support.ext_texture_filter_anisotropic;
-	gl_support_separatestencil = vid.support.ati_separate_stencil;
-	gl_support_stenciltwoside = vid.support.ext_stencil_two_side;
-	gl_support_ext_blend_minmax = vid.support.ext_blend_minmax;
-	gl_support_ext_blend_subtract = vid.support.ext_blend_subtract;
-	gl_support_shader_objects = vid.support.arb_shader_objects;
-	gl_support_shading_language_100 = vid.support.arb_shading_language_100;
-	gl_support_vertex_shader = vid.support.arb_vertex_shader;
-	gl_support_fragment_shader = vid.support.arb_fragment_shader;
-	gl_support_arb_vertex_buffer_object = vid.support.arb_vertex_buffer_object;
-	gl_support_ext_framebuffer_object = vid.support.ext_framebuffer_object;
-	gl_support_texture_compression = vid.support.arb_texture_compression;
-	gl_support_arb_occlusion_query = vid.support.arb_occlusion_query;
-	gl_support_amd_texture_texture4 = vid.support.amd_texture_texture4;
-	gl_support_arb_texture_gather = vid.support.arb_texture_gather;
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);

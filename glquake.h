@@ -264,8 +264,6 @@ typedef ptrdiff_t GLsizeiptrARB;
 #endif
 
 //GL_EXT_texture_filter_anisotropic
-extern int gl_support_anisotropy;
-extern int gl_max_anisotropy;
 #ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT       0x84FE
 #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT   0x84FF
@@ -281,17 +279,13 @@ extern int gl_max_anisotropy;
 #endif
 
 // GL_ARB_shadow
-extern int gl_support_arb_shadow;
 #ifndef GL_TEXTURE_COMPARE_MODE_ARB
 #define GL_TEXTURE_COMPARE_MODE_ARB       0x884C
 #define GL_TEXTURE_COMPARE_FUNC_ARB       0x884D
 #define GL_COMPARE_R_TO_TEXTURE_ARB       0x884E
 #endif
 
-extern int gl_max_texture_size;
-
 // GL_ARB_multitexture
-extern int gl_textureunits;
 extern void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
 extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
@@ -337,12 +331,10 @@ extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #endif
 
 // GL_EXT_compiled_vertex_array
-extern int gl_supportslockarrays;
 extern void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
 // GL_ARB_texture_env_combine
-extern int gl_combine_extension;
 #ifndef GL_COMBINE_ARB
 #define GL_COMBINE_ARB					0x8570
 #define GL_COMBINE_RGB_ARB				0x8571
@@ -376,8 +368,6 @@ extern int gl_combine_extension;
 #endif
 
 
-extern int gl_texture3d;
-extern int gl_max_3d_texture_size;
 #ifndef GL_TEXTURE_3D
 #define GL_PACK_SKIP_IMAGES			0x806B
 #define GL_PACK_IMAGE_HEIGHT			0x806C
@@ -394,8 +384,6 @@ extern void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xof
 extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 #endif
 
-extern int gl_texturecubemap;
-extern int gl_max_cube_map_texture_size;
 #ifndef GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB
 #define GL_NORMAL_MAP_ARB			    0x8511
 #define GL_REFLECTION_MAP_ARB		    0x8512
@@ -411,8 +399,6 @@ extern int gl_max_cube_map_texture_size;
 #define GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB		0x851C
 #endif
 
-extern int gl_texturerectangle;
-extern int gl_max_rectangle_texture_size;
 #ifndef GL_TEXTURE_RECTANGLE_ARB
 #define GL_TEXTURE_RECTANGLE_ARB            0x84F5
 #define GL_TEXTURE_BINDING_RECTANGLE_ARB    0x84F6
@@ -422,7 +408,6 @@ extern int gl_max_rectangle_texture_size;
 #define GL_SAMPLER_2D_RECT_SHADOW_ARB       0x8B64
 #endif
 
-extern int gl_depthtexture;
 #ifndef GL_DEPTH_COMPONENT16_ARB
 #define GL_DEPTH_COMPONENT16_ARB       0x81A5
 #define GL_DEPTH_COMPONENT24_ARB       0x81A6
@@ -432,7 +417,6 @@ extern int gl_depthtexture;
 #endif
 
 
-extern int gl_dot3arb;
 #ifndef GL_DOT3_RGB_ARB
 #define GL_DOT3_RGB_ARB				0x86AE
 #define GL_DOT3_RGBA_ARB				0x86AF
@@ -453,13 +437,11 @@ extern int gl_dot3ext;
 #endif
 
 // GL_SGIS_texture_edge_clamp or GL_EXT_texture_edge_clamp
-extern int gl_support_clamptoedge;
 #ifndef GL_CLAMP_TO_EDGE
 #define GL_CLAMP_TO_EDGE 0x812F
 #endif
 
 //GL_ATI_separate_stencil
-extern int gl_support_separatestencil;
 #ifndef GL_STENCIL_BACK_FUNC
 #define GL_STENCIL_BACK_FUNC              0x8800
 #define GL_STENCIL_BACK_FAIL              0x8801
@@ -473,10 +455,8 @@ extern void (GLAPIENTRY *qglStencilFuncSeparate)(GLenum, GLenum, GLint, GLuint);
 #define GL_STENCIL_TEST_TWO_SIDE_EXT      0x8910
 #define GL_ACTIVE_STENCIL_FACE_EXT        0x8911
 extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
-extern int gl_support_stenciltwoside;
 
 //GL_EXT_blend_minmax
-extern int gl_support_ext_blend_minmax;
 #ifndef GL_FUNC_ADD_EXT
 #define GL_FUNC_ADD_EXT                   0x8006 // also supplied by GL_EXT_blend_subtract
 #define GL_MIN_EXT                        0x8007
@@ -486,7 +466,6 @@ extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EX
 #endif
 
 //GL_EXT_blend_subtract
-extern int gl_support_ext_blend_subtract;
 #ifndef GL_FUNC_SUBTRACT_EXT
 #define GL_FUNC_SUBTRACT_EXT              0x800A
 #define GL_FUNC_REVERSE_SUBTRACT_EXT      0x800B
@@ -494,10 +473,8 @@ extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EX
 #endif
 
 //GL_ARB_texture_non_power_of_two
-extern int gl_support_arb_texture_non_power_of_two;
 
 //GL_ARB_vertex_buffer_object
-extern int gl_support_arb_vertex_buffer_object;
 #ifndef GL_ARRAY_BUFFER_ARB
 #define GL_ARRAY_BUFFER_ARB               0x8892
 #define GL_ELEMENT_ARRAY_BUFFER_ARB       0x8893
@@ -541,7 +518,6 @@ extern void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, c
 extern void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
 //GL_EXT_framebuffer_object
-extern int gl_support_ext_framebuffer_object;
 #ifndef GL_FRAMEBUFFER_EXT
 #define GL_FRAMEBUFFER_EXT                                   0x8D40
 #define GL_RENDERBUFFER_EXT                                  0x8D41
@@ -728,7 +704,6 @@ extern void (GLAPIENTRY *qglLineWidth)(GLfloat width);
 extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 // GL_ARB_shader_objects
-extern int gl_support_shader_objects;
 #ifndef GL_PROGRAM_OBJECT_ARB
 // 1-byte character string
 typedef char GLcharARB;
@@ -815,7 +790,6 @@ extern void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 #endif
 
 // GL_ARB_vertex_shader
-extern int gl_support_vertex_shader;
 //extern void (GLAPIENTRY *qglVertexAttrib1fARB)(GLuint index, GLfloat v0);
 //extern void (GLAPIENTRY *qglVertexAttrib1sARB)(GLuint index, GLshort v0);
 //extern void (GLAPIENTRY *qglVertexAttrib1dARB)(GLuint index, GLdouble v0);
@@ -892,7 +866,6 @@ extern GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const
 #endif
 
 // GL_ARB_fragment_shader
-extern int gl_support_fragment_shader;
 #ifndef GL_FRAGMENT_SHADER_ARB
 #define GL_FRAGMENT_SHADER_ARB						0x8B30
 #define GL_MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB		0x8B49
@@ -902,13 +875,11 @@ extern int gl_support_fragment_shader;
 #endif
 
 // GL_ARB_shading_language_100
-extern int gl_support_shading_language_100;
 #ifndef GL_SHADING_LANGUAGE_VERSION_ARB
 #define GL_SHADING_LANGUAGE_VERSION_ARB				0x8B8C
 #endif
 
 // GL_ARB_texture_compression
-extern int gl_support_texture_compression;
 extern void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
 extern void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
 //extern void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
@@ -931,7 +902,6 @@ extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, 
 #endif
 
 // GL_ARB_occlusion_query
-extern int gl_support_arb_occlusion_query;
 extern void (GLAPIENTRY *qglGenQueriesARB)(GLsizei n, GLuint *ids);
 extern void (GLAPIENTRY *qglDeleteQueriesARB)(GLsizei n, const GLuint *ids);
 extern GLboolean (GLAPIENTRY *qglIsQueryARB)(GLuint qid);
@@ -955,10 +925,8 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 #define GL_BGRA					0x80E1
 
 //GL_AMD_texture_texture4
-extern int gl_support_amd_texture_texture4;
 
 //GL_ARB_texture_gather
-extern int gl_support_arb_texture_gather;
 
 #define DEBUGGL
 
