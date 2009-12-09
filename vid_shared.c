@@ -797,7 +797,6 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 	vid.support.arb_texture_cube_map = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
-	vid.support.arb_texture_env_dot3 = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 	vid.support.arb_texture_rectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false);

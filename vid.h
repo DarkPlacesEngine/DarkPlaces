@@ -49,7 +49,6 @@ typedef struct viddef_support_s
 	qboolean arb_texture_compression;
 	qboolean arb_texture_cube_map;
 	qboolean arb_texture_env_combine;
-	qboolean arb_texture_env_dot3;
 	qboolean arb_texture_gather;
 	qboolean arb_texture_non_power_of_two;
 	qboolean arb_texture_rectangle;
