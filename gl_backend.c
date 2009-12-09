@@ -1755,58 +1755,78 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	CHECKGLERROR
-	if (!combinergb)
-		combinergb = GL_MODULATE;
-	if (!combinealpha)
-		combinealpha = GL_MODULATE;
-	if (!rgbscale)
-		rgbscale = 1;
-	if (!alphascale)
-		alphascale = 1;
-	if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1 || combinergb == GL_DOT3_RGBA_ARB || combinergb == GL_DOT3_RGB_ARB)
+	switch(vid.renderpath)
 	{
-		if (combinergb == GL_DECAL)
-			combinergb = GL_INTERPOLATE_ARB;
-		if (unit->combine != GL_COMBINE_ARB)
+	case RENDERPATH_GL20:
+		// do nothing
+		break;
+	case RENDERPATH_GL13:
+		// GL_ARB_texture_env_combine
+		if (!combinergb)
+			combinergb = GL_MODULATE;
+		if (!combinealpha)
+			combinealpha = GL_MODULATE;
+		if (!rgbscale)
+			rgbscale = 1;
+		if (!alphascale)
+			alphascale = 1;
+		if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1 || combinergb == GL_DOT3_RGBA_ARB || combinergb == GL_DOT3_RGB_ARB)
 		{
-			unit->combine = GL_COMBINE_ARB;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
-			qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
+			if (combinergb == GL_DECAL)
+				combinergb = GL_INTERPOLATE_ARB;
+			if (unit->combine != GL_COMBINE_ARB)
+			{
+				unit->combine = GL_COMBINE_ARB;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
+			}
+			if (unit->combinergb != combinergb)
+			{
+				unit->combinergb = combinergb;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+			}
+			if (unit->combinealpha != combinealpha)
+			{
+				unit->combinealpha = combinealpha;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
+			}
+			if (unit->rgbscale != rgbscale)
+			{
+				unit->rgbscale = rgbscale;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, unit->rgbscale);CHECKGLERROR
+			}
+			if (unit->alphascale != alphascale)
+			{
+				unit->alphascale = alphascale;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, unit->alphascale);CHECKGLERROR
+			}
 		}
-		if (unit->combinergb != combinergb)
+		else
 		{
-			unit->combinergb = combinergb;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+			if (unit->combine != combinergb)
+			{
+				unit->combine = combinergb;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
+			}
 		}
-		if (unit->combinealpha != combinealpha)
-		{
-			unit->combinealpha = combinealpha;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
-		}
-		if (unit->rgbscale != rgbscale)
-		{
-			unit->rgbscale = rgbscale;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, unit->rgbscale);CHECKGLERROR
-		}
-		if (unit->alphascale != alphascale)
-		{
-			unit->alphascale = alphascale;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, unit->alphascale);CHECKGLERROR
-		}
-	}
-	else
-	{
+		break;
+	case RENDERPATH_GL11:
+		// normal GL texenv
+		if (!combinergb)
+			combinergb = GL_MODULATE;
 		if (unit->combine != combinergb)
 		{
 			unit->combine = combinergb;
 			GL_ActiveTexture(unitnum);
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 		}
+		break;
 	}
 }
 
@@ -1841,84 +1861,118 @@ void R_Mesh_ResetTextureState(void)
 	BACKENDACTIVECHECK
 
 	CHECKGLERROR
-	for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
+	switch(vid.renderpath)
 	{
-		gltextureunit_t *unit = gl_state.units + unitnum;
-		// update 2d texture binding
-		if (unit->t2d)
+	case RENDERPATH_GL20:
+		for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
 		{
-			GL_ActiveTexture(unitnum);
-			if (unitnum < vid.texunits)
+			gltextureunit_t *unit = gl_state.units + unitnum;
+			if (unit->t2d)
 			{
+				unit->t2d = 0;
+				GL_ActiveTexture(unitnum);
+				qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
+			}
+			if (unit->t3d)
+			{
+				unit->t3d = 0;
+				GL_ActiveTexture(unitnum);
+				qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
+			}
+			if (unit->tcubemap)
+			{
+				unit->tcubemap = 0;
+				GL_ActiveTexture(unitnum);
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
+			}
+			if (unit->trectangle)
+			{
+				unit->trectangle = 0;
+				GL_ActiveTexture(unitnum);
+				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
+			}
+		}
+		for (unitnum = 0;unitnum < vid.texarrayunits;unitnum++)
+		{
+			gltextureunit_t *unit = gl_state.units + unitnum;
+			if (unit->arrayenabled)
+			{
+				unit->arrayenabled = false;
+				GL_ClientActiveTexture(unitnum);
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+		}
+		for (unitnum = 0;unitnum < vid.texunits;unitnum++)
+		{
+			gltextureunit_t *unit = gl_state.units + unitnum;
+			if (unit->texmatrixenabled)
+			{
+				unit->texmatrixenabled = false;
+				unit->matrix = identitymatrix;
+				CHECKGLERROR
+				GL_ActiveTexture(unitnum);
+				qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+				qglLoadIdentity();CHECKGLERROR
+				qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			}
+		}
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		for (unitnum = 0;unitnum < vid.texunits;unitnum++)
+		{
+			gltextureunit_t *unit = gl_state.units + unitnum;
+			if (unit->t2d)
+			{
+				unit->t2d = 0;
+				GL_ActiveTexture(unitnum);
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 			}
-			unit->t2d = 0;
-			qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
-		}
-		// update 3d texture binding
-		if (unit->t3d)
-		{
-			GL_ActiveTexture(unitnum);
-			if (unitnum < vid.texunits)
+			if (unit->t3d)
 			{
+				unit->t3d = 0;
+				GL_ActiveTexture(unitnum);
 				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 			}
-			unit->t3d = 0;
-			qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
-		}
-		// update cubemap texture binding
-		if (unit->tcubemap)
-		{
-			GL_ActiveTexture(unitnum);
-			if (unitnum < vid.texunits)
+			if (unit->tcubemap)
 			{
+				unit->tcubemap = 0;
+				GL_ActiveTexture(unitnum);
 				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 			}
-			unit->tcubemap = 0;
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
-		}
-		// update rectangle texture binding
-		if (unit->trectangle)
-		{
-			GL_ActiveTexture(unitnum);
-			if (unitnum < vid.texunits)
+			if (unit->trectangle)
 			{
+				unit->trectangle = 0;
+				GL_ActiveTexture(unitnum);
 				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
 			}
-			unit->trectangle = 0;
-			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
+			if (unit->arrayenabled)
+			{
+				unit->arrayenabled = false;
+				GL_ClientActiveTexture(unitnum);
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+			if (unit->texmatrixenabled)
+			{
+				unit->texmatrixenabled = false;
+				unit->matrix = identitymatrix;
+				CHECKGLERROR
+				GL_ActiveTexture(unitnum);
+				qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+				qglLoadIdentity();CHECKGLERROR
+				qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			}
+			if (unit->combine != GL_MODULATE)
+			{
+				unit->combine = GL_MODULATE;
+				GL_ActiveTexture(unitnum);
+				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
+			}
 		}
-	}
-	for (unitnum = 0;unitnum < vid.texarrayunits;unitnum++)
-	{
-		gltextureunit_t *unit = gl_state.units + unitnum;
-		// texture array unit is disabled, disable the array
-		if (unit->arrayenabled)
-		{
-			unit->arrayenabled = false;
-			GL_ClientActiveTexture(unitnum);
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-		}
-	}
-	for (unitnum = 0;unitnum < vid.texunits;unitnum++)
-	{
-		gltextureunit_t *unit = gl_state.units + unitnum;
-		// no texmatrix specified, revert to identity
-		if (unit->texmatrixenabled)
-		{
-			unit->texmatrixenabled = false;
-			unit->matrix = identitymatrix;
-			CHECKGLERROR
-			GL_ActiveTexture(unitnum);
-			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			qglLoadIdentity();CHECKGLERROR
-			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-		}
-		if (unit->combine != GL_MODULATE)
-		{
-			unit->combine = GL_MODULATE;
-			GL_ActiveTexture(unitnum);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
-		}
+		break;
 	}
 }

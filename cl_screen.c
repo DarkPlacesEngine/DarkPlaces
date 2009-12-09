@@ -2071,16 +2071,6 @@ void CL_UpdateScreen(void)
 	if (scr_fov.value > 170)
 		Cvar_Set ("fov","170");
 
-	// validate r_textureunits cvar
-	if (r_textureunits.integer > (int)vid.texunits)
-		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
-	if (r_textureunits.integer < 1)
-		Cvar_SetValueQuick(&r_textureunits, 1);
-
-	// validate gl_combine cvar
-	if (gl_combine.integer && !vid.support.arb_texture_env_combine)
-		Cvar_SetValueQuick(&gl_combine, 0);
-
 	// intermission is always full screen
 	if (cl.intermission)
 		sb_lines = 0;

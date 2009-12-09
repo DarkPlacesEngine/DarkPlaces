@@ -797,6 +797,7 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
 	vid.support.arb_texture_cube_map = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
+	vid.support.arb_texture_env_dot3 = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 	vid.support.arb_texture_rectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false);
@@ -821,6 +822,7 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 // COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 // COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
+// COMMANDLINEOPTION: GL: -nodot3 disables use of GL_ARB_texture_env_dot3
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
 // COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
 // COMMANDLINEOPTION: GL: -nofbo disables GL_EXT_framebuffer_object (which accelerates rendering), only used if GL_ARB_fragment_shader is also available
@@ -882,7 +884,9 @@ void VID_CheckExtensions(void)
 	}
 
 	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
-	if (vid.support.arb_fragment_shader && vid_gl20.integer)
+	if (vid.support.arb_multitexture)
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+	if (vid_gl20.integer && vid.support.arb_fragment_shader && vid.support.arb_vertex_shader && vid.support.arb_shader_objects)
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
 		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&vid.teximageunits);CHECKGLERROR
@@ -904,8 +908,6 @@ void VID_CheckExtensions(void)
 	}
 	else
 	{
-		if (vid.support.arb_multitexture)
-			qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
 		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
 		vid.teximageunits = vid.texunits;
 		vid.texarrayunits = vid.texunits;
@@ -999,8 +1001,16 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		return;
 
 	wantgamma = v_hwgamma.integer;
-	if(r_glsl.integer && v_glslgamma.integer)
-		wantgamma = 0;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		if (v_glslgamma.integer)
+			wantgamma = 0;
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
+	}
 	if(!vid_activewindow)
 		wantgamma = 0;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
