@@ -2958,8 +2958,8 @@ void gl_main_start(void)
 		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
 		Cvar_SetValueQuick(&gl_combine, 1);
 		Cvar_SetValueQuick(&r_glsl, 0);
-		r_loadnormalmap = true;
-		r_loadgloss = true;
+		r_loadnormalmap = false;
+		r_loadgloss = false;
 		r_loadfog = true;
 		break;
 	case RENDERPATH_GL11:

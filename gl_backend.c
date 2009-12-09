@@ -1770,7 +1770,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 			rgbscale = 1;
 		if (!alphascale)
 			alphascale = 1;
-		if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1 || combinergb == GL_DOT3_RGBA_ARB || combinergb == GL_DOT3_RGB_ARB)
+		if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1)
 		{
 			if (combinergb == GL_DECAL)
 				combinergb = GL_INTERPOLATE_ARB;
