@@ -64,7 +64,6 @@ typedef struct viddef_support_s
 	qboolean ext_texture_3d;
 	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
-	qboolean nv_blend_square;
 }
 viddef_support_t;
 

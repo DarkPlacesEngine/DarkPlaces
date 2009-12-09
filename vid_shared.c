@@ -812,10 +812,8 @@ void VID_CheckExtensions(void)
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
 	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
-	vid.support.nv_blend_square = GL_CheckExtension("GL_NV_blend_square", NULL, "-noblendsquare", false);
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
 // COMMANDLINEOPTION: GL: -noblendminmax disables GL_EXT_blend_minmax
-// COMMANDLINEOPTION: GL: -noblendsquare disables GL_NV_blend_square
 // COMMANDLINEOPTION: GL: -noblendsubtract disables GL_EXT_blend_subtract
 // COMMANDLINEOPTION: GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
