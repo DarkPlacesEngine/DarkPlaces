@@ -305,7 +305,7 @@ cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_SAVE, "r_shadow_shadowmappin
 cvar_t r_shadow_culltriangles = {0, "r_shadow_culltriangles", "1", "performs more expensive tests to remove unnecessary triangles of lit surfaces"};
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
-cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect r_glsl lighting)"};
+cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksm the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "1", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility)"};
@@ -379,61 +379,70 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
-	if(r_shadow_shadowmapping.integer && r_glsl.integer && vid.support.arb_fragment_shader && vid.support.ext_framebuffer_object)
+	switch(vid.renderpath)
 	{
-		if(r_shadow_shadowmapfilterquality < 0)
+	case RENDERPATH_GL20:
+		if(r_shadow_shadowmapping.integer && vid.support.ext_framebuffer_object)
 		{
-			if(strstr(gl_vendor, "NVIDIA")) 
+			if(r_shadow_shadowmapfilterquality < 0)
 			{
-				r_shadow_shadowmapsampler = vid.support.arb_shadow;
-				r_shadow_shadowmappcf = 1;
+				if(strstr(gl_vendor, "NVIDIA")) 
+				{
+					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmappcf = 1;
+				}
+				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) 
+					r_shadow_shadowmappcf = 1;
+				else if(strstr(gl_vendor, "ATI")) 
+					r_shadow_shadowmappcf = 1;
+				else 
+					r_shadow_shadowmapsampler = vid.support.arb_shadow;
 			}
-			else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) 
-				r_shadow_shadowmappcf = 1;
-			else if(strstr(gl_vendor, "ATI")) 
-				r_shadow_shadowmappcf = 1;
 			else 
-				r_shadow_shadowmapsampler = vid.support.arb_shadow;
-		}
-		else 
-		{
-			switch (r_shadow_shadowmapfilterquality)
 			{
+				switch (r_shadow_shadowmapfilterquality)
+				{
+				case 1:
+					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					break;
+				case 2:
+					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmappcf = 1;
+					break;
+				case 3:
+					r_shadow_shadowmappcf = 1;
+					break;
+				case 4:
+					r_shadow_shadowmappcf = 2;
+					break;
+				}
+			}
+			switch (r_shadow_shadowmaptexturetype)
+			{
+			case 0:
+				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
+				break;
 			case 1:
-				r_shadow_shadowmapsampler = vid.support.arb_shadow;
+				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
 				break;
 			case 2:
-				r_shadow_shadowmapsampler = vid.support.arb_shadow;
-				r_shadow_shadowmappcf = 1;
+				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
 				break;
-			case 3:
-				r_shadow_shadowmappcf = 1;
-				break;
-			case 4:
-				r_shadow_shadowmappcf = 2;
+			default:
+				if((vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
+					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
+				else if(vid.support.arb_texture_rectangle) 
+					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
+				else
+					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 				break;
 			}
 		}
-		switch (r_shadow_shadowmaptexturetype)
-		{
-		case 0:
-			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			break;
-		case 1:
-			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
-			break;
-		case 2:
-			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
-			break;
-		default:
-			if((vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			else if(vid.support.arb_texture_rectangle) 
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
-			else
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			break;
-		}
+		break;
+	case RENDERPATH_GL13:
+		break;
+	case RENDERPATH_GL11:
+		break;
 	}
 }
 
@@ -1865,12 +1874,21 @@ void R_Shadow_RenderMode_Begin(void)
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
 	}
 
-	if (r_glsl.integer && vid.support.arb_fragment_shader)
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
-	else if (vid.support.arb_texture_env_dot3 && vid.support.arb_texture_cube_map && r_shadow_dot3.integer && vid.stencil)
-		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
-	else
+		break;
+	case RENDERPATH_GL13:
+		if (vid.support.arb_texture_env_dot3 && vid.support.arb_texture_cube_map && r_shadow_dot3.integer && vid.stencil)
+			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_DOT3;
+		else
+			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
+		break;
+	case RENDERPATH_GL11:
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
+		break;
+	}
 
 	CHECKGLERROR
 #if 0
@@ -2683,7 +2701,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 	//
 	// Limit mult to 64 for sanity sake.
 	GL_Color(1,1,1,1);
-	if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap != r_texture_whitecube && r_textureunits.integer >= 4)
+	if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap != r_texture_whitecube && r_textureunits.integer >= 4 && vid.texunits >= 4)
 	{
 		// 3 3D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -2704,7 +2722,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.texmatrix[2] = rsurface.entitytolight;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap == r_texture_whitecube && r_textureunits.integer >= 2)
+	else if (r_shadow_texture3d.integer && rsurface.rtlight->currentcubemap == r_texture_whitecube && r_textureunits.integer >= 2 && vid.texunits >= 2)
 	{
 		// 2 3D combine path (Geforce3, original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -2720,7 +2738,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		m.texmatrix[1] = rsurface.texture->currenttexmatrix;
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_textureunits.integer >= 4 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
+	else if (r_textureunits.integer >= 4 && vid.texunits >= 4 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 4 2D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -2749,7 +2767,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_AmbientPass(int firstvertex, int 
 		}
 		GL_BlendFunc(GL_ONE, GL_ONE);
 	}
-	else if (r_textureunits.integer >= 3 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
+	else if (r_textureunits.integer >= 3 && vid.texunits >= 3 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
 	{
 		// 3 2D combine path (Geforce3, original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -2824,7 +2842,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 	GL_Color(1,1,1,1);
 	// generate normalization cubemap texcoords
 	R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(firstvertex, numvertices, numtriangles, element3i);
-	if (r_shadow_texture3d.integer && r_textureunits.integer >= 4)
+	if (r_shadow_texture3d.integer && r_textureunits.integer >= 4 && vid.texunits >= 4)
 	{
 		// 3/2 3D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -2866,7 +2884,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && vid.texunits >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 1/2/2 3D combine path (original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -2914,7 +2932,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && vid.texunits >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube)
 	{
 		// 2/2 3D combine path (original Radeon)
 		memset(&m, 0, sizeof(m));
@@ -2948,7 +2966,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_DiffusePass(int firstvertex, int 
 		m.texmatrix[1] = rsurface.entitytoattenuationxyz;
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_textureunits.integer >= 4)
+	else if (r_textureunits.integer >= 4 && vid.texunits >= 4)
 	{
 		// 4/2 2D combine path (Geforce3, Radeon 8500)
 		memset(&m, 0, sizeof(m));
@@ -3063,7 +3081,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 	GL_Color(1,1,1,1);
 	// generate normalization cubemap texcoords
 	R_Shadow_GenTexCoords_Specular_NormalCubeMap(firstvertex, numvertices, numtriangles, element3i);
-	if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
+	if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && vid.texunits >= 2 && rsurface.rtlight->currentcubemap != r_texture_whitecube)
 	{
 		// 2/0/0/1/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));
@@ -3118,7 +3136,7 @@ static void R_Shadow_RenderLighting_Light_Dot3_SpecularPass(int firstvertex, int
 		}
 		GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube /* && gl_support_blendsquare*/) // FIXME: detect blendsquare!
+	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && vid.texunits >= 2 && rsurface.rtlight->currentcubemap == r_texture_whitecube /* && gl_support_blendsquare*/) // FIXME: detect blendsquare!
 	{
 		// 2/0/0/2 3D combine blendsquare path
 		memset(&m, 0, sizeof(m));

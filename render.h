@@ -167,8 +167,6 @@ extern cvar_t r_renderview;
 extern cvar_t r_waterwarp;
 
 extern cvar_t r_textureunits;
-extern cvar_t gl_combine;
-extern cvar_t r_glsl;
 
 extern cvar_t r_glsl_offsetmapping;
 extern cvar_t r_glsl_offsetmapping_reliefmapping;

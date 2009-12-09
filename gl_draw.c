@@ -1339,49 +1339,58 @@ static float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 1000
 void R_DrawGamma(void)
 {
 	float c[4];
-	if (!vid_usinghwgamma && !(r_glsl.integer && v_glslgamma.integer))
+	switch(vid.renderpath)
 	{
-		// all the blends ignore depth
-		R_Mesh_VertexPointer(blendvertex3f, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
-		GL_DepthMask(true);
-		GL_DepthRange(0, 1);
-		GL_PolygonOffset(0, 0);
-		GL_DepthTest(false);
-		if (v_color_enable.integer)
+	case RENDERPATH_GL20:
+		if (vid_usinghwgamma || v_glslgamma.integer)
+			return;
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		if (vid_usinghwgamma)
+			return;
+		break;
+	}
+	// all the blends ignore depth
+	R_Mesh_VertexPointer(blendvertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
+	R_Mesh_ResetTextureState();
+	R_SetupGenericShader(false);
+	GL_DepthMask(true);
+	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
+	GL_DepthTest(false);
+	if (v_color_enable.integer)
+	{
+		c[0] = v_color_white_r.value;
+		c[1] = v_color_white_g.value;
+		c[2] = v_color_white_b.value;
+	}
+	else
+		c[0] = c[1] = c[2] = v_contrast.value;
+	if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
+	{
+		GL_BlendFunc(GL_DST_COLOR, GL_ONE);
+		while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
-			c[0] = v_color_white_r.value;
-			c[1] = v_color_white_g.value;
-			c[2] = v_color_white_b.value;
-		}
-		else
-			c[0] = c[1] = c[2] = v_contrast.value;
-		if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
-		{
-			GL_BlendFunc(GL_DST_COLOR, GL_ONE);
-			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
-			{
-				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-				R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
-				VectorScale(c, 0.5, c);
-			}
-		}
-		if (v_color_enable.integer)
-		{
-			c[0] = v_color_black_r.value;
-			c[1] = v_color_black_g.value;
-			c[2] = v_color_black_b.value;
-		}
-		else
-			c[0] = c[1] = c[2] = v_brightness.value;
-		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
-		{
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_Color(c[0], c[1], c[2], 1);
+			GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
 			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
+			VectorScale(c, 0.5, c);
 		}
+	}
+	if (v_color_enable.integer)
+	{
+		c[0] = v_color_black_r.value;
+		c[1] = v_color_black_g.value;
+		c[2] = v_color_black_b.value;
+	}
+	else
+		c[0] = c[1] = c[2] = v_brightness.value;
+	if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
+	{
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_Color(c[0], c[1], c[2], 1);
+		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
 	}
 }
 

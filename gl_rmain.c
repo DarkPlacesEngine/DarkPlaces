@@ -108,8 +108,8 @@ cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra c
 cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
 
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
-cvar_t gl_combine = {0, "gl_combine", "1", "enables the OpenGL 1.3 rendering path"};
-cvar_t r_glsl = {CVAR_SAVE, "r_glsl", "1", "enables the OpenGL 2.0 rendering path"};
+static cvar_t gl_combine = {CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
+static cvar_t r_glsl = {CVAR_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
 
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
@@ -2041,59 +2041,56 @@ void R_SetupShader_SetPermutation(unsigned int mode, unsigned int permutation)
 
 void R_SetupGenericShader(qboolean usetexture)
 {
-	if (vid.support.arb_fragment_shader)
+	switch(vid.renderpath)
 	{
-		if (r_glsl.integer)
-			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, usetexture ? SHADERPERMUTATION_DIFFUSE : 0);
-		else if (r_glsl_permutation)
-		{
-			r_glsl_permutation = NULL;
-			qglUseProgramObjectARB(0);CHECKGLERROR
-		}
+	case RENDERPATH_GL20:
+		R_SetupShader_SetPermutation(SHADERMODE_GENERIC, usetexture ? SHADERPERMUTATION_DIFFUSE : 0);
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
 	}
 }
 
 void R_SetupGenericTwoTextureShader(int texturemode)
 {
-	if (vid.support.arb_fragment_shader)
+	switch (vid.renderpath)
 	{
-		if (r_glsl.integer)
-			R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
-		else if (r_glsl_permutation)
-		{
-			r_glsl_permutation = NULL;
-			qglUseProgramObjectARB(0);CHECKGLERROR
-		}
-	}
-	if (!r_glsl_permutation)
+	case RENDERPATH_GL20:
+		R_SetupShader_SetPermutation(SHADERMODE_GENERIC, SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
 		R_Mesh_TexCombine(1, GL_DECAL, GL_DECAL, 1, 1);
+		break;
+	}
 }
 
 void R_SetupDepthOrShadowShader(void)
 {
-	if (vid.support.arb_fragment_shader)
+	switch (vid.renderpath)
 	{
-		if (r_glsl.integer)
-			R_SetupShader_SetPermutation(SHADERMODE_DEPTH_OR_SHADOW, 0);
-		else if (r_glsl_permutation)
-		{
-			r_glsl_permutation = NULL;
-			qglUseProgramObjectARB(0);CHECKGLERROR
-		}
+	case RENDERPATH_GL20:
+		R_SetupShader_SetPermutation(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		break;
+	case RENDERPATH_GL13:
+		break;
+	case RENDERPATH_GL11:
+		break;
 	}
 }
 
 void R_SetupShowDepthShader(void)
 {
-	if (vid.support.arb_fragment_shader)
+	switch (vid.renderpath)
 	{
-		if (r_glsl.integer)
-			R_SetupShader_SetPermutation(SHADERMODE_SHOWDEPTH, 0);
-		else if (r_glsl_permutation)
-		{
-			r_glsl_permutation = NULL;
-			qglUseProgramObjectARB(0);CHECKGLERROR
-		}
+	case RENDERPATH_GL20:
+		R_SetupShader_SetPermutation(SHADERMODE_SHOWDEPTH, 0);
+		break;
+	case RENDERPATH_GL13:
+		break;
+	case RENDERPATH_GL11:
+		break;
 	}
 }
 
@@ -2947,8 +2944,33 @@ void R_Main_ResizeViewCache(void)
 
 void gl_main_start(void)
 {
-	r_loadnormalmap = r_loadgloss = vid.support.arb_texture_env_dot3 || vid.support.arb_fragment_shader;
-	r_loadfog = true;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
+		Cvar_SetValueQuick(&gl_combine, 1);
+		Cvar_SetValueQuick(&r_glsl, 1);
+		r_loadnormalmap = true;
+		r_loadgloss = true;
+		r_loadfog = false;
+		break;
+	case RENDERPATH_GL13:
+		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
+		Cvar_SetValueQuick(&gl_combine, 1);
+		Cvar_SetValueQuick(&r_glsl, 0);
+		r_loadnormalmap = true;
+		r_loadgloss = true;
+		r_loadfog = true;
+		break;
+	case RENDERPATH_GL11:
+		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
+		Cvar_SetValueQuick(&gl_combine, 0);
+		Cvar_SetValueQuick(&r_glsl, 0);
+		r_loadnormalmap = false;
+		r_loadgloss = false;
+		r_loadfog = true;
+		break;
+	}
 
 	r_numqueries = 0;
 	r_maxqueries = 0;
@@ -3458,14 +3480,21 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 void R_AnimCache_CacheVisibleEntities(void)
 {
 	int i;
-	qboolean wantnormals;
-	qboolean wanttangents;
+	qboolean wantnormals = !r_showsurfaces.integer;
+	qboolean wanttangents = !r_showsurfaces.integer;
 
 	if (!r_animcachestate.maxindex)
 		return;
 
-	wantnormals = !r_showsurfaces.integer;
-	wanttangents = !r_showsurfaces.integer && (r_glsl.integer || r_refdef.scene.rtworld || r_refdef.scene.rtdlight);
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		wanttangents = false;
+		break;
+	}
 
 	// TODO: thread this?
 
@@ -4013,6 +4042,18 @@ static void R_Water_StartFrame(void)
 	int waterwidth, waterheight, texturewidth, textureheight;
 	r_waterstate_waterplane_t *p;
 
+	if (vid.width > (int)vid.maxtexturesize_2d || vid.height > (int)vid.maxtexturesize_2d)
+		return;
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		return;
+	}
+
 	// set waterwidth and waterheight to the water resolution that will be
 	// used (often less than the screen resolution for faster rendering)
 	waterwidth = (int)bound(1, vid.width * r_water_resolutionmultiplier.value, vid.width);
@@ -4020,7 +4061,7 @@ static void R_Water_StartFrame(void)
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
-	if (!r_water.integer || !r_glsl.integer || !vid.support.arb_fragment_shader || waterwidth > (int)vid.maxtexturesize_2d || waterheight > (int)vid.maxtexturesize_2d || r_showsurfaces.integer)
+	if (!r_water.integer || r_showsurfaces.integer)
 		texturewidth = textureheight = waterwidth = waterheight = 0;
 	else if (vid.support.arb_texture_non_power_of_two)
 	{
@@ -4246,6 +4287,15 @@ void R_Bloom_StartFrame(void)
 {
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
 
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		return;
+	}
+
 	// set bloomwidth and bloomheight to the bloom resolution that will be
 	// used (often less than the screen resolution for faster rendering)
 	r_bloomstate.bloomwidth = bound(1, r_bloom_resolution.integer, vid.height);
@@ -4278,7 +4328,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl.integer && (r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
+	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -4548,71 +4598,76 @@ void R_HDR_RenderBloomTexture(void)
 
 static void R_BlendView(void)
 {
-	if (r_bloomstate.texture_screen)
+	unsigned int permutation;
+
+	switch (vid.renderpath)
 	{
-		// make sure the buffer is available
-		if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
-
-		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-		GL_ActiveTexture(0);CHECKGLERROR
-
-		if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
-		{  
-			// declare variables
-			float speed;
-			static float avgspeed;
-
-			speed = VectorLength(cl.movement_velocity);
-
-			cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
-			avgspeed = avgspeed * (1 - cl.motionbluralpha) + speed * cl.motionbluralpha;
-
-			speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
-			speed = bound(0, speed, 1);
-			speed = speed * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
-
-			// calculate values into a standard alpha
-			cl.motionbluralpha = 1 - exp(-
-					(
-					 (r_motionblur.value * speed / 80)
-					 +
-					 (r_damageblur.value * (cl.cshifts[CSHIFT_DAMAGE].percent / 1600))
-					)
-					/
-					max(0.0001, cl.time - cl.oldtime) // fps independent
-				   );
-
-			cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
-			cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
-			// apply the blur
-			if (cl.motionbluralpha > 0)
-			{
-				R_SetupGenericShader(true);
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				GL_Color(1, 1, 1, cl.motionbluralpha);
-				R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-				R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
-				R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-				r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-			}
-		}
-
-		// copy view into the screen texture
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);CHECKGLERROR
-		r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-	}
-
-	if (r_glsl.integer && vid.support.arb_fragment_shader && (r_bloomstate.texture_screen || r_bloomstate.texture_bloom))
-	{
-		unsigned int permutation =
+	case RENDERPATH_GL20:
+		permutation =
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
 			| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
+
+		if (r_bloomstate.texture_screen)
+		{
+			// make sure the buffer is available
+			if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
+
+			R_ResetViewRendering2D();
+			R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+			R_Mesh_ColorPointer(NULL, 0, 0);
+			R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+			GL_ActiveTexture(0);CHECKGLERROR
+
+			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
+			{
+				// declare variables
+				float speed;
+				static float avgspeed;
+
+				speed = VectorLength(cl.movement_velocity);
+
+				cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
+				avgspeed = avgspeed * (1 - cl.motionbluralpha) + speed * cl.motionbluralpha;
+
+				speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
+				speed = bound(0, speed, 1);
+				speed = speed * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
+
+				// calculate values into a standard alpha
+				cl.motionbluralpha = 1 - exp(-
+						(
+						 (r_motionblur.value * speed / 80)
+						 +
+						 (r_damageblur.value * (cl.cshifts[CSHIFT_DAMAGE].percent / 1600))
+						)
+						/
+						max(0.0001, cl.time - cl.oldtime) // fps independent
+					   );
+
+				cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
+				cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
+				// apply the blur
+				if (cl.motionbluralpha > 0)
+				{
+					R_SetupGenericShader(true);
+					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					GL_Color(1, 1, 1, cl.motionbluralpha);
+					R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
+					R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
+					R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+					r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+				}
+			}
+
+			// copy view into the screen texture
+			qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);CHECKGLERROR
+			r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+		}
+		else if (!r_bloomstate.texture_bloom)
+			break; // no screen processing, no bloom, skip it
 
 		if (r_bloomstate.texture_bloom && !r_bloomstate.hdr)
 		{
@@ -4672,73 +4727,21 @@ static void R_BlendView(void)
 			qglUniform1fARB(r_glsl_permutation->loc_Saturation, r_glsl_saturation.value);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-		return;
-	}
-
-
-
-	if (r_bloomstate.texture_bloom && r_bloomstate.hdr)
-	{
-		// render high dynamic range bloom effect
-		// the bloom texture was made earlier this render, so we just need to
-		// blend it onto the screen...
-		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_SetupGenericShader(true);
-		GL_Color(1, 1, 1, 1);
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-	}
-	else if (r_bloomstate.texture_bloom)
-	{
-		// render simple bloom effect
-		// copy the screen and shrink it and darken it for the bloom process
-		R_Bloom_CopyBloomTexture(r_bloom_colorscale.value);
-		// make the bloom texture
-		R_Bloom_MakeTexture();
-		// put the original screen image back in place and blend the bloom
-		// texture on it
-		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		GL_Color(1, 1, 1, 1);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		// do both in one pass if possible
-		R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_bloom));
-		R_Mesh_TexCoordPointer(0, 2, r_bloomstate.bloomtexcoord2f, 0, 0);
-		if (r_textureunits.integer >= 2 && gl_combine.integer)
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 		{
-			R_SetupGenericTwoTextureShader(GL_ADD);
-			R_Mesh_TexBind(1, R_GetTexture(r_bloomstate.texture_screen));
-			R_Mesh_TexCoordPointer(1, 2, r_bloomstate.screentexcoord2f, 0, 0);
-		}
-		else
-		{
-			R_SetupGenericShader(true);
+			// apply a color tint to the whole view
+			R_ResetViewRendering2D();
+			R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
+			R_Mesh_ColorPointer(NULL, 0, 0);
+			R_SetupGenericShader(false);
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-			r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-			// now blend on the bloom texture
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			R_Mesh_TexBind(0, R_GetTexture(r_bloomstate.texture_screen));
-			R_Mesh_TexCoordPointer(0, 2, r_bloomstate.screentexcoord2f, 0, 0);
 		}
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
-		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-	}
-	if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
-	{
-		// apply a color tint to the whole view
-		R_ResetViewRendering2D();
-		R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-		R_SetupGenericShader(false);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+		break;
 	}
 }
 
@@ -4858,39 +4861,47 @@ void R_UpdateVariables(void)
 	else
 		r_refdef.fogenabled = false;
 
-	if(r_glsl.integer && v_glslgamma.integer && !vid_gammatables_trivial)
+	switch(vid.renderpath)
 	{
-		if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
+	case RENDERPATH_GL20:
+		if(v_glslgamma.integer && !vid_gammatables_trivial)
 		{
-			// build GLSL gamma texture
+			if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
+			{
+				// build GLSL gamma texture
 #define RAMPWIDTH 256
-			unsigned short ramp[RAMPWIDTH * 3];
-			unsigned char rampbgr[RAMPWIDTH][4];
-			int i;
+				unsigned short ramp[RAMPWIDTH * 3];
+				unsigned char rampbgr[RAMPWIDTH][4];
+				int i;
 
-			r_texture_gammaramps_serial = vid_gammatables_serial;
+				r_texture_gammaramps_serial = vid_gammatables_serial;
 
-			VID_BuildGammaTables(&ramp[0], RAMPWIDTH);
-			for(i = 0; i < RAMPWIDTH; ++i)
-			{
-				rampbgr[i][0] = (unsigned char) (ramp[i + 2 * RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
-				rampbgr[i][1] = (unsigned char) (ramp[i + RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
-				rampbgr[i][2] = (unsigned char) (ramp[i] * 255.0 / 65535.0 + 0.5);
-				rampbgr[i][3] = 0;
-			}
-			if (r_texture_gammaramps)
-			{
-				R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, RAMPWIDTH, 1);
-			}
-			else
-			{
-				r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &rampbgr[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+				VID_BuildGammaTables(&ramp[0], RAMPWIDTH);
+				for(i = 0; i < RAMPWIDTH; ++i)
+				{
+					rampbgr[i][0] = (unsigned char) (ramp[i + 2 * RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
+					rampbgr[i][1] = (unsigned char) (ramp[i + RAMPWIDTH] * 255.0 / 65535.0 + 0.5);
+					rampbgr[i][2] = (unsigned char) (ramp[i] * 255.0 / 65535.0 + 0.5);
+					rampbgr[i][3] = 0;
+				}
+				if (r_texture_gammaramps)
+				{
+					R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, RAMPWIDTH, 1);
+				}
+				else
+				{
+					r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &rampbgr[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+				}
 			}
 		}
-	}
-	else
-	{
-		// remove GLSL gamma texture
+		else
+		{
+			// remove GLSL gamma texture
+		}
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
 	}
 }
 
@@ -7893,13 +7904,22 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
 	if (r_showsurfaces.integer == 3)
+	{
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (r_glsl.integer && vid.support.arb_fragment_shader)
+		return;
+	}
+	switch (vid.renderpath)
+	{
+	case RENDERPATH_GL20:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (gl_combine.integer && r_textureunits.integer >= 2)
+		break;
+	case RENDERPATH_GL13:
 		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
-	else
+		break;
+	case RENDERPATH_GL11:
 		R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist, writedepth);
+		break;
+	}
 	CHECKGLERROR
 }
 
@@ -7908,13 +7928,22 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
 	if (r_showsurfaces.integer == 3)
+	{
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (r_glsl.integer && vid.support.arb_fragment_shader)
+		return;
+	}
+	switch (vid.renderpath)
+	{
+	case RENDERPATH_GL20:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth);
-	else if (gl_combine.integer && r_textureunits.integer >= 2)
+		break;
+	case RENDERPATH_GL13:
 		R_DrawTextureSurfaceList_GL13(texturenumsurfaces, texturesurfacelist, writedepth);
-	else
+		break;
+	case RENDERPATH_GL11:
 		R_DrawTextureSurfaceList_GL11(texturenumsurfaces, texturesurfacelist, writedepth);
+		break;
+	}
 	CHECKGLERROR
 }
 
@@ -7934,7 +7963,18 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && vid.support.arb_fragment_shader);
+	{
+		switch (vid.renderpath)
+		{
+		case RENDERPATH_GL20:
+			RSurf_ActiveModelEntity(ent, true, true);
+			break;
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL11:
+			RSurf_ActiveModelEntity(ent, true, false);
+			break;
+		}
+	}
 
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -9104,7 +9144,18 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	else if (depthonly)
 		RSurf_ActiveModelEntity(ent, false, false);
 	else
-		RSurf_ActiveModelEntity(ent, true, r_glsl.integer && vid.support.arb_fragment_shader);
+	{
+		switch (vid.renderpath)
+		{
+		case RENDERPATH_GL20:
+			RSurf_ActiveModelEntity(ent, true, true);
+			break;
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL11:
+			RSurf_ActiveModelEntity(ent, true, false);
+			break;
+		}
+	}
 
 	surfaces = model->data_surfaces;
 	update = model->brushq1.lightmapupdateflags;
