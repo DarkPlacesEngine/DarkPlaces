@@ -1289,6 +1289,12 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zfail, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
 	}
+	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_VISIBLEVOLUMES)
+	{
+		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
+		R_Mesh_VertexPointer(shadowvertex3f, 0, 0);
+		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, 0);
+	}
 	else
 	{
 		// decide which type of shadow to generate and set stencil mode
@@ -2989,8 +2995,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	{
 		// this variable must be set for the CompileShadowVolume/CompileShadowMap code
 		r_shadow_compilingrtlight = rtlight;
-		R_Shadow_EnlargeLeafSurfaceTrisBuffer(model->brush.num_leafs, model->num_surfaces, model->brush.shadowmesh ? model->brush.shadowmesh->numtriangles : model->surfmesh.num_triangles, model->surfmesh.num_triangles);
-		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs);
+		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, 0, NULL);
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
 		numshadowtrispvsbytes = ((model->brush.shadowmesh ? model->brush.shadowmesh->numtriangles : model->surfmesh.num_triangles) + 7) >> 3;
 		numlighttrispvsbytes = (model->surfmesh.num_triangles + 7) >> 3;
@@ -3112,9 +3117,9 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	int i, j;
 	mplane_t plane;
 	// reset the count of frustum planes
-	// see rsurface.rtlight_frustumplanes definition for how much this array
+	// see rtlight->cached_frustumplanes definition for how much this array
 	// can hold
-	rsurface.rtlight_numfrustumplanes = 0;
+	rtlight->cached_numfrustumplanes = 0;
 
 	// haven't implemented a culling path for ortho rendering
 	if (!r_refdef.view.useperspective)
@@ -3125,7 +3130,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 				break;
 		if (i == 4)
 			for (i = 0;i < 4;i++)
-				rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_refdef.view.frustum[i];
+				rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = r_refdef.view.frustum[i];
 		return;
 	}
 
@@ -3147,11 +3152,11 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) < -0.03125)
 			continue;
 		// copy the plane
-		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = r_refdef.view.frustum[i];
+		rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = r_refdef.view.frustum[i];
 	}
 	// if all the standard frustum planes were accepted, the light is onscreen
 	// otherwise we need to generate some more planes below...
-	if (rsurface.rtlight_numfrustumplanes < 4)
+	if (rtlight->cached_numfrustumplanes < 4)
 	{
 		// at least one of the stock frustum planes failed, so we need to
 		// create one or two custom planes to enclose the light origin
@@ -3182,12 +3187,12 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 			// we have created a valid plane, compute extra info
 			PlaneClassify(&plane);
 			// copy the plane
-			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
+			rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = plane;
 #if 1
 			// if we've found 5 frustum planes then we have constructed a
 			// proper split-side case and do not need to keep searching for
 			// planes to enclose the light origin
-			if (rsurface.rtlight_numfrustumplanes == 5)
+			if (rtlight->cached_numfrustumplanes == 5)
 				break;
 #endif
 		}
@@ -3195,9 +3200,9 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 #endif
 
 #if 0
-	for (i = 0;i < rsurface.rtlight_numfrustumplanes;i++)
+	for (i = 0;i < rtlight->cached_numfrustumplanes;i++)
 	{
-		plane = rsurface.rtlight_frustumplanes[i];
+		plane = rtlight->cached_frustumplanes[i];
 		Con_Printf("light %p plane #%i %f %f %f : %f (%f %f %f %f %f)\n", rtlight, i, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist, PlaneDiff(r_refdef.view.frustumcorner[0], &plane), PlaneDiff(r_refdef.view.frustumcorner[1], &plane), PlaneDiff(r_refdef.view.frustumcorner[2], &plane), PlaneDiff(r_refdef.view.frustumcorner[3], &plane), PlaneDiff(rtlight->shadoworigin, &plane));
 	}
 #endif
@@ -3217,7 +3222,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 			VectorSubtract(plane.normal, rtlight->shadoworigin, plane.normal);
 			plane.dist = VectorNormalizeLength(plane.normal);
 			plane.dist += DotProduct(plane.normal, rtlight->shadoworigin);
-			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
+			rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = plane;
 		}
 	}
 #endif
@@ -3228,8 +3233,8 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	{
 		VectorClear(plane.normal);
 		plane.normal[i >> 1] = (i & 1) ? -1 : 1;
-		plane.dist = (i & 1) ? -rsurface.rtlight_cullmaxs[i >> 1] : rsurface.rtlight_cullmins[i >> 1];
-		rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = plane;
+		plane.dist = (i & 1) ? -rtlight->cached_cullmaxs[i >> 1] : rtlight->cached_cullmins[i >> 1];
+		rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = plane;
 	}
 #endif
 
@@ -3240,33 +3245,33 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	vec_t bestdist;
 	// reduce all plane distances to tightly fit the rtlight cull box, which
 	// is in worldspace
-	VectorSet(points[0], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmins[2]);
-	VectorSet(points[1], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmins[2]);
-	VectorSet(points[2], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmins[2]);
-	VectorSet(points[3], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmins[2]);
-	VectorSet(points[4], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmaxs[2]);
-	VectorSet(points[5], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmins[1], rsurface.rtlight_cullmaxs[2]);
-	VectorSet(points[6], rsurface.rtlight_cullmins[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmaxs[2]);
-	VectorSet(points[7], rsurface.rtlight_cullmaxs[0], rsurface.rtlight_cullmaxs[1], rsurface.rtlight_cullmaxs[2]);
-	oldnum = rsurface.rtlight_numfrustumplanes;
-	rsurface.rtlight_numfrustumplanes = 0;
+	VectorSet(points[0], rtlight->cached_cullmins[0], rtlight->cached_cullmins[1], rtlight->cached_cullmins[2]);
+	VectorSet(points[1], rtlight->cached_cullmaxs[0], rtlight->cached_cullmins[1], rtlight->cached_cullmins[2]);
+	VectorSet(points[2], rtlight->cached_cullmins[0], rtlight->cached_cullmaxs[1], rtlight->cached_cullmins[2]);
+	VectorSet(points[3], rtlight->cached_cullmaxs[0], rtlight->cached_cullmaxs[1], rtlight->cached_cullmins[2]);
+	VectorSet(points[4], rtlight->cached_cullmins[0], rtlight->cached_cullmins[1], rtlight->cached_cullmaxs[2]);
+	VectorSet(points[5], rtlight->cached_cullmaxs[0], rtlight->cached_cullmins[1], rtlight->cached_cullmaxs[2]);
+	VectorSet(points[6], rtlight->cached_cullmins[0], rtlight->cached_cullmaxs[1], rtlight->cached_cullmaxs[2]);
+	VectorSet(points[7], rtlight->cached_cullmaxs[0], rtlight->cached_cullmaxs[1], rtlight->cached_cullmaxs[2]);
+	oldnum = rtlight->cached_numfrustumplanes;
+	rtlight->cached_numfrustumplanes = 0;
 	for (j = 0;j < oldnum;j++)
 	{
 		// find the nearest point on the box to this plane
-		bestdist = DotProduct(rsurface.rtlight_frustumplanes[j].normal, points[0]);
+		bestdist = DotProduct(rtlight->cached_frustumplanes[j].normal, points[0]);
 		for (i = 1;i < 8;i++)
 		{
-			dist = DotProduct(rsurface.rtlight_frustumplanes[j].normal, points[i]);
+			dist = DotProduct(rtlight->cached_frustumplanes[j].normal, points[i]);
 			if (bestdist > dist)
 				bestdist = dist;
 		}
-		Con_Printf("light %p %splane #%i %f %f %f : %f < %f\n", rtlight, rsurface.rtlight_frustumplanes[j].dist < bestdist + 0.03125 ? "^2" : "^1", j, rsurface.rtlight_frustumplanes[j].normal[0], rsurface.rtlight_frustumplanes[j].normal[1], rsurface.rtlight_frustumplanes[j].normal[2], rsurface.rtlight_frustumplanes[j].dist, bestdist);
+		Con_Printf("light %p %splane #%i %f %f %f : %f < %f\n", rtlight, rtlight->cached_frustumplanes[j].dist < bestdist + 0.03125 ? "^2" : "^1", j, rtlight->cached_frustumplanes[j].normal[0], rtlight->cached_frustumplanes[j].normal[1], rtlight->cached_frustumplanes[j].normal[2], rtlight->cached_frustumplanes[j].dist, bestdist);
 		// if the nearest point is near or behind the plane, we want this
 		// plane, otherwise the plane is useless as it won't cull anything
-		if (rsurface.rtlight_frustumplanes[j].dist < bestdist + 0.03125)
+		if (rtlight->cached_frustumplanes[j].dist < bestdist + 0.03125)
 		{
-			PlaneClassify(&rsurface.rtlight_frustumplanes[j]);
-			rsurface.rtlight_frustumplanes[rsurface.rtlight_numfrustumplanes++] = rsurface.rtlight_frustumplanes[j];
+			PlaneClassify(&rtlight->cached_frustumplanes[j]);
+			rtlight->cached_frustumplanes[rtlight->cached_numfrustumplanes++] = rtlight->cached_frustumplanes[j];
 		}
 	}
 	}
@@ -3295,14 +3300,14 @@ void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist, const
         CHECKGLERROR
     }
 	else if (r_refdef.scene.worldentity->model)
-		r_refdef.scene.worldmodel->DrawShadowMap(r_shadow_shadowmapside, r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, surfacesides, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
+		r_refdef.scene.worldmodel->DrawShadowMap(r_shadow_shadowmapside, r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, surfacesides, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
 void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
-	qboolean zpass;
+	qboolean zpass = false;
 	shadowmesh_t *mesh;
 	int t, tend;
 	int surfacelistindex;
@@ -3313,8 +3318,11 @@ void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, co
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
 		CHECKGLERROR
-		zpass = R_Shadow_UseZPass(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
-		R_Shadow_RenderMode_StencilShadowVolumes(zpass);
+		if (r_shadow_rendermode != R_SHADOW_RENDERMODE_VISIBLEVOLUMES)
+		{
+			zpass = R_Shadow_UseZPass(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
+			R_Shadow_RenderMode_StencilShadowVolumes(zpass);
+		}
 		mesh = zpass ? rsurface.rtlight->static_meshchain_shadow_zpass : rsurface.rtlight->static_meshchain_shadow_zfail;
 		for (;mesh;mesh = mesh->next)
 		{
@@ -3359,7 +3367,7 @@ void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, co
 		R_Shadow_VolumeFromList(r_refdef.scene.worldmodel->brush.shadowmesh->numverts, r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles, r_refdef.scene.worldmodel->brush.shadowmesh->vertex3f, r_refdef.scene.worldmodel->brush.shadowmesh->element3i, r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.scene.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist, r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
 	}
 	else if (numsurfaces)
-		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs);
+		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
@@ -3444,7 +3452,7 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent)
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
+void R_CacheRTLight(rtlight_t *rtlight)
 {
 	int i;
 	float f;
@@ -3456,14 +3464,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	int numshadowentities;
 	int numshadowentities_noselfshadow;
 	static entity_render_t *lightentities[MAX_EDICTS];
+	static entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
 	static entity_render_t *shadowentities[MAX_EDICTS];
-	static unsigned char entitysides[MAX_EDICTS];
-	int lightentities_noselfshadow;
-	int shadowentities_noselfshadow;
-	vec3_t nearestpoint;
-	vec_t distance;
-	qboolean castshadows;
-	int lodlinear;
+	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
+
+	rtlight->draw = false;
 
 	// skip lights that don't light because of ambientscale+diffusescale+specularscale being 0 (corona only lights)
 	// skip lights that are basically invisible (color 0 0 0)
@@ -3503,8 +3508,10 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
 		return;
 
-	VectorCopy(rtlight->cullmins, rsurface.rtlight_cullmins);
-	VectorCopy(rtlight->cullmaxs, rsurface.rtlight_cullmaxs);
+	VectorCopy(rtlight->cullmins, rtlight->cached_cullmins);
+	VectorCopy(rtlight->cullmaxs, rtlight->cached_cullmaxs);
+
+	R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
 
 	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
@@ -3523,8 +3530,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	{
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
-		R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.scene.worldmodel->brush.num_leafs, r_refdef.scene.worldmodel->num_surfaces, r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, r_refdef.scene.worldmodel->surfmesh.num_triangles);
-		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs);
+		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rtlight->cached_cullmins, rtlight->cached_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes);
+		R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
@@ -3532,7 +3539,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		shadowtrispvs = r_shadow_buffer_shadowtrispvs;
 		lighttrispvs = r_shadow_buffer_lighttrispvs;
 		// if the reduced leaf bounds are offscreen, skip it
-		if (R_CullBox(rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
+		if (R_CullBox(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
 			return;
 	}
 	else
@@ -3556,19 +3563,12 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		if (i == numleafs)
 			return;
 	}
-	// set up a scissor rectangle for this light
-	if (R_Shadow_ScissorForBBox(rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
-		return;
-
-	R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
 
 	// make a list of lit entities and shadow casting entities
 	numlightentities = 0;
 	numlightentities_noselfshadow = 0;
-	lightentities_noselfshadow = sizeof(lightentities)/sizeof(lightentities[0]) - 1;
 	numshadowentities = 0;
 	numshadowentities_noselfshadow = 0;
-	shadowentities_noselfshadow = sizeof(shadowentities)/sizeof(shadowentities[0]) - 1;
 
 	// add dynamic entities that are lit by the light
 	if (r_drawentities.integer)
@@ -3578,11 +3578,11 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			dp_model_t *model;
 			entity_render_t *ent = r_refdef.scene.entities[i];
 			vec3_t org;
-			if (!BoxesOverlap(ent->mins, ent->maxs, rsurface.rtlight_cullmins, rsurface.rtlight_cullmaxs))
+			if (!BoxesOverlap(ent->mins, ent->maxs, rtlight->cached_cullmins, rtlight->cached_cullmaxs))
 				continue;
 			// skip the object entirely if it is not within the valid
 			// shadow-casting region (which includes the lit region)
-			if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
+			if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
 				continue;
 			if (!(model = ent->model))
 				continue;
@@ -3595,7 +3595,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS && !r_refdef.scene.worldmodel->brush.BoxTouchingLeafPVS(r_refdef.scene.worldmodel, leafpvs, ent->mins, ent->maxs))
 					continue;
 				if (ent->flags & RENDER_NOSELFSHADOW)
-					lightentities[lightentities_noselfshadow - numlightentities_noselfshadow++] = ent;
+					lightentities_noselfshadow[numlightentities_noselfshadow++] = ent;
 				else
 					lightentities[numlightentities++] = ent;
 				// since it is lit, it probably also casts a shadow...
@@ -3610,7 +3610,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 					// RENDER_NOSELFSHADOW entities such as the gun
 					// (very weird, but keeps the player shadow off the gun)
 					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
-						shadowentities[shadowentities_noselfshadow - numshadowentities_noselfshadow++] = ent;
+						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
 					else
 						shadowentities[numshadowentities++] = ent;
 				}
@@ -3628,7 +3628,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 				{
 					if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
-						shadowentities[shadowentities_noselfshadow - numshadowentities_noselfshadow++] = ent;
+						shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
 					else
 						shadowentities[numshadowentities++] = ent;
 				}
@@ -3640,14 +3640,98 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 	if (numsurfaces + numlightentities + numlightentities_noselfshadow == 0)
 		return;
 
+	// count this light in the r_speeds
+	r_refdef.stats.lights++;
+
+	// flag it as worth drawing later
+	rtlight->draw = true;
+
+	// cache all the animated entities that cast a shadow but are not visible
+	for (i = 0;i < numshadowentities;i++)
+		if (shadowentities[i]->animcacheindex < 0)
+			R_AnimCache_GetEntity(shadowentities[i], false, false);
+	for (i = 0;i < numshadowentities_noselfshadow;i++)
+		if (shadowentities_noselfshadow[i]->animcacheindex < 0)
+			R_AnimCache_GetEntity(shadowentities_noselfshadow[i], false, false);
+
+	// allocate some temporary memory for rendering this light later in the frame
+	// reusable buffers need to be copied, static data can be used as-is
+	rtlight->cached_numlightentities               = numlightentities;
+	rtlight->cached_numlightentities_noselfshadow  = numlightentities_noselfshadow;
+	rtlight->cached_numshadowentities              = numshadowentities;
+	rtlight->cached_numshadowentities_noselfshadow = numshadowentities_noselfshadow;
+	rtlight->cached_numsurfaces                    = numsurfaces;
+	rtlight->cached_lightentities                  = (entity_render_t**)R_FrameData_Store(numlightentities*sizeof(entity_render_t*), (void*)lightentities);
+	rtlight->cached_lightentities_noselfshadow     = (entity_render_t**)R_FrameData_Store(numlightentities_noselfshadow*sizeof(entity_render_t*), (void*)lightentities_noselfshadow);
+	rtlight->cached_shadowentities                 = (entity_render_t**)R_FrameData_Store(numshadowentities*sizeof(entity_render_t*), (void*)shadowentities);
+	rtlight->cached_shadowentities_noselfshadow    = (entity_render_t**)R_FrameData_Store(numshadowentities_noselfshadow*sizeof(entity_render_t *), (void*)shadowentities_noselfshadow);
+	if (shadowtrispvs == r_shadow_buffer_shadowtrispvs)
+	{
+		rtlight->cached_shadowtrispvs                  =   (unsigned char *)R_FrameData_Store(r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, shadowtrispvs);
+		rtlight->cached_lighttrispvs                   =   (unsigned char *)R_FrameData_Store(r_refdef.scene.worldmodel->surfmesh.num_triangles, lighttrispvs);
+		rtlight->cached_surfacelist                    =              (int*)R_FrameData_Store(numsurfaces*sizeof(int), (void*)surfacelist);
+	}
+	else
+	{
+		// compiled light data
+		rtlight->cached_shadowtrispvs = shadowtrispvs;
+		rtlight->cached_lighttrispvs = lighttrispvs;
+		rtlight->cached_surfacelist = surfacelist;
+	}
+}
+
+void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
+{
+	int i;
+	int numsurfaces;
+	unsigned char *shadowtrispvs, *lighttrispvs, *surfacesides;
+	int numlightentities;
+	int numlightentities_noselfshadow;
+	int numshadowentities;
+	int numshadowentities_noselfshadow;
+	entity_render_t **lightentities;
+	entity_render_t **lightentities_noselfshadow;
+	entity_render_t **shadowentities;
+	entity_render_t **shadowentities_noselfshadow;
+	int *surfacelist;
+	static unsigned char entitysides[MAX_EDICTS];
+	static unsigned char entitysides_noselfshadow[MAX_EDICTS];
+	vec3_t nearestpoint;
+	vec_t distance;
+	qboolean castshadows;
+	int lodlinear;
+
+	// check if we cached this light this frame (meaning it is worth drawing)
+	if (!rtlight->draw)
+		return;
+
+	// if R_FrameData_Store ran out of space we skip anything dependent on it
+	if (r_framedata_failed)
+		return;
+
+	numlightentities = rtlight->cached_numlightentities;
+	numlightentities_noselfshadow = rtlight->cached_numlightentities_noselfshadow;
+	numshadowentities = rtlight->cached_numshadowentities;
+	numshadowentities_noselfshadow = rtlight->cached_numshadowentities_noselfshadow;
+	numsurfaces = rtlight->cached_numsurfaces;
+	lightentities = rtlight->cached_lightentities;
+	lightentities_noselfshadow = rtlight->cached_lightentities_noselfshadow;
+	shadowentities = rtlight->cached_shadowentities;
+	shadowentities_noselfshadow = rtlight->cached_shadowentities_noselfshadow;
+	shadowtrispvs = rtlight->cached_shadowtrispvs;
+	lighttrispvs = rtlight->cached_lighttrispvs;
+	surfacelist = rtlight->cached_surfacelist;
+
+	// set up a scissor rectangle for this light
+	if (R_Shadow_ScissorForBBox(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
+		return;
+
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
 	// make this the active rtlight for rendering purposes
 	R_Shadow_RenderMode_ActiveLight(rtlight);
-	// count this light in the r_speeds
-	r_refdef.stats.lights++;
 
 	if (r_showshadowvolumes.integer && r_refdef.view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows))
 	{
@@ -3659,7 +3743,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numshadowentities;i++)
 			R_Shadow_DrawEntityShadow(shadowentities[i]);
 		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
+			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
+		R_Shadow_RenderMode_VisibleLighting(false, false);
 	}
 
 	if (r_showlighting.integer && r_refdef.view.showdebug && numsurfaces + numlightentities + numlightentities_noselfshadow)
@@ -3672,7 +3757,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numlightentities;i++)
 			R_Shadow_DrawEntityLight(lightentities[i]);
 		for (i = 0;i < numlightentities_noselfshadow;i++)
-			R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
+			R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 	}
 
 	castshadows = numsurfaces + numshadowentities + numshadowentities_noselfshadow > 0 && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows);
@@ -3708,6 +3793,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
 
+		surfacesides = NULL;
 		if (numsurfaces)
 		{
 			if (rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
@@ -3717,6 +3803,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			}
 			else
 			{
+				surfacesides = r_shadow_buffer_surfacesides;
 				for(i = 0;i < numsurfaces;i++)
 				{
 					msurface_t *surface = r_refdef.scene.worldmodel->data_surfaces + surfacelist[i];
@@ -3732,7 +3819,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 				receivermask |= R_Shadow_CalcEntitySideMask(lightentities[i], &rtlight->matrix_worldtolight, &radiustolight, borderbias);
 			if (receivermask < 0x3F)
 				for(i = 0; i < numlightentities_noselfshadow;i++)
-					receivermask |= R_Shadow_CalcEntitySideMask(lightentities[lightentities_noselfshadow - i], &rtlight->matrix_worldtolight, &radiustolight, borderbias);
+					receivermask |= R_Shadow_CalcEntitySideMask(lightentities_noselfshadow[i], &rtlight->matrix_worldtolight, &radiustolight, borderbias);
 		}
 
 		receivermask &= R_Shadow_CullFrustumSides(rtlight, size, r_shadow_shadowmapborder);
@@ -3742,7 +3829,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			for (i = 0;i < numshadowentities;i++)
 				castermask |= (entitysides[i] = R_Shadow_CalcEntitySideMask(shadowentities[i], &rtlight->matrix_worldtolight, &radiustolight, borderbias));
 			for (i = 0;i < numshadowentities_noselfshadow;i++)
-				castermask |= (entitysides[shadowentities_noselfshadow - i] = R_Shadow_CalcEntitySideMask(shadowentities[shadowentities_noselfshadow - i], &rtlight->matrix_worldtolight, &radiustolight, borderbias)); 
+				castermask |= (entitysides_noselfshadow[i] = R_Shadow_CalcEntitySideMask(shadowentities_noselfshadow[i], &rtlight->matrix_worldtolight, &radiustolight, borderbias)); 
 		}
 
 		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
@@ -3764,7 +3851,7 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			// draw lighting in the unmasked areas
 			R_Shadow_RenderMode_Lighting(false, false, true);
 			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
+				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 		}
 
 		// render shadow casters into 6 sided depth texture
@@ -3773,8 +3860,8 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 			for (side = 0;side < 6;side++) if ((receivermask & castermask) & (1 << side))
 			{
 				R_Shadow_RenderMode_ShadowMap(side, false, size);
-				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides[shadowentities_noselfshadow - i] & (1 << side))
-					R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
+				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides_noselfshadow[i] & (1 << side))
+					R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
 			}
 		}
 
@@ -3794,42 +3881,25 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
 		R_Shadow_ClearStencil();
 
-		if (numsurfaces + numshadowentities)
-		{
-			if (numsurfaces)
-				R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
-			for (i = 0;i < numshadowentities;i++)
-				R_Shadow_DrawEntityShadow(shadowentities[i]);
-		}
+		if (numsurfaces)
+			R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
+		for (i = 0;i < numshadowentities;i++)
+			R_Shadow_DrawEntityShadow(shadowentities[i]);
 
-		if (numlightentities_noselfshadow)
-		{
-			// draw lighting in the unmasked areas
-			R_Shadow_RenderMode_Lighting(true, false, false);
-			for (i = 0;i < numlightentities_noselfshadow;i++)
-				R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
+		// draw lighting in the unmasked areas
+		R_Shadow_RenderMode_Lighting(true, false, false);
+		for (i = 0;i < numlightentities_noselfshadow;i++)
+			R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 
-			// optionally draw the illuminated areas
-			// for performance analysis by level designers
-			if (r_showlighting.integer && r_refdef.view.showdebug)
-			{
-				R_Shadow_RenderMode_VisibleLighting(!r_showdisabledepthtest.integer, false);
-				for (i = 0;i < numlightentities_noselfshadow;i++)
-					R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
-			}
-			for (i = 0;i < numshadowentities_noselfshadow;i++)
-				R_Shadow_DrawEntityShadow(shadowentities[shadowentities_noselfshadow - i]);
-		}
+		for (i = 0;i < numshadowentities_noselfshadow;i++)
+			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
 
-		if (numsurfaces + numlightentities)
-		{
-			// draw lighting in the unmasked areas
-			R_Shadow_RenderMode_Lighting(true, false, false);
-			if (numsurfaces)
-				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
-			for (i = 0;i < numlightentities;i++)
-				R_Shadow_DrawEntityLight(lightentities[i]);
-		}
+		// draw lighting in the unmasked areas
+		R_Shadow_RenderMode_Lighting(true, false, false);
+		if (numsurfaces)
+			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
+		for (i = 0;i < numlightentities;i++)
+			R_Shadow_DrawEntityLight(lightentities[i]);
 	}
 	else
 	{
@@ -3840,7 +3910,52 @@ void R_DrawRTLight(rtlight_t *rtlight, qboolean visible)
 		for (i = 0;i < numlightentities;i++)
 			R_Shadow_DrawEntityLight(lightentities[i]);
 		for (i = 0;i < numlightentities_noselfshadow;i++)
-			R_Shadow_DrawEntityLight(lightentities[lightentities_noselfshadow - i]);
+			R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
+	}
+}
+
+void R_PrepareRTLights(void)
+{
+	int flag;
+	int lnum;
+	size_t lightindex;
+	dlight_t *light;
+	size_t range;
+	float f;
+
+	R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.scene.worldmodel->brush.num_leafs, r_refdef.scene.worldmodel->num_surfaces, r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, r_refdef.scene.worldmodel->surfmesh.num_triangles);
+
+	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	if (r_shadow_debuglight.integer >= 0)
+	{
+		lightindex = r_shadow_debuglight.integer;
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light && (light->flags & flag))
+			R_CacheRTLight(&light->rtlight);
+	}
+	else
+	{
+		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		for (lightindex = 0;lightindex < range;lightindex++)
+		{
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (light && (light->flags & flag))
+				R_CacheRTLight(&light->rtlight);
+		}
+	}
+	if (r_refdef.scene.rtdlight)
+	{
+		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
+			R_CacheRTLight(r_refdef.scene.lights[lnum]);
+	}
+	else if(gl_flashblend.integer)
+	{
+		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
+		{
+			rtlight_t *rtlight = r_refdef.scene.lights[lnum];
+			f = (rtlight->style >= 0 ? r_refdef.scene.lightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
+			VectorScale(rtlight->color, f, rtlight->currentcolor);
+		}
 	}
 }
 

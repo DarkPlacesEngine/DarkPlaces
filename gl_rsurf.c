@@ -648,6 +648,8 @@ typedef struct r_q1bsp_getlightinfo_s
 	const unsigned char *pvs;
 	qboolean svbsp_active;
 	qboolean svbsp_insertoccluder;
+	int numfrustumplanes;
+	const mplane_t *frustumplanes;
 }
 r_q1bsp_getlightinfo_t;
 
@@ -662,7 +664,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 		//	return;
 		if (!plane)
 			break;
-		//if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
+		//if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
 		//	return;
 		if (plane->type < 3)
 		{
@@ -704,7 +706,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 				node = node->children[sides - 1];
 		}
 	}
-	if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rsurface.rtlight_numfrustumplanes, rsurface.rtlight_frustumplanes))
+	if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, info->numfrustumplanes, info->frustumplanes))
 		return;
 	leaf = (mleaf_t *)node;
 	if (info->svbsp_active)
@@ -915,7 +917,7 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 	}
 }
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes)
 {
 	r_q1bsp_getlightinfo_t info;
 	VectorCopy(relativelightorigin, info.relativelightorigin);
@@ -944,6 +946,8 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	info.outshadowtrispvs = outshadowtrispvs;
 	info.outlighttrispvs = outlighttrispvs;
 	info.outnumsurfaces = 0;
+	info.numfrustumplanes = numfrustumplanes;
+	info.frustumplanes = frustumplanes;
 	VectorCopy(info.relativelightorigin, info.outmins);
 	VectorCopy(info.relativelightorigin, info.outmaxs);
 	memset(visitingleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);

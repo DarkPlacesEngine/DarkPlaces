@@ -160,6 +160,17 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 #include "meshqueue.h"
 
+extern qboolean r_framedata_failed;
+void R_FrameData_Reset(void);
+void R_FrameData_NewFrame(void);
+void *R_FrameData_Alloc(size_t size);
+void *R_FrameData_Store(size_t size, void *data);
+
+void R_AnimCache_Free(void);
+void R_AnimCache_ClearCache(void);
+qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
+void R_AnimCache_CacheVisibleEntities(void);
+
 #include "r_lerpanim.h"
 
 extern cvar_t r_render;
@@ -344,12 +355,6 @@ typedef struct rsurfacestate_s
 	// rtlight rendering
 	// light currently being rendered
 	const rtlight_t *rtlight;
-	// current light's cull box (copied out of an rtlight or calculated by GetLightInfo)
-	vec3_t rtlight_cullmins;
-	vec3_t rtlight_cullmaxs;
-	// current light's culling planes
-	int rtlight_numfrustumplanes;
-	mplane_t rtlight_frustumplanes[12+6+6]; // see R_Shadow_ComputeShadowCasterCullingPlanes
 
 	// this is the location of the light in entity space
 	vec3_t entitylightorigin;
