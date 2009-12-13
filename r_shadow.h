@@ -73,6 +73,7 @@ void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec
 void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 
+void R_PrepareRTLights(void);
 void R_ShadowVolumeLighting(qboolean visible);
 void R_DrawCoronas(void);
 

@@ -143,6 +143,29 @@ typedef struct rtlight_s
 	unsigned int corona_queryindex_allpixels;
 	/// this is R_Shadow_Cubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
+	/// set by R_CacheRTLight to decide whether R_DrawRTLight should draw it
+	qboolean draw;
+	/// these fields are set by R_CacheRTLight for later drawing
+	int cached_numlightentities;
+	int cached_numlightentities_noselfshadow;
+	int cached_numshadowentities;
+	int cached_numshadowentities_noselfshadow;
+	int cached_numsurfaces;
+	struct entity_render_s **cached_lightentities;
+	struct entity_render_s **cached_lightentities_noselfshadow;
+	struct entity_render_s **cached_shadowentities;
+	struct entity_render_s **cached_shadowentities_noselfshadow;
+	unsigned char *cached_shadowtrispvs;
+	unsigned char *cached_lighttrispvs;
+	int *cached_surfacelist;
+	// reduced light cullbox from GetLightInfo
+	vec3_t cached_cullmins;
+	vec3_t cached_cullmaxs;
+	// current shadow-caster culling planes based on view
+	// (any geometry outside these planes can not contribute to the visible
+	//  shadows in any way, and thus can be culled safely)
+	int cached_numfrustumplanes;
+	mplane_t cached_frustumplanes[5]; // see R_Shadow_ComputeShadowCasterCullingPlanes
 
 	/// static light info
 	/// true if this light should be compiled as a static light

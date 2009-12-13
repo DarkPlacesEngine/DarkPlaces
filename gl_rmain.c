@@ -54,8 +54,6 @@ cvar_t r_equalize_entities_minambient = {CVAR_SAVE, "r_equalize_entities_minambi
 cvar_t r_equalize_entities_by = {CVAR_SAVE, "r_equalize_entities_by", "0.7", "light equalizing: exponent of dynamics compression (0 = no compression, 1 = full compression)"};
 cvar_t r_equalize_entities_to = {CVAR_SAVE, "r_equalize_entities_to", "0.8", "light equalizing: target light level"};
 
-cvar_t r_animcache = {CVAR_SAVE, "r_animcache", "1", "cache animation frames to save CPU usage, primarily optimizes shadows and reflections"};
-
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
 cvar_t r_farclip_base = {0, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
@@ -158,6 +156,8 @@ cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rot
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
+
+cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "1", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
 
 extern cvar_t v_glslgamma;
 
@@ -2972,6 +2972,9 @@ void gl_main_start(void)
 		break;
 	}
 
+	R_AnimCache_Free();
+	R_FrameData_Reset();
+
 	r_numqueries = 0;
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
@@ -3007,6 +3010,9 @@ void gl_main_start(void)
 extern rtexture_t *loadingscreentexture;
 void gl_main_shutdown(void)
 {
+	R_AnimCache_Free();
+	R_FrameData_Reset();
+
 	R_Main_FreeViewCache();
 
 	if (r_maxqueries)
@@ -3070,6 +3076,8 @@ void gl_main_newmap(void)
 			CL_ParseEntityLump(cl.worldmodel->brush.entities);
 	}
 	R_Main_FreeViewCache();
+
+	R_FrameData_Reset();
 }
 
 void GL_Main_Init(void)
@@ -3102,7 +3110,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_equalize_entities_minambient);
 	Cvar_RegisterVariable(&r_equalize_entities_by);
 	Cvar_RegisterVariable(&r_equalize_entities_to);
-	Cvar_RegisterVariable(&r_animcache);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
 	Cvar_RegisterVariable(&r_farclip_base);
@@ -3182,6 +3189,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_batchmode);
 	Cvar_RegisterVariable(&r_glsl_saturation);
+	Cvar_RegisterVariable(&r_framedatasize);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -3355,6 +3363,69 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 //==================================================================================
 
+// LordHavoc: this stores temporary data used within the same frame
+
+qboolean r_framedata_failed;
+static size_t r_framedata_size;
+static size_t r_framedata_current;
+static void *r_framedata_base;
+
+void R_FrameData_Reset(void)
+{
+	if (r_framedata_base);
+		Mem_Free(r_framedata_base);
+	r_framedata_base = NULL;
+	r_framedata_size = 0;
+	r_framedata_current = 0;
+}
+
+void R_FrameData_NewFrame(void)
+{
+	size_t wantedsize;
+	if (r_framedata_failed)
+		Cvar_SetValueQuick(&r_framedatasize, r_framedatasize.value * 1.25f);
+	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
+	wantedsize = bound(65536, wantedsize, 128*1024*1024);
+	if (r_framedata_size < wantedsize)
+	{
+		r_framedata_size = wantedsize;
+		if (!r_framedata_base)
+			r_framedata_base = Mem_Alloc(r_main_mempool, r_framedata_size);
+	}
+	r_framedata_current = 0;
+	r_framedata_failed = false;
+}
+
+void *R_FrameData_Alloc(size_t size)
+{
+	void *data;
+
+	// align to 16 byte boundary
+	size = (size + 15) & ~15;
+	data = r_framedata_base + r_framedata_current;
+	r_framedata_current += size;
+
+	// check overflow
+	if (r_framedata_current > r_framedata_size)
+		r_framedata_failed = true;
+
+	// return NULL on everything after a failure
+	if (r_framedata_failed)
+		return NULL;
+
+	return data;
+}
+
+void *R_FrameData_Store(size_t size, void *data)
+{
+	void *d = R_FrameData_Alloc(size);
+	if (d)
+		memcpy(d, data, size);
+	return d;
+}
+
+//==================================================================================
+
 // LordHavoc: animcache written by Echon, refactored and reformatted by me
 
 /**
@@ -3369,9 +3440,6 @@ typedef struct r_animcache_entity_s
 	float *normal3f;
 	float *svector3f;
 	float *tvector3f;
-	int maxvertices;
-	qboolean wantnormals;
-	qboolean wanttangents;
 }
 r_animcache_entity_t;
 
@@ -3387,104 +3455,87 @@ static r_animcache_t r_animcachestate;
 
 void R_AnimCache_Free(void)
 {
-	int idx;
-	for (idx=0 ; idx<r_animcachestate.maxindex ; idx++)
-	{
-		r_animcachestate.entity[idx].maxvertices = 0;
-		Mem_Free(r_animcachestate.entity[idx].vertex3f);
-		r_animcachestate.entity[idx].vertex3f = NULL;
-		r_animcachestate.entity[idx].normal3f = NULL;
-		r_animcachestate.entity[idx].svector3f = NULL;
-		r_animcachestate.entity[idx].tvector3f = NULL;
-	}
-	r_animcachestate.currentindex = 0;
-	r_animcachestate.maxindex = 0;
+	memset(&r_animcachestate, 0, sizeof(r_animcachestate));
 }
 
-void R_AnimCache_ResizeEntityCache(const int cacheIdx, const int numvertices)
-{
-	int arraySize;
-	float *base;
-	r_animcache_entity_t *cache = &r_animcachestate.entity[cacheIdx];
-
-	if (cache->maxvertices >= numvertices)
-		return;
-
-	// Release existing memory
-	if (cache->vertex3f)
-		Mem_Free(cache->vertex3f);
-
-	// Pad by 1024 verts
-	cache->maxvertices = (numvertices + 1023) & ~1023;
-	arraySize = cache->maxvertices * 3;
-
-	// Allocate, even if we don't need this memory in this instance it will get ignored and potentially used later
-	base = (float *)Mem_Alloc(r_main_mempool, arraySize * sizeof(float) * 4);
-	r_animcachestate.entity[cacheIdx].vertex3f = base;
-	r_animcachestate.entity[cacheIdx].normal3f = base + arraySize;
-	r_animcachestate.entity[cacheIdx].svector3f = base + arraySize*2;
-	r_animcachestate.entity[cacheIdx].tvector3f = base + arraySize*3;
-
-//	Con_Printf("allocated cache for %i (%f KB)\n", cacheIdx, (arraySize*sizeof(float)*4)/1024.0f);
-}
-
-void R_AnimCache_NewFrame(void)
+void R_AnimCache_ClearCache(void)
 {
 	int i;
+	entity_render_t *ent;
 
-	if (r_animcache.integer && r_drawentities.integer)
-		r_animcachestate.maxindex = sizeof(r_animcachestate.entity) / sizeof(r_animcachestate.entity[0]);
-	else if (r_animcachestate.maxindex)
-		R_AnimCache_Free();
-
+	r_animcachestate.maxindex = sizeof(r_animcachestate.entity) / sizeof(r_animcachestate.entity[0]);
 	r_animcachestate.currentindex = 0;
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
-		r_refdef.scene.entities[i]->animcacheindex = -1;
+	{
+		ent = r_refdef.scene.entities[i];
+		ent->animcacheindex = -1;
+	}
 }
 
 qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
 {
 	dp_model_t *model = ent->model;
 	r_animcache_entity_t *c;
+	int numvertices;
 	// see if it's already cached this frame
 	if (ent->animcacheindex >= 0)
 	{
 		// add normals/tangents if needed
-		c = r_animcachestate.entity + ent->animcacheindex;
-		if (c->wantnormals)
-			wantnormals = false;
-		if (c->wanttangents)
-			wanttangents = false;
 		if (wantnormals || wanttangents)
-			model->AnimateVertices(model, ent->frameblend, ent->skeleton, NULL, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
+		{
+			c = r_animcachestate.entity + ent->animcacheindex;
+			if (c->normal3f)
+				wantnormals = false;
+			if (c->svector3f)
+				wanttangents = false;
+			if (wantnormals || wanttangents)
+			{
+				numvertices = model->surfmesh.num_vertices;
+				if (wantnormals)
+					c->normal3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+				if (wanttangents)
+				{
+					c->svector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+					c->tvector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+				}
+				if (!r_framedata_failed)
+					model->AnimateVertices(model, ent->frameblend, ent->skeleton, NULL, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
+			}
+		}
 	}
 	else
 	{
 		// see if this ent is worth caching
 		if (r_animcachestate.maxindex <= r_animcachestate.currentindex)
 			return false;
-		if (!model || !model->Draw || !model->surfmesh.isanimated || !model->AnimateVertices || (ent->frameblend[0].lerp == 1 && ent->frameblend[0].subframe == 0))
+		if (!model || !model->Draw || !model->surfmesh.isanimated || !model->AnimateVertices || (ent->frameblend[0].lerp == 1 && ent->frameblend[0].subframe == 0 && !ent->skeleton))
 			return false;
-		// assign it a cache entry and make sure the arrays are big enough
-		R_AnimCache_ResizeEntityCache(r_animcachestate.currentindex, model->surfmesh.num_vertices);
+		// assign it a cache entry and get some temp memory
 		ent->animcacheindex = r_animcachestate.currentindex++;
 		c = r_animcachestate.entity + ent->animcacheindex;
-		c->wantnormals = wantnormals;
-		c->wanttangents = wanttangents;
-		model->AnimateVertices(model, ent->frameblend, ent->skeleton, c->vertex3f, wantnormals ? c->normal3f : NULL, wanttangents ? c->svector3f : NULL, wanttangents ? c->tvector3f : NULL);
+		numvertices = model->surfmesh.num_vertices;
+		memset(c, 0, sizeof(*c));
+		c->vertex3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+		if (wantnormals)
+			c->normal3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+		if (wanttangents)
+		{
+			c->svector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+			c->tvector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+		}
+		if (!r_framedata_failed)
+			model->AnimateVertices(model, ent->frameblend, ent->skeleton, c->vertex3f, c->normal3f, c->svector3f, c->tvector3f);
 	}
-	return true;
+	return !r_framedata_failed;
 }
 
 void R_AnimCache_CacheVisibleEntities(void)
 {
 	int i;
+	entity_render_t *ent;
 	qboolean wantnormals = !r_showsurfaces.integer;
 	qboolean wanttangents = !r_showsurfaces.integer;
-
-	if (!r_animcachestate.maxindex)
-		return;
 
 	switch(vid.renderpath)
 	{
@@ -3496,13 +3547,16 @@ void R_AnimCache_CacheVisibleEntities(void)
 		break;
 	}
 
-	// TODO: thread this?
+	// TODO: thread this
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
-		R_AnimCache_GetEntity(r_refdef.scene.entities[i], wantnormals, wanttangents);
+		ent = r_refdef.scene.entities[i];
+		if (ent->animcacheindex >= 0)
+			continue;
+		R_AnimCache_GetEntity(ent, wantnormals, wanttangents);
 	}
 }
 
@@ -4949,7 +5003,8 @@ void R_RenderView(void)
 	r_frame++; // used only by R_GetCurrentTexture
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 
-	R_AnimCache_NewFrame();
+	R_AnimCache_ClearCache();
+	R_FrameData_NewFrame();
 
 	if (r_refdef.view.isoverlay)
 	{
@@ -5101,6 +5156,7 @@ void R_RenderScene(void)
 	}
 
 	R_AnimCache_CacheVisibleEntities();
+	R_PrepareRTLights();
 
 	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDepth)
 	{
