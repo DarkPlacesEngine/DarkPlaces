@@ -519,6 +519,7 @@ void Draw_FreePic(const char *picname)
 		if (!strcmp (picname, pic->name) && pic->tex)
 		{
 			R_FreeTexture(pic->tex);
+			pic->tex = NULL;
 			pic->width = 0;
 			pic->height = 0;
 			return;
