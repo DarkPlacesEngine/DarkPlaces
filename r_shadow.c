@@ -3648,10 +3648,10 @@ void R_CacheRTLight(rtlight_t *rtlight)
 
 	// cache all the animated entities that cast a shadow but are not visible
 	for (i = 0;i < numshadowentities;i++)
-		if (shadowentities[i]->animcacheindex < 0)
+		if (!shadowentities[i]->animcache_vertex3f)
 			R_AnimCache_GetEntity(shadowentities[i], false, false);
 	for (i = 0;i < numshadowentities_noselfshadow;i++)
-		if (shadowentities_noselfshadow[i]->animcacheindex < 0)
+		if (!shadowentities_noselfshadow[i]->animcache_vertex3f)
 			R_AnimCache_GetEntity(shadowentities_noselfshadow[i], false, false);
 
 	// allocate some temporary memory for rendering this light later in the frame

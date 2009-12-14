@@ -362,8 +362,12 @@ typedef struct entity_render_s
 	// skeletal animation data (if skeleton.relativetransforms is not NULL, it overrides frameblend)
 	skeleton_t *skeleton;
 
-	// animation cache index
-	int animcacheindex;
+	// animation cache (pointers allocated using R_FrameData_Alloc)
+	// ONLY valid during R_RenderView!  may be NULL (not cached)
+	float *animcache_vertex3f;
+	float *animcache_normal3f;
+	float *animcache_svector3f;
+	float *animcache_tvector3f;
 
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;
