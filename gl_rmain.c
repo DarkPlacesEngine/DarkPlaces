@@ -3377,6 +3377,7 @@ void R_FrameData_Reset(void)
 	r_framedata_base = NULL;
 	r_framedata_size = 0;
 	r_framedata_current = 0;
+	r_framedata_failed = false;
 }
 
 void R_FrameData_NewFrame(void)
@@ -3386,11 +3387,12 @@ void R_FrameData_NewFrame(void)
 		Cvar_SetValueQuick(&r_framedatasize, r_framedatasize.value * 1.25f);
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
 	wantedsize = bound(65536, wantedsize, 128*1024*1024);
-	if (r_framedata_size < wantedsize)
+	if (r_framedata_size != wantedsize)
 	{
 		r_framedata_size = wantedsize;
-		if (!r_framedata_base)
-			r_framedata_base = Mem_Alloc(r_main_mempool, r_framedata_size);
+		if (r_framedata_base);
+			Mem_Free(r_framedata_base);
+		r_framedata_base = Mem_Alloc(r_main_mempool, r_framedata_size);
 	}
 	r_framedata_current = 0;
 	r_framedata_failed = false;
