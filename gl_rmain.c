@@ -3402,7 +3402,7 @@ void *R_FrameData_Alloc(size_t size)
 
 	// align to 16 byte boundary
 	size = (size + 15) & ~15;
-	data = r_framedata_base + r_framedata_current;
+	data = (void *)((unsigned char*)r_framedata_base + r_framedata_current);
 	r_framedata_current += size;
 
 	// check overflow
