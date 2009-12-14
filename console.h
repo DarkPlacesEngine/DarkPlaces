@@ -99,6 +99,7 @@ con_lineinfo_t;
 
 typedef struct conbuffer_s
 {
+	qboolean active;
 	int textsize;
 	char *text;
 	int maxlines;
