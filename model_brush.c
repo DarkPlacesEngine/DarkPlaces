@@ -2924,26 +2924,7 @@ typedef struct portal_s
 }
 portal_t;
 
-static portal_t *portalchain;
-
-/*
-===========
-AllocPortal
-===========
-*/
-static portal_t *AllocPortal(void)
-{
-	portal_t *p;
-	p = (portal_t *)Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
-	p->chain = portalchain;
-	portalchain = p;
-	return p;
-}
-
-static void FreePortal(portal_t *p)
-{
-	Mem_Free(p);
-}
+static memexpandablearray_t portalarray;
 
 static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 {
@@ -2966,8 +2947,8 @@ static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 
 static void Mod_Q1BSP_FinalizePortals(void)
 {
-	int i, j, numportals, numpoints;
-	portal_t *p, *pnext;
+	int i, j, numportals, numpoints, portalindex, portalrange = Mem_ExpandableArray_IndexRange(&portalarray);
+	portal_t *p;
 	mportal_t *portal;
 	mvertex_t *point;
 	mleaf_t *leaf, *endleaf;
@@ -2981,11 +2962,13 @@ static void Mod_Q1BSP_FinalizePortals(void)
 		VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
 		VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
 	}
-	p = portalchain;
 	numportals = 0;
 	numpoints = 0;
-	while (p)
+	for (portalindex = 0;portalindex < portalrange;portalindex++)
 	{
+		p = (portal_t*)Mem_ExpandableArray_RecordAtIndex(&portalarray, portalindex);
+		if (!p)
+			continue;
 		// note: this check must match the one below or it will usually corrupt memory
 		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
 		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1] && ((mleaf_t *)p->nodes[0])->clusterindex >= 0 && ((mleaf_t *)p->nodes[1])->clusterindex >= 0)
@@ -2993,7 +2976,6 @@ static void Mod_Q1BSP_FinalizePortals(void)
 			numportals += 2;
 			numpoints += p->numpoints * 2;
 		}
-		p = p->chain;
 	}
 	loadmodel->brush.data_portals = (mportal_t *)Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
 	loadmodel->brush.num_portals = numportals;
@@ -3005,12 +2987,11 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	// process all portals in the global portal chain, while freeing them
 	portal = loadmodel->brush.data_portals;
 	point = loadmodel->brush.data_portalpoints;
-	p = portalchain;
-	portalchain = NULL;
-	while (p)
+	for (portalindex = 0;portalindex < portalrange;portalindex++)
 	{
-		pnext = p->chain;
-
+		p = (portal_t*)Mem_ExpandableArray_RecordAtIndex(&portalarray, portalindex);
+		if (!p)
+			continue;
 		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1])
 		{
 			// note: this check must match the one above or it will usually corrupt memory
@@ -3078,8 +3059,6 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				}
 			}
 		}
-		FreePortal(p);
-		p = pnext;
 	}
 	// now recalculate the node bounding boxes from the leafs
 	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
@@ -3181,7 +3160,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 	// create the new portal by generating a polygon for the node plane,
 	// and clipping it by all of the other portals(which came from nodes above this one)
-	nodeportal = AllocPortal();
+	nodeportal = (portal_t *)Mem_ExpandableArray_AllocRecord(&portalarray);
 	nodeportal->plane = *plane;
 
 	// TODO: calculate node bounding boxes during recursion and calculate a maximum plane size accordingly to improve precision (as most maps do not need 1 billion unit plane polygons)
@@ -3264,7 +3243,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		}
 
 		// the portal is split
-		splitportal = AllocPortal();
+		splitportal = (portal_t *)Mem_ExpandableArray_AllocRecord(&portalarray);
 		temp = splitportal->chain;
 		*splitportal = *portal;
 		splitportal->chain = temp;
@@ -3293,9 +3272,10 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 static void Mod_Q1BSP_MakePortals(void)
 {
-	portalchain = NULL;
+	Mem_ExpandableArray_NewArray(&portalarray, loadmodel->mempool, sizeof(portal_t), 1020*1024/sizeof(portal_t));
 	Mod_Q1BSP_RecursiveNodePortals(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
 	Mod_Q1BSP_FinalizePortals();
+	Mem_ExpandableArray_FreeArray(&portalarray);
 }
 
 //Returns PVS data for a given point
