@@ -92,6 +92,7 @@ char rcon_redirect_buffer[1400];
 
 void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool)
 {
+	buf->active = true;
 	buf->textsize = textsize;
 	buf->text = (char *) Mem_Alloc(mempool, textsize);
 	buf->maxlines = maxlines;
@@ -117,6 +118,7 @@ ConBuffer_Shutdown
 */
 void ConBuffer_Shutdown(conbuffer_t *buf)
 {
+	buf->active = false;
 	Mem_Free(buf->text);
 	Mem_Free(buf->lines);
 	buf->text = NULL;
@@ -226,6 +228,10 @@ void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
 {
 	char *putpos;
 	con_lineinfo_t *p;
+
+	// developer_memory 1 during shutdown prints while conbuffer_t is being freed
+	if (!buf->active)
+		return;
 
 	ConBuffer_FixTimes(buf);
 
