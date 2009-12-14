@@ -3384,7 +3384,7 @@ void R_FrameData_NewFrame(void)
 {
 	size_t wantedsize;
 	if (r_framedata_failed)
-		Cvar_SetValueQuick(&r_framedatasize, r_framedatasize.value * 1.25f);
+		Cvar_SetValueQuick(&r_framedatasize, r_framedatasize.value + 1.0f);
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
 	wantedsize = bound(65536, wantedsize, 128*1024*1024);
 	if (r_framedata_size != wantedsize)
