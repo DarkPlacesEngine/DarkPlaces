@@ -592,6 +592,7 @@ void R_Textures_Init (void)
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
+	Cvar_RegisterVariable (&gl_max_lightmapsize);
 	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&r_precachetextures);
 	Cvar_RegisterVariable (&gl_texture_anisotropy);
@@ -1110,6 +1111,11 @@ rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
+}
+
+rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
+{
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_RECTANGLE, data, palette);
 }
 
 static int R_ShadowMapTextureFlags(int precision, qboolean filter)
