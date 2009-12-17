@@ -3447,6 +3447,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->Draw = R_Q1BSP_Draw;
 	mod->DrawDepth = R_Q1BSP_DrawDepth;
 	mod->DrawDebug = R_Q1BSP_DrawDebug;
+	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
@@ -6045,6 +6046,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->Draw = R_Q1BSP_Draw;
 	mod->DrawDepth = R_Q1BSP_DrawDepth;
 	mod->DrawDebug = R_Q1BSP_DrawDebug;
+	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
@@ -6735,6 +6737,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->Draw = R_Q1BSP_Draw;
 	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
 	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
 	loadmodel->GetLightInfo = R_Q1BSP_GetLightInfo;
 	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;

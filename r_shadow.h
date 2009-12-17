@@ -51,6 +51,7 @@ void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping);
+void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadowmapping);
 void R_Shadow_RenderMode_VisibleShadowVolumes(void);
 void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
 void R_Shadow_RenderMode_End(void);
@@ -73,9 +74,10 @@ void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec
 void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 
-void R_PrepareRTLights(void);
-void R_ShadowVolumeLighting(qboolean visible);
-void R_DrawCoronas(void);
+void R_Shadow_PrepareLights(void);
+void R_Shadow_DrawPrepass(void);
+void R_Shadow_DrawLights(void);
+void R_Shadow_DrawCoronas(void);
 
 extern int maxshadowmark;
 extern int numshadowmark;

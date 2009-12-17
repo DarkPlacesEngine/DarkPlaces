@@ -373,9 +373,11 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	v->m[13] = - (top + bottom)/(top - bottom);
 	v->m[14] = - (zFar + zNear)/(zFar - zNear);
 	v->m[15] = 1;
+	v->screentodepth[0] = -farclip / (farclip - nearclip);
+	v->screentodepth[1] = farclip * nearclip / (farclip - nearclip);
 
 	Matrix4x4_Invert_Full(&v->viewmatrix, &v->cameramatrix);
-	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
@@ -412,13 +414,15 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 	v->m[10] = -(farclip + nearclip) / (farclip - nearclip);
 	v->m[11] = -1;
 	v->m[14] = -2 * nearclip * farclip / (farclip - nearclip);
+	v->screentodepth[0] = -farclip / (farclip - nearclip);
+	v->screentodepth[1] = farclip * nearclip / (farclip - nearclip);
 
 	Matrix4x4_Invert_Full(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
-	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
@@ -446,13 +450,15 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 	v->m[10] = -nudge;
 	v->m[11] = -1;
 	v->m[14] = -2 * nearclip * nudge;
+	v->screentodepth[0] = (v->m[10] + 1) * 0.5 - 1;
+	v->screentodepth[1] = v->m[14] * -0.5;
 
 	Matrix4x4_Invert_Full(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
 	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
-	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
@@ -556,7 +562,7 @@ void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	Matrix4x4_FromArrayFloatGL(&basematrix, cubeviewmatrix[side]);
 	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
-	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
@@ -581,7 +587,7 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	Matrix4x4_FromArrayFloatGL(&basematrix, rectviewmatrix[side]);
 	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
-	Matrix4x4_FromArrayDoubleGL(&v->projectmatrix, v->m);
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, v->m);
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
@@ -597,7 +603,7 @@ void R_SetViewport(const r_viewport_t *v)
 
 	// Load the projection matrix into OpenGL
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadMatrixd(gl_state.viewport.m);CHECKGLERROR
+	qglLoadMatrixf(gl_state.viewport.m);CHECKGLERROR
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 
 	// FIXME: v_flipped_state is evil, this probably breaks somewhere
@@ -1020,7 +1026,7 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	qglCompileShaderARB(shaderobject);CHECKGLERROR
 	qglGetObjectParameterivARB(shaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &shadercompiled);CHECKGLERROR
 	qglGetInfoLogARB(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-	if (compilelog[0] && developer.integer > 0)
+	if (compilelog[0] && developer.integer > 0 && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning")))
 	{
 		int i, j, pretextlines = 0;
 		for (i = 0;i < numstrings - 1;i++)
@@ -1066,7 +1072,8 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglGetInfoLogARB(programobject, sizeof(linklog), NULL, linklog);CHECKGLERROR
 	if (linklog[0])
 	{
-		Con_DPrintf("program link log:\n%s\n", linklog);
+		if (strstr(linklog, "error") || strstr(linklog, "ERROR") || strstr(linklog, "Error") || strstr(linklog, "WARNING") || strstr(linklog, "warning") || strstr(linklog, "Warning"))
+			Con_DPrintf("program link log:\n%s\n", linklog);
 		// software vertex shader is ok but software fragment shader is WAY
 		// too slow, fail program if so.
 		// NOTE: this string might be ATI specific, but that's ok because the

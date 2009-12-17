@@ -539,9 +539,9 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(true, true, false, false);
+		R_DrawWorldSurfaces(true, true, false, false, false);
 	else
-		R_DrawModelSurfaces(ent, true, true, false, false);
+		R_DrawModelSurfaces(ent, true, true, false, false, false);
 }
 
 extern void R_Water_AddWaterPlane(msurface_t *surface);
@@ -590,9 +590,9 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, true, false, false);
+		R_DrawWorldSurfaces(false, true, false, false, false);
 	else
-		R_DrawModelSurfaces(ent, false, true, false, false);
+		R_DrawModelSurfaces(ent, false, true, false, false, false);
 }
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
@@ -610,9 +610,9 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	R_Mesh_ResetTextureState();
 	R_SetupDepthOrShadowShader();
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, true, false);
+		R_DrawWorldSurfaces(false, false, true, false, false);
 	else
-		R_DrawModelSurfaces(ent, false, false, true, false);
+		R_DrawModelSurfaces(ent, false, false, true, false, false);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
@@ -621,9 +621,20 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, false, true);
+		R_DrawWorldSurfaces(false, false, false, true, false);
 	else
-		R_DrawModelSurfaces(ent, false, false, false, true);
+		R_DrawModelSurfaces(ent, false, false, false, true, false);
+}
+
+void R_Q1BSP_DrawPrepass(entity_render_t *ent)
+{
+	dp_model_t *model = ent->model;
+	if (model == NULL)
+		return;
+	if (ent == r_refdef.scene.worldentity)
+		R_DrawWorldSurfaces(false, true, false, false, true);
+	else
+		R_DrawModelSurfaces(ent, false, true, false, false, true);
 }
 
 typedef struct r_q1bsp_getlightinfo_s

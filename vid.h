@@ -40,6 +40,7 @@ typedef struct viddef_support_s
 {
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
+	qboolean arb_draw_buffers;
 	qboolean arb_fragment_shader;
 	qboolean arb_multitexture;
 	qboolean arb_occlusion_query;
@@ -108,6 +109,7 @@ typedef struct viddef_s
 	unsigned int maxtexturesize_cubemap;
 	unsigned int maxtexturesize_rectangle;
 	unsigned int max_anisotropy;
+	unsigned int maxdrawbuffers;
 
 	viddef_support_t support;
 } viddef_t;
