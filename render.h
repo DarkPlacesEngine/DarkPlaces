@@ -384,10 +384,10 @@ void RSurf_SetupDepthAndCulling(void);
 void R_Mesh_ResizeArrays(int newvertices);
 
 texture_t *R_GetCurrentTexture(texture_t *t);
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug);
+void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
 void R_AddWaterPlanes(entity_render_t *ent);
-void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth);
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 
 void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist);
@@ -398,7 +398,8 @@ typedef enum rsurfacepass_e
 {
 	RSURFPASS_BASE,
 	RSURFPASS_BACKGROUND,
-	RSURFPASS_RTLIGHT
+	RSURFPASS_RTLIGHT,
+	RSURFPASS_DEFERREDGEOMETRY,
 }
 rsurfacepass_t;
 
@@ -439,7 +440,13 @@ typedef enum gl20_texunit_e
 	GL20TU_SHADOWMAPRECT = 11,
 	GL20TU_SHADOWMAPCUBE = 11,
 	GL20TU_SHADOWMAP2D = 11,
-	GL20TU_CUBEPROJECTION = 12
+	GL20TU_CUBEPROJECTION = 12,
+	// rtlight prepass data (screenspace depth and normalmap)
+	GL20TU_SCREENDEPTH = 13,
+	GL20TU_SCREENNORMALMAP = 14,
+	// lightmap prepass data (screenspace diffuse and specular from lights)
+	GL20TU_SCREENDIFFUSE = 11,
+	GL20TU_SCREENSPECULAR = 12,
 }
 gl20_texunit;
 

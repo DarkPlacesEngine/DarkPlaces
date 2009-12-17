@@ -143,9 +143,9 @@ typedef struct rtlight_s
 	unsigned int corona_queryindex_allpixels;
 	/// this is R_Shadow_Cubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
-	/// set by R_CacheRTLight to decide whether R_DrawRTLight should draw it
+	/// set by R_Shadow_PrepareLight to decide whether R_Shadow_DrawLight should draw it
 	qboolean draw;
-	/// these fields are set by R_CacheRTLight for later drawing
+	/// these fields are set by R_Shadow_PrepareLight for later drawing
 	int cached_numlightentities;
 	int cached_numlightentities_noselfshadow;
 	int cached_numshadowentities;
@@ -1519,7 +1519,7 @@ r_viewport_type_t;
 
 typedef struct r_viewport_s
 {
-	double m[16];
+	float m[16];
 	matrix4x4_t cameramatrix; // from entity (transforms from camera entity to world)
 	matrix4x4_t viewmatrix; // actual matrix for rendering (transforms to viewspace)
 	matrix4x4_t projectmatrix; // actual projection matrix (transforms from viewspace to screen)
@@ -1530,6 +1530,7 @@ typedef struct r_viewport_s
 	int height;
 	int depth;
 	r_viewport_type_t type;
+	float screentodepth[2]; // used by deferred renderer to calculate linear depth from device depth coordinates
 }
 r_viewport_t;
 

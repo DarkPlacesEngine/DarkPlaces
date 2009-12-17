@@ -293,7 +293,7 @@ void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const r
 		R_CalcLightningBeamPolygonTexCoord2f(texcoord2f + 16, t1 + 0.66, t2 + 0.66);
 
 		// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
-		R_DrawCustomSurface(r_lightningbeam_qmbtexture.integer ? r_lightningbeamqmbtexture : r_lightningbeamtexture, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 12, 0, 6, false);
+		R_DrawCustomSurface(r_lightningbeam_qmbtexture.integer ? r_lightningbeamqmbtexture : r_lightningbeamtexture, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 12, 0, 6, false, false);
 	}
 }
 
