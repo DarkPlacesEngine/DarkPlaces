@@ -695,9 +695,30 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 	else
 	{
 		char fn[MAX_OSPATH];
+		char urlbuf[1024];
 		const char *p, *q;
 		size_t length;
 		downloadinfo *di;
+
+		// if URL is protocol:///* or protocol://:port/*, insert the IP of the current server
+		p = strchr(URL, ':');
+		if(p)
+		{
+			if(!strncmp(p, ":///", 4) || !strncmp(p, "://:", 4))
+			{
+				char addressstring[128];
+				*addressstring = 0;
+				InfoString_GetValue(cls.userinfo, "*ip", addressstring, sizeof(addressstring));
+				q = strchr(addressstring, ':');
+				if(!q)
+					q = addressstring + strlen(addressstring);
+				if(*addressstring)
+				{
+					dpsnprintf(urlbuf, sizeof(urlbuf), "%.*s://%.*s%s", (int) (p - URL), URL, (int) (q - addressstring), addressstring, URL + (p - URL) + 3);
+					URL = urlbuf;
+				}
+			}
+		}
 
 		// Note: This extraction of the file name portion is NOT entirely correct.
 		//
