@@ -7784,7 +7784,6 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 	int texturesurfaceindex;
 	qboolean applycolor;
 	qboolean applyfog;
-	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
@@ -7827,18 +7826,15 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 		switch (layer->type)
 		{
 		case TEXTURELAYERTYPE_LITTEXTURE:
-			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(r_texture_white);
-			m.pointer_texcoord[0] = rsurface.modeltexcoordlightmap2f;
-			m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordlightmap2f_bufferobject;
-			m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordlightmap2f_bufferoffset;
-			m.tex[1] = R_GetTexture(layer->texture);
-			m.texmatrix[1] = layer->texmatrix;
-			m.texrgbscale[1] = layertexrgbscale;
-			m.pointer_texcoord[1] = rsurface.texcoordtexture2f;
-			m.pointer_texcoord_bufferobject[1] = rsurface.texcoordtexture2f_bufferobject;
-			m.pointer_texcoord_bufferoffset[1] = rsurface.texcoordtexture2f_bufferoffset;
-			R_Mesh_TextureState(&m);
+			// single-pass lightmapped texture with 2x rgbscale
+			R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+			R_Mesh_TexMatrix(0, NULL);
+			R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+			R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
+			R_Mesh_TexBind(1, R_GetTexture(layer->texture));
+			R_Mesh_TexMatrix(1, &layer->texmatrix);
+			R_Mesh_TexCombine(1, GL_MODULATE, GL_MODULATE, layertexrgbscale, 1);
+			R_Mesh_TexCoordPointer(1, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
 			else if (rsurface.uselightmaptexture)
@@ -7847,28 +7843,31 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 				RSurf_DrawBatch_GL11_VertexColor(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
 			break;
 		case TEXTURELAYERTYPE_TEXTURE:
-			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(layer->texture);
-			m.texmatrix[0] = layer->texmatrix;
-			m.texrgbscale[0] = layertexrgbscale;
-			m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-			m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-			m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-			R_Mesh_TextureState(&m);
+			// singletexture unlit texture with transparency support
+			R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+			R_Mesh_TexMatrix(0, &layer->texmatrix);
+			R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, layertexrgbscale, 1);
+			R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+			R_Mesh_TexBind(1, 0);
+			R_Mesh_TexCoordPointer(1, 2, NULL, 0, 0);
 			RSurf_DrawBatch_GL11_Unlit(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
 			break;
 		case TEXTURELAYERTYPE_FOG:
-			memset(&m, 0, sizeof(m));
-			m.texrgbscale[0] = layertexrgbscale;
+			// singletexture fogging
 			if (layer->texture)
 			{
-				m.tex[0] = R_GetTexture(layer->texture);
-				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-				m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-				m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
+				R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+				R_Mesh_TexMatrix(0, &layer->texmatrix);
+				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, layertexrgbscale, 1);
+				R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 			}
-			R_Mesh_TextureState(&m);
+			else
+			{
+				R_Mesh_TexBind(0, 0);
+				R_Mesh_TexCoordPointer(0, 2, NULL, 0, 0);
+			}
+			R_Mesh_TexBind(1, 0);
+			R_Mesh_TexCoordPointer(1, 2, NULL, 0, 0);
 			// generate a color array for the fog pass
 			R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
@@ -7907,7 +7906,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 	// OpenGL 1.1 - crusty old voodoo path
 	int texturesurfaceindex;
 	qboolean applyfog;
-	rmeshstate_t m;
 	int layerindex;
 	const texturelayer_t *layer;
 	RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
@@ -7935,12 +7933,10 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 			{
 				// two-pass lit texture with 2x rgbscale
 				// first the lightmap pass
-				memset(&m, 0, sizeof(m));
-				m.tex[0] = R_GetTexture(r_texture_white);
-				m.pointer_texcoord[0] = rsurface.modeltexcoordlightmap2f;
-				m.pointer_texcoord_bufferobject[0] = rsurface.modeltexcoordlightmap2f_bufferobject;
-				m.pointer_texcoord_bufferoffset[0] = rsurface.modeltexcoordlightmap2f_bufferoffset;
-				R_Mesh_TextureState(&m);
+				R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+				R_Mesh_TexMatrix(0, NULL);
+				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+				R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 					RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 				else if (rsurface.uselightmaptexture)
@@ -7950,25 +7946,19 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 				GL_LockArrays(0, 0);
 				// then apply the texture to it
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-				memset(&m, 0, sizeof(m));
-				m.tex[0] = R_GetTexture(layer->texture);
-				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-				m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-				m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-				R_Mesh_TextureState(&m);
+				R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+				R_Mesh_TexMatrix(0, &layer->texmatrix);
+				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+				R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 				RSurf_DrawBatch_GL11_Unlit(texturenumsurfaces, texturesurfacelist, layer->color[0] * 0.5f, layer->color[1] * 0.5f, layer->color[2] * 0.5f, layer->color[3], layer->color[0] != 2 || layer->color[1] != 2 || layer->color[2] != 2 || layer->color[3] != 1, false);
 			}
 			else
 			{
 				// single pass vertex-lighting-only texture with 1x rgbscale and transparency support
-				memset(&m, 0, sizeof(m));
-				m.tex[0] = R_GetTexture(layer->texture);
-				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-				m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-				m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-				R_Mesh_TextureState(&m);
+				R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+				R_Mesh_TexMatrix(0, &layer->texmatrix);
+				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+				R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 					RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, layer->color[0], layer->color[1], layer->color[2], layer->color[3], layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
 				else
@@ -7977,31 +7967,28 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 			break;
 		case TEXTURELAYERTYPE_TEXTURE:
 			// singletexture unlit texture with transparency support
-			memset(&m, 0, sizeof(m));
-			m.tex[0] = R_GetTexture(layer->texture);
-			m.texmatrix[0] = layer->texmatrix;
-			m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-			m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-			m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-			R_Mesh_TextureState(&m);
+			R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+			R_Mesh_TexMatrix(0, &layer->texmatrix);
+			R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+			R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 			RSurf_DrawBatch_GL11_Unlit(texturenumsurfaces, texturesurfacelist, layer->color[0], layer->color[1], layer->color[2], layer->color[3], layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
 			break;
 		case TEXTURELAYERTYPE_FOG:
 			// singletexture fogging
-			R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 			if (layer->texture)
 			{
-				memset(&m, 0, sizeof(m));
-				m.tex[0] = R_GetTexture(layer->texture);
-				m.texmatrix[0] = layer->texmatrix;
-				m.pointer_texcoord[0] = rsurface.texcoordtexture2f;
-				m.pointer_texcoord_bufferobject[0] = rsurface.texcoordtexture2f_bufferobject;
-				m.pointer_texcoord_bufferoffset[0] = rsurface.texcoordtexture2f_bufferoffset;
-				R_Mesh_TextureState(&m);
+				R_Mesh_TexBind(0, R_GetTexture(layer->texture));
+				R_Mesh_TexMatrix(0, &layer->texmatrix);
+				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+				R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 			}
 			else
-				R_Mesh_ResetTextureState();
+			{
+				R_Mesh_TexBind(0, 0);
+				R_Mesh_TexCoordPointer(0, 2, NULL, 0, 0);
+			}
 			// generate a color array for the fog pass
+			R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				int i;

@@ -1726,7 +1726,7 @@ static const float gl_identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (matrix->m[3][3])
+	if (matrix && matrix->m[3][3])
 	{
 		// texmatrix specified, check if it is different
 		if (!unit->texmatrixenabled || memcmp(&unit->matrix, matrix, sizeof(matrix4x4_t)))
@@ -1835,30 +1835,6 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 		}
 		break;
 	}
-}
-
-void R_Mesh_TextureState(const rmeshstate_t *m)
-{
-	unsigned int i;
-
-	BACKENDACTIVECHECK
-
-	CHECKGLERROR
-	for (i = 0;i < vid.teximageunits;i++)
-		R_Mesh_TexBindAll(i, m->tex[i], m->tex3d[i], m->texcubemap[i], m->texrectangle[i]);
-	for (i = 0;i < vid.texarrayunits;i++)
-	{
-		if (m->pointer_texcoord3f[i])
-			R_Mesh_TexCoordPointer(i, 3, m->pointer_texcoord3f[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
-		else
-			R_Mesh_TexCoordPointer(i, 2, m->pointer_texcoord[i], m->pointer_texcoord_bufferobject[i], m->pointer_texcoord_bufferoffset[i]);
-	}
-	for (i = 0;i < vid.texunits;i++)
-	{
-		R_Mesh_TexMatrix(i, &m->texmatrix[i]);
-		R_Mesh_TexCombine(i, m->texcombinergb[i], m->texcombinealpha[i], m->texrgbscale[i], m->texalphascale[i]);
-	}
-	CHECKGLERROR
 }
 
 void R_Mesh_ResetTextureState(void)

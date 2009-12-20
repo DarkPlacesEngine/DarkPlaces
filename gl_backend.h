@@ -42,29 +42,6 @@ extern cvar_t gl_mesh_copyarrays;
 extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 
-//input to R_Mesh_TextureState
-typedef struct rmeshstate_s
-{
-	// textures
-	int tex[MAX_TEXTUREUNITS];
-	int tex3d[MAX_TEXTUREUNITS];
-	int texcubemap[MAX_TEXTUREUNITS];
-	int texrectangle[MAX_TEXTUREUNITS];
-	// texture combine settings
-	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
-	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
-	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
-	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
-	// matrices
-	matrix4x4_t texmatrix[MAX_TEXTUREUNITS];
-	// pointers
-	const float *pointer_texcoord[MAX_TEXTUREUNITS]; // 2D
-	const float *pointer_texcoord3f[MAX_TEXTUREUNITS]; // 3D
-	int pointer_texcoord_bufferobject[MAX_TEXTUREUNITS]; // 2D and 3D
-	size_t pointer_texcoord_bufferoffset[MAX_TEXTUREUNITS]; // 2D and 3D
-}
-rmeshstate_t;
-
 // adds console variables and registers the render module (only call from GL_Init)
 void gl_backend_init(void);
 
@@ -101,13 +78,11 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle);
 // equivalent to R_Mesh_TexBindAll(unitnum,tex2d,0,0,0)
 void R_Mesh_TexBind(unsigned int unitnum, int texnum);
-// sets the texcoord matrix for a texenv unit
+// sets the texcoord matrix for a texenv unit, can be NULL or blank (will use identity)
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 // sets the combine state for a texenv unit
 void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale);
-// set up the requested texture state
-void R_Mesh_TextureState(const rmeshstate_t *m);
-// set up a blank texture state (faster/easier specialized version of R_Mesh_TextureState)
+// set up a blank texture state (unbinds all textures, texcoord pointers, and resets combine settings)
 void R_Mesh_ResetTextureState(void);
 
 // renders a mesh

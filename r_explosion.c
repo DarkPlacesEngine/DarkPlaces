@@ -204,7 +204,6 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 {
 	int surfacelistindex = 0;
 	const int numtriangles = EXPLOSIONTRIS, numverts = EXPLOSIONVERTS;
-	rmeshstate_t m;
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
@@ -215,10 +214,9 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 
 	R_SetupGenericShader(true);
 	R_Mesh_ColorPointer(NULL, 0, 0);
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(explosiontexture);
-	m.pointer_texcoord[0] = explosiontexcoord2f[0];
-	R_Mesh_TextureState(&m);
+	R_Mesh_ResetTextureState();
+	R_Mesh_TexBind(0, R_GetTexture(explosiontexture));
+	R_Mesh_TexCoordPointer(0, 2, explosiontexcoord2f[0], 0, 0);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const explosion_t *e = explosion + surfacelist[surfacelistindex];
