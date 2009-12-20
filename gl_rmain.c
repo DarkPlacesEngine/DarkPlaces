@@ -8673,7 +8673,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
 	qboolean dynamic;
-	qboolean notworld = ent != r_refdef.scene.worldentity;
 	dp_model_t *model;
 	const float *vertex3f;
 	const msurface_t *surface;
@@ -8865,7 +8864,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex+surface->num_firsttriangle, surfaceindex, decalsequence);
 			else
 				for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
-					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, notworld ? -1 : surfaceindex, decalsequence);
+					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, surfaceindex, decalsequence);
 		}
 	}
 }
@@ -9025,7 +9024,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	float *c4f;
 	float *t2f;
 	const int *e;
-	const unsigned char *surfacevisible = r_refdef.viewcache.world_surfacevisible;
+	const unsigned char *surfacevisible = ent == r_refdef.scene.worldentity ? r_refdef.viewcache.world_surfacevisible : NULL;
 	int numtris = 0;
 
 	numdecals = decalsystem->numdecals;
@@ -9064,7 +9063,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		if (!decal->color4ub[0][3])
 			continue;
 
-		if (decal->surfaceindex >= 0 && !surfacevisible[decal->surfaceindex])
+		if (surfacevisible && !surfacevisible[decal->surfaceindex])
 			continue;
 
 		// update color values for fading decals
