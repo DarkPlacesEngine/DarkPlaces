@@ -9120,6 +9120,25 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	if (numtris > 0)
 	{
 		r_refdef.stats.drawndecals += numtris;
+
+		if (r_refdef.fogenabled)
+		{
+			switch(vid.renderpath)
+			{
+			case RENDERPATH_GL20:
+			case RENDERPATH_GL13:
+			case RENDERPATH_GL11:
+				for (i = 0, v3f = decalsystem->vertex3f, c4f = decalsystem->color4f;i < numtris*3;i++, v3f += 3, c4f += 4)
+				{
+					alpha = RSurf_FogVertex(v3f);
+					c4f[0] *= alpha;
+					c4f[1] *= alpha;
+					c4f[2] *= alpha;
+				}
+				break;
+			}
+		}
+
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
 		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numtris, decalsystem->element3i, decalsystem->element3s, false, false);
