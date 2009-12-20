@@ -3678,8 +3678,10 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	rtlight->cached_shadowentities_noselfshadow    = (entity_render_t**)R_FrameData_Store(numshadowentities_noselfshadow*sizeof(entity_render_t *), (void*)shadowentities_noselfshadow);
 	if (shadowtrispvs == r_shadow_buffer_shadowtrispvs)
 	{
-		rtlight->cached_shadowtrispvs                  =   (unsigned char *)R_FrameData_Store(r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, shadowtrispvs);
-		rtlight->cached_lighttrispvs                   =   (unsigned char *)R_FrameData_Store(r_refdef.scene.worldmodel->surfmesh.num_triangles, lighttrispvs);
+		int numshadowtrispvsbytes = (((r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles) + 7) >> 3);
+		int numlighttrispvsbytes = ((r_refdef.scene.worldmodel->surfmesh.num_triangles + 7) >> 3);
+		rtlight->cached_shadowtrispvs                  =   (unsigned char *)R_FrameData_Store(numshadowtrispvsbytes, shadowtrispvs);
+		rtlight->cached_lighttrispvs                   =   (unsigned char *)R_FrameData_Store(numlighttrispvsbytes, lighttrispvs);
 		rtlight->cached_surfacelist                    =              (int*)R_FrameData_Store(numsurfaces*sizeof(int), (void*)surfacelist);
 	}
 	else
