@@ -2715,8 +2715,6 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
 	else
 		R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
-	R_Mesh_TexMatrix(1, &rsurface.texture->currentbackgroundtexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
@@ -3435,14 +3433,6 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
 	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
-	switch(r_shadow_lightingrendermode)
-	{
-	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
-		break;
-	default:
-		break;
-	}
 }
 
 void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
@@ -3457,14 +3447,6 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
 	VectorCopy(rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
-	switch(r_shadow_lightingrendermode)
-	{
-	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-		R_Mesh_TexMatrix(3, &rsurface.entitytolight);
-		break;
-	default:
-		break;
-	}
 
 	r_refdef.scene.worldmodel->DrawLight(r_refdef.scene.worldentity, numsurfaces, surfacelist, trispvs);
 
