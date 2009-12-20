@@ -8291,6 +8291,29 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	GL_AlphaTest(false);
 }
 
+static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, const entity_render_t *queueentity)
+{
+	// transparent surfaces get pushed off into the transparent queue
+	int surfacelistindex;
+	const msurface_t *surface;
+	vec3_t tempcenter, center;
+	for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
+	{
+		surface = texturesurfacelist[surfacelistindex];
+		tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+		tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+		tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+		Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+		if (queueentity->transparent_offset) // transparent offset
+		{
+			center[0] += r_refdef.view.forward[0]*queueentity->transparent_offset;
+			center[1] += r_refdef.view.forward[1]*queueentity->transparent_offset;
+			center[2] += r_refdef.view.forward[2]*queueentity->transparent_offset;
+		}
+		R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
+	}
+}
+
 static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
 	const entity_render_t *queueentity = r_refdef.scene.worldentity;
@@ -8307,13 +8330,14 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 	}
 	else if (prepass)
 	{
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			return;
 		if (!rsurface.texture->currentnumlayers)
 			return;
-		R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+		else
+			R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
-	else if (r_showsurfaces.integer && !r_refdef.view.showdebug)
+	else if (r_showsurfaces.integer && !r_refdef.view.showdebug && !prepass)
 	{
 		RSurf_SetupDepthAndCulling();
 		GL_AlphaTest(false);
@@ -8327,7 +8351,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		GL_DepthTest(writedepth);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
-	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3)
+	else if (r_showsurfaces.integer && r_showsurfaces.integer != 3 && !prepass)
 	{
 		RSurf_SetupDepthAndCulling();
 		GL_AlphaTest(false);
@@ -8346,19 +8370,9 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		return;
 	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
 	{
-		// transparent surfaces get pushed off into the transparent queue
-		int surfacelistindex;
-		const msurface_t *surface;
-		vec3_t tempcenter, center;
-		for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
-		{
-			surface = texturesurfacelist[surfacelistindex];
-			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
-		}
+		// in the deferred case, transparent surfaces were queued during prepass
+		if (!r_shadow_usingdeferredprepass)
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
 	}
 	else
 	{
@@ -8413,11 +8427,12 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	}
 	else if (prepass)
 	{
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			return;
 		if (!rsurface.texture->currentnumlayers)
 			return;
-		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+		else
+			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
 	else if (r_showsurfaces.integer && !r_refdef.view.showdebug)
 	{
@@ -8452,25 +8467,9 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		return;
 	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
 	{
-		// transparent surfaces get pushed off into the transparent queue
-		int surfacelistindex;
-		const msurface_t *surface;
-		vec3_t tempcenter, center;
-		for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
-		{
-			surface = texturesurfacelist[surfacelistindex];
-			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-			Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-			if (queueentity->transparent_offset) // transparent offset
-			{
-				center[0] += r_refdef.view.forward[0]*queueentity->transparent_offset;
-				center[1] += r_refdef.view.forward[1]*queueentity->transparent_offset;
-				center[2] += r_refdef.view.forward[2]*queueentity->transparent_offset;
-			}
-			R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
-		}
+		// in the deferred case, transparent surfaces were queued during prepass
+		if (!r_shadow_usingdeferredprepass)
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
 	}
 	else
 	{
