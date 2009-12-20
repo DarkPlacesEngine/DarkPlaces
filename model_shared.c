@@ -2942,7 +2942,7 @@ void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, int width, int hei
 	state->width = width;
 	state->height = height;
 	state->currentY = 0;
-	state->rows = Mem_Alloc(tempmempool, state->height * sizeof(*state->rows));
+	state->rows = Mem_Alloc(loadmodel->mempool, state->height * sizeof(*state->rows));
 	for (y = 0;y < state->height;y++)
 	{
 		state->rows[y].currentX = 0;
