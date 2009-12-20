@@ -72,7 +72,7 @@ cvar_t cl_beams_quakepositionhack = {CVAR_SAVE, "cl_beams_quakepositionhack", "1
 cvar_t cl_beams_instantaimhack = {CVAR_SAVE, "cl_beams_instantaimhack", "0", "makes your lightning gun aiming update instantly"};
 cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0", "make a light at the end of the beam"};
 
-cvar_t cl_deathfade = {CVAR_SAVE, "cl_deathfade", "0", "fade screen to dark red when dead, value = how fast the fade is"};
+cvar_t cl_deathfade = {CVAR_SAVE, "cl_deathfade", "0", "fade screen to dark red when dead, value represents how fast the fade is (higher is faster)"};
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
 
