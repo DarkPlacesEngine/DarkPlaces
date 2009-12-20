@@ -315,7 +315,6 @@ typedef struct rsurfacestate_s
 	int ent_qwskin;
 	int ent_flags;
 	float ent_shadertime;
-	float ent_color[4];
 	int ent_alttextures; // used by q1bsp animated textures (pressed buttons)
 	// transform matrices to render this entity and effects on this entity
 	matrix4x4_t matrix;
@@ -333,8 +332,11 @@ typedef struct rsurfacestate_s
 	// colormapping state from entity (these are black if colormapping is off)
 	vec3_t colormap_pantscolor;
 	vec3_t colormap_shirtcolor;
+	// special coloring of ambient/diffuse textures (gloss not affected)
+	// colormod[3] is the alpha of the entity
+	float colormod[4];
 	// special coloring of glow textures
-	vec3_t glowmod;
+	float glowmod[3];
 	// view location in model space
 	vec3_t localvieworigin;
 	// polygon offset data for submodels
@@ -377,7 +379,7 @@ rsurfacestate_t;
 extern rsurfacestate_t rsurface;
 
 void RSurf_ActiveWorldEntity(void);
-void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
+void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass);
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
 void RSurf_SetupDepthAndCulling(void);
 
@@ -455,6 +457,7 @@ void R_SetupGenericTwoTextureShader(int texturemode);
 void R_SetupDepthOrShadowShader(void);
 void R_SetupShowDepthShader(void);
 void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
+void R_SetupDeferredLightShader(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s
 {
