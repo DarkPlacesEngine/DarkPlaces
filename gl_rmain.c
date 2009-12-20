@@ -1497,7 +1497,7 @@ static const char *builtinshaderstring =
 "	// are added up. To prevent divisions by zero or strong exaggerations, a max()\n"
 "	// nudge is done here at expense of some additional fps. This is ONLY needed for\n"
 "	// deluxemaps, tangentspace deluxemap avoid this problem by design.\n"
-"	lightcolor *= recip(max(0.25, lightnormal.z));\n"
+"	lightcolor *= 1.0 / max(0.25, lightnormal.z);\n"
 "#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
 "#ifdef MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
 "#define SHADING\n"
