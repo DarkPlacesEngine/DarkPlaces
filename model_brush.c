@@ -1459,6 +1459,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->reflectfactor = 1;
 		Vector4Set(tx->reflectcolor4f, 1, 1, 1, 1);
 		tx->r_water_wateralpha = 1;
+		tx->specularscalemod = 1;
+		tx->specularpowermod = 1;
 	}
 
 	if (!m)
