@@ -47,6 +47,8 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 {
 	if (!skinframe)
 		skinframe = R_SkinFrame_LoadMissing();
+	texture->specularscalemod = 1;
+	texture->specularpowermod = 1;
 	texture->basematerialflags = MATERIALFLAG_WALL;
 	if (fullbright)
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;

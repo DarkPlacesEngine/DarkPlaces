@@ -2068,6 +2068,9 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texflagsmask &= ~TEXF_COMPRESS;
 	texture->specularscalemod = 1; // unless later loaded from the shader
 	texture->specularpowermod = 1; // unless later loaded from the shader
+	// WHEN ADDING DEFAULTS HERE, REMEMBER TO SYNC TO SHADER LOADING ABOVE
+	// HERE, AND Q1BSP LOADING
+	// JUST GREP FOR "specularscalemod = 1".
 
 	if (shader)
 	{
