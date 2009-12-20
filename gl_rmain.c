@@ -6056,7 +6056,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
 	if (!(rsurface.ent_flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
-	else if (rsurface.modeltexcoordlightmap2f == NULL)
+	else if (rsurface.modeltexcoordlightmap2f == NULL && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
 		// pick a model lighting mode
 		if (VectorLength2(rsurface.modellight_diffuse) >= (1.0f / 256.0f))
@@ -6149,7 +6149,6 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->currentnumlayers = 0;
 	if (t->currentmaterialflags & MATERIALFLAG_WALL)
 	{
-		int layerflags = 0;
 		int blendfunc1, blendfunc2;
 		qboolean depthmask;
 		if (t->currentmaterialflags & MATERIALFLAG_ADD)
@@ -6173,8 +6172,6 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			blendfunc2 = GL_ZERO;
 		}
 		depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
-		if (r_refdef.fogenabled && (t->currentmaterialflags & MATERIALFLAG_BLENDED))
-			layerflags |= TEXTURELAYERFLAG_FOGDARKEN;
 		if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 		{
 			// fullbright is not affected by r_refdef.lightmapintensity
@@ -7826,7 +7823,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 		layercolor[3] = layer->color[3];
 		applycolor = layercolor[0] != 1 || layercolor[1] != 1 || layercolor[2] != 1 || layercolor[3] != 1;
 		R_Mesh_ColorPointer(NULL, 0, 0);
-		applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
+		applyfog = r_refdef.fogenabled && (rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED);
 		switch (layer->type)
 		{
 		case TEXTURELAYERTYPE_LITTEXTURE:
@@ -7930,7 +7927,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 		GL_DepthMask(layer->depthmask && writedepth);
 		GL_BlendFunc(layer->blendfunc1, layer->blendfunc2);
 		R_Mesh_ColorPointer(NULL, 0, 0);
-		applyfog = (layer->flags & TEXTURELAYERFLAG_FOGDARKEN) != 0;
+		applyfog = r_refdef.fogenabled && (rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED);
 		switch (layer->type)
 		{
 		case TEXTURELAYERTYPE_LITTEXTURE:
@@ -9537,6 +9534,25 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	texture.specularpowermod = 1;
 
 	surface.texture = &texture;
+	surface.num_triangles = numtriangles;
+	surface.num_firsttriangle = firsttriangle;
+	surface.num_vertices = numvertices;
+	surface.num_firstvertex = firstvertex;
+
+	// now render it
+	rsurface.texture = R_GetCurrentTexture(surface.texture);
+	rsurface.uselightmaptexture = false;
+	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass);
+}
+
+void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass)
+{
+	static msurface_t surface;
+	const msurface_t *surfacelist = &surface;
+
+	// fake enough texture and surface state to render this geometry
+
+	surface.texture = texture;
 	surface.num_triangles = numtriangles;
 	surface.num_firsttriangle = firsttriangle;
 	surface.num_vertices = numvertices;
