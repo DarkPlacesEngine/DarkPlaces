@@ -488,9 +488,9 @@ static const char *builtinshaderstring =
 "void main(void)\n"
 "{\n"
 "	gl_Position = ftransform();\n"
-"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
 "#ifdef USEBLOOM\n"
-"	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
 "#endif\n"
 "}\n"
 "#endif\n"
@@ -558,10 +558,10 @@ static const char *builtinshaderstring =
 "{\n"
 "	gl_FrontColor = gl_Color;\n"
 "#ifdef USEDIFFUSE\n"
-"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
 "#endif\n"
 "#ifdef USESPECULAR\n"
-"	gl_TexCoord[1] = gl_TextureMatrix[1] * gl_MultiTexCoord1;\n"
+"	gl_TexCoord[1] = gl_MultiTexCoord1;\n"
 "#endif\n"
 "	gl_Position = ftransform();\n"
 "}\n"
@@ -602,7 +602,7 @@ static const char *builtinshaderstring =
 "void main(void)\n"
 "{\n"
 "	gl_FrontColor = gl_Color;\n"
-"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
+"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
 "	gl_Position = ftransform();\n"
 "}\n"
 "#endif\n"
@@ -629,11 +629,12 @@ static const char *builtinshaderstring =
 "#ifdef MODE_REFRACTION\n"
 "varying vec2 TexCoord;\n"
 "varying vec4 ModelViewProjectionPosition;\n"
+"uniform mat4 TexMatrix;\n"
 "#ifdef VERTEX_SHADER\n"
 "\n"
 "void main(void)\n"
 "{\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
+"	TexCoord = vec2(TexMatrix * gl_MultiTexCoord0);\n"
 "	gl_Position = ftransform();\n"
 "	ModelViewProjectionPosition = gl_Position;\n"
 "}\n"
@@ -678,10 +679,11 @@ static const char *builtinshaderstring =
 "varying vec4 ModelViewProjectionPosition;\n"
 "#ifdef VERTEX_SHADER\n"
 "uniform vec3 EyePosition;\n"
+"uniform mat4 TexMatrix;\n"
 "\n"
 "void main(void)\n"
 "{\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
+"	TexCoord = vec2(TexMatrix * gl_MultiTexCoord0);\n"
 "	vec3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n"
 "	EyeVector.x = dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz);\n"
 "	EyeVector.y = dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz);\n"
@@ -837,12 +839,16 @@ static const char *builtinshaderstring =
 "// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3), this would require sending a 4 component texcoord1 with W as 1 or -1 according to which side the texcoord2 should be on\n"
 "\n"
 "#ifdef MODE_DEFERREDGEOMETRY\n"
+"uniform mat4 TexMatrix;\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"uniform mat4 BackgroundTexMatrix;\n"
+"#endif\n"
 "void main(void)\n"
 "{\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
+"	TexCoord = vec2(TexMatrix * gl_MultiTexCoord0);\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
 "	gl_FrontColor = gl_Color;\n"
-"	TexCoord2 = vec2(gl_TextureMatrix[1] * gl_MultiTexCoord0);\n"
+"	TexCoord2 = vec2(BackgroundTexMatrix * gl_MultiTexCoord0);\n"
 "#endif\n"
 "\n"
 "	// transform unnormalized eye direction into tangent space\n"
@@ -866,15 +872,22 @@ static const char *builtinshaderstring =
 "	gl_Position = ftransform();\n"
 "}\n"
 "#else // !MODE_DEFERREDLIGHTSOURCE\n"
+"uniform mat4 TexMatrix;\n"
+"#ifdef USEVERTEXTEXTUREBLEND\n"
+"uniform mat4 BackgroundTexMatrix;\n"
+"#endif\n"
+"#ifdef MODE_LIGHTSOURCE\n"
+"uniform mat4 ModelToLight;\n"
+"#endif\n"
 "void main(void)\n"
 "{\n"
 "#if defined(MODE_VERTEXCOLOR) || defined(USEVERTEXTEXTUREBLEND)\n"
 "	gl_FrontColor = gl_Color;\n"
 "#endif\n"
 "	// copy the surface texcoord\n"
-"	TexCoord = vec2(gl_TextureMatrix[0] * gl_MultiTexCoord0);\n"
+"	TexCoord = vec2(TexMatrix * gl_MultiTexCoord0);\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"	TexCoord2 = vec2(gl_TextureMatrix[1] * gl_MultiTexCoord0);\n"
+"	TexCoord2 = vec2(BackgroundTexMatrix * gl_MultiTexCoord0);\n"
 "#endif\n"
 "#ifdef USELIGHTMAP\n"
 "	TexCoordLightmap = vec2(gl_MultiTexCoord4);\n"
@@ -883,7 +896,7 @@ static const char *builtinshaderstring =
 "#ifdef MODE_LIGHTSOURCE\n"
 "	// transform vertex position into light attenuation/cubemap space\n"
 "	// (-1 to +1 across the light box)\n"
-"	CubeVector = vec3(gl_TextureMatrix[3] * gl_Vertex);\n"
+"	CubeVector = vec3(ModelToLight * gl_Vertex);\n"
 "\n"
 "# ifdef USEDIFFUSE\n"
 "	// transform unnormalized light direction into tangent space\n"
@@ -1801,6 +1814,9 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec4;
 	int loc_ViewTintColor;
 	int loc_ViewToLight;
+	int loc_ModelToLight;
+	int loc_TexMatrix;
+	int loc_BackgroundTexMatrix;
 }
 r_glsl_permutation_t;
 
@@ -2008,6 +2024,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
 		p->loc_ViewTintColor              = qglGetUniformLocationARB(p->program, "ViewTintColor");
 		p->loc_ViewToLight                = qglGetUniformLocationARB(p->program, "ViewToLight");
+		p->loc_ModelToLight               = qglGetUniformLocationARB(p->program, "ModelToLight");
+		p->loc_TexMatrix                  = qglGetUniformLocationARB(p->program, "TexMatrix");
+		p->loc_BackgroundTexMatrix        = qglGetUniformLocationARB(p->program, "BackgroundTexMatrix");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -2210,6 +2229,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 	// fragment shader on features that are not being used
 	unsigned int permutation = 0;
 	unsigned int mode = 0;
+	float m16f[16];
 	// TODO: implement geometry-shader based shadow volumes someday
 	if (r_glsl_offsetmapping.integer)
 	{
@@ -2385,6 +2405,7 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 	R_SetupShader_SetPermutation(mode, permutation);
 	if (mode == SHADERMODE_LIGHTSOURCE)
 	{
+		if (r_glsl_permutation->loc_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToLight, 1, false, m16f);}
 		if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
 		if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
 		if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);
@@ -2439,6 +2460,8 @@ void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, f
 		if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 		if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
 	}
+	if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
+	if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
 	if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 	if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1fARB(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3]);
 	if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
@@ -7674,8 +7697,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
 		return;
 
-	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
-	R_Mesh_TexMatrix(1, &rsurface.texture->currentbackgroundtexmatrix);
 	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
 	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
 	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
