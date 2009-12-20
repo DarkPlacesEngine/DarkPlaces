@@ -1899,6 +1899,14 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 
 		// note that this case must do everything the following case does too
 	}
+	else if ((ent->state_previous.effects & EF_RESTARTANIM_BIT) != (ent->state_current.effects & EF_RESTARTANIM_BIT))
+	{
+		ent->render.framegroupblend[1] = ent->render.framegroupblend[0];
+		ent->render.framegroupblend[1].lerp = 1;
+		ent->render.framegroupblend[0].frame = ent->state_current.frame;
+		ent->render.framegroupblend[0].start = cl.time;
+		ent->render.framegroupblend[0].lerp = 0;
+	}
 	else if (DotProduct(odelta, odelta) > 1000*1000
 		|| (cl.fixangle[0] && !cl.fixangle[1])
 		|| (ent->state_previous.tagindex != ent->state_current.tagindex)
