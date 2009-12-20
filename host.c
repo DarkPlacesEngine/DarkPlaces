@@ -770,7 +770,10 @@ void Host_Main(void)
 					aborttime = realtime + 0.1;
 				}
 			}
-			advancetime = min(advancetime, 0.1);
+			if(slowmo.value > 0 && slowmo.value < 1)
+				advancetime = min(advancetime, 0.1 / slowmo.value);
+			else
+				advancetime = min(advancetime, 0.1);
 
 			if(advancetime > 0)
 			{
