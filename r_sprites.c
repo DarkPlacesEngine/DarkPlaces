@@ -380,7 +380,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 
 			R_CalcSprite_Vertex3f(vertex3f, org, left, up, frame->left, frame->right, frame->down, frame->up);
 
-			R_DrawCustomSurface(texture->currentskinframe, &identitymatrix, texture->currentmaterialflags, 0, 4, 0, 2, false, false);
+			R_DrawCustomSurface_Texture(texture, &identitymatrix, texture->currentmaterialflags, 0, 4, 0, 2, false, false);
 		}
 	}
 

@@ -408,16 +408,6 @@ typedef enum texturelayertype_e
 }
 texturelayertype_t;
 
-typedef enum texturelayerflag_e
-{
-	// indicates that the pass should apply fog darkening; used on
-	// transparent surfaces where simply blending an alpha fog as a final
-	// pass would not behave properly, so all the surfaces must be darkened,
-	// and the fog color added as a separate pass
-	TEXTURELAYERFLAG_FOGDARKEN = 1,
-}
-texturelayerflag_t;
-
 typedef struct texturelayer_s
 {
 	texturelayertype_t type;
@@ -427,7 +417,6 @@ typedef struct texturelayer_s
 	rtexture_t *texture;
 	matrix4x4_t texmatrix;
 	vec4_t color;
-	int flags;
 }
 texturelayer_t;
 
