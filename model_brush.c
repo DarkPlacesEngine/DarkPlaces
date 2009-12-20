@@ -1646,8 +1646,6 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// start out with no animation
 			tx->currentframe = tx;
 			tx->currentskinframe = tx->skinframes[0];
-			tx->specularscalemod = 1; // not supported here
-			tx->specularpowermod = 1; // not supported here
 		}
 	}
 
