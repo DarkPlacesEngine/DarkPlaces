@@ -95,6 +95,7 @@ cvar_t r_polygonoffset_decals_factor = {0, "r_polygonoffset_decals_factor", "0",
 cvar_t r_polygonoffset_decals_offset = {0, "r_polygonoffset_decals_offset", "-14", "biases depth values of decals to prevent z-fighting artifacts"};
 cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
+cvar_t r_transparentdepthmasking = {CVAR_SAVE, "r_transparentdepthmasking", "1", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -3337,6 +3338,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_polygonoffset_decals_offset);
 	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_drawfog);
+	Cvar_RegisterVariable(&r_transparentdepthmasking);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&r_glsl);
@@ -6079,6 +6081,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	}
 	else
 		t->currentmaterialflags &= ~(MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER);
+	if ((t->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)) == MATERIALFLAG_BLENDED && r_transparentdepthmasking.integer && !(t->basematerialflags & MATERIALFLAG_BLENDED))
+		t->currentmaterialflags |= MATERIALFLAG_TRANSDEPTH;
 
 	// there is no tcmod
 	if (t->currentmaterialflags & MATERIALFLAG_WATERSCROLL)
@@ -8212,6 +8216,51 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			RSurf_ActiveModelEntity(ent, true, false, false);
 			break;
 		}
+	}
+
+	if (r_transparentdepthmasking.integer)
+	{
+		qboolean setup = false;
+		for (i = 0;i < numsurfaces;i = j)
+		{
+			j = i + 1;
+			surface = rsurface.modelsurfaces + surfacelist[i];
+			texture = surface->texture;
+			rsurface.texture = R_GetCurrentTexture(texture);
+			rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
+			// scan ahead until we find a different texture
+			endsurface = min(i + 1024, numsurfaces);
+			texturenumsurfaces = 0;
+			texturesurfacelist[texturenumsurfaces++] = surface;
+			for (;j < endsurface;j++)
+			{
+				surface = rsurface.modelsurfaces + surfacelist[j];
+				if (texture != surface->texture || rsurface.uselightmaptexture != (surface->lightmaptexture != NULL))
+					break;
+				texturesurfacelist[texturenumsurfaces++] = surface;
+			}
+			if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_TRANSDEPTH))
+				continue;
+			// render the range of surfaces as depth
+			if (!setup)
+			{
+				setup = true;
+				GL_ColorMask(0,0,0,0);
+				GL_Color(1,1,1,1);
+				GL_DepthTest(true);
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+				GL_DepthMask(true);
+				GL_AlphaTest(false);
+				R_Mesh_ColorPointer(NULL, 0, 0);
+				R_Mesh_ResetTextureState();
+				R_SetupDepthOrShadowShader();
+			}
+			RSurf_SetupDepthAndCulling();
+			RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		}
+		if (setup)
+			GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	}
 
 	for (i = 0;i < numsurfaces;i = j)

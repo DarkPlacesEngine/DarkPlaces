@@ -110,6 +110,8 @@ mplane_t;
 #define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 8388608
 // causes RSurf_GetCurrentTexture to leave alone certain fields
 #define MATERIALFLAG_CUSTOMSURFACE 16777216
+// causes MATERIALFLAG_BLENDED to render a depth pass before rendering, hiding backfaces and other hidden geometry
+#define MATERIALFLAG_TRANSDEPTH 33554432
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency
