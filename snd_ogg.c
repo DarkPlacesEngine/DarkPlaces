@@ -411,7 +411,7 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 	ogg_stream_perchannel_t* per_ch = (ogg_stream_perchannel_t *)*chfetcherpointer;
 	ogg_stream_persfx_t* per_sfx = (ogg_stream_persfx_t *)sfxfetcher;
 	snd_buffer_t* sb;
-	int newlength, done, ret, bigendian;
+	int newlength, done, ret;
 	unsigned int real_start;
 	unsigned int factor;
 
@@ -529,13 +529,8 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 		newlength = sizeof(resampling_buffer);
 
 	// Decompress in the resampling_buffer
-#if BYTE_ORDER == BIG_ENDIAN
-	bigendian = 1;
-#else
-	bigendian = 0;
-#endif
 	done = 0;
-	while ((ret = qov_read (&per_ch->vf, (char *)&resampling_buffer[done], (int)(newlength - done), bigendian, 2, 1, &per_ch->bs)) > 0)
+	while ((ret = qov_read (&per_ch->vf, (char *)&resampling_buffer[done], (int)(newlength - done), mem_bigendian, 2, 1, &per_ch->bs)) > 0)
 		done += ret;
 
 	Snd_AppendToSndBuffer (sb, resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format);

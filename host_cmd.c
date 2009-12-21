@@ -2381,7 +2381,7 @@ void Host_PQRcon_f (void)
 		MSG_WriteByte (&net_message, CCREQ_RCON);
 		SZ_Write(&net_message, (void*)rcon_password.string, n);
 		MSG_WriteString (&net_message, Cmd_Args());
-		*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+		StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 		NetConn_Write(mysocket, net_message.data, net_message.cursize, &to);
 		SZ_Clear (&net_message);
 	}

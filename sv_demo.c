@@ -27,13 +27,15 @@ void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clien
 {
 	int len, i;
 	float f;
+	int temp;
 
 	if(client->sv_demo_file == NULL)
 		return;
 	if(sendbuffer->cursize == 0)
 		return;
 	
-	len = LittleLong(sendbuffer->cursize | (clienttoserver ? DEMOMSG_CLIENT_TO_SERVER : 0));
+	temp = sendbuffer->cursize | (clienttoserver ? DEMOMSG_CLIENT_TO_SERVER : 0);
+	len = LittleLong(temp);
 	FS_Write(client->sv_demo_file, &len, 4);
 	for(i = 0; i < 3; ++i)
 	{

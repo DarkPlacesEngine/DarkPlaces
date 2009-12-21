@@ -69,78 +69,40 @@ void Com_BlockFullChecksum (void *buffer, int len, unsigned char *outbuf);
 //							Endianess handling
 //============================================================================
 
-// We use BSD-style defines: BYTE_ORDER is defined to either BIG_ENDIAN or LITTLE_ENDIAN
-
-// Initializations
-#if !defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN) || (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
-# undef BYTE_ORDER
-# undef LITTLE_ENDIAN
-# undef BIG_ENDIAN
-# define LITTLE_ENDIAN 1234
-# define BIG_ENDIAN 4321
-#endif
-
-// If we still don't know the CPU endianess at this point, we try to guess
-// normally including sys/types.h includes endian.h for the platform, which defines BYTE_ORDER, LITTLE_ENDIAN, and BIG_ENDIAN, however endian.h is a BSD-ism, and may not be present on all platforms (particularly windows)
-#ifndef BYTE_ORDER
-# if defined(WIN32) || defined (__i386) || defined(__amd64)
-#  define BYTE_ORDER LITTLE_ENDIAN
-# else
-#  if defined(SUNOS)
-#   if defined(__i386) || defined(__amd64)
-#    define BYTE_ORDER LITTLE_ENDIAN
-#   else
-#    define BYTE_ORDER BIG_ENDIAN
-#   endif
-#  else
-#   warning "Unable to determine the CPU endianess. Defaulting to little endian"
-#   define BYTE_ORDER LITTLE_ENDIAN
-#  endif
-# endif
-#endif
+// check mem_bigendian if you need to know the system byte order
 
 /*! \name Byte order functions.
  * @{
  */
 
-/// Swaps the byte order of the given short \p l.
-short ShortSwap (short l);
+// unaligned memory access crashes on some platform, so always read bytes...
+#define BigShort(l) BuffBigShort((unsigned char *)&(l))
+#define LittleShort(l) BuffLittleShort((unsigned char *)&(l))
+#define BigLong(l) BuffBigLong((unsigned char *)&(l))
+#define LittleLong(l) BuffLittleLong((unsigned char *)&(l))
+#define BigFloat(l) BuffBigFloat((unsigned char *)&(l))
+#define LittleFloat(l) BuffLittleFloat((unsigned char *)&(l))
 
-/// Swaps the byte order of the given long \p l.
-int LongSwap (int l);
+/// Extract a big endian 32bit float from the given \p buffer.
+float BuffBigFloat (const unsigned char *buffer);
 
-/// Swaps the byte order of the given float \p f.
-float FloatSwap (float f);
+/// Extract a big endian 32bit int from the given \p buffer.
+int BuffBigLong (const unsigned char *buffer);
 
-#if BYTE_ORDER == LITTLE_ENDIAN
-// little endian
-#define BigShort(l) ShortSwap(l)
-#define LittleShort(l) (l)
-#define BigLong(l) LongSwap(l)
-#define LittleLong(l) (l)
-#define BigFloat(l) FloatSwap(l)
-#define LittleFloat(l) (l)
-#else
-// big endian
-#define BigShort(l) (l)
-#define LittleShort(l) ShortSwap(l)
-#define BigLong(l) (l)
-#define LittleLong(l) LongSwap(l)
-#define BigFloat(l) (l)
-#define LittleFloat(l) FloatSwap(l)
-#endif
+/// Extract a big endian 16bit short from the given \p buffer.
+short BuffBigShort (const unsigned char *buffer);
 
-/// Extract a big endian long from the given \p buffer.
-unsigned int BuffBigLong (const unsigned char *buffer);
+/// Extract a little endian 32bit float from the given \p buffer.
+float BuffLittleFloat (const unsigned char *buffer);
 
-/// Extract a big endian short from the given \p buffer.
-unsigned short BuffBigShort (const unsigned char *buffer);
+/// Extract a little endian 32bit int from the given \p buffer.
+int BuffLittleLong (const unsigned char *buffer);
 
-/// Extract a little endian long from the given \p buffer.
-unsigned int BuffLittleLong (const unsigned char *buffer);
+/// Extract a little endian 16bit short from the given \p buffer.
+short BuffLittleShort (const unsigned char *buffer);
 
-/// Extract a little endian short from the given \p buffer.
-unsigned short BuffLittleShort (const unsigned char *buffer);
+/// Encode a big endian 32bit int to the given \p buffer
+void StoreBigLong (unsigned char *buffer, unsigned int i);
 //@}
 
 //============================================================================

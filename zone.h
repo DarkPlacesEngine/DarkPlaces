@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef ZONE_H
 #define ZONE_H
 
+extern qboolean mem_bigendian;
+
 // div0: heap overflow detection paranoia
 #define MEMPARANOIA 0
 

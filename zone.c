@@ -35,6 +35,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MEMHEADER_SENTINEL_FOR_ADDRESS(p) ((sentinel_seed ^ (unsigned int) (uintptr_t) (p)) + sentinel_seed)
 unsigned int sentinel_seed;
 
+qboolean mem_bigendian = false;
+
 // LordHavoc: enables our own low-level allocator (instead of malloc)
 #define MEMCLUMPING 0
 #define MEMCLUMPING_FREECLUMPS 0
@@ -43,7 +45,7 @@ unsigned int sentinel_seed;
 // smallest unit we care about is this many bytes
 #define MEMUNIT 128
 // try to do 32MB clumps, but overhead eats into this
-#define MEMWANTCLUMPSIZE (1<<29)
+#define MEMWANTCLUMPSIZE (1<<27)
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (MEMWANTCLUMPSIZE - MEMWANTCLUMPSIZE/MEMUNIT/32 - 128)
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
@@ -800,6 +802,10 @@ Memory_Init
 */
 void Memory_Init (void)
 {
+	static union {unsigned short s;unsigned char b[2];} u;
+	u.s = 0x100;
+	mem_bigendian = u.b[0];
+
 	sentinel_seed = rand();
 	poolchain = NULL;
 	tempmempool = Mem_AllocPool("Temporary Memory", POOLFLAG_TEMP, NULL);

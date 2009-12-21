@@ -84,11 +84,10 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 #ifdef SUNOS
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
 #else
-#	if BYTE_ORDER == BIG_ENDIAN
+	if (mem_bigendian)
 		info.play.encoding = AUDIO_ENCODING_SLINEAR_BE;
-#	else
+	else
 		info.play.encoding = AUDIO_ENCODING_SLINEAR_LE;
-#	endif
 #endif
 
 	if (ioctl (audio_fd, AUDIO_SETINFO, &info) != 0)
