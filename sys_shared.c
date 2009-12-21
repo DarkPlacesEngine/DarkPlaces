@@ -1,9 +1,14 @@
 #include "quakedef.h"
+
+#define SUPPORTDLL
+
 # include <time.h>
 #ifndef WIN32
 # include <unistd.h>
 # include <fcntl.h>
+#ifdef SUPPORTDLL
 # include <dlfcn.h>
+#endif
 #endif
 
 static char sys_timestring[128];
@@ -56,6 +61,7 @@ DLL MANAGEMENT
 
 qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
+#ifdef SUPPORTDLL
 	const dllfunction_t *func;
 	dllhandle_t dllhandle = 0;
 	unsigned int i;
@@ -143,10 +149,14 @@ notfound:
 
 	*handle = dllhandle;
 	return true;
+#else
+	return false;
+#endif
 }
 
 void Sys_UnloadLibrary (dllhandle_t* handle)
 {
+#ifdef SUPPORTDLL
 	if (handle == NULL || *handle == NULL)
 		return;
 
@@ -157,14 +167,19 @@ void Sys_UnloadLibrary (dllhandle_t* handle)
 #endif
 
 	*handle = NULL;
+#endif
 }
 
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 {
+#ifdef SUPPORTDLL
 #ifdef WIN32
 	return (void *)GetProcAddress (handle, name);
 #else
 	return (void *)dlsym (handle, name);
+#endif
+#else
+	return NULL;
 #endif
 }
 
