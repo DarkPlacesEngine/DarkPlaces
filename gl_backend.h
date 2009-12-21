@@ -74,6 +74,8 @@ void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t buffer
 void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferoffset);
 // sets the texcoord array pointer for an array unit
 void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset);
+// returns current texture bound to this identifier
+int R_Mesh_TexBound(unsigned int unitnum, int id);
 // sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle);
 // equivalent to R_Mesh_TexBindAll(unitnum,tex2d,0,0,0)

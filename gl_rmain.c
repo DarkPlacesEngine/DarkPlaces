@@ -450,8 +450,8 @@ static void R_BuildFogTexture(void)
 	}
 	else
 	{
-		r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
-		//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+		r_texture_fogattenuation = R_LoadTexture2D(r_main_texturepool, "fogattenuation", FOGWIDTH, 1, &data1[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT | TEXF_ALLOWUPDATES, NULL);
+		//r_texture_fogintensity = R_LoadTexture2D(r_main_texturepool, "fogintensity", FOGWIDTH, 1, &data2[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_ALLOWUPDATES, NULL);
 	}
 }
 
@@ -5136,7 +5136,7 @@ void R_UpdateVariables(void)
 				}
 				else
 				{
-					r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &rampbgr[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+					r_texture_gammaramps = R_LoadTexture2D(r_main_texturepool, "gammaramps", RAMPWIDTH, 1, &rampbgr[0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT | TEXF_ALLOWUPDATES, NULL);
 				}
 			}
 		}
@@ -9426,10 +9426,31 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	}
 	// update lightmaps if needed
 	if (update)
+	{
+		int updated = 0;
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
+		{
 			if (r_refdef.viewcache.world_surfacevisible[j])
+			{
 				if (update[j])
+				{
+					updated++;
 					R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
+				}
+			}
+		}
+		if (updated)
+		{
+			int count = model->brushq3.num_mergedlightmaps;
+			for (i = 0;i < count;i++)
+			{
+				if (model->brushq3.data_deluxemaps[i])
+					R_FlushTexture(model->brushq3.data_deluxemaps[i]);
+				if (model->brushq3.data_lightmaps[i])
+					R_FlushTexture(model->brushq3.data_lightmaps[i]);
+			}
+		}
+	}
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
 	{
@@ -9538,6 +9559,29 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		return;
 	}
 	// update lightmaps if needed
+	if (update)
+	{
+		int updated = 0;
+		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
+		{
+			if (update[j])
+			{
+				updated++;
+				R_BuildLightMap(ent, surfaces + j);
+			}
+		}
+		if (updated)
+		{
+			int count = model->brushq3.num_mergedlightmaps;
+			for (i = 0;i < count;i++)
+			{
+				if (model->brushq3.data_deluxemaps[i])
+					R_FlushTexture(model->brushq3.data_deluxemaps[i]);
+				if (model->brushq3.data_lightmaps[i])
+					R_FlushTexture(model->brushq3.data_lightmaps[i]);
+			}
+		}
+	}
 	if (update)
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 			if (update[j])
