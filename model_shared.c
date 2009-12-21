@@ -1797,7 +1797,7 @@ void Mod_LoadQ3Shaders(void)
 							shader.textureblendalpha = true;
 						}
 					}
-					layer->texflags = TEXF_ALPHA | TEXF_PRECACHE;
+					layer->texflags = TEXF_ALPHA;
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
 					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
@@ -3740,8 +3740,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 
 	for (lightmapindex = 0;lightmapindex < model->brushq3.num_mergedlightmaps;lightmapindex++)
 	{
-		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
-		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, NULL);
+		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, NULL);
 	}
 
 	if (lightmappixels)

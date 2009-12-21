@@ -1907,7 +1907,7 @@ static void R_InitParticleTexture (void)
 	// we invert it again during the blendfunc to make it work...
 
 #ifndef DUMPPARTICLEFONT
-	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, false);
+	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_FORCELINEAR, false);
 	if (decalskinframe)
 	{
 		particlefonttexture = decalskinframe->base;
@@ -2051,7 +2051,7 @@ static void R_InitParticleTexture (void)
 		Image_WriteTGABGRA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
-		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE);
+		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_FORCELINEAR, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE);
 		particlefonttexture = decalskinframe->base;
 
 		Mem_Free(particletexturedata);
@@ -2070,7 +2070,7 @@ static void R_InitParticleTexture (void)
 	}
 
 #ifndef DUMPPARTICLEFONT
-	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, true);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true);
 	if (!particletexture[tex_beam].texture)
 #endif
 	{
@@ -2093,7 +2093,7 @@ static void R_InitParticleTexture (void)
 #ifdef DUMPPARTICLEFONT
 		Image_WriteTGABGRA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
 #endif
-		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE | TEXF_FORCELINEAR, NULL);
+		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
 	}
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;

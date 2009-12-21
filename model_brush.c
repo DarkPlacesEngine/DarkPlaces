@@ -1381,8 +1381,8 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 		}
 	}
 
-	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture",              TEXF_PRECACHE, (unsigned char *) solidpixels, w, h);
-	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA | TEXF_PRECACHE, (unsigned char *) alphapixels, w, h);
+	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture", 0         , (unsigned char *) solidpixels, w, h);
+	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA, (unsigned char *) alphapixels, w, h);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
 }
@@ -1578,9 +1578,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
+				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
 				if (!skinframe)
-					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
+					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
 				if (!skinframe)
 				{
 					// did not find external texture, load it from the bsp or wad3
@@ -1597,13 +1597,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0), pixels, image_width, image_height);
+							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), pixels, image_width, image_height);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_PRECACHE | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
 				// if skinframe is still NULL the "missing" texture will be used
 				if (skinframe)
@@ -1618,7 +1618,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				{
 					// replace the texture with transparent black
 					Vector4Set(zero, 128, 128, 128, 128);
-					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_ALPHA, zero, 1, 1);
+					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zero, 1, 1);
 					tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
 				}
 				else if (!strncmp(tx->name,"*lava",5)
@@ -1633,7 +1633,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 			{
 				// replace the texture with black
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_PRECACHE, zero, 1, 1);
+				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zero, 1, 1);
 				tx->basematerialflags |= MATERIALFLAG_REFLECTION;
 			}
 			else if (!strncmp(tx->name, "sky", 3))
@@ -2444,9 +2444,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				loadmodel->brushq3.num_mergedlightmaps = lightmapnumber + 1;
 				loadmodel->brushq3.data_lightmaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_lightmaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_lightmaps[0]));
 				loadmodel->brushq3.data_deluxemaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_deluxemaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_deluxemaps[0]));
-				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES, NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES, NULL);
 				if (loadmodel->brushq1.nmaplightdata)
-					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES, NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES, NULL);
 				lightmapnumber++;
 				Mod_AllocLightmap_Reset(&allocState);
 				Mod_AllocLightmap_Block(&allocState, ssize, tsize, &lightmapx, &lightmapy);
@@ -4260,7 +4260,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		return;
 
 	for (i = 0;i < count;i++, in++, out++)
-		Mod_LoadTextureFromQ3Shader(out, out->name, true, true, TEXF_MIPMAP | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(out, out->name, true, true, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
 }
 
 static void Mod_Q3BSP_LoadPlanes(lump_t *l)
@@ -4696,9 +4696,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 					;
 				if (developer_loading.integer)
 					Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*size, mergeheight*size, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES), NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES), NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
-					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES), NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES | TEXF_MANUALFLUSHUPDATES), NULL);
 			}
 			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
 			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
@@ -4712,9 +4712,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		{
 			// figure out which merged lightmap texture this fits into
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
 			else
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_PRECACHE | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
 		}
 	}
 
@@ -6977,7 +6977,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_textures = numtextures;
 	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 	for (i = 0;i < numtextures;i++)
-		Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, texturenames[i], true, true, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, texturenames[i], true, true, TEXF_MIPMAP | TEXF_ALPHA | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
 
 	// free the texturenames array since we are now done with it
 	for (i = 0;i < numtextures;i++)
@@ -7081,7 +7081,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-			Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP | TEXF_COMPRESS);
+			Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
 	}
 	else
 	{
