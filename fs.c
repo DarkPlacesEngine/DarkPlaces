@@ -106,6 +106,19 @@ CONSTANTS
 #define ZIP_CDIR_CHUNK_BASE_SIZE	46
 #define ZIP_LOCAL_CHUNK_BASE_SIZE	30
 
+#ifdef LINK_TO_ZLIB
+#include <zlib.h>
+
+#define qz_inflate inflate
+#define qz_inflateEnd inflateEnd
+#define qz_inflateInit2_ inflateInit2_
+#define qz_inflateReset inflateReset
+#define qz_deflateInit2_ deflateInit2_
+#define qz_deflateEnd deflateEnd
+#define qz_deflate deflate
+#define Z_MEMLEVEL_DEFAULT 8
+#else
+
 // Zlib constants (from zlib.h)
 #define Z_SYNC_FLUSH	2
 #define MAX_WBITS		15
@@ -166,6 +179,7 @@ typedef struct
 	unsigned long	adler;		///< adler32 value of the uncompressed data
 	unsigned long	reserved;	///< reserved for future use
 } z_stream;
+#endif
 
 
 /// inside a package (PAK or PK3)
@@ -334,6 +348,7 @@ PRIVATE FUNCTIONS - PK3 HANDLING
 =============================================================================
 */
 
+#ifndef LINK_TO_ZLIB
 // Functions exported from zlib
 #if defined(WIN32) && defined(ZLIB_USES_WINAPI)
 # define ZEXPORT WINAPI
@@ -348,12 +363,14 @@ static int (ZEXPORT *qz_inflateReset) (z_stream* strm);
 static int (ZEXPORT *qz_deflateInit2_) (z_stream* strm, int level, int method, int windowBits, int memLevel, int strategy, const char *version, int stream_size);
 static int (ZEXPORT *qz_deflateEnd) (z_stream* strm);
 static int (ZEXPORT *qz_deflate) (z_stream* strm, int flush);
+#endif
 
 #define qz_inflateInit2(strm, windowBits) \
         qz_inflateInit2_((strm), (windowBits), ZLIB_VERSION, sizeof(z_stream))
 #define qz_deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
         qz_deflateInit2_((strm), (level), (method), (windowBits), (memLevel), (strategy), ZLIB_VERSION, sizeof(z_stream))
 
+#ifndef LINK_TO_ZLIB
 //        qz_deflateInit_((strm), (level), ZLIB_VERSION, sizeof(z_stream))
 
 static dllfunction_t zlibfuncs[] =
@@ -370,6 +387,7 @@ static dllfunction_t zlibfuncs[] =
 
 /// Handle for Zlib DLL
 static dllhandle_t zlib_dll = NULL;
+#endif
 
 #ifdef WIN32
 static HRESULT (WINAPI *qSHGetFolderPath) (HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwFlags, LPTSTR pszPath);
@@ -390,7 +408,9 @@ Unload the Zlib DLL
 */
 void PK3_CloseLibrary (void)
 {
+#ifndef LINK_TO_ZLIB
 	Sys_UnloadLibrary (&zlib_dll);
+#endif
 }
 
 
@@ -403,6 +423,9 @@ Try to load the Zlib DLL
 */
 qboolean PK3_OpenLibrary (void)
 {
+#ifdef LINK_TO_ZLIB
+	return true;
+#else
 	const char* dllnames [] =
 	{
 #if defined(WIN64)
@@ -429,6 +452,7 @@ qboolean PK3_OpenLibrary (void)
 
 	// Load the DLL
 	return Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs);
+#endif
 }
 
 /*
@@ -440,8 +464,12 @@ See if zlib is available
 */
 qboolean FS_HasZlib(void)
 {
+#ifdef LINK_TO_ZLIB
+	return true;
+#else
 	PK3_OpenLibrary(); // to be safe
 	return (zlib_dll != 0);
+#endif
 }
 
 /*
@@ -1808,6 +1836,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 		if (!PK3_GetTrueFileOffset (pfile, pack))
 			return NULL;
 
+#ifndef LINK_TO_ZLIB
 	// No Zlib DLL = no compressed files
 	if (!zlib_dll && (pfile->flags & PACKFILE_FLAG_DEFLATED))
 	{
@@ -1816,6 +1845,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 					pfile->name);
 		return NULL;
 	}
+#endif
 
 	// LordHavoc: lseek affects all duplicates of a handle so we do it before
 	// the dup() call to avoid having to close the dup_handle on error here
@@ -2898,6 +2928,9 @@ int FS_SysFileType (const char *path)
 	if (stat (path,&buf) == -1)
 		return FS_FILETYPE_NONE;
 
+#ifndef S_ISDIR
+#define S_ISDIR(a) (((a) & S_IFMT) == S_IFDIR)
+#endif
 	if(S_ISDIR(buf.st_mode))
 		return FS_FILETYPE_DIRECTORY;
 
@@ -3338,8 +3371,10 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 	unsigned char *tmp;
 
 	*deflated_size = 0;
+#ifndef LINK_TO_ZLIB
 	if(!zlib_dll)
 		return NULL;
+#endif
 
 	memset(&strm, 0, sizeof(strm));
 	strm.zalloc = Z_NULL;
@@ -3435,8 +3470,10 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	sizebuf_t outbuf;
 
 	*inflated_size = 0;
+#ifndef LINK_TO_ZLIB
 	if(!zlib_dll)
 		return NULL;
+#endif
 
 	memset(&outbuf, 0, sizeof(outbuf));
 	outbuf.data = (unsigned char *) Mem_Alloc(tempmempool, sizeof(tmp));
