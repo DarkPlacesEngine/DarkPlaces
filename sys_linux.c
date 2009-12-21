@@ -33,7 +33,7 @@ cvar_t sys_useclockgettime = {CVAR_SAVE, "sys_useclockgettime", "0", "use POSIX 
 // =======================================================================
 void Sys_Shutdown (void)
 {
-#ifndef WIN32
+#ifdef FNDELAY
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #endif
 	fflush(stdout);
@@ -45,7 +45,7 @@ void Sys_Error (const char *error, ...)
 	char string[MAX_INPUTLINE];
 
 // change stdin to non blocking
-#ifndef WIN32
+#ifdef FNDELAY
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #endif
 
@@ -61,11 +61,12 @@ void Sys_Error (const char *error, ...)
 
 void Sys_PrintToTerminal(const char *text)
 {
-#ifndef WIN32
+#ifdef FNDELAY
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	int origflags = fcntl (1, F_GETFL, 0);
 	fcntl (1, F_SETFL, origflags & ~FNDELAY);
-#else
+#endif
+#ifdef WIN32
 #define write _write
 #endif
 	while(*text)
@@ -75,7 +76,7 @@ void Sys_PrintToTerminal(const char *text)
 			break; // sorry, I cannot do anything about this error - without an output
 		text += written;
 	}
-#ifndef WIN32
+#ifdef FNDELAY
 	fcntl (1, F_SETFL, origflags);
 #endif
 	//fprintf(stdout, "%s", text);
@@ -293,7 +294,7 @@ int main (int argc, char **argv)
 	com_argc = argc;
 	com_argv = (const char **)argv;
 
-#ifndef WIN32
+#ifdef FNDELAY
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 #endif
 
