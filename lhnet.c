@@ -81,6 +81,14 @@
 #define SOCKLEN_T socklen_t
 #endif
 
+#ifdef MSG_DONTWAIT
+#define LHNET_RECVFROM_FLAGS MSG_DONTWAIT
+#define LHNET_SENDTO_FLAGS 0
+#else
+#define LHNET_RECVFROM_FLAGS 0
+#define LHNET_SENDTO_FLAGS 0
+#endif
+
 typedef struct lhnetaddressnative_s
 {
 	lhnetaddresstype_t addresstype;
@@ -89,7 +97,9 @@ typedef struct lhnetaddressnative_s
 	{
 		struct sockaddr sock;
 		struct sockaddr_in in;
+#ifdef SUPPORTIPV6
 		struct sockaddr_in6 in6;
+#endif
 	}
 	addr;
 }
@@ -129,6 +139,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 		address->addr.in.sin_family = AF_INET;
 		address->addr.in.sin_port = htons((unsigned short)port);
 		return 1;
+#ifdef SUPPORTIPV6
 	case LHNETADDRESSTYPE_INET6:
 		// [0:0:0:0:0:0:0:0]:port  (IN6ADDR_ANY, binds to all interfaces)
 		memset(address, 0, sizeof(*address));
@@ -137,6 +148,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 		address->addr.in6.sin6_family = AF_INET6;
 		address->addr.in6.sin6_port = htons((unsigned short)port);
 		return 1;
+#endif
 	}
 	return 0;
 }
@@ -437,8 +449,10 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 		address->port = port;
 		if (address->addresstype == LHNETADDRESSTYPE_INET6)
 		{
+#ifdef SUPPORTIPV6
 			address->addr.in6.sin6_port = htons((unsigned short)port);
 			return 1;
+#endif
 		}
 		else if (address->addresstype == LHNETADDRESSTYPE_INET4)
 		{
@@ -453,6 +467,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 	{
 		if (hostentry->h_addrtype == AF_INET6)
 		{
+#ifdef SUPPORTIPV6
 			// great it worked
 			address->addresstype = LHNETADDRESSTYPE_INET6;
 			address->port = port;
@@ -472,6 +487,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 			printf("gethostbyname(\"%s\") returned ipv6 address %s\n", string, string2);
 #endif
 			return 1;
+#endif
 		}
 		else if (hostentry->h_addrtype == AF_INET)
 		{
@@ -559,6 +575,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 			}
 		}
 		break;
+#ifdef SUPPORTIPV6
 	case LHNETADDRESSTYPE_INET6:
 		a = (const unsigned char *)(&address->addr.in6.sin6_addr);
 		if (includeport)
@@ -578,6 +595,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 			}
 		}
 		break;
+#endif
 	}
 	return 0;
 }
@@ -641,9 +659,11 @@ int LHNETADDRESS_SetPort(lhnetaddress_t *vaddress, int port)
 	case LHNETADDRESSTYPE_INET4:
 		address->addr.in.sin_port = htons((unsigned short)port);
 		return 1;
+#ifdef SUPPORTIPV6
 	case LHNETADDRESSTYPE_INET6:
 		address->addr.in6.sin6_port = htons((unsigned short)port);
 		return 1;
+#endif
 	default:
 		return 0;
 	}
@@ -671,6 +691,7 @@ int LHNETADDRESS_Compare(const lhnetaddress_t *vaddress1, const lhnetaddress_t *
 		if (address1->port != address2->port)
 			return -1;
 		return 0;
+#ifdef SUPPORTIPV6
 	case LHNETADDRESSTYPE_INET6:
 		if (address1->addr.in6.sin6_family != address2->addr.in6.sin6_family)
 			return 1;
@@ -679,6 +700,7 @@ int LHNETADDRESS_Compare(const lhnetaddress_t *vaddress1, const lhnetaddress_t *
 		if (address1->port != address2->port)
 			return -1;
 		return 0;
+#endif
 	default:
 		return 1;
 	}
@@ -804,6 +826,7 @@ static const char *LHNETPRIVATE_StrError(void)
 
 void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 {
+#ifdef FD_SET
 	fd_set fdreadset;
 	struct timeval tv;
 	int lastfd;
@@ -822,6 +845,9 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 	tv.tv_sec = microseconds / 1000000;
 	tv.tv_usec = microseconds % 1000000;
 	select(lastfd + 1, &fdreadset, NULL, NULL, &tv);
+#else
+	Sys_Sleep(microseconds);
+#endif
 }
 
 lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
@@ -869,20 +895,32 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 			}
 			break;
 		case LHNETADDRESSTYPE_INET4:
+#ifdef SUPPORTIPV6
 		case LHNETADDRESSTYPE_INET6:
+#endif
 #ifdef WIN32
 			if (lhnet_didWSAStartup)
 			{
 #endif
+#ifdef SUPPORTIPV6
 				if ((lhnetsocket->inetsocket = socket(address->addresstype == LHNETADDRESSTYPE_INET6 ? PF_INET6 : PF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1)
+#else
+				if ((lhnetsocket->inetsocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1)
+#endif
 				{
 #ifdef WIN32
-					u_long _true = 1;
 					u_long _false = 0;
+#endif
+#ifdef MSG_DONTWAIT
+					if (1)
+#else
+#ifdef WIN32
+					u_long _true = 1;
 #else
 					char _true = 1;
 #endif
 					if (ioctlsocket(lhnetsocket->inetsocket, FIONBIO, &_true) != -1)
+#endif
 					{
 #ifdef IPV6_V6ONLY
 						// We need to set this flag to tell the OS that we only listen on IPv6. If we don't
@@ -903,6 +941,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 							lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
 							SOCKLEN_T namelen;
 							int bindresult;
+#ifdef SUPPORTIPV6
 							if (address->addresstype == LHNETADDRESSTYPE_INET6)
 							{
 								namelen = sizeof(localaddress->addr.in6);
@@ -911,6 +950,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 									getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
 							}
 							else
+#endif
 							{
 								namelen = sizeof(localaddress->addr.in);
 								bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
@@ -1041,7 +1081,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		SOCKLEN_T inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addr.in);
-		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
+		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, LHNET_RECVFROM_FLAGS, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET4;
@@ -1062,6 +1102,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
+#ifdef SUPPORTIPV6
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 	{
 		SOCKLEN_T inetaddresslength;
@@ -1088,6 +1129,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
+#endif
 	return value;
 }
 
@@ -1120,7 +1162,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 	}
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4)
 	{
-		value = sendto(lhnetsocket->inetsocket, (char *)content, contentlength, 0, (struct sockaddr *)&address->addr.in, sizeof(struct sockaddr_in));
+		value = sendto(lhnetsocket->inetsocket, (char *)content, contentlength, LHNET_SENDTO_FLAGS, (struct sockaddr *)&address->addr.in, sizeof(struct sockaddr_in));
 		if (value == -1)
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
@@ -1128,6 +1170,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 			Con_Printf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
+#ifdef SUPPORTIPV6
 	else if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 	{
 		value = sendto(lhnetsocket->inetsocket, (char *)content, contentlength, 0, (struct sockaddr *)&address->addr.in6, sizeof(struct sockaddr_in6));
@@ -1138,6 +1181,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 			Con_Printf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
+#endif
 	return value;
 }
 
