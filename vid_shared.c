@@ -161,22 +161,22 @@ void (GLAPIENTRY *qglBegin)(GLenum mode);
 void (GLAPIENTRY *qglEnd)(void);
 
 void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
-void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
-void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+//void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+//void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-void (GLAPIENTRY *qglPushMatrix)(void);
-void (GLAPIENTRY *qglPopMatrix)(void);
+//void (GLAPIENTRY *qglPushMatrix)(void);
+//void (GLAPIENTRY *qglPopMatrix)(void);
 void (GLAPIENTRY *qglLoadIdentity)(void);
-void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+//void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
 void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
-void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
-void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
-void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
-void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
-void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
-void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
+//void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
+//void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
+//void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+//void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+//void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
+//void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
+//void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
+//void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
@@ -198,8 +198,8 @@ void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
 void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 //void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
 //GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
-GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
-void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+//GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
+//void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
 //void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
@@ -226,8 +226,8 @@ void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 
-void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
-void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
+//void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
+//void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
 
 //[515]: added on 29.07.2005
 void (GLAPIENTRY *qglLineWidth)(GLfloat width);
@@ -418,7 +418,8 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 
 	if(ext == 0) // opengl version
 	{
-		sscanf(gl_version, "%d.%d", &curr_version.major, &curr_version.minor);
+		if (sscanf(gl_version, "%d.%d", &curr_version.major, &curr_version.minor) < 2)
+			curr_version.major = curr_version.minor = 1;
 
 		if (curr_version.major < min_version.major || (curr_version.major == min_version.major && curr_version.minor < min_version.minor))
 		{
@@ -434,13 +435,10 @@ int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, c
 		// functions are cleared before all the extensions are evaluated
 		if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
 		{
-			if (!silent)
-			{
-				if (ext)
-					Con_DPrintf("%s is missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
-				else
-					Con_DPrintf("OpenGL %s core features are missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
-			}
+			if (ext && !silent)
+				Con_DPrintf("%s is missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
+			if (!ext)
+				Con_Printf("OpenGL %s core features are missing function \"%s\" - broken driver!\n", minglver_or_ext, func->name);
 			failed = true;
 		}
 	}
@@ -502,22 +500,22 @@ static dllfunction_t opengl110funcs[] =
 	{"glPointSize", (void**) &qglPointSize},
 //
 	{"glMatrixMode", (void **) &qglMatrixMode},
-	{"glOrtho", (void **) &qglOrtho},
-	{"glFrustum", (void **) &qglFrustum},
+//	{"glOrtho", (void **) &qglOrtho},
+//	{"glFrustum", (void **) &qglFrustum},
 	{"glViewport", (void **) &qglViewport},
-	{"glPushMatrix", (void **) &qglPushMatrix},
-	{"glPopMatrix", (void **) &qglPopMatrix},
+//	{"glPushMatrix", (void **) &qglPushMatrix},
+//	{"glPopMatrix", (void **) &qglPopMatrix},
 	{"glLoadIdentity", (void **) &qglLoadIdentity},
-	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
+//	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
 	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
-	{"glMultMatrixd", (void **) &qglMultMatrixd},
-	{"glMultMatrixf", (void **) &qglMultMatrixf},
-	{"glRotated", (void **) &qglRotated},
-	{"glRotatef", (void **) &qglRotatef},
-	{"glScaled", (void **) &qglScaled},
-	{"glScalef", (void **) &qglScalef},
-	{"glTranslated", (void **) &qglTranslated},
-	{"glTranslatef", (void **) &qglTranslatef},
+//	{"glMultMatrixd", (void **) &qglMultMatrixd},
+//	{"glMultMatrixf", (void **) &qglMultMatrixf},
+//	{"glRotated", (void **) &qglRotated},
+//	{"glRotatef", (void **) &qglRotatef},
+//	{"glScaled", (void **) &qglScaled},
+//	{"glScalef", (void **) &qglScalef},
+//	{"glTranslated", (void **) &qglTranslated},
+//	{"glTranslatef", (void **) &qglTranslatef},
 	{"glReadPixels", (void **) &qglReadPixels},
 	{"glStencilFunc", (void **) &qglStencilFunc},
 	{"glStencilMask", (void **) &qglStencilMask},
@@ -530,14 +528,14 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
 	{"glHint", (void **) &qglHint},
-	{"glPixelStoref", (void **) &qglPixelStoref},
+//	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
 	{"glGenTextures", (void **) &qglGenTextures},
 	{"glDeleteTextures", (void **) &qglDeleteTextures},
 	{"glBindTexture", (void **) &qglBindTexture},
 //	{"glPrioritizeTextures", (void **) &qglPrioritizeTextures},
 //	{"glAreTexturesResident", (void **) &qglAreTexturesResident},
-	{"glIsTexture", (void **) &qglIsTexture},
+//	{"glIsTexture", (void **) &qglIsTexture},
 //	{"glTexImage1D", (void **) &qglTexImage1D},
 	{"glTexImage2D", (void **) &qglTexImage2D},
 //	{"glTexSubImage1D", (void **) &qglTexSubImage1D},
@@ -550,8 +548,8 @@ static dllfunction_t opengl110funcs[] =
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{"glPolygonMode", (void **) &qglPolygonMode},
 	{"glPolygonStipple", (void **) &qglPolygonStipple},
-	{"glClipPlane", (void **) &qglClipPlane},
-	{"glGetClipPlane", (void **) &qglGetClipPlane},
+//	{"glClipPlane", (void **) &qglClipPlane},
+//	{"glGetClipPlane", (void **) &qglGetClipPlane},
 	{NULL, NULL}
 };
 
