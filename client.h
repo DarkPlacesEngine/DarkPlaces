@@ -478,6 +478,7 @@ typedef struct scoreboard_s
 	float	qw_entertime;
 	int		qw_ping;
 	int		qw_packetloss;
+	int		qw_movementloss;
 	int		qw_spectator;
 	char	qw_team[8];
 	char	qw_skin[MAX_QPATH];

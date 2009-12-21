@@ -544,6 +544,35 @@ void SV_ReadClientMove (void)
 	// (we have to buffer the moves because of old ones being repeated)
 	if (sv_numreadmoves < CL_MAX_USERCMDS)
 		sv_readmoves[sv_numreadmoves++] = *move;
+
+	// movement packet loss tracking
+	if(move->sequence)
+	{
+		if(move->sequence > host_client->movement_highestsequence_seen)
+		{
+			if(host_client->movement_highestsequence_seen)
+			{
+				// mark moves in between as lost
+				if(move->sequence - host_client->movement_highestsequence_seen < NETGRAPH_PACKETS)
+					for(i = host_client->movement_highestsequence_seen; i < move->sequence; ++i)
+						host_client->movement_count[i % NETGRAPH_PACKETS] = -1;
+				else
+					memset(host_client->movement_count, -1, sizeof(host_client->movement_count));
+			}
+			// mark THIS move as seen for the first time
+			host_client->movement_count[move->sequence % NETGRAPH_PACKETS] = 1;
+			// update highest sequence seen
+			host_client->movement_highestsequence_seen = move->sequence;
+		}
+		else
+			if(host_client->movement_count[move->sequence % NETGRAPH_PACKETS] >= 0)
+				++host_client->movement_count[move->sequence % NETGRAPH_PACKETS];
+	}
+	else
+	{
+		host_client->movement_highestsequence_seen = 0;
+		memset(host_client->movement_count, 0, sizeof(host_client->movement_count));
+	}
 }
 
 void SV_ExecuteClientMoves(void)

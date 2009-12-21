@@ -1247,6 +1247,9 @@ static void VM_CL_getplayerkey (void)
 		if(!strcasecmp(c, "pl"))
 			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_packetloss);
 	else
+		if(!strcasecmp(c, "movementloss"))
+			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_movementloss);
+	else
 		if(!strcasecmp(c, "entertime"))
 			dpsnprintf(t, sizeof(t), "%f", cl.scores[i].qw_entertime);
 	else

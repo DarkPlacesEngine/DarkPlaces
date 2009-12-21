@@ -142,7 +142,7 @@ void Host_Status_f (void)
 				for (j = 0;j < NETGRAPH_PACKETS;j++)
 					if (client->netconnection->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
 						packetloss++;
-			packetloss = packetloss * 100 / NETGRAPH_PACKETS;
+			packetloss = (packetloss * 100 + NETGRAPH_PACKETS - 1) / NETGRAPH_PACKETS;
 			ping = bound(0, (int)floor(client->ping*1000+0.5), 9999);
 		}
 
@@ -2712,7 +2712,7 @@ Send back ping and packet loss update for all current players to this player
 */
 void Host_Pings_f (void)
 {
-	int		i, j, ping, packetloss;
+	int		i, j, ping, packetloss, movementloss;
 	char temp[128];
 
 	if (!host_client->netconnection)
@@ -2726,11 +2726,18 @@ void Host_Pings_f (void)
 	for (i = 0;i < svs.maxclients;i++)
 	{
 		packetloss = 0;
+		movementloss = 0;
 		if (svs.clients[i].netconnection)
+		{
 			for (j = 0;j < NETGRAPH_PACKETS;j++)
 				if (svs.clients[i].netconnection->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
 					packetloss++;
-		packetloss = packetloss * 100 / NETGRAPH_PACKETS;
+			for (j = 0;j < NETGRAPH_PACKETS;j++)
+				if (svs.clients[i].movement_count[j] < 0)
+					movementloss++;
+		}
+		packetloss = (packetloss * 100 + NETGRAPH_PACKETS - 1) / NETGRAPH_PACKETS;
+		movementloss = (movementloss * 100 + NETGRAPH_PACKETS - 1) / NETGRAPH_PACKETS;
 		ping = (int)floor(svs.clients[i].ping*1000+0.5);
 		ping = bound(0, ping, 9999);
 		if (sv.protocol == PROTOCOL_QUAKEWORLD)
@@ -2744,7 +2751,10 @@ void Host_Pings_f (void)
 		else
 		{
 			// write the string into the packet as multiple unterminated strings to avoid needing a local buffer
-			dpsnprintf(temp, sizeof(temp), " %d %d", ping, packetloss);
+			if(movementloss)
+				dpsnprintf(temp, sizeof(temp), " %d %d,%d", ping, packetloss, movementloss);
+			else
+				dpsnprintf(temp, sizeof(temp), " %d %d", ping, packetloss);
 			MSG_WriteUnterminatedString(&host_client->netconnection->message, temp);
 		}
 	}
@@ -2754,6 +2764,7 @@ void Host_Pings_f (void)
 
 void Host_PingPLReport_f(void)
 {
+	char **errbyte;
 	int i;
 	int l = Cmd_Argc();
 	if (l > cl.maxclients)
@@ -2761,7 +2772,11 @@ void Host_PingPLReport_f(void)
 	for (i = 0;i < l;i++)
 	{
 		cl.scores[i].qw_ping = atoi(Cmd_Argv(1+i*2));
-		cl.scores[i].qw_packetloss = atoi(Cmd_Argv(1+i*2+1));
+		cl.scores[i].qw_packetloss = strtol(Cmd_Argv(1+i*2+1), &errbyte, 0);
+		if(errbyte && *errbyte == ',')
+			cl.scores[i].qw_movementloss = atoi(errbyte + 1);
+		else
+			cl.scores[i].qw_movementloss = 0;
 	}
 }
 
