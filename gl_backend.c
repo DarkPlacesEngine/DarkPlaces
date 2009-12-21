@@ -306,10 +306,10 @@ void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t
 	out[2] = v->z + (out[2] * iw + 1.0f) * v->depth * 0.5f;
 }
 
-static void R_Viewport_ApplyNearClipPlane(r_viewport_t *v, double normalx, double normaly, double normalz, double dist)
+static void R_Viewport_ApplyNearClipPlane(r_viewport_t *v, float normalx, float normaly, float normalz, float dist)
 {
-	double q[4];
-	double d;
+	float q[4];
+	float d;
 	float clipPlane[4], v3[3], v4[3];
 	float normal[3];
 
@@ -354,7 +354,7 @@ static void R_Viewport_ApplyNearClipPlane(r_viewport_t *v, double normalx, doubl
 	v->m[14] = clipPlane[3] * d;
 }
 
-void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double x1, double y1, double x2, double y2, double nearclip, double farclip, const double *nearplane)
+void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float x1, float y1, float x2, float y2, float nearclip, float farclip, const float *nearplane)
 {
 	float left = x1, right = x2, bottom = y2, top = y1, zNear = nearclip, zFar = farclip;
 	memset(v, 0, sizeof(*v));
@@ -393,7 +393,7 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 #endif
 }
 
-void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double frustumx, double frustumy, double nearclip, double farclip, const double *nearplane)
+void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float nearclip, float farclip, const float *nearplane)
 {
 	matrix4x4_t tempmatrix, basematrix;
 	memset(v, 0, sizeof(*v));
@@ -428,10 +428,10 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 		R_Viewport_ApplyNearClipPlane(v, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
 }
 
-void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, double frustumx, double frustumy, double nearclip, const double *nearplane)
+void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float nearclip, const float *nearplane)
 {
 	matrix4x4_t tempmatrix, basematrix;
-	const double nudge = 1.0 - 1.0 / (1<<23);
+	const float nudge = 1.0 - 1.0 / (1<<23);
 	memset(v, 0, sizeof(*v));
 
 	if(v_flipped.integer)

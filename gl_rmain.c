@@ -4183,8 +4183,8 @@ void R_View_Update(void)
 
 void R_SetupView(qboolean allowwaterclippingplane)
 {
-	const double *customclipplane = NULL;
-	double plane[4];
+	const float *customclipplane = NULL;
+	float plane[4];
 	if (r_refdef.view.useclipplane && allowwaterclippingplane)
 	{
 		// LordHavoc: couldn't figure out how to make this approach the
