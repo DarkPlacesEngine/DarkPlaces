@@ -853,7 +853,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			}
 		}
 		mip = 0;
-		if (vid.support.arb_texture_compression)
+		if (qglGetCompressedTexImageARB)
 		{
 			if (gl_texturecompression.integer >= 2)
 				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
