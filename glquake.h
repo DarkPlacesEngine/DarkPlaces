@@ -651,22 +651,22 @@ extern void (GLAPIENTRY *qglBegin)(GLenum mode);
 extern void (GLAPIENTRY *qglEnd)(void);
 
 extern void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
-extern void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
-extern void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+//extern void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+//extern void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-extern void (GLAPIENTRY *qglPushMatrix)(void);
-extern void (GLAPIENTRY *qglPopMatrix)(void);
+//extern void (GLAPIENTRY *qglPushMatrix)(void);
+//extern void (GLAPIENTRY *qglPopMatrix)(void);
 extern void (GLAPIENTRY *qglLoadIdentity)(void);
-extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+//extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
 extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
-extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
-extern void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
-extern void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-extern void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-extern void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
-extern void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
-extern void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
-extern void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
+//extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
+//extern void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
+//extern void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+//extern void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+//extern void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
+//extern void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
+//extern void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
+//extern void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 extern void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
@@ -688,8 +688,8 @@ extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
 extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 //extern void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
 //extern GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
-extern GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
-extern void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+//extern GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
+//extern void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
 //extern void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
@@ -704,8 +704,8 @@ extern void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint
 extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 extern void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 
-extern void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
-extern void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
+//extern void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
+//extern void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
 
 //[515]: added on 29.07.2005
 extern void (GLAPIENTRY *qglLineWidth)(GLfloat width);
