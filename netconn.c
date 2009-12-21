@@ -1263,11 +1263,11 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			}
 			else if (flags & NETFLAG_DATA)
 			{
-				unsigned int temppacket[2];
+				unsigned char temppacket[8];
 				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   += originallength + 28;
 				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
-				StoreBigLong(sendbuffer, 8 | NETFLAG_ACK);
-				StoreBigLong(sendbuffer + 4, sequence);
+				StoreBigLong(temppacket, 8 | NETFLAG_ACK);
+				StoreBigLong(temppacket + 4, sequence);
 				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
 				if (sequence == conn->nq.receiveSequence)
 				{
