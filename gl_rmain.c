@@ -6265,7 +6265,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			// were darkened by fog already, and we should not add fog color
 			// (because the background was not darkened, there is no fog color
 			// that was lost behind it).
-			R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_BLENDED) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->currentskinframe->fog, &t->currenttexmatrix, r_refdef.fogcolor[0] / r_refdef.view.colorscale, r_refdef.fogcolor[1] / r_refdef.view.colorscale, r_refdef.fogcolor[2] / r_refdef.view.colorscale, t->lightmapcolor[3]);
+			R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_BLENDED) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->currentskinframe->fog, &t->currenttexmatrix, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], t->lightmapcolor[3]);
 		}
 	}
 
