@@ -6,10 +6,6 @@
 #define TEXF_ALPHA 0x00000001
 // mipmapped
 #define TEXF_MIPMAP 0x00000002
-// upload if r_textureprecache >= 1, otherwise defer loading until it is used
-#define TEXF_PRECACHE 0x00000004
-// upload immediately, never defer (ignore r_textureprecache)
-#define TEXF_ALWAYSPRECACHE 0x00000008
 // indicates texture coordinates should be clamped rather than wrapping
 #define TEXF_CLAMP 0x00000020
 // indicates texture should be uploaded using GL_NEAREST or GL_NEAREST_MIPMAP_NEAREST mode
@@ -20,7 +16,7 @@
 #define TEXF_PICMIP 0x00000100
 // indicates texture should be compressed if possible
 #define TEXF_COMPRESS 0x00000200
-// use this flag to block R_PurgeTexture from freeing a texture
+// use this flag to block R_PurgeTexture from freeing a texture (only used by r_texture_white and similar which may be used in skinframe_t)
 #define TEXF_PERSISTENT 0x00000400
 // indicates texture should use GL_COMPARE_R_TO_TEXTURE mode
 #define TEXF_COMPARE 0x00000800

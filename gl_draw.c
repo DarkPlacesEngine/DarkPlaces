@@ -97,7 +97,7 @@ static rtexture_t *draw_generateconchars(void)
 	Image_WriteTGABGRA ("gfx/generated_conchars.tga", 256, 256, data);
 #endif
 
-	tex = R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, data, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	tex = R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, data, TEXTYPE_BGRA, TEXF_ALPHA, NULL);
 	Mem_Free(data);
 	return tex;
 }
@@ -109,7 +109,7 @@ static rtexture_t *draw_generateditherpattern(void)
 	for (y = 0;y < 8;y++)
 		for (x = 0;x < 8;x++)
 			pixels[y][x] = ((x^y) & 4) ? 254 : 0;
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST | TEXF_PRECACHE, palette_bgra_transparent);
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST, palette_bgra_transparent);
 }
 
 typedef struct embeddedpic_s
@@ -280,7 +280,7 @@ static rtexture_t *draw_generatepic(const char *name, qboolean quiet)
 	const embeddedpic_t *p;
 	for (p = embeddedpics;p->name;p++)
 		if (!strcmp(name, p->name))
-			return R_LoadTexture2D(drawtexturepool, p->name, p->width, p->height, (const unsigned char *)p->pixels, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_bgra_embeddedpic);
+			return R_LoadTexture2D(drawtexturepool, p->name, p->width, p->height, (const unsigned char *)p->pixels, TEXTYPE_PALETTE, TEXF_ALPHA, palette_bgra_embeddedpic);
 	if (!strcmp(name, "gfx/conchars"))
 		return draw_generateconchars();
 	if (!strcmp(name, "gfx/colorcontrol/ditherpattern"))
@@ -335,7 +335,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		return pic;
 	}
 
-	pic->texflags = TEXF_ALPHA | TEXF_PRECACHE;
+	pic->texflags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
 		pic->texflags |= TEXF_CLAMP;
 	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
@@ -504,7 +504,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	pic->height = height;
 	if (pic->tex)
 		R_FreeTexture(pic->tex);
-	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, TEXF_PRECACHE | (alpha ? TEXF_ALPHA : 0) | TEXF_ALLOWUPDATES, NULL);
+	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, (alpha ? TEXF_ALPHA : 0) | TEXF_ALLOWUPDATES, NULL);
 	return pic;
 }
 

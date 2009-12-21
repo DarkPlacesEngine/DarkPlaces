@@ -42,7 +42,7 @@ static void VideoUpdateCallback(rtexture_t *rt, void *data) {
 
 static void LinkVideoTexture( clvideo_t *video ) {
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_ALWAYSPRECACHE | TEXF_PERSISTENT | TEXF_ALLOWUPDATES, NULL );
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT | TEXF_ALLOWUPDATES, NULL );
 	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
 	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
 }

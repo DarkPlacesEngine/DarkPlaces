@@ -1730,7 +1730,7 @@ static void SCR_SetLoadingScreenTexture(void)
 		loadingscreentexture_h = vid.height / (float) h;
 	}
 
-	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP, NULL);
 	R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
 	GL_ActiveTexture(0);
 	CHECKGLERROR

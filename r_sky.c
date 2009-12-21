@@ -122,7 +122,7 @@ int R_LoadSkyBox(void)
 			}
 			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 			Image_CopyMux (temp, image_buffer, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
-			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va("skyboxside%d", i), TEXF_CLAMP | TEXF_PRECACHE | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height);
+			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va("skyboxside%d", i), TEXF_CLAMP | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height);
 			Mem_Free(image_buffer);
 			Mem_Free(temp);
 			success++;
