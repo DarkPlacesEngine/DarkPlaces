@@ -624,6 +624,7 @@ qboolean NetConn_CanSend(netconn_t *conn)
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables)
 {
 	int totallen = 0;
+	int temp;
 
 	// if this packet was supposedly choked, but we find ourselves sending one
 	// anyway, make sure the size counting starts at zero
@@ -653,9 +654,11 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendreliable = true;
 		}
 		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
-		*((int *)(sendbuffer + 0)) = LittleLong((unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31));
+		temp = (unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31);
+		*((int *)(sendbuffer + 0)) = LittleLong(temp);
 		// last received unreliable packet number, and last received reliable packet number (0 or 1)
-		*((int *)(sendbuffer + 4)) = LittleLong((unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31));
+		temp = (unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31);
+		*((int *)(sendbuffer + 4)) = LittleLong(temp);
 		packetLen = 8;
 		conn->outgoing_unreliable_sequence++;
 		// client sends qport in every packet
@@ -703,7 +706,6 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		unsigned int packetLen;
 		unsigned int dataLen;
 		unsigned int eom;
-		unsigned int *header;
 
 		// if a reliable message fragment has been lost, send it again
 		if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
@@ -721,9 +723,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			packetLen = NET_HEADERSIZE + dataLen;
 
-			header = (unsigned int *)sendbuffer;
-			header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-			header[1] = BigLong(conn->nq.sendSequence - 1);
+			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+			StoreBigLong(sendbuffer + 4, conn->nq.sendSequence - 1);
 			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
@@ -770,9 +771,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			packetLen = NET_HEADERSIZE + dataLen;
 
-			header = (unsigned int *)sendbuffer;
-			header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-			header[1] = BigLong(conn->nq.sendSequence);
+			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+			StoreBigLong(sendbuffer + 4, conn->nq.sendSequence);
 			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 			conn->nq.sendSequence++;
@@ -799,9 +799,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 				return -1;
 			}
 
-			header = (unsigned int *)sendbuffer;
-			header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
-			header[1] = BigLong(conn->outgoing_unreliable_sequence);
+			StoreBigLong(sendbuffer, packetLen | NETFLAG_UNRELIABLE);
+			StoreBigLong(sendbuffer + 4, conn->outgoing_unreliable_sequence);
 			memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
 
 			conn->outgoing_unreliable_sequence++;
@@ -1157,13 +1156,13 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		unsigned int sequence;
 		int qlength;
 
-		qlength = (unsigned int)BigLong(((int *)data)[0]);
+		qlength = (unsigned int)BuffBigLong(data);
 		flags = qlength & ~NETFLAG_LENGTH_MASK;
 		qlength &= NETFLAG_LENGTH_MASK;
 		// control packets were already handled
 		if (!(flags & NETFLAG_CTL) && qlength == length)
 		{
-			sequence = BigLong(((int *)data)[1]);
+			sequence = BuffBigLong(data + 4);
 			packetsReceived++;
 			data += 8;
 			length -= 8;
@@ -1223,7 +1222,6 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 							unsigned int packetLen;
 							unsigned int dataLen;
 							unsigned int eom;
-							unsigned int *header;
 
 							conn->sendMessageLength -= MAX_PACKETFRAGMENT;
 							memmove(conn->sendMessage, conn->sendMessage+MAX_PACKETFRAGMENT, conn->sendMessageLength);
@@ -1241,9 +1239,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 
 							packetLen = NET_HEADERSIZE + dataLen;
 
-							header = (unsigned int *)sendbuffer;
-							header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
-							header[1] = BigLong(conn->nq.sendSequence);
+							StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+							StoreBigLong(sendbuffer + 4, conn->nq.sendSequence);
 							memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 							conn->nq.sendSequence++;
@@ -1269,8 +1266,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 				unsigned int temppacket[2];
 				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   += originallength + 28;
 				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
-				temppacket[0] = BigLong(8 | NETFLAG_ACK);
-				temppacket[1] = BigLong(sequence);
+				StoreBigLong(sendbuffer, 8 | NETFLAG_ACK);
+				StoreBigLong(sendbuffer + 4, sequence);
 				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
 				if (sequence == conn->nq.receiveSequence)
 				{
@@ -1895,7 +1892,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return ret;
 	}
 	// netquake control packets, supported for compatibility only
-	if (length >= 5 && (control = BigLong(*((int *)data))) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length)
+	if (length >= 5 && (control = BuffBigLong(data)) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length)
 	{
 		int n;
 		serverlist_info_t *info;
@@ -2096,7 +2093,7 @@ void NetConn_ClientFrame(void)
 		MSG_WriteByte(&net_message, CCREQ_CONNECT);
 		MSG_WriteString(&net_message, "QUAKE");
 		MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
-		*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+		StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 		NetConn_Write(cls.connect_mysocket, net_message.data, net_message.cursize, &cls.connect_address);
 		SZ_Clear(&net_message);
 	}
@@ -2818,7 +2815,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	// protocol
 	// (this protects more modern protocols against being used for
 	//  Quake packet flood Denial Of Service attacks)
-	if (length >= 5 && (i = BigLong(*((int *)data))) && (i & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (i & NETFLAG_LENGTH_MASK) == length && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3))
+	if (length >= 5 && (i = BuffBigLong(data)) && (i & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (i & NETFLAG_LENGTH_MASK) == length && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3))
 	{
 		int c;
 		int protocolnumber;
@@ -2848,7 +2845,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				MSG_WriteLong(&net_message, 0);
 				MSG_WriteByte(&net_message, CCREP_REJECT);
 				MSG_WriteString(&net_message, "Incompatible version.\n");
-				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 				SZ_Clear(&net_message);
 				break;
@@ -2871,7 +2868,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteLong(&net_message, 0);
 					MSG_WriteByte(&net_message, CCREP_ACCEPT);
 					MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(client->netconnection->mysocket)));
-					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 					SZ_Clear(&net_message);
 
@@ -2908,7 +2905,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteLong(&net_message, 0);
 					MSG_WriteByte(&net_message, CCREP_ACCEPT);
 					MSG_WriteLong(&net_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(conn->mysocket)));
-					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 					SZ_Clear(&net_message);
 					// now set up the client struct
@@ -2928,7 +2925,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			MSG_WriteLong(&net_message, 0);
 			MSG_WriteByte(&net_message, CCREP_REJECT);
 			MSG_WriteString(&net_message, "Server is full.\n");
-			*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+			StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 			NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 			SZ_Clear(&net_message);
 			break;
@@ -2958,7 +2955,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				MSG_WriteByte(&net_message, numclients);
 				MSG_WriteByte(&net_message, svs.maxclients);
 				MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
-				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 				SZ_Clear(&net_message);
 			}
@@ -2990,7 +2987,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteLong(&net_message, client->frags);
 					MSG_WriteLong(&net_message, (int)(realtime - client->connecttime));
 					MSG_WriteString(&net_message, client->netconnection ? client->netconnection->address : "botclient");
-					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 					SZ_Clear(&net_message);
 				}
@@ -3020,7 +3017,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteString(&net_message, var->name);
 					MSG_WriteString(&net_message, var->string);
 				}
-				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 				SZ_Clear(&net_message);
 			}
@@ -3105,7 +3102,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 					MSG_WriteByte(&net_message, CCREQ_SERVER_INFO);
 					MSG_WriteString(&net_message, "QUAKE");
 					MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
-					*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+					StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(cl_sockets[i], net_message.data, net_message.cursize, &broadcastaddress);
 					SZ_Clear(&net_message);
 

@@ -120,7 +120,7 @@ typedef struct md2_s
 
 // all md3 ints, floats, and shorts, are little endian, and thus need to be
 // passed through LittleLong/LittleFloat/LittleShort to avoid breaking on
-// bigendian machines (Macs for example)
+// bigendian machines
 #define MD3VERSION 15
 #define MD3NAME 64
 #define MD3FRAMENAME 16
