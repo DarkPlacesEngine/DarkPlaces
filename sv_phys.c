@@ -121,7 +121,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 
 	//return SV_TraceBox(start, vec3_origin, vec3_origin, end, type, passedict, hitsupercontentsmask);
 
@@ -266,7 +266,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
 	vec_t len = 0;
@@ -445,7 +445,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
 	vec_t len = 0;
@@ -636,7 +636,7 @@ int SV_PointSuperContents(const vec3_t point)
 	int frame;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 
 	// get world supercontents at this point
 	if (sv.worldmodel && sv.worldmodel->PointSuperContents)
@@ -713,7 +713,8 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 {
 	int i, numtouchedicts, old_self, old_other;
-	prvm_edict_t *touch, *touchedicts[MAX_EDICTS];
+	prvm_edict_t *touch;
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 
 	if (ent == prog->edicts)
 		return;		// don't add the world
@@ -1555,7 +1556,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	dp_model_t *pushermodel;
 	trace_t trace, trace2;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
-	unsigned short moved_edicts[MAX_EDICTS];
+	static unsigned short moved_edicts[MAX_EDICTS];
 
 	if (!pusher->fields.server->velocity[0] && !pusher->fields.server->velocity[1] && !pusher->fields.server->velocity[2] && !pusher->fields.server->avelocity[0] && !pusher->fields.server->avelocity[1] && !pusher->fields.server->avelocity[2])
 	{

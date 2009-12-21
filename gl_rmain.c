@@ -343,7 +343,8 @@ static void R_BuildNormalizationCube(void)
 	vec3_t v;
 	vec_t s, t, intensity;
 #define NORMSIZE 64
-	unsigned char data[6][NORMSIZE][NORMSIZE][4];
+	unsigned char *data;
+	data = Mem_Alloc(tempmempool, 6*NORMSIZE*NORMSIZE*4);
 	for (side = 0;side < 6;side++)
 	{
 		for (y = 0;y < NORMSIZE;y++)
@@ -387,14 +388,15 @@ static void R_BuildNormalizationCube(void)
 					break;
 				}
 				intensity = 127.0f / sqrt(DotProduct(v, v));
-				data[side][y][x][2] = (unsigned char)(128.0f + intensity * v[0]);
-				data[side][y][x][1] = (unsigned char)(128.0f + intensity * v[1]);
-				data[side][y][x][0] = (unsigned char)(128.0f + intensity * v[2]);
-				data[side][y][x][3] = 255;
+				data[((side*64+y)*64+x)*4+2] = (unsigned char)(128.0f + intensity * v[0]);
+				data[((side*64+y)*64+x)*4+1] = (unsigned char)(128.0f + intensity * v[1]);
+				data[((side*64+y)*64+x)*4+0] = (unsigned char)(128.0f + intensity * v[2]);
+				data[((side*64+y)*64+x)*4+3] = 255;
 			}
 		}
 	}
-	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, &data[0][0][0][0], TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+	r_texture_normalizationcube = R_LoadTextureCubeMap(r_main_texturepool, "normalcube", NORMSIZE, data, TEXTYPE_BGRA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_PERSISTENT, NULL);
+	Mem_Free(data);
 }
 
 static void R_BuildFogTexture(void)
@@ -7098,7 +7100,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesu
 	{
 		#define MAXBATCHTRIANGLES 4096
 		int batchtriangles = 0;
-		int batchelements[MAXBATCHTRIANGLES*3];
+		static int batchelements[MAXBATCHTRIANGLES*3];
 		for (i = 0;i < texturenumsurfaces;i = j)
 		{
 			surface = texturesurfacelist[i];
@@ -8210,7 +8212,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	int texturenumsurfaces, endsurface;
 	texture_t *texture;
 	const msurface_t *surface;
-	const msurface_t *texturesurfacelist[1024];
+	const msurface_t *texturesurfacelist[256];
 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable

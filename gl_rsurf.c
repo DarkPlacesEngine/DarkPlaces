@@ -724,7 +724,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 	{
 		int i;
 		mportal_t *portal;
-		double points[128][3];
+		static double points[128][3];
 		for (portal = leaf->portals;portal;portal = portal->next)
 		{
 			for (i = 0;i < portal->numpoints;i++)

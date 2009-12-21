@@ -246,7 +246,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -458,7 +458,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
 	vec_t len = 0;
@@ -696,7 +696,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	dp_model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
 	vec_t len = 0;

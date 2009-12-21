@@ -3140,6 +3140,9 @@ static void RemovePortalFromNodes(portal_t *portal)
 }
 
 #define PORTAL_DIST_EPSILON (1.0 / 32.0)
+static double *portalpointsbuffer;
+static int portalpointsbufferoffset;
+static int portalpointsbuffersize;
 static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 {
 	int i, side;
@@ -3147,11 +3150,22 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	mplane_t clipplane, *plane;
 	portal_t *portal, *nextportal, *nodeportal, *splitportal, *temp;
 	int numfrontpoints, numbackpoints;
-	double frontpoints[3*MAX_PORTALPOINTS], backpoints[3*MAX_PORTALPOINTS];
+	double *frontpoints, *backpoints;
 
 	// if a leaf, we're done
 	if (!node->plane)
 		return;
+
+	// get some space for our clipping operations to use
+	if (portalpointsbuffersize < portalpointsbufferoffset + 6*MAX_PORTALPOINTS)
+	{
+		portalpointsbuffersize = portalpointsbufferoffset * 2;
+		portalpointsbuffer = Mem_Realloc(loadmodel->mempool, portalpointsbuffer, portalpointsbuffersize * sizeof(*portalpointsbuffer));
+	}
+	frontpoints = portalpointsbuffer + portalpointsbufferoffset;
+	portalpointsbufferoffset += 3*MAX_PORTALPOINTS;
+	backpoints = portalpointsbuffer + portalpointsbufferoffset;
+	portalpointsbufferoffset += 3*MAX_PORTALPOINTS;
 
 	plane = node->plane;
 
@@ -3270,12 +3284,21 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 	Mod_Q1BSP_RecursiveNodePortals(front);
 	Mod_Q1BSP_RecursiveNodePortals(back);
+
+	portalpointsbufferoffset -= 6*MAX_PORTALPOINTS;
 }
 
 static void Mod_Q1BSP_MakePortals(void)
 {
 	Mem_ExpandableArray_NewArray(&portalarray, loadmodel->mempool, sizeof(portal_t), 1020*1024/sizeof(portal_t));
+	portalpointsbufferoffset = 0;
+	portalpointsbuffersize = 6*MAX_PORTALPOINTS*128;
+	portalpointsbuffer = Mem_Alloc(loadmodel->mempool, portalpointsbuffersize * sizeof(*portalpointsbuffer));
 	Mod_Q1BSP_RecursiveNodePortals(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
+	Mem_Free(portalpointsbuffer);
+	portalpointsbuffer = NULL;
+	portalpointsbufferoffset = 0;
+	portalpointsbuffersize = 0;
 	Mod_Q1BSP_FinalizePortals();
 	Mem_ExpandableArray_FreeArray(&portalarray);
 }
