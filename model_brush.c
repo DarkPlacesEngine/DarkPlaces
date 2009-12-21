@@ -4954,12 +4954,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	 		patchtess[patchtesscount].info.lods[PATCH_LOD_COLLISION].ytess = cytess;
 	
 			patchtess[patchtesscount].surface_id = i;
-			patchtess[patchtesscount].lodgroup[0] = in->specific.patch.mins[0];
-			patchtess[patchtesscount].lodgroup[1] = in->specific.patch.mins[1];
-			patchtess[patchtesscount].lodgroup[2] = in->specific.patch.mins[2];
-			patchtess[patchtesscount].lodgroup[3] = in->specific.patch.maxs[0];
-			patchtess[patchtesscount].lodgroup[4] = in->specific.patch.maxs[1];
-			patchtess[patchtesscount].lodgroup[5] = in->specific.patch.maxs[2];
+			patchtess[patchtesscount].lodgroup[0] = LittleFloat(in->specific.patch.mins[0]);
+			patchtess[patchtesscount].lodgroup[1] = LittleFloat(in->specific.patch.mins[1]);
+			patchtess[patchtesscount].lodgroup[2] = LittleFloat(in->specific.patch.mins[2]);
+			patchtess[patchtesscount].lodgroup[3] = LittleFloat(in->specific.patch.maxs[0]);
+			patchtess[patchtesscount].lodgroup[4] = LittleFloat(in->specific.patch.maxs[1]);
+			patchtess[patchtesscount].lodgroup[5] = LittleFloat(in->specific.patch.maxs[2]);
 			patchtess[patchtesscount].originalvertex3f = originalvertex3f;
 			++patchtesscount;
 			break;
