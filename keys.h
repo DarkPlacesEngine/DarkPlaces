@@ -106,6 +106,8 @@ typedef enum keynum_e
 	K_KP_ENTER,
 	K_KP_EQUALS,
 
+	K_PRINTSCREEN,
+
 	// mouse buttons generate virtual keys
 
 	K_MOUSE1 = 512,
