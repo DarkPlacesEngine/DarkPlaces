@@ -84,6 +84,9 @@ cvar_t developer_memorydebug = {0, "developer_memorydebug", "0", "enables memory
 
 static mempool_t *poolchain = NULL;
 
+void Mem_PrintStats(void);
+void Mem_PrintList(size_t minallocationsize);
+
 #if MEMCLUMPING != 2
 // some platforms have a malloc that returns NULL but succeeds later
 // (Windows growing its swapfile for example)
@@ -333,7 +336,13 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	pool->realsize += realsize;
 	base = (unsigned char *)Clump_AllocBlock(realsize);
 	if (base== NULL)
+	{
+		Mem_PrintList(0);
+		Mem_PrintStats();
+		Mem_PrintList(1<<30);
+		Mem_PrintStats();
 		Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+	}
 	// calculate address that aligns the end of the memheader_t to the specified alignment
 	mem = (memheader_t*)((((size_t)base + sizeof(memheader_t) + (alignment-1)) & ~(alignment-1)) - sizeof(memheader_t));
 	mem->baseaddress = (void*)base;
@@ -432,7 +441,13 @@ mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const 
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool = (mempool_t *)Clump_AllocBlock(sizeof(mempool_t));
 	if (pool == NULL)
+	{
+		Mem_PrintList(0);
+		Mem_PrintStats();
+		Mem_PrintList(1<<30);
+		Mem_PrintStats();
 		Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
+	}
 	memset(pool, 0, sizeof(mempool_t));
 	pool->sentinel1 = MEMHEADER_SENTINEL_FOR_ADDRESS(&pool->sentinel1);
 	pool->sentinel2 = MEMHEADER_SENTINEL_FOR_ADDRESS(&pool->sentinel2);
