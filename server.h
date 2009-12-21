@@ -199,6 +199,8 @@ typedef struct client_s
 	netconn_t *netconnection;
 
 	int movesequence;
+	signed char movement_count[NETGRAPH_PACKETS];
+	int movement_highestsequence_seen; // not the same as movesequence if prediction is off
 	/// movement
 	usercmd_t cmd;
 	/// intended motion calced from cmd

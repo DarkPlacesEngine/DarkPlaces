@@ -938,6 +938,8 @@ void SV_SendServerinfo (client_t *client)
 	// clear movement info until client enters the new level properly
 	memset(&client->cmd, 0, sizeof(client->cmd));
 	client->movesequence = 0;
+	client->movement_highestsequence_seen = 0;
+	memset(&client->movement_count, 0, sizeof(client->movement_count));
 #ifdef NUM_PING_TIMES
 	for (i = 0;i < NUM_PING_TIMES;i++)
 		client->ping_times[i] = 0;
