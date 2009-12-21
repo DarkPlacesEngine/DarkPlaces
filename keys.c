@@ -232,6 +232,8 @@ static const keyname_t   keynames[] = {
 	{"KP_ENTER", K_KP_ENTER},
 	{"KP_EQUALS", K_KP_EQUALS},
 
+	{"PRINTSCREEN", K_PRINTSCREEN},
+
 
 
 	{"MOUSE1", K_MOUSE1},
