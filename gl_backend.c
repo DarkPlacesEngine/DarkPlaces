@@ -1545,6 +1545,22 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 	}
 }
 
+int R_Mesh_TexBound(unsigned int unitnum, int id)
+{
+	gltextureunit_t *unit = gl_state.units + unitnum;
+	if (unitnum >= vid.teximageunits)
+		return 0;
+	if (id == GL_TEXTURE_2D)
+		return unit->t2d;
+	if (id == GL_TEXTURE_3D)
+		return unit->t3d;
+	if (id == GL_TEXTURE_CUBE_MAP_ARB)
+		return unit->tcubemap;
+	if (id == GL_TEXTURE_RECTANGLE_ARB)
+		return unit->trectangle;
+	return 0;
+}
+
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;

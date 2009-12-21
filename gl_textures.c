@@ -20,6 +20,7 @@ cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_SAVE, "gl_texturecompression
 cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
 cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
+cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -99,6 +100,10 @@ typedef struct gltexture_s
 	updatecallback_t updatecallback;
 	void *updatacallback_data;
 	// --- [11/22/2007 Black]
+
+	// stores backup copy of texture for deferred texture updates (r_nopartialtextureupdates cvar)
+	unsigned char *bufferpixels;
+	qboolean buffermodified;
 
 	// pointer to texturepool (check this to see if the texture is allocated)
 	struct gltexturepool_s *pool;
@@ -386,6 +391,7 @@ static void GL_TextureMode_f (void)
 	// change all the existing mipmap texture objects
 	// FIXME: force renderer(/client/something?) restart instead?
 	CHECKGLERROR
+	GL_ActiveTexture(0);
 	for (pool = gltexturepoolchain;pool;pool = pool->next)
 	{
 		for (glt = pool->gltchain;glt;glt = glt->chain)
@@ -393,7 +399,7 @@ static void GL_TextureMode_f (void)
 			// only update already uploaded images
 			if (!(glt->flags & (GLTEXF_UPLOAD | TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
 			{
-				qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
+				oldbindtexnum = R_Mesh_TexBound(0, gltexturetypebindingenums[glt->texturetype]);
 				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
@@ -606,6 +612,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_q3bspdeluxemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_sky);
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
+	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
@@ -641,6 +648,7 @@ void R_Textures_Frame (void)
 		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
 
 		CHECKGLERROR
+		GL_ActiveTexture(0);
 		for (pool = gltexturepoolchain;pool;pool = pool->next)
 		{
 			for (glt = pool->gltchain;glt;glt = glt->chain)
@@ -648,7 +656,7 @@ void R_Textures_Frame (void)
 				// only update already uploaded images
 				if ((glt->flags & (GLTEXF_UPLOAD | TEXF_MIPMAP)) == TEXF_MIPMAP)
 				{
-					qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
+					oldbindtexnum = R_Mesh_TexBound(0, gltexturetypebindingenums[glt->texturetype]);
 
 					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
@@ -772,7 +780,8 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	CHECKGLERROR
 
 	// we need to restore the texture binding after finishing the upload
-	qglGetIntegerv(gltexturetypebindingenums[glt->texturetype], &oldbindtexnum);CHECKGLERROR
+	GL_ActiveTexture(0);
+	oldbindtexnum = R_Mesh_TexBound(0, gltexturetypebindingenums[glt->texturetype]);
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 	// these are rounded up versions of the size to do better resampling
@@ -804,7 +813,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		prevbuffer = colorconvertbuffer;
 	}
 
-	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth)
+	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth && (fragx != 0 || fragy != 0 || fragwidth != glt->tilewidth || fragheight != glt->tileheight))
 	{
 		// update a portion of the image
 		switch(glt->texturetype)
@@ -1070,6 +1079,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		CHECKGLERROR
 		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 		R_Upload(glt, data, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
+		if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
+			glt->bufferpixels = Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 	}
 	else if (data)
 	{
@@ -1165,7 +1176,56 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 	if (!glt->texnum)
 		Host_Error("R_UpdateTexture: texture has not been uploaded yet");
 	// update part of the texture
-	R_Upload(glt, data, x, y, 0, width, height, 1);
+	if (glt->bufferpixels)
+	{
+		int j;
+		int bpp = glt->bytesperpixel;
+		int inputskip = width*bpp;
+		int outputskip = glt->tilewidth*bpp;
+		const unsigned char *input = data;
+		unsigned char *output = glt->bufferpixels;
+		if (x < 0)
+		{
+			width += x;
+			input -= x*bpp;
+			x = 0;
+		}
+		if (y < 0)
+		{
+			height += y;
+			input -= y*inputskip;
+			y = 0;
+		}
+		if (width > glt->tilewidth - x)
+			width = glt->tilewidth - x;
+		if (height > glt->tileheight - y)
+			height = glt->tileheight - y;
+		if (width < 1 || height < 1)
+			return;
+		glt->buffermodified = true;
+		output += y*outputskip + x*bpp;
+		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
+			memcpy(output, input, width*bpp);
+		if (!(glt->flags & TEXF_MANUALFLUSHUPDATES))
+			R_FlushTexture(rt);
+	}
+	else
+		R_Upload(glt, data, x, y, 0, width, height, 1);
+}
+
+void R_FlushTexture(rtexture_t *rt)
+{
+	gltexture_t *glt;
+	if (rt == NULL)
+		Host_Error("R_FlushTexture: no texture supplied");
+
+	// update part of the texture
+	glt = (gltexture_t *)rt;
+
+	if (!glt->buffermodified || !glt->bufferpixels)
+		return;
+	glt->buffermodified = false;
+	R_Upload(glt, glt->bufferpixels, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth);
 }
 
 void R_ClearTexture (rtexture_t *rt)
