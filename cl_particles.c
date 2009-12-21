@@ -2209,7 +2209,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	float *v3f, *t2f, *c4f;
 	particletexture_t *tex;
 	float right[3], up[3], size, ca;
-	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value * r_refdef.view.colorscale;
+	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
 	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
@@ -2392,15 +2392,28 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 		blendmode = p->blendmode;
 
-		c4f[0] = p->color[0] * colormultiplier[0];
-		c4f[1] = p->color[1] * colormultiplier[1];
-		c4f[2] = p->color[2] * colormultiplier[2];
-		c4f[3] = p->alpha * colormultiplier[3];
 		switch (blendmode)
 		{
 		case PBLEND_INVALID:
 		case PBLEND_INVMOD:
+			c4f[0] = p->color[0] * (1.0f / 256.0f);
+			c4f[1] = p->color[1] * (1.0f / 256.0f);
+			c4f[2] = p->color[2] * (1.0f / 256.0f);
+			c4f[3] = p->alpha * colormultiplier[3];
+			// additive and modulate can just fade out in fog (this is correct)
+			if (r_refdef.fogenabled)
+				c4f[3] *= RSurf_FogVertex(p->org);
+			// collapse alpha into color for these blends (so that the particlefont does not need alpha on most textures)
+			c4f[0] *= c4f[3];
+			c4f[1] *= c4f[3];
+			c4f[2] *= c4f[3];
+			c4f[3] = 1;
+			break;
 		case PBLEND_ADD:
+			c4f[0] = p->color[0] * colormultiplier[0];
+			c4f[1] = p->color[1] * colormultiplier[1];
+			c4f[2] = p->color[2] * colormultiplier[2];
+			c4f[3] = p->alpha * colormultiplier[3];
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
 				c4f[3] *= RSurf_FogVertex(p->org);
@@ -2411,6 +2424,10 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[3] = 1;
 			break;
 		case PBLEND_ALPHA:
+			c4f[0] = p->color[0] * colormultiplier[0];
+			c4f[1] = p->color[1] * colormultiplier[1];
+			c4f[2] = p->color[2] * colormultiplier[2];
+			c4f[3] = p->alpha * colormultiplier[3];
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
 			{
