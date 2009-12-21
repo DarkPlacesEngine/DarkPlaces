@@ -2764,7 +2764,7 @@ void Host_Pings_f (void)
 
 void Host_PingPLReport_f(void)
 {
-	char **errbyte;
+	char *errbyte;
 	int i;
 	int l = Cmd_Argc();
 	if (l > cl.maxclients)

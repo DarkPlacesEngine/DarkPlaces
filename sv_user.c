@@ -553,8 +553,8 @@ void SV_ReadClientMove (void)
 			if(host_client->movement_highestsequence_seen)
 			{
 				// mark moves in between as lost
-				if(move->sequence - host_client->movement_highestsequence_seen < NETGRAPH_PACKETS)
-					for(i = host_client->movement_highestsequence_seen; i < move->sequence; ++i)
+				if(move->sequence - host_client->movement_highestsequence_seen - 1 < NETGRAPH_PACKETS)
+					for(i = host_client->movement_highestsequence_seen + 1; i < move->sequence; ++i)
 						host_client->movement_count[i % NETGRAPH_PACKETS] = -1;
 				else
 					memset(host_client->movement_count, -1, sizeof(host_client->movement_count));
