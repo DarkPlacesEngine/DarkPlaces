@@ -437,7 +437,7 @@ static void VM_CL_findradius (void)
 	vec_t			radius, radius2;
 	vec3_t			org, eorg, mins, maxs;
 	int				i, numtouchedicts;
-	prvm_edict_t	*touchedicts[MAX_EDICTS];
+	static prvm_edict_t	*touchedicts[MAX_EDICTS];
 	int             chainfield;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_findradius);

@@ -61,7 +61,7 @@ void R_MeshQueue_RenderTransparent(void)
 	const rtlight_t *rtlight;
 	void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfaceindices);
 	meshqueue_t *mqt;
-	meshqueue_t *hash[4096], **hashpointer[4096];
+	static meshqueue_t *hash[4096], **hashpointer[4096];
 	int batchsurfaceindex[256];
 	if (!mqt_count)
 		return;

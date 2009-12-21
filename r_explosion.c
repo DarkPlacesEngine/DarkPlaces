@@ -63,7 +63,7 @@ extern qboolean r_loadfog;
 static void r_explosion_start(void)
 {
 	int x, y;
-	unsigned char noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
+	static unsigned char noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
 	explosiontexturepool = R_AllocTexturePool();
 	explosiontexture = NULL;
 	explosiontexturefog = NULL;

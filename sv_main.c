@@ -1354,7 +1354,7 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 	matrix4x4_t matrix, imatrix;
 	dp_model_t *model;
 	prvm_edict_t *touch;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 	vec3_t boxmins, boxmaxs;
 	vec3_t clipboxmins, clipboxmaxs;
 	vec3_t endpoints[MAX_LINEOFSIGHTTRACES];

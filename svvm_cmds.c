@@ -922,7 +922,7 @@ static void VM_SV_findradius (void)
 	vec3_t org, eorg, mins, maxs;
 	int i;
 	int numtouchedicts;
-	prvm_edict_t *touchedicts[MAX_EDICTS];
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
 	int chainfield;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_findradius);
