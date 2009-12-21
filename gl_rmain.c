@@ -4820,6 +4820,7 @@ void R_HDR_RenderBloomTexture(void)
 	r_refdef.view.width = oldwidth;
 	r_refdef.view.height = oldheight;
 	r_refdef.view.colorscale = oldcolorscale;
+	r_frame++; // used only by R_GetCurrentTexture
 
 	R_ResetViewRendering3D();
 
