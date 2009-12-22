@@ -4720,7 +4720,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 	for (i = 0;i < loadmodel->brushq3.num_mergedlightmaps;i++)
 	{
-		if (loadmodel->brushq3.data_deluxemaps[i])
+		if (loadmodel->brushq3.data_deluxemaps && loadmodel->brushq3.data_deluxemaps[i])
 			R_FlushTexture(loadmodel->brushq3.data_deluxemaps[i]);
 		if (loadmodel->brushq3.data_lightmaps[i])
 			R_FlushTexture(loadmodel->brushq3.data_lightmaps[i]);
