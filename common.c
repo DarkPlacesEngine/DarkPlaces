@@ -740,9 +740,11 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 					}
 				}
 				out_inner:
+				/*
 				wordChars = strlen(cursor);
 				if (wordChars > wordLen)
-					wordChars = wordLen;
+				*/
+				wordChars = wordLen;
 				spaceUsedForWord = wordWidth(passthroughCW, cursor, &wordChars, maxWidth - continuationWidth); // this may have reduced wordLen when it won't fit - but this is GOOD. TODO fix words that do fit in a non-continuation line
 				if(wordChars < 1)
 				{
