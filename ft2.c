@@ -172,7 +172,7 @@ qboolean Font_OpenLibrary (void)
 #if defined(WIN64)
 		#error path for freetype 2 dll
 #elif defined(WIN32)
-		#error path for freetype 2 dll
+		"freetype6.dll",
 #elif defined(MACOSX)
 		"libfreetype.dylib",
 #else
