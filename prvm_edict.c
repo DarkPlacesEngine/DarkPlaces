@@ -31,6 +31,7 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 ddef_t *PRVM_ED_FieldAtOfs(int ofs);
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
 
+cvar_t prvm_language = {0, "prvm_language", "", "when set, loads progs.dat.LANGUAGENAME.po for string translations; when set to dump, progs.dat.dump.po is written from the strings in the progs"};
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
@@ -1751,12 +1752,253 @@ PRVM_ResetProg
 ===============
 */
 
+#define PO_HASHSIZE 16384
+typedef struct po_string_s
+{
+	char *key, *value;
+	struct po_string_s *nextonhashchain;
+}
+po_string_t;
+typedef struct po_s
+{
+	po_string_t *hashtable[PO_HASHSIZE];
+}
+po_t;
+void PRVM_PO_UnparseString(char *out, const char *in, size_t outsize)
+{
+	for(;;)
+	{
+		switch(*in)
+		{
+			case 0:
+				*out++ = 0;
+				return;
+			case '\a': if(outsize >= 2) { *out++ = '\\'; *out++ = 'a'; outsize -= 2; } break;
+			case '\b': if(outsize >= 2) { *out++ = '\\'; *out++ = 'b'; outsize -= 2; } break;
+			case '\t': if(outsize >= 2) { *out++ = '\\'; *out++ = 't'; outsize -= 2; } break;
+			case '\r': if(outsize >= 2) { *out++ = '\\'; *out++ = 'r'; outsize -= 2; } break;
+			case '\n': if(outsize >= 2) { *out++ = '\\'; *out++ = 'n'; outsize -= 2; } break;
+			case '\\': if(outsize >= 2) { *out++ = '\\'; *out++ = '\\'; outsize -= 2; } break;
+			case '"': if(outsize >= 2) { *out++ = '\\'; *out++ = '"'; outsize -= 2; } break;
+			default:
+				if(*in >= 0 && *in <= 0x1F)
+				{
+					if(outsize >= 4)
+					{
+						*out++ = '\\';
+						*out++ = '0' + ((*in & 0700) >> 6);
+						*out++ = '0' + ((*in & 0070) >> 3);
+						*out++ = '0' + ((*in & 0007));
+						outsize -= 4;
+					}
+				}
+				else
+				{
+					if(outsize >= 1)
+					{
+						*out++ = *in;
+						outsize -= 1;
+					}
+				}
+				break;
+		}
+		++in;
+	}
+}
+void PRVM_PO_ParseString(char *out, const char *in, size_t outsize)
+{
+	for(;;)
+	{
+		switch(*in)
+		{
+			case 0:
+				*out++ = 0;
+				return;
+			case '\\':
+				++in;
+				switch(*in)
+				{
+					case 'a': if(outsize > 0) { *out++ = '\a'; --outsize; } break;
+					case 'b': if(outsize > 0) { *out++ = '\b'; --outsize; } break;
+					case 't': if(outsize > 0) { *out++ = '\t'; --outsize; } break;
+					case 'r': if(outsize > 0) { *out++ = '\r'; --outsize; } break;
+					case 'n': if(outsize > 0) { *out++ = '\n'; --outsize; } break;
+					case '\\': if(outsize > 0) { *out++ = '\\'; --outsize; } break;
+					case '"': if(outsize > 0) { *out++ = '"'; --outsize; } break;
+					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+						if(outsize > 0) 
+							*out = *in - '0';
+						++in;
+						if(*in >= '0' && *in <= '7')
+						{
+							if(outsize > 0)
+								*out = (*out << 3) | (*in - '0');
+							++in;
+						}
+						if(*in >= '0' && *in <= '7')
+						{
+							if(outsize > 0)
+								*out = (*out << 3) | (*in - '0');
+							++in;
+						}
+						--in;
+						if(outsize > 0)
+						{
+							++out;
+							--outsize;
+						}
+						break;
+					default:
+						if(outsize > 0) { *out++ = *in; --outsize; }
+						break;
+				}
+				break;
+			default:
+				if(outsize > 0)
+				{
+					*out++ = *in;
+					--outsize;
+				}
+				break;
+		}
+		++in;
+	}
+}
+po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
+{
+	po_t *po;
+	const char *p, *q;
+	int mode;
+	char inbuf[MAX_INPUTLINE];
+	char decodedbuf[MAX_INPUTLINE];
+	size_t decodedpos;
+	int hashindex;
+	po_string_t thisstr;
+	const char *buf = (const char *) FS_LoadFile(filename, pool, true, NULL);
+
+	if(!buf)
+		return NULL;
+
+	po = Mem_Alloc(pool, sizeof(*po));
+	memset(po, 0, sizeof(*po));
+
+	p = buf;
+	while(*p)
+	{
+		if(*p == '#')
+		{
+			// skip to newline
+			p = strchr(p, '\n');
+			if(!p)
+				break;
+			++p;
+			continue;
+		}
+		if(*p == '\r' || *p == '\n')
+		{
+			++p;
+			continue;
+		}
+		if(!strncmp(p, "msgid \"", 7))
+		{
+			mode = 0;
+			p += 6;
+		}
+		else if(!strncmp(p, "msgstr \"", 8))
+		{
+			mode = 1;
+			p += 7;
+		}
+		else
+		{
+			p = strchr(p, '\n');
+			if(!p)
+				break;
+			++p;
+			continue;
+		}
+		decodedpos = 0;
+		while(*p == '"')
+		{
+			++p;
+			q = strchr(p, '\n');
+			if(!q)
+				break;
+			if(*(q-1) == '\r')
+				--q;
+			if(*(q-1) != '"')
+				break;
+			if(q - p >= (ssize_t) sizeof(inbuf))
+				break;
+			strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
+			PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
+			decodedpos += strlen(decodedbuf + decodedpos);
+			if(*q == '\r')
+				++q;
+			if(*q == '\n')
+				++q;
+			p = q;
+		}
+		if(mode == 0)
+		{
+			if(thisstr.key)
+				Mem_Free(thisstr.key);
+			thisstr.key = Mem_Alloc(pool, decodedpos + 1);
+			memcpy(thisstr.key, decodedbuf, decodedpos + 1);
+		}
+		else if(decodedpos > 0 && thisstr.key) // skip empty translation results
+		{
+			thisstr.value = Mem_Alloc(pool, decodedpos + 1);
+			memcpy(thisstr.value, decodedbuf, decodedpos + 1);
+			hashindex = CRC_Block((const unsigned char *) thisstr.key, strlen(thisstr.key)) % PO_HASHSIZE;
+			thisstr.nextonhashchain = po->hashtable[hashindex];
+			po->hashtable[hashindex] = Mem_Alloc(pool, sizeof(thisstr));
+			memcpy(po->hashtable[hashindex], &thisstr, sizeof(thisstr));
+			memset(&thisstr, 0, sizeof(thisstr));
+		}
+	}
+	
+	Mem_Free((char *) buf);
+	return po;
+}
+const char *PRVM_PO_Lookup(po_t *po, const char *str)
+{
+	int hashindex = CRC_Block((const unsigned char *) str, strlen(str)) % PO_HASHSIZE;
+	po_string_t *p = po->hashtable[hashindex];
+	while(p)
+	{
+		if(!strcmp(str, p->key))
+			return p->value;
+		p = p->nextonhashchain;
+	}
+	return NULL;
+}
+void PRVM_PO_Destroy(po_t *po)
+{
+	int i;
+	for(i = 0; i < PO_HASHSIZE; ++i)
+	{
+		po_string_t *p = po->hashtable[i];
+		while(p)
+		{
+			po_string_t *q = p;
+			p = p->nextonhashchain;
+			Mem_Free(q->key);
+			Mem_Free(q->value);
+			Mem_Free(q);
+		}
+	}
+	Mem_Free(po);
+}
+
 void PRVM_LeakTest(void);
 void PRVM_ResetProg(void)
 {
 	PRVM_LeakTest();
 	PRVM_GCALL(reset_cmd)();
 	Mem_FreePool(&prog->progs_mempool);
+	if(prog->po)
+		PRVM_PO_Destroy((po_t *) prog->po);
 	memset(prog,0,sizeof(prvm_prog_t));
 	prog->starttime = Sys_DoubleTime();
 }
@@ -2060,6 +2302,62 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	PRVM_LoadLNO(filename);
 
 	PRVM_Init_Exec();
+
+	if(*prvm_language.string && !strcmp(PRVM_NAME, "client"))
+	// in CSQC we really shouldn't be able to change how stuff works... sorry for now
+	// later idea: include a list of authorized .po file checksums with the csprogs
+	{
+		if(!strcmp(prvm_language.string, "dump"))
+		{
+			qfile_t *f = FS_OpenRealFile(va("%s.%s.po", filename, prvm_language.string), "w", false);
+			Con_Printf("Dumping to %s.%s.po\n", filename, prvm_language.string);
+			if(f)
+			{
+				for (i=0 ; i<prog->progs->numglobaldefs ; i++)
+				{
+					const char *name;
+					name = PRVM_GetString(prog->globaldefs[i].s_name);
+					if(!name || strncmp(name, "notranslate_", 12))
+					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
+					{
+						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
+						const char *value = PRVM_GetString(val->string);
+						if(*value)
+						{
+							char buf[MAX_INPUTLINE];
+							PRVM_PO_UnparseString(buf, value, sizeof(buf));
+							FS_Printf(f, "msgid \"%s\"\nmsgstr \"\"\n\n", buf);
+						}
+					}
+				}
+				FS_Close(f);
+			}
+		}
+		else
+		{
+			po_t *po = PRVM_PO_Load(va("%s.%s.po", filename, prvm_language.string), prog->progs_mempool);
+			if(po)
+			{
+				for (i=0 ; i<prog->progs->numglobaldefs ; i++)
+				{
+					const char *name;
+					name = PRVM_GetString(prog->globaldefs[i].s_name);
+					if(!name || strncmp(name, "notranslate_", 12))
+					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
+					{
+						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
+						const char *value = PRVM_GetString(val->string);
+						if(*value)
+						{
+							value = PRVM_PO_Lookup(po, value);
+							if(value)
+								val->string = PRVM_SetEngineString(value);
+						}
+					}
+				}
+			}
+		}
+	}
 
 	for (i=0 ; i<prog->progs->numglobaldefs ; i++)
 	{
@@ -2413,6 +2711,7 @@ void PRVM_Init (void)
 	// COMMANDLINEOPTION: PRVM: -noboundscheck disables the bounds checks (security hole if CSQC is in use!)
 	prvm_boundscheck = !COM_CheckParm("-noboundscheck");
 
+	Cvar_RegisterVariable (&prvm_language);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
