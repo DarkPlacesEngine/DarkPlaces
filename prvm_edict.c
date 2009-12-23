@@ -2318,7 +2318,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_")))
+					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_", 12)))
 					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
@@ -2343,7 +2343,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_")))
+					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_", 12)))
 					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
