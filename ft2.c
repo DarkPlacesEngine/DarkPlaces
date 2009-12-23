@@ -396,7 +396,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 {
 	size_t namelen;
-	char filename[PATH_MAX];
+	char filename[MAX_QPATH];
 	int status;
 	size_t i;
 	unsigned char *data;
@@ -735,7 +735,7 @@ void Font_UnloadFont(ft2_font_t *font)
 
 static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
 {
-	char map_identifier[PATH_MAX];
+	char map_identifier[MAX_QPATH];
 	unsigned long mapidx = _ch / FONT_CHARS_PER_MAP;
 	unsigned char *data;
 	FT_ULong ch, mapch;
