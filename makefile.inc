@@ -28,8 +28,8 @@ LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode
 CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --cflags || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -DODE_STATIC`
 
 # Additional stuff for libCg
-LIB_CG=`[ -n "/usr/lib64/libCg.so" ] && echo \ -lCg\ -lCgGL -lGL`
-CFLAGS_CG=`[ -n "/usr/lib64/libCg.so" ] && echo \ -DSUPPORTCG`
+LIB_CG=`[ -r "/usr/lib64/libCg.so" -o -r "/usr/lib/libCg.so" ] && echo \ -lCg\ -lCgGL -lGL`
+CFLAGS_CG=`[ -r "/usr/lib64/libCg.so" -o -r "/usr/lib/libCg.so" ] && echo \ -DSUPPORTCG`
 
 
 SDL_CONFIG?=sdl-config
