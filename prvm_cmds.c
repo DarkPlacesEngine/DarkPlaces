@@ -10,6 +10,8 @@
 #include "libcurl.h"
 #include <time.h>
 
+#include "ft2.h"
+
 extern cvar_t prvm_backtraceforwarnings;
 
 // LordHavoc: changed this to NOT use a return statement, so that it can be used in functions that must return a value
@@ -2167,7 +2169,8 @@ void VM_strlen(void)
 {
 	VM_SAFEPARMCOUNT(1,VM_strlen);
 
-	PRVM_G_FLOAT(OFS_RETURN) = strlen(PRVM_G_STRING(OFS_PARM0));
+	//PRVM_G_FLOAT(OFS_RETURN) = strlen(PRVM_G_STRING(OFS_PARM0));
+	PRVM_G_FLOAT(OFS_RETURN) = u8_strlen(PRVM_G_STRING(OFS_PARM0));
 }
 
 // DRESK - Decolorized String
@@ -2210,7 +2213,8 @@ void VM_strlennocol(void)
 
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	nCnt = COM_StringLengthNoColors(szString, 0, NULL);
+	//nCnt = COM_StringLengthNoColors(szString, 0, NULL);
+	nCnt = u8_COM_StringLengthNoColors(szString, 0, NULL);
 
 	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }
@@ -2290,12 +2294,15 @@ string	substring(string s, float start, float length)
 // returns a section of a string as a tempstring
 void VM_substring(void)
 {
-	int start, length, slength, maxlen;
+	int start, length;
+	int u_slength = 0, u_start;
+	size_t u_length;
 	const char *s;
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT(3,VM_substring);
 
+	/*
 	s = PRVM_G_STRING(OFS_PARM0);
 	start = (int)PRVM_G_FLOAT(OFS_PARM1);
 	length = (int)PRVM_G_FLOAT(OFS_PARM2);
@@ -2312,6 +2319,40 @@ void VM_substring(void)
 
 	memcpy(string, s + start, length);
 	string[length] = 0;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
+	*/
+	
+	s = PRVM_G_STRING(OFS_PARM0);
+	start = (int)PRVM_G_FLOAT(OFS_PARM1);
+	length = (int)PRVM_G_FLOAT(OFS_PARM2);
+
+	if (start < 0) // FTE_STRINGS feature
+	{
+		u_slength = u8_strlen(s);
+		start += u_slength;
+		start = bound(0, start, u_slength);
+	}
+
+	if (length < 0) // FTE_STRINGS feature
+	{
+		if (!u_slength) // it's not calculated when it's not needed above
+			u_slength = u8_strlen(s);
+		length += u_slength - start + 1;
+	}
+		
+	// positive start, positive length
+	u_start = u8_byteofs(s, start, NULL);
+	if (u_start < 0)
+	{
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString("");
+		return;
+	}
+	u_length = u8_bytelen(s + u_start, length);
+	if (u_length >= sizeof(string)-1)
+		u_length = sizeof(string)-1;
+	
+	memcpy(string, s + u_start, u_length);
+	string[u_length] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 }
 
@@ -3095,12 +3136,24 @@ string	chr(float ascii)
 */
 void VM_chr(void)
 {
+	/*
 	char tmp[2];
 	VM_SAFEPARMCOUNT(1, VM_chr);
 
 	tmp[0] = (unsigned char) PRVM_G_FLOAT(OFS_PARM0);
 	tmp[1] = 0;
 
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(tmp);
+	*/
+	
+	char tmp[8];
+	int len;
+	VM_SAFEPARMCOUNT(1, VM_chr);
+
+	len = u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0), tmp, sizeof(tmp));
+	if (len < 0)
+		len = 0;
+	tmp[len] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(tmp);
 }
 
@@ -3262,6 +3315,7 @@ void VM_drawstring(void)
 		Con_Printf("VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	DrawQ_String_Font(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
+	//Font_DrawString(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -3315,10 +3369,30 @@ float	stringwidth(string text, float allowColorCodes, float size)
 void VM_stringwidth(void)
 {
 	const char  *string;
-	float sz, mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
+	float *szv;
+	float mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
 	int colors;
+	float x[200];
 	VM_SAFEPARMCOUNTRANGE(2,3,VM_drawstring);
 
+	if(prog->argc == 3)
+	{
+		szv = PRVM_G_VECTOR(OFS_PARM2);
+		mult = 1;
+	}
+	else
+	{
+		static float defsize[] = {0, 0};
+		szv = defsize;
+		mult = 1;
+	}
+	x[180] = 3;
+
+	string = PRVM_G_STRING(OFS_PARM0);
+	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font_Size(string, szv[0], szv[1], 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
+/*
 	if(prog->argc == 3)
 	{
 		mult = sz = PRVM_G_FLOAT(OFS_PARM2);
@@ -3333,6 +3407,8 @@ void VM_stringwidth(void)
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
 	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
+*/
+
 }
 /*
 =========
@@ -4929,6 +5005,7 @@ void VM_strstrofs (void)
 	instr = PRVM_G_STRING(OFS_PARM0);
 	match = PRVM_G_STRING(OFS_PARM1);
 	firstofs = (prog->argc > 2)?(int)PRVM_G_FLOAT(OFS_PARM2):0;
+	firstofs = u8_bytelen(instr, firstofs);
 
 	if (firstofs && (firstofs < 0 || firstofs > (int)strlen(instr)))
 	{
@@ -4947,10 +5024,17 @@ void VM_strstrofs (void)
 void VM_str2chr (void)
 {
 	const char *s;
+	Uchar ch;
+	int index;
 	VM_SAFEPARMCOUNT(2, VM_str2chr);
 	s = PRVM_G_STRING(OFS_PARM0);
-	if((unsigned)PRVM_G_FLOAT(OFS_PARM1) < strlen(s))
-		PRVM_G_FLOAT(OFS_RETURN) = (unsigned char)s[(unsigned)PRVM_G_FLOAT(OFS_PARM1)];
+	index = u8_bytelen(s, (int)PRVM_G_FLOAT(OFS_PARM1));
+
+	if((unsigned)index < strlen(s))
+	{
+		ch = u8_getchar(s + index, NULL);
+		PRVM_G_FLOAT(OFS_RETURN) = ch;
+	}
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 }
@@ -4958,12 +5042,26 @@ void VM_str2chr (void)
 //#223 string(float c, ...) chr2str (FTE_STRINGS)
 void VM_chr2str (void)
 {
+	/*
 	char	t[9];
 	int		i;
 	VM_SAFEPARMCOUNTRANGE(0, 8, VM_chr2str);
 	for(i = 0;i < prog->argc && i < (int)sizeof(t) - 1;i++)
 		t[i] = (unsigned char)PRVM_G_FLOAT(OFS_PARM0+i*3);
 	t[i] = 0;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
+	*/
+	char t[9 * 4 + 1];
+	int i;
+	size_t len = 0;
+	VM_SAFEPARMCOUNTRANGE(0, 8, VM_chr2str);
+	for(i = 0; i < prog->argc && len < sizeof(t)-1; ++i)
+	{
+		int add = u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0+i*3), t + len, sizeof(t)-1);
+		if(add > 0)
+			len += add;
+	}
+	t[len] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 

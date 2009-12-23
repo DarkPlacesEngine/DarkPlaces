@@ -90,6 +90,8 @@ DRAWFLAG_MASK = 0xFF,   // ONLY R_BeginPolygon()
 DRAWFLAG_MIPMAP = 0x100 // ONLY R_BeginPolygon()
 };
 
+#define MAX_FONT_SIZES 8
+#define MAX_FONT_FALLBACKS 3
 typedef struct dp_font_s
 {
 	rtexture_t *tex;
@@ -98,6 +100,12 @@ typedef struct dp_font_s
 	float scale; // scales the font (without changing line height!)
 	char texpath[MAX_QPATH];
 	char title[MAX_QPATH];
+
+	int req_face; // requested face index, usually 0
+	float req_sizes[MAX_FONT_SIZES]; // sizes to render the font with, 0 still defaults to 16 (backward compatibility when loadfont doesn't get a size parameter) and -1 = disabled
+	char fallbacks[MAX_FONT_FALLBACKS][MAX_QPATH];
+	int fallback_faces[MAX_FONT_FALLBACKS];
+	struct ft2_font_s *ft2;
 }
 dp_font_t;
 
@@ -137,9 +145,13 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 // if r_textshadow is not zero, an additional instance of the text is drawn first at an offset with an inverted shade of gray (black text produces a white shadow, brightly colored text produces a black shadow)
 float DrawQ_String(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes);
 float DrawQ_String_Font(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
-float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt);
-float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
-float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
+// you are STRONGLY DISCOURAGED to use a version without the _Size suffix!!!
+/* don't use: */float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt);
+/* use this:  */float DrawQ_TextWidth_Font_Size(const char *text, float w, float h, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt);
+/* don't use: */float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
+/* use this:  */float DrawQ_TextWidth_Font_UntilWidth_Size(const char *text, float w, float h, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
+/* don't use: */float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
+/* use this:  */float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w, float h, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
 // draw a very fancy pic (per corner texcoord/color control), the order is tl, tr, bl, br
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags);
 // draw a triangle mesh

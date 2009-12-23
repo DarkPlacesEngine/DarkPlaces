@@ -25,6 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_video.h"
 #include "cl_dyntexture.h"
 
+#include "ft2.h"
+#include "ft2_fontdefs.h"
+
 dp_font_t dp_fonts[MAX_FONTS] = {{0}};
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
@@ -544,6 +547,20 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
 
+	if(fnt->ft2)
+	{
+		// clear freetype font
+		Font_UnloadFont(fnt->ft2);
+		Mem_Free(fnt->ft2);
+		fnt->ft2 = NULL;
+	}
+
+	if(fnt->req_face != -1)
+	{
+		if(!Font_LoadFont(fnt->texpath, fnt))
+			Con_Printf("Failed to load font-file for '%s', it will not support as many characters.\n", fnt->texpath);
+	}
+
 	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
 	if(fnt->tex == r_texture_notexture)
 	{
@@ -635,15 +652,54 @@ static dp_font_t *FindFont(const char *title)
 	return NULL;
 }
 
+static inline float snap_to_pixel_x(float x, float roundUpAt)
+{
+	float pixelpos = x * vid.width / vid_conwidth.value;
+	int snap = (int) pixelpos;
+	if (pixelpos - snap >= roundUpAt) ++snap;
+	return ((float)snap * vid_conwidth.value / vid.width);
+	/*
+	x = (int)(x * vid.width / vid_conwidth.value);
+	x = (x * vid_conwidth.value / vid.width);
+	return x;
+	*/
+}
+
+static inline float snap_to_pixel_y(float y, float roundUpAt)
+{
+	float pixelpos = y * vid.height / vid_conheight.value;
+	int snap = (int) pixelpos;
+	if (pixelpos - snap > roundUpAt) ++snap;
+	return ((float)snap * vid_conheight.value / vid.height);
+	/*
+	y = (int)(y * vid.height / vid_conheight.value);
+	y = (y * vid_conheight.value / vid.height);
+	return y;
+	*/
+}
+
 static void LoadFont_f(void)
 {
 	dp_font_t *f;
-	int i;
+	int i, si;
+	float sz, sn;
+	const char *filelist, *c, *cm;
+	char mainfont[MAX_QPATH];
+
 	if(Cmd_Argc() < 2)
 	{
 		Con_Printf("Available font commands:\n");
 		for(i = 0; i < MAX_FONTS; ++i)
-			Con_Printf("  loadfont %s gfx/tgafile\n", dp_fonts[i].title);
+			Con_Printf("  loadfont %s gfx/tgafile[...] [sizes...]\n", dp_fonts[i].title);
+		Con_Printf("A font can simply be gfx/tgafile, or alternatively you\n"
+			   "can specify multiple fonts and faces\n"
+			   "Like this: gfx/vera-sans:2,gfx/fallback:1\n"
+			   "to load face 2 of the font gfx/vera-sans and use face 1\n"
+			   "of gfx/fallback as fallback font.\n"
+			   "You can also specify a list of font sizes to load, like this:\n"
+			   "loadfont console gfx/conchars,gfx/fallback 8 12 16 24 32\n"
+			   "In many cases, 8 12 16 24 32 should be a good choice.\n"
+			);
 		return;
 	}
 	f = FindFont(Cmd_Argv(1));
@@ -652,7 +708,93 @@ static void LoadFont_f(void)
 		Con_Printf("font function not found\n");
 		return;
 	}
-	LoadFont(true, (Cmd_Argc() < 3) ? "gfx/conchars" : Cmd_Argv(2), f);
+
+	if(Cmd_Argc() < 3)
+		filelist = "gfx/conchars";
+	else
+		filelist = Cmd_Argv(2);
+
+	memset(f->fallbacks, 0, sizeof(f->fallbacks));
+	memset(f->fallback_faces, 0, sizeof(f->fallback_faces));
+
+	// first font is handled "normally"
+	c = strchr(filelist, ':');
+	cm = strchr(filelist, ',');
+	if(c && (!cm || c < cm))
+		f->req_face = atoi(c+1);
+	else
+	{
+		f->req_face = 0;
+		c = cm;
+	}
+
+	if(!c || (c - filelist) > MAX_QPATH)
+		strlcpy(mainfont, filelist, sizeof(mainfont));
+	else
+	{
+		memcpy(mainfont, filelist, c - filelist);
+		mainfont[c - filelist] = 0;
+	}
+
+	for(i = 0; i < MAX_FONT_FALLBACKS; ++i)
+	{
+		c = strchr(filelist, ',');
+		if(!c)
+			break;
+		filelist = c + 1;
+		if(!*filelist)
+			break;
+		c = strchr(filelist, ':');
+		cm = strchr(filelist, ',');
+		if(c && (!cm || c < cm))
+			f->fallback_faces[i] = atoi(c+1);
+		else
+		{
+			f->fallback_faces[i] = 0; // f->req_face; could make it stick to the default-font's face index
+			c = cm;
+		}
+		if(!c || (c-filelist) > MAX_QPATH)
+		{
+			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
+		}
+		else
+		{
+			memcpy(f->fallbacks[i], filelist, c - filelist);
+			f->fallbacks[i][c - filelist] = 0;
+		}
+	}
+
+	// for now: by default load only one size: the default size
+	f->req_sizes[0] = 0;
+	for(i = 1; i < MAX_FONT_SIZES; ++i)
+		f->req_sizes[i] = -1;
+
+	// for some reason this argc is 3 even when using 2 arguments here, maybe nexuiz screws up
+	if(Cmd_Argc() >= 3)
+	{
+		for(i = 0; i < Cmd_Argc()-3; ++i)
+		{
+			sz = atof(Cmd_Argv(i+3));
+			if (IS_NAN(sz)) // do not use crap sizes
+				continue;
+			// now try to scale to our actual size:
+			if (vid.width > 0)
+				sn = snap_to_pixel_y(sz, 0.5);
+			else
+			{
+				sn = sz * vid_height.value / vid_conheight.value;
+				si = (int)sn;
+				if ( sn - (float)si >= 0.5 )
+					++si;
+				sn = si * vid_conheight.value / vid_height.value;
+			}
+			if (!IS_NAN(sn))
+				f->req_sizes[i] = sn;
+			else
+				f->req_sizes[i] = sz;
+		}
+	}
+	LoadFont(true, mainfont, f);
 }
 
 /*
@@ -668,6 +810,8 @@ static void gl_draw_start(void)
 	numcachepics = 0;
 	memset(cachepichash, 0, sizeof(cachepichash));
 
+	font_start();
+
 	for(i = 0; i < MAX_FONTS; ++i)
 		LoadFont(false, va("gfx/font_%s", dp_fonts[i].title), &dp_fonts[i]);
 
@@ -677,6 +821,8 @@ static void gl_draw_start(void)
 
 static void gl_draw_shutdown(void)
 {
+	font_shutdown();
+
 	R_FreeTexturePool(&drawtexturepool);
 
 	numcachepics = 0;
@@ -685,6 +831,7 @@ static void gl_draw_shutdown(void)
 
 static void gl_draw_newmap(void)
 {
+	font_newmap();
 }
 
 void GL_Draw_Init (void)
@@ -708,6 +855,7 @@ void GL_Draw_Init (void)
 	for(i = 0, j = 0; i < MAX_USERFONTS; ++i)
 		if(!FONT_USER[i].title[0])
 			dpsnprintf(FONT_USER[i].title, sizeof(FONT_USER[i].title), "user%d", j++);
+	Font_Init();
 }
 
 void _DrawQ_Setup(void)
@@ -925,13 +1073,41 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 	}
 }
 
-float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w, float h, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
-	int num, colorindex = STRING_COLOR_DEFAULT;
+	int colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
 	float x = 0;
-	char ch;
+	Uchar ch, mapch, nextch;
+	Uchar prevch = 0; // used for kerning
 	int tempcolorindex;
+	float kx;
+	int map_index = 0;
+	ft2_font_map_t *fontmap = NULL;
+	ft2_font_map_t *map = NULL;
+	ft2_font_map_t *prevmap = NULL;
+	ft2_font_t *ft2 = fnt->ft2;
+	// float ftbase_x;
+	qboolean snap = true;
+
+	if (!h) h = w;
+	if (!h) {
+		w = h = 1;
+		snap = false;
+	}
+	// do this in the end
+	w *= fnt->scale;
+	h *= fnt->scale;
+
+	// find the most fitting size:
+	if (ft2 != NULL)
+	{
+		if (snap)
+			map_index = Font_IndexForSize(ft2, h, &w, &h);
+		else
+			map_index = Font_IndexForSize(ft2, h, NULL, NULL);
+		fontmap = Font_MapForIndex(ft2, map_index);
+	}
 
 	if (*maxlen < 1)
 		*maxlen = 1<<30;
@@ -941,42 +1117,53 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	else
 		colorindex = *outcolor;
 
-	maxwidth /= fnt->scale;
+	// maxwidth /= fnt->scale; // w and h are multiplied by it already
+	// ftbase_x = snap_to_pixel_x(0);
 
-	for (i = 0;i < *maxlen && text[i];i++)
+	for (i = 0;i < *maxlen && *text;)
 	{
-		if (text[i] == ' ')
+		nextch = ch = u8_getchar(text, &text);
+		//i = text - text_start;
+		if (!ch)
+			break;
+		if (snap)
+			x = snap_to_pixel_x(x, 0.4);
+		if (ch == ' ' && !fontmap)
 		{
-			if(x + fnt->width_of[(int) ' '] > maxwidth)
+			if(x + fnt->width_of[(int) ' '] * w > maxwidth)
 				break; // oops, can't draw this
-			x += fnt->width_of[(int) ' '];
+			x += fnt->width_of[(int) ' '] * w;
+			++i;
 			continue;
 		}
-		if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
+		if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < *maxlen)
 		{
-			ch = text[++i];
-            if (ch <= '9' && ch >= '0') // ^[0-9] found
+			++i;
+			ch = *text; // colors are ascii, so no u8_ needed
+			if (ch <= '9' && ch >= '0') // ^[0-9] found
 			{
 				colorindex = ch - '0';
-                continue;
+				++text;
+				++i;
+				continue;
 			}
 			else if (ch == STRING_COLOR_RGB_TAG_CHAR && i + 3 < *maxlen ) // ^x found
 			{
 				// building colorindex...
-				ch = tolower(text[i+1]);
+				ch = tolower(text[1]);
 				tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
 				if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
 				else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
 				else tempcolorindex = 0;
 				if (tempcolorindex)
 				{
-					ch = tolower(text[i+2]);
+					ch = tolower(text[2]);
 					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
 					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
 					else tempcolorindex = 0;
 					if (tempcolorindex)
 					{
-						ch = tolower(text[i+3]);
+						ch = tolower(text[3]);
 						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
 						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
 						else tempcolorindex = 0;
@@ -984,20 +1171,54 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 						{
 							colorindex = tempcolorindex | 0xf;
 							// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
-							i+=3;
+							i+=4;
+							text += 4;
 							continue;
 						}
 					}
 				}
 			}
 			else if (ch == STRING_COLOR_TAG) // ^^ found, ignore the first ^ and go to print the second
+			{
 				i++;
+				text++;
+			}
 			i--;
 		}
-		num = (unsigned char) text[i];
-		if(x + fnt->width_of[num] > maxwidth)
-			break; // oops, can't draw this
-		x += fnt->width_of[num];
+		ch = nextch;
+		++i;
+
+		if (!fontmap || (ch <= 0xFF && fontmap->glyphs[ch].image) || (ch >= 0xE000 && ch <= 0xE0FF))
+		{
+			if (ch > 0xE000)
+				ch -= 0xE000;
+			if (ch > 0xFF)
+				continue;
+			if (fontmap)
+				map = ft2_oldstyle_map;
+			prevch = 0;
+			if(x + fnt->width_of[ch] * w > maxwidth)
+				break; // oops, can't draw this
+			x += fnt->width_of[ch] * w;
+		} else {
+			if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
+			{
+				map = FontMap_FindForChar(fontmap, ch);
+				if (!map)
+				{
+					if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
+						break;
+					if (!map)
+						break;
+				}
+			}
+			mapch = ch - map->start;
+			if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, NULL))
+				x += kx * w;
+			x += map->glyphs[mapch].advance_x * w;
+			prevmap = map;
+			prevch = ch;
+		}
 	}
 
 	*maxlen = i;
@@ -1005,12 +1226,12 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxl
 	if (outcolor)
 		*outcolor = colorindex;
 
-	return x * fnt->scale;
+	return x;
 }
 
 float DrawQ_String_Font(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
-	int num, shadow, colorindex = STRING_COLOR_DEFAULT;
+	int shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
 	float x = startx, y, s, t, u, v, thisw;
 	float *av, *at, *ac;
@@ -1019,16 +1240,46 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	static float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	static float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
 	static float color4f[QUADELEMENTS_MAXQUADS*4*4];
-	int ch;
+	Uchar ch, mapch, nextch;
+	Uchar prevch = 0; // used for kerning
 	int tempcolorindex;
+	int map_index = 0;
+	ft2_font_map_t *prevmap = NULL; // the previous map
+	ft2_font_map_t *map = NULL;     // the currently used map
+	ft2_font_map_t *fontmap = NULL; // the font map for the size
+	float ftbase_y;
+	const char *text_start = text;
+	float kx, ky;
+	ft2_font_t *ft2 = fnt->ft2;
+	qboolean snap = true;
+	float pix_x, pix_y;
 
 	int tw, th;
 	tw = R_TextureWidth(fnt->tex);
 	th = R_TextureHeight(fnt->tex);
 
+	if (!h) h = w;
+	if (!h) {
+		h = w = 1;
+		snap = false;
+	}
+
 	starty -= (fnt->scale - 1) * h * 0.5; // center
 	w *= fnt->scale;
 	h *= fnt->scale;
+
+	if (ft2 != NULL)
+	{
+		if (snap)
+			map_index = Font_IndexForSize(ft2, h, &w, &h);
+		else
+			map_index = Font_IndexForSize(ft2, h, NULL, NULL);
+		fontmap = Font_MapForIndex(ft2, map_index);
+	}
+
+	// draw the font at its baseline when using freetype
+	//ftbase_x = 0;
+	ftbase_y = h * (4.5/6.0);
 
 	if (maxlen < 1)
 		maxlen = 1<<30;
@@ -1037,6 +1288,8 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 
 	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
+	if (!fontmap)
+		R_Mesh_TexBind(0, R_GetTexture(fnt->tex));
 	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1);
@@ -1046,8 +1299,15 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	av = vertex3f;
 	batchcount = 0;
 
+	//ftbase_x = snap_to_pixel_x(ftbase_x);
+	ftbase_y = snap_to_pixel_y(ftbase_y, 0.3);
+
+	pix_x = vid.width / vid_conwidth.value;
+	pix_y = vid.height / vid_conheight.value;
 	for (shadow = r_textshadow.value != 0 && basealpha > 0;shadow >= 0;shadow--)
 	{
+		text = text_start;
+
 		if (!outcolor || *outcolor == -1)
 			colorindex = STRING_COLOR_DEFAULT;
 		else
@@ -1057,44 +1317,59 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 
 		x = startx;
 		y = starty;
+		/*
 		if (shadow)
 		{
-			x += r_textshadow.value;
-			y += r_textshadow.value;
+			x += r_textshadow.value * vid.width / vid_conwidth.value;
+			y += r_textshadow.value * vid.height / vid_conheight.value;
 		}
-		for (i = 0;i < maxlen && text[i];i++)
+		*/
+		for (i = 0;i < maxlen && *text;)
 		{
-			if (text[i] == ' ')
+			nextch = ch = u8_getchar(text, &text);
+			//i = text - text_start;
+			if (!ch)
+				break;
+			if (snap)
+			{
+				x = snap_to_pixel_x(x, 0.4);
+				y = snap_to_pixel_y(y, 0.4);
+			}
+			if (ch == ' ' && !fontmap)
 			{
 				x += fnt->width_of[(int) ' '] * w;
+				++i;
 				continue;
 			}
-			if (text[i] == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
+			if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
 			{
-				ch = text[++i];
+				++i;
+				ch = *text; // colors are ascii, so no u8_ needed
 				if (ch <= '9' && ch >= '0') // ^[0-9] found
 				{
 					colorindex = ch - '0';
 					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
+					++text;
+					++i;
 					continue;
 				}
 				else if (ch == STRING_COLOR_RGB_TAG_CHAR && i+3 < maxlen ) // ^x found
 				{
 					// building colorindex...
-					ch = tolower(text[i+1]);
+					ch = tolower(text[1]);
 					tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
 					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
 					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
 					else tempcolorindex = 0;
 					if (tempcolorindex)
 					{
-						ch = tolower(text[i+2]);
+						ch = tolower(text[2]);
 						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
 						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
 						else tempcolorindex = 0;
 						if (tempcolorindex)
 						{
-							ch = tolower(text[i+3]);
+							ch = tolower(text[3]);
 							if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
 							else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
 							else tempcolorindex = 0;
@@ -1104,50 +1379,177 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 								// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
 								//Con_Printf("^1colorindex:^7 %x\n", colorindex);
 								DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
-								i+=3;
+								i+=4;
+								text+=4;
 								continue;
 							}
 						}
 					}
 				}
 				else if (ch == STRING_COLOR_TAG)
+				{
 					i++;
+					text++;
+				}
 				i--;
 			}
-			num = (unsigned char) text[i];
-			thisw = fnt->width_of[num];
-			// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
-			s = (num & 15)*0.0625f + (0.5f / tw);
-			t = (num >> 4)*0.0625f + (0.5f / th);
-			u = 0.0625f * thisw - (1.0f / tw);
-			v = 0.0625f - (1.0f / th);
-			ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
-			ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
-			ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
-			ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
-			at[ 0] = s		; at[ 1] = t	;
-			at[ 2] = s+u	; at[ 3] = t	;
-			at[ 4] = s+u	; at[ 5] = t+v	;
-			at[ 6] = s		; at[ 7] = t+v	;
-			av[ 0] = x			; av[ 1] = y	; av[ 2] = 10;
-			av[ 3] = x+w*thisw	; av[ 4] = y	; av[ 5] = 10;
-			av[ 6] = x+w*thisw	; av[ 7] = y+h	; av[ 8] = 10;
-			av[ 9] = x			; av[10] = y+h	; av[11] = 10;
-			ac += 16;
-			at += 8;
-			av += 12;
-			batchcount++;
-			if (batchcount >= QUADELEMENTS_MAXQUADS)
+			// get the backup
+			ch = nextch;
+			++i;
+			// using a value of -1 for the oldstyle map because NULL means uninitialized...
+			// this way we don't need to rebind fnt->tex for every old-style character
+			// E000..E0FF: emulate old-font characters (to still have smileys and such available)
+			if (shadow)
 			{
-				GL_LockArrays(0, batchcount * 4);
-				R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-				GL_LockArrays(0, 0);
-				batchcount = 0;
-				ac = color4f;
-				at = texcoord2f;
-				av = vertex3f;
+				x += pix_x * r_textshadow.value;
+				y += pix_y * r_textshadow.value;
 			}
-			x += thisw * w;
+			if (!fontmap || (ch <= 0xFF && fontmap->glyphs[ch].image) || (ch >= 0xE000 && ch <= 0xE0FF))
+			{
+				if (ch > 0xE000)
+					ch -= 0xE000;
+				if (ch > 0xFF)
+					continue;
+				if (fontmap)
+				{
+					if (map != ft2_oldstyle_map)
+					{
+						if (batchcount)
+						{
+							// switching from freetype to non-freetype rendering
+							GL_LockArrays(0, batchcount * 4);
+							R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+							GL_LockArrays(0, 0);
+							batchcount = 0;
+							ac = color4f;
+							at = texcoord2f;
+							av = vertex3f;
+						}
+						R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1);
+						map = ft2_oldstyle_map;
+					}
+				}
+				prevch = 0;
+				//num = (unsigned char) text[i];
+				//thisw = fnt->width_of[num];
+				thisw = fnt->width_of[ch];
+				// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
+				s = (ch & 15)*0.0625f + (0.5f / tw);
+				t = (ch >> 4)*0.0625f + (0.5f / th);
+				u = 0.0625f * thisw - (1.0f / tw);
+				v = 0.0625f - (1.0f / th);
+				ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
+				ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
+				ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
+				ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
+				at[ 0] = s		; at[ 1] = t	;
+				at[ 2] = s+u	; at[ 3] = t	;
+				at[ 4] = s+u	; at[ 5] = t+v	;
+				at[ 6] = s		; at[ 7] = t+v	;
+				av[ 0] = x			; av[ 1] = y	; av[ 2] = 10;
+				av[ 3] = x+w*thisw	; av[ 4] = y	; av[ 5] = 10;
+				av[ 6] = x+w*thisw	; av[ 7] = y+h	; av[ 8] = 10;
+				av[ 9] = x			; av[10] = y+h	; av[11] = 10;
+				ac += 16;
+				at += 8;
+				av += 12;
+				batchcount++;
+				if (batchcount >= QUADELEMENTS_MAXQUADS)
+				{
+					GL_LockArrays(0, batchcount * 4);
+					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+					GL_LockArrays(0, 0);
+					batchcount = 0;
+					ac = color4f;
+					at = texcoord2f;
+					av = vertex3f;
+				}
+				x += thisw * w;
+			} else {
+				if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
+				{
+					// new charmap - need to render
+					if (batchcount)
+					{
+						// we need a different character map, render what we currently have:
+						GL_LockArrays(0, batchcount * 4);
+						R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+						GL_LockArrays(0, 0);
+						batchcount = 0;
+						ac = color4f;
+						at = texcoord2f;
+						av = vertex3f;
+					}
+					// find the new map
+					map = FontMap_FindForChar(fontmap, ch);
+					if (!map)
+					{
+						if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
+						{
+							shadow = -1;
+							break;
+						}
+						if (!map)
+						{
+							// this shouldn't happen
+							shadow = -1;
+							break;
+						}
+					}
+					R_SetupShader_Generic(map->texture, NULL, GL_MODULATE, 1);
+				}
+
+				mapch = ch - map->start;
+				thisw = map->glyphs[mapch].advance_x;
+
+				//x += ftbase_x;
+				y += ftbase_y;
+				if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, &ky))
+				{
+					x += kx * w;
+					y += ky * h;
+				}
+				else
+					kx = ky = 0;
+				ac[ 0] = color[0]; ac[ 1] = color[1]; ac[ 2] = color[2]; ac[ 3] = color[3];
+				ac[ 4] = color[0]; ac[ 5] = color[1]; ac[ 6] = color[2]; ac[ 7] = color[3];
+				ac[ 8] = color[0]; ac[ 9] = color[1]; ac[10] = color[2]; ac[11] = color[3];
+				ac[12] = color[0]; ac[13] = color[1]; ac[14] = color[2]; ac[15] = color[3];
+				at[0] = map->glyphs[mapch].txmin; at[1] = map->glyphs[mapch].tymin;
+				at[2] = map->glyphs[mapch].txmax; at[3] = map->glyphs[mapch].tymin;
+				at[4] = map->glyphs[mapch].txmax; at[5] = map->glyphs[mapch].tymax;
+				at[6] = map->glyphs[mapch].txmin; at[7] = map->glyphs[mapch].tymax;
+				av[ 0] = x + w * map->glyphs[mapch].vxmin; av[ 1] = y + h * map->glyphs[mapch].vymin; av[ 2] = 10;
+				av[ 3] = x + w * map->glyphs[mapch].vxmax; av[ 4] = y + h * map->glyphs[mapch].vymin; av[ 5] = 10;
+				av[ 6] = x + w * map->glyphs[mapch].vxmax; av[ 7] = y + h * map->glyphs[mapch].vymax; av[ 8] = 10;
+				av[ 9] = x + w * map->glyphs[mapch].vxmin; av[10] = y + h * map->glyphs[mapch].vymax; av[11] = 10;
+				//x -= ftbase_x;
+				y -= ftbase_y;
+
+				x += thisw * w;
+				ac += 16;
+				at += 8;
+				av += 12;
+				batchcount++;
+				if (batchcount >= QUADELEMENTS_MAXQUADS)
+				{
+					GL_LockArrays(0, batchcount * 4);
+					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+					GL_LockArrays(0, 0);
+					batchcount = 0;
+					ac = color4f;
+					at = texcoord2f;
+					av = vertex3f;
+				}
+
+				prevmap = map;
+				prevch = ch;
+			}
+			if (shadow)
+			{
+				x -= pix_x * r_textshadow.value;
+				y -= pix_y * r_textshadow.value;
+			}
 		}
 	}
 	if (batchcount > 0)
@@ -1174,9 +1576,24 @@ float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolor
 	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
 }
 
+float DrawQ_TextWidth_Font_Size(const char *text, float w, float h, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
+{
+	return DrawQ_TextWidth_Font_UntilWidth_Size(text, w, h, &maxlen, ignorecolorcodes, fnt, 1000000000);
+}
+
 float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
 	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
+}
+
+float DrawQ_TextWidth_Font_UntilWidth_Size(const char *text, float w, float h, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+{
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, w, h, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
+}
+
+float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+{
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, 0, 0, maxlen, outcolor, ignorecolorcodes, fnt, maxwidth);
 }
 
 #if 0

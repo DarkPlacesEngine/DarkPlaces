@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 #include "image.h"
 
+#include "utf8lib.h"
+
 // for secure rcon authentication
 #include "hmac.h"
 #include "mdfour.h"
@@ -1027,7 +1029,7 @@ void Host_Name_f (void)
 		host_client->name[1] = '0' + STRING_COLOR_DEFAULT;
 	}
 
-	COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
+	u8_COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
 	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
 	{
 		size_t l;

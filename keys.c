@@ -22,6 +22,7 @@
 
 #include "quakedef.h"
 #include "cl_video.h"
+#include "utf8lib.h"
 
 cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well"};
 
@@ -475,7 +476,7 @@ Interactive line editing and console scrollback
 ====================
 */
 static void
-Key_Console (int key, int ascii)
+Key_Console (int key, int unicode)
 {
 	// LordHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
@@ -552,6 +553,7 @@ Key_Console (int key, int ascii)
 			if (i > 0)
 			{
 				// terencehill: insert the clipboard text between the characters of the line
+				/*
 				char *temp = (char *) Z_Malloc(MAX_INPUTLINE);
 				cbd[i]=0;
 				temp[0]=0;
@@ -562,6 +564,12 @@ Key_Console (int key, int ascii)
 				if (temp[0])
 					strlcat(key_line, temp, sizeof(key_line));
 				Z_Free(temp);
+				key_linepos += i;
+				*/
+				// blub: I'm changing this to use memmove() like the rest of the code does.
+				cbd[i] = 0;
+				memmove(key_line + key_linepos + i, key_line + key_linepos, sizeof(key_line) - key_linepos - i);
+				memcpy(key_line + key_linepos, cbd, i);
 				key_linepos += i;
 			}
 			Z_Free(cbd);
@@ -704,7 +712,8 @@ Key_Console (int key, int ascii)
 		else if(keydown[K_SHIFT]) // move cursor to the previous character ignoring colors
 		{
 			int		pos;
-			pos = key_linepos-1;
+			size_t          inchar;
+			pos = u8_prevbyte(key_line, key_linepos);
 			while (pos)
 				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
 					pos-=2;
@@ -718,10 +727,14 @@ Key_Console (int key, int ascii)
 					pos--;
 					break;
 				}
-			key_linepos = pos + 1;
+			// we need to move to the beginning of the character when in a wide character:
+			u8_charidx(key_line, pos + 1, &inchar);
+			key_linepos = pos + 1 - inchar;
 		}
 		else
-			key_linepos--;
+		{
+			key_linepos = u8_prevbyte(key_line, key_linepos);
+		}
 		return;
 	}
 
@@ -730,8 +743,9 @@ Key_Console (int key, int ascii)
 	{
 		if (key_linepos > 1)
 		{
-			strlcpy(key_line + key_linepos - 1, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
-			key_linepos--;
+			int newpos = u8_prevbyte(key_line, key_linepos);
+			strlcpy(key_line + newpos, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
+			key_linepos = newpos;
 		}
 		return;
 	}
@@ -742,7 +756,7 @@ Key_Console (int key, int ascii)
 		size_t linelen;
 		linelen = strlen(key_line);
 		if (key_linepos < (int)linelen)
-			memmove(key_line + key_linepos, key_line + key_linepos + 1, linelen - key_linepos);
+			memmove(key_line + key_linepos, key_line + key_linepos + u8_bytelen(key_line + key_linepos, 1), linelen - key_linepos);
 		return;
 	}
 
@@ -796,7 +810,7 @@ Key_Console (int key, int ascii)
 			// skip the char
 			if (key_line[pos] == STRING_COLOR_TAG && key_line[pos+1] == STRING_COLOR_TAG) // consider ^^ as a character
 				pos++;
-			pos++;
+			pos += u8_bytelen(key_line + pos, 1);
 			
 			// now go beyond all next consecutive color tags, if any
 			if(pos < len)
@@ -812,7 +826,7 @@ Key_Console (int key, int ascii)
 			key_linepos = pos;
 		}
 		else
-			key_linepos++;
+			key_linepos += u8_bytelen(key_line + key_linepos, 1);
 		return;
 	}
 
@@ -923,22 +937,31 @@ Key_Console (int key, int ascii)
 	}
 
 	// non printable
-	if (ascii < 32)
+	if (unicode < 32)
 		return;
 
 	if (key_linepos < MAX_INPUTLINE-1)
 	{
+		char buf[16];
 		int len;
+		int blen;
+		blen = u8_fromchar(unicode, buf, sizeof(buf));
+		if (!blen)
+			return;
 		len = (int)strlen(&key_line[key_linepos]);
 		// check insert mode, or always insert if at end of line
 		if (key_insert || len == 0)
 		{
 			// can't use strcpy to move string to right
 			len++;
-			memmove(&key_line[key_linepos + 1], &key_line[key_linepos], len);
+			//memmove(&key_line[key_linepos + u8_bytelen(key_line + key_linepos, 1)], &key_line[key_linepos], len);
+			memmove(&key_line[key_linepos + blen], &key_line[key_linepos], len);
 		}
-		key_line[key_linepos] = ascii;
-		key_linepos++;
+		memcpy(key_line + key_linepos, buf, blen);
+		key_linepos += blen;
+		//key_linepos += u8_fromchar(unicode, key_line + key_linepos, sizeof(key_line) - key_linepos - 1);
+		//key_line[key_linepos] = ascii;
+		//key_linepos++;
 	}
 }
 
@@ -953,7 +976,6 @@ extern int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
 static void
 Key_Message (int key, int ascii)
 {
-
 	if (key == K_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
@@ -978,7 +1000,7 @@ Key_Message (int key, int ascii)
 
 	if (key == K_BACKSPACE) {
 		if (chat_bufferlen) {
-			chat_bufferlen--;
+			chat_bufferlen = u8_prevbyte(chat_buffer, chat_bufferlen);
 			chat_buffer[chat_bufferlen] = 0;
 		}
 		return;
@@ -995,8 +1017,10 @@ Key_Message (int key, int ascii)
 	if (!ascii)
 		return;							// non printable
 
-	chat_buffer[chat_bufferlen++] = ascii;
-	chat_buffer[chat_bufferlen] = 0;
+	chat_bufferlen += u8_fromchar(ascii, chat_buffer+chat_bufferlen, sizeof(chat_buffer) - chat_bufferlen - 1);
+
+	//chat_buffer[chat_bufferlen++] = ascii;
+	//chat_buffer[chat_bufferlen] = 0;
 }
 
 //============================================================================

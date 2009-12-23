@@ -204,6 +204,7 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_OUT_OF_MEMORY			0x0505
 
 #define GL_DITHER				0x0BD0
+#define GL_ALPHA				0x1906
 #define GL_RGB					0x1907
 #define GL_RGBA					0x1908
 

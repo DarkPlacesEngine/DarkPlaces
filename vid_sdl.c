@@ -388,7 +388,7 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-				Key_Event( MapKey( event.key.keysym.sym ), (char)event.key.keysym.unicode, (event.key.state == SDL_PRESSED) );
+				Key_Event( MapKey( event.key.keysym.sym ), event.key.keysym.unicode, (event.key.state == SDL_PRESSED) );
 				break;
 			case SDL_ACTIVEEVENT:
 				if( event.active.state & SDL_APPACTIVE )

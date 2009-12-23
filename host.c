@@ -975,6 +975,7 @@ char engineversion[128];
 
 qboolean sys_nostdout = false;
 
+extern void u8_Init(void);
 extern void Render_Init(void);
 extern void Mathlib_Init(void);
 extern void FS_Init(void);
@@ -1042,6 +1043,7 @@ static void Host_Init (void)
 	Con_Init();
 
 	// initialize various cvars that could not be initialized earlier
+	u8_Init();
 	Curl_Init_Commands();
 	Cmd_Init_Commands();
 	Sys_Init_Commands();

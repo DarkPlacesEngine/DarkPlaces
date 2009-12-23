@@ -39,6 +39,8 @@ typedef enum textype_e
 	TEXTYPE_BGRA,
 	// 16bit D16 (16bit depth) or 32bit S8D24 (24bit depth, 8bit stencil unused)
 	TEXTYPE_SHADOWMAP,
+	// 8bit ALPHA (used for freetype fonts)
+	TEXTYPE_ALPHA,
 }
 textype_t;
 
