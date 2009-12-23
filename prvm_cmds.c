@@ -5709,6 +5709,10 @@ void VM_sprintf(void)
 				break;
 			case '%':
 				++s;
+
+				if(*s == '%')
+					goto verbatim;
+
 				// complete directive format:
 				// %3$*1$.*2$ld
 				
@@ -5868,11 +5872,14 @@ nolength:
 					*f++ = 0;
 					switch(*s)
 					{
-						case 'd': case 'i': case 'o': case 'u': case 'x': case 'X': case 'c': 
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, (int) (isfloat ? GETARG_FLOAT(thisarg) : GETARG_INT(thisarg)));
+						case 'd': case 'i':
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
+							break;
+						case 'o': case 'u': case 'x': case 'X': case 'c': 
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
 							break;
 						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, (double) (isfloat ? GETARG_FLOAT(thisarg) : GETARG_INT(thisarg)));
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
 							break;
 						case 's':
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
@@ -5885,6 +5892,7 @@ nolength:
 				++s;
 				break;
 			default:
+verbatim:
 				if(o < end - 1)
 					*o++ = *s++;
 				break;
