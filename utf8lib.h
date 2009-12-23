@@ -13,6 +13,7 @@
 #include <stdint.h>
 typedef __int32 U_int32;
 #else
+#include <stdint.h>
 #include <sys/types.h>
 typedef int32_t U_int32;
 #endif
