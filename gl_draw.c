@@ -1075,6 +1075,7 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 
 float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w, float h, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
+	const char *text_start = text;
 	int colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
 	float x = 0;
@@ -1083,6 +1084,7 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 	int tempcolorindex;
 	float kx;
 	int map_index = 0;
+	size_t bytes_left;
 	ft2_font_map_t *fontmap = NULL;
 	ft2_font_map_t *map = NULL;
 	ft2_font_map_t *prevmap = NULL;
@@ -1120,9 +1122,9 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 	// maxwidth /= fnt->scale; // w and h are multiplied by it already
 	// ftbase_x = snap_to_pixel_x(0);
 
-	for (i = 0;i < *maxlen && *text;)
+	for (i = 0;((bytes_left = *maxlen - (text - text_start)) > 0) && *text;)
 	{
-		nextch = ch = u8_getchar(text, &text);
+		nextch = ch = u8_getnchar(text, &text, bytes_left);
 		//i = text - text_start;
 		if (!ch)
 			break;
@@ -1253,6 +1255,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 	ft2_font_t *ft2 = fnt->ft2;
 	qboolean snap = true;
 	float pix_x, pix_y;
+	size_t bytes_left;
 
 	int tw, th;
 	tw = R_TextureWidth(fnt->tex);
@@ -1324,9 +1327,9 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			y += r_textshadow.value * vid.height / vid_conheight.value;
 		}
 		*/
-		for (i = 0;i < maxlen && *text;)
+		for (i = 0;((bytes_left = maxlen - (text - text_start)) > 0) && *text;)
 		{
-			nextch = ch = u8_getchar(text, &text);
+			nextch = ch = u8_getnchar(text, &text, bytes_left);
 			//i = text - text_start;
 			if (!ch)
 				break;

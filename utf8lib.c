@@ -25,9 +25,11 @@ UTF-8 encoding and decoding functions follow.
  * @param _start  Filled with the start byte-offset of the next valid character
  * @param _len    Fileed with the length of the next valid character
  * @param _ch     Filled with the unicode value of the next character
+ * @param _maxlen Maximum number of bytes to read from _s
  * @return        Whether or not another valid character is in the string
  */
-static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch)
+#define U8_ANALYZE_INFINITY 7
+static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch, size_t _maxlen)
 {
 	const unsigned char *s = (const unsigned char*)_s;
 	unsigned char bt, bc;
@@ -39,10 +41,12 @@ static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *
 findchar:
 
 	// <0xC2 is always an overlong encoding, they're invalid, thus skipped
-	while (s[i] && s[i] >= 0x80 && s[i] <= 0xC2) {
+	while (i < _maxlen && s[i] && s[i] >= 0x80 && s[i] <= 0xC2) {
 		//fprintf(stderr, "skipping\n");
 		++i;
 	}
+	if(i >= _maxlen)
+		return false;
 	//fprintf(stderr, "checking\n");
 
 	// If we hit the end, well, we're out and invalid
@@ -72,6 +76,8 @@ findchar:
 		++i;
 		goto findchar;
 	}
+	if(i + bits > _maxlen)
+		return false;
 	// turn bt into a mask and give ch a starting value
 	--bt;
 	ch = (s[i] & bt);
@@ -144,7 +150,7 @@ size_t u8_strlen(const char *_s)
 			continue;
 		}
 
-		if (!u8_analyze((const char*)s, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s, &st, &ln, NULL, U8_ANALYZE_INFINITY))
 			break;
 		// valid character, skip after it
 		s += st + ln;
@@ -189,7 +195,7 @@ size_t u8_strnlen(const char *_s, size_t n)
 			continue;
 		}
 
-		if (!u8_analyze((const char*)s, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s, &st, &ln, NULL, n))
 			break;
 		// valid character, see if it's still inside the range specified by n:
 		if (n < st + ln)
@@ -234,7 +240,7 @@ size_t u8_bytelen(const char *_s, size_t n)
 			continue;
 		}
 
-		if (!u8_analyze((const char*)s, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s, &st, &ln, NULL, U8_ANALYZE_INFINITY))
 			break;
 		--n;
 		s += st + ln;
@@ -265,7 +271,7 @@ int u8_byteofs(const char *_s, size_t i, size_t *len)
 	do
 	{
 		ofs += ln;
-		if (!u8_analyze((const char*)s + ofs, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s + ofs, &st, &ln, NULL, U8_ANALYZE_INFINITY))
 			return -1;
 		ofs += st;
 	} while(i-- > 0);
@@ -312,7 +318,7 @@ int u8_charidx(const char *_s, size_t i, size_t *len)
 			continue;
 		}
 
-		if (!u8_analyze((const char*)s+ofs, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s+ofs, &st, &ln, NULL, U8_ANALYZE_INFINITY))
 			return -1;
 		// see if next char is after the bytemark
 		if (ofs + st > i)
@@ -373,7 +379,7 @@ size_t u8_prevbyte(const char *_s, size_t i)
 			continue;
 		}
 
-		if (!u8_analyze((const char*)s+ofs, &st, &ln, NULL))
+		if (!u8_analyze((const char*)s+ofs, &st, &ln, NULL, U8_ANALYZE_INFINITY))
 			return lastofs;
 		if (ofs + st > i)
 			return lastofs;
@@ -429,7 +435,37 @@ Uchar u8_getchar(const char *_s, const char **_end)
 		return (Uchar)*(const unsigned char*)_s;
 	}
 	
-	if (!u8_analyze(_s, &st, &ln, &ch))
+	if (!u8_analyze(_s, &st, &ln, &ch, U8_ANALYZE_INFINITY))
+		return 0;
+	if (_end)
+		*_end = _s + st + ln;
+	return ch;
+}
+
+/** Fetch a character from an utf-8 encoded string.
+ * @param _s      The start of an utf-8 encoded multi-byte character.
+ * @param _end    Will point to after the first multi-byte character.
+ * @return        The 32-bit integer representation of the first multi-byte character or 0 for invalid characters.
+ */
+Uchar u8_getnchar(const char *_s, const char **_end, size_t _maxlen)
+{
+	size_t st, ln;
+	Uchar ch;
+
+	if (!utf8_enable.integer)
+	{
+		if (_end)
+			*_end = _s + 1;
+		/* Careful: if we disable utf8 but not freetype, we wish to see freetype chars
+		 * for normal letters. So use E000+x for special chars, but leave the freetype stuff for the
+		 * rest:
+		 */
+		if (!char_usefont[(unsigned int)*(const unsigned char*)_s])
+			return 0xE000 + (Uchar)*(const unsigned char*)_s;
+		return (Uchar)*(const unsigned char*)_s;
+	}
+	
+	if (!u8_analyze(_s, &st, &ln, &ch, _maxlen))
 		return 0;
 	if (_end)
 		*_end = _s + st + ln;
