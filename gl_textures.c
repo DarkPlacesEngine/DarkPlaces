@@ -63,6 +63,8 @@ static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA   , 4, 4, 0.
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA   , 4, 4, 1.0f, GL_BGRA   , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_shadowmap16            = {TEXTYPE_SHADOWMAP,2,2, 2.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT16_ARB, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_shadowmap24            = {TEXTYPE_SHADOWMAP,4,4, 4.0f, GL_DEPTH_COMPONENT, GL_DEPTH_COMPONENT24_ARB, GL_UNSIGNED_INT};
+static textypeinfo_t textype_alpha                  = {TEXTYPE_ALPHA  , 1, 4, 4.0f, GL_ALPHA  , 4, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_alpha_compress         = {TEXTYPE_ALPHA  , 1, 4, 1.0f, GL_ALPHA  , GL_COMPRESSED_RGBA_ARB, GL_UNSIGNED_BYTE};
 
 typedef enum gltexturetype_e
 {
@@ -173,6 +175,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_rgba_alpha_compress;
 			case TEXTYPE_BGRA:
 				return &textype_bgra_alpha_compress;
+			case TEXTYPE_ALPHA:
+				return &textype_alpha_compress;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -188,6 +192,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_rgba_compress;
 			case TEXTYPE_BGRA:
 				return &textype_bgra_compress;
+			case TEXTYPE_ALPHA:
+				return &textype_alpha_compress;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -206,6 +212,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_rgba_alpha;
 			case TEXTYPE_BGRA:
 				return &textype_bgra_alpha;
+			case TEXTYPE_ALPHA:
+				return &textype_alpha;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -223,6 +231,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 				return &textype_bgra;
 			case TEXTYPE_SHADOWMAP:
 				return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
+			case TEXTYPE_ALPHA:
+				return &textype_alpha;
 			default:
 				Host_Error("R_GetTexTypeInfo: unknown texture format");
 				return NULL;
@@ -1028,6 +1038,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		}
 		break;
 	case TEXTYPE_SHADOWMAP:
+		break;
+	case TEXTYPE_ALPHA:
+		flags |= TEXF_ALPHA;
 		break;
 	default:
 		Host_Error("R_LoadTexture: unknown texture type");

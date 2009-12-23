@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "polygon.h"
 #include "image.h"
+#include "ft2.h"
 
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
@@ -4191,12 +4192,14 @@ extern void gl_backend_init(void);
 extern void Sbar_Init(void);
 extern void R_LightningBeams_Init(void);
 extern void Mod_RenderInit(void);
+extern void Font_Init(void);
 
 void Render_Init(void)
 {
 	gl_backend_init();
 	R_Textures_Init();
 	GL_Main_Init();
+	Font_Init();
 	GL_Draw_Init();
 	R_Shadow_Init();
 	R_Sky_Init();

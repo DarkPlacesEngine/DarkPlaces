@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // common.c -- misc functions used in client and server
 
 #include "quakedef.h"
+#include "utf8lib.h"
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -696,6 +697,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 	int result = 0;
 	size_t wordLen;
 	size_t dummy;
+	size_t wordChars;
 
 	dummy = 0;
 	wordWidth(passthroughCW, NULL, &dummy, -1);
@@ -708,12 +710,12 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 		switch(ch)
 		{
 			case 0: // end of string
-				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+				result += processLine(passthroughPL, startOfLine, u8_strnlen(startOfLine, cursor - startOfLine), spaceUsedInLine, isContinuation);
 				isContinuation = false;
 				goto out;
 				break;
 			case '\n': // end of line
-				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+				result += processLine(passthroughPL, startOfLine, u8_strnlen(startOfLine, cursor - startOfLine), spaceUsedInLine, isContinuation);
 				isContinuation = false;
 				++cursor;
 				startOfLine = cursor;
@@ -738,8 +740,9 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 					}
 				}
 				out_inner:
-				spaceUsedForWord = wordWidth(passthroughCW, cursor, &wordLen, maxWidth - continuationWidth); // this may have reduced wordLen when it won't fit - but this is GOOD. TODO fix words that do fit in a non-continuation line
-				if(wordLen < 1)
+				wordChars = strnlen(cursor, wordLen);
+				spaceUsedForWord = wordWidth(passthroughCW, cursor, &wordChars, maxWidth - continuationWidth); // this may have reduced wordLen when it won't fit - but this is GOOD. TODO fix words that do fit in a non-continuation line
+				if(wordChars < 1)
 				{
 					wordLen = 1;
 					spaceUsedForWord = maxWidth + 1; // too high, forces it in a line of itself
@@ -753,7 +756,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 				else
 				{
 					// output current line
-					result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
+					result += processLine(passthroughPL, startOfLine, u8_strnlen(startOfLine, cursor - startOfLine), spaceUsedInLine, isContinuation);
 					isContinuation = true;
 					startOfLine = cursor;
 					cursor += wordLen;
