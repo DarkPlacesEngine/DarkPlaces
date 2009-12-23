@@ -601,7 +601,7 @@ int Font_IndexForSize(ft2_font_t *font, float _fsize, float *outw, float *outh)
 				break;
 		}
 	}
-	if (r_font_size_snapping.integer && value <= 1)
+	if (value <= r_font_size_snapping.integer)
 	{
 		if (outw && outh)
 		{
