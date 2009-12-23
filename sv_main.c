@@ -2697,19 +2697,29 @@ SV_ParticleEffectIndex
 int SV_ParticleEffectIndex(const char *name)
 {
 	int i, argc, linenumber, effectnameindex;
+	int filepass;
 	fs_offset_t filesize;
 	unsigned char *filedata;
 	const char *text, *textstart, *textend;
 	char argv[16][1024];
+	char filename[MAX_QPATH];
 	if (!sv.particleeffectnamesloaded)
 	{
 		sv.particleeffectnamesloaded = true;
 		memset(sv.particleeffectname, 0, sizeof(sv.particleeffectname));
 		for (i = 0;i < EFFECT_TOTAL;i++)
 			strlcpy(sv.particleeffectname[i], standardeffectnames[i], sizeof(sv.particleeffectname[i]));
-		filedata = FS_LoadFile("effectinfo.txt", tempmempool, true, &filesize);
-		if (filedata)
+		for (filepass = 0;;filepass++)
 		{
+			if (filepass == 0)
+				dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
+			else if (filepass == 1)
+				dpsnprintf(filename, sizeof(filename), "maps/%s_effectinfo.txt", sv.name);
+			else
+				break;
+			filedata = FS_LoadFile(filename, tempmempool, true, &filesize);
+			if (!filedata)
+				continue;
 			textstart = (const char *)filedata;
 			textend = (const char *)filedata + filesize;
 			text = textstart;
@@ -2750,7 +2760,7 @@ int SV_ParticleEffectIndex(const char *name)
 						// if we run out of names, abort
 						if (effectnameindex == SV_MAX_PARTICLEEFFECTNAME)
 						{
-							Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+							Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 							break;
 						}
 					}
