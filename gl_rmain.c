@@ -2260,6 +2260,8 @@ r_cg_permutation_t *r_cg_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_cg_permutationarray;
 
+#define CHECKCGERROR {CGerror err;const char *errorstring = cgGetLastErrorString(&err);if (err){Con_Printf("%s:%i CG error %i: %s\n", __FILE__, __LINE__, err, errorstring);if (err == 1) Con_Printf("last listing:\n%s\n", cgGetLastListing(vid.cgcontext));}}
+
 static r_cg_permutation_t *R_CG_FindPermutation(unsigned int mode, unsigned int permutation)
 {
 	//unsigned int hashdepth = 0;
@@ -2319,6 +2321,8 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	const char *geomstrings_list[32+3];
 	const char *fragstrings_list[32+3];
 	char permutationname[256];
+	CGprofile vertexProfile;
+	CGprofile fragmentProfile;
 
 	if (p->compiled)
 		return;
@@ -2398,119 +2402,140 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	for (i = 0;i < fragstrings_count;t += strlen(fragstrings_list[i]), i++)
 		memcpy(t, fragstrings_list[i], strlen(fragstrings_list[i]));
 
-	// compile the shader program
-	if (vertstring[0] || geomstring[0] || fragstring[0])
+	CHECKGLERROR
+	CHECKCGERROR
+	//vertexProfile = CG_PROFILE_ARBVP1;
+	//fragmentProfile = CG_PROFILE_ARBFP1;
+	vertexProfile = cgGLGetLatestProfile(CG_GL_VERTEX);CHECKCGERROR
+	fragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);CHECKCGERROR
+	//cgGLSetOptimalOptions(vertexProfile);CHECKCGERROR
+	//cgGLSetOptimalOptions(fragmentProfile);CHECKCGERROR
+	//cgSetAutoCompile(vid.cgcontext, CG_COMPILE_MANUAL);CHECKCGERROR
+	CHECKGLERROR
+
+	// compile the vertex program
+	if (vertstring[0] && (p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, CG_PROFILE_ARBVP1, NULL, NULL)))
 	{
-		if (vertstring[0])
-			p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, CG_PROFILE_ARBVP1, NULL, NULL);
-		if (fragstring[0])
-			p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, CG_PROFILE_ARBFP1, NULL, NULL);
+		CHECKCGERROR
+		cgCompileProgram(p->vprogram);CHECKCGERROR
+		if (!cgIsProgramCompiled(p->vprogram))
+		{
+			CHECKCGERROR
+			cgDestroyProgram(p->vprogram);CHECKCGERROR
+			p->vprogram = 0;
+		}
+		else
+		{
+			cgGLLoadProgram(p->vprogram);CHECKCGERROR CHECKGLERROR
+			cgGLEnableProfile(vertexProfile);CHECKCGERROR CHECKGLERROR
+			// look up all the uniform variable names we care about, so we don't
+			// have to look them up every time we set them
+			CHECKCGERROR
+			p->vp_EyePosition                = cgGetNamedParameter(p->vprogram, "EyePosition");
+			p->vp_FogPlane                   = cgGetNamedParameter(p->vprogram, "FogPlane");
+			p->vp_LightDir                   = cgGetNamedParameter(p->vprogram, "LightDir");
+			p->vp_LightPosition              = cgGetNamedParameter(p->vprogram, "LightPosition");
+			p->vp_ModelToLight               = cgGetNamedParameter(p->vprogram, "ModelToLight");
+			p->vp_TexMatrix                  = cgGetNamedParameter(p->vprogram, "TexMatrix");
+			p->vp_BackgroundTexMatrix        = cgGetNamedParameter(p->vprogram, "BackgroundTexMatrix");
+			p->vp_ModelViewProjectionMatrix  = cgGetNamedParameter(p->vprogram, "ModelViewProjectionMatrix");
+			p->vp_ModelViewMatrix            = cgGetNamedParameter(p->vprogram, "ModelViewMatrix");
+			CHECKCGERROR
+		}
 	}
 
-	if (p->vprogram)
+	// compile the fragment program
+	if (fragstring[0] && (p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, CG_PROFILE_ARBFP1, NULL, NULL)))
 	{
-		cgGLBindProgram(p->vprogram);
-		cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));
+		cgCompileProgram(p->fprogram);CHECKCGERROR
+		if (!cgIsProgramCompiled(p->fprogram))
+		{
+			CHECKCGERROR
+			cgDestroyProgram(p->fprogram);CHECKCGERROR
+			p->fprogram = 0;
+		}
+		else
+		{
+			cgGLLoadProgram(p->fprogram);CHECKCGERROR CHECKGLERROR
+			cgGLEnableProfile(fragmentProfile);CHECKCGERROR CHECKGLERROR
+			CHECKCGERROR
+			p->fp_Texture_First              = cgGetNamedParameter(p->fprogram, "Texture_First");
+			p->fp_Texture_Second             = cgGetNamedParameter(p->fprogram, "Texture_Second");
+			p->fp_Texture_GammaRamps         = cgGetNamedParameter(p->fprogram, "Texture_GammaRamps");
+			p->fp_Texture_Normal             = cgGetNamedParameter(p->fprogram, "Texture_Normal");
+			p->fp_Texture_Color              = cgGetNamedParameter(p->fprogram, "Texture_Color");
+			p->fp_Texture_Gloss              = cgGetNamedParameter(p->fprogram, "Texture_Gloss");
+			p->fp_Texture_Glow               = cgGetNamedParameter(p->fprogram, "Texture_Glow");
+			p->fp_Texture_SecondaryNormal    = cgGetNamedParameter(p->fprogram, "Texture_SecondaryNormal");
+			p->fp_Texture_SecondaryColor     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryColor");
+			p->fp_Texture_SecondaryGloss     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGloss");
+			p->fp_Texture_SecondaryGlow      = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGlow");
+			p->fp_Texture_Pants              = cgGetNamedParameter(p->fprogram, "Texture_Pants");
+			p->fp_Texture_Shirt              = cgGetNamedParameter(p->fprogram, "Texture_Shirt");
+			p->fp_Texture_FogMask            = cgGetNamedParameter(p->fprogram, "Texture_FogMask");
+			p->fp_Texture_Lightmap           = cgGetNamedParameter(p->fprogram, "Texture_Lightmap");
+			p->fp_Texture_Deluxemap          = cgGetNamedParameter(p->fprogram, "Texture_Deluxemap");
+			p->fp_Texture_Attenuation        = cgGetNamedParameter(p->fprogram, "Texture_Attenuation");
+			p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
+			p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
+			p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
+			p->fp_Texture_ShadowMapRect      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapRect");
+			p->fp_Texture_ShadowMapCube      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapCube");
+			p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
+			p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
+			p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
+			p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
+			p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
+			p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
+			p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
+			p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
+			p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
+			p->fp_Color_Ambient              = cgGetNamedParameter(p->fprogram, "Color_Ambient");
+			p->fp_Color_Diffuse              = cgGetNamedParameter(p->fprogram, "Color_Diffuse");
+			p->fp_Color_Specular             = cgGetNamedParameter(p->fprogram, "Color_Specular");
+			p->fp_Color_Glow                 = cgGetNamedParameter(p->fprogram, "Color_Glow");
+			p->fp_Color_Pants                = cgGetNamedParameter(p->fprogram, "Color_Pants");
+			p->fp_Color_Shirt                = cgGetNamedParameter(p->fprogram, "Color_Shirt");
+			p->fp_DeferredColor_Ambient      = cgGetNamedParameter(p->fprogram, "DeferredColor_Ambient");
+			p->fp_DeferredColor_Diffuse      = cgGetNamedParameter(p->fprogram, "DeferredColor_Diffuse");
+			p->fp_DeferredColor_Specular     = cgGetNamedParameter(p->fprogram, "DeferredColor_Specular");
+			p->fp_DeferredMod_Diffuse        = cgGetNamedParameter(p->fprogram, "DeferredMod_Diffuse");
+			p->fp_DeferredMod_Specular       = cgGetNamedParameter(p->fprogram, "DeferredMod_Specular");
+			p->fp_DistortScaleRefractReflect = cgGetNamedParameter(p->fprogram, "DistortScaleRefractReflect");
+			p->fp_EyePosition                = cgGetNamedParameter(p->fprogram, "EyePosition");
+			p->fp_FogColor                   = cgGetNamedParameter(p->fprogram, "FogColor");
+			p->fp_FogHeightFade              = cgGetNamedParameter(p->fprogram, "FogHeightFade");
+			p->fp_FogPlane                   = cgGetNamedParameter(p->fprogram, "FogPlane");
+			p->fp_FogPlaneViewDist           = cgGetNamedParameter(p->fprogram, "FogPlaneViewDist");
+			p->fp_FogRangeRecip              = cgGetNamedParameter(p->fprogram, "FogRangeRecip");
+			p->fp_LightColor                 = cgGetNamedParameter(p->fprogram, "LightColor");
+			p->fp_LightDir                   = cgGetNamedParameter(p->fprogram, "LightDir");
+			p->fp_LightPosition              = cgGetNamedParameter(p->fprogram, "LightPosition");
+			p->fp_OffsetMapping_Scale        = cgGetNamedParameter(p->fprogram, "OffsetMapping_Scale");
+			p->fp_PixelSize                  = cgGetNamedParameter(p->fprogram, "PixelSize");
+			p->fp_ReflectColor               = cgGetNamedParameter(p->fprogram, "ReflectColor");
+			p->fp_ReflectFactor              = cgGetNamedParameter(p->fprogram, "ReflectFactor");
+			p->fp_ReflectOffset              = cgGetNamedParameter(p->fprogram, "ReflectOffset");
+			p->fp_RefractColor               = cgGetNamedParameter(p->fprogram, "RefractColor");
+			p->fp_Saturation                 = cgGetNamedParameter(p->fprogram, "Saturation");
+			p->fp_ScreenCenterRefractReflect = cgGetNamedParameter(p->fprogram, "ScreenCenterRefractReflect");
+			p->fp_ScreenScaleRefractReflect  = cgGetNamedParameter(p->fprogram, "ScreenScaleRefractReflect");
+			p->fp_ScreenToDepth              = cgGetNamedParameter(p->fprogram, "ScreenToDepth");
+			p->fp_ShadowMap_Parameters       = cgGetNamedParameter(p->fprogram, "ShadowMap_Parameters");
+			p->fp_ShadowMap_TextureScale     = cgGetNamedParameter(p->fprogram, "ShadowMap_TextureScale");
+			p->fp_SpecularPower              = cgGetNamedParameter(p->fprogram, "SpecularPower");
+			p->fp_UserVec1                   = cgGetNamedParameter(p->fprogram, "UserVec1");
+			p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
+			p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
+			p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
+			p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
+			p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
+			CHECKCGERROR
+		}
 	}
-	else
-		cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));
-	if (p->fprogram)
-	{
-		cgGLBindProgram(p->fprogram);
-		cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));
-	}
-	else
-		cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));
 
-	if (p->vprogram || p->fprogram)
-	{
-		// look up all the uniform variable names we care about, so we don't
-		// have to look them up every time we set them
-		p->vp_EyePosition                = cgGetNamedParameter(p->vprogram, "EyePosition");
-		p->vp_FogPlane                   = cgGetNamedParameter(p->vprogram, "FogPlane");
-		p->vp_LightDir                   = cgGetNamedParameter(p->vprogram, "LightDir");
-		p->vp_LightPosition              = cgGetNamedParameter(p->vprogram, "LightPosition");
-		p->vp_ModelToLight               = cgGetNamedParameter(p->vprogram, "ModelToLight");
-		p->vp_TexMatrix                  = cgGetNamedParameter(p->vprogram, "TexMatrix");
-		p->vp_BackgroundTexMatrix        = cgGetNamedParameter(p->vprogram, "BackgroundTexMatrix");
-		p->vp_ModelViewProjectionMatrix  = cgGetNamedParameter(p->vprogram, "ModelViewProjectionMatrix");
-		p->vp_ModelViewMatrix            = cgGetNamedParameter(p->vprogram, "ModelViewMatrix");
-
-		p->fp_Texture_First              = cgGetNamedParameter(p->fprogram, "Texture_First");
-		p->fp_Texture_Second             = cgGetNamedParameter(p->fprogram, "Texture_Second");
-		p->fp_Texture_GammaRamps         = cgGetNamedParameter(p->fprogram, "Texture_GammaRamps");
-		p->fp_Texture_Normal             = cgGetNamedParameter(p->fprogram, "Texture_Normal");
-		p->fp_Texture_Color              = cgGetNamedParameter(p->fprogram, "Texture_Color");
-		p->fp_Texture_Gloss              = cgGetNamedParameter(p->fprogram, "Texture_Gloss");
-		p->fp_Texture_Glow               = cgGetNamedParameter(p->fprogram, "Texture_Glow");
-		p->fp_Texture_SecondaryNormal    = cgGetNamedParameter(p->fprogram, "Texture_SecondaryNormal");
-		p->fp_Texture_SecondaryColor     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryColor");
-		p->fp_Texture_SecondaryGloss     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGloss");
-		p->fp_Texture_SecondaryGlow      = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGlow");
-		p->fp_Texture_Pants              = cgGetNamedParameter(p->fprogram, "Texture_Pants");
-		p->fp_Texture_Shirt              = cgGetNamedParameter(p->fprogram, "Texture_Shirt");
-		p->fp_Texture_FogMask            = cgGetNamedParameter(p->fprogram, "Texture_FogMask");
-		p->fp_Texture_Lightmap           = cgGetNamedParameter(p->fprogram, "Texture_Lightmap");
-		p->fp_Texture_Deluxemap          = cgGetNamedParameter(p->fprogram, "Texture_Deluxemap");
-		p->fp_Texture_Attenuation        = cgGetNamedParameter(p->fprogram, "Texture_Attenuation");
-		p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
-		p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
-		p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
-		p->fp_Texture_ShadowMapRect      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapRect");
-		p->fp_Texture_ShadowMapCube      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapCube");
-		p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
-		p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
-		p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
-		p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
-		p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
-		p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
-		p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
-		p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
-		p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
-		p->fp_Color_Ambient              = cgGetNamedParameter(p->fprogram, "Color_Ambient");
-		p->fp_Color_Diffuse              = cgGetNamedParameter(p->fprogram, "Color_Diffuse");
-		p->fp_Color_Specular             = cgGetNamedParameter(p->fprogram, "Color_Specular");
-		p->fp_Color_Glow                 = cgGetNamedParameter(p->fprogram, "Color_Glow");
-		p->fp_Color_Pants                = cgGetNamedParameter(p->fprogram, "Color_Pants");
-		p->fp_Color_Shirt                = cgGetNamedParameter(p->fprogram, "Color_Shirt");
-		p->fp_DeferredColor_Ambient      = cgGetNamedParameter(p->fprogram, "DeferredColor_Ambient");
-		p->fp_DeferredColor_Diffuse      = cgGetNamedParameter(p->fprogram, "DeferredColor_Diffuse");
-		p->fp_DeferredColor_Specular     = cgGetNamedParameter(p->fprogram, "DeferredColor_Specular");
-		p->fp_DeferredMod_Diffuse        = cgGetNamedParameter(p->fprogram, "DeferredMod_Diffuse");
-		p->fp_DeferredMod_Specular       = cgGetNamedParameter(p->fprogram, "DeferredMod_Specular");
-		p->fp_DistortScaleRefractReflect = cgGetNamedParameter(p->fprogram, "DistortScaleRefractReflect");
-		p->fp_EyePosition                = cgGetNamedParameter(p->fprogram, "EyePosition");
-		p->fp_FogColor                   = cgGetNamedParameter(p->fprogram, "FogColor");
-		p->fp_FogHeightFade              = cgGetNamedParameter(p->fprogram, "FogHeightFade");
-		p->fp_FogPlane                   = cgGetNamedParameter(p->fprogram, "FogPlane");
-		p->fp_FogPlaneViewDist           = cgGetNamedParameter(p->fprogram, "FogPlaneViewDist");
-		p->fp_FogRangeRecip              = cgGetNamedParameter(p->fprogram, "FogRangeRecip");
-		p->fp_LightColor                 = cgGetNamedParameter(p->fprogram, "LightColor");
-		p->fp_LightDir                   = cgGetNamedParameter(p->fprogram, "LightDir");
-		p->fp_LightPosition              = cgGetNamedParameter(p->fprogram, "LightPosition");
-		p->fp_OffsetMapping_Scale        = cgGetNamedParameter(p->fprogram, "OffsetMapping_Scale");
-		p->fp_PixelSize                  = cgGetNamedParameter(p->fprogram, "PixelSize");
-		p->fp_ReflectColor               = cgGetNamedParameter(p->fprogram, "ReflectColor");
-		p->fp_ReflectFactor              = cgGetNamedParameter(p->fprogram, "ReflectFactor");
-		p->fp_ReflectOffset              = cgGetNamedParameter(p->fprogram, "ReflectOffset");
-		p->fp_RefractColor               = cgGetNamedParameter(p->fprogram, "RefractColor");
-		p->fp_Saturation                 = cgGetNamedParameter(p->fprogram, "Saturation");
-		p->fp_ScreenCenterRefractReflect = cgGetNamedParameter(p->fprogram, "ScreenCenterRefractReflect");
-		p->fp_ScreenScaleRefractReflect  = cgGetNamedParameter(p->fprogram, "ScreenScaleRefractReflect");
-		p->fp_ScreenToDepth              = cgGetNamedParameter(p->fprogram, "ScreenToDepth");
-		p->fp_ShadowMap_Parameters       = cgGetNamedParameter(p->fprogram, "ShadowMap_Parameters");
-		p->fp_ShadowMap_TextureScale     = cgGetNamedParameter(p->fprogram, "ShadowMap_TextureScale");
-		p->fp_SpecularPower              = cgGetNamedParameter(p->fprogram, "SpecularPower");
-		p->fp_UserVec1                   = cgGetNamedParameter(p->fprogram, "UserVec1");
-		p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
-		p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
-		p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
-		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
-		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
-		CHECKGLERROR
-		if (developer.integer)
-			Con_Printf("^5CG shader %s compiled.\n", permutationname);
-	}
+	if ((p->vprogram || !vertstring[0]) && (p->fprogram || !fragstring[0]))
+		Con_DPrintf("^5CG shader %s compiled.\n", permutationname);
 	else
 		Con_Printf("^1CG shader %s failed!  some features may not work properly.\n", permutationname);
 
@@ -2532,15 +2557,13 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 {
 	r_cg_permutation_t *perm = R_CG_FindPermutation(mode, permutation);
+	CHECKGLERROR
+	CHECKCGERROR
 	if (r_cg_permutation != perm)
 	{
 		r_cg_permutation = perm;
-		cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));
-		cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));
 		if (!r_cg_permutation->vprogram && !r_cg_permutation->fprogram)
 		{
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));
 			if (!r_cg_permutation->compiled)
 				R_CG_CompilePermutation(perm, mode, permutation);
 			if (!r_cg_permutation->vprogram && !r_cg_permutation->fprogram)
@@ -2569,58 +2592,85 @@ void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 			}
 		}
 		CHECKGLERROR
+		CHECKCGERROR
 		if (r_cg_permutation->vprogram)
 		{
-			cgGLBindProgram(r_cg_permutation->vprogram);
-			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));
+			//cgGLLoadProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
+			cgGLBindProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
+			//cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
 		}
 		else
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));
+		{
+			//cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+		}
 		if (r_cg_permutation->fprogram)
 		{
-			cgGLBindProgram(r_cg_permutation->fprogram);
-			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));
+			//cgGLLoadProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
+			cgGLBindProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
+			//cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 		}
 		else
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));
+		{
+			//cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
+			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
+		}
 	}
-	if (r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);
+	CHECKCGERROR
+	if (r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
+}
+
+void CG_BindTexture(CGparameter param, int texnum)
+{
+	cgGLSetTextureParameter(param, texnum);
+	cgGLEnableTextureParameter(param);
 }
 #endif
 
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
-	r_glsl_permutation_t *p;
-	limit = Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
-	for (i = 0;i < limit;i++)
+	switch(vid.renderpath)
 	{
-		if ((p = (r_glsl_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_glsl_permutationarray, i)))
+	case RENDERPATH_GL20:
 		{
-			GL_Backend_FreeProgram(p->program);
-			Mem_ExpandableArray_FreeRecord(&r_glsl_permutationarray, (void*)p);
-		}
-	}
-	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
-#ifdef SUPPORTCG
-	if (vid.cgcontext)
-	{
-		r_cg_permutation_t *p;
-		limit = Mem_ExpandableArray_IndexRange(&r_cg_permutationarray);
-		for (i = 0;i < limit;i++)
-		{
-			if ((p = (r_cg_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_cg_permutationarray, i)))
+			r_glsl_permutation_t *p;
+			limit = Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
+			for (i = 0;i < limit;i++)
 			{
-				if (p->vprogram)
-					cgDestroyProgram(p->vprogram);
-				if (p->fprogram)
-					cgDestroyProgram(p->fprogram);
-				Mem_ExpandableArray_FreeRecord(&r_cg_permutationarray, (void*)p);
+				if ((p = (r_glsl_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_glsl_permutationarray, i)))
+				{
+					GL_Backend_FreeProgram(p->program);
+					Mem_ExpandableArray_FreeRecord(&r_glsl_permutationarray, (void*)p);
+				}
+			}
+			memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
+		}
+		break;
+	case RENDERPATH_CGGL:
+#ifdef SUPPORTCG
+		{
+			r_cg_permutation_t *p;
+			limit = Mem_ExpandableArray_IndexRange(&r_cg_permutationarray);
+			for (i = 0;i < limit;i++)
+			{
+				if ((p = (r_cg_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_cg_permutationarray, i)))
+				{
+					if (p->vprogram)
+						cgDestroyProgram(p->vprogram);
+					if (p->fprogram)
+						cgDestroyProgram(p->fprogram);
+					Mem_ExpandableArray_FreeRecord(&r_cg_permutationarray, (void*)p);
+				}
 			}
 		}
 		memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
-	}
+		break;
 #endif
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
+	}
 }
 
 void R_GLSL_DumpShader_f(void)
@@ -2678,9 +2728,10 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		break;
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
+		CHECKCGERROR
 		R_SetupShader_SetPermutationCG(SHADERMODE_GENERIC, (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
-		if (r_cg_permutation->fp_Texture_First ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_First , R_GetTexture(first ));
-		if (r_cg_permutation->fp_Texture_Second) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Second, R_GetTexture(second));
+		if (r_cg_permutation->fp_Texture_First ) CG_BindTexture(r_cg_permutation->fp_Texture_First , R_GetTexture(first ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Second) CG_BindTexture(r_cg_permutation->fp_Texture_Second, R_GetTexture(second));CHECKCGERROR
 #endif
 		break;
 	case RENDERPATH_GL13:
@@ -3066,137 +3117,139 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		break;
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
-		R_SetupShader_SetPermutationGLSL(mode, permutation);
+		R_SetupShader_SetPermutationCG(mode, permutation);
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
-			if (r_cg_permutation->vp_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelToLight, m16f);}
-			if (r_cg_permutation->vp_LightPosition >= 0) cgGLSetParameter3f(r_cg_permutation->vp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
+			if (r_cg_permutation->vp_ModelToLight) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelToLight, m16f);}CHECKCGERROR
+			if (r_cg_permutation->vp_LightPosition) cgGLSetParameter3f(r_cg_permutation->vp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);CHECKCGERROR
 		}
 		else
 		{
 			if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_cg_permutation->vp_LightDir >= 0) cgGLSetParameter3f(r_cg_permutation->vp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+				if (r_cg_permutation->vp_LightDir) cgGLSetParameter3f(r_cg_permutation->vp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
 			}
 		}
-		if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);
-		if (r_cg_permutation->vp_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_TexMatrix, m16f);}
-		if (r_cg_permutation->vp_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_BackgroundTexMatrix, m16f);}
-		if (r_cg_permutation->vp_EyePosition >= 0) cgGLSetParameter3f(r_cg_permutation->vp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
-		if (r_cg_permutation->vp_FogPlane >= 0) cgGLSetParameter4f(r_cg_permutation->vp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
+		if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);CHECKCGERROR
+		if (r_cg_permutation->vp_TexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_TexMatrix, m16f);}CHECKCGERROR
+		if (r_cg_permutation->vp_BackgroundTexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_BackgroundTexMatrix, m16f);}CHECKCGERROR
+		if (r_cg_permutation->vp_EyePosition) cgGLSetParameter3f(r_cg_permutation->vp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
+		if (r_cg_permutation->vp_FogPlane) cgGLSetParameter4f(r_cg_permutation->vp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);CHECKCGERROR
 		CHECKGLERROR
 
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
-			if (r_cg_permutation->fp_LightPosition >= 0) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
-			if (r_cg_permutation->fp_LightColor >= 0) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
-			if (r_cg_permutation->fp_Color_Ambient >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);
-			if (r_cg_permutation->fp_Color_Diffuse >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.colormod[0] * diffusescale, rsurface.colormod[1] * diffusescale, rsurface.colormod[2] * diffusescale);
-			if (r_cg_permutation->fp_Color_Specular >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, specularscale, specularscale, specularscale);
+			if (r_cg_permutation->fp_LightPosition) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);CHECKCGERROR
+			if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKCGERROR
+			if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);CHECKCGERROR
+			if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.colormod[0] * diffusescale, rsurface.colormod[1] * diffusescale, rsurface.colormod[2] * diffusescale);CHECKCGERROR
+			if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, specularscale, specularscale, specularscale);CHECKCGERROR
 
 			// additive passes are only darkened by fog, not tinted
-			if (r_cg_permutation->fp_FogColor >= 0)
-				cgGLSetParameter3f(r_cg_permutation->fp_FogColor, 0, 0, 0);
-			if (r_cg_permutation->fp_ShadowMap_TextureScale >= 0) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-			if (r_cg_permutation->fp_ShadowMap_Parameters >= 0) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
-			if (r_cg_permutation->fp_SpecularPower >= 0) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
+			if (r_cg_permutation->fp_FogColor) cgGLSetParameter3f(r_cg_permutation->fp_FogColor, 0, 0, 0);CHECKCGERROR
+			if (r_cg_permutation->fp_ShadowMap_TextureScale) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
+			if (r_cg_permutation->fp_ShadowMap_Parameters) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
+			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
 		}
 		else
 		{
 			if (mode == SHADERMODE_FLATCOLOR)
 			{
-				if (r_cg_permutation->fp_Color_Ambient >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2]);
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2]);CHECKCGERROR
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_cg_permutation->fp_Color_Ambient >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * rsurface.colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * rsurface.colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * rsurface.colormod[2]);
-				if (r_cg_permutation->fp_Color_Diffuse >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, r_refdef.lightmapintensity, r_refdef.lightmapintensity, r_refdef.lightmapintensity);
-				if (r_cg_permutation->fp_Color_Specular >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale);
-				if (r_cg_permutation->fp_DeferredMod_Diffuse >= 0) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * r_shadow_deferred_8bitrange.value);
-				if (r_cg_permutation->fp_DeferredMod_Specular >= 0) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
-				if (r_cg_permutation->fp_LightColor >= 0) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
-				if (r_cg_permutation->fp_LightDir >= 0) cgGLSetParameter3f(r_cg_permutation->fp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * rsurface.colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * rsurface.colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * rsurface.colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, r_refdef.lightmapintensity, r_refdef.lightmapintensity, r_refdef.lightmapintensity);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * r_shadow_deferred_8bitrange.value);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
+				if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_LightDir) cgGLSetParameter3f(r_cg_permutation->fp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
 			}
 			else
 			{
-				if (r_cg_permutation->fp_Color_Ambient >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, r_refdef.scene.ambient * rsurface.colormod[0], r_refdef.scene.ambient * rsurface.colormod[1], r_refdef.scene.ambient * rsurface.colormod[2]);
-				if (r_cg_permutation->fp_Color_Diffuse >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
-				if (r_cg_permutation->fp_Color_Specular >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale);
-				if (r_cg_permutation->fp_DeferredMod_Diffuse >= 0) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
-				if (r_cg_permutation->fp_DeferredMod_Specular >= 0) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, r_refdef.scene.ambient * rsurface.colormod[0], r_refdef.scene.ambient * rsurface.colormod[1], r_refdef.scene.ambient * rsurface.colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale, r_refdef.lightmapintensity * specularscale);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (r_cg_permutation->fp_FogColor >= 0)
+			if (r_cg_permutation->fp_FogColor)
 			{
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
 					cgGLSetParameter3f(r_cg_permutation->fp_FogColor, 0, 0, 0);
 				else
 					cgGLSetParameter3f(r_cg_permutation->fp_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
+				CHECKCGERROR
 			}
-			if (r_cg_permutation->fp_DistortScaleRefractReflect >= 0) cgGLSetParameter4f(r_cg_permutation->fp_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
-			if (r_cg_permutation->fp_ScreenScaleRefractReflect >= 0) cgGLSetParameter4f(r_cg_permutation->fp_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
-			if (r_cg_permutation->fp_ScreenCenterRefractReflect >= 0) cgGLSetParameter4f(r_cg_permutation->fp_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-			if (r_cg_permutation->fp_RefractColor >= 0) cgGLSetParameter4fv(r_cg_permutation->fp_RefractColor, rsurface.texture->refractcolor4f);
-			if (r_cg_permutation->fp_ReflectColor >= 0) cgGLSetParameter4fv(r_cg_permutation->fp_ReflectColor, rsurface.texture->reflectcolor4f);
-			if (r_cg_permutation->fp_ReflectFactor >= 0) cgGLSetParameter1f(r_cg_permutation->fp_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
-			if (r_cg_permutation->fp_ReflectOffset >= 0) cgGLSetParameter1f(r_cg_permutation->fp_ReflectOffset, rsurface.texture->reflectmin);
-			if (r_cg_permutation->fp_SpecularPower >= 0) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
+			if (r_cg_permutation->fp_DistortScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);CHECKCGERROR
+			if (r_cg_permutation->fp_ScreenScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);CHECKCGERROR
+			if (r_cg_permutation->fp_ScreenCenterRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);CHECKCGERROR
+			if (r_cg_permutation->fp_RefractColor) cgGLSetParameter4fv(r_cg_permutation->fp_RefractColor, rsurface.texture->refractcolor4f);CHECKCGERROR
+			if (r_cg_permutation->fp_ReflectColor) cgGLSetParameter4fv(r_cg_permutation->fp_ReflectColor, rsurface.texture->reflectcolor4f);CHECKCGERROR
+			if (r_cg_permutation->fp_ReflectFactor) cgGLSetParameter1f(r_cg_permutation->fp_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);CHECKCGERROR
+			if (r_cg_permutation->fp_ReflectOffset) cgGLSetParameter1f(r_cg_permutation->fp_ReflectOffset, rsurface.texture->reflectmin);CHECKCGERROR
+			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
 		}
-		if (r_cg_permutation->fp_Color_Glow >= 0) cgGLSetParameter3f(r_cg_permutation->fp_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
-		if (r_cg_permutation->fp_Alpha >= 0) cgGLSetParameter1f(r_cg_permutation->fp_Alpha, rsurface.texture->lightmapcolor[3]);
-		if (r_cg_permutation->fp_EyePosition >= 0) cgGLSetParameter3f(r_cg_permutation->fp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
-		if (r_cg_permutation->fp_Color_Pants >= 0)
+		if (r_cg_permutation->fp_Color_Glow) cgGLSetParameter3f(r_cg_permutation->fp_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);CHECKCGERROR
+		if (r_cg_permutation->fp_Alpha) cgGLSetParameter1f(r_cg_permutation->fp_Alpha, rsurface.texture->lightmapcolor[3]);CHECKCGERROR
+		if (r_cg_permutation->fp_EyePosition) cgGLSetParameter3f(r_cg_permutation->fp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
+		if (r_cg_permutation->fp_Color_Pants)
 		{
 			if (rsurface.texture->pantstexture)
 				cgGLSetParameter3f(r_cg_permutation->fp_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
 			else
 				cgGLSetParameter3f(r_cg_permutation->fp_Color_Pants, 0, 0, 0);
+			CHECKCGERROR
 		}
-		if (r_cg_permutation->fp_Color_Shirt >= 0)
+		if (r_cg_permutation->fp_Color_Shirt)
 		{
 			if (rsurface.texture->shirttexture)
 				cgGLSetParameter3f(r_cg_permutation->fp_Color_Shirt, rsurface.colormap_shirtcolor[0], rsurface.colormap_shirtcolor[1], rsurface.colormap_shirtcolor[2]);
 			else
 				cgGLSetParameter3f(r_cg_permutation->fp_Color_Shirt, 0, 0, 0);
+			CHECKCGERROR
 		}
-		if (r_cg_permutation->fp_FogPlane >= 0) cgGLSetParameter4f(r_cg_permutation->fp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
-		if (r_cg_permutation->fp_FogPlaneViewDist >= 0) cgGLSetParameter1f(r_cg_permutation->fp_FogPlaneViewDist, rsurface.fogplaneviewdist);
-		if (r_cg_permutation->fp_FogRangeRecip >= 0) cgGLSetParameter1f(r_cg_permutation->fp_FogRangeRecip, rsurface.fograngerecip);
-		if (r_cg_permutation->fp_FogHeightFade >= 0) cgGLSetParameter1f(r_cg_permutation->fp_FogHeightFade, rsurface.fogheightfade);
-		if (r_cg_permutation->fp_OffsetMapping_Scale >= 0) cgGLSetParameter1f(r_cg_permutation->fp_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
-		if (r_cg_permutation->fp_ScreenToDepth >= 0) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_cg_permutation->fp_FogPlane) cgGLSetParameter4f(r_cg_permutation->fp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);CHECKCGERROR
+		if (r_cg_permutation->fp_FogPlaneViewDist) cgGLSetParameter1f(r_cg_permutation->fp_FogPlaneViewDist, rsurface.fogplaneviewdist);CHECKCGERROR
+		if (r_cg_permutation->fp_FogRangeRecip) cgGLSetParameter1f(r_cg_permutation->fp_FogRangeRecip, rsurface.fograngerecip);CHECKCGERROR
+		if (r_cg_permutation->fp_FogHeightFade) cgGLSetParameter1f(r_cg_permutation->fp_FogHeightFade, rsurface.fogheightfade);CHECKCGERROR
+		if (r_cg_permutation->fp_OffsetMapping_Scale) cgGLSetParameter1f(r_cg_permutation->fp_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);CHECKCGERROR
+		if (r_cg_permutation->fp_ScreenToDepth) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
 
-	//	if (r_cg_permutation->fp_Texture_First          ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_First          , R_GetTexture(r_texture_white                                     ));
-	//	if (r_cg_permutation->fp_Texture_Second         ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Second         , R_GetTexture(r_texture_white                                     ));
-	//	if (r_cg_permutation->fp_Texture_GammaRamps     ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_GammaRamps     , R_GetTexture(r_texture_gammaramps                                ));
-		if (r_cg_permutation->fp_Texture_Normal         ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Normal         , R_GetTexture(rsurface.texture->nmaptexture                       ));
-		if (r_cg_permutation->fp_Texture_Color          ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Color          , R_GetTexture(rsurface.texture->basetexture                       ));
-		if (r_cg_permutation->fp_Texture_Gloss          ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Gloss          , R_GetTexture(rsurface.texture->glosstexture                      ));
-		if (r_cg_permutation->fp_Texture_Glow           ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Glow           , R_GetTexture(rsurface.texture->glowtexture                       ));
-		if (r_cg_permutation->fp_Texture_SecondaryNormal) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_SecondaryNormal, R_GetTexture(rsurface.texture->backgroundnmaptexture             ));
-		if (r_cg_permutation->fp_Texture_SecondaryColor ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_SecondaryColor , R_GetTexture(rsurface.texture->backgroundbasetexture             ));
-		if (r_cg_permutation->fp_Texture_SecondaryGloss ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_SecondaryGloss , R_GetTexture(rsurface.texture->backgroundglosstexture            ));
-		if (r_cg_permutation->fp_Texture_SecondaryGlow  ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_SecondaryGlow  , R_GetTexture(rsurface.texture->backgroundglowtexture             ));
-		if (r_cg_permutation->fp_Texture_Pants          ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Pants          , R_GetTexture(rsurface.texture->pantstexture                      ));
-		if (r_cg_permutation->fp_Texture_Shirt          ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Shirt          , R_GetTexture(rsurface.texture->shirttexture                      ));
-		if (r_cg_permutation->fp_Texture_FogMask        ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_FogMask        , R_GetTexture(r_texture_fogattenuation                            ));
-		if (r_cg_permutation->fp_Texture_Lightmap       ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Lightmap       , R_GetTexture(r_texture_white                                     ));
-		if (r_cg_permutation->fp_Texture_Deluxemap      ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Deluxemap      , R_GetTexture(r_texture_blanknormalmap                            ));
-		if (r_cg_permutation->fp_Texture_Attenuation    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Attenuation    , R_GetTexture(r_shadow_attenuationgradienttexture                 ));
-		if (r_cg_permutation->fp_Texture_Refraction     ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Refraction     , R_GetTexture(r_texture_white                                     ));
-		if (r_cg_permutation->fp_Texture_Reflection     ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Reflection     , R_GetTexture(r_texture_white                                     ));
-		if (r_cg_permutation->fp_Texture_ScreenDepth    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenDepth    , R_GetTexture(r_shadow_prepassgeometrydepthtexture                ));
-		if (r_cg_permutation->fp_Texture_ScreenNormalMap) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenNormalMap, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture            ));
-		if (r_cg_permutation->fp_Texture_ScreenDiffuse  ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenDiffuse  , R_GetTexture(r_shadow_prepasslightingdiffusetexture              ));
-		if (r_cg_permutation->fp_Texture_ScreenSpecular ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenSpecular , R_GetTexture(r_shadow_prepasslightingspeculartexture             ));
+	//	if (r_cg_permutation->fp_Texture_First          ) CG_BindTexture(r_cg_permutation->fp_Texture_First          , R_GetTexture(r_texture_white                                     ));CHECKCGERROR
+	//	if (r_cg_permutation->fp_Texture_Second         ) CG_BindTexture(r_cg_permutation->fp_Texture_Second         , R_GetTexture(r_texture_white                                     ));CHECKCGERROR
+	//	if (r_cg_permutation->fp_Texture_GammaRamps     ) CG_BindTexture(r_cg_permutation->fp_Texture_GammaRamps     , R_GetTexture(r_texture_gammaramps                                ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Normal         ) CG_BindTexture(r_cg_permutation->fp_Texture_Normal         , R_GetTexture(rsurface.texture->nmaptexture                       ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Color          ) CG_BindTexture(r_cg_permutation->fp_Texture_Color          , R_GetTexture(rsurface.texture->basetexture                       ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Gloss          ) CG_BindTexture(r_cg_permutation->fp_Texture_Gloss          , R_GetTexture(rsurface.texture->glosstexture                      ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Glow           ) CG_BindTexture(r_cg_permutation->fp_Texture_Glow           , R_GetTexture(rsurface.texture->glowtexture                       ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_SecondaryNormal) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryNormal, R_GetTexture(rsurface.texture->backgroundnmaptexture             ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_SecondaryColor ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryColor , R_GetTexture(rsurface.texture->backgroundbasetexture             ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_SecondaryGloss ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryGloss , R_GetTexture(rsurface.texture->backgroundglosstexture            ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_SecondaryGlow  ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryGlow  , R_GetTexture(rsurface.texture->backgroundglowtexture             ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Pants          ) CG_BindTexture(r_cg_permutation->fp_Texture_Pants          , R_GetTexture(rsurface.texture->pantstexture                      ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Shirt          ) CG_BindTexture(r_cg_permutation->fp_Texture_Shirt          , R_GetTexture(rsurface.texture->shirttexture                      ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_FogMask        ) CG_BindTexture(r_cg_permutation->fp_Texture_FogMask        , R_GetTexture(r_texture_fogattenuation                            ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Lightmap       ) CG_BindTexture(r_cg_permutation->fp_Texture_Lightmap       , R_GetTexture(r_texture_white                                     ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Deluxemap      ) CG_BindTexture(r_cg_permutation->fp_Texture_Deluxemap      , R_GetTexture(r_texture_blanknormalmap                            ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Attenuation    ) CG_BindTexture(r_cg_permutation->fp_Texture_Attenuation    , R_GetTexture(r_shadow_attenuationgradienttexture                 ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Refraction     ) CG_BindTexture(r_cg_permutation->fp_Texture_Refraction     , R_GetTexture(r_texture_white                                     ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Reflection     ) CG_BindTexture(r_cg_permutation->fp_Texture_Reflection     , R_GetTexture(r_texture_white                                     ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenDepth    ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , R_GetTexture(r_shadow_prepassgeometrydepthtexture                ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenNormalMap) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture            ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenDiffuse  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDiffuse  , R_GetTexture(r_shadow_prepasslightingdiffusetexture              ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenSpecular ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenSpecular , R_GetTexture(r_shadow_prepasslightingspeculartexture             ));CHECKCGERROR
 		if (rsurface.rtlight)
 		{
-			if (r_cg_permutation->fp_Texture_Cube       ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Cube           , R_GetTexture(rsurface.rtlight->currentcubemap                    ));
-			if (r_cg_permutation->fp_Texture_ShadowMapRect  ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMapRect  , R_GetTexture(r_shadow_shadowmaprectangletexture                  ));
+			if (r_cg_permutation->fp_Texture_Cube       ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , R_GetTexture(rsurface.rtlight->currentcubemap                    ));CHECKCGERROR
+			if (r_cg_permutation->fp_Texture_ShadowMapRect  ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapRect  , R_GetTexture(r_shadow_shadowmaprectangletexture                  ));CHECKCGERROR
 			if (r_shadow_usingshadowmapcube)
-				if (r_cg_permutation->fp_Texture_ShadowMapCube  ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMapCube  , R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));
-			if (r_cg_permutation->fp_Texture_ShadowMap2D    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMap2D    , R_GetTexture(r_shadow_shadowmap2dtexture                         ));
-			if (r_cg_permutation->fp_Texture_CubeProjection ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_CubeProjection , R_GetTexture(r_shadow_shadowmapvsdcttexture                      ));
+				if (r_cg_permutation->fp_Texture_ShadowMapCube  ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapCube  , R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));CHECKCGERROR
+			if (r_cg_permutation->fp_Texture_ShadowMap2D    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , R_GetTexture(r_shadow_shadowmap2dtexture                         ));CHECKCGERROR
+			if (r_cg_permutation->fp_Texture_CubeProjection ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , R_GetTexture(r_shadow_shadowmapvsdcttexture                      ));CHECKCGERROR
 		}
 
 		CHECKGLERROR
@@ -3265,7 +3318,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	{
 	case RENDERPATH_GL20:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
+		if (r_glsl_permutation->loc_ModelViewMatrix           >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3fARB(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
 		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
@@ -3289,26 +3342,26 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(mode, permutation);
-		if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);
-		if (r_cg_permutation->fp_LightPosition            ) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
-		if (r_cg_permutation->fp_ViewToLight              ) cgGLSetMatrixParameterfc(r_cg_permutation->fp_ViewToLight, viewtolight16f);
-		if (r_cg_permutation->fp_DeferredColor_Ambient    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		if (r_cg_permutation->fp_DeferredColor_Diffuse    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		if (r_cg_permutation->fp_DeferredColor_Specular   ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Specular, lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
-		if (r_cg_permutation->fp_ShadowMap_TextureScale   ) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_cg_permutation->fp_ShadowMap_Parameters     ) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
-		if (r_cg_permutation->fp_SpecularPower            ) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
-		if (r_cg_permutation->fp_ScreenToDepth            ) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_cg_permutation->vp_ModelViewMatrix          ) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);CHECKCGERROR
+		if (r_cg_permutation->fp_LightPosition            ) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);CHECKCGERROR
+		if (r_cg_permutation->fp_ViewToLight              ) cgGLSetMatrixParameterfc(r_cg_permutation->fp_ViewToLight, viewtolight16f);CHECKCGERROR
+		if (r_cg_permutation->fp_DeferredColor_Ambient    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);CHECKCGERROR
+		if (r_cg_permutation->fp_DeferredColor_Diffuse    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);CHECKCGERROR
+		if (r_cg_permutation->fp_DeferredColor_Specular   ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Specular, lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);CHECKCGERROR
+		if (r_cg_permutation->fp_ShadowMap_TextureScale   ) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
+		if (r_cg_permutation->fp_ShadowMap_Parameters     ) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
+		if (r_cg_permutation->fp_SpecularPower            ) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
+		if (r_cg_permutation->fp_ScreenToDepth            ) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
 
-		if (r_cg_permutation->fp_Texture_Attenuation      ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Attenuation    , R_GetTexture(r_shadow_attenuationgradienttexture                 ));
-		if (r_cg_permutation->fp_Texture_ScreenDepth      ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenDepth    , R_GetTexture(r_shadow_prepassgeometrydepthtexture                ));
-		if (r_cg_permutation->fp_Texture_ScreenNormalMap  ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ScreenNormalMap, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture            ));
-		if (r_cg_permutation->fp_Texture_Cube             ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Cube           , R_GetTexture(rsurface.rtlight->currentcubemap                    ));
-		if (r_cg_permutation->fp_Texture_ShadowMapRect    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMapRect  , R_GetTexture(r_shadow_shadowmaprectangletexture                  ));
+		if (r_cg_permutation->fp_Texture_Attenuation      ) CG_BindTexture(r_cg_permutation->fp_Texture_Attenuation    , R_GetTexture(r_shadow_attenuationgradienttexture                 ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenDepth      ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , R_GetTexture(r_shadow_prepassgeometrydepthtexture                ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ScreenNormalMap  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture            ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Cube             ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , R_GetTexture(rsurface.rtlight->currentcubemap                    ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ShadowMapRect    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapRect  , R_GetTexture(r_shadow_shadowmaprectangletexture                  ));CHECKCGERROR
 		if (r_shadow_usingshadowmapcube)
-			if (r_cg_permutation->fp_Texture_ShadowMapCube    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMapCube  , R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));
-		if (r_cg_permutation->fp_Texture_ShadowMap2D      ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_ShadowMap2D    , R_GetTexture(r_shadow_shadowmap2dtexture                         ));
-		if (r_cg_permutation->fp_Texture_CubeProjection   ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_CubeProjection , R_GetTexture(r_shadow_shadowmapvsdcttexture                      ));
+			if (r_cg_permutation->fp_Texture_ShadowMapCube    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapCube  , R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ShadowMap2D      ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , R_GetTexture(r_shadow_shadowmap2dtexture                         ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_CubeProjection   ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , R_GetTexture(r_shadow_shadowmapvsdcttexture                      ));CHECKCGERROR
 #endif
 		break;
 	case RENDERPATH_GL13:
@@ -4987,7 +5040,7 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
-			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix >= 0) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);
+			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 #endif
 			break;
@@ -5733,17 +5786,17 @@ static void R_BlendView(void)
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 			R_SetupShader_SetPermutationCG(SHADERMODE_POSTPROCESS, permutation);
-			if (r_cg_permutation->fp_Texture_First     ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_First     , R_GetTexture(r_bloomstate.texture_screen));
-			if (r_cg_permutation->fp_Texture_Second    ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Second    , R_GetTexture(r_bloomstate.texture_bloom ));
-			if (r_cg_permutation->fp_Texture_GammaRamps) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_GammaRamps, R_GetTexture(r_texture_gammaramps       ));
-			if (r_cg_permutation->fp_ViewTintColor     ) cgGLSetParameter4f(     r_cg_permutation->fp_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-			if (r_cg_permutation->fp_ClientTime        ) cgGLSetParameter1f(     r_cg_permutation->fp_ClientTime        , cl.time);
-			if (r_cg_permutation->fp_PixelSize         ) cgGLSetParameter2f(     r_cg_permutation->fp_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
-			if (r_cg_permutation->fp_UserVec1          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
-			if (r_cg_permutation->fp_UserVec2          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
-			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
-			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
-			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);
+			if (r_cg_permutation->fp_Texture_First     ) CG_BindTexture(r_cg_permutation->fp_Texture_First     , R_GetTexture(r_bloomstate.texture_screen));CHECKCGERROR
+			if (r_cg_permutation->fp_Texture_Second    ) CG_BindTexture(r_cg_permutation->fp_Texture_Second    , R_GetTexture(r_bloomstate.texture_bloom ));CHECKCGERROR
+			if (r_cg_permutation->fp_Texture_GammaRamps) CG_BindTexture(r_cg_permutation->fp_Texture_GammaRamps, R_GetTexture(r_texture_gammaramps       ));CHECKCGERROR
+			if (r_cg_permutation->fp_ViewTintColor     ) cgGLSetParameter4f(     r_cg_permutation->fp_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);CHECKCGERROR
+			if (r_cg_permutation->fp_ClientTime        ) cgGLSetParameter1f(     r_cg_permutation->fp_ClientTime        , cl.time);CHECKCGERROR
+			if (r_cg_permutation->fp_PixelSize         ) cgGLSetParameter2f(     r_cg_permutation->fp_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);CHECKCGERROR
+			if (r_cg_permutation->fp_UserVec1          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);CHECKCGERROR
+			if (r_cg_permutation->fp_UserVec2          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);CHECKCGERROR
+			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);CHECKCGERROR
+			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);CHECKCGERROR
+			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);CHECKCGERROR
 #endif
 			break;
 		default:
@@ -7960,8 +8013,8 @@ static void RSurf_BindLightmapForSurface(const msurface_t *surface)
 	{
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
-		if (r_cg_permutation->fp_Texture_Lightmap ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Lightmap , R_GetTexture(surface->lightmaptexture ));
-		if (r_cg_permutation->fp_Texture_Deluxemap) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Deluxemap, R_GetTexture(surface->deluxemaptexture));
+		if (r_cg_permutation->fp_Texture_Lightmap ) CG_BindTexture(r_cg_permutation->fp_Texture_Lightmap , R_GetTexture(surface->lightmaptexture ));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Deluxemap) CG_BindTexture(r_cg_permutation->fp_Texture_Deluxemap, R_GetTexture(surface->deluxemaptexture));CHECKCGERROR
 #endif
 		break;
 	case RENDERPATH_GL20:
@@ -8003,8 +8056,8 @@ static void RSurf_BindReflectionForSurface(const msurface_t *surface)
 	{
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
-		if (r_cg_permutation->fp_Texture_Refraction >= 0) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Refraction, bestp ? R_GetTexture(bestp->texture_refraction) : R_GetTexture(r_texture_black));
-		if (r_cg_permutation->fp_Texture_Reflection >= 0) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Reflection, bestp ? R_GetTexture(bestp->texture_reflection) : R_GetTexture(r_texture_black));
+		if (r_cg_permutation->fp_Texture_Refraction) CG_BindTexture(r_cg_permutation->fp_Texture_Refraction, bestp ? R_GetTexture(bestp->texture_refraction) : R_GetTexture(r_texture_black));CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_Reflection) CG_BindTexture(r_cg_permutation->fp_Texture_Reflection, bestp ? R_GetTexture(bestp->texture_reflection) : R_GetTexture(r_texture_black));CHECKCGERROR
 #endif
 		break;
 	case RENDERPATH_GL20:
