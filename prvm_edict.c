@@ -2303,10 +2303,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 
 	PRVM_Init_Exec();
 
-	if(*prvm_language.string && !strcmp(PRVM_NAME, "client"))
+	if(*prvm_language.string)
 	// in CSQC we really shouldn't be able to change how stuff works... sorry for now
 	// later idea: include a list of authorized .po file checksums with the csprogs
 	{
+		qboolean deftrans = !!strcmp(PRVM_NAME, "client");
 		if(!strcmp(prvm_language.string, "dump"))
 		{
 			qfile_t *f = FS_OpenRealFile(va("%s.%s.po", filename, prvm_language.string), "w", false);
@@ -2317,7 +2318,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if(!name || strncmp(name, "notranslate_", 12))
+					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_")))
 					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
@@ -2342,7 +2343,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if(!name || strncmp(name, "notranslate_", 12))
+					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_")))
 					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
