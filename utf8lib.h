@@ -10,7 +10,6 @@
 // let them be 32 bit for now
 // normally, whcar_t is 16 or 32 bit, 16 on linux I think, 32 on haiku and maybe windows
 #ifdef _MSC_VER
-#include <stdint.h>
 typedef __int32 U_int32;
 #else
 #include <stdint.h>
