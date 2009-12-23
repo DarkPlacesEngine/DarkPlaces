@@ -4585,6 +4585,9 @@ NULL,							// #622
 NULL,							// #623
 VM_CL_getextresponse,			// #624 string getextresponse(void)
 NULL,							// #625
+NULL,							// #626
+VM_sprintf,                     // #627 string sprintf(string format, ...)
+NULL,							// #628
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
