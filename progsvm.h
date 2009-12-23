@@ -212,6 +212,8 @@ typedef struct prvm_prog_fieldoffsets_s
 	int nodrawtoclient; // ssqc
 	int pflags; // ssqc
 	int ping; // ssqc
+	int packetloss; // ssqc
+	int movementloss; // ssqc
 	int pitch_speed; // ssqc / csqc
 	int playermodel; // ssqc
 	int playerskin; // ssqc

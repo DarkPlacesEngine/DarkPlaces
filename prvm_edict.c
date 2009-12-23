@@ -1609,6 +1609,8 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.nodrawtoclient                 = PRVM_ED_FindFieldOffset("nodrawtoclient");
 	prog->fieldoffsets.pflags                         = PRVM_ED_FindFieldOffset("pflags");
 	prog->fieldoffsets.ping                           = PRVM_ED_FindFieldOffset("ping");
+	prog->fieldoffsets.packetloss                     = PRVM_ED_FindFieldOffset("ping_packetloss");
+	prog->fieldoffsets.movementloss                   = PRVM_ED_FindFieldOffset("ping_movementloss");
 	prog->fieldoffsets.pitch_speed                    = PRVM_ED_FindFieldOffset("pitch_speed");
 	prog->fieldoffsets.playermodel                    = PRVM_ED_FindFieldOffset("playermodel");
 	prog->fieldoffsets.playerskin                     = PRVM_ED_FindFieldOffset("playerskin");

@@ -212,7 +212,7 @@ void PRVM_PrintFunctionStatements (const char *name)
 			endstatement = prog->functions[i].first_statement;
 
 	// now print the range of statements
-	Con_Printf("%s progs: disassembly of function %s (statements %i-%i):\n", PRVM_NAME, name, firststatement, endstatement);
+	Con_Printf("%s progs: disassembly of function %s (statements %i-%i, locals %i-%i):\n", PRVM_NAME, name, firststatement, endstatement, func->parm_start, func->parm_start + func->locals - 1);
 	for (i = firststatement;i < endstatement;i++)
 	{
 		PRVM_PrintStatement(prog->statements + i);
