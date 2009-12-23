@@ -8,8 +8,9 @@
 typedef __int32 FT_Int32;
 typedef __uint32 FT_UInt32;
 #else
+# include <stdint.h>
 typedef int32_t FT_Int32;
-typedef u_int32_t FT_UInt32;
+typedef uint32_t FT_UInt32;
 #endif
 
 typedef int FT_Error;
