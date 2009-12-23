@@ -652,7 +652,7 @@ static dp_font_t *FindFont(const char *title)
 	return NULL;
 }
 
-static inline float snap_to_pixel_x(float x, float roundUpAt)
+static float snap_to_pixel_x(float x, float roundUpAt)
 {
 	float pixelpos = x * vid.width / vid_conwidth.value;
 	int snap = (int) pixelpos;
@@ -665,7 +665,7 @@ static inline float snap_to_pixel_x(float x, float roundUpAt)
 	*/
 }
 
-static inline float snap_to_pixel_y(float y, float roundUpAt)
+static float snap_to_pixel_y(float y, float roundUpAt)
 {
 	float pixelpos = y * vid.height / vid_conheight.value;
 	int snap = (int) pixelpos;
