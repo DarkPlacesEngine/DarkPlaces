@@ -100,6 +100,7 @@ char *vm_sv_extensions =
 "DP_QC_NUM_FOR_EDICT "
 "DP_QC_RANDOMVEC "
 "DP_QC_SINCOSSQRTPOW "
+"DP_QC_SPRINTF "
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGBUFFERS_CVARLIST "
@@ -3999,6 +4000,9 @@ NULL,							// #622
 NULL,							// #623
 VM_SV_getextresponse,			// #624 string getextresponse(void)
 NULL,							// #625
+NULL,							// #626
+VM_sprintf,                     // #627 string sprintf(string format, ...)
+NULL,							// #628
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

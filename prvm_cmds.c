@@ -5666,3 +5666,231 @@ void VM_isfunction(void)
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = true;
 }
+
+/*
+=========
+VM_sprintf
+
+string sprintf(string format, ...)
+=========
+*/
+
+void VM_sprintf(void)
+{
+	const char *s, *s0;
+	char outbuf[MAX_INPUTLINE];
+	char *o = outbuf, *end = outbuf + sizeof(outbuf), *err;
+	int argpos = 1;
+	int width, precision, thisarg, flags;
+	char formatbuf[16];
+	char *f;
+	qboolean isfloat;
+#define PRINTF_ALTERNATE 1
+#define PRINTF_ZEROPAD 2
+#define PRINTF_LEFT 4
+#define PRINTF_SPACEPOSITIVE 8
+#define PRINTF_SIGNPOSITIVE 16
+
+	formatbuf[0] = '%';
+
+	s = PRVM_G_STRING(OFS_PARM0);
+
+#define GETARG_FLOAT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_FLOAT(OFS_PARM0 + 3 * (a))) : 0)
+#define GETARG_INT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_INT(OFS_PARM0 + 3 * (a))) : 0)
+#define GETARG_STRING(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_STRING(OFS_PARM0 + 3 * (a))) : "")
+
+	for(;;)
+	{
+		s0 = s;
+		switch(*s)
+		{
+			case 0:
+				goto finished;
+				break;
+			case '%':
+				++s;
+				// complete directive format:
+				// %3$*1$.*2$ld
+				
+				width = -1;
+				precision = -1;
+				thisarg = -1;
+				flags = 0;
+
+				// is number following?
+				if(*s >= '0' && *s <= '9')
+				{
+					width = strtol(s, &err, 10);
+					if(!err)
+					{
+						VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+						goto finished;
+					}
+					if(*err == '$')
+					{
+						thisarg = width;
+						width = -1;
+						s = err + 1;
+					}
+					else
+					{
+						if(*s == '0')
+						{
+							flags |= PRINTF_ZEROPAD;
+							if(width == 0)
+								width = -1; // it was just a flag
+						}
+						s = err;
+					}
+				}
+
+				if(width < 0)
+				{
+					for(;;)
+					{
+						switch(*s)
+						{
+							case '#': flags |= PRINTF_ALTERNATE; break;
+							case '0': flags |= PRINTF_ZEROPAD; break;
+							case '-': flags |= PRINTF_LEFT; break;
+							case ' ': flags |= PRINTF_SPACEPOSITIVE; break;
+							case '+': flags |= PRINTF_SIGNPOSITIVE; break;
+							default:
+								goto noflags;
+						}
+						++s;
+					}
+noflags:
+					if(*s == '*')
+					{
+						++s;
+						if(*s >= '0' && *s <= '9')
+						{
+							width = strtol(s, &err, 10);
+							if(!err || *err != '$')
+							{
+								VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+								goto finished;
+							}
+							s = err + 1;
+						}
+						else
+							width = argpos++;
+						width = GETARG_FLOAT(width);
+					}
+					else if(*s >= '0' && *s <= '9')
+					{
+						width = strtol(s, &err, 10);
+						if(!err)
+						{
+							VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+							goto finished;
+						}
+						s = err;
+					}
+					if(width < 0)
+					{
+						flags |= PRINTF_LEFT;
+						width = -width;
+					}
+				}
+
+				if(*s == '.')
+				{
+					++s;
+					if(*s == '*')
+					{
+						++s;
+						if(*s >= '0' && *s <= '9')
+						{
+							precision = strtol(s, &err, 10);
+							if(!err || *err != '$')
+							{
+								VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+								goto finished;
+							}
+							s = err + 1;
+						}
+						else
+							precision = argpos++;
+						precision = GETARG_FLOAT(precision);
+					}
+					else if(*s >= '0' && *s <= '9')
+					{
+						precision = strtol(s, &err, 10);
+						if(!err)
+						{
+							VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+							goto finished;
+						}
+						s = err;
+					}
+					else
+					{
+						VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+						goto finished;
+					}
+				}
+
+				isfloat = true;
+				for(;;)
+				{
+					switch(*s)
+					{
+						case 'h': isfloat = true; break;
+						case 'l': isfloat = false; break;
+						case 'L': isfloat = false; break;
+						case 'j': break;
+						case 'z': break;
+						case 't': break;
+						default:
+							goto nolength;
+					}
+					++s;
+				}
+nolength:
+
+				if(thisarg < 0)
+					thisarg = argpos++;
+
+				if(o < end - 1)
+				{
+					f = &formatbuf[1];
+					if(flags & PRINTF_ALTERNATE) *f++ = '#';
+					if(flags & PRINTF_ZEROPAD) *f++ = '0';
+					if(flags & PRINTF_LEFT) *f++ = '-';
+					if(flags & PRINTF_SPACEPOSITIVE) *f++ = ' ';
+					if(flags & PRINTF_SIGNPOSITIVE) *f++ = '+';
+					*f++ = '*';
+					*f++ = '.';
+					*f++ = '*';
+					*f++ = *s;
+					*f++ = 0;
+					switch(*s)
+					{
+						case 'd': case 'i': case 'o': case 'u': case 'x': case 'X': case 'c': 
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, (int) (isfloat ? GETARG_FLOAT(thisarg) : GETARG_INT(thisarg)));
+							break;
+						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, (double) (isfloat ? GETARG_FLOAT(thisarg) : GETARG_INT(thisarg)));
+							break;
+						case 's':
+							o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
+							break;
+						default:
+							VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
+							goto finished;
+					}
+				}
+				++s;
+				break;
+			default:
+				if(o < end - 1)
+					*o++ = *s++;
+				break;
+		}
+	}
+finished:
+	*o = 0;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(outbuf);
+}

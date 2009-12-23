@@ -24,6 +24,7 @@ char *vm_m_extensions =
 "DP_QC_FINDCHAIN_TOFIELD "
 "DP_QC_LOG "
 "DP_QC_RENDER_SCENE "
+"DP_QC_SPRINTF "
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGBUFFERS_CVARLIST "
@@ -1406,6 +1407,7 @@ VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
 VM_CL_getextresponse,			// #624 string getextresponse(void)
 VM_netaddress_resolve,          // #625 string netaddress_resolve(string, float)
 VM_M_getgamedirinfo,            // #626 string getgamedirinfo(float n, float prop)
+VM_sprintf,                     // #627 string sprintf(string format, ...)
 NULL
 };
 

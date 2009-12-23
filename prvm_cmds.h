@@ -448,3 +448,5 @@ void VM_SV_getextresponse (void);
 
 void VM_isfunction(void);
 void VM_callfunction(void);
+
+void VM_sprintf(void);
