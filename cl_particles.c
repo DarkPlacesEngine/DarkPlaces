@@ -221,7 +221,7 @@ cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias
 cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
 
 
-void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
+void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, const char *filename)
 {
 	int arrayindex;
 	int argc;
@@ -250,7 +250,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		}
 		if (argc < 1)
 			continue;
-#define checkparms(n) if (argc != (n)) {Con_Printf("effectinfo.txt:%i: error while parsing: %s given %i parameters, should be %i parameters\n", linenumber, argv[0], argc, (n));break;}
+#define checkparms(n) if (argc != (n)) {Con_Printf("%s:%i: error while parsing: %s given %i parameters, should be %i parameters\n", filename, linenumber, argv[0], argc, (n));break;}
 #define readints(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = strtol(argv[1+arrayindex], NULL, 0)
 #define readfloats(array, n) checkparms(n+1);for (arrayindex = 0;arrayindex < argc - 1;arrayindex++) array[arrayindex] = atof(argv[1+arrayindex])
 #define readint(var) checkparms(2);var = strtol(argv[1], NULL, 0)
@@ -263,7 +263,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			effectinfoindex++;
 			if (effectinfoindex >= MAX_PARTICLEEFFECTINFO)
 			{
-				Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+				Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 				break;
 			}
 			for (effectnameindex = 1;effectnameindex < MAX_PARTICLEEFFECTNAME;effectnameindex++)
@@ -282,7 +282,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			// if we run out of names, abort
 			if (effectnameindex == MAX_PARTICLEEFFECTNAME)
 			{
-				Con_Printf("effectinfo.txt:%i: too many effects!\n", linenumber);
+				Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 				break;
 			}
 			info = particleeffectinfo + effectinfoindex;
@@ -312,7 +312,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		}
 		else if (info == NULL)
 		{
-			Con_Printf("effectinfo.txt:%i: command %s encountered before effect\n", linenumber, argv[0]);
+			Con_Printf("%s:%i: command %s encountered before effect\n", filename, linenumber, argv[0]);
 			break;
 		}
 		else if (!strcmp(argv[0], "countabsolute")) {readfloat(info->countabsolute);}
@@ -332,7 +332,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			else if (!strcmp(argv[1], "smoke")) info->particletype = pt_smoke;
 			else if (!strcmp(argv[1], "decal")) info->particletype = pt_decal;
 			else if (!strcmp(argv[1], "entityparticle")) info->particletype = pt_entityparticle;
-			else Con_Printf("effectinfo.txt:%i: unrecognized particle type %s\n", linenumber, argv[1]);
+			else Con_Printf("%s:%i: unrecognized particle type %s\n", filename, linenumber, argv[1]);
 			info->blendmode = particletype[info->particletype].blendmode;
 			info->orientation = particletype[info->particletype].orientation;
 		}
@@ -342,7 +342,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			if (!strcmp(argv[1], "alpha")) info->blendmode = PBLEND_ALPHA;
 			else if (!strcmp(argv[1], "add")) info->blendmode = PBLEND_ADD;
 			else if (!strcmp(argv[1], "invmod")) info->blendmode = PBLEND_INVMOD;
-			else Con_Printf("effectinfo.txt:%i: unrecognized blendmode %s\n", linenumber, argv[1]);
+			else Con_Printf("%s:%i: unrecognized blendmode %s\n", filename, linenumber, argv[1]);
 		}
 		else if (!strcmp(argv[0], "orientation"))
 		{
@@ -351,7 +351,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 			else if (!strcmp(argv[1], "spark")) info->orientation = PARTICLE_SPARK;
 			else if (!strcmp(argv[1], "oriented")) info->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
 			else if (!strcmp(argv[1], "beam")) info->orientation = PARTICLE_HBEAM;
-			else Con_Printf("effectinfo.txt:%i: unrecognized orientation %s\n", linenumber, argv[1]);
+			else Con_Printf("%s:%i: unrecognized orientation %s\n", filename, linenumber, argv[1]);
 		}
 		else if (!strcmp(argv[0], "color")) {readints(info->color, 2);}
 		else if (!strcmp(argv[0], "tex")) {readints(info->tex, 2);}
@@ -382,7 +382,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend)
 		else if (!strcmp(argv[0], "staintex")) {readints(info->staintex, 2);}
 		else if (!strcmp(argv[0], "stainless")) {info->staintex[0] = -2; info->staincolor[0] = (unsigned int)-1; info->staincolor[1] = (unsigned int)-1;}
 		else
-			Con_Printf("effectinfo.txt:%i: skipping unknown command %s\n", linenumber, argv[0]);
+			Con_Printf("%s:%i: skipping unknown command %s\n", filename, linenumber, argv[0]);
 #undef checkparms
 #undef readints
 #undef readfloats
@@ -451,16 +451,26 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 void CL_Particles_LoadEffectInfo(void)
 {
 	int i;
+	int filepass;
 	unsigned char *filedata;
 	fs_offset_t filesize;
+	char filename[MAX_QPATH];
 	memset(particleeffectinfo, 0, sizeof(particleeffectinfo));
 	memset(particleeffectname, 0, sizeof(particleeffectname));
 	for (i = 0;i < EFFECT_TOTAL;i++)
 		strlcpy(particleeffectname[i], standardeffectnames[i], sizeof(particleeffectname[i]));
-	filedata = FS_LoadFile("effectinfo.txt", tempmempool, true, &filesize);
-	if (filedata)
+	for (filepass = 0;;filepass++)
 	{
-		CL_Particles_ParseEffectInfo((const char *)filedata, (const char *)filedata + filesize);
+		if (filepass == 0)
+			dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
+		else if (filepass == 1)
+			dpsnprintf(filename, sizeof(filename), "maps/%s_effectinfo.txt", cl.levelname);
+		else
+			break;
+		filedata = FS_LoadFile(filename, tempmempool, true, &filesize);
+		if (!filedata)
+			continue;
+		CL_Particles_ParseEffectInfo((const char *)filedata, (const char *)filedata + filesize, filename);
 		Mem_Free(filedata);
 	}
 }
@@ -474,7 +484,7 @@ void CL_ReadPointFile_f (void);
 void CL_Particles_Init (void)
 {
 	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
-	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo, "reloads effectinfo.txt");
+	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map)");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
