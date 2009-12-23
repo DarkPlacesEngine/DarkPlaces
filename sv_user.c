@@ -696,6 +696,7 @@ void SV_ApplyClientMove (void)
 {
 	prvm_eval_t *val;
 	usercmd_t *move = &host_client->cmd;
+	int j, movementloss, packetloss;
 
 	if (!move->receivetime)
 		return;
@@ -714,6 +715,18 @@ void SV_ApplyClientMove (void)
 		host_client->edict->fields.server->impulse = move->impulse;
 	// only send the impulse to qc once
 	move->impulse = 0;
+
+	movementloss = packetloss = 0;
+	if(host_client->netconnection)
+	{
+		for (j = 0;j < NETGRAPH_PACKETS;j++)
+			if (host_client->netconnection->incoming_netgraph[j].unreliablebytes == NETGRAPH_LOSTPACKET)
+				packetloss++;
+		for (j = 0;j < NETGRAPH_PACKETS;j++)
+			if (host_client->movement_count[j] < 0)
+				movementloss++;
+	}
+
 	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button3))) val->_float = ((move->buttons >> 2) & 1);
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.button4))) val->_float = ((move->buttons >> 3) & 1);
@@ -738,6 +751,8 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ping))) val->_float = host_client->ping * 1000.0;
+	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.packetloss))) val->_float = packetloss / (float) NETGRAPH_PACKETS;
+	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.movementloss))) val->_float = movementloss / (float) NETGRAPH_PACKETS;
 }
 
 void SV_FrameLost(int framenum)
