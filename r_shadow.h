@@ -2,6 +2,8 @@
 #ifndef R_SHADOW_H
 #define R_SHADOW_H
 
+#define R_SHADOW_SHADOWMAP_NUMCUBEMAPS 8
+
 extern cvar_t r_shadow_bumpscale_basetexture;
 extern cvar_t r_shadow_bumpscale_bumpmap;
 extern cvar_t r_shadow_debuglight;

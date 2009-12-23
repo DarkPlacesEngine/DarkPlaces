@@ -210,12 +210,11 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_CullFace(r_refdef.view.cullface_back);
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 
-	R_SetupGenericShader(true);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_TexBind(0, R_GetTexture(explosiontexture));
+	R_SetupShader_Generic(explosiontexture, NULL, GL_MODULATE, 1);
 	R_Mesh_TexCoordPointer(0, 2, explosiontexcoord2f[0], 0, 0);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{

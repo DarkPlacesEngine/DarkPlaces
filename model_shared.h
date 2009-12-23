@@ -480,10 +480,17 @@ typedef struct texture_s
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
 
 	qboolean colormapping;
-	rtexture_t *basetexture;
-	rtexture_t *glosstexture;
-	rtexture_t *backgroundbasetexture;
-	rtexture_t *backgroundglosstexture;
+	rtexture_t *basetexture; // original texture without pants/shirt/glow
+	rtexture_t *pantstexture; // pants only (in greyscale)
+	rtexture_t *shirttexture; // shirt only (in greyscale)
+	rtexture_t *nmaptexture; // normalmap (bumpmap for dot3)
+	rtexture_t *glosstexture; // glossmap (for dot3)
+	rtexture_t *glowtexture; // glow only (fullbrights)
+	rtexture_t *fogtexture; // alpha of the base texture (if not opaque)
+	rtexture_t *backgroundbasetexture; // original texture without pants/shirt/glow
+	rtexture_t *backgroundnmaptexture; // normalmap (bumpmap for dot3)
+	rtexture_t *backgroundglosstexture; // glossmap (for dot3)
+	rtexture_t *backgroundglowtexture; // glow only (fullbrights)
 	float specularscale;
 	float specularpower;
 	// color tint (colormod * currentalpha) used for rtlighting this material

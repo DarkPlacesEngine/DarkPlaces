@@ -453,12 +453,11 @@ typedef enum gl20_texunit_e
 }
 gl20_texunit;
 
-void R_SetupGenericShader(qboolean usetexture);
-void R_SetupGenericTwoTextureShader(int texturemode);
-void R_SetupDepthOrShadowShader(void);
-void R_SetupShowDepthShader(void);
-void R_SetupSurfaceShader(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
-void R_SetupDeferredLightShader(const rtlight_t *rtlight);
+void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale);
+void R_SetupShader_DepthOrShadow(void);
+void R_SetupShader_ShowDepth(void);
+void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
+void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s
 {

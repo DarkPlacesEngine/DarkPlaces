@@ -344,14 +344,14 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_CullFace(GL_NONE);
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
 
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_SetupGenericShader(false);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
 	isvis = (portal->here->clusterindex >= 0 && portal->past->clusterindex >= 0 && portal->here->clusterindex != portal->past->clusterindex);
 
@@ -608,7 +608,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_AlphaTest(false);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_SetupDepthOrShadowShader();
+	R_SetupShader_DepthOrShadow();
 	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, true, false, false);
 	else

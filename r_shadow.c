@@ -140,8 +140,6 @@ demonstrated by the game Doom3.
 #include "portals.h"
 #include "image.h"
 
-#define R_SHADOW_SHADOWMAP_NUMCUBEMAPS 8
-
 extern void R_Shadow_EditLights_Init(void);
 
 typedef enum r_shadow_rendermode_e
@@ -398,6 +396,7 @@ void R_Shadow_SetShadowMode(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
 		if ((r_shadow_shadowmapping.integer || r_shadow_deferred.integer) && vid.support.ext_framebuffer_object)
 		{
 			if(r_shadow_shadowmapfilterquality < 0)
@@ -1910,6 +1909,7 @@ void R_Shadow_RenderMode_Begin(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 		break;
 	case RENDERPATH_GL13:
@@ -1975,7 +1975,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	R_SetupGenericShader(false);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	r_shadow_usingshadowmaprect = false;
 	r_shadow_usingshadowmapcube = false;
 	r_shadow_usingshadowmap2d = false;
@@ -1998,7 +1998,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 	R_Shadow_RenderMode_Reset();
 	GL_ColorMask(0, 0, 0, 0);
 	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
-	R_SetupDepthOrShadowShader();
+	R_SetupShader_DepthOrShadow();
 	qglDepthFunc(GL_LESS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 	r_shadow_rendermode = mode;
@@ -2184,11 +2184,11 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 	if (fbo)
 	{
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo);CHECKGLERROR
-		R_SetupDepthOrShadowShader();
+		R_SetupShader_DepthOrShadow();
 	}
 	else
 	{
-		R_SetupShowDepthShader();
+		R_SetupShader_ShowDepth();
 		qglClearColor(1,1,1,1);CHECKGLERROR
 	}
 	CHECKGLERROR
@@ -2215,34 +2215,6 @@ init_done:
 	if (clear)
 		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
 	CHECKGLERROR
-}
-
-void R_Shadow_RenderMode_SetShadowMapTexture(void)
-{
-	if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
-	{
-		r_shadow_usingshadowmap2d = true;
-		R_Mesh_TexBind(GL20TU_SHADOWMAP2D, R_GetTexture(r_shadow_shadowmap2dtexture));
-		CHECKGLERROR
-	}
-	else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
-	{
-		r_shadow_usingshadowmaprect = true;
-		R_Mesh_TexBindAll(GL20TU_SHADOWMAPRECT, 0, 0, 0, R_GetTexture(r_shadow_shadowmaprectangletexture));
-		CHECKGLERROR
-	}
-	else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
-	{
-		r_shadow_usingshadowmapcube = true;
-		R_Mesh_TexBindAll(GL20TU_SHADOWMAPCUBE, 0, 0, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);
-		CHECKGLERROR
-	}
-
-	if (r_shadow_shadowmapvsdct && (r_shadow_usingshadowmap2d || r_shadow_usingshadowmaprect))
-	{
-		R_Mesh_TexBindAll(GL20TU_CUBEPROJECTION, 0, 0, R_GetTexture(r_shadow_shadowmapvsdcttexture), 0);
-		CHECKGLERROR
-	}
 }
 
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
@@ -2272,11 +2244,17 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 	// do global setup needed for the chosen lighting mode
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 	{
-		R_Mesh_TexBindAll(GL20TU_CUBE, 0, 0, R_GetTexture(rsurface.rtlight->currentcubemap), 0); // light filter
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 		CHECKGLERROR
-		if (shadowmapping)
-			R_Shadow_RenderMode_SetShadowMapTexture();
+	}
+	if (shadowmapping)
+	{
+		if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
+			r_shadow_usingshadowmap2d = true;
+		else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
+			r_shadow_usingshadowmaprect = true;
+		else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
+			r_shadow_usingshadowmapcube = true;
 	}
 	R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 	CHECKGLERROR
@@ -2313,9 +2291,8 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	R_Shadow_RenderMode_Reset();
 	r_shadow_rendermode = r_shadow_lightingrendermode;
 	// do global setup needed for the chosen lighting mode
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 	{
-		R_Mesh_Matrix(&identitymatrix);
+		R_EntityMatrix(&identitymatrix);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		if (stenciltest)
 		{
@@ -2325,32 +2302,30 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 			qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
 		}
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_prepasslightingfbo);CHECKGLERROR
-		R_Mesh_TexBindAll(GL20TU_SCREENDEPTH, 0, 0, 0, R_GetTexture(r_shadow_prepassgeometrydepthtexture));
-		R_Mesh_TexBindAll(GL20TU_SCREENNORMALMAP, 0, 0, 0, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture));
-		R_Mesh_TexBindAll(GL20TU_CUBE, 0, 0, R_GetTexture(rsurface.rtlight->currentcubemap), 0); // light filter
 		if (shadowmapping)
-			R_Shadow_RenderMode_SetShadowMapTexture();
-		R_SetupDeferredLightShader(rsurface.rtlight);
-		//R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
-		R_Mesh_TexBind(GL20TU_ATTENUATION, R_GetTexture(r_shadow_attenuationgradienttexture));
+		{
+			if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
+				r_shadow_usingshadowmap2d = true;
+			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
+				r_shadow_usingshadowmaprect = true;
+			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
+				r_shadow_usingshadowmapcube = true;
+		}
 
+		// render the lighting
+		R_SetupShader_DeferredLight(rsurface.rtlight);
 		for (i = 0;i < 8;i++)
 			Matrix4x4_Transform(matrix, bboxpoints[i], vertex3f + i*3);
 		CHECKGLERROR
-		//qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);CHECKGLERROR
 		R_Mesh_VertexPointer(vertex3f, 0, 0);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		GL_ColorMask(1,1,1,1);
-		//GL_Color(0.25f,0.05f,0.02f,1.0f);
-		//R_SetupGenericShader(false);
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
 		GL_PolygonOffset(0, 0);
 		GL_DepthTest(true);
 		qglDepthFunc(GL_GREATER);CHECKGLERROR
 		GL_CullFace(r_refdef.view.cullface_back);
-		//GL_AlphaTest(false);
-		//qglDisable(GL_STENCIL_TEST);CHECKGLERROR
 		R_Mesh_Draw(0, 8, 0, 12, NULL, bboxelements, 0, 0);
 	}
 }
@@ -2710,29 +2685,11 @@ static void R_Shadow_RenderLighting_VisibleLighting(int firstvertex, int numvert
 static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int element3i_bufferobject, int element3s_bufferobject, const vec3_t lightcolor, float ambientscale, float diffusescale, float specularscale)
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
-	R_SetupSurfaceShader(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
+	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
 	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
 		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
 	else
 		R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_TexBind(GL20TU_NORMAL, R_GetTexture(rsurface.texture->currentskinframe->nmap));
-	R_Mesh_TexBind(GL20TU_COLOR, R_GetTexture(rsurface.texture->basetexture));
-	R_Mesh_TexBind(GL20TU_GLOSS, R_GetTexture(rsurface.texture->glosstexture));
-	if (rsurface.texture->backgroundcurrentskinframe)
-	{
-		R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->nmap));
-		R_Mesh_TexBind(GL20TU_SECONDARY_COLOR, R_GetTexture(rsurface.texture->backgroundbasetexture));
-		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS, R_GetTexture(rsurface.texture->backgroundglosstexture));
-		R_Mesh_TexBind(GL20TU_SECONDARY_GLOW, R_GetTexture(rsurface.texture->backgroundcurrentskinframe->glow));
-	}
-	//R_Mesh_TexBindAll(GL20TU_CUBE, 0, 0, R_GetTexture(rsurface.rtlight->currentcubemap), 0);
-	R_Mesh_TexBind(GL20TU_FOGMASK, R_GetTexture(r_texture_fogattenuation));
-	if(rsurface.texture->colormapping)
-	{
-		R_Mesh_TexBind(GL20TU_PANTS, R_GetTexture(rsurface.texture->currentskinframe->pants));
-		R_Mesh_TexBind(GL20TU_SHIRT, R_GetTexture(rsurface.texture->currentskinframe->shirt));
-	}
-	R_Mesh_TexBind(GL20TU_ATTENUATION, R_GetTexture(r_shadow_attenuationgradienttexture));
 	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
@@ -2847,8 +2804,8 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	const float *surfacepants = rsurface.colormap_pantscolor;
 	const float *surfaceshirt = rsurface.colormap_shirtcolor;
 	rtexture_t *basetexture = rsurface.texture->basetexture;
-	rtexture_t *pantstexture = rsurface.texture->currentskinframe->pants;
-	rtexture_t *shirttexture = rsurface.texture->currentskinframe->shirt;
+	rtexture_t *pantstexture = rsurface.texture->pantstexture;
+	rtexture_t *shirttexture = rsurface.texture->shirttexture;
 	qboolean dopants = pantstexture && VectorLength2(surfacepants) >= (1.0f / 1048576.0f);
 	qboolean doshirt = shirttexture && VectorLength2(surfaceshirt) >= (1.0f / 1048576.0f);
 	ambientscale *= 2 * r_refdef.view.colorscale;
@@ -3408,6 +3365,7 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	vec_t relativeshadowradius;
 	RSurf_ActiveModelEntity(ent, false, false, false);
 	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, relativeshadoworigin);
+	// we need to re-init the shader for each entity because the matrix changed
 	relativeshadowradius = rsurface.rtlight->radius / ent->scale;
 	relativeshadowmins[0] = relativeshadoworigin[0] - relativeshadowradius;
 	relativeshadowmins[1] = relativeshadoworigin[1] - relativeshadowradius;
@@ -3990,7 +3948,7 @@ void R_Shadow_DrawPrepass(void)
 	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawPrepass)
 		r_refdef.scene.worldmodel->DrawPrepass(r_refdef.scene.worldentity);
 	if (r_timereport_active)
-		R_TimeReport("prepassgeometry");
+		R_TimeReport("prepassworld");
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
@@ -4000,6 +3958,9 @@ void R_Shadow_DrawPrepass(void)
 		if (ent->model && ent->model->DrawPrepass != NULL)
 			ent->model->DrawPrepass(ent);
 	}
+
+	if (r_timereport_active)
+		R_TimeReport("prepassmodels");
 
 	GL_DepthMask(false);
 	GL_ColorMask(1,1,1,1);
@@ -4068,6 +4029,7 @@ void R_Shadow_PrepareLights(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
 		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || !vid.support.arb_texture_rectangle || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
@@ -4304,12 +4266,12 @@ void R_DrawModelShadows(void)
 	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	//GL_ScissorTest(true);
-	//R_Mesh_Matrix(&identitymatrix);
+	//R_EntityMatrix(&identitymatrix);
 	//R_Mesh_ResetTextureState();
 	R_ResetViewRendering2D();
 	R_Mesh_VertexPointer(r_screenvertex3f, 0, 0);
 	R_Mesh_ColorPointer(NULL, 0, 0);
-	R_SetupGenericShader(false);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
 	// set up a darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -4428,7 +4390,7 @@ void R_Shadow_DrawCoronas(void)
 	if (r_waterstate.renderingscene)
 		return;
 	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 
@@ -4459,7 +4421,7 @@ void R_Shadow_DrawCoronas(void)
 		GL_DepthTest(true);
 		R_Mesh_ColorPointer(NULL, 0, 0);
 		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{

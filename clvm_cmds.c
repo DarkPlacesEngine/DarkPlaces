@@ -3034,12 +3034,11 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 	if(polys->progstarttime != prog->starttime) // from other progs? won't draw these (this can cause crashes!)
 		return;
 	R_Mesh_ResetTextureState();
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
 	R_Mesh_VertexPointer(polys->data_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(polys->data_color4f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, polys->data_texcoord2f, 0, 0);
-	R_SetupGenericShader(true);
 
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
@@ -3058,7 +3057,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 			GL_BlendFunc(GL_ONE_MINUS_DST_COLOR,GL_ONE);
 		else
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		R_Mesh_TexBind(0, R_GetTexture(tex));
+		R_SetupShader_Generic(tex, NULL, GL_MODULATE, 1);
 		numtriangles = 0;
 		for (;surfacelistindex < numsurfaces;surfacelistindex++)
 		{

@@ -2229,7 +2229,6 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
 	R_Mesh_ColorPointer(particle_color4f, 0, 0);
-	R_SetupGenericShader(true);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2282,7 +2281,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	// now render the decals all at once
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-	R_Mesh_TexBind(0, R_GetTexture(particletexture[63].texture));
+	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1);
 	GL_LockArrays(0, numsurfaces*4);
 	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
 	GL_LockArrays(0, 0);
@@ -2388,7 +2387,6 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
 	R_Mesh_ColorPointer(particle_color4f, 0, 0);
-	R_SetupGenericShader(true);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2577,7 +2575,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		if (texture != particletexture[p->texnum].texture)
 		{
 			texture = particletexture[p->texnum].texture;
-			R_Mesh_TexBind(0, R_GetTexture(texture));
+			R_SetupShader_Generic(texture, NULL, GL_MODULATE, 1);
 		}
 
 		// iterate until we find a change in settings
