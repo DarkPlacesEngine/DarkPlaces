@@ -467,6 +467,9 @@ typedef struct prvm_prog_s
 	qboolean			loaded;
 	qboolean			leaktest_active;
 
+	// translation buffer (only needs to be freed on unloading progs, type is private to prvm_edict.c)
+	void *po;
+
 	// printed together with backtraces
 	const char *statestring;
 
