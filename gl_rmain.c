@@ -2676,9 +2676,11 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		if (r_glsl_permutation->loc_Texture_Second) R_Mesh_TexBind(GL20TU_SECOND, R_GetTexture(second));
 		break;
 	case RENDERPATH_CGGL:
+#ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(SHADERMODE_GENERIC, (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (r_shadow_glossexact.integer ? SHADERPERMUTATION_EXACTSPECULARMATH : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
 		if (r_cg_permutation->fp_Texture_First ) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_First , R_GetTexture(first ));
 		if (r_cg_permutation->fp_Texture_Second) cgGLSetTextureParameter(r_cg_permutation->fp_Texture_Second, R_GetTexture(second));
+#endif
 		break;
 	case RENDERPATH_GL13:
 		R_Mesh_TexBind(0, R_GetTexture(first ));
@@ -2701,7 +2703,9 @@ void R_SetupShader_DepthOrShadow(void)
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, 0);
 		break;
 	case RENDERPATH_CGGL:
+#ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(SHADERMODE_DEPTH_OR_SHADOW, 0);
+#endif
 		break;
 	case RENDERPATH_GL13:
 		R_Mesh_TexBind(0, 0);
@@ -2721,7 +2725,9 @@ void R_SetupShader_ShowDepth(void)
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, 0);
 		break;
 	case RENDERPATH_CGGL:
+#ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(SHADERMODE_SHOWDEPTH, 0);
+#endif
 		break;
 	case RENDERPATH_GL13:
 		break;
@@ -4977,8 +4983,10 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 			break;
 		case RENDERPATH_CGGL:
+#ifdef SUPPORTCG
 			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix >= 0) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
+#endif
 			break;
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
