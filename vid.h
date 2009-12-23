@@ -33,6 +33,7 @@ typedef enum renderpath_e
 	RENDERPATH_GL11,
 	RENDERPATH_GL13,
 	RENDERPATH_GL20,
+	RENDERPATH_CGGL,
 }
 renderpath_t;
 
@@ -95,6 +96,8 @@ typedef struct viddef_s
 	qboolean stereobuffer;
 	int samples;
 	qboolean stencil;
+
+	void *cgcontext;
 
 	renderpath_t renderpath;
 

@@ -27,6 +27,10 @@ CPUOPTIMIZATIONS?=
 LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --libs` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -lstdc++`
 CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --cflags || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -DODE_STATIC`
 
+# Additional stuff for libCg
+LIB_CG=`[ -n "/usr/lib64/libCg.so" ] && echo \ -lCg\ -lCgGL -lGL`
+CFLAGS_CG=`[ -n "/usr/lib64/libCg.so" ] && echo \ -DSUPPORTCG`
+
 
 SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
@@ -169,7 +173,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) -Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) -Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -196,7 +200,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl

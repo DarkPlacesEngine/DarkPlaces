@@ -22,6 +22,16 @@ cvar_t gl_fbo = {CVAR_SAVE, "gl_fbo", "1", "make use of GL_ARB_framebuffer_objec
 cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qboolean v_flipped_state = false;
 
+r_viewport_t gl_viewport;
+matrix4x4_t gl_modelmatrix;
+matrix4x4_t gl_viewmatrix;
+matrix4x4_t gl_modelviewmatrix;
+matrix4x4_t gl_projectionmatrix;
+matrix4x4_t gl_modelviewprojectionmatrix;
+float gl_modelview16f[16];
+float gl_modelviewprojection16f[16];
+qboolean gl_modelmatrixchanged;
+
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
 
@@ -140,10 +150,6 @@ typedef struct gl_state_s
 	int pointer_color_buffer;
 
 	memexpandablearray_t bufferobjectinfoarray;
-
-	r_viewport_t viewport;
-	matrix4x4_t modelmatrix;
-	matrix4x4_t modelviewmatrix;
 
 	qboolean active;
 }
@@ -327,7 +333,7 @@ static void R_Viewport_ApplyNearClipPlane(r_viewport_t *v, float normalx, float 
 	// testing code for comparing results
 	float clipPlane2[4];
 	VectorCopy4(clipPlane, clipPlane2);
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 	VectorSet(q, normal[0], normal[1], normal[2], -dist);
 	qglClipPlane(GL_CLIP_PLANE0, q);
 	qglGetClipPlane(GL_CLIP_PLANE0, q);
@@ -595,29 +601,40 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 
 void R_SetViewport(const r_viewport_t *v)
 {
-	float glmatrix[16];
-	gl_state.viewport = *v;
+	gl_viewport = *v;
 
 	CHECKGLERROR
 	qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 
-	// Load the projection matrix into OpenGL
-	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
-	qglLoadMatrixf(gl_state.viewport.m);CHECKGLERROR
-	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-
 	// FIXME: v_flipped_state is evil, this probably breaks somewhere
 	GL_SetMirrorState(v_flipped.integer && (v->type == R_VIEWPORTTYPE_PERSPECTIVE || v->type == R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP));
 
-	// directly force an update of the modelview matrix
-	Matrix4x4_Concat(&gl_state.modelviewmatrix, &gl_state.viewport.viewmatrix, &gl_state.modelmatrix);
-	Matrix4x4_ToArrayFloatGL(&gl_state.modelviewmatrix, glmatrix);
-	qglLoadMatrixf(glmatrix);CHECKGLERROR
+	// copy over the matrices to our state
+	gl_viewmatrix = v->viewmatrix;
+	gl_projectionmatrix = v->projectmatrix;
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+//		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		// Load the projection matrix into OpenGL
+		qglMatrixMode(GL_PROJECTION);CHECKGLERROR
+		qglLoadMatrixf(gl_viewport.m);CHECKGLERROR
+		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+		break;
+	}
+
+	// force an update of the derived matrices
+	gl_modelmatrixchanged = true;
+	R_EntityMatrix(&gl_modelmatrix);
 }
 
 void R_GetViewport(r_viewport_t *v)
 {
-	*v = gl_state.viewport;
+	*v = gl_viewport;
 }
 
 static void GL_BindVBO(int bufferobject)
@@ -1435,19 +1452,6 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 	Con_Printf("vertex buffers: %i element buffers totalling %i bytes (%.3f MB), %i vertex buffers totalling %i bytes (%.3f MB), combined %i bytes (%.3fMB)\n", (int)ebocount, (int)ebomemory, ebomemory / 1048576.0, (int)vbocount, (int)vbomemory, vbomemory / 1048576.0, (int)(ebomemory + vbomemory), (ebomemory + vbomemory) / 1048576.0);
 }
 
-void R_Mesh_Matrix(const matrix4x4_t *matrix)
-{
-	if (memcmp(matrix, &gl_state.modelmatrix, sizeof(matrix4x4_t)))
-	{
-		float glmatrix[16];
-		gl_state.modelmatrix = *matrix;
-		Matrix4x4_Concat(&gl_state.modelviewmatrix, &gl_state.viewport.viewmatrix, &gl_state.modelmatrix);
-		Matrix4x4_ToArrayFloatGL(&gl_state.modelviewmatrix, glmatrix);
-		CHECKGLERROR
-		qglLoadMatrixf(glmatrix);CHECKGLERROR
-	}
-}
-
 void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset)
 {
 	if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
@@ -1559,6 +1563,13 @@ int R_Mesh_TexBound(unsigned int unitnum, int id)
 	if (id == GL_TEXTURE_RECTANGLE_ARB)
 		return unit->trectangle;
 	return 0;
+}
+
+void R_Mesh_CopyToTexture(int texnum, int tx, int ty, int sx, int sy, int width, int height)
+{
+	R_Mesh_TexBind(0, texnum);
+	GL_ActiveTexture(0);CHECKGLERROR
+	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, tx, ty, sx, sy, width, height);CHECKGLERROR
 }
 
 void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle)
@@ -1781,6 +1792,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
 		// do nothing
 		break;
 	case RENDERPATH_GL13:
@@ -1863,6 +1875,7 @@ void R_Mesh_ResetTextureState(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
 		for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
 		{
 			gltextureunit_t *unit = gl_state.units + unitnum;

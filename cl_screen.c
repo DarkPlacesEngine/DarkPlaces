@@ -1731,10 +1731,7 @@ static void SCR_SetLoadingScreenTexture(void)
 	}
 
 	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP, NULL);
-	R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
-	GL_ActiveTexture(0);
-	CHECKGLERROR
-	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, vid.width, vid.height);CHECKGLERROR
+	R_Mesh_CopyToTexture(R_GetTexture(loadingscreentexture), 0, 0, 0, 0, vid.width, vid.height);
 
 	loadingscreentexture_vertex3f[2] = loadingscreentexture_vertex3f[5] = loadingscreentexture_vertex3f[8] = loadingscreentexture_vertex3f[11] = 0;
 	loadingscreentexture_vertex3f[0] = loadingscreentexture_vertex3f[9] = 0;
@@ -1858,7 +1855,7 @@ static void SCR_DrawLoadingStack(void)
 		R_Mesh_VertexPointer(verts, 0, 0);
 		R_Mesh_ColorPointer(colors, 0, 0);
 		R_Mesh_ResetTextureState();
-		R_SetupGenericShader(false);
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
 		verts[0] = verts[9] = 0;
 		verts[1] = verts[4] = vid_conheight.integer - 8;
@@ -1901,7 +1898,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 		qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
 	R_Textures_Frame();
 	R_Mesh_Start();
-	R_Mesh_Matrix(&identitymatrix);
+	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
 	loadingscreenpic = Draw_CachePic ("gfx/loading");
 	x = (vid_conwidth.integer - loadingscreenpic->width)/2;
@@ -1925,19 +1922,18 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
-	R_SetupGenericShader(true);
 	R_Mesh_ColorPointer(NULL, 0, 0);
 	if(loadingscreentexture)
 	{
 		R_Mesh_VertexPointer(loadingscreentexture_vertex3f, 0, 0);
 		R_Mesh_ResetTextureState();
-		R_Mesh_TexBind(0, R_GetTexture(loadingscreentexture));
+		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1);
 		R_Mesh_TexCoordPointer(0, 2, loadingscreentexture_texcoord2f, 0, 0);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	}
 	R_Mesh_VertexPointer(loadingscreenpic_vertex3f, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_TexBind(0, R_GetTexture(loadingscreenpic->tex));
+	R_SetupShader_Generic(loadingscreenpic->tex, NULL, GL_MODULATE, 1);
 	R_Mesh_TexCoordPointer(0, 2, loadingscreenpic_texcoord2f, 0, 0);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	SCR_DrawLoadingStack();
