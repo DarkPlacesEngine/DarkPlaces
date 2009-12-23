@@ -1866,12 +1866,13 @@ void particletextureinvert(unsigned char *data)
 static void R_InitBloodTextures (unsigned char *particletexturedata)
 {
 	int i, j, k, m;
-	unsigned char *data = Mem_Alloc(tempmempool, PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4);
+	size_t datasize = PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4;
+	unsigned char *data = Mem_Alloc(tempmempool, datasize);
 
 	// blood particles
 	for (i = 0;i < 8;i++)
 	{
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		for (k = 0;k < 24;k++)
 			particletextureblotch(data, PARTICLETEXTURESIZE/16, 96, 0, 0, 160);
 		//particletextureclamp(data, 32, 32, 32, 255, 255, 255);
@@ -1882,7 +1883,7 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 	// blood decals
 	for (i = 0;i < 8;i++)
 	{
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		m = 8;
 		for (j = 1;j < 10;j++)
 			for (k = min(j, m - 1);k < m;k++)
@@ -1933,7 +1934,8 @@ static void R_InitParticleTexture (void)
 #endif
 	{
 		unsigned char *particletexturedata = (unsigned char *)Mem_Alloc(tempmempool, PARTICLEFONTSIZE*PARTICLEFONTSIZE*4);
-		unsigned char *data = (unsigned char *)Mem_Alloc(tempmempool, PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4);
+		size_t datasize = PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4;
+		unsigned char *data = (unsigned char *)Mem_Alloc(tempmempool, datasize);
 		unsigned char *noise1 = (unsigned char *)Mem_Alloc(tempmempool, PARTICLETEXTURESIZE*2*PARTICLETEXTURESIZE*2);
 		unsigned char *noise2 = (unsigned char *)Mem_Alloc(tempmempool, PARTICLETEXTURESIZE*2*PARTICLETEXTURESIZE*2);
 
@@ -1947,7 +1949,7 @@ static void R_InitParticleTexture (void)
 		// smoke
 		for (i = 0;i < 8;i++)
 		{
-			memset(data, 255, sizeof(data));
+			memset(data, 255, datasize);
 			do
 			{
 				fractalnoise(noise1, PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/8);
@@ -1975,7 +1977,7 @@ static void R_InitParticleTexture (void)
 		}
 
 		// rain splash
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		{
 			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
@@ -1989,7 +1991,7 @@ static void R_InitParticleTexture (void)
 		setuptex(tex_rainsplash, data, particletexturedata);
 
 		// normal particle
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		{
 			dy = (y - 0.5f*PARTICLETEXTURESIZE) / (PARTICLETEXTURESIZE*0.5f-1);
@@ -2004,7 +2006,7 @@ static void R_InitParticleTexture (void)
 		setuptex(tex_particle, data, particletexturedata);
 
 		// rain
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		light[0] = 1;light[1] = 1;light[2] = 1;
 		VectorNormalize(light);
 		for (y = 0;y < PARTICLETEXTURESIZE;y++)
@@ -2027,7 +2029,7 @@ static void R_InitParticleTexture (void)
 		setuptex(tex_raindrop, data, particletexturedata);
 
 		// bubble
-		memset(data, 255, sizeof(data));
+		memset(data, 255, datasize);
 		light[0] = 1;light[1] = 1;light[2] = 1;
 		VectorNormalize(light);
 		for (y = 0;y < PARTICLETEXTURESIZE;y++)
@@ -2047,7 +2049,7 @@ static void R_InitParticleTexture (void)
 		// bullet decals
 		for (i = 0;i < 8;i++)
 		{
-			memset(data, 255, sizeof(data));
+			memset(data, 255, datasize);
 			for (k = 0;k < 12;k++)
 				particletextureblotch(data, PARTICLETEXTURESIZE/16, 0, 0, 0, 128);
 			for (k = 0;k < 3;k++)
