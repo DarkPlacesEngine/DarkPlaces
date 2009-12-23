@@ -1464,7 +1464,7 @@ int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, floa
 		if(isContinuation && *ti->continuationString)
 			x += (int) DrawQ_String_Font(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
 		if(length > 0)
-			DrawQ_String_Font(x, ti->y, line, u8_strnlen(line, length), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, &(ti->colorindex), false, ti->font);
+			DrawQ_String_Font(x, ti->y, line, length, ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, &(ti->colorindex), false, ti->font);
 	}
 
 	ti->y += ti->fontsize;
