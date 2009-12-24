@@ -1331,7 +1331,7 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 		for (i = 0;((bytes_left = maxlen - (text - text_start)) > 0) && *text;)
 		{
 			nextch = ch = u8_getnchar(text, &text, bytes_left);
-			//i = text - text_start;
+			i = text - text_start;
 			if (!ch)
 				break;
 			if (snap)
@@ -1342,12 +1342,10 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			if (ch == ' ' && !fontmap)
 			{
 				x += fnt->width_of[(int) ' '] * w;
-				++i;
 				continue;
 			}
-			if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i + 1 < maxlen)
+			if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i < maxlen)
 			{
-				++i;
 				ch = *text; // colors are ascii, so no u8_ needed
 				if (ch <= '9' && ch >= '0') // ^[0-9] found
 				{
@@ -1399,7 +1397,6 @@ float DrawQ_String_Font(float startx, float starty, const char *text, size_t max
 			}
 			// get the backup
 			ch = nextch;
-			++i;
 			// using a value of -1 for the oldstyle map because NULL means uninitialized...
 			// this way we don't need to rebind fnt->tex for every old-style character
 			// E000..E0FF: emulate old-font characters (to still have smileys and such available)
