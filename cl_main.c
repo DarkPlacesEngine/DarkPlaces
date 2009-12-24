@@ -1427,7 +1427,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		Matrix4x4_Scale(&tempmatrix, 150, 1);
 		VectorSet(color, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f, e->persistent.muzzleflash * 4.0f);
 		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, color, -1, NULL, true, 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 	}
 	// LordHavoc: if the model has no flags, don't check each
 	if (e->render.model && e->render.effects && !(e->render.flags & RENDER_VIEWMODEL))
@@ -1473,7 +1473,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
 		Matrix4x4_Scale(&dlightmatrix, light[3], 1);
 		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 	}
 	// make the glow dlight
 	else if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && r_refdef.scene.numlights < MAX_DLIGHTS)
@@ -1485,7 +1485,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		//	Matrix4x4_AdjustOrigin(&dlightmatrix, 0, 0, 30);
 		Matrix4x4_Scale(&dlightmatrix, dlightradius, 1);
 		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 	}
 	// do trail light
 	if (e->render.flags & RENDER_GLOWTRAIL)
@@ -1702,7 +1702,7 @@ void CL_RelinkBeams(void)
 				VectorSet(dlightcolor, 0.3, 0.7, 1);
 				Matrix4x4_CreateFromQuakeEntity(&tempmatrix, end[0], end[1], end[2], 0, 0, 0, 200);
 				R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, dlightcolor, -1, NULL, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
-				r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights++];
+				r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 			}
 			if (cl_beams_polygons.integer)
 				continue;
