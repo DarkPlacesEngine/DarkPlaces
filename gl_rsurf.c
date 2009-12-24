@@ -790,8 +790,6 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 						{
 							if (info->svbsp_insertoccluder)
 							{
-								if (!(currentmaterialflags & MATERIALFLAG_NOCULLFACE) && r_shadow_frontsidecasting.integer != PointInfrontOfTriangle(info->relativelightorigin, v[0], v[1], v[2]))
-									continue;
 								if (currentmaterialflags & MATERIALFLAG_NOSHADOW)
 									continue;
 								VectorCopy(v[0], v2[0]);
@@ -1172,7 +1170,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 #define RSURF_MAX_BATCHSURFACES 8192
 
 extern qboolean r_shadow_usingdeferredprepass;
-void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs)
+void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
@@ -1243,9 +1241,9 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
 				for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
 				{
-					if (trispvs)
+					if (lighttrispvs && r_test.integer)
 					{
-						if (!CHECKPVSBIT(trispvs, m))
+						if (!CHECKPVSBIT(lighttrispvs, m))
 						{
 							usebufferobject = false;
 							continue;
