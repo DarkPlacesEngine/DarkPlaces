@@ -628,8 +628,9 @@ void SV_ExecuteClientMoves(void)
 					// count the move as LOST if we don't
 					// execute it but it has higher
 					// sequence count
-					if(move->sequence > host_client->movesequence)
-						host_client->movement_count[(move->sequence) % NETGRAPH_PACKETS] = -1;
+					if(host_client->movesequence)
+						if(move->sequence > host_client->movesequence)
+							host_client->movement_count[(move->sequence) % NETGRAPH_PACKETS] = -1;
 					continue;
 				}
 
