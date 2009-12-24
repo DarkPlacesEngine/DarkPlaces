@@ -3076,7 +3076,7 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP_InsertSurfaces(const
 	const float *vertex3f = model->surfmesh.data_vertex3f;
 	const int *element3i = model->surfmesh.data_element3i;
 	const int *e;
-	double v2[3][3];
+	float v2[3][3];
 	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->nummodelsurfaces;surfaceindex++, surface++)
 	{
 		if (!BoxesOverlap(surface->mins, surface->maxs, mins, maxs))
@@ -3097,7 +3097,7 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(dp_model_t *model, l
 {
 	int maxnodes = 1<<14;
 	svbsp_node_t *nodes;
-	double origin[3];
+	float origin[3];
 	float mins[3];
 	float maxs[3];
 	svbsp_t svbsp;

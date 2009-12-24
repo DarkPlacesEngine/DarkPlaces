@@ -12,9 +12,9 @@
 
 #define SVBSP_DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 
-static void SVBSP_PlaneFromPoints(double *plane4f, const double *p1, const double *p2, const double *p3)
+static void SVBSP_PlaneFromPoints(float *plane4f, const float *p1, const float *p2, const float *p3)
 {
-	double ilength;
+	float ilength;
 	// calculate unnormalized plane
 	plane4f[0] = (p1[1] - p2[1]) * (p3[2] - p2[2]) - (p1[2] - p2[2]) * (p3[1] - p2[1]);
 	plane4f[1] = (p1[2] - p2[2]) * (p3[0] - p2[0]) - (p1[0] - p2[0]) * (p3[2] - p2[2]);
@@ -30,7 +30,7 @@ static void SVBSP_PlaneFromPoints(double *plane4f, const double *p1, const doubl
 	plane4f[3] *= ilength;
 }
 
-void SVBSP_Init(svbsp_t *b, const double *origin, int maxnodes, svbsp_node_t *nodes)
+void SVBSP_Init(svbsp_t *b, const float *origin, int maxnodes, svbsp_node_t *nodes)
 {
 	memset(b, 0, sizeof(*b));
 	b->origin[0] = origin[0];
@@ -88,12 +88,15 @@ void SVBSP_Init(svbsp_t *b, const double *origin, int maxnodes, svbsp_node_t *no
 	b->nodes[2].children[1] = -1;
 }
 
-static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpointer, int parentnodenum, int numpoints, const double *points, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const double *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
+static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpointer, int parentnodenum, int numpoints, const float *points, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const float *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
 {
 	// now we need to create up to numpoints + 1 new nodes, forming a BSP tree
 	// describing the occluder polygon's shadow volume
 	int i, j, p, basenum;
 	svbsp_node_t *node;
+#if 1
+	unsigned int sideflags[(MAX_SVBSP_POLYGONPOINTS+31)>>5];
+#endif
 
 	// if there aren't enough nodes remaining, skip it
 	if (b->numnodes + numpoints + 1 >= b->maxnodes)
@@ -118,29 +121,55 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// line which is done last to allow multithreaded queries during an
 	// insertion
 	basenum = b->numnodes;
+#if 1
+	// iterate parent planes and check if any sides of the polygon lie on their plane - if so the polygon can not contribute a new node for that side
+	memset(sideflags, 0, sizeof(sideflags[0])*((numpoints+31)>>5));
+	for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
+	{
+		float *parentnodeplane = b->nodes[j].plane;
+		float plane[4] = {parentnodeplane[0], parentnodeplane[1], parentnodeplane[2], parentnodeplane[3]};
+		float mindist = plane[3] - SVBSP_CLIP_EPSILON;
+		float maxdist = plane[3] + SVBSP_CLIP_EPSILON;
+		float d;
+		int i, p, n;
+		// if a parent plane crosses the origin, it is a side plane
+		// if it does not cross the origin, it is a face plane, and thus will
+		// not match any side planes we could add
+		d = SVBSP_DotProduct(b->origin     , plane);
+		if (d < mindist || d > maxdist)
+			continue;
+		// classify each side as belonging to this parent plane or not
+		// do a distance check on the last point of the polygon first, and
+		// then one distance check per point, reusing the previous point
+		// distance check to classify this side as being on or off the plane
+		i = numpoints-1;
+		d = SVBSP_DotProduct(points + i * 3, plane);
+		p = d >= mindist && d <= maxdist;
+		for (i = 0;i < numpoints;i++)
+		{
+			d = SVBSP_DotProduct(points + i * 3, plane);
+			n = d >= mindist && d <= maxdist;
+			if (p && n)
+				sideflags[i>>5] |= 1<<(i&31);
+			p = n;
+		}
+#endif
+	}
+
 	for (i = 0, p = numpoints - 1;i < numpoints;p = i, i++)
 	{
 #if 1
-		// see if a parent plane describes this side
-		for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
-		{
-			double *parentnodeplane = b->nodes[j].plane;
-			if (fabs(SVBSP_DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(SVBSP_DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
-			 && fabs(SVBSP_DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
-				break;
-		}
-		if (j >= 0)
-			continue; // already have a matching parent plane
+		// skip any sides that were classified as belonging to a parent plane
+		if (sideflags[i>>5] & (1<<(i&31)))
+			continue;
 #endif
-
 		// create a side plane
 		// anything infront of this is not inside the shadow volume
 		node = b->nodes + b->numnodes++;
 		SVBSP_PlaneFromPoints(node->plane, b->origin, points + p * 3, points + i * 3);
 		// we need to flip the plane if it puts any part of the polygon on the
 		// wrong side
-		// (in this way this code treats all polygons as double sided)
+		// (in this way this code treats all polygons as float sided)
 		//
 		// because speed is important this stops as soon as it finds proof
 		// that the orientation is right or wrong
@@ -149,7 +178,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		// sufficient)
 		for (j = 0;j < numpoints;j++)
 		{
-			double d = SVBSP_DotProduct(points + j * 3, node->plane) - node->plane[3];
+			float d = SVBSP_DotProduct(points + j * 3, node->plane) - node->plane[3];
 			if (d < -SVBSP_CLIP_EPSILON)
 				break;
 			if (d > SVBSP_CLIP_EPSILON)
@@ -174,7 +203,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// see if a parent plane describes the face plane
 	for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 	{
-		double *parentnodeplane = b->nodes[j].plane;
+		float *parentnodeplane = b->nodes[j].plane;
 		if (fabs(SVBSP_DotProduct(points    , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
 		 && fabs(SVBSP_DotProduct(points + 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
 		 && fabs(SVBSP_DotProduct(points + 6, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
@@ -205,11 +234,13 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	}
 }
 
-static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int parentnodenum, int numpoints, const double *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const double *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
+static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int parentnodenum, int numpoints, const float *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const float *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
 {
 	int i;
 	int frontnumpoints, backnumpoints;
-	double frontpoints[MAX_SVBSP_POLYGONPOINTS * 3], backpoints[MAX_SVBSP_POLYGONPOINTS * 3];
+	float plane[4];
+	float frontpoints[MAX_SVBSP_POLYGONPOINTS * 3], backpoints[MAX_SVBSP_POLYGONPOINTS * 3];
+	float d;
 	if (numpoints < 3)
 		return 0;
 	// recurse through plane nodes
@@ -219,9 +250,14 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		svbsp_node_t *node = b->nodes + *parentnodenumpointer;
 		parentnodenum = *parentnodenumpointer;
 #if 1
-		if (SVBSP_DotProduct(points, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON)
+		plane[0] = node->plane[0];
+		plane[1] = node->plane[1];
+		plane[2] = node->plane[2];
+		plane[3] = node->plane[3];
+		d = SVBSP_DotProduct(points, plane) >= plane[3];
+		if (d >= SVBSP_CLIP_EPSILON)
 		{
-			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, node->plane) >= node->plane[3] + SVBSP_CLIP_EPSILON;i++);
+			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, plane) - plane[3] >= SVBSP_CLIP_EPSILON;i++);
 			if (i == numpoints)
 			{
 				// no need to split, just go to one side
@@ -229,9 +265,9 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 				continue;
 			}
 		}
-		else if (SVBSP_DotProduct(points, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON)
+		else if (d <= -SVBSP_CLIP_EPSILON)
 		{
-			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, node->plane) <= node->plane[3] - SVBSP_CLIP_EPSILON;i++);
+			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, plane) - plane[3] <= -SVBSP_CLIP_EPSILON;i++);
 			if (i == numpoints)
 			{
 				// no need to split, just go to one side
@@ -241,7 +277,7 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		}
 #endif
 		// at this point we know it crosses the plane, so we need to split it
-		PolygonD_Divide(numpoints, points, node->plane[0], node->plane[1], node->plane[2], node->plane[3], SVBSP_CLIP_EPSILON, MAX_SVBSP_POLYGONPOINTS, frontpoints, &frontnumpoints, MAX_SVBSP_POLYGONPOINTS, backpoints, &backnumpoints, NULL);
+		PolygonF_Divide(numpoints, points, node->plane[0], node->plane[1], node->plane[2], node->plane[3], SVBSP_CLIP_EPSILON, MAX_SVBSP_POLYGONPOINTS, frontpoints, &frontnumpoints, MAX_SVBSP_POLYGONPOINTS, backpoints, &backnumpoints, NULL);
 		if (frontnumpoints > MAX_SVBSP_POLYGONPOINTS)
 			frontnumpoints = MAX_SVBSP_POLYGONPOINTS;
 		if (backnumpoints > MAX_SVBSP_POLYGONPOINTS)
@@ -301,7 +337,7 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 	return 1;
 }
 
-int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const double *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const double *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
+int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const float *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const float *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
 {
 	int i;
 	int nodenum;

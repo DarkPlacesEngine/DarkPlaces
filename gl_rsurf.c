@@ -724,7 +724,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 	{
 		int i;
 		mportal_t *portal;
-		static double points[128][3];
+		static float points[128][3];
 		for (portal = leaf->portals;portal;portal = portal->next)
 		{
 			for (i = 0;i < portal->numpoints;i++)
@@ -768,7 +768,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 		msurface_t *surface;
 		const int *e;
 		const vec_t *v[3];
-		double v2[3][3];
+		float v2[3][3];
 		for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
 		{
 			surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
@@ -857,7 +857,7 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 {
 	if (use_svbsp)
 	{
-		double origin[3];
+		float origin[3];
 		VectorCopy(info->relativelightorigin, origin);
 		if (!r_svbsp.nodes)
 		{
