@@ -14,14 +14,14 @@ typedef struct svbsp_node_s
 	// parent can be -1 if this is the root node, >= 0 is a node
 	int parent, children[2], padding;
 	// node plane, splits space
-	double plane[4];
+	float plane[4];
 }
 svbsp_node_t;
 
 typedef struct svbsp_s
 {
 	// lightsource or view origin
-	double origin[3];
+	float origin[3];
 	// current number of nodes in the svbsp
 	int numnodes;
 	// how big the nodes array is
@@ -53,7 +53,7 @@ svbsp_t;
 //
 // as a rule of thumb the minimum nodes needed for a polygon set is
 // numpolygons * (averagepolygonvertices + 1)
-void SVBSP_Init(svbsp_t *b, const double *origin, int maxnodes, svbsp_node_t *nodes);
+void SVBSP_Init(svbsp_t *b, const float *origin, int maxnodes, svbsp_node_t *nodes);
 
 // this function tests if any part of a polygon is not in shadow, and returns
 // non-zero if the polygon is not completely shadowed
@@ -70,6 +70,6 @@ void SVBSP_Init(svbsp_t *b, const double *origin, int maxnodes, svbsp_node_t *no
 // (beware that polygons often get split heavily, even if entirely unshadowed)
 //
 // thread-safety notes: do not multi-thread insertions!
-int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const double *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const double *points), void *fragmentcallback_pointer1, int fragmentcallback_number1);
+int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const float *points, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const float *points), void *fragmentcallback_pointer1, int fragmentcallback_number1);
 
 #endif
