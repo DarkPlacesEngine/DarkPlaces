@@ -372,7 +372,7 @@ extern cvar_t developer_loading;
 #if defined(__linux__)
 # define DP_OS_NAME		"Linux"
 # define DP_OS_STR		"linux"
-#elif defined(WIN64)
+#elif defined(_WIN64)
 # define DP_OS_NAME		"Windows64"
 # define DP_OS_STR		"win64"
 #elif defined(WIN32)
@@ -405,7 +405,7 @@ extern cvar_t developer_loading;
 # elif defined(__powerpc__)
 #  define DP_ARCH_STR		"ppc"
 # endif
-#elif defined(WIN64)
+#elif defined(_WIN64)
 # define DP_ARCH_STR		"x86_64"
 #elif defined(WIN32)
 # define DP_ARCH_STR		"x86"
