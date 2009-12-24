@@ -1616,7 +1616,7 @@ void Con_DrawNotify (void)
 	if(numChatlines)
 	{
 		v = chatstart + numChatlines * con_chatsize.value;
-		Con_DrawNotifyRect(CON_MASK_CHAT, CON_MASK_INPUT, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, /*"^3\014\014\014 "*/ "^3\xee\x80\x8d\xee\x80\x8d\xee\x80\x8d "); // 015 is ·> character in conchars.tga
+		Con_DrawNotifyRect(CON_MASK_CHAT, CON_MASK_INPUT, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, (utf8_enable.integer ? "^3\xee\x80\x8c\xee\x80\x8c\xee\x80\x8c " : "^3\014\014\014 ")); // 015 is ·> character in conchars.tga
 	}
 
 	if (key_dest == key_message)
