@@ -114,15 +114,13 @@ static dllfunction_t ras_funcs[] =
 };
 static const char* ras_dllname [] =
 {
-	#if defined(WIN64)
-		"3dras64.dll",
-	#elif defined(WIN32)
+#if defined(WIN32)
 		"3dras32.dll",
-	#elif defined(MACOSX)
+#elif defined(MACOSX)
 		"3dras.dylib",
-	#else
+#else
 		"3dras.so",
-	#endif
+#endif
 		NULL
 };
 

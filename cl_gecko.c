@@ -551,7 +551,7 @@ static OSGK_ScriptResult dpGlobal_query (void* objTag, void* methTag,
   return result;
 }
 
-#if defined(WIN64)
+#if defined(_WIN64)
 # define XULRUNNER_DIR_SUFFIX	"win64"
 #elif defined(WIN32)
 # define XULRUNNER_DIR_SUFFIX	"win32"
@@ -848,9 +848,7 @@ qboolean CL_Gecko_OpenLibrary (void)
 {
 	const char* dllnames_gecko [] =
 	{
-#if defined(WIN64)
-		"OffscreenGecko64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"OffscreenGecko.dll",
 #elif defined(MACOSX)
 		"OffscreenGecko.dylib",

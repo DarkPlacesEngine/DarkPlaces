@@ -1449,9 +1449,7 @@ static void World_Physics_Init(void)
 #ifdef ODE_DYNAMIC
 	const char* dllnames [] =
 	{
-# if defined(WIN64)
-		"libode1_64.dll",
-# elif defined(WIN32)
+# if defined(WIN32)
 		"libode1.dll",
 # elif defined(MACOSX)
 		"libode.1.dylib",

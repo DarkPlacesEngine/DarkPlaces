@@ -428,9 +428,7 @@ qboolean PK3_OpenLibrary (void)
 #else
 	const char* dllnames [] =
 	{
-#if defined(WIN64)
-		"zlib64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 # ifdef ZLIB_USES_WINAPI
 		"zlibwapi.dll",
 		"zlib.dll",

@@ -521,9 +521,7 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 {
 	const char* dllnames_og [] =
 	{
-#if defined(WIN64)
-		"libogg64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"libogg.dll",
 		"ogg.dll",
 #elif defined(MACOSX)
@@ -536,9 +534,7 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 	};
 	const char* dllnames_vo [] =
 	{
-#if defined(WIN64)
-		"libvorbis64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"libvorbis.dll",
 		"vorbis.dll",
 #elif defined(MACOSX)
@@ -551,9 +547,7 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 	};
 	const char* dllnames_ve [] =
 	{
-#if defined(WIN64)
-		"libvorbisenc64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"libvorbisenc.dll",
 		"vorbisenc.dll",
 #elif defined(MACOSX)
@@ -566,9 +560,7 @@ qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 	};
 	const char* dllnames_th [] =
 	{
-#if defined(WIN64)
-		"libtheora64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"libtheora.dll",
 		"theora.dll",
 #elif defined(MACOSX)

@@ -133,9 +133,7 @@ qboolean ModPlug_OpenLibrary (void)
 {
 	const char* dllnames_modplug [] =
 	{
-#if defined(WIN64)
-		"libmodplug64.dll",
-#elif defined(WIN32)
+#if defined(WIN32)
 		"libmodplug-0.dll",
 		"modplug.dll",
 #elif defined(MACOSX)
