@@ -1928,7 +1928,7 @@ po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
 				--q;
 			if(*(q-1) != '"')
 				break;
-			if(q - p >= (ssize_t) sizeof(inbuf))
+			if((size_t)(q - p) >= (size_t) sizeof(inbuf))
 				break;
 			strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
 			PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);

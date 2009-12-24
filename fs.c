@@ -549,7 +549,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 	// Load the central directory in memory
 	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
 	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
-	if(read (pack->handle, central_dir, eocd->cdir_size) != (ssize_t) eocd->cdir_size)
+	if(read (pack->handle, central_dir, eocd->cdir_size) != (fs_offset_t) eocd->cdir_size)
 	{
 		Mem_Free (central_dir);
 		return -1;
