@@ -8,7 +8,7 @@
 #include "polygon.h"
 
 #define MAX_SVBSP_POLYGONPOINTS 64
-#define SVBSP_CLIP_EPSILON (1.0 / 1024.0)
+#define SVBSP_CLIP_EPSILON (1.0f / 1024.0f)
 
 #define SVBSP_DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 
@@ -21,9 +21,9 @@ static void SVBSP_PlaneFromPoints(float *plane4f, const float *p1, const float *
 	plane4f[2] = (p1[0] - p2[0]) * (p3[1] - p2[1]) - (p1[1] - p2[1]) * (p3[0] - p2[0]);
 	plane4f[3] = SVBSP_DotProduct(plane4f, p1);
 	// normalize the plane normal and adjust distance accordingly
-	ilength = sqrt(SVBSP_DotProduct(plane4f, plane4f));
+	ilength = (float)sqrt(SVBSP_DotProduct(plane4f, plane4f));
 	if (ilength)
-		ilength = 1.0 / ilength;
+		ilength = 1.0f / ilength;
 	plane4f[0] *= ilength;
 	plane4f[1] *= ilength;
 	plane4f[2] *= ilength;
@@ -94,8 +94,16 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// describing the occluder polygon's shadow volume
 	int i, j, p, basenum;
 	svbsp_node_t *node;
-#if 1
+#if 0
 	unsigned int sideflags[(MAX_SVBSP_POLYGONPOINTS+31)>>5];
+	float *parentnodeplane;
+	float plane[4];
+#if 0
+	float mindist;
+	float maxdist;
+	float d;
+#endif
+	int n;
 #endif
 
 	// if there aren't enough nodes remaining, skip it
@@ -122,33 +130,73 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// insertion
 	basenum = b->numnodes;
 #if 1
+	for (i = 0, p = numpoints - 1;i < numpoints;p = i, i++)
+	{
+#if 1
+		// see if a parent plane describes this side
+		for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
+		{
+			float *parentnodeplane = b->nodes[j].plane;
+		//	float v[3];
+		//	v[0] = SVBSP_DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3];
+		//	v[1] = SVBSP_DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3];
+		//	v[2] = SVBSP_DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3];
+		//	if (SVBSP_DotProduct(v,v) < (SVBSP_CLIP_EPSILON*SVBSP_CLIP_EPSILON))
+			if (fabs(SVBSP_DotProduct(points + p * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(SVBSP_DotProduct(points + i * 3, parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON
+			 && fabs(SVBSP_DotProduct(b->origin     , parentnodeplane) - parentnodeplane[3]) < SVBSP_CLIP_EPSILON)
+				break;
+		}
+		if (j >= 0)
+			continue; // already have a matching parent plane
+#endif
+
+#else
+#if 1
 	// iterate parent planes and check if any sides of the polygon lie on their plane - if so the polygon can not contribute a new node for that side
-	memset(sideflags, 0, sizeof(sideflags[0])*((numpoints+31)>>5));
+	for (i = 0;i < (int)(sizeof(sideflags)/sizeof(sideflags[0]));i++)
+		sideflags[i] = 0;
 	for (j = parentnodenum;j >= 0;j = b->nodes[j].parent)
 	{
-		float *parentnodeplane = b->nodes[j].plane;
-		float plane[4] = {parentnodeplane[0], parentnodeplane[1], parentnodeplane[2], parentnodeplane[3]};
-		float mindist = plane[3] - SVBSP_CLIP_EPSILON;
-		float maxdist = plane[3] + SVBSP_CLIP_EPSILON;
-		float d;
-		int i, p, n;
+		parentnodeplane = b->nodes[j].plane;
+		plane[0] = parentnodeplane[0];
+		plane[1] = parentnodeplane[1];
+		plane[2] = parentnodeplane[2];
+		plane[3] = parentnodeplane[3];
+#if 0
+		mindist = plane[3] - SVBSP_CLIP_EPSILON;
+		maxdist = plane[3] + SVBSP_CLIP_EPSILON;
+#endif
 		// if a parent plane crosses the origin, it is a side plane
 		// if it does not cross the origin, it is a face plane, and thus will
 		// not match any side planes we could add
+#if 1
+		if (fabs(SVBSP_DotProduct(b->origin, plane) - plane[3]) > SVBSP_CLIP_EPSILON)
+			continue;
+#else
 		d = SVBSP_DotProduct(b->origin     , plane);
 		if (d < mindist || d > maxdist)
 			continue;
+#endif
 		// classify each side as belonging to this parent plane or not
 		// do a distance check on the last point of the polygon first, and
 		// then one distance check per point, reusing the previous point
 		// distance check to classify this side as being on or off the plane
 		i = numpoints-1;
+#if 1
+		p = fabs(SVBSP_DotProduct(points + i * 3, plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
+#else
 		d = SVBSP_DotProduct(points + i * 3, plane);
 		p = d >= mindist && d <= maxdist;
+#endif
 		for (i = 0;i < numpoints;i++)
 		{
+#if 1
+			n = fabs(SVBSP_DotProduct(points + i * 3, plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
+#else
 			d = SVBSP_DotProduct(points + i * 3, plane);
 			n = d >= mindist && d <= maxdist;
+#endif
 			if (p && n)
 				sideflags[i>>5] |= 1<<(i&31);
 			p = n;
@@ -162,6 +210,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 		// skip any sides that were classified as belonging to a parent plane
 		if (sideflags[i>>5] & (1<<(i&31)))
 			continue;
+#endif
 #endif
 		// create a side plane
 		// anything infront of this is not inside the shadow volume
