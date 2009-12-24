@@ -32,7 +32,6 @@ extern cvar_t r_shadow_realtime_world_compileshadow;
 extern cvar_t r_shadow_realtime_world_compilesvbsp;
 extern cvar_t r_shadow_realtime_world_compileportalculling;
 extern cvar_t r_shadow_scissor;
-extern cvar_t r_shadow_culltriangles;
 extern cvar_t r_shadow_polygonfactor;
 extern cvar_t r_shadow_polygonoffset;
 extern cvar_t r_shadow_singlepassvolumegeneration;
