@@ -620,8 +620,18 @@ void SV_ExecuteClientMoves(void)
 				// discard (treat like lost) moves with too low distance from
 				// the previous one to prevent hacks using float inaccuracy
 				// clients will see this as packet loss in the netgraph
+				// this should also apply if a move cannot get
+				// executed because it came too late and
+				// already was performed serverside
 				if(moveframetime < 0.0005)
+				{
+					// count the move as LOST if we don't
+					// execute it but it has higher
+					// sequence count
+					if(move->sequence > host_client->movesequence)
+						host_client->movement_count[(move->sequence) % NETGRAPH_PACKETS] = -1;
 					continue;
+				}
 
 				//Con_Printf("movesequence = %i (%i lost), moveframetime = %f\n", move->sequence, move->sequence ? move->sequence - host_client->movesequence - 1 : 0, moveframetime);
 				host_client->cmd = *move;
