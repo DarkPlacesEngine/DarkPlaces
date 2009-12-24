@@ -2260,7 +2260,7 @@ r_cg_permutation_t *r_cg_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_cg_permutationarray;
 
-#define CHECKCGERROR {CGerror err;const char *errorstring = cgGetLastErrorString(&err);if (err){Con_Printf("%s:%i CG error %i: %s\n", __FILE__, __LINE__, err, errorstring);if (err == 1) Con_Printf("last listing:\n%s\n", cgGetLastListing(vid.cgcontext));}}
+#define CHECKCGERROR {CGerror err = cgGetError(), err2 = err;if (err){Con_Printf("%s:%i CG error %i: %s : %s\n", __FILE__, __LINE__, err, cgGetErrorString(err), cgGetLastErrorString(&err2));if (err == 1) Con_Printf("last listing:\n%s\n", cgGetLastListing(vid.cgcontext));}}
 
 static r_cg_permutation_t *R_CG_FindPermutation(unsigned int mode, unsigned int permutation)
 {
@@ -2606,13 +2606,13 @@ void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 		}
 		if (r_cg_permutation->fprogram)
 		{
-			//cgGLLoadProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
+			cgGLLoadProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
 			cgGLBindProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
-			//cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
+			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 		}
 		else
 		{
-			//cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
+			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 		}
 	}
@@ -3318,7 +3318,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	{
 	case RENDERPATH_GL20:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_ModelViewMatrix           >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
+		if (r_glsl_permutation->loc_ModelViewMatrix           >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix          , 1, false, gl_modelview16f);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3fARB(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
 		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
@@ -5040,6 +5040,7 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
+			CHECKCGERROR
 			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 #endif
