@@ -254,7 +254,7 @@ static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int paren
 		plane[1] = node->plane[1];
 		plane[2] = node->plane[2];
 		plane[3] = node->plane[3];
-		d = SVBSP_DotProduct(points, plane) >= plane[3];
+		d = SVBSP_DotProduct(points, plane) - plane[3];
 		if (d >= SVBSP_CLIP_EPSILON)
 		{
 			for (i = 1;i < numpoints && SVBSP_DotProduct(points + i * 3, plane) - plane[3] >= SVBSP_CLIP_EPSILON;i++);
