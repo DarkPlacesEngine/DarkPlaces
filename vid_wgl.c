@@ -1102,7 +1102,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 		mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		if (!mainwindow)
 		{
-			Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, (int)global_hInstance, NULL);
+			Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, global_hInstance, NULL);
 			VID_Shutdown();
 			return false;
 		}
@@ -1115,14 +1115,14 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 		if (!pixelformat)
 		{
 			VID_Shutdown();
-			Con_Printf("ChoosePixelFormat(%d, %p) failed\n", (int)baseDC, &pfd);
+			Con_Printf("ChoosePixelFormat(%p, %p) failed\n", baseDC, &pfd);
 			return false;
 		}
 
 		if (SetPixelFormat(baseDC, pixelformat, &pfd) == false)
 		{
 			VID_Shutdown();
-			Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", (int)baseDC, pixelformat, &pfd);
+			Con_Printf("SetPixelFormat(%p, %d, %p) failed\n", baseDC, pixelformat, &pfd);
 			return false;
 		}
 
@@ -1143,7 +1143,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 		if (!qwglMakeCurrent(baseDC, baseRC))
 		{
 			VID_Shutdown();
-			Con_Printf("wglMakeCurrent(%d, %d) failed\n", (int)baseDC, (int)baseRC);
+			Con_Printf("wglMakeCurrent(%p, %p) failed\n", baseDC, baseRC);
 			return false;
 		}
 
