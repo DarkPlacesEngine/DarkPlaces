@@ -336,7 +336,7 @@ int Q3PatchAdjustTesselation(int numcomponents, patchinfo_t *patch1, float *patc
 
 	struct {int id1,id2;} commonverts[8];
 	int i, j, k, side1, side2, *tess1, *tess2;
-	int dist1, dist2;
+	int dist1 = 0, dist2 = 0;
 	qboolean modified = false;
 
 	// Potential paired vertices (corners of the first patch)
