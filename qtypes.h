@@ -11,10 +11,6 @@ typedef enum qboolean_e {false, true} qboolean;
 typedef bool qboolean;
 #endif
 
-#if defined(WIN32)
-# define ssize_t long
-#endif
-
 #ifndef NULL
 #define NULL ((void *)0)
 #endif

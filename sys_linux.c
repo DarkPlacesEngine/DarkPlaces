@@ -71,7 +71,7 @@ void Sys_PrintToTerminal(const char *text)
 #endif
 	while(*text)
 	{
-		ssize_t written = write(1, text, strlen(text));
+		fs_offset_t written = (fs_offset_t)write(1, text, strlen(text));
 		if(written <= 0)
 			break; // sorry, I cannot do anything about this error - without an output
 		text += written;
