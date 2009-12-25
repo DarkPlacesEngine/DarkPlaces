@@ -128,7 +128,7 @@ static Colormap vidx11_colormap;
 //
 
 long keysym2ucs(KeySym keysym);
-int DP_Xutf8LookupString(XKeyEvent * ev,
+void DP_Xutf8LookupString(XKeyEvent * ev,
 			 Uchar *uch,
 			 KeySym * keysym_return,
 			 Status * status_return)
@@ -136,7 +136,6 @@ int DP_Xutf8LookupString(XKeyEvent * ev,
 	int rc;
 	KeySym keysym;
 	int codepoint;
-	int len;
 	char buffer[64];
 	int nbytes = sizeof(buffer);
 
@@ -155,7 +154,7 @@ int DP_Xutf8LookupString(XKeyEvent * ev,
 			*status_return = XLookupKeySym;
 			*keysym_return = keysym;
 		}
-		return 0;
+		return;
 	}
 
 	*uch = codepoint;
@@ -166,7 +165,6 @@ int DP_Xutf8LookupString(XKeyEvent * ev,
 	} else {
 		*status_return = XLookupChars;
 	}
-	return len;
 }
 static int XLateKey(XKeyEvent *ev, Uchar *ascii)
 {
