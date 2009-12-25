@@ -3397,6 +3397,7 @@ void VM_stringwidth(void)
 	size_t maxlen = 0;
 	VM_SAFEPARMCOUNTRANGE(2,3,VM_drawstring);
 
+	getdrawfontscale(&sx, &sy);
 	if(prog->argc == 3)
 	{
 		szv = PRVM_G_VECTOR(OFS_PARM2);
@@ -3404,11 +3405,18 @@ void VM_stringwidth(void)
 	}
 	else
 	{
-		static float defsize[] = {0, 0};
+		// we want the width for 8x8 font size, divided by 8
+		static float defsize[] = {8, 8};
 		szv = defsize;
-		mult = 1;
+		mult = 0.125;
+		// to make sure snapping is turned off, ALWAYS use a nontrivial scale in this case
+		if(sx >= 0.9 && sx <= 1.1)
+		{
+			mult *= 2;
+			sx /= 2;
+			sy /= 2;
+		}
 	}
-	getdrawfontscale(&sx, &sy);
 
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
