@@ -44,4 +44,6 @@ size_t u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid
 // returns a static buffer, use this for inlining
 char  *u8_encodech(Uchar ch, size_t*);
 
+size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
+
 #endif // UTF8LIB_H__

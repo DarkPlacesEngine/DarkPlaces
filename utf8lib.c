@@ -694,3 +694,30 @@ u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
 	}
 	// never get here
 }
+
+/** Pads a utf-8 string
+ * @param out     The target buffer the utf-8 string is written to.
+ * @param outsize The size of the target buffer, including the final NUL
+ * @param in      The input utf-8 buffer
+ * @param leftalign Left align the output string (by default right alignment is done)
+ * @param minwidth The minimum output width
+ * @param maxwidth The maximum output width
+ * @return        The number of bytes written, not including the terminating \0
+ */
+size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth)
+{
+	if(!utf8_enable.integer)
+	{
+		return dpsnprintf(out, outsize, "%*.*s", leftalign ? -(int) minwidth : (int) minwidth, (int) maxwidth, in);
+	}
+	else
+	{
+		size_t l = u8_bytelen(in, maxwidth);
+		size_t actual_width = u8_strnlen(in, l);
+		int pad = (actual_width >= minwidth) ? 0 : (minwidth - actual_width);
+		int prec = l;
+		int lpad = leftalign ? 0 : pad;
+		int rpad = leftalign ? pad : 0;
+		return dpsnprintf(out, outsize, "%*s%.*s%*s", lpad, "", prec, in, rpad, "");
+	}
+}
