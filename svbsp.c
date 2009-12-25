@@ -40,70 +40,60 @@ static void SVBSP_PlaneFromPoints(float *plane4f, const float *p1, const float *
 	plane4f[3] *= ilength;
 }
 
-static void SVBSP_DividePolygon(int innumpoints, const float *inpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float epsilon, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints, int *oncountpointer)
+static void SVBSP_DividePolygon(const svbsp_polygon_t *poly, const float *plane, svbsp_polygon_t *front, svbsp_polygon_t *back, const float *dists, const int *sides)
 {
-	int i, frontcount = 0, backcount = 0, oncount = 0;
-	const float *n, *p;
-	float frac, pdist, ndist;
-	if (innumpoints)
+	int i, j, count = poly->numpoints, frontcount = 0, backcount = 0;
+	float frac, ifrac, c[3], pdist, ndist;
+	const float *nextpoint;
+	const float *points = poly->points[0];
+	float *outfront = front->points[0];
+	float *outback = back->points[0];
+	for(i = 0;i < count;i++, points += 3)
 	{
-		n = inpoints;
-		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
-		for(i = 0;i < innumpoints;i++)
+		j = i + 1;
+		if (j >= count)
+			j = 0;
+		if (!(sides[i] & 2))
 		{
-			p = n;
-			pdist = ndist;
-			n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
-			ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
-			if (pdist >= -epsilon)
-			{
-				if (pdist <= epsilon)
-					oncount++;
-				if (frontcount < outfrontmaxpoints)
-				{
-					*outfrontpoints++ = p[0];
-					*outfrontpoints++ = p[1];
-					*outfrontpoints++ = p[2];
-				}
-				frontcount++;
-			}
-			if (pdist <= epsilon)
-			{
-				if (backcount < outbackmaxpoints)
-				{
-					*outbackpoints++ = p[0];
-					*outbackpoints++ = p[1];
-					*outbackpoints++ = p[2];
-				}
-				backcount++;
-			}
-			if ((pdist > epsilon && ndist < -epsilon) || (pdist < -epsilon && ndist > epsilon))
-			{
-				oncount++;
-				frac = pdist / (pdist - ndist);
-				if (frontcount < outfrontmaxpoints)
-				{
-					*outfrontpoints++ = p[0] + frac * (n[0] - p[0]);
-					*outfrontpoints++ = p[1] + frac * (n[1] - p[1]);
-					*outfrontpoints++ = p[2] + frac * (n[2] - p[2]);
-				}
-				frontcount++;
-				if (backcount < outbackmaxpoints)
-				{
-					*outbackpoints++ = p[0] + frac * (n[0] - p[0]);
-					*outbackpoints++ = p[1] + frac * (n[1] - p[1]);
-					*outbackpoints++ = p[2] + frac * (n[2] - p[2]);
-				}
-				backcount++;
-			}
+			outfront[frontcount*3+0] = points[0];
+			outfront[frontcount*3+1] = points[1];
+			outfront[frontcount*3+2] = points[2];
+			frontcount++;
+		}
+		if (!(sides[i] & 1))
+		{
+			outback[backcount*3+0] = points[0];
+			outback[backcount*3+1] = points[1];
+			outback[backcount*3+2] = points[2];
+			backcount++;
+		}
+		if ((sides[i] | sides[j]) == 3)
+		{
+			// don't allow splits if remaining points would overflow point buffer
+			if (frontcount + (count - i) > MAX_SVBSP_POLYGONPOINTS - 1)
+				continue;
+			if (backcount + (count - i) > MAX_SVBSP_POLYGONPOINTS - 1)
+				continue;
+			nextpoint = poly->points[j];
+			pdist = dists[i];
+			ndist = dists[j];
+			frac = pdist / (pdist - ndist);
+			ifrac = 1.0f - frac;
+			c[0] = points[0] * ifrac + frac * nextpoint[0];
+			c[1] = points[1] * ifrac + frac * nextpoint[1];
+			c[2] = points[2] * ifrac + frac * nextpoint[2];
+			outfront[frontcount*3+0] = c[0];
+			outfront[frontcount*3+1] = c[1];
+			outfront[frontcount*3+2] = c[2];
+			frontcount++;
+			outback[backcount*3+0] = c[0];
+			outback[backcount*3+1] = c[1];
+			outback[backcount*3+2] = c[2];
+			backcount++;
 		}
 	}
-	if (neededfrontpoints)
-		*neededfrontpoints = frontcount;
-	if (neededbackpoints)
-		*neededbackpoints = backcount;
-	if (oncountpointer)
-		*oncountpointer = oncount;
+	front->numpoints = frontcount;
+	back->numpoints = backcount;
 }
 
 void SVBSP_Init(svbsp_t *b, const float *origin, int maxnodes, svbsp_node_t *nodes)
@@ -170,6 +160,10 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// describing the occluder polygon's shadow volume
 	int i, j, p, basenum;
 	svbsp_node_t *node;
+
+	// points and lines are valid testers but not occluders
+	if (poly->numpoints < 3)
+		return;
 
 	// if there aren't enough nodes remaining, skip it
 	if (b->numnodes + poly->numpoints + 1 >= b->maxnodes)
@@ -280,141 +274,85 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 static int SVBSP_AddPolygonNode(svbsp_t *b, int *parentnodenumpointer, int parentnodenum, const svbsp_polygon_t *poly, int insertoccluder, void (*fragmentcallback)(void *fragmentcallback_pointer1, int fragmentcallback_number1, svbsp_t *b, int numpoints, const float *points), void *fragmentcallback_pointer1, int fragmentcallback_number1)
 {
 	int i;
-	int countonpoints;
+	int s;
 	int facesplitflag = poly->facesplitflag;
+	int bothsides;
 	float plane[4];
+	float d;
 	svbsp_polygon_t front;
 	svbsp_polygon_t back;
 	svbsp_node_t *node;
+	int sides[MAX_SVBSP_POLYGONPOINTS];
+	float dists[MAX_SVBSP_POLYGONPOINTS];
 	if (poly->numpoints < 1)
 		return 0;
 	// recurse through plane nodes
 	while (*parentnodenumpointer >= 0)
 	{
-		// do a quick check to see if there is any need to split the polygon
-		node = b->nodes + *parentnodenumpointer;
+		// get node info
 		parentnodenum = *parentnodenumpointer;
+		node = b->nodes + parentnodenum;
 		plane[0] = node->plane[0];
 		plane[1] = node->plane[1];
 		plane[2] = node->plane[2];
 		plane[3] = node->plane[3];
-#if 1
+		// calculate point dists for clipping
+		bothsides = 0;
+		for (i = 0;i < poly->numpoints;i++)
 		{
-			int onback;
-			int onfront;
-			float d;
-			onback = 0;
-			onfront = 0;
-			for (i = 0;i < poly->numpoints;i++)
-			{
-				d = SVBSP_DotProduct(poly->points[i], plane) - plane[3];
-				if (d <= -SVBSP_CLIP_EPSILON)
-					onback = 1;
-				if (d >= SVBSP_CLIP_EPSILON)
-					onfront = 1;
-			}
-			if (onfront)
-			{
-				if (!onback)
-				{
-					// no need to split, just go to one side
-					parentnodenumpointer = &node->children[0];
-					continue;
-				}
-			}
-			else if (onback)
-			{
-				// no need to split, just go to one side
-				parentnodenumpointer = &node->children[1];
-				continue;
-			}
-			else
-			{
-				// no need to split, this polygon is on the plane
-				// this case only occurs for polygons on the face plane, usually
-				// the same polygon (inserted twice - once as occluder, once as
-				// tester)
-				// if this is an occluder, it is redundant
-				if (insertoccluder)
-					return 1; // occluded
-				// if this is a tester, test the front side, because it is
-				// probably the same polygon that created this node...
-				facesplitflag = 1;
-				parentnodenumpointer = &node->children[0];
-				continue;
-			}
+			d = SVBSP_DotProduct(poly->points[i], plane) - plane[3];
+			s = 0;
+			if (d > SVBSP_CLIP_EPSILON)
+				s = 1;
+			if (d < -SVBSP_CLIP_EPSILON)
+				s = 2;
+			bothsides |= s;
+			dists[i] = d;
+			sides[i] = s;
 		}
-		// at this point we know it crosses the plane, so we need to split it
-		SVBSP_DividePolygon(poly->numpoints, poly->points[0], plane[0], plane[1], plane[2], plane[3], SVBSP_CLIP_EPSILON, MAX_SVBSP_POLYGONPOINTS, front.points[0], &front.numpoints, MAX_SVBSP_POLYGONPOINTS, back.points[0], &back.numpoints, &countonpoints);
-#else
-		// at this point we know it crosses the plane, so we need to split it
-		SVBSP_DividePolygon(poly->numpoints, poly->points[0], plane[0], plane[1], plane[2], plane[3], SVBSP_CLIP_EPSILON, MAX_SVBSP_POLYGONPOINTS, front.points[0], &front.numpoints, MAX_SVBSP_POLYGONPOINTS, back.points[0], &back.numpoints, &countonpoints);
-		if (countonpoints == poly->numpoints)
+		// see which side the polygon is on
+		switch(bothsides)
 		{
-			// polygon lies on plane - this only occurs on face planes
-			// if it is an occluder, it is redundant
+		default:
+		case 0:
+			// no need to split, this polygon is on the plane
+			// this case only occurs for polygons on the face plane, usually
+			// the same polygon (inserted twice - once as occluder, once as
+			// tester)
+			// if this is an occluder, it is redundant
 			if (insertoccluder)
 				return 1; // occluded
-			// if it is a tester, it should take the front side only
+			// if this is a tester, test the front side, because it is
+			// probably the same polygon that created this node...
 			facesplitflag = 1;
 			parentnodenumpointer = &node->children[0];
 			continue;
-		}
+		case 1:
+			// no need to split, just go to one side
+			parentnodenumpointer = &node->children[0];
+			continue;
+		case 2:
+			// no need to split, just go to one side
+			parentnodenumpointer = &node->children[1];
+			continue;
+		case 3:
+			// lies on both sides of the plane, we need to split it
+#if 1
+			SVBSP_DividePolygon(poly, plane, &front, &back, dists, sides);
+#else
+			PolygonF_Divide(poly->numpoints, poly->points[0], plane[0], plane[1], plane[2], plane[3], SVBSP_CLIP_EPSILON, MAX_SVBSP_POLYGONPOINTS, front.points[0], &front.numpoints, MAX_SVBSP_POLYGONPOINTS, back.points[0], &back.numpoints, NULL);
+			if (front.numpoints > MAX_SVBSP_POLYGONPOINTS)
+				front.numpoints = MAX_SVBSP_POLYGONPOINTS;
+			if (back.numpoints > MAX_SVBSP_POLYGONPOINTS)
+				back.numpoints = MAX_SVBSP_POLYGONPOINTS;
 #endif
-		if (front.numpoints > MAX_SVBSP_POLYGONPOINTS)
-			front.numpoints = MAX_SVBSP_POLYGONPOINTS;
-		front.facesplitflag = facesplitflag;
-		if (back.numpoints > MAX_SVBSP_POLYGONPOINTS)
-			back.numpoints = MAX_SVBSP_POLYGONPOINTS;
-		back.facesplitflag = facesplitflag;
-#if 0
-		if (insertoccluder)
-		{
-			int pnum;
-			int f;
-			int pf;
-			svbsp_node_t *pnode;
-			// set splitflags based on this node and parent nodes
-			for (i = 0;i < front.numpoints;i++)
-				front.splitflags[i] = 0;
-			for (i = 0;i < front.numpoints;i++)
-				back.splitflags[i] = 0;
-			pnum = *parentnodenumpointer;
-			while (pnum >= 0)
-			{
-				pnode = b->nodes + pnum;
-				plane[0] = pnode->plane[0];
-				plane[1] = pnode->plane[1];
-				plane[2] = pnode->plane[2];
-				plane[3] = pnode->plane[3];
-				if (front.numpoints)
-				{
-					i = front.numpoints-1;
-					pf = fabs(SVBSP_DotProduct(front.points[i], plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
-					for (i = 0;i < front.numpoints;pf = f, i++)
-					{
-						f = fabs(SVBSP_DotProduct(front.points[i], plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
-						front.splitflags[i] |= (f & pf);
-					}
-				}
-				if (back.numpoints)
-				{
-					i = back.numpoints-1;
-					pf = fabs(SVBSP_DotProduct(back.points[i], plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
-					for (i = 0;i < back.numpoints;pf = f, i++)
-					{
-						f = fabs(SVBSP_DotProduct(back.points[i], plane) - plane[3]) <= SVBSP_CLIP_EPSILON;
-						back.splitflags[i] |= (f & pf);
-					}
-				}
-				pnum = pnode->parent;
-			}
+			front.facesplitflag = facesplitflag;
+			back.facesplitflag = facesplitflag;
+			// recurse the sides and return the resulting occlusion flags
+			i  = SVBSP_AddPolygonNode(b, &node->children[0], *parentnodenumpointer, &front, insertoccluder, fragmentcallback, fragmentcallback_pointer1, fragmentcallback_number1);
+			i |= SVBSP_AddPolygonNode(b, &node->children[1], *parentnodenumpointer, &back , insertoccluder, fragmentcallback, fragmentcallback_pointer1, fragmentcallback_number1);
+			return i;
 		}
-#endif
-		// recurse the sides and return the resulting occlusion flags
-		i  = SVBSP_AddPolygonNode(b, &node->children[0], *parentnodenumpointer, &front, insertoccluder, fragmentcallback, fragmentcallback_pointer1, fragmentcallback_number1);
-		i |= SVBSP_AddPolygonNode(b, &node->children[1], *parentnodenumpointer, &back , insertoccluder, fragmentcallback, fragmentcallback_pointer1, fragmentcallback_number1);
-		return i;
 	}
 	// leaf node
 	if (*parentnodenumpointer == -1)
