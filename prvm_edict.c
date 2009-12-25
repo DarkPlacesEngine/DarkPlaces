@@ -1686,6 +1686,7 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.dmg_save                      = PRVM_ED_FindGlobalOffset("dmg_save");
 	prog->globaloffsets.dmg_take                      = PRVM_ED_FindGlobalOffset("dmg_take");
 	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
+	prog->globaloffsets.drawfontscale                 = PRVM_ED_FindGlobalOffset("drawfontscale");
 	prog->globaloffsets.gettaginfo_forward            = PRVM_ED_FindGlobalOffset("gettaginfo_forward");
 	prog->globaloffsets.gettaginfo_name               = PRVM_ED_FindGlobalOffset("gettaginfo_name");
 	prog->globaloffsets.gettaginfo_offset             = PRVM_ED_FindGlobalOffset("gettaginfo_offset");
