@@ -5860,7 +5860,8 @@ nolength:
 				if(o < end - 1)
 				{
 					f = &formatbuf[1];
-					if(flags & PRINTF_ALTERNATE) *f++ = '#';
+					if(*s != 's' && *s != 'c')
+						if(flags & PRINTF_ALTERNATE) *f++ = '#';
 					if(flags & PRINTF_ZEROPAD) *f++ = '0';
 					if(flags & PRINTF_LEFT) *f++ = '-';
 					if(flags & PRINTF_SPACEPOSITIVE) *f++ = ' ';
@@ -5870,19 +5871,44 @@ nolength:
 					*f++ = '*';
 					*f++ = *s;
 					*f++ = 0;
+
+					if(width < 0)
+						width = 0;
+
 					switch(*s)
 					{
 						case 'd': case 'i':
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
 							break;
-						case 'o': case 'u': case 'x': case 'X': case 'c': 
+						case 'o': case 'u': case 'x': case 'X':
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
 							break;
 						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
+							if(precision < 0)
+								precision = 6;
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
 							break;
+						case 'c':
+							if(precision < 0)
+								precision = end - o - 1;
+							if(flags & PRINTF_ALTERNATE)
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+							else
+							{
+								unsigned int c = (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg));
+								const char *buf = u8_encodech(c, NULL);
+								if(!buf)
+									buf = "";
+								o += u8_strpad(o, end - o, buf, (flags & PRINTF_LEFT) != 0, width, precision);
+							}
+							break;
 						case 's':
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
+							if(precision < 0)
+								precision = end - o - 1;
+							if(flags & PRINTF_ALTERNATE)
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
+							else
+								o += u8_strpad(o, end - o, GETARG_STRING(thisarg), (flags & PRINTF_LEFT) != 0, width, precision);
 							break;
 						default:
 							VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
