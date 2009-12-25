@@ -45,15 +45,16 @@ findchar:
 		//fprintf(stderr, "skipping\n");
 		++i;
 	}
-	if(i >= _maxlen)
-		return false;
+
 	//fprintf(stderr, "checking\n");
-
 	// If we hit the end, well, we're out and invalid
-	if (!s[i])
+	if(i >= _maxlen || !s[i]) {
+		if (_start) *_start = i;
+		if (_len) *_len = 0;
 		return false;
-	//fprintf(stderr, "checking ascii\n");
+	}
 
+	//fprintf(stderr, "checking ascii\n");
 	// ascii characters
 	if (s[i] < 0x80)
 	{
@@ -76,8 +77,11 @@ findchar:
 		++i;
 		goto findchar;
 	}
-	if(i + bits > _maxlen)
+	if(i + bits > _maxlen) {
+		if (_start) *_start = i;
+		if (_len) *_len = 0;
 		return false;
+	}
 	// turn bt into a mask and give ch a starting value
 	--bt;
 	ch = (s[i] & bt);
@@ -436,7 +440,7 @@ Uchar u8_getchar(const char *_s, const char **_end)
 	}
 	
 	if (!u8_analyze(_s, &st, &ln, &ch, U8_ANALYZE_INFINITY))
-		return 0;
+		ch = 0;
 	if (_end)
 		*_end = _s + st + ln;
 	return ch;
@@ -466,7 +470,7 @@ Uchar u8_getnchar(const char *_s, const char **_end, size_t _maxlen)
 	}
 	
 	if (!u8_analyze(_s, &st, &ln, &ch, _maxlen))
-		return 0;
+		ch = 0;
 	if (_end)
 		*_end = _s + st + ln;
 	return ch;
