@@ -41,7 +41,7 @@ static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *
 findchar:
 
 	// <0xC2 is always an overlong encoding, they're invalid, thus skipped
-	while (i < _maxlen && s[i] && s[i] >= 0x80 && s[i] <= 0xC2) {
+	while (i < _maxlen && s[i] && s[i] >= 0x80 && s[i] < 0xC2) {
 		//fprintf(stderr, "skipping\n");
 		++i;
 	}
@@ -144,7 +144,7 @@ size_t u8_strlen(const char *_s)
 		}
 
 		// invalid, skip u8_analyze
-		if (*s <= 0xC2)
+		if (*s < 0xC2)
 		{
 			++s;
 			continue;
@@ -188,7 +188,7 @@ size_t u8_strnlen(const char *_s, size_t n)
 		}
 
 		// invalid, skip u8_analyze
-		if (*s <= 0xC2)
+		if (*s < 0xC2)
 		{
 			++s;
 			--n;
@@ -233,7 +233,7 @@ size_t u8_bytelen(const char *_s, size_t n)
 		}
 
 		// invalid, skip u8_analyze
-		if (*s <= 0xC2)
+		if (*s < 0xC2)
 		{
 			++s;
 			++len;
@@ -312,7 +312,7 @@ int u8_charidx(const char *_s, size_t i, size_t *len)
 		}
 
 		// invalid, skip u8_analyze
-		if (s[ofs] <= 0xC2)
+		if (s[ofs] < 0xC2)
 		{
 			++ofs;
 			continue;
@@ -373,7 +373,7 @@ size_t u8_prevbyte(const char *_s, size_t i)
 		}
 
 		// invalid, skip u8_analyze
-		if (s[ofs] <= 0xC2)
+		if (s[ofs] < 0xC2)
 		{
 			++ofs;
 			continue;
