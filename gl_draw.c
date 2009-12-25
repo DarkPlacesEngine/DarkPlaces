@@ -1073,6 +1073,7 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 	}
 }
 
+// NOTE: this function always draws exactly one character if maxwidth <= 0
 float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w, float h, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	const char *text_start = text;
@@ -1091,6 +1092,7 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 	ft2_font_t *ft2 = fnt->ft2;
 	// float ftbase_x;
 	qboolean snap = true;
+	qboolean least_one = false;
 
 	if (!h) h = w;
 	if (!h) {
@@ -1121,9 +1123,16 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 
 	// maxwidth /= fnt->scale; // w and h are multiplied by it already
 	// ftbase_x = snap_to_pixel_x(0);
+	
+	if(maxwidth <= 0)
+	{
+		least_one = true;
+		maxwidth = -maxwidth;
+	}
 
 	for (i = 0;((bytes_left = *maxlen - (text - text_start)) > 0) && *text;)
 	{
+		size_t i0 = i;
 		nextch = ch = u8_getnchar(text, &text, bytes_left);
 		i = text - text_start;
 		if (!ch)
@@ -1132,8 +1141,12 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 			x = snap_to_pixel_x(x, 0.4);
 		if (ch == ' ' && !fontmap)
 		{
+			if(!least_one || i0) // never skip the first character
 			if(x + fnt->width_of[(int) ' '] * w > maxwidth)
+			{
+				i = i0;
 				break; // oops, can't draw this
+			}
 			x += fnt->width_of[(int) ' '] * w;
 			continue;
 		}
@@ -1200,8 +1213,12 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w
 			if (fontmap)
 				map = ft2_oldstyle_map;
 			prevch = 0;
+			if(!least_one || i0) // never skip the first character
 			if(x + fnt->width_of[ch] * w > maxwidth)
+			{
+				i = i0;
 				break; // oops, can't draw this
+			}
 			x += fnt->width_of[ch] * w;
 		} else {
 			if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)

@@ -670,6 +670,9 @@ would be good for any more. At the beginning of the string, it will be called
 for the char 0 to initialize a clean state, and then once with the string " "
 (a space) so the routine knows how long a space is.
 
+In case no single character fits into the given width, the wordWidth function
+must return the width of exactly one character.
+
 Wrapped lines get the isContinuation flag set and are continuationWidth less wide.
 
 The sum of the return values of the processLine function will be returned.
@@ -739,7 +742,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 				}
 				out_inner:
 				spaceUsedForWord = wordWidth(passthroughCW, cursor, &wordLen, maxWidth - continuationWidth); // this may have reduced wordLen when it won't fit - but this is GOOD. TODO fix words that do fit in a non-continuation line
-				if(wordLen < 1)
+				if(wordLen < 1) // cannot happen according to current spec of wordWidth
 				{
 					wordLen = 1;
 					spaceUsedForWord = maxWidth + 1; // too high, forces it in a line of itself

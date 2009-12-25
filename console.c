@@ -1422,14 +1422,8 @@ float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float 
 		ti->colorindex = -1;
 		return ti->fontsize * ti->font->maxwidth;
 	}
-	/*
 	if(maxWidth >= 0)
-		return DrawQ_TextWidth_Font_UntilWidth(w, length, false, ti->font, maxWidth / ti->fontsize) * ti->fontsize;
-	else if(maxWidth == -1)
-		return DrawQ_TextWidth_Font(w, *length, false, ti->font) * ti->fontsize;
-	*/
-	if(maxWidth >= 0)
-		return DrawQ_TextWidth_Font_UntilWidth_Size(w, ti->fontsize, ti->fontsize, length, false, ti->font, maxWidth);
+		return DrawQ_TextWidth_Font_UntilWidth_Size(w, ti->fontsize, ti->fontsize, length, false, ti->font, -maxWidth); // -maxWidth: we want at least one char
 	else if(maxWidth == -1)
 		return DrawQ_TextWidth_Font_Size(w, ti->fontsize, ti->fontsize, *length, false, ti->font);
 	else
