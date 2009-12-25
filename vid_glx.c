@@ -39,6 +39,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #include <X11/extensions/xf86vmode.h>
 
+// get the Uchar type
+#include "utf8lib.h"
+
 #include "nexuiz.xpm"
 #include "darkplaces.xpm"
 
@@ -122,16 +125,58 @@ static Visual *vidx11_visual;
 static Colormap vidx11_colormap;
 
 /*-----------------------------------------------------------------------*/
+//
 
-static int XLateKey(XKeyEvent *ev, char *ascii)
+long keysym2ucs(KeySym keysym);
+int DP_Xutf8LookupString(XKeyEvent * ev,
+			 Uchar *uch,
+			 KeySym * keysym_return,
+			 Status * status_return)
+{
+	int rc;
+	KeySym keysym;
+	int codepoint;
+	int len;
+	char buffer[64];
+	int nbytes = sizeof(buffer);
+
+	rc = XLookupString(ev, buffer, nbytes, &keysym, NULL);
+
+	if (rc > 0) {
+		codepoint = buffer[0] & 0xFF;
+	} else {
+		codepoint = keysym2ucs(keysym);
+	}
+
+	if (codepoint < 0) {
+		if (keysym == None) {
+			*status_return = XLookupNone;
+		} else {
+			*status_return = XLookupKeySym;
+			*keysym_return = keysym;
+		}
+		return 0;
+	}
+
+	*uch = codepoint;
+
+	if (keysym != None) {
+		*keysym_return = keysym;
+		*status_return = XLookupBoth;
+	} else {
+		*status_return = XLookupChars;
+	}
+	return len;
+}
+static int XLateKey(XKeyEvent *ev, Uchar *ascii)
 {
 	int key = 0;
-	char buf[64];
+	//char buf[64];
 	KeySym keysym, shifted;
+	Status status;
 
 	keysym = XLookupKeysym (ev, 0);
-	XLookupString(ev, buf, sizeof buf, &shifted, 0);
-	*ascii = buf[0];
+	DP_Xutf8LookupString(ev, ascii, &shifted, &status);
 
 	switch(keysym)
 	{
@@ -398,7 +443,7 @@ static void HandleEvents(void)
 {
 	XEvent event;
 	int key;
-	char ascii;
+	Uchar unicode;
 	qboolean dowarp = false;
 
 	if (!vidx11_display)
@@ -412,14 +457,14 @@ static void HandleEvents(void)
 		{
 		case KeyPress:
 			// key pressed
-			key = XLateKey (&event.xkey, &ascii);
-			Key_Event(key, ascii, true);
+			key = XLateKey (&event.xkey, &unicode);
+			Key_Event(key, unicode, true);
 			break;
 
 		case KeyRelease:
 			// key released
-			key = XLateKey (&event.xkey, &ascii);
-			Key_Event(key, ascii, false);
+			key = XLateKey (&event.xkey, &unicode);
+			Key_Event(key, unicode, false);
 			break;
 
 		case MotionNotify:
