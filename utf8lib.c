@@ -626,13 +626,14 @@ all characters until the zero terminator.
 size_t
 COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
 size_t
-u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
+u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 {
-	const char *end;
+	const unsigned char *s = (const unsigned char*)_s;
+	const unsigned char *end;
 	size_t len = 0;
 
 	if (!utf8_enable.integer)
-		return COM_StringLengthNoColors(s, size_s, valid);
+		return COM_StringLengthNoColors(_s, size_s, valid);
 
 	end = size_s ? (s + size_s) : NULL;
 
