@@ -3151,8 +3151,6 @@ void VM_chr(void)
 	VM_SAFEPARMCOUNT(1, VM_chr);
 
 	len = u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0), tmp, sizeof(tmp));
-	if (len < 0)
-		len = 0;
 	tmp[len] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(tmp);
 }
@@ -5086,11 +5084,7 @@ void VM_chr2str (void)
 	size_t len = 0;
 	VM_SAFEPARMCOUNTRANGE(0, 8, VM_chr2str);
 	for(i = 0; i < prog->argc && len < sizeof(t)-1; ++i)
-	{
-		int add = u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0+i*3), t + len, sizeof(t)-1);
-		if(add > 0)
-			len += add;
-	}
+		len += u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0+i*3), t + len, sizeof(t)-1);
 	t[len] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
