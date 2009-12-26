@@ -288,6 +288,22 @@ qboolean Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
 	return true;
 }
 
+static float Font_VirtualToRealSize(float sz)
+{
+	int vh, vw, si;
+	float sn;
+	if(sz < 0)
+		return sz;
+	vw = ((vid.width > 0) ? vid.width : vid_width.value);
+	vh = ((vid.height > 0) ? vid.height : vid_height.value);
+	// now try to scale to our actual size:
+	sn = sz * vh / vid_conheight.value;
+	si = (int)sn;
+	if ( sn - (float)si >= 0.5 )
+		++si;
+	return si;
+}
+
 static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font);
 static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean no_texture, qboolean no_kerning);
 qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
@@ -347,7 +363,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 		count = 0;
 		for (s = 0; s < MAX_FONT_SIZES; ++s)
 		{
-			if (Font_LoadSize(fb, dpfnt->req_sizes[s], true, false))
+			if (Font_LoadSize(fb, Font_VirtualToRealSize(dpfnt->req_sizes[s]), true, false))
 				++count;
 		}
 		if (!count)
@@ -374,7 +390,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 	count = 0;
 	for (s = 0; s < MAX_FONT_SIZES; ++s)
 	{
-		if (Font_LoadSize(ft2, dpfnt->req_sizes[s], false, false))
+		if (Font_LoadSize(ft2, Font_VirtualToRealSize(dpfnt->req_sizes[s]), false, false))
 			++count;
 	}
 	if (!count)

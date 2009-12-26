@@ -681,9 +681,9 @@ static float snap_to_pixel_y(float y, float roundUpAt)
 static void LoadFont_f(void)
 {
 	dp_font_t *f;
-	int i, si;
-	float sz, sn;
+	int i;
 	const char *filelist, *c, *cm;
+	float sz;
 	char mainfont[MAX_QPATH];
 
 	if(Cmd_Argc() < 2)
@@ -777,21 +777,7 @@ static void LoadFont_f(void)
 			sz = atof(Cmd_Argv(i+3));
 			if (IS_NAN(sz)) // do not use crap sizes
 				continue;
-			// now try to scale to our actual size:
-			if (vid.width > 0)
-				sn = snap_to_pixel_y(sz, 0.5);
-			else
-			{
-				sn = sz * vid_height.value / vid_conheight.value;
-				si = (int)sn;
-				if ( sn - (float)si >= 0.5 )
-					++si;
-				sn = si * vid_conheight.value / vid_height.value;
-			}
-			if (!IS_NAN(sn))
-				f->req_sizes[i] = sn;
-			else
-				f->req_sizes[i] = sz;
+			f->req_sizes[i] = sz;
 		}
 	}
 	LoadFont(true, mainfont, f);
