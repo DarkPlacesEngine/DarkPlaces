@@ -486,10 +486,10 @@ Uchar u8_getnchar(const char *_s, const char **_end, size_t _maxlen)
 int u8_fromchar(Uchar w, char *to, size_t maxlen)
 {
 	if (maxlen < 1)
-		return -2;
+		return 0;
 
 	if (!w)
-		return -5;
+		return 0;
 
 	if (w >= 0xE000 && !utf8_enable.integer)
 		w -= 0xE000;
@@ -544,7 +544,7 @@ int u8_fromchar(Uchar w, char *to, size_t maxlen)
 		to[0] = 0xE0 | w;
 		return 4;
 	}
-	return -1;
+	return 0;
 }
 
 /** uses u8_fromchar on a static buffer
@@ -602,10 +602,13 @@ size_t u8_wcstombs(char *mb, const Uchar *wcs, size_t maxlen)
 		return 0;
 	for (i = 0; wcs[i] && i < maxlen-1; ++i)
 	{
+		/*
 		int len;
 		if ( (len = u8_fromchar(wcs[i], mb, maxlen - i)) < 0)
 			return (mb - start);
 		mb += len;
+		*/
+		mb += u8_fromchar(wcs[i], mb, maxlen - i);
 	}
 	*mb = 0;
 	return (mb - start);
