@@ -1127,7 +1127,7 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	if(sidefric < 0 && VectorLength2(vel_perpend))
 	{
 		vec_t f, fmin;
-		f = 1 + s->cmd.frametime * wishspeed * sidefric;
+		f = 1 - s->cmd.frametime * wishspeed * sidefric;
 		fmin = (savespeed - vel_straight*vel_straight) / VectorLength2(vel_perpend);
 		if(fmin <= 0)
 			VectorScale(vel_perpend, f, vel_perpend);
