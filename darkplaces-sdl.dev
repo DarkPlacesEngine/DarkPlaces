@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces-sdl.dev
 Name=DarkPlaces
-UnitCount=175
+UnitCount=181
 Type=0
 Ver=1
 ObjFiles=
@@ -1757,18 +1757,8 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit176]
-FileName=SDLMain.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit179]
-FileName=timing.h
+FileName=ft2_fontdefs.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1778,9 +1768,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit181]
-FileName=darkplaces_private.h
+FileName=utf8lib.c
 CompileCpp=0
-Folder=Header Files
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1908,7 +1898,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit178]
-FileName=timing.h
+FileName=ft2.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1918,9 +1908,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit180]
-FileName=timing.h
+FileName=ft2.c
 CompileCpp=0
-Folder=Header Files
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1928,7 +1918,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit177]
-FileName=timing.h
+FileName=ft2_defs.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -1959,6 +1949,16 @@ BuildCmd=
 
 [Unit171]
 FileName=clvm_cmds.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit176]
+FileName=utf8lib.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
