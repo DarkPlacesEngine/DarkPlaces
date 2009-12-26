@@ -154,6 +154,7 @@ void DP_Xutf8LookupString(XKeyEvent * ev,
 			*status_return = XLookupKeySym;
 			*keysym_return = keysym;
 		}
+		*uch = 0;
 		return;
 	}
 
