@@ -1508,8 +1508,7 @@ An svc_signonnum has been received, perform a client side setup
 */
 static void CL_SignonReply (void)
 {
-	if (developer.integer >= 100)
-		Con_Printf("CL_SignonReply: %i\n", cls.signon);
+	Con_DPrintf("CL_SignonReply: %i\n", cls.signon);
 
 	switch (cls.signon)
 	{
@@ -2848,8 +2847,8 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 		return;
 	if (!cl_iplog_loaded)
 		CL_IPLog_Load();
-	if (developer.integer >= 100)
-		Con_Printf("CL_IPLog_Add(\"%s\", \"%s\", %i, %i);\n", address, name, checkexisting, addtofile);
+	if (developer_extra.integer)
+		Con_DPrintf("CL_IPLog_Add(\"%s\", \"%s\", %i, %i);\n", address, name, checkexisting, addtofile);
 	// see if it already exists
 	if (checkexisting)
 	{
@@ -2857,8 +2856,8 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 		{
 			if (!strcmp(cl_iplog_items[i].address, address) && !strcmp(cl_iplog_items[i].name, name))
 			{
-				if (developer.integer >= 100)
-					Con_Printf("... found existing \"%s\" \"%s\"\n", cl_iplog_items[i].address, cl_iplog_items[i].name);
+				if (developer_extra.integer)
+					Con_DPrintf("... found existing \"%s\" \"%s\"\n", cl_iplog_items[i].address, cl_iplog_items[i].name);
 				return;
 			}
 		}
@@ -2889,8 +2888,8 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 		// TODO: this ought to open the one in the userpath version of the base
 		// gamedir, not the current gamedir
 		Log_Printf(cl_iplog_name.string, "%s %s\n", address, name);
-		if (developer.integer >= 100)
-			Con_Printf("CL_IPLog_Add: appending this line to %s: %s %s\n", cl_iplog_name.string, address, name);
+		if (developer_extra.integer)
+			Con_DPrintf("CL_IPLog_Add: appending this line to %s: %s %s\n", cl_iplog_name.string, address, name);
 	}
 }
 
@@ -3141,12 +3140,12 @@ static void CL_NetworkTimeReceived(double newtime)
 	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
 		cl.mtime[1] = max(cl.mtime[1], cl.mtime[0] - 0.1);
-		if (developer.integer >= 100 && vid_activewindow)
+		if (developer_extra.integer && vid_activewindow)
 		{
 			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
-				Con_Printf("--- cl.time < cl.mtime[1] (%f < %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
+				Con_DPrintf("--- cl.time < cl.mtime[1] (%f < %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 			else if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
-				Con_Printf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
+				Con_DPrintf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 		}
 		cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
 		timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;

@@ -961,24 +961,24 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 					Con_DPrintf("enumerating modes yielded a bogus item... please debug this\n");
 					continue;
 				}
-				if(developer.integer >= 100)
-					Con_Printf("Found mode %dx%dx%dbpp %dHz... ", (int)thismode.dmPelsWidth, (int)thismode.dmPelsHeight, (int)thismode.dmBitsPerPel, (int)thismode.dmDisplayFrequency);
+				if(developer_extra.integer)
+					Con_DPrintf("Found mode %dx%dx%dbpp %dHz... ", (int)thismode.dmPelsWidth, (int)thismode.dmPelsHeight, (int)thismode.dmBitsPerPel, (int)thismode.dmDisplayFrequency);
 				if(thismode.dmBitsPerPel != (DWORD)bpp)
 				{
-					if(developer.integer >= 100)
-						Con_Printf("wrong bpp\n");
+					if(developer_extra.integer)
+						Con_DPrintf("wrong bpp\n");
 					continue;
 				}
 				if(thismode.dmPelsWidth != (DWORD)width)
 				{
-					if(developer.integer >= 100)
-						Con_Printf("wrong width\n");
+					if(developer_extra.integer)
+						Con_DPrintf("wrong width\n");
 					continue;
 				}
 				if(thismode.dmPelsHeight != (DWORD)height)
 				{
-					if(developer.integer >= 100)
-						Con_Printf("wrong height\n");
+					if(developer_extra.integer)
+						Con_DPrintf("wrong height\n");
 					continue;
 				}
 
@@ -987,14 +987,14 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 					// if we have a good mode, make sure this mode is better than the previous one, and allowed by the refreshrate
 					if(thismode.dmDisplayFrequency > (DWORD)refreshrate)
 					{
-						if(developer.integer >= 100)
-							Con_Printf("too high refresh rate\n");
+						if(developer_extra.integer)
+							Con_DPrintf("too high refresh rate\n");
 						continue;
 					}
 					else if(thismode.dmDisplayFrequency <= gdevmode.dmDisplayFrequency)
 					{
-						if(developer.integer >= 100)
-							Con_Printf("doesn't beat previous best match (too low)\n");
+						if(developer_extra.integer)
+							Con_DPrintf("doesn't beat previous best match (too low)\n");
 						continue;
 					}
 				}
@@ -1003,8 +1003,8 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 					// we do have one, but it isn't good... make sure it has a lower frequency than the previous one
 					if(thismode.dmDisplayFrequency >= gdevmode.dmDisplayFrequency)
 					{
-						if(developer.integer >= 100)
-							Con_Printf("doesn't beat previous best match (too high)\n");
+						if(developer_extra.integer)
+							Con_DPrintf("doesn't beat previous best match (too high)\n");
 						continue;
 					}
 				}
@@ -1015,12 +1015,12 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 					foundgoodmode = true;
 				else
 				{
-					if(developer.integer >= 100)
-						Con_Printf("(out of range)\n");
+					if(developer_extra.integer)
+						Con_DPrintf("(out of range)\n");
 				}
 				foundmode = true;
-				if(developer.integer >= 100)
-					Con_Printf("accepted\n");
+				if(developer_extra.integer)
+					Con_DPrintf("accepted\n");
 			}
 		}
 

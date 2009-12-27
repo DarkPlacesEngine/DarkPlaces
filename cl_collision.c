@@ -157,8 +157,8 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 		if( model != NULL )
 		{
-			if (!model->TraceBox && developer.integer >= 1)
-				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
+			if (!model->TraceBox)
+				Con_DPrintf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
 			if (ent->fields.client->angles[0] || ent->fields.client->angles[2] || ent->fields.client->avelocity[0] || ent->fields.client->avelocity[2])
 			{

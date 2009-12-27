@@ -3725,8 +3725,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	//Mod_Q1BSP_ProcessLightList();
 
-	if (developer.integer >= 10)
-		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals);
+	Con_DPrintf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals);
 }
 
 static void Mod_Q2BSP_LoadEntities(lump_t *l)
@@ -4862,8 +4861,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		n = LittleLong(in->effectindex);
 		if (n < -1 || n >= loadmodel->brushq3.num_effects)
 		{
-			if (developer.integer >= 100)
-				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
+			if (developer_extra.integer)
+				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
 			n = -1;
 		}
 		if (n == -1)
@@ -4967,8 +4966,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			++patchtesscount;
 			break;
 		case Q3FACETYPE_FLARE:
-			if (developer.integer >= 100)
-				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
+			if (developer_extra.integer)
+				Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
 			// don't render it
 			continue;
 		}
@@ -5092,12 +5091,12 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 
 			out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle), loadmodel->surfmesh.data_vertex3f);
 
-			if (developer.integer >= 100)
+			if (developer_extra.integer)
 			{
 				if (out->num_triangles < finaltriangles)
-					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_vertices, finaltriangles, finaltriangles - out->num_triangles, out->num_triangles);
+					Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_vertices, finaltriangles, finaltriangles - out->num_triangles, out->num_triangles);
 				else
-					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->num_vertices, out->num_triangles);
+					Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->num_vertices, out->num_triangles);
 			}
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
@@ -5124,8 +5123,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Mod_Q3BSP_BuildBBoxes(out->data_collisionelement3i, out->num_collisiontriangles, out->data_collisionvertex3f, &out->data_collisionbbox6f, &out->num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
 			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f, &out->data_bbox6f, &out->num_bboxstride, mod_q3bsp_curves_stride.integer);
 
-			if (developer.integer >= 100)
-				Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
+			if (developer_extra.integer)
+				Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
 			break;
 		default:
 			break;

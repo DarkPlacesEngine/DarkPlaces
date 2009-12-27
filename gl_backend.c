@@ -1043,14 +1043,14 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	qglCompileShaderARB(shaderobject);CHECKGLERROR
 	qglGetObjectParameterivARB(shaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &shadercompiled);CHECKGLERROR
 	qglGetInfoLogARB(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-	if (compilelog[0] && developer.integer > 0 && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning")))
+	if (compilelog[0] && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning")))
 	{
 		int i, j, pretextlines = 0;
 		for (i = 0;i < numstrings - 1;i++)
 			for (j = 0;strings[i][j];j++)
 				if (strings[i][j] == '\n')
 					pretextlines++;
-		Con_DPrintf("%s shader compile log:\n%s\n(line offset for any above warnings/errors: %i)\n", shadertype, compilelog, pretextlines);
+		Con_Printf("%s shader compile log:\n%s\n(line offset for any above warnings/errors: %i)\n", shadertype, compilelog, pretextlines);
 	}
 	if (!shadercompiled)
 	{
@@ -1134,8 +1134,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	unsigned int numelements = numtriangles * 3;
 	if (numvertices < 3 || numtriangles < 1)
 	{
-		if (numvertices < 0 || numtriangles < 0 || developer.integer >= 100)
-			Con_Printf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3s, bufferobject3i, bufferobject3s);
+		if (numvertices < 0 || numtriangles < 0 || developer_extra.integer)
+			Con_DPrintf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3s, bufferobject3i, bufferobject3s);
 		return;
 	}
 	if (!gl_mesh_prefer_short_elements.integer)

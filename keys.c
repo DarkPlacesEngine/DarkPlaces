@@ -1420,8 +1420,8 @@ Key_Event (int key, int ascii, qboolean down)
 	if (!bind)
 		bind = keybindings[key_bmap2][key];
 
-	if (developer.integer >= 1000)
-		Con_Printf("Key_Event(%i, '%c', %s) keydown %i bind \"%s\"\n", key, ascii ? ascii : '?', down ? "down" : "up", keydown[key], bind ? bind : "");
+	if (developer_insane.integer)
+		Con_DPrintf("Key_Event(%i, '%c', %s) keydown %i bind \"%s\"\n", key, ascii ? ascii : '?', down ? "down" : "up", keydown[key], bind ? bind : "");
 
 	if(key_consoleactive)
 		keydest = key_console;

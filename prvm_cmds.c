@@ -25,7 +25,7 @@ void VM_Warning(const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_Print(msg);
+	Con_DPrint(msg);
 
 	// TODO: either add a cvar/cmd to control the state dumping or replace some of the calls with Con_Printf [9/13/2006 Black]
 	if(prvm_backtraceforwarnings.integer && recursive != realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
@@ -744,15 +744,12 @@ void VM_dprint (void)
 {
 	char string[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_dprint);
-	if (developer.integer)
-	{
-		VM_VarString(0, string, sizeof(string));
+	VM_VarString(0, string, sizeof(string));
 #if 1
-		Con_Printf("%s", string);
+	Con_DPrintf("%s", string);
 #else
-		Con_Printf("%s: %s", PRVM_NAME, string);
+	Con_DPrintf("%s: %s", PRVM_NAME, string);
 #endif
-	}
 }
 
 /*
@@ -974,12 +971,12 @@ void VM_remove (void)
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if( PRVM_NUM_FOR_EDICT(ed) <= prog->reserved_edicts )
 	{
-		if (developer.integer >= 1)
+		if (developer.integer)
 			VM_Warning( "VM_remove: tried to remove the null entity or a reserved entity!\n" );
 	}
 	else if( ed->priv.required->free )
 	{
-		if (developer.integer >= 1)
+		if (developer.integer)
 			VM_Warning( "VM_remove: tried to remove an already freed entity!\n" );
 	}
 	else
@@ -1845,14 +1842,14 @@ void VM_fopen(void)
 	if (prog->openfiles[filenum] == NULL)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		if (developer.integer >= 100)
+		if (developer_extra.integer)
 			VM_Warning("VM_fopen: %s: %s mode %s failed\n", PRVM_NAME, filename, modestring);
 	}
 	else
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = filenum;
-		if (developer.integer >= 100)
-			Con_Printf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
+		if (developer_extra.integer)
+			Con_DPrintf("VM_fopen: %s: %s mode %s opened as #%i\n", PRVM_NAME, filename, modestring, filenum);
 		prog->openfiles_origin[filenum] = PRVM_AllocationOrigin();
 	}
 }
@@ -1886,8 +1883,8 @@ void VM_fclose(void)
 	prog->openfiles[filenum] = NULL;
 	if(prog->openfiles_origin[filenum])
 		PRVM_Free((char *)prog->openfiles_origin[filenum]);
-	if (developer.integer >= 100)
-		Con_Printf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
+	if (developer_extra.integer)
+		Con_DPrintf("VM_fclose: %s: #%i closed\n", PRVM_NAME, filenum);
 }
 
 /*
@@ -1937,8 +1934,8 @@ void VM_fgets(void)
 		if (c != '\n')
 			FS_UnGetc(prog->openfiles[filenum], (unsigned char)c);
 	}
-	if (developer.integer >= 100)
-		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
+	if (developer_extra.integer)
+		Con_DPrintf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
 }
@@ -1973,8 +1970,8 @@ void VM_fputs(void)
 	VM_VarString(1, string, sizeof(string));
 	if ((stringlength = (int)strlen(string)))
 		FS_Write(prog->openfiles[filenum], string, stringlength);
-	if (developer.integer >= 100)
-		Con_Printf("fputs: %s: %s\n", PRVM_NAME, string);
+	if (developer_extra.integer)
+		Con_DPrintf("fputs: %s: %s\n", PRVM_NAME, string);
 }
 
 /*

@@ -360,8 +360,8 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 		return;
 	}
 
-	if (developer.integer >= 100)
-		Con_Printf("Cvar_SetQuick({\"%s\", \"%s\", %i, \"%s\"}, \"%s\");\n", var->name, var->string, var->flags, var->defstring, value);
+	if (developer_extra.integer)
+		Con_DPrintf("Cvar_SetQuick({\"%s\", \"%s\", %i, \"%s\"}, \"%s\");\n", var->name, var->string, var->flags, var->defstring, value);
 
 	Cvar_SetQuick_Internal(var, value);
 }
@@ -419,8 +419,8 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	char *oldstr;
 	size_t alloclen;
 
-	if (developer.integer >= 100)
-		Con_Printf("Cvar_RegisterVariable({\"%s\", \"%s\", %i});\n", variable->name, variable->string, variable->flags);
+	if (developer_extra.integer)
+		Con_DPrintf("Cvar_RegisterVariable({\"%s\", \"%s\", %i});\n", variable->name, variable->string, variable->flags);
 
 // first check to see if it has already been defined
 	cvar = Cvar_FindVar (variable->name);
@@ -428,8 +428,8 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	{
 		if (cvar->flags & CVAR_ALLOCATED)
 		{
-			if (developer.integer >= 100)
-				Con_Printf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}\n", cvar->name, cvar->string, cvar->flags);
+			if (developer_extra.integer)
+				Con_DPrintf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}\n", cvar->name, cvar->string, cvar->flags);
 			// fixed variables replace allocated ones
 			// (because the engine directly accesses fixed variables)
 			// NOTE: this isn't actually used currently
@@ -512,8 +512,8 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 	cvar_t *current, *next, *cvar;
 	size_t alloclen;
 
-	if (developer.integer >= 100)
-		Con_Printf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
+	if (developer_extra.integer)
+		Con_DPrintf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
 
 // first check to see if it has already been defined
 	cvar = Cvar_FindVar (name);
@@ -619,7 +619,7 @@ qboolean	Cvar_Command (void)
 		return true;
 	}
 
-	if (developer.integer >= 100)
+	if (developer_extra.integer)
 		Con_DPrint("Cvar_Command: ");
 
 	if (v->flags & CVAR_READONLY)
@@ -628,7 +628,7 @@ qboolean	Cvar_Command (void)
 		return true;
 	}
 	Cvar_Set (v->name, Cmd_Argv(1));
-	if (developer.integer >= 100)
+	if (developer_extra.integer)
 		Con_DPrint("\n");
 	return true;
 }
@@ -787,7 +787,7 @@ void Cvar_Set_f (void)
 		return;
 	}
 
-	if (developer.integer >= 100)
+	if (developer_extra.integer)
 		Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
@@ -813,7 +813,7 @@ void Cvar_SetA_f (void)
 		return;
 	}
 
-	if (developer.integer >= 100)
+	if (developer_extra.integer)
 		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar

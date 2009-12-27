@@ -716,8 +716,8 @@ void SndSys_Submit (void)
 			snd_sent++;
 		else if (wResult == WAVERR_STILLPLAYING)
 		{
-			if(developer.integer >= 1000)
-				Con_Print("waveOutWrite failed (too much sound data)\n");
+			if(developer_insane.integer)
+				Con_DPrint("waveOutWrite failed (too much sound data)\n");
 			//h->dwFlags |= WHDR_DONE;
 			//snd_sent++;
 		}

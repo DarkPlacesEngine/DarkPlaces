@@ -409,30 +409,29 @@ static void curl_default_callback(int status, size_t length_received, unsigned c
 	switch(status)
 	{
 		case CURLCBSTATUS_OK:
-			Con_Printf("Download of %s: OK\n", di->filename);
+			Con_DPrintf("Download of %s: OK\n", di->filename);
 			break;
 		case CURLCBSTATUS_FAILED:
-			Con_Printf("Download of %s: FAILED\n", di->filename);
+			Con_DPrintf("Download of %s: FAILED\n", di->filename);
 			break;
 		case CURLCBSTATUS_ABORTED:
-			Con_Printf("Download of %s: ABORTED\n", di->filename);
+			Con_DPrintf("Download of %s: ABORTED\n", di->filename);
 			break;
 		case CURLCBSTATUS_SERVERERROR:
-			Con_Printf("Download of %s: (unknown server error)\n", di->filename);
+			Con_DPrintf("Download of %s: (unknown server error)\n", di->filename);
 			break;
 		case CURLCBSTATUS_UNKNOWN:
-			Con_Printf("Download of %s: (unknown client error)\n", di->filename);
+			Con_DPrintf("Download of %s: (unknown client error)\n", di->filename);
 			break;
 		default:
-			Con_Printf("Download of %s: %d\n", di->filename, status);
+			Con_DPrintf("Download of %s: %d\n", di->filename, status);
 			break;
 	}
 }
 
 static void curl_quiet_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
 {
-	if(developer.integer)
-		curl_default_callback(status, length_received, buffer, cbdata);
+	curl_default_callback(status, length_received, buffer, cbdata);
 }
 
 /*

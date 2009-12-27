@@ -1294,8 +1294,8 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		if (ent)
 			ent->persistent.trail_time = len;
 	}
-	else if (developer.integer >= 1)
-		Con_Printf("CL_ParticleEffect_Fallback: no fallback found for effect %s\n", particleeffectname[effectnameindex]);
+	else
+		Con_DPrintf("CL_ParticleEffect_Fallback: no fallback found for effect %s\n", particleeffectname[effectnameindex]);
 }
 
 // this is also called on point effects with spawndlight = true and

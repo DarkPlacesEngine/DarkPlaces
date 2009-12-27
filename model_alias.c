@@ -2400,8 +2400,8 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		version = LittleLong(pchunk->version);
 		recordsize = LittleLong(pchunk->recordsize);
 		numrecords = LittleLong(pchunk->numrecords);
-		if (developer.integer >= 100)
-			Con_Printf("%s: %s %x: %i * %i = %i\n", loadmodel->name, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
+		if (developer_extra.integer)
+			Con_DPrintf("%s: %s %x: %i * %i = %i\n", loadmodel->name, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
 		if (version != 0x1e83b9 && version != 0x1e9179 && version != 0x2e && version != 0x12f2bc && version != 0x12f2f0)
 			Con_Printf ("%s: chunk %s has unknown version %x (0x1e83b9, 0x1e9179, 0x2e, 0x12f2bc, 0x12f2f0 are currently supported), trying to load anyway!\n", loadmodel->name, pchunk->id, version);
 		if (!strcmp(pchunk->id, "ACTRHEAD"))
@@ -2571,8 +2571,8 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		version = LittleLong(pchunk->version);
 		recordsize = LittleLong(pchunk->recordsize);
 		numrecords = LittleLong(pchunk->numrecords);
-		if (developer.integer >= 100)
-			Con_Printf("%s: %s %x: %i * %i = %i\n", animname, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
+		if (developer_extra.integer)
+			Con_DPrintf("%s: %s %x: %i * %i = %i\n", animname, pchunk->id, version, recordsize, numrecords, recordsize * numrecords);
 		if (version != 0x1e83b9 && version != 0x1e9179 && version != 0x2e && version != 0x12f2bc && version != 0x12f2f0)
 			Con_Printf ("%s: chunk %s has unknown version %x (0x1e83b9, 0x1e9179, 0x2e, 0x12f2bc, 0x12f2f0 are currently supported), trying to load anyway!\n", animname, pchunk->id, version);
 		if (!strcmp(pchunk->id, "ANIMHEAD"))

@@ -2765,8 +2765,8 @@ static void VM_SV_gettagindex (void)
 	{
 		tag_index = SV_GetTagIndex(ent, tag_name);
 		if (tag_index == 0)
-			if(developer.integer >= 100)
-				Con_Printf("VM_SV_gettagindex(entity #%i): tag \"%s\" not found\n", PRVM_NUM_FOR_EDICT(ent), tag_name);
+			if(developer_extra.integer)
+				Con_DPrintf("VM_SV_gettagindex(entity #%i): tag \"%s\" not found\n", PRVM_NUM_FOR_EDICT(ent), tag_name);
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = tag_index;
 }

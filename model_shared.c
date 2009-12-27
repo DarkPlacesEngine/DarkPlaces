@@ -1600,12 +1600,12 @@ void Mod_LoadQ3Shaders(void)
 						}
 						//for (j = numparameters;j < TEXTURE_MAXFRAMES + 4;j++)
 						//	parameter[j][0] = 0;
-						if (developer.integer >= 100)
+						if (developer_insane.integer)
 						{
-							Con_Printf("%s %i: ", shader.name, shader.numlayers - 1);
+							Con_DPrintf("%s %i: ", shader.name, shader.numlayers - 1);
 							for (j = 0;j < numparameters;j++)
-								Con_Printf(" %s", parameter[j]);
-							Con_Print("\n");
+								Con_DPrintf(" %s", parameter[j]);
+							Con_DPrint("\n");
 						}
 						if (numparameters >= 2 && !strcasecmp(parameter[0], "blendfunc"))
 						{
@@ -1821,12 +1821,12 @@ void Mod_LoadQ3Shaders(void)
 				//	parameter[j][0] = 0;
 				if (fileindex == 0 && !strcasecmp(com_token, "}"))
 					break;
-				if (developer.integer >= 100)
+				if (developer_insane.integer)
 				{
-					Con_Printf("%s: ", shader.name);
+					Con_DPrintf("%s: ", shader.name);
 					for (j = 0;j < numparameters;j++)
-						Con_Printf(" %s", parameter[j]);
-					Con_Print("\n");
+						Con_DPrintf(" %s", parameter[j]);
+					Con_DPrint("\n");
 				}
 				if (numparameters < 1)
 					continue;
@@ -2210,21 +2210,21 @@ nothing                GL_ZERO GL_ONE
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
-		if (developer.integer >= 100)
-			Con_Printf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
+		if (developer_extra.integer)
+			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
 	}
 	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
 	{
-		if (developer.integer >= 100)
-			Con_Printf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
+		if (developer_extra.integer)
+			Con_DPrintf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
 		texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 	}
 	else
 	{
-		if (developer.integer >= 100)
-			Con_Printf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
+		if (developer_extra.integer)
+			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
 		texture->surfaceparms = 0;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
@@ -2482,7 +2482,7 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 
 static void Mod_BuildVBOs(void)
 {
-	if (developer.integer && loadmodel->surfmesh.data_element3s && loadmodel->surfmesh.data_element3i)
+	if (gl_paranoid.integer && loadmodel->surfmesh.data_element3s && loadmodel->surfmesh.data_element3i)
 	{
 		int i;
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)

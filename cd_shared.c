@@ -136,8 +136,8 @@ qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
 	if (CDAudio_SysPlay(track) == -1)
 		return false;
 
-	if(cdaudio.integer != 3 || developer.integer)
-		Con_Printf ("CD track %u playing...\n", track);
+	if(cdaudio.integer != 3)
+		Con_DPrintf ("CD track %u playing...\n", track);
 
 	return true;
 }
@@ -269,8 +269,8 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 			S_SetChannelFlag (faketrack, CHANNELFLAG_LOCALSOUND, true); // not pausable
 			if(track >= 1)
 			{
-				if(cdaudio.integer != 0 || developer.integer) // we don't need these messages if only fake tracks can be played anyway
-					Con_Printf ("Fake CD track %u playing...\n", track);
+				if(cdaudio.integer != 0) // we don't need these messages if only fake tracks can be played anyway
+					Con_DPrintf ("Fake CD track %u playing...\n", track);
 			}
 			else
 				Con_DPrintf ("BGM track %s playing...\n", trackname);

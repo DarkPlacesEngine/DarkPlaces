@@ -824,8 +824,8 @@ void SV_LinkEdict (prvm_edict_t *ent)
 	{
 		if (model != NULL)
 		{
-			if (!model->TraceBox && developer.integer >= 1)
-				Con_Printf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
+			if (!model->TraceBox)
+				Con_DPrintf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
 			if (ent->fields.server->angles[0] || ent->fields.server->angles[2] || ent->fields.server->avelocity[0] || ent->fields.server->avelocity[2])
 			{
@@ -1968,8 +1968,8 @@ qboolean SV_UnstickEntity (prvm_edict_t *ent)
 			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname), offset[0], offset[1], offset[2]);
 			return true;
 		case UNSTICK_STUCK:
-			if (developer.integer >= 100)
-				Con_Printf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
+			if (developer_extra.integer)
+				Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(ent->fields.server->classname));
 			return false;
 		default:
 			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");

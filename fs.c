@@ -2020,16 +2020,16 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 					if (fs_empty_files_in_pack_mark_deletions.integer && pak->files[middle].realsize == 0)
 					{
 						// yes, but the first one is empty so we treat it as not being there
-						if (!quiet && developer.integer >= 10)
-							Con_Printf("FS_FindFile: %s is marked as deleted\n", name);
+						if (!quiet && developer_extra.integer)
+							Con_DPrintf("FS_FindFile: %s is marked as deleted\n", name);
 
 						if (index != NULL)
 							*index = -1;
 						return NULL;
 					}
 
-					if (!quiet && developer.integer >= 10)
-						Con_Printf("FS_FindFile: %s in %s\n",
+					if (!quiet && developer_extra.integer)
+						Con_DPrintf("FS_FindFile: %s in %s\n",
 									pak->files[middle].name, pak->filename);
 
 					if (index != NULL)
@@ -2050,8 +2050,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 			dpsnprintf(netpath, sizeof(netpath), "%s%s", search->filename, name);
 			if (FS_SysFileExists (netpath))
 			{
-				if (!quiet && developer.integer >= 10)
-					Con_Printf("FS_FindFile: %s\n", netpath);
+				if (!quiet && developer_extra.integer)
+					Con_DPrintf("FS_FindFile: %s\n", netpath);
 
 				if (index != NULL)
 					*index = -1;
@@ -2060,8 +2060,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		}
 	}
 
-	if (!quiet && developer.integer >= 10)
-		Con_Printf("FS_FindFile: can't find %s\n", name);
+	if (!quiet && developer_extra.integer)
+		Con_DPrintf("FS_FindFile: can't find %s\n", name);
 
 	if (index != NULL)
 		*index = -1;
