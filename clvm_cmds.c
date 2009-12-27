@@ -357,7 +357,7 @@ static void VM_CL_tracetoss (void)
 	trace_t	trace;
 	prvm_edict_t	*ent;
 	prvm_edict_t	*ignore;
-	int svent;
+	int svent = 0;
 
 	prog->xfunction->builtinsprofile += 600;
 
