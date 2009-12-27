@@ -71,7 +71,9 @@ cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited
 cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
-cvar_t developer = {0, "developer","0", "prints additional debugging messages and information (recommended for modders and level designers)"};
+cvar_t developer = {CVAR_SAVE, "developer","0", "prints debugging messages and information (recommended for all developers and level designers)"};
+cvar_t developer_extra = {0, "developer_extra", "prints additional debugging messages, often very verbose!"};
+cvar_t developer_insane = {0, "developer_insane", "prints huge streams of information about internal workings, entire contents of files being read/written, etc.  Not recommended!"};
 cvar_t developer_loadfile = {0, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
 cvar_t developer_loading = {0, "developer_loading","0", "prints information about files as they are loaded or unloaded successfully"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
@@ -225,6 +227,8 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_maxidlefps);
 
 	Cvar_RegisterVariable (&developer);
+	Cvar_RegisterVariable (&developer_extra);
+	Cvar_RegisterVariable (&developer_insane);
 	Cvar_RegisterVariable (&developer_loadfile);
 	Cvar_RegisterVariable (&developer_loading);
 	Cvar_RegisterVariable (&developer_entityparsing);
@@ -1006,11 +1010,9 @@ static void Host_Init (void)
 
 	// FIXME: this is evil, but possibly temporary
 	// LordHavoc: doesn't seem very temporary...
-	// LordHavoc: enabled this by default on debug
-#ifndef DEBUG
+	// LordHavoc: made this a saved cvar
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
-#endif
 	{
 		developer.value = developer.integer = 1;
 		developer.string = "1";
@@ -1018,12 +1020,16 @@ static void Host_Init (void)
 
 	if (COM_CheckParm("-developer2"))
 	{
-		developer.value = developer.integer = 100;
-		developer.string = "100";
-		developer_memory.value = developer_memory.integer = 100;
-		developer.string = "100";
-		developer_memorydebug.value = developer_memorydebug.integer = 100;
-		developer_memorydebug.string = "100";
+		developer.value = developer.integer = 1;
+		developer.string = "1";
+		developer_extra.value = developer_extra.integer = 1;
+		developer_extra.string = "1";
+		developer_insane.value = developer_insane.integer = 1;
+		developer_insane.string = "1";
+		developer_memory.value = developer_memory.integer = 1;
+		developer_memory.string = "1";
+		developer_memorydebug.value = developer_memorydebug.integer = 1;
+		developer_memorydebug.string = "1";
 	}
 
 // COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from

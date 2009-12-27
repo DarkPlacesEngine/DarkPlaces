@@ -116,9 +116,7 @@ clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
 	clvideo_t *video;
 	// sanity check
 	if( !name || !*name || strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) != 0 ) {
-		if( developer.integer > 0 ) {
-			Con_Printf( "CL_OpenVideo: Bad video texture name '%s'!\n", name );
-		}
+		Con_DPrintf( "CL_OpenVideo: Bad video texture name '%s'!\n", name );
 		return NULL;
 	}
 

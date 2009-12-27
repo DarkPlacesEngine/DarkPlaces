@@ -2878,8 +2878,8 @@ int PRVM_SetEngineString(const char *s)
 		if (prog->knownstrings[i] == s)
 			return -1 - i;
 	// new unknown engine string
-	if (developer.integer >= 200)
-		Con_Printf("new engine string %p = \"%s\"\n", s, s);
+	if (developer_insane.integer)
+		Con_DPrintf("new engine string %p = \"%s\"\n", s, s);
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
@@ -2929,8 +2929,8 @@ int PRVM_SetTempString(const char *s)
 	if (!s)
 		return 0;
 	size = (int)strlen(s) + 1;
-	if (developer.integer >= 300)
-		Con_Printf("PRVM_SetTempString: cursize %i, size %i\n", vm_tempstringsbuf.cursize, size);
+	if (developer_insane.integer)
+		Con_DPrintf("PRVM_SetTempString: cursize %i, size %i\n", vm_tempstringsbuf.cursize, size);
 	if (vm_tempstringsbuf.maxsize < vm_tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = vm_tempstringsbuf;
@@ -2941,8 +2941,7 @@ int PRVM_SetTempString(const char *s)
 			vm_tempstringsbuf.maxsize *= 2;
 		if (vm_tempstringsbuf.maxsize != old.maxsize || vm_tempstringsbuf.data == NULL)
 		{
-			if (developer.integer >= 100)
-				Con_Printf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, vm_tempstringsbuf.maxsize/1024);
+			Con_DPrintf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, vm_tempstringsbuf.maxsize/1024);
 			vm_tempstringsbuf.data = (unsigned char *) Mem_Alloc(sv_mempool, vm_tempstringsbuf.maxsize);
 			if (old.cursize)
 				memcpy(vm_tempstringsbuf.data, old.data, old.cursize);

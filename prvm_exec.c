@@ -836,8 +836,8 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_Printf("MVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("MVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
@@ -1040,8 +1040,8 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_Printf("CLVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("CLVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
@@ -1244,8 +1244,8 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer.integer >= 200 && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_Printf("SVVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("SVVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 

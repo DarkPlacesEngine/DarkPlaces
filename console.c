@@ -1312,14 +1312,11 @@ void Con_DPrintf(const char *fmt, ...)
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
 
-	if (!developer.integer)
-		return;			// don't confuse non-developers with techie stuff...
-
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_Print(msg);
+	Con_DPrint(msg);
 }
 
 
@@ -1905,8 +1902,8 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					keyname[l] = 0;
 					if (!COM_ParseToken_Simple(&data, false, false))
 						break;
-					if (developer.integer >= 100)
-						Con_Printf("key: %s %s\n", keyname, com_token);
+					if (developer_extra.integer)
+						Con_DPrintf("key: %s %s\n", keyname, com_token);
 					if (!strcmp(keyname, "message"))
 					{
 						// get the message contents

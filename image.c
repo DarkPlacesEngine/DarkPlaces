@@ -912,8 +912,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 			}
 			if (data)
 			{
-				if (developer.integer >= 10)
-					Con_Printf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+				if (developer_loading.integer)
+					Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
 				//if (developer_memorydebug.integer)
 				//	Mem_CheckSentinelsGlobal();
 				if(allowFixtrans && r_fixtrans_auto.integer)

@@ -124,8 +124,8 @@ static OSStatus audioDeviceIOProc(AudioDeviceID inDevice,
 		unsigned int missingFrames;
 
 		missingFrames = submissionChunk - frameCount;
-		if (developer.integer >= 1000 && vid_activewindow)
-			Con_Printf("audioDeviceIOProc: %u sample frames missing\n", missingFrames);
+		if (developer_insane.integer && vid_activewindow)
+			Con_DPrintf("audioDeviceIOProc: %u sample frames missing\n", missingFrames);
 		memset(&outBuffer[frameCount * snd_renderbuffer->format.channels], 0, missingFrames * sizeof(outBuffer[0]));
 	}
 

@@ -3047,8 +3047,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 			if (CHECKPVSBIT(rtlight->static_shadowtrispvs, i))
 				shadowtris++;
 
-	if (developer.integer >= 10)
-		Con_Printf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles, %i zpass/%i zfail compiled shadow volume triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris, shadowzpasstris, shadowzfailtris);
+	if (developer_extra.integer)
+		Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles, %i zpass/%i zfail compiled shadow volume triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris, shadowzpasstris, shadowzfailtris);
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)

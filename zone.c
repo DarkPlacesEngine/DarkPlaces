@@ -327,8 +327,8 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	}
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
-	if (developer.integer && developer_memory.integer)
-		Con_Printf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
+	if (developer_memory.integer)
+		Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
 	//if (developer.integer && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
@@ -397,8 +397,8 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 
 	pool = mem->pool;
-	if (developer.integer && developer_memory.integer)
-		Con_Printf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, (int)(mem->size));
+	if (developer_memory.integer)
+		Con_DPrintf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, (int)(mem->size));
 	// unlink memheader from doubly linked list
 	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
 		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);
@@ -424,7 +424,7 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 		return;
 	}
 
-	if (developer.integer && developer_memorydebug.integer)
+	if (developer_memorydebug.integer)
 	{
 		//_Mem_CheckSentinelsGlobal(filename, fileline);
 		if (!Mem_IsAllocated(NULL, data))
@@ -437,8 +437,8 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
-	//if (developer.integer && developer_memorydebug.integer)
-	//	_Mem_CheckSentinelsGlobal(filename, fileline);
+	if (developer_memorydebug.integer)
+		_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool = (mempool_t *)Clump_AllocBlock(sizeof(mempool_t));
 	if (pool == NULL)
 	{
@@ -469,8 +469,8 @@ void _Mem_FreePool(mempool_t **poolpointer, const char *filename, int fileline)
 	mempool_t *pool = *poolpointer;
 	mempool_t **chainaddress, *iter, *temp;
 
-	//if (developer.integer && developer_memorydebug.integer)
-	//	_Mem_CheckSentinelsGlobal(filename, fileline);
+	if (developer_memorydebug.integer)
+		_Mem_CheckSentinelsGlobal(filename, fileline);
 	if (pool)
 	{
 		// unlink pool from chain
@@ -503,7 +503,7 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 {
 	mempool_t *chainaddress;
 
-	if (developer.integer && developer_memorydebug.integer)
+	if (developer_memorydebug.integer)
 	{
 		//_Mem_CheckSentinelsGlobal(filename, fileline);
 		// check if this pool is in the poolchain

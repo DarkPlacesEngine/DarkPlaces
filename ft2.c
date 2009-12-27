@@ -800,8 +800,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			}
 			--mapstart->intSize;
 		}
-		if (developer.integer)
-			Con_Printf("Using size: %f for requested size %f\n", mapstart->intSize, mapstart->size);
+		Con_DPrintf("Using size: %f for requested size %f\n", mapstart->intSize, mapstart->size);
 	}
 
 	if (!font->image_font && !Font_SetSize(font, mapstart->intSize, mapstart->intSize))
@@ -870,8 +869,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 		mapch = ch - map->start;
 
-		if (developer.integer)
-			Con_Print("glyphinfo: ------------- GLYPH INFO -----------------\n");
+		if (developer_extra.integer)
+			Con_DPrint("glyphinfo: ------------- GLYPH INFO -----------------\n");
 
 		++gC;
 		if (gC >= FONT_CHARS_PER_LINE)
@@ -926,8 +925,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			if (status)
 			{
 				//Con_Printf("failed to load glyph %lu for %s\n", glyphIndex, font->name);
-				if (developer.integer)
-					Con_Printf("failed to load glyph for char %lx from font %s\n", (unsigned long)ch, font->name);
+				Con_DPrintf("failed to load glyph for char %lx from font %s\n", (unsigned long)ch, font->name);
 				continue;
 			}
 		}
@@ -949,24 +947,24 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		switch (bmp->pixel_mode)
 		{
 		case FT_PIXEL_MODE_MONO:
-			if (developer.integer)
-				Con_Print("glyphinfo:   Pixel Mode: MONO\n");
+			if (developer_extra.integer)
+				Con_DPrint("glyphinfo:   Pixel Mode: MONO\n");
 			break;
 		case FT_PIXEL_MODE_GRAY2:
-			if (developer.integer)
-				Con_Print("glyphinfo:   Pixel Mode: GRAY2\n");
+			if (developer_extra.integer)
+				Con_DPrint("glyphinfo:   Pixel Mode: GRAY2\n");
 			break;
 		case FT_PIXEL_MODE_GRAY4:
-			if (developer.integer)
-				Con_Print("glyphinfo:   Pixel Mode: GRAY4\n");
+			if (developer_extra.integer)
+				Con_DPrint("glyphinfo:   Pixel Mode: GRAY4\n");
 			break;
 		case FT_PIXEL_MODE_GRAY:
-			if (developer.integer)
-				Con_Print("glyphinfo:   Pixel Mode: GRAY\n");
+			if (developer_extra.integer)
+				Con_DPrint("glyphinfo:   Pixel Mode: GRAY\n");
 			break;
 		default:
-			if (developer.integer)
-				Con_Printf("glyphinfo:   Pixel Mode: Unknown: %i\n", bmp->pixel_mode);
+			if (developer_extra.integer)
+				Con_DPrintf("glyphinfo:   Pixel Mode: Unknown: %i\n", bmp->pixel_mode);
 			Mem_Free(data);
 			Con_Printf("ERROR: Unrecognized pixel mode for font %s size %f: %i\n", font->name, mapstart->size, bmp->pixel_mode);
 			return false;
@@ -1051,19 +1049,19 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			mapglyph->advance_x = advance;
 			mapglyph->advance_y = 0;
 
-			if (developer.integer)
+			if (developer_extra.integer)
 			{
-				Con_Printf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, gC, gR);
-				Con_Printf("glyphinfo:   %f, %f, %lu\n", bearingX, map->sfx, (unsigned long)glyph->metrics.horiBearingX);
+				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, gC, gR);
+				Con_DPrintf("glyphinfo:   %f, %f, %lu\n", bearingX, map->sfx, (unsigned long)glyph->metrics.horiBearingX);
 				if (ch >= 32 && ch <= 128)
-					Con_Printf("glyphinfo:   Character: %c\n", (int)ch);
-				Con_Printf("glyphinfo:   Vertex info:\n");
-				Con_Printf("glyphinfo:     X: ( %f  --  %f )\n", mapglyph->vxmin, mapglyph->vxmax);
-				Con_Printf("glyphinfo:     Y: ( %f  --  %f )\n", mapglyph->vymin, mapglyph->vymax);
-				Con_Printf("glyphinfo:   Texture info:\n");
-				Con_Printf("glyphinfo:     S: ( %f  --  %f )\n", mapglyph->txmin, mapglyph->txmax);
-				Con_Printf("glyphinfo:     T: ( %f  --  %f )\n", mapglyph->tymin, mapglyph->tymax);
-				Con_Printf("glyphinfo:   Advance: %f, %f\n", mapglyph->advance_x, mapglyph->advance_y);
+					Con_DPrintf("glyphinfo:   Character: %c\n", (int)ch);
+				Con_DPrintf("glyphinfo:   Vertex info:\n");
+				Con_DPrintf("glyphinfo:     X: ( %f  --  %f )\n", mapglyph->vxmin, mapglyph->vxmax);
+				Con_DPrintf("glyphinfo:     Y: ( %f  --  %f )\n", mapglyph->vymin, mapglyph->vymax);
+				Con_DPrintf("glyphinfo:   Texture info:\n");
+				Con_DPrintf("glyphinfo:     S: ( %f  --  %f )\n", mapglyph->txmin, mapglyph->txmax);
+				Con_DPrintf("glyphinfo:     T: ( %f  --  %f )\n", mapglyph->tymin, mapglyph->tymax);
+				Con_DPrintf("glyphinfo:   Advance: %f, %f\n", mapglyph->advance_x, mapglyph->advance_y);
 			}
 		}
 		map->glyphs[mapch].image = false;
@@ -1071,8 +1069,9 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 	// create a texture from the data now
 
-	if (developer.integer)
+	if (developer_extra.integer)
 	{
+		// LordHavoc: why are we writing this?  And why not write it as TGA using the appropriate function?
 		// view using `display -depth 8 -size 512x512 name_page.rgba` (be sure to use a correct -size parameter)
 		dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%u.rgba", font->name, (unsigned)map->start/FONT_CHARS_PER_MAP);
 		FS_WriteFile(map_identifier, data, pitch * FONT_CHAR_LINES * map->glyphSize);

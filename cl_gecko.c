@@ -405,9 +405,7 @@ static clgecko_t * cl_gecko_findunusedinstance( void ) {
 			return instance;
 		}
 	}
-	if( developer.integer > 0 ) {
-		Con_Printf( "cl_gecko_findunusedinstance: out of geckos\n" );
-	}
+	Con_DPrintf( "cl_gecko_findunusedinstance: out of geckos\n" );
 	return NULL;
 }
 
@@ -415,9 +413,7 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 	int i;
 
 	if( !name || !*name || strncmp( name, CLGECKOPREFIX, sizeof( CLGECKOPREFIX ) - 1 ) != 0 ) {
-		if( developer.integer > 0 ) {
-			Con_Printf( "CL_Gecko_FindBrowser: Bad gecko texture name '%s'!\n", name );
-		}
+		Con_DPrintf( "CL_Gecko_FindBrowser: Bad gecko texture name '%s'!\n", name );
 		return NULL;
 	}
 
@@ -428,9 +424,7 @@ clgecko_t * CL_Gecko_FindBrowser( const char *name ) {
 		}
 	}
 
-	if( developer.integer > 0 ) {
-		Con_Printf( "CL_Gecko_FindBrowser: No browser named '%s'!\n", name );
-	}
+	Con_DPrintf( "CL_Gecko_FindBrowser: No browser named '%s'!\n", name );
 
 	return NULL;
 }
@@ -570,9 +564,7 @@ static qboolean CL_Gecko_Embedding_Init (void)
 
 	if( cl_geckoembedding != NULL ) return true;
 
-	if( developer.integer > 0 ) {
-		Con_Printf( "CL_Gecko_Embedding_Init: setting up gecko embedding\n" );
-	}
+	Con_DPrintf( "CL_Gecko_Embedding_Init: setting up gecko embedding\n" );
 
 	options = osgk_embedding_options_create();
 #ifdef XULRUNNER_DIR_SUFFIX
@@ -589,9 +581,7 @@ static qboolean CL_Gecko_Embedding_Init (void)
 		return false;
 	} 
 	
-	if( developer.integer > 0 ) {
-		Con_Printf( "CL_Gecko_Embedding_Init: Embedding set up correctly\n" );
-	}
+	Con_DPrintf( "CL_Gecko_Embedding_Init: Embedding set up correctly\n" );
 
 	dpGlobalTemplate = osgk_sot_create( cl_geckoembedding, dpGlobal_create, NULL, NULL );
 

@@ -2442,8 +2442,8 @@ static void SV_Download_f(void)
 	extension = FS_FileExtension(host_client->download_name);
 
 	// host_client is asking to download a specified file
-	if (developer.integer >= 100)
-		Con_Printf("Download request for %s by %s\n", host_client->download_name, host_client->name);
+	if (developer_extra.integer)
+		Con_DPrintf("Download request for %s by %s\n", host_client->download_name, host_client->name);
 
 	if(is_csqc)
 	{
