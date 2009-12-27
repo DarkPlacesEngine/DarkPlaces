@@ -926,7 +926,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			if (status)
 			{
 				//Con_Printf("failed to load glyph %lu for %s\n", glyphIndex, font->name);
-				Con_Printf("failed to load glyph for char %lx from font %s\n", (unsigned long)ch, font->name);
+				if (developer.integer)
+					Con_Printf("failed to load glyph for char %lx from font %s\n", (unsigned long)ch, font->name);
 				continue;
 			}
 		}
