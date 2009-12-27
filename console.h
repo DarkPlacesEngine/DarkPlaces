@@ -39,6 +39,12 @@ void Con_Init_Commands (void);
 void Con_Shutdown (void);
 void Con_DrawConsole (int lines);
 
+/// Prints to a chosen console target
+void Con_MaskPrint(int mask, const char *msg);
+
+// Prints to a chosen console target
+void Con_MaskPrintf(int mask, const char *fmt, ...) DP_FUNC_PRINTF(2);
+
 /// Prints to all appropriate console targets, and adds timestamps
 void Con_Print(const char *txt);
 
@@ -81,9 +87,13 @@ void Log_DestBuffer_Flush (void); ///< call this once per frame to send out repl
 void Log_Printf(const char *logfilename, const char *fmt, ...) DP_FUNC_PRINTF(2);
 //@}
 
+// CON_MASK_PRINT is the default (Con_Print/Con_Printf)
+// CON_MASK_DEVELOPER is used by Con_DPrint/Con_DPrintf
 #define CON_MASK_HIDENOTIFY 128
 #define CON_MASK_CHAT 1
 #define CON_MASK_INPUT 2
+#define CON_MASK_DEVELOPER 4
+#define CON_MASK_PRINT 8
 
 typedef struct con_lineinfo_s
 {

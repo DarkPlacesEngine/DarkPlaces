@@ -1008,13 +1008,13 @@ static char Sys_Con_NearestColor(const unsigned char _r, const unsigned char _g,
 
 /*
 ================
-Con_Print
+Con_MaskPrint
 ================
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
 extern qboolean sys_nostdout;
-void Con_Print(const char *msg)
+void Con_MaskPrint(int additionalmask, const char *msg)
 {
 	static int mask = 0;
 	static int index = 0;
@@ -1023,6 +1023,8 @@ void Con_Print(const char *msg)
 	for (;*msg;msg++)
 	{
 		Con_Rcon_AddChar(*msg);
+		if (index == 0)
+			mask |= additionalmask;
 		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
@@ -1272,6 +1274,32 @@ void Con_Print(const char *msg)
 	}
 }
 
+/*
+================
+Con_MaskPrintf
+================
+*/
+void Con_MaskPrintf(int mask, const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAX_INPUTLINE];
+
+	va_start(argptr,fmt);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
+
+	Con_MaskPrint(mask, msg);
+}
+
+/*
+================
+Con_Print
+================
+*/
+void Con_Print(const char *msg)
+{
+	Con_MaskPrint(CON_MASK_PRINT, msg);
+}
 
 /*
 ================
@@ -1287,7 +1315,7 @@ void Con_Printf(const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_Print(msg);
+	Con_MaskPrint(CON_MASK_PRINT, msg);
 }
 
 /*
@@ -1297,9 +1325,7 @@ Con_DPrint
 */
 void Con_DPrint(const char *msg)
 {
-	if (!developer.integer)
-		return;			// don't confuse non-developers with techie stuff...
-	Con_Print(msg);
+	Con_MaskPrint(CON_MASK_DEVELOPER, msg);
 }
 
 /*
@@ -1316,7 +1342,7 @@ void Con_DPrintf(const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_DPrint(msg);
+	Con_MaskPrint(CON_MASK_DEVELOPER, msg);
 }
 
 
@@ -1601,7 +1627,7 @@ void Con_DrawNotify (void)
 		chatstart = 0; // shut off gcc warning
 	}
 
-	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_INPUT | CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0), con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
+	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_INPUT | CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0) | CON_MASK_DEVELOPER, con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
 
 	// chat?
 	if(numChatlines)
@@ -1689,6 +1715,8 @@ int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 
 	//if(con.lines[lineno].mask & CON_MASK_LOADEDHISTORY)
 	//	return 0;
+	if ((con.lines[lineno].mask & CON_MASK_DEVELOPER) && !developer.integer)
+		return 0;
 
 	ti.continuationString = "";
 	ti.alignment = 0;

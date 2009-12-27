@@ -859,7 +859,8 @@ void NetConn_OpenClientPort(const char *addressstring, lhnetaddresstype_t addres
 		{
 			cl_sockets[cl_numsockets++] = s;
 			LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
-			Con_Printf("Client opened a socket on address %s\n", addressstring2);
+			if (addresstype != LHNETADDRESSTYPE_LOOP)
+				Con_Printf("Client opened a socket on address %s\n", addressstring2);
 		}
 		else
 		{
@@ -884,7 +885,9 @@ void NetConn_OpenClientPorts(void)
 		Con_Printf("Client using port %i\n", port);
 	NetConn_OpenClientPort(NULL, LHNETADDRESSTYPE_LOOP, 2);
 	NetConn_OpenClientPort(net_address.string, LHNETADDRESSTYPE_INET4, port);
+#ifdef SUPPORTIPV6
 	NetConn_OpenClientPort(net_address_ipv6.string, LHNETADDRESSTYPE_INET6, port);
+#endif
 }
 
 void NetConn_CloseServerPorts(void)
@@ -914,7 +917,8 @@ qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddresstype_t ad
 			{
 				sv_sockets[sv_numsockets++] = s;
 				LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
-				Con_Printf("Server listening on address %s\n", addressstring2);
+				if (addresstype != LHNETADDRESSTYPE_LOOP)
+					Con_Printf("Server listening on address %s\n", addressstring2);
 				return true;
 			}
 			else
@@ -948,8 +952,12 @@ void NetConn_OpenServerPorts(int opennetports)
 		NetConn_OpenServerPort(NULL, LHNETADDRESSTYPE_LOOP, 1, 1);
 	if (opennetports)
 	{
+#ifdef SUPPORTIPV6
 		qboolean ip4success = NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
 		NetConn_OpenServerPort(net_address_ipv6.string, LHNETADDRESSTYPE_INET6, port, ip4success ? 1 : 100);
+#else
+		NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
+#endif
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!");

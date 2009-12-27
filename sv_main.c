@@ -2895,31 +2895,29 @@ void SV_Prepare_CSQC(void)
 	svs.csqc_progdata = NULL;
 	svs.csqc_progdata_deflated = NULL;
 	
-	Con_Print("Loading csprogs.dat\n");
-
 	sv.csqc_progname[0] = 0;
 	svs.csqc_progdata = FS_LoadFile(csqc_progname.string, sv_mempool, false, &progsize);
 
 	if(progsize > 0)
 	{
 		size_t deflated_size;
-		
+
 		sv.csqc_progsize = (int)progsize;
 		sv.csqc_progcrc = CRC_Block(svs.csqc_progdata, progsize);
 		strlcpy(sv.csqc_progname, csqc_progname.string, sizeof(sv.csqc_progname));
-		Con_Printf("server detected csqc progs file \"%s\" with size %i and crc %i\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
+		Con_DPrintf("server detected csqc progs file \"%s\" with size %i and crc %i\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
 
-		Con_Print("Compressing csprogs.dat\n");
+		Con_DPrint("Compressing csprogs.dat\n");
 		//unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
 		svs.csqc_progdata_deflated = FS_Deflate(svs.csqc_progdata, progsize, &deflated_size, -1, sv_mempool);
 		svs.csqc_progsize_deflated = (int)deflated_size;
 		if(svs.csqc_progdata_deflated)
 		{
-			Con_Printf("Deflated: %g%%\n", 100.0 - 100.0 * (deflated_size / (float)progsize));
+			Con_DPrintf("Deflated: %g%%\n", 100.0 - 100.0 * (deflated_size / (float)progsize));
 			Con_DPrintf("Uncompressed: %u\nCompressed:   %u\n", (unsigned)sv.csqc_progsize, (unsigned)svs.csqc_progsize_deflated);
 		}
 		else
-			Con_Printf("Cannot compress - need zlib for this. Using uncompressed progs only.\n");
+			Con_DPrintf("Cannot compress - need zlib for this. Using uncompressed progs only.\n");
 	}
 }
 

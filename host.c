@@ -660,7 +660,7 @@ void Host_Main(void)
 				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
 				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
 			}
-			if(svs.perf_lost > 0)
+			if(svs.perf_lost > 0 && developer_extra.integer)
 				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport());
 			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
 		}
