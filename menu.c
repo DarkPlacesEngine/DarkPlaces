@@ -111,7 +111,7 @@ void M_Update_Return_Reason(char *s)
 {
 	strlcpy(m_return_reason, s, sizeof(m_return_reason));
 	if (s)
-		Con_Printf("%s\n", s);
+		Con_DPrintf("%s\n", s);
 }
 
 #define StartingGame	(m_multiplayer_cursor == 1)

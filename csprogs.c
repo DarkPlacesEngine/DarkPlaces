@@ -939,7 +939,7 @@ void CL_VM_Init (void)
 		return;
 	}
 
-	Con_Printf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
+	Con_DPrintf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
 
 	if(cls.demorecording)
 	{
@@ -1010,7 +1010,7 @@ void CL_VM_ShutDown (void)
 			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
 	CSQC_END
-	Con_Print("CSQC ^1unloaded\n");
+	Con_DPrint("CSQC ^1unloaded\n");
 	cl.csqc_loaded = false;
 }
 

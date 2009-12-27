@@ -1636,7 +1636,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// darkplaces or quake3
 			char protocolnames[1400];
 			Protocol_Names(protocolnames, sizeof(protocolnames));
-			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+			Con_DPrintf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
 			M_Update_Return_Reason("Got challenge response");
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
