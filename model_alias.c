@@ -531,6 +531,7 @@ int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int s
 			return 1;
 		*parentindex = model->data_bones[tagindex].parent;
 		*tagname = model->data_bones[tagindex].name;
+		memset(blendmatrix, 0, sizeof(blendmatrix));
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
@@ -548,6 +549,7 @@ int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int s
 			return 1;
 		*parentindex = -1;
 		*tagname = model->data_tags[tagindex].name;
+		memset(blendmatrix, 0, sizeof(blendmatrix));
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;

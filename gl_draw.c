@@ -775,9 +775,8 @@ static void LoadFont_f(void)
 		for(i = 0; i < Cmd_Argc()-3; ++i)
 		{
 			sz = atof(Cmd_Argv(i+3));
-			if (IS_NAN(sz)) // do not use crap sizes
-				continue;
-			f->req_sizes[i] = sz;
+			if (sz > 0.001f && sz < 1000.0f) // do not use crap sizes
+				f->req_sizes[i] = sz;
 		}
 	}
 	LoadFont(true, mainfont, f);

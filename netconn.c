@@ -624,7 +624,6 @@ qboolean NetConn_CanSend(netconn_t *conn)
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables)
 {
 	int totallen = 0;
-	int temp;
 
 	// if this packet was supposedly choked, but we find ourselves sending one
 	// anyway, make sure the size counting starts at zero
@@ -654,11 +653,9 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendreliable = true;
 		}
 		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
-		temp = (unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31);
-		*((int *)(sendbuffer + 0)) = LittleLong(temp);
+		StoreLittleLong(sendbuffer, (unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31));
 		// last received unreliable packet number, and last received reliable packet number (0 or 1)
-		temp = (unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31);
-		*((int *)(sendbuffer + 4)) = LittleLong(temp);
+		StoreLittleLong(sendbuffer + 4, (unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31));
 		packetLen = 8;
 		conn->outgoing_unreliable_sequence++;
 		// client sends qport in every packet
