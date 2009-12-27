@@ -1482,7 +1482,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 			end = ((unsigned char *) (&shader->Q3SHADERINFO_COMPARE_END)) + sizeof(shader->Q3SHADERINFO_COMPARE_END);
 			start2 = (unsigned char *) (&entry->shader.Q3SHADERINFO_COMPARE_START);
 			if(memcmp(start, start2, end - start))
-				Con_Printf("Shader '%s' already defined, ignoring mismatching redeclaration\n", shader->name);
+				Con_DPrintf("Shader '%s' already defined, ignoring mismatching redeclaration\n", shader->name);
 			else
 				Con_DPrintf("Shader '%s' already defined\n", shader->name);
 			return;
@@ -1556,7 +1556,7 @@ void Mod_LoadQ3Shaders(void)
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
 			{
-				Con_Printf("%s parsing error - expected \"{\", found \"%s\"\n", search->filenames[fileindex], com_token);
+				Con_DPrintf("%s parsing error - expected \"{\", found \"%s\"\n", search->filenames[fileindex], com_token);
 				break;
 			}
 			while (COM_ParseToken_QuakeC(&text, false))

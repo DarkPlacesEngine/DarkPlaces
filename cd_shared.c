@@ -129,7 +129,7 @@ qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
 	if (track > maxTrack)
 	{
 		if(complain)
-			Con_Printf("CDAudio: Bad track number %u.\n", track);
+			Con_DPrintf("CDAudio: Bad track number %u.\n", track);
 		return false;
 	}
 
@@ -192,7 +192,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 		track = (unsigned char) atoi(trackname);
 		if (track < 1)
 		{
-			Con_Printf("CDAudio: Bad track number %u.\n", track);
+			Con_DPrintf("CDAudio: Bad track number %u.\n", track);
 			return;
 		}
 	}

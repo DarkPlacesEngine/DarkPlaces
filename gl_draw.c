@@ -289,7 +289,7 @@ static rtexture_t *draw_generatepic(const char *name, qboolean quiet)
 	if (!strcmp(name, "gfx/colorcontrol/ditherpattern"))
 		return draw_generateditherpattern();
 	if (!quiet)
-		Con_Printf("Draw_CachePic: failed to load %s\n", name);
+		Con_DPrintf("Draw_CachePic: failed to load %s\n", name);
 	return r_texture_notexture;
 }
 
