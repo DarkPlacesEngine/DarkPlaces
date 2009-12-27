@@ -222,8 +222,10 @@ size_t u8_bytelen(const char *_s, size_t n)
 	size_t len = 0;
 	const unsigned char *s = (const unsigned char*)_s;
 
-	if (!utf8_enable.integer)
-		return n;
+	if (!utf8_enable.integer) {
+		len = strlen(_s);
+		return (len < n) ? len : n;
+	}
 
 	while (*s && n)
 	{
@@ -267,6 +269,12 @@ int u8_byteofs(const char *_s, size_t i, size_t *len)
 
 	if (!utf8_enable.integer)
 	{
+		if (strlen(_s) < i)
+		{
+			if (len) *len = 0;
+			return -1;
+		}
+
 		if (len) *len = 1;
 		return i;
 	}
