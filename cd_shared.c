@@ -121,7 +121,7 @@ qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
 		if (!cdValid)
 		{
 			if(complain)
-				Con_Print ("No CD in player.\n");
+				Con_DPrint ("No CD in player.\n");
 			return false;
 		}
 	}
@@ -233,7 +233,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 		}
 		else
 		{
-			Con_Print ("No CD in player.\n");
+			Con_DPrint ("No CD in player.\n");
 		}
 		return;
 	}

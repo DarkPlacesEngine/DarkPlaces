@@ -80,7 +80,7 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 				dlclose(dllhandle);
 				goto notfound;
 			}
-		Con_Printf ("All of %s's functions were already linked in! Not loading dynamically...\n", dllnames[0]);
+		Con_DPrintf ("All of %s's functions were already linked in! Not loading dynamically...\n", dllnames[0]);
 		*handle = dllhandle;
 		return true;
 	}
@@ -93,10 +93,10 @@ notfound:
 		*func->funcvariable = NULL;
 
 	// Try every possible name
-	Con_Printf ("Trying to load library...");
+	Con_DPrintf ("Trying to load library...");
 	for (i = 0; dllnames[i] != NULL; i++)
 	{
-		Con_Printf (" \"%s\"", dllnames[i]);
+		Con_DPrintf (" \"%s\"", dllnames[i]);
 #ifdef WIN32
 		dllhandle = LoadLibrary (dllnames[i]);
 #else
@@ -118,7 +118,7 @@ notfound:
 			char temp[MAX_OSPATH];
 			strlcpy(temp, path, sizeof(temp));
 			strlcat(temp, dllnames[i], sizeof(temp));
-			Con_Printf (" \"%s\"", temp);
+			Con_DPrintf (" \"%s\"", temp);
 #ifdef WIN32
 			dllhandle = LoadLibrary (temp);
 #else
@@ -132,17 +132,17 @@ notfound:
 	// No DLL found
 	if (! dllhandle)
 	{
-		Con_Printf(" - failed.\n");
+		Con_DPrintf(" - failed.\n");
 		return false;
 	}
 
-	Con_Printf(" - loaded.\n");
+	Con_DPrintf(" - loaded.\n");
 
 	// Get the function adresses
 	for (func = fcts; func && func->name != NULL; func++)
 		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (dllhandle, func->name)))
 		{
-			Con_Printf ("Missing function \"%s\" - broken library!\n", func->name);
+			Con_DPrintf ("Missing function \"%s\" - broken library!\n", func->name);
 			Sys_UnloadLibrary (&dllhandle);
 			return false;
 		}

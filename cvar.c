@@ -461,7 +461,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			Z_Free(cvar);
 		}
 		else
-			Con_Printf("Can't register variable %s, already defined\n", variable->name);
+			Con_DPrintf("Can't register variable %s, already defined\n", variable->name);
 		return;
 	}
 

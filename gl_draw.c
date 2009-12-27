@@ -558,7 +558,7 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	if(fnt->req_face != -1)
 	{
 		if(!Font_LoadFont(fnt->texpath, fnt))
-			Con_Printf("Failed to load font-file for '%s', it will not support as many characters.\n", fnt->texpath);
+			Con_DPrintf("Failed to load font-file for '%s', it will not support as many characters.\n", fnt->texpath);
 	}
 
 	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
