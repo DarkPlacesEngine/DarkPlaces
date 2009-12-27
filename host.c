@@ -72,8 +72,8 @@ cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some p
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 cvar_t developer = {CVAR_SAVE, "developer","0", "prints debugging messages and information (recommended for all developers and level designers)"};
-cvar_t developer_extra = {0, "developer_extra", "prints additional debugging messages, often very verbose!"};
-cvar_t developer_insane = {0, "developer_insane", "prints huge streams of information about internal workings, entire contents of files being read/written, etc.  Not recommended!"};
+cvar_t developer_extra = {0, "developer_extra", "0", "prints additional debugging messages, often very verbose!"};
+cvar_t developer_insane = {0, "developer_insane", "0", "prints huge streams of information about internal workings, entire contents of files being read/written, etc.  Not recommended!"};
 cvar_t developer_loadfile = {0, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
 cvar_t developer_loading = {0, "developer_loading","0", "prints information about files as they are loaded or unloaded successfully"};
 cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
