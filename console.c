@@ -1662,40 +1662,26 @@ void Con_DrawNotify (void)
 
 /*
 ================
-Con_MeasureConsoleLine
-
-Counts the number of lines for a line on the console.
-================
-*/
-int Con_MeasureConsoleLine(int lineno)
-{
-	float width = vid_conwidth.value;
-	con_text_info_t ti;
-	con_lineinfo_t *li = &CON_LINES(lineno);
-
-	//if(con.lines[lineno].mask & CON_MASK_LOADEDHISTORY)
-	//	return 0;
-
-	ti.fontsize = con_textsize.value;
-	ti.font = FONT_CONSOLE;
-
-	return COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);
-}
-
-/*
-================
 Con_LineHeight
 
 Returns the height of a given console line; calculates it if necessary.
 ================
 */
-int Con_LineHeight(int i)
+int Con_LineHeight(int lineno)
 {
-	con_lineinfo_t *li = &CON_LINES(i);
-	int h = li->height;
-	if(h != -1)
-		return h;
-	return li->height = Con_MeasureConsoleLine(i);
+	con_lineinfo_t *li = &CON_LINES(lineno);
+	if ((li->mask & CON_MASK_DEVELOPER) && !developer.integer)
+		return 0;
+	if(li->height == -1)
+	{
+		float width = vid_conwidth.value;
+		con_text_info_t ti;
+		con_lineinfo_t *li = &CON_LINES(lineno);
+		ti.fontsize = con_textsize.value;
+		ti.font = FONT_CONSOLE;
+		li->height = COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);
+	}
+	return li->height;
 }
 
 /*
@@ -1731,6 +1717,7 @@ int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 	return COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
 }
 
+#if 0
 /*
 ================
 Con_LastVisibleLine
@@ -1739,7 +1726,7 @@ Calculates the last visible line index and how much to show of it based on
 con_backscroll.
 ================
 */
-void Con_LastVisibleLine(int *last, int *limitlast)
+static void Con_LastVisibleLine(int *last, int *limitlast)
 {
 	int lines_seen = 0;
 	int i;
@@ -1770,6 +1757,7 @@ void Con_LastVisibleLine(int *last, int *limitlast)
 		// FIXME uses con in a non abstracted way
 	*limitlast = 1;
 }
+#endif
 
 /*
 ================
@@ -1781,11 +1769,11 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
-	int i, last, limitlast;
-	float y;
-
 	if (lines <= 0)
 		return;
+
+	if (con_backscroll < 0)
+		con_backscroll = 0;
 
 	con_vislines = lines;
 
@@ -1794,8 +1782,27 @@ void Con_DrawConsole (int lines)
 	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, false, FONT_CONSOLE) * con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
+#if 1
+	{
+		int i;
+		int count = CON_LINES_COUNT;
+		float ymax = con_vislines - 2 * con_textsize.value;
+		float y = ymax + con_textsize.value * con_backscroll;
+		for (i = 0;i < count && y >= 0;i++)
+			y -= Con_DrawConsoleLine(y - con_textsize.value, CON_LINES_COUNT - 1 - i, 0, ymax) * con_textsize.value;
+		// fix any excessive scrollback for the next frame
+		if (i >= count && y >= 0)
+		{
+			con_backscroll -= (int)(y / con_textsize.value);
+			if (con_backscroll < 0)
+				con_backscroll = 0;
+		}
+	}
+#else
 	if(CON_LINES_COUNT > 0)
 	{
+		int i, last, limitlast;
+		float y;
 		float ymax = con_vislines - 2 * con_textsize.value;
 		Con_LastVisibleLine(&last, &limitlast);
 		y = ymax - con_textsize.value;
@@ -1816,6 +1823,7 @@ void Con_DrawConsole (int lines)
 			--i;
 		}
 	}
+#endif
 
 // draw the input prompt, user text, and cursor if desired
 	Con_DrawInput ();

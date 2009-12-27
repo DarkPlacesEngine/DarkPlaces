@@ -921,7 +921,7 @@ Key_Console (int key, int unicode)
 	if (key == K_HOME || key == K_KP_HOME)
 	{
 		if (keydown[K_CTRL])
-			con_backscroll = INT_MAX;
+			con_backscroll = CON_TEXTSIZE;
 		else
 			key_linepos = 1;
 		return;
