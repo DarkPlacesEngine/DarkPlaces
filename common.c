@@ -104,6 +104,26 @@ void StoreBigLong (unsigned char *buffer, unsigned int i)
 	buffer[3] = i         & 0xFF;
 }
 
+void StoreBigShort (unsigned char *buffer, unsigned short i)
+{
+	buffer[0] = (i >>  8) & 0xFF;
+	buffer[1] = i         & 0xFF;
+}
+
+void StoreLittleLong (unsigned char *buffer, unsigned int i)
+{
+	buffer[0] = i         & 0xFF;
+	buffer[1] = (i >>  8) & 0xFF;
+	buffer[2] = (i >> 16) & 0xFF;
+	buffer[3] = (i >> 24) & 0xFF;
+}
+
+void StoreLittleShort (unsigned char *buffer, unsigned short i)
+{
+	buffer[0] = i         & 0xFF;
+	buffer[1] = (i >>  8) & 0xFF;
+}
+
 /*
 ============================================================================
 
