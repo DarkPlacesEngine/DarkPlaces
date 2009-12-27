@@ -103,6 +103,15 @@ short BuffLittleShort (const unsigned char *buffer);
 
 /// Encode a big endian 32bit int to the given \p buffer
 void StoreBigLong (unsigned char *buffer, unsigned int i);
+
+/// Encode a big endian 16bit int to the given \p buffer
+void StoreBigShort (unsigned char *buffer, unsigned short i);
+
+/// Encode a little endian 32bit int to the given \p buffer
+void StoreLittleLong (unsigned char *buffer, unsigned int i);
+
+/// Encode a little endian 16bit int to the given \p buffer
+void StoreLittleShort (unsigned char *buffer, unsigned short i);
 //@}
 
 //============================================================================
