@@ -1428,8 +1428,8 @@ float DrawQ_String_Font_Scale(float startx, float starty, const char *text, size
 			// E000..E0FF: emulate old-font characters (to still have smileys and such available)
 			if (shadow)
 			{
-				x += pix_x * r_textshadow.value;
-				y += pix_y * r_textshadow.value;
+				x += 1.0/pix_x * r_textshadow.value;
+				y += 1.0/pix_y * r_textshadow.value;
 			}
 			if (!fontmap || (ch <= 0xFF && fontmap->glyphs[ch].image) || (ch >= 0xE000 && ch <= 0xE0FF))
 			{
@@ -1574,8 +1574,8 @@ float DrawQ_String_Font_Scale(float startx, float starty, const char *text, size
 			}
 			if (shadow)
 			{
-				x -= pix_x * r_textshadow.value;
-				y -= pix_y * r_textshadow.value;
+				x -= 1.0/pix_x * r_textshadow.value;
+				y -= 1.0/pix_y * r_textshadow.value;
 			}
 		}
 	}
