@@ -503,7 +503,7 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean no_texture,
 	int map_index;
 	ft2_font_map_t *fmap, temp;
 
-	if (IS_NAN(size))
+	if (!(size > 0.001f && size < 1000.0f))
 		size = 0;
 
 	if (!size)
