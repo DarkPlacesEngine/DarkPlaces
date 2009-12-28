@@ -1670,8 +1670,6 @@ Returns the height of a given console line; calculates it if necessary.
 int Con_LineHeight(int lineno)
 {
 	con_lineinfo_t *li = &CON_LINES(lineno);
-	if ((li->mask & CON_MASK_DEVELOPER) && !developer.integer)
-		return 0;
 	if(li->height == -1)
 	{
 		float width = vid_conwidth.value;
@@ -1693,15 +1691,15 @@ If alpha is 0, the line is not drawn, but still wrapped and its height
 returned.
 ================
 */
-int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
+int Con_DrawConsoleLine(int mask_must, int mask_mustnot, float y, int lineno, float ymin, float ymax)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
 	con_lineinfo_t *li = &CON_LINES(lineno);
 
-	//if(con.lines[lineno].mask & CON_MASK_LOADEDHISTORY)
-	//	return 0;
-	if ((con.lines[lineno].mask & CON_MASK_DEVELOPER) && !developer.integer)
+	if((li->mask & mask_must) != mask_must)
+		return 0;
+	if((li->mask & mask_mustnot) != 0)
 		return 0;
 
 	ti.continuationString = "";
@@ -1717,7 +1715,6 @@ int Con_DrawConsoleLine(float y, int lineno, float ymin, float ymax)
 	return COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_DisplayLineFunc, &ti);
 }
 
-#if 0
 /*
 ================
 Con_LastVisibleLine
@@ -1726,7 +1723,7 @@ Calculates the last visible line index and how much to show of it based on
 con_backscroll.
 ================
 */
-static void Con_LastVisibleLine(int *last, int *limitlast)
+static void Con_LastVisibleLine(int mask_must, int mask_mustnot, int *last, int *limitlast)
 {
 	int lines_seen = 0;
 	int i;
@@ -1734,15 +1731,19 @@ static void Con_LastVisibleLine(int *last, int *limitlast)
 	if(con_backscroll < 0)
 		con_backscroll = 0;
 
+	*last = 0;
+
 	// now count until we saw con_backscroll actual lines
 	for(i = CON_LINES_COUNT - 1; i >= 0; --i)
+	if((CON_LINES(i).mask & mask_must) == mask_must)
+	if((CON_LINES(i).mask & mask_mustnot) == 0)
 	{
 		int h = Con_LineHeight(i);
 
 		// line is the last visible line?
+		*last = i;
 		if(lines_seen + h > con_backscroll && lines_seen <= con_backscroll)
 		{
-			*last = i;
 			*limitlast = lines_seen + h - con_backscroll;
 			return;
 		}
@@ -1753,11 +1754,8 @@ static void Con_LastVisibleLine(int *last, int *limitlast)
 	// if we get here, no line was on screen - scroll so that one line is
 	// visible then.
 	con_backscroll = lines_seen - 1;
-	*last = con.lines_first;
-		// FIXME uses con in a non abstracted way
 	*limitlast = 1;
 }
-#endif
 
 /*
 ================
@@ -1769,6 +1767,9 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
+	int mask_must = 0;
+	int mask_mustnot = developer.integer ? 0 : CON_MASK_DEVELOPER;
+
 	if (lines <= 0)
 		return;
 
@@ -1782,14 +1783,14 @@ void Con_DrawConsole (int lines)
 	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font_Size(engineversion, con_textsize.value, con_textsize.value, 0, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
-#if 1
+#if 0
 	{
 		int i;
 		int count = CON_LINES_COUNT;
 		float ymax = con_vislines - 2 * con_textsize.value;
 		float y = ymax + con_textsize.value * con_backscroll;
 		for (i = 0;i < count && y >= 0;i++)
-			y -= Con_DrawConsoleLine(y - con_textsize.value, CON_LINES_COUNT - 1 - i, 0, ymax) * con_textsize.value;
+			y -= Con_DrawConsoleLine(mask_must, mask_mustnot, y - con_textsize.value, CON_LINES_COUNT - 1 - i, 0, ymax) * con_textsize.value;
 		// fix any excessive scrollback for the next frame
 		if (i >= count && y >= 0)
 		{
@@ -1804,7 +1805,7 @@ void Con_DrawConsole (int lines)
 		int i, last, limitlast;
 		float y;
 		float ymax = con_vislines - 2 * con_textsize.value;
-		Con_LastVisibleLine(&last, &limitlast);
+		Con_LastVisibleLine(mask_must, mask_mustnot, &last, &limitlast);
 		y = ymax - con_textsize.value;
 
 		if(limitlast)
@@ -1814,7 +1815,7 @@ void Con_DrawConsole (int lines)
 
 		for(;;)
 		{
-			y -= Con_DrawConsoleLine(y, i, 0, ymax) * con_textsize.value;
+			y -= Con_DrawConsoleLine(mask_must, mask_mustnot, y, i, 0, ymax) * con_textsize.value;
 			if(i == 0)
 				break; // top of console buffer
 			if(y < 0)
