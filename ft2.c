@@ -1076,20 +1076,24 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			// double advance = (double)glyph->metrics.horiAdvance * map->sfx;
 
 			double bearingX = (glyph->metrics.horiBearingX >> 6) / map->size;
-			double bearingY = (glyph->metrics.horiBearingY >> 6) / map->size;
+			//double bearingY = (glyph->metrics.horiBearingY >> 6) / map->size;
 			double advance = (glyph->advance.x >> 6) / map->size;
-			double mWidth = (glyph->metrics.width >> 6) / map->size;
-			double mHeight = (glyph->metrics.height >> 6) / map->size;
+			//double mWidth = (glyph->metrics.width >> 6) / map->size;
+			//double mHeight = (glyph->metrics.height >> 6) / map->size;
 
-			mapglyph->vxmin = bearingX;
-			mapglyph->vxmax = bearingX + mWidth;
-			mapglyph->vymin = -bearingY;
-			mapglyph->vymax = mHeight - bearingY;
 			mapglyph->txmin = ( (double)(gC * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->txmax = mapglyph->txmin + (double)bmp->width / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->tymin = ( (double)(gR * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			mapglyph->tymax = mapglyph->tymin + (double)bmp->rows / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
-			//Con_Printf("dpi = %f %f (%f %d)\n", (mapglyph->vxmax - mapglyph->vxmin) / (mapglyph->txmax - mapglyph->txmin), (mapglyph->vymax - mapglyph->vymin) / (mapglyph->tymax - mapglyph->tymin), map->size, map->glyphSize);
+			//mapglyph->vxmin = bearingX;
+			//mapglyph->vxmax = bearingX + mWidth;
+			mapglyph->vxmin = glyph->bitmap_left / map->size;
+			mapglyph->vxmax = mapglyph->vxmin + bmp->width / map->size; // don't ask
+			//mapglyph->vymin = -bearingY;
+			//mapglyph->vymax = mHeight - bearingY;
+			mapglyph->vymin = -glyph->bitmap_top / map->size;
+			mapglyph->vymax = mapglyph->vymin + bmp->rows / map->size;
+			//Con_Printf("dpi = %f %f (%f %d) %d %d\n", bmp->width / (mapglyph->vxmax - mapglyph->vxmin), bmp->rows / (mapglyph->vymax - mapglyph->vymin), map->size, map->glyphSize, (int)fontface->size->metrics.x_ppem, (int)fontface->size->metrics.y_ppem);
 			//mapglyph->advance_x = advance * usefont->size;
 			mapglyph->advance_x = advance;
 			mapglyph->advance_y = 0;
