@@ -290,10 +290,11 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMO
 
 # Link
 # Note that Windows Vista users may need --large-address-aware because Vista seems to map over 500MB of application address space for its own purposes, which is a significant chunk taken out of the default 2GB address space, this option raises the limit to 4GB (or 3GB on Vista 32 and older versions of Windows).
-LDFLAGS_WINCOMMON=-lws2_32 -Wl,--large-address-aware
-LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG)
+# if using mingw64 you need to use LDFLAGS_WINCOMMON= on the commandline to get rid of this, otherwise it produces a compile error
+LDFLAGS_WINCOMMON=-Wl,--large-address-aware
+LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm -lws2_32
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lws2_32
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
