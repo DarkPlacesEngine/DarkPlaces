@@ -19,7 +19,7 @@ cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_SAVE, "gl_texturecompression
 cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
 cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
-cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates"};
+cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -98,7 +98,7 @@ typedef struct gltexture_s
 	void *updatacallback_data;
 	// --- [11/22/2007 Black]
 
-	// stores backup copy of texture for deferred texture updates (r_nopartialtextureupdates cvar)
+	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
 	unsigned char *bufferpixels;
 	qboolean buffermodified;
 
@@ -927,20 +927,6 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
 
-int R_RealGetTexture(rtexture_t *rt)
-{
-	if (rt)
-	{
-		gltexture_t *glt;
-		glt = (gltexture_t *)rt;
-		if (glt->flags & GLTEXF_DYNAMIC)
-			R_UpdateDynamicTexture(glt);
-		return glt->texnum;
-	}
-	else
-		return 0;
-}
-
 static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
 {
 	int i, size;
@@ -1157,30 +1143,34 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 			height = glt->tileheight - y;
 		if (width < 1 || height < 1)
 			return;
+		glt->dirty = true;
 		glt->buffermodified = true;
 		output += y*outputskip + x*bpp;
 		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
 			memcpy(output, input, width*bpp);
-		if (!(glt->flags & TEXF_MANUALFLUSHUPDATES))
-			R_FlushTexture(rt);
 	}
 	else
 		R_Upload(glt, data, x, y, 0, width, height, 1);
 }
 
-void R_FlushTexture(rtexture_t *rt)
+int R_RealGetTexture(rtexture_t *rt)
 {
-	gltexture_t *glt;
-	if (rt == NULL)
-		Host_Error("R_FlushTexture: no texture supplied");
-
-	// update part of the texture
-	glt = (gltexture_t *)rt;
-
-	if (!glt->buffermodified || !glt->bufferpixels)
-		return;
-	glt->buffermodified = false;
-	R_Upload(glt, glt->bufferpixels, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth);
+	if (rt)
+	{
+		gltexture_t *glt;
+		glt = (gltexture_t *)rt;
+		if (glt->flags & GLTEXF_DYNAMIC)
+			R_UpdateDynamicTexture(glt);
+		if (glt->buffermodified && glt->bufferpixels)
+		{
+			glt->buffermodified = false;
+			R_Upload(glt, glt->bufferpixels, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth);
+		}
+		glt->dirty = false;
+		return glt->texnum;
+	}
+	else
+		return 0;
 }
 
 void R_ClearTexture (rtexture_t *rt)
