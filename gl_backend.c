@@ -1565,24 +1565,59 @@ int R_Mesh_TexBound(unsigned int unitnum, int id)
 	return 0;
 }
 
-void R_Mesh_CopyToTexture(int texnum, int tx, int ty, int sx, int sy, int width, int height)
+void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int width, int height)
 {
-	R_Mesh_TexBind(0, texnum);
+	R_Mesh_TexBind(0, tex);
 	GL_ActiveTexture(0);CHECKGLERROR
 	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, tx, ty, sx, sy, width, height);CHECKGLERROR
 }
 
-void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle)
+void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	int tex2d, tex3d, texcubemap, texnum;
 	if (unitnum >= vid.teximageunits)
 		return;
-	// update 2d texture binding
-	if (unit->t2d != tex2d)
+	switch(vid.renderpath)
 	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (!tex)
+			tex = r_texture_white;
+		texnum = R_GetTexture(tex);
+		switch(tex->gltexturetypeenum)
 		{
+		case GL_TEXTURE_2D: if (unit->t2d != texnum) {GL_ActiveTexture(unitnum);unit->t2d = texnum;qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR}break;
+		case GL_TEXTURE_3D: if (unit->t3d != texnum) {GL_ActiveTexture(unitnum);unit->t3d = texnum;qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR}break;
+		case GL_TEXTURE_CUBE_MAP_ARB: if (unit->tcubemap != texnum) {GL_ActiveTexture(unitnum);unit->tcubemap = texnum;qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR}break;
+		case GL_TEXTURE_RECTANGLE_ARB: if (unit->trectangle != texnum) {GL_ActiveTexture(unitnum);unit->trectangle = texnum;qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR}break;
+		}
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		tex2d = 0;
+		tex3d = 0;
+		texcubemap = 0;
+		if (tex)
+		{
+			texnum = R_GetTexture(tex);
+			switch(tex->gltexturetypeenum)
+			{
+			case GL_TEXTURE_2D:
+				tex2d = texnum;
+				break;
+			case GL_TEXTURE_3D:
+				tex3d = texnum;
+				break;
+			case GL_TEXTURE_CUBE_MAP_ARB:
+				texcubemap = texnum;
+				break;
+			}
+		}
+		// update 2d texture binding
+		if (unit->t2d != tex2d)
+		{
+			GL_ActiveTexture(unitnum);
 			if (tex2d)
 			{
 				if (unit->t2d == 0)
@@ -1597,16 +1632,13 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 				}
 			}
+			unit->t2d = tex2d;
+			qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 		}
-		unit->t2d = tex2d;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
-	}
-	// update 3d texture binding
-	if (unit->t3d != tex3d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
+		// update 3d texture binding
+		if (unit->t3d != tex3d)
 		{
+			GL_ActiveTexture(unitnum);
 			if (tex3d)
 			{
 				if (unit->t3d == 0)
@@ -1621,16 +1653,13 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 					qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 				}
 			}
+			unit->t3d = tex3d;
+			qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 		}
-		unit->t3d = tex3d;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
-	}
-	// update cubemap texture binding
-	if (unit->tcubemap != texcubemap)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
+		// update cubemap texture binding
+		if (unit->tcubemap != texcubemap)
 		{
+			GL_ActiveTexture(unitnum);
 			if (texcubemap)
 			{
 				if (unit->tcubemap == 0)
@@ -1645,106 +1674,10 @@ void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubema
 					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 				}
 			}
+			unit->tcubemap = texcubemap;
+			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 		}
-		unit->tcubemap = texcubemap;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
-	}
-	// update rectangle texture binding
-	if (unit->trectangle != texrectangle)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
-		{
-			if (texrectangle)
-			{
-				if (unit->trectangle == 0)
-				{
-					qglEnable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-				}
-			}
-			else
-			{
-				if (unit->trectangle)
-				{
-					qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-				}
-			}
-		}
-		unit->trectangle = texrectangle;
-		qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
-	}
-}
-
-void R_Mesh_TexBind(unsigned int unitnum, int texnum)
-{
-	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= vid.teximageunits)
-		return;
-	// update 2d texture binding
-	if (unit->t2d != texnum)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
-		{
-			if (texnum)
-			{
-				if (unit->t2d == 0)
-				{
-					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-				}
-			}
-			else
-			{
-				if (unit->t2d)
-				{
-					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-				}
-			}
-		}
-		unit->t2d = texnum;
-		qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
-	}
-	// update 3d texture binding
-	if (unit->t3d)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
-		{
-			if (unit->t3d)
-			{
-				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
-			}
-		}
-		unit->t3d = 0;
-		qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
-	}
-	// update cubemap texture binding
-	if (unit->tcubemap != 0)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
-		{
-			if (unit->tcubemap)
-			{
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-			}
-		}
-		unit->tcubemap = 0;
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
-	}
-	// update rectangle texture binding
-	if (unit->trectangle != 0)
-	{
-		GL_ActiveTexture(unitnum);
-		if (unitnum < vid.texunits)
-		{
-			if (unit->trectangle)
-			{
-				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-			}
-		}
-		unit->trectangle = 0;
-		qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
+		break;
 	}
 }
 
