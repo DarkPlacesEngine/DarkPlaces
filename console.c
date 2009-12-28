@@ -1779,7 +1779,7 @@ void Con_DrawConsole (int lines)
 
 // draw the background
 	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic ("gfx/conback") : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
-	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font(engineversion, 0, false, FONT_CONSOLE) * con_textsize.value, lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
+	DrawQ_String_Font(vid_conwidth.integer - DrawQ_TextWidth_Font_Size(engineversion, con_textsize.value, con_textsize.value, 0, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
 #if 1
