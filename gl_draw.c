@@ -1330,7 +1330,7 @@ float DrawQ_String_Font_Scale(float startx, float starty, const char *text, size
 	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
 	if (!fontmap)
-		R_Mesh_TexBind(0, R_GetTexture(fnt->tex));
+		R_Mesh_TexBind(0, fnt->tex);
 	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
 	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1);

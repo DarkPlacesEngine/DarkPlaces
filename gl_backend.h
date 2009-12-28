@@ -87,11 +87,9 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, co
 // returns current texture bound to this identifier
 int R_Mesh_TexBound(unsigned int unitnum, int id);
 // copies a section of the framebuffer to a 2D texture
-void R_Mesh_CopyToTexture(int texnum, int tx, int ty, int sx, int sy, int width, int height);
-// sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
-void R_Mesh_TexBindAll(unsigned int unitnum, int tex2d, int tex3d, int texcubemap, int texrectangle);
-// equivalent to R_Mesh_TexBindAll(unitnum,tex2d,0,0,0)
-void R_Mesh_TexBind(unsigned int unitnum, int texnum);
+void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int width, int height);
+// bind a given texture to a given image unit
+void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex);
 // sets the texcoord matrix for a texenv unit, can be NULL or blank (will use identity)
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 // sets the combine state for a texenv unit

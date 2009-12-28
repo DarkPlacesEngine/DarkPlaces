@@ -2812,26 +2812,26 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	diffusecolorpants[0] = diffusecolorbase[0] * surfacepants[0];diffusecolorpants[1] = diffusecolorbase[1] * surfacepants[1];diffusecolorpants[2] = diffusecolorbase[2] * surfacepants[2];
 	ambientcolorshirt[0] = ambientcolorbase[0] * surfaceshirt[0];ambientcolorshirt[1] = ambientcolorbase[1] * surfaceshirt[1];ambientcolorshirt[2] = ambientcolorbase[2] * surfaceshirt[2];
 	diffusecolorshirt[0] = diffusecolorbase[0] * surfaceshirt[0];diffusecolorshirt[1] = diffusecolorbase[1] * surfaceshirt[1];diffusecolorshirt[2] = diffusecolorbase[2] * surfaceshirt[2];
-	R_Mesh_TexBind(0, R_GetTexture(basetexture));
+	R_Mesh_TexBind(0, basetexture);
 	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
 	R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
 	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 	switch(r_shadow_rendermode)
 	{
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN:
-		R_Mesh_TexBindAll(1, 0, R_GetTexture(r_shadow_attenuation3dtexture), 0, 0);
+		R_Mesh_TexBind(1, r_shadow_attenuation3dtexture);
 		R_Mesh_TexMatrix(1, &rsurface.entitytoattenuationxyz);
 		R_Mesh_TexCombine(1, GL_MODULATE, GL_MODULATE, 1, 1);
 		R_Mesh_TexCoordPointer(1, 3, rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset);
 		break;
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN:
-		R_Mesh_TexBind(2, R_GetTexture(r_shadow_attenuation2dtexture));
+		R_Mesh_TexBind(2, r_shadow_attenuation2dtexture);
 		R_Mesh_TexMatrix(2, &rsurface.entitytoattenuationz);
 		R_Mesh_TexCombine(2, GL_MODULATE, GL_MODULATE, 1, 1);
 		R_Mesh_TexCoordPointer(2, 3, rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset);
 		// fall through
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN:
-		R_Mesh_TexBind(1, R_GetTexture(r_shadow_attenuation2dtexture));
+		R_Mesh_TexBind(1, r_shadow_attenuation2dtexture);
 		R_Mesh_TexMatrix(1, &rsurface.entitytoattenuationxyz);
 		R_Mesh_TexCombine(1, GL_MODULATE, GL_MODULATE, 1, 1);
 		R_Mesh_TexCoordPointer(1, 3, rsurface.vertex3f, rsurface.vertex3f_bufferobject, rsurface.vertex3f_bufferoffset);
@@ -2841,16 +2841,16 @@ static void R_Shadow_RenderLighting_Light_Vertex(int firstvertex, int numvertice
 	default:
 		break;
 	}
-	//R_Mesh_TexBind(0, R_GetTexture(basetexture));
+	//R_Mesh_TexBind(0, basetexture);
 	R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, diffusecolorbase, ambientcolorbase);
 	if (dopants)
 	{
-		R_Mesh_TexBind(0, R_GetTexture(pantstexture));
+		R_Mesh_TexBind(0, pantstexture);
 		R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, diffusecolorpants, ambientcolorpants);
 	}
 	if (doshirt)
 	{
-		R_Mesh_TexBind(0, R_GetTexture(shirttexture));
+		R_Mesh_TexBind(0, shirttexture);
 		R_Shadow_RenderLighting_Light_Vertex_Pass(firstvertex, numvertices, numtriangles, element3i, diffusecolorshirt, ambientcolorshirt);
 	}
 }

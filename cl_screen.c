@@ -1731,7 +1731,7 @@ static void SCR_SetLoadingScreenTexture(void)
 	}
 
 	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP, NULL);
-	R_Mesh_CopyToTexture(R_GetTexture(loadingscreentexture), 0, 0, 0, 0, vid.width, vid.height);
+	R_Mesh_CopyToTexture(loadingscreentexture, 0, 0, 0, 0, vid.width, vid.height);
 
 	loadingscreentexture_vertex3f[2] = loadingscreentexture_vertex3f[5] = loadingscreentexture_vertex3f[8] = loadingscreentexture_vertex3f[11] = 0;
 	loadingscreentexture_vertex3f[0] = loadingscreentexture_vertex3f[9] = 0;
