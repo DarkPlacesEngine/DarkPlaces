@@ -37,6 +37,7 @@ cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0",
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
 cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
+cvar_t developer_font = {CVAR_SAVE, "developer_font", "0", "prints debug messages about fonts"};
 
 /*
 ================================================================================
@@ -257,6 +258,7 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_size_snapping);
 	Cvar_RegisterVariable(&r_font_hinting);
 	Cvar_RegisterVariable(&r_font_antialias);
+	Cvar_RegisterVariable(&developer_font);
 }
 
 /*
@@ -913,7 +915,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 		mapch = ch - map->start;
 
-		if (developer_extra.integer)
+		if (developer_font.integer)
 			Con_DPrint("glyphinfo: ------------- GLYPH INFO -----------------\n");
 
 		++gC;
@@ -991,23 +993,23 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		switch (bmp->pixel_mode)
 		{
 		case FT_PIXEL_MODE_MONO:
-			if (developer_extra.integer)
+			if (developer_font.integer)
 				Con_DPrint("glyphinfo:   Pixel Mode: MONO\n");
 			break;
 		case FT_PIXEL_MODE_GRAY2:
-			if (developer_extra.integer)
+			if (developer_font.integer)
 				Con_DPrint("glyphinfo:   Pixel Mode: GRAY2\n");
 			break;
 		case FT_PIXEL_MODE_GRAY4:
-			if (developer_extra.integer)
+			if (developer_font.integer)
 				Con_DPrint("glyphinfo:   Pixel Mode: GRAY4\n");
 			break;
 		case FT_PIXEL_MODE_GRAY:
-			if (developer_extra.integer)
+			if (developer_font.integer)
 				Con_DPrint("glyphinfo:   Pixel Mode: GRAY\n");
 			break;
 		default:
-			if (developer_extra.integer)
+			if (developer_font.integer)
 				Con_DPrintf("glyphinfo:   Pixel Mode: Unknown: %i\n", bmp->pixel_mode);
 			Mem_Free(data);
 			Con_Printf("ERROR: Unrecognized pixel mode for font %s size %f: %i\n", font->name, mapstart->size, bmp->pixel_mode);
@@ -1098,7 +1100,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			mapglyph->advance_x = advance;
 			mapglyph->advance_y = 0;
 
-			if (developer_extra.integer)
+			if (developer_font.integer)
 			{
 				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, gC, gR);
 				Con_DPrintf("glyphinfo:   %f, %f, %lu\n", bearingX, map->sfx, (unsigned long)glyph->metrics.horiBearingX);
@@ -1118,7 +1120,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 	// create a texture from the data now
 
-	if (developer_extra.integer)
+	if (developer_font.integer > 100)
 	{
 		// LordHavoc: why are we writing this?  And why not write it as TGA using the appropriate function?
 		// view using `display -depth 8 -size 512x512 name_page.rgba` (be sure to use a correct -size parameter)
