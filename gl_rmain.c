@@ -11759,17 +11759,6 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 				}
 			}
 		}
-		if (updated)
-		{
-			int count = model->brushq3.num_mergedlightmaps;
-			for (i = 0;i < count;i++)
-			{
-				if (model->brushq3.data_deluxemaps[i])
-					R_FlushTexture(model->brushq3.data_deluxemaps[i]);
-				if (model->brushq3.data_lightmaps[i])
-					R_FlushTexture(model->brushq3.data_lightmaps[i]);
-			}
-		}
 	}
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)
@@ -11889,17 +11878,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 			{
 				updated++;
 				R_BuildLightMap(ent, surfaces + j);
-			}
-		}
-		if (updated)
-		{
-			int count = model->brushq3.num_mergedlightmaps;
-			for (i = 0;i < count;i++)
-			{
-				if (model->brushq3.data_deluxemaps[i])
-					R_FlushTexture(model->brushq3.data_deluxemaps[i]);
-				if (model->brushq3.data_lightmaps[i])
-					R_FlushTexture(model->brushq3.data_lightmaps[i]);
 			}
 		}
 	}

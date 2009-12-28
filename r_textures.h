@@ -22,10 +22,8 @@
 #define TEXF_COMPARE 0x00000800
 // indicates texture should use lower precision where supported
 #define TEXF_LOWPRECISION 0x00001000
-// indicates texture should support R_UpdateTexture
+// indicates texture should support R_UpdateTexture, actual uploads may be delayed until R_Mesh_TexBind if gl_nopartialtextureupdates is on
 #define TEXF_ALLOWUPDATES 0x00002000
-// indicates texture should support R_FlushTexture (improving speed on multiple partial updates per draw)
-#define TEXF_MANUALFLUSHUPDATES 0x00004000
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION)
 
@@ -95,12 +93,9 @@ rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char 
 void R_FreeTexture(rtexture_t *rt);
 
 // update a portion of the image data of a texture, used by lightmap updates
-// and procedural textures such as video playback.
-// if TEXF_MANUALFLUSHUPDATES is used, you MUST call R_FlushTexture to apply the updates
+// and procedural textures such as video playback, actual uploads may be
+// delayed by gl_nopartialtextureupdates cvar until R_Mesh_TexBind uses it
 void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int width, int height);
-// if TEXF_MANUALFLUSHUPDATES is used, call this to apply the updates,
-// otherwise this function does nothing
-void R_FlushTexture(rtexture_t *rt);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
