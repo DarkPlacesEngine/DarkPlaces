@@ -5881,7 +5881,7 @@ static void *r_framedata_base;
 
 void R_FrameData_Reset(void)
 {
-	if (r_framedata_base);
+	if (r_framedata_base)
 		Mem_Free(r_framedata_base);
 	r_framedata_base = NULL;
 	r_framedata_size = 0;
