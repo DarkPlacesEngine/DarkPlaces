@@ -564,8 +564,21 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
 	if(fnt->tex == r_texture_notexture)
 	{
-		fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION)->tex;
-		strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
+		for (i = 0; i < MAX_FONT_FALLBACKS; ++i)
+		{
+			if (!fnt->fallbacks[i][0])
+				break;
+			fnt->tex = Draw_CachePic_Flags(fnt->fallbacks[i], CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
+			if(fnt->tex != r_texture_notexture)
+				break;
+		}
+		if(fnt->tex == r_texture_notexture)
+		{
+			fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION)->tex;
+			strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
+		}
+		else
+			dpsnprintf(widthfile, sizeof(widthfile), "%s.width", fnt->fallbacks[i]);
 	}
 	else
 		dpsnprintf(widthfile, sizeof(widthfile), "%s.width", fnt->texpath);
