@@ -35,7 +35,7 @@ CVars introduced with the freetype extension
 cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "disable freetype support for fonts entirely"};
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
-cvar_t r_font_autohinting = {CVAR_SAVE, "r_font_autohinting", "1", "enable autohinting if possible"};
+cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "2", "0 = no hinting, 1 = force autohinting, 2 = full hinting"};
 
 /*
 ================================================================================
@@ -254,7 +254,7 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_disable_freetype);
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
-	Cvar_RegisterVariable(&r_font_autohinting);
+	Cvar_RegisterVariable(&r_font_hinting);
 }
 
 /*
@@ -780,13 +780,11 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	else
 		fontface = (FT_Face)font->face;
 
-	load_flags = 0;
-	if (r_font_autohinting.integer == 0)
-		load_flags = FT_LOAD_NO_AUTOHINT;
-	if (r_font_autohinting.integer <= -1)
-		load_flags |= FT_LOAD_NO_HINTING;
-	if (r_font_autohinting.integer <= -2)
-		load_flags |= FT_LOAD_NO_AUTOHINT;
+	load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT;
+	if (r_font_hinting.integer == 1)
+		load_flags = FT_LOAD_FORCE_AUTOHINT;
+	else if (r_font_hinting.integer == 2)
+		load_flags = 0;
 
 	//status = qFT_Set_Pixel_Sizes((FT_Face)font->face, /*size*/0, mapstart->size);
 	//if (status)
