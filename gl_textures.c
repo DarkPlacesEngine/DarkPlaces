@@ -28,12 +28,8 @@ int		gl_filter_mag = GL_LINEAR;
 static mempool_t *texturemempool;
 
 // note: this must not conflict with TEXF_ flags in r_textures.h
-// cleared when a texture is uploaded
-#define GLTEXF_UPLOAD		0x00010000
 // bitmask for mismatch checking
 #define GLTEXF_IMPORTANTBITS (0)
-// set when image is uploaded and freed
-#define GLTEXF_DESTROYED	0x00040000
 // dynamic texture (treat texnum == 0 differently)
 #define GLTEXF_DYNAMIC		0x00080000
 
@@ -91,13 +87,13 @@ static int cubemapside[6] =
 
 typedef struct gltexture_s
 {
-	// this field is exposed to the R_GetTexture macro, for speed reasons
-	// (must be identical in rtexture_t)
+	// this portion of the struct is exposed to the R_GetTexture macro for
+	// speed reasons, must be identical in rtexture_t!
 	int texnum; // GL texture slot number
+	qboolean dirty; // indicates that R_RealGetTexture should be called
+	int gltexturetypeenum; // used by R_Mesh_TexBind
 
 	// dynamic texture stuff [11/22/2007 Black]
-	// used to hold the texture number of dirty textures   
-	int dirtytexnum;
 	updatecallback_t updatecallback;
 	void *updatacallback_data;
 	// --- [11/22/2007 Black]
@@ -250,10 +246,10 @@ void R_MarkDirtyTexture(rtexture_t *rt) {
 	}
 
 	// dont do anything if the texture is already dirty (and make sure this *is* a dynamic texture after all!)
-	if( !glt->dirtytexnum && glt->flags & GLTEXF_DYNAMIC ) {
-		glt->dirtytexnum = glt->texnum;
+	if (glt->flags & GLTEXF_DYNAMIC)
+	{
 		// mark it as dirty, so R_RealGetTexture gets called
-		glt->texnum = 0;
+		glt->dirty = true;
 	}
 }
 
@@ -266,14 +262,10 @@ void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void 
 	glt->flags |= GLTEXF_DYNAMIC;
 	glt->updatecallback = updatecallback;
 	glt->updatacallback_data = data;
-	glt->dirtytexnum = 0;
 }
 
 static void R_UpdateDynamicTexture(gltexture_t *glt) {
-	glt->texnum = glt->dirtytexnum;
-	// reset dirtytexnum again (not dirty anymore)
-	glt->dirtytexnum = 0;
-	// TODO: now assert that t->texnum != 0 ?
+	glt->dirty = false;
 	if( glt->updatecallback ) {
 		glt->updatecallback( (rtexture_t*) glt, glt->updatacallback_data );
 	}
@@ -300,7 +292,7 @@ void R_FreeTexture(rtexture_t *rt)
 	else
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
-	if (!(glt->flags & GLTEXF_UPLOAD))
+	if (glt->texnum)
 	{
 		CHECKGLERROR
 		qglDeleteTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
@@ -406,7 +398,7 @@ static void GL_TextureMode_f (void)
 		for (glt = pool->gltchain;glt;glt = glt->chain)
 		{
 			// only update already uploaded images
-			if (!(glt->flags & (GLTEXF_UPLOAD | TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
+			if (glt->texnum && !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
 			{
 				oldbindtexnum = R_Mesh_TexBound(0, gltexturetypebindingenums[glt->texturetype]);
 				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
@@ -530,7 +522,7 @@ void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean print
 		for (glt = pool->gltchain;glt;glt = glt->chain)
 		{
 			glsize = R_CalcTexelDataSize(glt);
-			isloaded = !(glt->flags & GLTEXF_UPLOAD);
+			isloaded = glt->texnum != 0;
 			pooltotal++;
 			pooltotalt += glsize;
 			pooltotalp += glt->inputdatasize;
@@ -662,7 +654,7 @@ void R_Textures_Frame (void)
 			for (glt = pool->gltchain;glt;glt = glt->chain)
 			{
 				// only update already uploaded images
-				if ((glt->flags & (GLTEXF_UPLOAD | TEXF_MIPMAP)) == TEXF_MIPMAP)
+				if (glt->texnum && (glt->flags & TEXF_MIPMAP) == TEXF_MIPMAP)
 				{
 					oldbindtexnum = R_Mesh_TexBound(0, gltexturetypebindingenums[glt->texturetype]);
 
@@ -821,7 +813,9 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		prevbuffer = colorconvertbuffer;
 	}
 
-	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP | GLTEXF_UPLOAD)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth && (fragx != 0 || fragy != 0 || fragwidth != glt->tilewidth || fragheight != glt->tileheight))
+	// upload the image - preferring to do only complete uploads (drivers do not really like partial updates)
+
+	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth && (fragx != 0 || fragy != 0 || fragwidth != glt->tilewidth || fragheight != glt->tileheight))
 	{
 		// update a portion of the image
 		switch(glt->texturetype)
@@ -841,9 +835,6 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	{
 		if (fragx || fragy || fragz || glt->inputwidth != fragwidth || glt->inputheight != fragheight || glt->inputdepth != fragdepth)
 			Host_Error("R_Upload: partial update not allowed on initial upload or in combination with PICMIP or MIPMAP\n");
-
-		// upload the image for the first time
-		glt->flags &= ~GLTEXF_UPLOAD;
 
 		// cubemaps contain multiple images and thus get processed a bit differently
 		if (glt->texturetype != GLTEXTURETYPE_CUBEMAP)
@@ -944,21 +935,6 @@ int R_RealGetTexture(rtexture_t *rt)
 		glt = (gltexture_t *)rt;
 		if (glt->flags & GLTEXF_DYNAMIC)
 			R_UpdateDynamicTexture(glt);
-		if (glt->flags & GLTEXF_UPLOAD)
-		{
-			CHECKGLERROR
-			qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
-			R_Upload(glt, glt->inputtexels, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
-			if (glt->inputtexels)
-			{
-				Mem_Free(glt->inputtexels);
-				glt->inputtexels = NULL;
-				glt->flags |= GLTEXF_DESTROYED;
-			}
-			else if (glt->flags & GLTEXF_DESTROYED)
-				Con_Printf("R_GetTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
-		}
-
 		return glt->texnum;
 	}
 	else
@@ -1055,7 +1031,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->inputwidth = width;
 	glt->inputheight = height;
 	glt->inputdepth = depth;
-	glt->flags = flags | GLTEXF_UPLOAD;
+	glt->flags = flags;
 	glt->textype = texinfo;
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
@@ -1066,8 +1042,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = 0;
+	glt->dirty = false;
+	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
 	// init the dynamic texture attributes, too [11/22/2007 Black]
-	glt->dirtytexnum = 0;
 	glt->updatecallback = NULL;
 	glt->updatacallback_data = NULL;
 
