@@ -49,6 +49,8 @@ typedef struct rtexture_s
 {
 	// this is exposed (rather than private) for speed reasons only
 	int texnum;
+	qboolean dirty;
+	int gltexturetypeenum; // exposed for use in R_Mesh_TexBind
 }
 rtexture_t;
 
@@ -102,7 +104,7 @@ void R_FlushTexture(rtexture_t *rt);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
-#define R_GetTexture(rt) ((rt) ? ((rt)->texnum > 0 ? (rt)->texnum : R_RealGetTexture(rt)) : r_texture_white->texnum)
+#define R_GetTexture(rt) ((rt) ? ((rt)->dirty ? R_RealGetTexture(rt) : (rt)->texnum) : r_texture_white->texnum)
 int R_RealGetTexture (rtexture_t *rt);
 
 // returns width of texture, as was specified when it was uploaded
