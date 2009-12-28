@@ -5899,7 +5899,7 @@ void R_FrameData_NewFrame(void)
 	if (r_framedata_size != wantedsize)
 	{
 		r_framedata_size = wantedsize;
-		if (r_framedata_base);
+		if (r_framedata_base)
 			Mem_Free(r_framedata_base);
 		r_framedata_base = Mem_Alloc(r_main_mempool, r_framedata_size);
 	}
