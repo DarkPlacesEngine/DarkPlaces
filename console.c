@@ -1806,11 +1806,11 @@ void Con_DrawConsole (int lines)
 		float y;
 		float ymax = con_vislines - 2 * con_textsize.value;
 		Con_LastVisibleLine(mask_must, mask_mustnot, &last, &limitlast);
+		//Con_LastVisibleLine(mask_must, mask_mustnot, &last, &limitlast);
 		y = ymax - con_textsize.value;
 
 		if(limitlast)
 			y += (CON_LINES(last).height - limitlast) * con_textsize.value;
-				// FIXME uses con in a non abstracted way
 		i = last;
 
 		for(;;)
