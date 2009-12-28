@@ -35,7 +35,8 @@ CVars introduced with the freetype extension
 cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "disable freetype support for fonts entirely"};
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
-cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "2", "0 = no hinting, 1 = force autohinting, 2 = full hinting"};
+cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
+cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
 
 /*
 ================================================================================
@@ -255,6 +256,7 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
 	Cvar_RegisterVariable(&r_font_hinting);
+	Cvar_RegisterVariable(&r_font_antialias);
 }
 
 /*
@@ -780,11 +782,44 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	else
 		fontface = (FT_Face)font->face;
 
-	load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT;
-	if (r_font_hinting.integer == 1)
-		load_flags = FT_LOAD_FORCE_AUTOHINT;
-	else if (r_font_hinting.integer == 2)
-		load_flags = 0;
+	switch(r_font_antialias.integer)
+	{
+		case 0:
+			switch(r_font_hinting.integer)
+			{
+				case 0:
+					load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT | FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME;
+					break;
+				case 1:
+				case 2:
+					load_flags = FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME;
+					break;
+				default:
+				case 3:
+					load_flags = FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME;
+					break;
+			}
+			break;
+		default:
+		case 1:
+			switch(r_font_hinting.integer)
+			{
+				case 0:
+					load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT | FT_LOAD_TARGET_NORMAL;
+					break;
+				case 1:
+					load_flags = FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_LIGHT;
+					break;
+				case 2:
+					load_flags = FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL;
+					break;
+				default:
+				case 3:
+					load_flags = FT_LOAD_TARGET_NORMAL;
+					break;
+			}
+			break;
+	}
 
 	//status = qFT_Set_Pixel_Sizes((FT_Face)font->face, /*size*/0, mapstart->size);
 	//if (status)
@@ -990,14 +1025,14 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				for (x = 0; x < bmp->width; x += 8)
 				{
 					unsigned char ch = *src++;
-					*dst = 255 * ((ch & 0x80) >> 7); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x40) >> 6); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x20) >> 5); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x10) >> 4); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x08) >> 3); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x04) >> 2); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x02) >> 1); dst += bytesPerPixel;
-					*dst = 255 * ((ch & 0x01) >> 0); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x80) >> 7); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x40) >> 6); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x20) >> 5); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x10) >> 4); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x08) >> 3); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x04) >> 2); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x02) >> 1); dst += bytesPerPixel;
+					*dst = 255 * !!((ch & 0x01) >> 0); dst += bytesPerPixel;
 				}
 				break;
 			case FT_PIXEL_MODE_GRAY2:
@@ -1016,8 +1051,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				for (x = 0; x < bmp->width; x += 2)
 				{
 					unsigned char ch = *src++;
-					*dst = ( ((ch & 0xF0) >> 4) * 0x24); dst += bytesPerPixel;
-					*dst = ( ((ch & 0x0F) ) * 0x24); dst += bytesPerPixel;
+					*dst = ( ((ch & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
+					*dst = ( ((ch & 0x0F) ) * 0x11); dst += bytesPerPixel;
 				}
 				break;
 			case FT_PIXEL_MODE_GRAY:
@@ -1054,6 +1089,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			mapglyph->txmax = mapglyph->txmin + (double)bmp->width / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->tymin = ( (double)(gR * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			mapglyph->tymax = mapglyph->tymin + (double)bmp->rows / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
+			//Con_Printf("dpi = %f %f (%f %d)\n", (mapglyph->vxmax - mapglyph->vxmin) / (mapglyph->txmax - mapglyph->txmin), (mapglyph->vymax - mapglyph->vymin) / (mapglyph->tymax - mapglyph->tymin), map->size, map->glyphSize);
 			//mapglyph->advance_x = advance * usefont->size;
 			mapglyph->advance_x = advance;
 			mapglyph->advance_y = 0;
