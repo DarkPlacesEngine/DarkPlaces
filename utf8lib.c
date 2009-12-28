@@ -78,9 +78,13 @@ findchar:
 		goto findchar;
 	}
 	if(i + bits > _maxlen) {
+		/*
 		if (_start) *_start = i;
 		if (_len) *_len = 0;
 		return false;
+		*/
+		++i;
+		goto findchar;
 	}
 	// turn bt into a mask and give ch a starting value
 	--bt;
