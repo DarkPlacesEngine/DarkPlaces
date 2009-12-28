@@ -35,6 +35,7 @@ CVars introduced with the freetype extension
 cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "disable freetype support for fonts entirely"};
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
+cvar_t r_font_autohinting = {CVAR_SAVE, "r_font_autohinting", "1", "enable autohinting if possible"};
 
 /*
 ================================================================================
@@ -253,6 +254,7 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_disable_freetype);
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
+	Cvar_RegisterVariable(&r_font_autohinting);
 }
 
 /*
@@ -755,6 +757,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	FT_ULong ch, mapch;
 	int status;
 	int tp;
+	FT_Int32 load_flags;
 
 	int pitch;
 	int gR, gC; // glyph position: row and column
@@ -776,6 +779,14 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		fontface = (FT_Face)font->next->face;
 	else
 		fontface = (FT_Face)font->face;
+
+	load_flags = 0;
+	if (r_font_autohinting.integer == 0)
+		load_flags = FT_LOAD_NO_AUTOHINT;
+	if (r_font_autohinting.integer <= -1)
+		load_flags |= FT_LOAD_NO_HINTING;
+	if (r_font_autohinting.integer <= -2)
+		load_flags |= FT_LOAD_NO_AUTOHINT;
 
 	//status = qFT_Set_Pixel_Sizes((FT_Face)font->face, /*size*/0, mapstart->size);
 	//if (status)
@@ -903,7 +914,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				glyphIndex = qFT_Get_Char_Index(face, ch);
 				if (glyphIndex == 0)
 					continue;
-				status = qFT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER);
+				status = qFT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER | load_flags);
 				if (status)
 					continue;
 				break;
@@ -921,7 +932,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		{
 			usefont = font;
 			face = font->face;
-			status = qFT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER);
+			status = qFT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER | load_flags);
 			if (status)
 			{
 				//Con_Printf("failed to load glyph %lu for %s\n", glyphIndex, font->name);
