@@ -48,7 +48,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "qtypes.h"
 
-extern char *buildstring;
+extern const char *buildstring;
 extern char engineversion[128];
 
 #define GAMENAME "id1"
