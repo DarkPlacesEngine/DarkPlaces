@@ -52,11 +52,11 @@ size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, 
  */
 extern Uchar u8_quake2utf8map[256];
 // these defines get a bit tricky, as c and e may be aliased to the same variable
-#define u8_getchar(c,e) (utf8_enable.integer ? u8_getchar_utf8_enabled(c,e) : (u8_quake2utf8map[(*((unsigned char **)(e)) = ((unsigned char *)(c)) + 1)[-1]]))
-#define u8_getchar_noendptr(c) (utf8_enable.integer ? u8_getchar_utf8_enabled(c,NULL) : (u8_quake2utf8map[*((unsigned char *)(c))]))
+#define u8_getchar(c,e) (utf8_enable.integer ? u8_getchar_utf8_enabled(c,e) : (u8_quake2utf8map[(unsigned char)(*(e) = (c) + 1)[-1]]))
+#define u8_getchar_noendptr(c) (utf8_enable.integer ? u8_getchar_utf8_enabled(c,NULL) : (u8_quake2utf8map[(unsigned char)*(c)]))
 #define u8_getchar_check(c,e) ((e) ? u8_getchar((c),(e)) : u8_getchar_noendptr((c)))
-#define u8_getnchar(c,e,n) (utf8_enable.integer ? u8_getnchar_utf8_enabled(c,e,n) : ((n) <= 0 ? ((*(e) = c), 0) : (u8_quake2utf8map[(*((unsigned char **)(e)) = ((unsigned char *)(c)) + 1)[-1]])))
-#define u8_getnchar_noendptr(c,n) (utf8_enable.integer ? u8_getnchar_utf8_enabled(c,NULL,n) : ((n) <= 0 ? 0  : (u8_quake2utf8map[*((unsigned char *)(c))])))
+#define u8_getnchar(c,e,n) (utf8_enable.integer ? u8_getnchar_utf8_enabled(c,e,n) : ((n) <= 0 ? ((*(e) = c), 0) : (u8_quake2utf8map[(unsigned char)(*(e) = (c) + 1)[-1]])))
+#define u8_getnchar_noendptr(c,n) (utf8_enable.integer ? u8_getnchar_utf8_enabled(c,NULL,n) : ((n) <= 0 ? 0  : (u8_quake2utf8map[(unsigned char)*(c)])))
 #define u8_getnchar_check(c,e,n) ((e) ? u8_getchar((c),(e),(n)) : u8_getchar_noendptr((c),(n)))
 
 #endif // UTF8LIB_H__
