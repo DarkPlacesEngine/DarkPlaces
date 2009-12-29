@@ -5057,7 +5057,7 @@ void VM_str2chr (void)
 
 	if((unsigned)index < strlen(s))
 	{
-		ch = u8_getchar(s + index, NULL);
+		ch = u8_getchar_noendptr(s + index);
 		PRVM_G_FLOAT(OFS_RETURN) = ch;
 	}
 	else
