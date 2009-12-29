@@ -20,6 +20,36 @@ UTF-8 encoding and decoding functions follow.
 ================================================================================
 */
 
+unsigned char utf8_lengths[256] = { // 0 = invalid
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // ascii characters
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x80 - 0xBF are within multibyte sequences
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // they could be interpreted as 2-byte starts but
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // the codepoint would be < 127
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // C0 and C1 would also result in overlong encodings
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+	3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+	4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	// with F5 the codepoint is above 0x10FFFF,
+	// F8-FB would start 5-byte sequences
+	// FC-FD would start 6-byte sequences
+	// ...
+};
+Uchar utf8_range[5] = {
+	1,       // invalid - let's not allow the creation of 0-bytes :P
+	1,       // ascii minimum
+	0x80,    // 2-byte minimum
+	0x800,   // 3-byte minimum
+	0x10000, // 4-byte minimum
+};
+
 /** Analyze the next character and return various information if requested.
  * @param _s      An utf-8 string.
  * @param _start  Filled with the start byte-offset of the next valid character
@@ -32,21 +62,51 @@ UTF-8 encoding and decoding functions follow.
 static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch, size_t _maxlen)
 {
 	const unsigned char *s = (const unsigned char*)_s;
-	unsigned char bt, bc;
+	unsigned char bt;//, bc;
 	size_t i;
 	size_t bits, j;
 	Uchar ch;
 
 	i = 0;
 findchar:
+	while (i < _maxlen && s[i] && (bits = utf8_lengths[s[i]]) == 0)
+		++i;
 
+	if (i >= _maxlen || !s[i]) {
+		if (_start) *_start = i;
+		if (_len) *_len = 0;
+		return false;
+	}
+	
+	if (bits == 1) { // ascii
+		if (_start) *_start = i;
+		if (_len) *_len = 1;
+		if (_ch) *_ch = (Uchar)s[i];
+		return true;
+	}
+
+	ch = (s[i] & (0xFF >> bits));
+	for (j = 1; j < bits; ++j)
+	{
+		if ( (s[i+j] & 0xC0) != 0x80 )
+		{
+			i += j;
+			goto findchar;
+		}
+		ch = (ch << 6) | (s[i+j] & 0x3F);
+	}
+	if (ch < utf8_range[bits] || ch >= 0x10FFFF)
+	{
+		i += bits;
+		goto findchar;
+	}
+#if 0
 	// <0xC2 is always an overlong encoding, they're invalid, thus skipped
 	while (i < _maxlen && s[i] && s[i] >= 0x80 && s[i] < 0xC2) {
 		//fprintf(stderr, "skipping\n");
 		++i;
 	}
 
-	//fprintf(stderr, "checking\n");
 	// If we hit the end, well, we're out and invalid
 	if(i >= _maxlen || !s[i]) {
 		if (_start) *_start = i;
@@ -54,8 +114,8 @@ findchar:
 		return false;
 	}
 
-	//fprintf(stderr, "checking ascii\n");
-	// ascii characters
+	// I'll leave that in - if you remove it, also change the part below
+	// to support 1-byte chars correctly
 	if (s[i] < 0x80)
 	{
 		if (_start) *_start = i;
@@ -64,7 +124,6 @@ findchar:
 		//fprintf(stderr, "valid ascii\n");
 		return true;
 	}
-	//fprintf(stderr, "checking length\n");
 
 	// Figure out the next char's length
 	bc = s[i];
@@ -117,6 +176,7 @@ findchar:
 		//fprintf(stderr, "overlong: %i bytes for %x\n", bits, ch);
 		goto findchar;
 	}
+#endif
 
 	if (_start)
 		*_start = i;
