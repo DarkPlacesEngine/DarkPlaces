@@ -198,6 +198,11 @@ void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
+void (GLAPIENTRY *qglGetTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglGetTexParameteriv)(GLenum target, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGetTexLevelParameterfv)(GLenum target, GLint level, GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglGetTexLevelParameteriv)(GLenum target, GLint level, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGetTexImage)(GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels);
 void (GLAPIENTRY *qglHint)(GLenum target, GLenum mode);
 
 void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
@@ -534,6 +539,11 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexParameterf", (void **) &qglTexParameterf},
 	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
+	{"glGetTexImage", (void **) &qglGetTexImage},
+	{"glGetTexParameterfv", (void **) &qglGetTexParameterfv},
+	{"glGetTexParameteriv", (void **) &qglGetTexParameteriv},
+	{"glGetTexLevelParameterfv", (void **) &qglGetTexLevelParameterfv},
+	{"glGetTexLevelParameteriv", (void **) &qglGetTexLevelParameteriv},
 	{"glHint", (void **) &qglHint},
 //	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
@@ -824,6 +834,7 @@ void VID_CheckExtensions(void)
 	vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
+	vid.support.ext_texture_compression_s3tc = GL_CheckExtension("GL_EXT_texture_compression_s3tc", NULL, "-nos3tc", false);
 	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
@@ -841,6 +852,7 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
 // COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
 // COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
+// COMMANDLINEOPTION: GL: -nos3tc disables GL_EXT_texture_compression_s3tc (which allows use of .dds texture caching)
 // COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
 // COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
 // COMMANDLINEOPTION: GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)

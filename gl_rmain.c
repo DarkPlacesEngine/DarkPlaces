@@ -31,9 +31,11 @@ rtexturepool_t *r_main_texturepool;
 
 static int r_frame = 0; ///< used only by R_GetCurrentTexture
 
-qboolean r_loadnormalmap;
-qboolean r_loadgloss;
+static qboolean r_loadnormalmap;
+static qboolean r_loadgloss;
 qboolean r_loadfog;
+static qboolean r_loaddds;
+static qboolean r_savedds;
 
 //
 // screen size info
@@ -106,6 +108,9 @@ cvar_t gl_fogblue = {0, "gl_fogblue","0.3", "nehahra fog color blue value (for N
 cvar_t gl_fogstart = {0, "gl_fogstart", "0", "nehahra fog start distance (for Nehahra compatibility only)"};
 cvar_t gl_fogend = {0, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
 cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
+
+cvar_t r_texture_dds_load = {CVAR_SAVE, "r_texture_dds_load", "0", "load compressed dds/filename.dds texture instead of filename.tga, if the file exists (requires driver support)"};
+cvar_t r_texture_dds_save = {CVAR_SAVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
 
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
 static cvar_t gl_combine = {CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
@@ -5006,9 +5011,13 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	unsigned char *pixels;
 	unsigned char *bumppixels;
 	unsigned char *basepixels = NULL;
-	int basepixels_width;
-	int basepixels_height;
+	int basepixels_width = 0;
+	int basepixels_height = 0;
 	skinframe_t *skinframe;
+	rtexture_t *ddsbase = NULL;
+	qboolean ddshasalpha = false;
+	float ddsavgcolor[4];
+	char basename[MAX_QPATH];
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -5020,9 +5029,15 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	if (skinframe && skinframe->base)
 		return skinframe;
 
-	basepixels = loadimagepixelsbgra(name, complain, true);
-	if (basepixels == NULL)
-		return NULL;
+	Image_StripImageExtension(name, basename, sizeof(basename));
+
+	// check for DDS texture file first
+	if (!r_loaddds || !(ddsbase = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s.dds", basename), textureflags, &ddshasalpha, ddsavgcolor)))
+	{
+		basepixels = loadimagepixelsbgra(name, complain, true);
+		if (basepixels == NULL)
+			return NULL;
+	}
 
 	if (developer_loading.integer)
 		Con_Printf("loading skin \"%s\"\n", name);
@@ -5032,50 +5047,75 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, true);
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
-	skinframe->base = r_texture_notexture;
+	skinframe->base = NULL;
 	skinframe->pants = NULL;
 	skinframe->shirt = NULL;
-	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->nmap = NULL;
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
 	skinframe->hasalpha = false;
 
-	basepixels_width = image_width;
-	basepixels_height = image_height;
-	skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
-
-	if (textureflags & TEXF_ALPHA)
+	if (ddsbase)
 	{
-		for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
-		{
-			if (basepixels[j] < 255)
-			{
-				skinframe->hasalpha = true;
-				break;
-			}
-		}
+		skinframe->base = ddsbase;
+		skinframe->hasalpha = ddshasalpha;
+		VectorCopy(ddsavgcolor, skinframe->avgcolor);
 		if (r_loadfog && skinframe->hasalpha)
+			skinframe->fog = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_mask.dds", skinframe->basename), textureflags | TEXF_ALPHA, NULL, NULL);
+		//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
+	}
+	else
+	{
+		basepixels_width = image_width;
+		basepixels_height = image_height;
+		skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (textureflags & TEXF_ALPHA)
 		{
-			// has transparent pixels
-			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
-			for (j = 0;j < image_width * image_height * 4;j += 4)
+			for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
 			{
-				pixels[j+0] = 255;
-				pixels[j+1] = 255;
-				pixels[j+2] = 255;
-				pixels[j+3] = basepixels[j+3];
+				if (basepixels[j] < 255)
+				{
+					skinframe->hasalpha = true;
+					break;
+				}
 			}
-			skinframe->fog = R_LoadTexture2D (r_main_texturepool, va("%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
-			Mem_Free(pixels);
+			if (r_loadfog && skinframe->hasalpha)
+			{
+				// has transparent pixels
+				pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
+				for (j = 0;j < image_width * image_height * 4;j += 4)
+				{
+					pixels[j+0] = 255;
+					pixels[j+1] = 255;
+					pixels[j+2] = 255;
+					pixels[j+3] = basepixels[j+3];
+				}
+				skinframe->fog = R_LoadTexture2D (r_main_texturepool, va("%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+				Mem_Free(pixels);
+			}
 		}
+		R_SKINFRAME_LOAD_AVERAGE_COLORS(basepixels_width * basepixels_height, basepixels[4 * pix + comp]);
+		//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->base)
+			R_SaveTextureDDSFile(skinframe->base, va("dds/%s.dds", skinframe->basename), true);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->fog)
+			R_SaveTextureDDSFile(skinframe->fog, va("dds/%s_mask.dds", skinframe->basename), true);
 	}
 
-	R_SKINFRAME_LOAD_AVERAGE_COLORS(basepixels_width * basepixels_height, basepixels[4 * pix + comp]);
-	//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
+	if (r_loaddds)
+	{
+		if (r_loadnormalmap)
+			skinframe->nmap = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_norm.dds", skinframe->basename), textureflags | TEXF_ALPHA, NULL, NULL);
+		skinframe->glow = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_glow.dds", skinframe->basename), textureflags, NULL, NULL);
+		if (r_loadgloss)
+			skinframe->gloss = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_gloss.dds", skinframe->basename), textureflags, NULL, NULL);
+		skinframe->pants = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_pants.dds", skinframe->basename), textureflags, NULL, NULL);
+		skinframe->shirt = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_shirt.dds", skinframe->basename), textureflags, NULL, NULL);
+	}
 
 	// _norm is the name used by tenebrae and has been adopted as standard
-	if (r_loadnormalmap)
+	if (r_loadnormalmap && skinframe->nmap == NULL)
 	{
 		if ((pixels = loadimagepixelsbgra(va("%s_norm", skinframe->basename), false, false)) != NULL)
 		{
@@ -5098,14 +5138,46 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | skinframe->textureflags) & (gl_texturecompression_normal.integer ? ~0 : ~TEXF_COMPRESS), NULL);
 			Mem_Free(pixels);
 		}
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->nmap)
+			R_SaveTextureDDSFile(skinframe->nmap, va("dds/%s_norm.dds", skinframe->basename), true);
 	}
-	// _luma is supported for tenebrae compatibility
-	// (I think it's a very stupid name, but oh well)
+
+	// _luma is supported only for tenebrae compatibility
 	// _glow is the preferred name
-	if ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false))) {skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_glow.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if (r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false))) {skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_gloss.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if ((pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false))) {skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
-	if ((pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false))) {skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);Mem_Free(pixels);pixels = NULL;}
+	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false))))
+	{
+		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_glow.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->glow)
+			R_SaveTextureDDSFile(skinframe->glow, va("dds/%s_glow.dds", skinframe->basename), true);
+		Mem_Free(pixels);pixels = NULL;
+	}
+
+	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false)))
+	{
+		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_gloss.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->gloss)
+			R_SaveTextureDDSFile(skinframe->gloss, va("dds/%s_gloss.dds", skinframe->basename), true);
+		Mem_Free(pixels);
+		pixels = NULL;
+	}
+
+	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false)))
+	{
+		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->pants)
+			R_SaveTextureDDSFile(skinframe->pants, va("dds/%s_pants.dds", skinframe->basename), true);
+		Mem_Free(pixels);
+		pixels = NULL;
+	}
+
+	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false)))
+	{
+		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->shirt)
+			R_SaveTextureDDSFile(skinframe->shirt, va("dds/%s_shirt.dds", skinframe->basename), true);
+		Mem_Free(pixels);
+		pixels = NULL;
+	}
 
 	if (basepixels)
 		Mem_Free(basepixels);
@@ -5130,10 +5202,10 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
-	skinframe->base = r_texture_notexture;
+	skinframe->base = NULL;
 	skinframe->pants = NULL;
 	skinframe->shirt = NULL;
-	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->nmap = NULL;
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
@@ -5198,10 +5270,10 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
-	skinframe->base = r_texture_notexture;
+	skinframe->base = NULL;
 	skinframe->pants = NULL;
 	skinframe->shirt = NULL;
-	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->nmap = NULL;
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
@@ -5318,10 +5390,10 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
-	skinframe->base = r_texture_notexture;
+	skinframe->base = NULL;
 	skinframe->pants = NULL;
 	skinframe->shirt = NULL;
-	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->nmap = NULL;
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
@@ -5365,10 +5437,10 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	skinframe = R_SkinFrame_Find("missing", TEXF_FORCENEAREST, 0, 0, 0, true);
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
-	skinframe->base = r_texture_notexture;
+	skinframe->base = NULL;
 	skinframe->pants = NULL;
 	skinframe->shirt = NULL;
-	skinframe->nmap = r_texture_blanknormalmap;
+	skinframe->nmap = NULL;
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
@@ -5445,6 +5517,9 @@ void gl_main_start(void)
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
 	r_texture_gammaramps = NULL;
+
+	r_loaddds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_load.integer;
+	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
 
 	switch(vid.renderpath)
 	{
@@ -5658,6 +5733,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fog_exp2);
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_transparentdepthmasking);
+	Cvar_RegisterVariable(&r_texture_dds_load);
+	Cvar_RegisterVariable(&r_texture_dds_save);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&r_glsl);
@@ -8441,9 +8518,13 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	if (t->currentskinframe->qpixels)
 		R_SkinFrame_GenerateTexturesFromQPixels(t->currentskinframe, t->colormapping);
 	t->basetexture = (!t->colormapping && t->currentskinframe->merged) ? t->currentskinframe->merged : t->currentskinframe->base;
+	if (!t->basetexture)
+		t->basetexture = r_texture_notexture;
 	t->pantstexture = t->colormapping ? t->currentskinframe->pants : NULL;
 	t->shirttexture = t->colormapping ? t->currentskinframe->shirt : NULL;
 	t->nmaptexture = t->currentskinframe->nmap;
+	if (!t->nmaptexture)
+		t->nmaptexture = r_texture_blanknormalmap;
 	t->glosstexture = r_texture_black;
 	t->glowtexture = t->currentskinframe->glow;
 	t->fogtexture = t->currentskinframe->fog;
@@ -8453,6 +8534,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->backgroundnmaptexture = t->backgroundcurrentskinframe->nmap;
 		t->backgroundglosstexture = r_texture_black;
 		t->backgroundglowtexture = t->backgroundcurrentskinframe->glow;
+		if (!t->backgroundnmaptexture)
+			t->backgroundnmaptexture = r_texture_blanknormalmap;
 	}
 	else
 	{

@@ -64,6 +64,7 @@ typedef struct viddef_support_s
 	qboolean ext_framebuffer_object;
 	qboolean ext_stencil_two_side;
 	qboolean ext_texture_3d;
+	qboolean ext_texture_compression_s3tc;
 	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
 }

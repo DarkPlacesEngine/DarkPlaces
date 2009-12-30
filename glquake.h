@@ -124,6 +124,11 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_UNPACK_ALIGNMENT			0x0CF5
 #define GL_TEXTURE_BINDING_1D                   0x8068
 #define GL_TEXTURE_BINDING_2D                   0x8069
+#define GL_TEXTURE_INTERNAL_FORMAT		0x1003
+#define GL_TEXTURE_MIN_LOD			0x813A
+#define GL_TEXTURE_MAX_LOD			0x813B
+#define GL_TEXTURE_BASE_LEVEL			0x813C
+#define GL_TEXTURE_MAX_LEVEL			0x813D
 
 #define GL_NEAREST				0x2600
 #define GL_LINEAR				0x2601
@@ -682,6 +687,11 @@ extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
+extern void (GLAPIENTRY *qglGetTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
+extern void (GLAPIENTRY *qglGetTexParameteriv)(GLenum target, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetTexLevelParameterfv)(GLenum target, GLint level, GLenum pname, GLfloat *params);
+extern void (GLAPIENTRY *qglGetTexLevelParameteriv)(GLenum target, GLint level, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetTexImage)(GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels);
 extern void (GLAPIENTRY *qglHint)(GLenum target, GLenum mode);
 
 extern void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
@@ -908,6 +918,14 @@ extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, 
 #define GL_TEXTURE_COMPRESSED_ARB					0x86A1
 #define GL_NUM_COMPRESSED_TEXTURE_FORMATS_ARB		0x86A2
 #define GL_COMPRESSED_TEXTURE_FORMATS_ARB			0x86A3
+#endif
+
+// GL_EXT_texture_compression_s3tc
+#ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT                   0x83F0
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT                  0x83F1
+#define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT                  0x83F2
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT                  0x83F3
 #endif
 
 // GL_ARB_occlusion_query
