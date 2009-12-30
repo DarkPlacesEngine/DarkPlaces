@@ -1451,7 +1451,6 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// finally, set the sfx pointer, so the channel becomes valid for playback
 	// and will be noticed by the mixer
 	target_chan->sfx = sfx;
-	SND_Spatialize (target_chan, isstatic);
 }
 
 
