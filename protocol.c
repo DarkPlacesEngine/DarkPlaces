@@ -1217,6 +1217,8 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 	}
 }
 
+extern void CL_NewFrameReceived(int num);
+
 // (client and server) allocates a new empty database
 entityframe_database_t *EntityFrame_AllocDatabase(mempool_t *mempool)
 {
@@ -1423,9 +1425,8 @@ void EntityFrame_CL_ReadFrame(void)
 	// read the frame header info
 	f->time = cl.mtime[0];
 	number = MSG_ReadLong();
-	for (i = 0;i < LATESTFRAMENUMS-1;i++)
-		cl.latestframenums[i] = cl.latestframenums[i+1];
-	cl.latestframenums[LATESTFRAMENUMS-1] = f->framenum = MSG_ReadLong();
+	f->framenum = MSG_ReadLong();
+	CL_NewFrameReceived(f->framenum);
 	f->eye[0] = MSG_ReadFloat();
 	f->eye[1] = MSG_ReadFloat();
 	f->eye[2] = MSG_ReadFloat();
@@ -1690,9 +1691,8 @@ void EntityFrame4_CL_ReadFrame(void)
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
 	// read the number of this frame
-	for (i = 0;i < LATESTFRAMENUMS-1;i++)
-		cl.latestframenums[i] = cl.latestframenums[i+1];
-	cl.latestframenums[LATESTFRAMENUMS-1] = framenum = MSG_ReadLong();
+	framenum = MSG_ReadLong();
+	CL_NewFrameReceived(framenum);
 	// read the start number
 	enumber = (unsigned short) MSG_ReadShort();
 	if (developer_networkentities.integer >= 10)
@@ -2390,15 +2390,12 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 
 void EntityFrame5_CL_ReadFrame(void)
 {
-	int i, n, enumber;
+	int i, n, enumber, framenum;
 	entity_t *ent;
 	entity_state_t *s;
 	// read the number of this frame to echo back in next input packet
-	for (i = 0;i < LATESTFRAMENUMS-1;i++)
-		cl.latestframenums[i] = cl.latestframenums[i+1];
-	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
-	if (developer_networkentities.integer >= 10)
-		Con_Printf("recv: svc_entities %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
+	framenum = MSG_ReadLong();
+	CL_NewFrameReceived(framenum);
 	if (cls.protocol != PROTOCOL_QUAKE && cls.protocol != PROTOCOL_QUAKEDP && cls.protocol != PROTOCOL_NEHAHRAMOVIE && cls.protocol != PROTOCOL_DARKPLACES1 && cls.protocol != PROTOCOL_DARKPLACES2 && cls.protocol != PROTOCOL_DARKPLACES3 && cls.protocol != PROTOCOL_DARKPLACES4 && cls.protocol != PROTOCOL_DARKPLACES5 && cls.protocol != PROTOCOL_DARKPLACES6)
 		cls.servermovesequence = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000

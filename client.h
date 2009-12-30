@@ -1043,8 +1043,10 @@ typedef struct client_state_s
 
 	// entity database stuff
 	// latest received entity frame numbers
-#define LATESTFRAMENUMS 3
+#define LATESTFRAMENUMS 32
+	int latestframenumsposition;
 	int latestframenums[LATESTFRAMENUMS];
+	int latestsendnums[LATESTFRAMENUMS];
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 	entityframeqw_database_t *entitydatabaseqw;
