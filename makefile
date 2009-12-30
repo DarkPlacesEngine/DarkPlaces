@@ -188,7 +188,7 @@ ifeq ($(WIN32RELEASE), 1)
 endif
 
 ifeq ($(WIN64RELEASE), 1)
-	CPUOPTIMIZATIONS=-DSUPPORTDIRECTX -DUSE_WSPIAPI_H
+	CPUOPTIMIZATIONS=
 endif
 
 ##### Sound configuration #####
