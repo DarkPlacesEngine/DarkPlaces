@@ -2390,7 +2390,7 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 
 void EntityFrame5_CL_ReadFrame(void)
 {
-	int i, n, enumber, framenum;
+	int n, enumber, framenum;
 	entity_t *ent;
 	entity_state_t *s;
 	// read the number of this frame to echo back in next input packet
