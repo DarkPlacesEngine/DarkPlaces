@@ -1572,6 +1572,15 @@ void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
 	MSG_WriteByte(buf, to->msec);
 }
 
+void CL_NewFrameReceived(int num)
+{
+	if (developer_networkentities.integer >= 10)
+		Con_Printf("recv: svc_entities %i\n", num);
+	cl.latestframenums[cl.latestframenumsposition] = num;
+	cl.latestsendnums[cl.latestframenumsposition] = cl.cmd.sequence;
+	cl.latestframenumsposition = (cl.latestframenumsposition + 1) % LATESTFRAMENUMS;
+}
+
 /*
 ==============
 CL_SendMove
@@ -1882,17 +1891,24 @@ void CL_SendMove(void)
 
 	if (cls.protocol != PROTOCOL_QUAKEWORLD && buf.cursize)
 	{
-		// ack the last few frame numbers
+		// ack entity frame numbers received since the last input was sent
 		// (redundent to improve handling of client->server packet loss)
-		// for LATESTFRAMENUMS == 3 case this is 15 bytes
+		// if cl_netrepeatinput is 1 and client framerate matches server
+		// framerate, this is 10 bytes, if client framerate is lower this
+		// will be more...
+		int i, j;
+		int oldsequence = cl.cmd.sequence - bound(1, cl_netrepeatinput.integer + 1, 3);
+		if (oldsequence < 1)
+			oldsequence = 1;
 		for (i = 0;i < LATESTFRAMENUMS;i++)
 		{
-			if (cl.latestframenums[i] > 0)
+			j = (cl.latestframenumsposition + i) % LATESTFRAMENUMS;
+			if (cl.latestsendnums[j] >= oldsequence)
 			{
 				if (developer_networkentities.integer >= 10)
-					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
+					Con_Printf("send clc_ackframe %i\n", cl.latestframenums[j]);
 				MSG_WriteByte(&buf, clc_ackframe);
-				MSG_WriteLong(&buf, cl.latestframenums[i]);
+				MSG_WriteLong(&buf, cl.latestframenums[j]);
 			}
 		}
 	}
