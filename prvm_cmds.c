@@ -3285,7 +3285,7 @@ void VM_drawcharacter(void)
 	}
 
 	getdrawfontscale(&sx, &sy);
-	DrawQ_String_Font_Scale(pos[0], pos[1], &character, 1, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
+	DrawQ_String_Scale(pos[0], pos[1], &character, 1, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -3328,7 +3328,7 @@ void VM_drawstring(void)
 		Con_Printf("VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	getdrawfontscale(&sx, &sy);
-	DrawQ_String_Font_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
+	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont());
 	//Font_DrawString(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -3372,7 +3372,7 @@ void VM_drawcolorcodedstring(void)
 
 	color = -1;
 	getdrawfontscale(&sx, &sy);
-	DrawQ_String_Font_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false, getdrawfont());
+	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 /*
@@ -3416,7 +3416,7 @@ void VM_stringwidth(void)
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(string, &maxlen, szv[0], szv[1], sx, sy, NULL, !colors, getdrawfont(), 1000000000) * mult;
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_UntilWidth_TrackColors_Scale(string, &maxlen, szv[0], szv[1], sx, sy, NULL, !colors, getdrawfont(), 1000000000) * mult;
 /*
 	if(prog->argc == 3)
 	{
@@ -3431,7 +3431,7 @@ void VM_stringwidth(void)
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
 */
 
 }
