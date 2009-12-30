@@ -1722,9 +1722,6 @@ void CL_SendMove(void)
 		cl.lastpackettime = floor(realtime / packettime) * packettime;
 	else
 		cl.lastpackettime = realtime;
-	
-	if(cl.cmd.impulse)
-		Con_Printf("MOVEMENT DEBUGGING: Prepared impulse %d\n", cl.cmd.impulse);
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
@@ -1865,8 +1862,6 @@ void CL_SendMove(void)
 				// 5 bytes
 				MSG_WriteLong (&buf, cmd->buttons);
 				MSG_WriteByte (&buf, cmd->impulse);
-				if(cmd->impulse)
-					Con_Printf("MOVEMENT DEBUGGING: sending impulse %d\n", cmd->impulse);
 				// PRYDON_CLIENTCURSOR
 				// 30 bytes
 				MSG_WriteShort (&buf, (short)(cmd->cursor_screen[0] * 32767.0f));
