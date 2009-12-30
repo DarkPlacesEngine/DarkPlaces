@@ -3416,7 +3416,7 @@ void VM_stringwidth(void)
 	string = PRVM_G_STRING(OFS_PARM0);
 	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(string, szv[0], szv[1], sx, sy, &maxlen, NULL, !colors, getdrawfont(), 1000000000) * mult; // 1x1 characters, don't actually draw
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(string, &maxlen, szv[0], szv[1], sx, sy, NULL, !colors, getdrawfont(), 1000000000) * mult;
 /*
 	if(prog->argc == 3)
 	{

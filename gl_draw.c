@@ -1072,7 +1072,7 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 }
 
 // NOTE: this function always draws exactly one character if maxwidth <= 0
-float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(const char *text, float w, float h, float sw, float sh, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	const char *text_start = text;
 	int colorindex = STRING_COLOR_DEFAULT;
@@ -1615,35 +1615,35 @@ float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, 
 	return DrawQ_String_Font(startx, starty, text, maxlen, w, h, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, &dp_fonts[0]);
 }
 
-float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, float w, float h, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, size_t *maxlen, float w, float h, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
-	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(text, w, h, 1, 1, maxlen, outcolor, ignorecolorcodes, fnt, maxwidth);
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(text, maxlen, w, h, 1, 1, outcolor, ignorecolorcodes, fnt, maxwidth);
 }
 
-float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
+//float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
+//{
+//	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
+//}
+
+float DrawQ_TextWidth_Font_Size(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
-	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
+	return DrawQ_TextWidth_Font_UntilWidth_Size(text, &maxlen, w, h, ignorecolorcodes, fnt, 1000000000);
 }
 
-float DrawQ_TextWidth_Font_Size(const char *text, float w, float h, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
+//float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+//{
+//	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
+//}
+
+float DrawQ_TextWidth_Font_UntilWidth_Size(const char *text, size_t *maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
-	return DrawQ_TextWidth_Font_UntilWidth_Size(text, w, h, &maxlen, ignorecolorcodes, fnt, 1000000000);
+	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, maxlen, w, h, NULL, ignorecolorcodes, fnt, maxWidth);
 }
 
-float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
-{
-	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
-}
-
-float DrawQ_TextWidth_Font_UntilWidth_Size(const char *text, float w, float h, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
-{
-	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, w, h, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
-}
-
-float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
-{
-	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, 0, 0, maxlen, outcolor, ignorecolorcodes, fnt, maxwidth);
-}
+//float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+//{
+//	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, maxlen, 0, 0, outcolor, ignorecolorcodes, fnt, maxwidth);
+//}
 
 #if 0
 // not used
