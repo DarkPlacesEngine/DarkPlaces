@@ -10183,17 +10183,11 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
 
 	if (refract)
-	{
-		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
-		GL_AlphaTest(false);
-	}
 	else
-	{
-		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0 && !r_shadow_usingdeferredprepass);
-	}
+	GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+	GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0 && !r_shadow_usingdeferredprepass);
 
 	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
