@@ -1403,7 +1403,8 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 // Start a sound effect
 // =======================================================================
 
-void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic)
+static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *sfx);
+void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos)
 {
 	if (!sfx)
 	{
@@ -1423,7 +1424,9 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	memset (target_chan, 0, sizeof (*target_chan));
 	VectorCopy (origin, target_chan->origin);
 	target_chan->flags = flags;
-	target_chan->pos = 0; // start of the sound
+	target_chan->pos = startpos; // start of the sound
+	target_chan->entnum = entnum;
+	target_chan->entchannel = entchannel;
 
 	// If it's a static sound
 	if (isstatic)
@@ -1435,23 +1438,27 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	else
 		target_chan->dist_mult = attenuation / snd_soundradius.value;
 
+	// we have to set the channel volume AFTER the sfx because the function
+	// needs it for replaygain support
+	S_SetChannelVolume_WithSfx(target_chan - channels, fvol, sfx);
+
+	// set the listener volumes
+	SND_Spatialize (target_chan, isstatic);
+
 	// Lock the SFX during play
 	S_LockSfx (sfx);
 
 	// finally, set the sfx pointer, so the channel becomes valid for playback
 	// and will be noticed by the mixer
 	target_chan->sfx = sfx;
-
-	// we have to set the channel volume AFTER the sfx because the function
-	// needs it for replaygain support
-	S_SetChannelVolume(target_chan - channels, fvol);
+	SND_Spatialize (target_chan, isstatic);
 }
 
 
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	channel_t *target_chan, *check, *ch;
-	int		ch_idx;
+	int		ch_idx, startpos;
 
 	if (snd_renderbuffer == NULL || sfx == NULL || nosound.integer)
 		return -1;
@@ -1482,26 +1489,23 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	if (!target_chan)
 		return -1;
 
-	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_NONE, origin, fvol, attenuation, false);
-	target_chan->entnum = entnum;
-	target_chan->entchannel = entchannel;
-
-	SND_Spatialize(target_chan, false);
-
 	// if an identical sound has also been started this frame, offset the pos
 	// a bit to keep it from just making the first one louder
 	check = &channels[NUM_AMBIENTS];
+	startpos = 0;
 	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
 	{
 		if (check == target_chan)
 			continue;
-		if (check->sfx == sfx && !check->pos)
+		if (check->sfx == sfx && check->pos == 0)
 		{
 			// use negative pos offset to delay this sound effect
-			target_chan->pos += (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
+			startpos = (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
 			break;
 		}
 	}
+
+	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_NONE, origin, fvol, attenuation, false, entnum, entchannel, startpos);
 
 	return (target_chan - channels);
 }
@@ -1621,9 +1625,8 @@ void S_PauseGameSounds (qboolean toggle)
 	}
 }
 
-void S_SetChannelVolume (unsigned int ch_ind, float fvol)
+static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *sfx)
 {
-	sfx_t *sfx = channels[ch_ind].sfx;
 	if(sfx->volume_peak > 0)
 	{
 		// Replaygain support
@@ -1634,6 +1637,12 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 		// Con_DPrintf("%f\n", fvol);
 	}
 	channels[ch_ind].master_vol = (int)(fvol * 255.0f);
+}
+
+void S_SetChannelVolume(unsigned int ch_ind, float fvol)
+{
+	sfx_t *sfx = channels[ch_ind].sfx;
+	S_SetChannelVolume_WithSfx(ch_ind, fvol, sfx);
 }
 
 float S_GetChannelPosition (unsigned int ch_ind)
@@ -1677,9 +1686,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 	}
 
 	target_chan = &channels[total_channels++];
-	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_FORCELOOP, origin, fvol, attenuation, true);
-
-	SND_Spatialize (target_chan, true);
+	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_FORCELOOP, origin, fvol, attenuation, true, 0, 0, 0);
 }
 
 
