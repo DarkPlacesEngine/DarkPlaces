@@ -1225,6 +1225,12 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		bytesperblock = 0;
 		bytesperpixel = 4;
 		size = dds_width*dds_height*bytesperpixel;
+		if(128 + size < ddsfilesize)
+		{
+			Mem_Free(dds);
+			Con_Printf("^1%s: invalid BGRA DDS image\n");
+			return NULL;
+		}
 		// check alpha
 		for (i = 3;i < size;i += 4)
 			if (ddspixels[i] < 255)
@@ -1241,6 +1247,12 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		bytesperblock = 8;
 		bytesperpixel = 0;
 		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
+		if(128 + size < ddsfilesize)
+		{
+			Mem_Free(dds);
+			Con_Printf("^1%s: invalid DXT1 DDS image\n");
+			return NULL;
+		}
 		for (i = 0;i < size;i += bytesperblock)
 			if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
 				break;
@@ -1256,6 +1268,12 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		bytesperblock = 16;
 		bytesperpixel = 0;
 		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
+		if(128 + size < ddsfilesize)
+		{
+			Mem_Free(dds);
+			Con_Printf("^1%s: invalid DXT3 DDS image\n");
+			return NULL;
+		}
 		flags |= TEXF_ALPHA;
 	}
 	else if (!memcmp(dds+84, "DXT5", 4))
@@ -1264,6 +1282,12 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		bytesperblock = 16;
 		bytesperpixel = 0;
 		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
+		if(128 + size < ddsfilesize)
+		{
+			Mem_Free(dds);
+			Con_Printf("^1%s: invalid DXT5 DDS image\n");
+			return NULL;
+		}
 		flags |= TEXF_ALPHA;
 	}
 	else
