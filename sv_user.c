@@ -531,6 +531,9 @@ void SV_ReadClientMove (void)
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
 
+	if(move->impulse)
+		Con_Printf("MOVEMENT DEBUGGING: received impulse %d\n", move->impulse);
+
 	// if the previous move has not been applied yet, we need to accumulate
 	// the impulse/buttons from it
 	if (!host_client->cmd.applied)
@@ -629,8 +632,11 @@ void SV_ExecuteClientMoves(void)
 					// execute it but it has higher
 					// sequence count
 					if(host_client->movesequence)
+					{
 						if(move->sequence > host_client->movesequence)
 							host_client->movement_count[(move->sequence) % NETGRAPH_PACKETS] = -1;
+						Con_Printf("MOVEMENT DEBUGGING: invalid packet timing (less than 0.5ms), discarded packet\n");
+					}
 					continue;
 				}
 
@@ -653,6 +659,10 @@ void SV_ExecuteClientMoves(void)
 				// the server and qc frametime values must be changed temporarily
 				prog->globals.server->frametime = sv.frametime = moveframetime;
 				// if move is more than 50ms, split it into two moves (this matches QWSV behavior and the client prediction)
+
+				if(host_client->cmd.impulse)
+					Con_Printf("MOVEMENT DEBUGGING: applying impulse %d\n", host_client->cmd.impulse);
+
 				if (sv.frametime > 0.05)
 				{
 					prog->globals.server->frametime = sv.frametime = moveframetime * 0.5f;
