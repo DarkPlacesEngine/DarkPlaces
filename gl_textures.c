@@ -1236,8 +1236,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		for (i = 3;i < size;i += 4)
 			if (ddspixels[i] < 255)
 				break;
-		if (i < size)
-			flags |= TEXF_ALPHA;
+		if (i >= size)
+			flags &= ~TEXF_ALPHA;
 	}
 	else if (!memcmp(dds+84, "DXT1", 4))
 	{
@@ -1259,10 +1259,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
 				break;
 		if (i < size)
-		{
 			textype = TEXTYPE_DXT1A;
-			flags |= TEXF_ALPHA;
-		}
+		else
+			flags &= ~TEXF_ALPHA;
 	}
 	else if (!memcmp(dds+84, "DXT3", 4))
 	{
@@ -1276,7 +1275,6 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT3 DDS image\n", filename);
 			return NULL;
 		}
-		flags |= TEXF_ALPHA;
 	}
 	else if (!memcmp(dds+84, "DXT5", 4))
 	{
@@ -1290,7 +1288,6 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT5 DDS image\n", filename);
 			return NULL;
 		}
-		flags |= TEXF_ALPHA;
 	}
 	else
 	{
