@@ -3,6 +3,7 @@
 #include "image.h"
 #include "jpeg.h"
 #include "image_png.h"
+#include "intoverflow.h"
 
 cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
 cvar_t gl_max_lightmapsize = {CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
@@ -1203,7 +1204,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	if (!dds)
 		return NULL; // not found
 
-	if (memcmp(dds, "DDS ", 4) || ddssize < (unsigned int)BuffLittleLong(dds+4) || BuffLittleLong(dds+76) != 32)
+	if (ddsfilesize <= 128 || memcmp(dds, "DDS ", 4) || ddssize < (unsigned int)BuffLittleLong(dds+4) || BuffLittleLong(dds+76) != 32)
 	{
 		Mem_Free(dds);
 		Con_Printf("^1%s: not a DDS image\n", filename);
@@ -1224,11 +1225,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		textype = TEXTYPE_BGRA;
 		bytesperblock = 0;
 		bytesperpixel = 4;
-		size = dds_width*dds_height*bytesperpixel;
-		if(128 + size > ddsfilesize)
+		size = INTOVERFLOW_MUL(INTOVERFLOW_MUL(dds_width, dds_height), bytesperpixel);
+		if(INTOVERFLOW_ADD(128, size) > INTOVERFLOW_NORMALIZE(ddsfilesize))
 		{
 			Mem_Free(dds);
-			Con_Printf("^1%s: invalid BGRA DDS image\n");
+			Con_Printf("^1%s: invalid BGRA DDS image\n", filename);
 			return NULL;
 		}
 		// check alpha
@@ -1246,11 +1247,12 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		textype = TEXTYPE_DXT1;
 		bytesperblock = 8;
 		bytesperpixel = 0;
-		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
-		if(128 + size > ddsfilesize)
+		//size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
+		size = INTOVERFLOW_MUL(INTOVERFLOW_MUL(INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_width, 3), 4), INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_height, 3), 4)), bytesperblock);
+		if(INTOVERFLOW_ADD(128, size) > INTOVERFLOW_NORMALIZE(ddsfilesize))
 		{
 			Mem_Free(dds);
-			Con_Printf("^1%s: invalid DXT1 DDS image\n");
+			Con_Printf("^1%s: invalid DXT1 DDS image\n", filename);
 			return NULL;
 		}
 		for (i = 0;i < size;i += bytesperblock)
@@ -1267,11 +1269,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		textype = TEXTYPE_DXT3;
 		bytesperblock = 16;
 		bytesperpixel = 0;
-		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
-		if(128 + size > ddsfilesize)
+		size = INTOVERFLOW_MUL(INTOVERFLOW_MUL(INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_width, 3), 4), INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_height, 3), 4)), bytesperblock);
+		if(INTOVERFLOW_ADD(128, size) > INTOVERFLOW_NORMALIZE(ddsfilesize))
 		{
 			Mem_Free(dds);
-			Con_Printf("^1%s: invalid DXT3 DDS image\n");
+			Con_Printf("^1%s: invalid DXT3 DDS image\n", filename);
 			return NULL;
 		}
 		flags |= TEXF_ALPHA;
@@ -1281,11 +1283,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		textype = TEXTYPE_DXT5;
 		bytesperblock = 16;
 		bytesperpixel = 0;
-		size = ((dds_width+3)/4)*((dds_height+3)/4)*bytesperblock;
-		if(128 + size > ddsfilesize)
+		size = INTOVERFLOW_MUL(INTOVERFLOW_MUL(INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_width, 3), 4), INTOVERFLOW_DIV(INTOVERFLOW_ADD(dds_height, 3), 4)), bytesperblock);
+		if(INTOVERFLOW_ADD(128, size) > INTOVERFLOW_NORMALIZE(ddsfilesize))
 		{
 			Mem_Free(dds);
-			Con_Printf("^1%s: invalid DXT5 DDS image\n");
+			Con_Printf("^1%s: invalid DXT5 DDS image\n", filename);
 			return NULL;
 		}
 		flags |= TEXF_ALPHA;
