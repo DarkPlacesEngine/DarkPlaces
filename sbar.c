@@ -1202,14 +1202,14 @@ void Sbar_ShowFPS(void)
 		fps_y = vid_conheight.integer - sbar_info_pos.integer - fps_height;
 		if (soundstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(soundstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(soundstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, soundstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (fpsstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(fpsstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(fpsstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			if (red)
 				DrawQ_String_Font(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 0, 0, 1, 0, NULL, true, FONT_INFOBAR);
@@ -1219,49 +1219,49 @@ void Sbar_ShowFPS(void)
 		}
 		if (timedemostring1[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(timedemostring1, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timedemostring1, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, timedemostring1, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (timedemostring2[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(timedemostring2, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timedemostring2, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, timedemostring2, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (timestring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(timestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(timestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, timestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (datestring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(datestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(datestring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, datestring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (speedstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(speedstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(speedstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, speedstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (topspeedstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(topspeedstring, 0, fps_scalex, fps_scaley, false, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(topspeedstring, 0, fps_scalex, fps_scaley, false, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, topspeedstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, false, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 		if (blurstring[0])
 		{
-			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font_Size(blurstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth_Font(blurstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String_Font(fps_x, fps_y, blurstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;

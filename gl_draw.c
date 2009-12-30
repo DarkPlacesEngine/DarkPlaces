@@ -1620,30 +1620,15 @@ float DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(const char *text, size_t 
 	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size_Scale(text, maxlen, w, h, 1, 1, outcolor, ignorecolorcodes, fnt, maxwidth);
 }
 
-//float DrawQ_TextWidth_Font(const char *text, size_t maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt)
-//{
-//	return DrawQ_TextWidth_Font_UntilWidth(text, &maxlen, ignorecolorcodes, fnt, 1000000000);
-//}
-
-float DrawQ_TextWidth_Font_Size(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_TextWidth_Font(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_TextWidth_Font_UntilWidth_Size(text, &maxlen, w, h, ignorecolorcodes, fnt, 1000000000);
 }
-
-//float DrawQ_TextWidth_Font_UntilWidth(const char *text, size_t *maxlen, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
-//{
-//	return DrawQ_TextWidth_Font_UntilWidth_TrackColors(text, maxlen, NULL, ignorecolorcodes, fnt, maxWidth);
-//}
 
 float DrawQ_TextWidth_Font_UntilWidth_Size(const char *text, size_t *maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
 	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, maxlen, w, h, NULL, ignorecolorcodes, fnt, maxWidth);
 }
-
-//float DrawQ_TextWidth_Font_UntilWidth_TrackColors(const char *text, size_t *maxlen, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
-//{
-//	return DrawQ_TextWidth_Font_UntilWidth_TrackColors_Size(text, maxlen, 0, 0, outcolor, ignorecolorcodes, fnt, maxwidth);
-//}
 
 #if 0
 // not used
