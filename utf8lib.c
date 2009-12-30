@@ -62,9 +62,8 @@ Uchar utf8_range[5] = {
 static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch, size_t _maxlen)
 {
 	const unsigned char *s = (const unsigned char*)_s;
-	//unsigned char bt;//, bc;
-	size_t i;
-	size_t bits, j;
+	size_t i, j;
+	size_t bits = 0;
 	Uchar ch;
 
 	i = 0;
