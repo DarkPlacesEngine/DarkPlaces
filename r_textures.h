@@ -39,6 +39,14 @@ typedef enum textype_e
 	TEXTYPE_SHADOWMAP,
 	// 8bit ALPHA (used for freetype fonts)
 	TEXTYPE_ALPHA,
+	// 4x4 block compressed 15bit color (4 bits per pixel)
+	TEXTYPE_DXT1,
+	// 4x4 block compressed 15bit color plus 1bit alpha (4 bits per pixel)
+	TEXTYPE_DXT1A,
+	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel)
+	TEXTYPE_DXT3,
+	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel)
+	TEXTYPE_DXT5,
 }
 textype_t;
 
@@ -88,6 +96,10 @@ rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *ide
 rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter);
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter);
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, int precision, qboolean filter);
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor);
+
+// saves a texture to a DDS file
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);

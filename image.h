@@ -2,7 +2,6 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
-
 extern int image_width, image_height;
 
 
