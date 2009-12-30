@@ -3630,6 +3630,7 @@ void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutatio
 		qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
 	}
 	if (r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
+	if (r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
 }
 
 #ifdef SUPPORTCG
@@ -4097,6 +4098,7 @@ void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 	}
 	CHECKCGERROR
 	if (r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
+	if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
 }
 
 void CG_BindTexture(CGparameter param, int texnum)
@@ -4533,7 +4535,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
 		}
-		if (r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
 		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
@@ -4609,7 +4610,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_cg_permutation->vp_LightDir) cgGLSetParameter3f(r_cg_permutation->vp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
 			}
 		}
-		if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);CHECKCGERROR
 		if (r_cg_permutation->vp_TexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_TexMatrix, m16f);}CHECKCGERROR
 		if (r_cg_permutation->vp_BackgroundTexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_BackgroundTexMatrix, m16f);}CHECKCGERROR
 		if (r_cg_permutation->vp_EyePosition) cgGLSetParameter3f(r_cg_permutation->vp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
@@ -4797,7 +4797,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	{
 	case RENDERPATH_GL20:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_ModelViewMatrix           >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix          , 1, false, gl_modelview16f);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3fARB(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
 		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
@@ -4821,7 +4820,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(mode, permutation);
-		if (r_cg_permutation->vp_ModelViewMatrix          ) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelviewprojection16f);CHECKCGERROR
 		if (r_cg_permutation->fp_LightPosition            ) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);CHECKCGERROR
 		if (r_cg_permutation->fp_ViewToLight              ) cgGLSetMatrixParameterfc(r_cg_permutation->fp_ViewToLight, viewtolight16f);CHECKCGERROR
 		if (r_cg_permutation->fp_DeferredColor_Ambient    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);CHECKCGERROR
@@ -6587,12 +6585,14 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 		{
 		case RENDERPATH_GL20:
 			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
+			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 			CHECKCGERROR
 			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
+			if (r_cg_permutation && r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 #endif
 			break;
@@ -6843,24 +6843,6 @@ static void R_Water_ProcessPlanes(void)
 	r_waterstate.renderingscene = true;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
-		// render the normal view scene and copy into texture
-		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
-		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
-		{
-			r_refdef.view = myview;
-			r_refdef.view.clipplane = p->plane;
-			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
-			r_refdef.view.clipplane.dist = -r_refdef.view.clipplane.dist;
-			PlaneClassify(&r_refdef.view.clipplane);
-
-			R_ResetViewRendering3D();
-			R_ClearScreen(r_refdef.fogenabled);
-			R_View_Update();
-			R_RenderScene();
-
-			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-		}
-
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			r_refdef.view = myview;
@@ -6888,6 +6870,25 @@ static void R_Water_ProcessPlanes(void)
 
 			R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 		}
+
+		// render the normal view scene and copy into texture
+		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
+		{
+			r_refdef.view = myview;
+			r_refdef.view.clipplane = p->plane;
+			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
+			r_refdef.view.clipplane.dist = -r_refdef.view.clipplane.dist;
+			PlaneClassify(&r_refdef.view.clipplane);
+
+			R_ResetViewRendering3D();
+			R_ClearScreen(r_refdef.fogenabled);
+			R_View_Update();
+			R_RenderScene();
+
+			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+		}
+
 	}
 	r_waterstate.renderingscene = false;
 	r_refdef.view = originalview;

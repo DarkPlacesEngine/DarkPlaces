@@ -1520,7 +1520,6 @@ r_viewport_type_t;
 
 typedef struct r_viewport_s
 {
-	float m[16];
 	matrix4x4_t cameramatrix; // from entity (transforms from camera entity to world)
 	matrix4x4_t viewmatrix; // actual matrix for rendering (transforms to viewspace)
 	matrix4x4_t projectmatrix; // actual projection matrix (transforms from viewspace to screen)
