@@ -1410,7 +1410,7 @@ void Con_DrawInput (void)
 
 //	text[key_linepos + 1] = 0;
 
-	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth_Font(text, key_linepos, false, FONT_CONSOLE) * con_textsize.value;
+	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth_Font_Size(text, key_linepos, con_textsize.value, con_textsize.value, false, FONT_CONSOLE);
 	if(x >= 0)
 		x = 0;
 
@@ -1446,9 +1446,9 @@ float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length, float 
 		return ti->fontsize * ti->font->maxwidth;
 	}
 	if(maxWidth >= 0)
-		return DrawQ_TextWidth_Font_UntilWidth_Size(w, ti->fontsize, ti->fontsize, length, false, ti->font, -maxWidth); // -maxWidth: we want at least one char
+		return DrawQ_TextWidth_Font_UntilWidth_Size(w, length, ti->fontsize, ti->fontsize, false, ti->font, -maxWidth); // -maxWidth: we want at least one char
 	else if(maxWidth == -1)
-		return DrawQ_TextWidth_Font_Size(w, ti->fontsize, ti->fontsize, *length, false, ti->font);
+		return DrawQ_TextWidth_Font_Size(w, *length, ti->fontsize, ti->fontsize, false, ti->font);
 	else
 	{
 		printf("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
@@ -1653,7 +1653,7 @@ void Con_DrawNotify (void)
 
 		// FIXME word wrap
 		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
-		x = vid_conwidth.value - DrawQ_TextWidth_Font(temptext, 0, false, FONT_CHAT) * inputsize;
+		x = vid_conwidth.value - DrawQ_TextWidth_Font_Size(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
 		if(x > 0)
 			x = 0;
 		DrawQ_String_Font(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
