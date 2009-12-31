@@ -33,50 +33,72 @@
 static void				(*qpng_set_sig_bytes)		(void*, int);
 static int				(*qpng_sig_cmp)				(const unsigned char*, size_t, size_t);
 static void*			(*qpng_create_read_struct)	(const char*, void*, void(*)(void *png, const char *message), void(*)(void *png, const char *message));
+static void*			(*qpng_create_write_struct)	(const char*, void*, void(*)(void *png, const char *message), void(*)(void *png, const char *message));
 static void*			(*qpng_create_info_struct)	(void*);
 static void				(*qpng_read_info)			(void*, void*);
+static void				(*qpng_set_compression_level)	(void*, int);
 static void				(*qpng_set_expand)			(void*);
 static void				(*qpng_set_gray_1_2_4_to_8)	(void*);
 static void				(*qpng_set_palette_to_rgb)	(void*);
 static void				(*qpng_set_tRNS_to_alpha)	(void*);
 static void				(*qpng_set_gray_to_rgb)		(void*);
 static void				(*qpng_set_filler)			(void*, unsigned int, int);
+static void				(*qpng_set_IHDR)			(void*, void*, unsigned long, unsigned long, int, int, int, int, int);
+static void				(*qpng_set_packing)			(void*);
+static void				(*qpng_set_bgr)				(void*);
+static int				(*qpng_set_interlace_handling)	(void*);
 static void				(*qpng_read_update_info)	(void*, void*);
 static void				(*qpng_read_image)			(void*, unsigned char**);
 static void				(*qpng_read_end)			(void*, void*);
 static void				(*qpng_destroy_read_struct)	(void**, void**, void**);
+static void				(*qpng_destroy_write_struct)	(void**, void**);
 static void				(*qpng_set_read_fn)			(void*, void*, void(*)(void *png, unsigned char *data, size_t length));
+static void				(*qpng_set_write_fn)		(void*, void*, void(*)(void *png, unsigned char *data, size_t length), void(*)(void *png));
 static unsigned int		(*qpng_get_valid)			(void*, void*, unsigned int);
 static unsigned int		(*qpng_get_rowbytes)		(void*, void*);
 static unsigned char	(*qpng_get_channels)		(void*, void*);
 static unsigned char	(*qpng_get_bit_depth)		(void*, void*);
 static unsigned int		(*qpng_get_IHDR)			(void*, void*, unsigned long*, unsigned long*, int *, int *, int *, int *, int *);
 static char*			(*qpng_get_libpng_ver)		(void*);
+static void				(*qpng_write_info)			(void*, void*);
+static void				(*qpng_write_row)			(void*, unsigned char*);
+static void				(*qpng_write_end)			(void*, void*);
 
 static dllfunction_t pngfuncs[] =
 {
 	{"png_set_sig_bytes",		(void **) &qpng_set_sig_bytes},
 	{"png_sig_cmp",				(void **) &qpng_sig_cmp},
 	{"png_create_read_struct",	(void **) &qpng_create_read_struct},
+	{"png_create_write_struct",	(void **) &qpng_create_write_struct},
 	{"png_create_info_struct",	(void **) &qpng_create_info_struct},
 	{"png_read_info",			(void **) &qpng_read_info},
+	{"png_set_compression_level",	(void **) &qpng_set_compression_level},
 	{"png_set_expand",			(void **) &qpng_set_expand},
 	{"png_set_gray_1_2_4_to_8",	(void **) &qpng_set_gray_1_2_4_to_8},
 	{"png_set_palette_to_rgb",	(void **) &qpng_set_palette_to_rgb},
 	{"png_set_tRNS_to_alpha",	(void **) &qpng_set_tRNS_to_alpha},
 	{"png_set_gray_to_rgb",		(void **) &qpng_set_gray_to_rgb},
 	{"png_set_filler",			(void **) &qpng_set_filler},
+	{"png_set_IHDR",			(void **) &qpng_set_IHDR},
+	{"png_set_packing",			(void **) &qpng_set_packing},
+	{"png_set_bgr",				(void **) &qpng_set_bgr},
+	{"png_set_interlace_handling",	(void **) &qpng_set_interlace_handling},
 	{"png_read_update_info",	(void **) &qpng_read_update_info},
 	{"png_read_image",			(void **) &qpng_read_image},
 	{"png_read_end",			(void **) &qpng_read_end},
 	{"png_destroy_read_struct",	(void **) &qpng_destroy_read_struct},
+	{"png_destroy_write_struct",	(void **) &qpng_destroy_write_struct},
 	{"png_set_read_fn",			(void **) &qpng_set_read_fn},
+	{"png_set_write_fn",		(void **) &qpng_set_write_fn},
 	{"png_get_valid",			(void **) &qpng_get_valid},
 	{"png_get_rowbytes",		(void **) &qpng_get_rowbytes},
 	{"png_get_channels",		(void **) &qpng_get_channels},
 	{"png_get_bit_depth",		(void **) &qpng_get_bit_depth},
 	{"png_get_IHDR",			(void **) &qpng_get_IHDR},
 	{"png_get_libpng_ver",		(void **) &qpng_get_libpng_ver},
+	{"png_write_info",			(void **) &qpng_write_info},
+	{"png_write_row",			(void **) &qpng_write_row},
+	{"png_write_end",			(void **) &qpng_write_end},
 	{NULL, NULL}
 };
 
@@ -135,7 +157,6 @@ void PNG_CloseLibrary (void)
 	Sys_UnloadLibrary (&png_dll);
 }
 
-
 /*
 =================================================================
 
@@ -187,6 +208,7 @@ static struct
 	int		Filter;
 	//double	LastModified;
 	//int		Transparent;
+	qfile_t *outfile;
 } my_png;
 
 //LordHavoc: removed __cdecl prefix, added overrun protection, and rewrote this to be more efficient
@@ -205,6 +227,15 @@ void PNG_fReadData(void *png, unsigned char *data, size_t length)
 	memcpy(data, my_png.tmpBuf + my_png.tmpi, length);
 	my_png.tmpi += (int)length;
 	//Com_HexDumpToConsole(data, (int)length);
+}
+
+void PNG_fWriteData(void *png, unsigned char *data, size_t length)
+{
+	FS_Write(my_png.outfile, data, length);
+}
+
+void PNG_fFlushData(void *png)
+{
 }
 
 void PNG_error_fn(void *png, const char *message)
@@ -378,3 +409,99 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 	return imagedata;
 }
 
+/*
+=================================================================
+
+	PNG compression
+
+=================================================================
+*/
+
+#define Z_BEST_COMPRESSION 9
+#define PNG_INTERLACE_ADAM7 1
+#define PNG_FILTER_TYPE_BASE 0
+#define PNG_FILTER_TYPE_DEFAULT PNG_FILTER_TYPE_BASE
+#define PNG_COMPRESSION_TYPE_BASE 0
+#define PNG_COMPRESSION_TYPE_DEFAULT PNG_COMPRESSION_TYPE_BASE
+
+
+/*
+====================
+PNG_SaveImage_preflipped
+
+Save a preflipped PNG image to a file
+====================
+*/
+qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data)
+{
+	unsigned int offset, linesize;
+	qfile_t* file = NULL;
+	void *png, *pnginfo;
+	unsigned char ioBuffer[8192];
+	int passes, i, j;
+
+	// No DLL = no JPEGs
+	if (!png_dll)
+	{
+		Con_Print("You need the libpng library to save PNG images\n");
+		return false;
+	}
+
+	png = (void *)qpng_create_write_struct(PNG_LIBPNG_VER_STRING, 0, PNG_error_fn, PNG_warning_fn);
+	if(!png)
+		return false;
+	pnginfo = (void *)qpng_create_info_struct(png);
+	if(!pnginfo)
+	{
+		 qpng_destroy_write_struct(&png, NULL);
+		 return false;
+	}
+
+	// this must be memset before the setjmp error handler, because it relies
+	// on the fields in this struct for cleanup
+	memset(&my_png, 0, sizeof(my_png));
+
+	// NOTE: this relies on jmp_buf being the first thing in the png structure
+	// created by libpng! (this is correct for libpng 1.2.x)
+#ifdef __cplusplus
+#if defined(MACOSX) || defined(WIN32)
+	if (setjmp((int *)png))
+#else
+	if (setjmp((__jmp_buf_tag *)png))
+#endif
+#else
+	if (setjmp(png))
+#endif
+	{
+		qpng_destroy_write_struct(&png, &pnginfo);
+		return false;
+	}
+
+	// Open the file
+	file = FS_OpenRealFile(filename, "wb", true);
+	if (!file)
+		return false;
+	my_png.outfile = file;
+	qpng_set_write_fn(png, ioBuffer, PNG_fWriteData, PNG_fFlushData);
+
+	qpng_set_compression_level(png, Z_BEST_COMPRESSION);
+
+	qpng_set_IHDR(png, pnginfo, width, height, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_ADAM7, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	qpng_write_info(png, pnginfo);
+	qpng_set_packing(png);
+	qpng_set_bgr(png);
+
+	passes = qpng_set_interlace_handling(png);
+
+	linesize = width * 3;
+	offset = linesize * (height - 1);
+	for(i = 0; i < passes; ++i)
+		for(j = 0; j < height; ++j)
+			qpng_write_row(png, &data[offset - j * linesize]);
+
+	qpng_write_end(png, NULL);
+	qpng_destroy_write_struct(&png, &pnginfo);
+
+	FS_Close (file);
+	return true;
+}

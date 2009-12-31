@@ -3,6 +3,7 @@
 #include "cl_video.h"
 #include "image.h"
 #include "jpeg.h"
+#include "image_png.h"
 #include "cl_collision.h"
 #include "libcurl.h"
 #include "csprogs.h"
@@ -30,6 +31,7 @@ cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
+cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
 // scr_screenshot_name is defined in fs.c
@@ -860,6 +862,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_pixelheight);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
+	Cvar_RegisterVariable (&scr_screenshot_png);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
@@ -917,6 +920,7 @@ void SCR_ScreenShot_f (void)
 	unsigned char *buffer2;
 	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
+	qboolean png = (scr_screenshot_png.integer != 0) && !jpeg;
 
 	if (Cmd_Argc() == 2)
 	{
@@ -924,12 +928,23 @@ void SCR_ScreenShot_f (void)
 		strlcpy(filename, Cmd_Argv(1), sizeof(filename));
 		ext = FS_FileExtension(filename);
 		if (!strcasecmp(ext, "jpg"))
+		{
 			jpeg = true;
+			png = false;
+		}
 		else if (!strcasecmp(ext, "tga"))
+		{
 			jpeg = false;
+			png = false;
+		}
+		else if (!strcasecmp(ext, "png"))
+		{
+			jpeg = false;
+			png = true;
+		}
 		else
 		{
-			Con_Printf("screenshot: supplied filename must end in .jpg or .tga\n");
+			Con_Printf("screenshot: supplied filename must end in .jpg or .tga or .png\n");
 			return;
 		}
 	}
@@ -954,7 +969,7 @@ void SCR_ScreenShot_f (void)
 
 		// find a file name to save it to
 		for (;shotnumber < 1000000;shotnumber++)
-			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)))
+			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.png", fs_gamedir, prefix_name, shotnumber)))
 				break;
 		if (shotnumber >= 1000000)
 		{
@@ -962,17 +977,27 @@ void SCR_ScreenShot_f (void)
 			return;
 		}
 
-		dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : "tga");
+		dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : png ? "png" : "tga");
 	}
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 	buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, true))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, png, true))
 		Con_Printf("Wrote %s\n", filename);
 	else
+	{
 		Con_Printf("Unable to write %s\n", filename);
+		if(jpeg || png)
+		{
+			if(SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, false, true))
+			{
+				strlcpy(filename + strlen(filename) - 3, "tga", 4);
+				Con_Printf("Wrote %s\n", filename);
+			}
+		}
+	}
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
@@ -1344,7 +1369,7 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false, false);
 	}
 
 	Mem_Free (buffer1);
@@ -1427,7 +1452,7 @@ void SHOWLMP_drawall(void)
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect)
+qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean png, qboolean gammacorrect)
 {
 	int	indices[3] = {0,1,2};
 	qboolean ret;
@@ -1468,6 +1493,8 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 	if (jpeg)
 		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
+	else if (png)
+		ret = PNG_SaveImage_preflipped (filename, width, height, buffer2);
 	else
 		ret = Image_WriteTGABGR_preflipped (filename, width, height, buffer2, buffer3);
 
@@ -1638,7 +1665,7 @@ void SCR_DrawScreen (void)
 			buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 			buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
 			buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
-			SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, true);
+			SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, false, true);
 			Mem_Free(buffer1);
 			Mem_Free(buffer2);
 			Mem_Free(buffer3);
