@@ -25,6 +25,7 @@
 #include "quakedef.h"
 #include "snd_main.h"
 #include "snd_ogg.h"
+#include "snd_wav.h"
 
 
 /*
@@ -649,10 +650,9 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
-	ogg_stream_persfx_t* per_sfx;
 	vorbis_info *vi;
 	vorbis_comment *vc;
-	ogg_int64_t len;
+	ogg_int64_t len, buff_len;
 	double peak, gaindb;
 
 	if (!vf_dll)
@@ -694,27 +694,80 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 
 	len = qov_pcm_total (&vf, -1) * vi->channels * 2;  // 16 bits => "* 2"
 
-	if (developer_loading.integer >= 2)
-		Con_Printf ("Ogg sound file \"%s\" will be streamed\n", filename);
-	per_sfx = (ogg_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
-	strlcpy(per_sfx->name, sfx->name, sizeof(per_sfx->name));
-	sfx->memsize += sizeof (*per_sfx);
-	per_sfx->file = data;
-	per_sfx->filesize = filesize;
-	sfx->memsize += filesize;
+	// Decide if we go for a stream or a simple PCM cache
+	buff_len = (int)ceil (STREAM_BUFFER_DURATION * snd_renderbuffer->format.speed) * 2 * vi->channels;
+	if (snd_streaming.integer && (len > (ogg_int64_t)filesize + 3 * buff_len || snd_streaming.integer >= 2))
+	{
+		ogg_stream_persfx_t* per_sfx;
 
-	per_sfx->format.speed = vi->rate;
-	per_sfx->format.width = 2;  // We always work with 16 bits samples
-	per_sfx->format.channels = vi->channels;
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" will be streamed\n", filename);
+		per_sfx = (ogg_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
+		strlcpy(per_sfx->name, sfx->name, sizeof(per_sfx->name));
+		sfx->memsize += sizeof (*per_sfx);
+		per_sfx->file = data;
+		per_sfx->filesize = filesize;
+		sfx->memsize += filesize;
 
-	sfx->fetcher_data = per_sfx;
-	sfx->fetcher = &ogg_fetcher;
-	sfx->flags |= SFXFLAG_STREAMED;
-	sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
-	vc = qov_comment(&vf, -1);
-	OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed, sfx->total_length, &peak, &gaindb);
-	per_sfx->total_length = sfx->total_length;
-	qov_clear (&vf);
+		per_sfx->format.speed = vi->rate;
+		per_sfx->format.width = 2;  // We always work with 16 bits samples
+		per_sfx->format.channels = vi->channels;
+
+		sfx->fetcher_data = per_sfx;
+		sfx->fetcher = &ogg_fetcher;
+		sfx->flags |= SFXFLAG_STREAMED;
+		sfx->total_length = (int)((size_t)len / (per_sfx->format.channels * 2) * ((double)snd_renderbuffer->format.speed / per_sfx->format.speed));
+		vc = qov_comment(&vf, -1);
+		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, (double)snd_renderbuffer->format.speed / (double)per_sfx->format.speed, sfx->total_length, &peak, &gaindb);
+		per_sfx->total_length = sfx->total_length;
+		qov_clear (&vf);
+	}
+	else
+	{
+		char *buff;
+		ogg_int64_t done;
+		int bs;
+		long ret;
+		snd_buffer_t *sb;
+		snd_format_t ogg_format;
+
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" will be cached\n", filename);
+
+		// Decode it
+		buff = (char *)Mem_Alloc (snd_mempool, (int)len);
+		done = 0;
+		bs = 0;
+		while ((ret = qov_read (&vf, &buff[done], (int)(len - done), mem_bigendian, 2, 1, &bs)) > 0)
+			done += ret;
+
+		// Build the sound buffer
+		ogg_format.speed = vi->rate;
+		ogg_format.channels = vi->channels;
+		ogg_format.width = 2;  // We always work with 16 bits samples
+		sb = Snd_CreateSndBuffer ((unsigned char *)buff, (size_t)done / (vi->channels * 2), &ogg_format, snd_renderbuffer->format.speed);
+		if (sb == NULL)
+		{
+			qov_clear (&vf);
+			Mem_Free (data);
+			Mem_Free (buff);
+			return false;
+		}
+
+		sfx->fetcher = &wav_fetcher;
+		sfx->fetcher_data = sb;
+
+		sfx->total_length = sb->nbframes;
+		sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
+
+		sfx->flags &= ~SFXFLAG_STREAMED;
+		vc = qov_comment(&vf, -1);
+		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, (double)snd_renderbuffer->format.speed / (double)sb->format.speed, sfx->total_length, &peak, &gaindb);
+		sb->nbframes = sfx->total_length;
+		qov_clear (&vf);
+		Mem_Free (data);
+		Mem_Free (buff);
+	}
 
 	if(peak)
 	{
