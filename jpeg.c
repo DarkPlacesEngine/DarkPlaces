@@ -52,6 +52,7 @@ typedef int jboolean;
 #define qjpeg_start_decompress jpeg_start_decompress
 #define qjpeg_std_error jpeg_std_error
 #define qjpeg_write_scanlines jpeg_write_scanlines
+#define qjpeg_simple_progression jpeg_simple_progression
 #define jpeg_dll true
 #else
 /*
@@ -426,6 +427,7 @@ static jboolean (*qjpeg_start_compress) (j_compress_ptr cinfo, jboolean write_al
 static jboolean (*qjpeg_start_decompress) (j_decompress_ptr cinfo);
 static struct jpeg_error_mgr* (*qjpeg_std_error) (struct jpeg_error_mgr *err);
 static JDIMENSION (*qjpeg_write_scanlines) (j_compress_ptr cinfo, unsigned char** scanlines, JDIMENSION num_lines);
+static void (*qjpeg_simple_progression) (j_compress_ptr cinfo);
 
 static dllfunction_t jpegfuncs[] =
 {
@@ -444,6 +446,7 @@ static dllfunction_t jpegfuncs[] =
 	{"jpeg_start_decompress",	(void **) &qjpeg_start_decompress},
 	{"jpeg_std_error",			(void **) &qjpeg_std_error},
 	{"jpeg_write_scanlines",	(void **) &qjpeg_write_scanlines},
+	{"jpeg_simple_progression",	(void **) &qjpeg_simple_progression},
 	{NULL, NULL}
 };
 
@@ -829,6 +832,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	cinfo.input_components = 3;
 	qjpeg_set_defaults (&cinfo);
 	qjpeg_set_quality (&cinfo, (int)(scr_screenshot_jpeg_quality.value * 100), TRUE);
+	qjpeg_simple_progression (&cinfo);
 
 	// turn off subsampling (to make text look better)
 	cinfo.optimize_coding = 1;
