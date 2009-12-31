@@ -119,6 +119,7 @@ extern qboolean snd_usethreadedmixing; // if true, the main thread does not mix 
 
 extern cvar_t _snd_mixahead;
 extern cvar_t snd_swapstereo;
+extern cvar_t snd_streaming;
 
 #define SND_CHANNELLAYOUT_AUTO		0
 #define SND_CHANNELLAYOUT_STANDARD	1
