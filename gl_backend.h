@@ -101,7 +101,7 @@ void R_Mesh_ResetTextureState(void);
 void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int bufferobject3i, int bufferobject3s);
 
 // saves a section of the rendered frame to a .tga or .jpg file
-qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean gammacorrect);
+qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean png, qboolean gammacorrect);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(qboolean fogcolor);
 
