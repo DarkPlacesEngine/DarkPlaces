@@ -262,7 +262,7 @@ static void S_Play_Common (float fvol, float attenuation)
 			ch_ind = S_StartSound (-1, 0, sfx, listener_origin, fvol, attenuation);
 
 			// Free the sfx if the file didn't exist
-			if (ch_ind < 0)
+			if (!sfx->fetcher)
 				S_FreeSfx (sfx, false);
 			else
 				channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
