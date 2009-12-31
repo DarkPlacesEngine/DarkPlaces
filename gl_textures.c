@@ -889,7 +889,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	int i, size;
 	gltexture_t *glt;
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
-	textypeinfo_t *texinfo;
+	textypeinfo_t *texinfo, *texinfo2;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -971,6 +971,12 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	default:
 		Host_Error("R_LoadTexture: unknown texture type");
 	}
+
+	texinfo2 = R_GetTexTypeInfo(textype, flags);
+	if(size == width * height * depth * sides * texinfo->inputbytesperpixel)
+		texinfo = texinfo2;
+	else
+		Con_Printf ("R_LoadTexture: input size changed after alpha fallback\n");
 
 	glt = (gltexture_t *)Mem_Alloc(texturemempool, sizeof(gltexture_t));
 	if (identifier)
