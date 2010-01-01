@@ -37,6 +37,7 @@ static void*			(*qpng_create_write_struct)	(const char*, void*, void(*)(void *pn
 static void*			(*qpng_create_info_struct)	(void*);
 static void				(*qpng_read_info)			(void*, void*);
 static void				(*qpng_set_compression_level)	(void*, int);
+static void				(*qpng_set_filter)			(void*, int, int);
 static void				(*qpng_set_expand)			(void*);
 static void				(*qpng_set_gray_1_2_4_to_8)	(void*);
 static void				(*qpng_set_palette_to_rgb)	(void*);
@@ -73,6 +74,7 @@ static dllfunction_t pngfuncs[] =
 	{"png_create_info_struct",	(void **) &qpng_create_info_struct},
 	{"png_read_info",			(void **) &qpng_read_info},
 	{"png_set_compression_level",	(void **) &qpng_set_compression_level},
+	{"png_set_filter",			(void **) &qpng_set_filter},
 	{"png_set_expand",			(void **) &qpng_set_expand},
 	{"png_set_gray_1_2_4_to_8",	(void **) &qpng_set_gray_1_2_4_to_8},
 	{"png_set_palette_to_rgb",	(void **) &qpng_set_palette_to_rgb},
@@ -417,13 +419,22 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 =================================================================
 */
 
+#define Z_BEST_SPEED 1
 #define Z_BEST_COMPRESSION 9
+#define PNG_INTERLACE_NONE 0
 #define PNG_INTERLACE_ADAM7 1
 #define PNG_FILTER_TYPE_BASE 0
 #define PNG_FILTER_TYPE_DEFAULT PNG_FILTER_TYPE_BASE
 #define PNG_COMPRESSION_TYPE_BASE 0
 #define PNG_COMPRESSION_TYPE_DEFAULT PNG_COMPRESSION_TYPE_BASE
-
+#define PNG_NO_FILTERS     0x00
+#define PNG_FILTER_NONE    0x08
+#define PNG_FILTER_SUB     0x10
+#define PNG_FILTER_UP      0x20
+#define PNG_FILTER_AVG     0x40
+#define PNG_FILTER_PAETH   0x80
+#define PNG_ALL_FILTERS (PNG_FILTER_NONE | PNG_FILTER_SUB | PNG_FILTER_UP | \
+                         PNG_FILTER_AVG | PNG_FILTER_PAETH)
 
 /*
 ====================
@@ -484,9 +495,11 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 	my_png.outfile = file;
 	qpng_set_write_fn(png, ioBuffer, PNG_fWriteData, PNG_fFlushData);
 
-	qpng_set_compression_level(png, Z_BEST_COMPRESSION);
-
+	//qpng_set_compression_level(png, Z_BEST_COMPRESSION);
+	qpng_set_compression_level(png, Z_BEST_SPEED);
 	qpng_set_IHDR(png, pnginfo, width, height, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_ADAM7, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	//qpng_set_IHDR(png, pnginfo, width, height, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	qpng_set_filter(png, 0, PNG_NO_FILTERS);
 	qpng_write_info(png, pnginfo);
 	qpng_set_packing(png);
 	qpng_set_bgr(png);
@@ -503,5 +516,6 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 	qpng_destroy_write_struct(&png, &pnginfo);
 
 	FS_Close (file);
+
 	return true;
 }
