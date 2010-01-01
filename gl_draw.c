@@ -1352,7 +1352,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	//ftbase_x = snap_to_pixel_x(ftbase_x);
 	if(snap)
 	{
-		startx = snap_to_pixel_y(startx, 0.4);
+		startx = snap_to_pixel_x(startx, 0.4);
 		starty = snap_to_pixel_y(starty, 0.4);
 		ftbase_y = snap_to_pixel_y(ftbase_y, 0.3);
 	}
