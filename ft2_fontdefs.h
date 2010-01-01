@@ -43,6 +43,9 @@ struct ft2_font_map_s
 	ft2_kerning_t          kerning;
 	// safes us the trouble of calculating these over and over again
 	double                 sfx, sfy;
+
+	// the width_of for the image-font, pixel-snapped for this size
+	float           width_of[256];
 };
 
 struct ft2_attachment_s
