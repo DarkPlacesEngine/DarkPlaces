@@ -314,7 +314,7 @@ static float Font_VirtualToRealSize(float sz)
 
 static float Font_SnapTo(float val, float snapwidth)
 {
-	return rint(val / snapwidth) * snapwidth;
+	return floor(val / snapwidth + 0.5f) * snapwidth;
 }
 
 static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font);
