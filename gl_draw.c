@@ -532,6 +532,7 @@ void Draw_FreePic(const char *picname)
 	}
 }
 
+static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
 static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 {
@@ -615,7 +616,13 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 				case '+':
 				case '-':
 				case '.':
-					fnt->width_of[ch++] = atof(com_token) + extraspacing;
+					fnt->width_of[ch] = atof(com_token) + extraspacing;
+					if (fnt->ft2)
+					{
+						for (i = 0; i < MAX_FONT_SIZES && fnt->req_sizes[i] >= 0; ++i)
+							Font_MapForIndex(fnt->ft2, i)->width_of[ch] = snap_to_pixel_x(fnt->width_of[ch] * fnt->req_sizes[i], 0.4);
+					}
+					ch++;
 					break;
 				default:
 					if(!strcmp(com_token, "extraspacing"))
@@ -1092,6 +1099,8 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	qboolean snap = true;
 	qboolean least_one = false;
 	float dw, dh; // display w/h
+	float width_of_factor;
+	const float *width_of;
 
 	if (!h) h = w;
 	if (!h) {
@@ -1110,13 +1119,6 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 		else
 			map_index = Font_IndexForSize(ft2, h, NULL, NULL);
 		fontmap = Font_MapForIndex(ft2, map_index);
-	}
-	if(snap)
-	{
-		if(fabs(sw - 1) > 0.001 || fabs(sh - 1) > 0.001)
-			snap = false; // turn off pixel snapping for better animation
-		else
-			sw = sh = 1;
 	}
 
 	dw = w * sw;
@@ -1139,6 +1141,20 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 		maxwidth = -maxwidth;
 	}
 
+	//if (snap)
+	//	x = snap_to_pixel_x(x, 0.4); // haha, it's 0 anyway
+
+	if (fontmap)
+	{
+		width_of_factor = 1;
+		width_of = fontmap->width_of;
+	}
+	else
+	{
+		width_of_factor = dw;
+		width_of = fnt->width_of;
+	}
+
 	for (i = 0;((bytes_left = *maxlen - (text - text_start)) > 0) && *text;)
 	{
 		size_t i0 = i;
@@ -1146,17 +1162,15 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 		i = text - text_start;
 		if (!ch)
 			break;
-		if (snap)
-			x = snap_to_pixel_x(x, 0.4);
 		if (ch == ' ' && !fontmap)
 		{
 			if(!least_one || i0) // never skip the first character
-			if(x + fnt->width_of[(int) ' '] * dw > maxwidth)
+			if(x + width_of[(int) ' '] * width_of_factor > maxwidth)
 			{
 				i = i0;
 				break; // oops, can't draw this
 			}
-			x += fnt->width_of[(int) ' '] * dw;
+			x += width_of[(int) ' '] * width_of_factor;
 			continue;
 		}
 		// i points to the char after ^
@@ -1223,12 +1237,12 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 				map = ft2_oldstyle_map;
 			prevch = 0;
 			if(!least_one || i0) // never skip the first character
-			if(x + fnt->width_of[ch] * dw > maxwidth)
+			if(x + width_of[ch] * width_of_factor > maxwidth)
 			{
 				i = i0;
 				break; // oops, can't draw this
 			}
-			x += fnt->width_of[ch] * dw;
+			x += width_of[ch] * width_of_factor;
 		} else {
 			if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
 			{
@@ -1284,6 +1298,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	float pix_x, pix_y;
 	size_t bytes_left;
 	float dw, dh;
+	float width_of_factor;
+	const float *width_of;
 
 	int tw, th;
 	tw = R_TextureWidth(fnt->tex);
@@ -1306,13 +1322,6 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		else
 			map_index = Font_IndexForSize(ft2, h, NULL, NULL);
 		fontmap = Font_MapForIndex(ft2, map_index);
-	}
-	if(snap)
-	{
-		if(fabs(sw - 1) > 0.001 || fabs(sh - 1) > 0.001)
-			snap = false; // turn off pixel snapping for better animation
-		else
-			sw = sh = 1;
 	}
 
 	dw = w * sw;
@@ -1342,10 +1351,26 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 
 	//ftbase_x = snap_to_pixel_x(ftbase_x);
 	if(snap)
+	{
+		startx = snap_to_pixel_y(startx, 0.4);
+		starty = snap_to_pixel_y(starty, 0.4);
 		ftbase_y = snap_to_pixel_y(ftbase_y, 0.3);
+	}
 
 	pix_x = vid.width / vid_conwidth.value;
 	pix_y = vid.height / vid_conheight.value;
+
+	if (fontmap)
+	{
+		width_of_factor = 1;
+		width_of = fontmap->width_of;
+	}
+	else
+	{
+		width_of_factor = dw;
+		width_of = fnt->width_of;
+	}
+
 	for (shadow = r_textshadow.value != 0 && basealpha > 0;shadow >= 0;shadow--)
 	{
 		text = text_start;
@@ -1372,14 +1397,9 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 			i = text - text_start;
 			if (!ch)
 				break;
-			if (snap)
-			{
-				x = snap_to_pixel_x(x, 0.4);
-				y = snap_to_pixel_y(y, 0.4);
-			}
 			if (ch == ' ' && !fontmap)
 			{
-				x += fnt->width_of[(int) ' '] * dw;
+				x += width_of[(int) ' '] * width_of_factor;
 				continue;
 			}
 			if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i < maxlen)
@@ -1503,7 +1523,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 					at = texcoord2f;
 					av = vertex3f;
 				}
-				x += thisw * dw;
+				x += width_of[ch] * width_of_factor;
 			} else {
 				if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
 				{
