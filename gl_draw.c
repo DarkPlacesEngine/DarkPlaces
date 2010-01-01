@@ -1373,6 +1373,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 
 	for (shadow = r_textshadow.value != 0 && basealpha > 0;shadow >= 0;shadow--)
 	{
+		prevch = 0;
 		text = text_start;
 
 		if (!outcolor || *outcolor == -1)
