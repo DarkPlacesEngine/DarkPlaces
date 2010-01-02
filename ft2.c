@@ -263,6 +263,8 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_antialias);
 	Cvar_RegisterVariable(&r_font_kerning);
 	Cvar_RegisterVariable(&developer_font);
+	// let's open it at startup already
+	Font_OpenLibrary();
 }
 
 /*
