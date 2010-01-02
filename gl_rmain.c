@@ -11823,20 +11823,19 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 			r_surfacelist[numsurfacelist++] = surfaces + j;
 	}
 	// update lightmaps if needed
-	if (update)
+	if (model->brushq1.firstrender)
 	{
-		int updated = 0;
+		model->brushq1.firstrender = false;
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
-		{
+			if (update[j])
+				R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
+	}
+	else if (update)
+	{
+		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 			if (r_refdef.viewcache.world_surfacevisible[j])
-			{
 				if (update[j])
-				{
-					updated++;
 					R_BuildLightMap(r_refdef.scene.worldentity, surfaces + j);
-				}
-			}
-		}
 	}
 	// don't do anything if there were no surfaces
 	if (!numsurfacelist)

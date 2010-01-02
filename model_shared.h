@@ -747,6 +747,7 @@ typedef struct model_brushq1_s
 
 	// this contains bytes that are 1 if a surface needs its lightmap rebuilt
 	unsigned char *lightmapupdateflags;
+	qboolean firstrender; // causes all surface lightmaps to be loaded in first frame
 }
 model_brushq1_t;
 

@@ -2248,6 +2248,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 	loadmodel->num_surfaces = count;
 
+	loadmodel->brushq1.firstrender = true;
 	loadmodel->brushq1.lightmapupdateflags = (unsigned char *)Mem_Alloc(loadmodel->mempool, count*sizeof(unsigned char));
 
 	totalverts = 0;
