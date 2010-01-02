@@ -177,6 +177,7 @@ qboolean Font_OpenLibrary (void)
 		"freetype6.dll",
 		"libfreetype-6.dll",
 #elif defined(MACOSX)
+		"libfreetype.6.dylib",
 		"libfreetype.dylib",
 #else
 		"libfreetype.so.6",
