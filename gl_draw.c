@@ -860,7 +860,6 @@ void GL_Draw_Init (void)
 	for(i = 0, j = 0; i < MAX_USERFONTS; ++i)
 		if(!FONT_USER[i].title[0])
 			dpsnprintf(FONT_USER[i].title, sizeof(FONT_USER[i].title), "user%d", j++);
-	Font_Init();
 }
 
 void _DrawQ_Setup(void)
