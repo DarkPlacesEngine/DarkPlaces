@@ -619,8 +619,14 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 					fnt->width_of[ch] = atof(com_token) + extraspacing;
 					if (fnt->ft2)
 					{
-						for (i = 0; i < MAX_FONT_SIZES && fnt->req_sizes[i] >= 0; ++i)
-							Font_MapForIndex(fnt->ft2, i)->width_of[ch] = snap_to_pixel_x(fnt->width_of[ch] * fnt->req_sizes[i], 0.4);
+						for (i = 0; i < MAX_FONT_SIZES; ++i)
+						{
+							//Font_MapForIndex(fnt->ft2, i)->width_of[ch] = snap_to_pixel_x(fnt->width_of[ch] * fnt->req_sizes[i], 0.4);
+							ft2_font_map_t *map = Font_MapForIndex(fnt->ft2, i);
+							if (!map)
+								break;
+							map->width_of[ch] = Font_SnapTo(fnt->width_of[ch], 1/map->size);
+						}
 					}
 					ch++;
 					break;
@@ -789,7 +795,6 @@ static void LoadFont_f(void)
 	for(i = 1; i < MAX_FONT_SIZES; ++i)
 		f->req_sizes[i] = -1;
 
-	// for some reason this argc is 3 even when using 2 arguments here, maybe nexuiz screws up
 	if(Cmd_Argc() >= 3)
 	{
 		for(i = 0; i < Cmd_Argc()-3; ++i)
@@ -1145,7 +1150,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 
 	if (fontmap)
 	{
-		width_of_factor = 1;
+		width_of_factor = dw;
 		width_of = fontmap->width_of;
 	}
 	else
@@ -1361,7 +1366,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 
 	if (fontmap)
 	{
-		width_of_factor = 1;
+		width_of_factor = dw;
 		width_of = fontmap->width_of;
 	}
 	else
