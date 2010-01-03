@@ -43,6 +43,7 @@ cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to
 cvar_t prvm_reuseedicts_startuptime = {0, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
 cvar_t prvm_reuseedicts_neverinsameframe = {0, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
 
+static double prvm_reuseedicts_always_allow = 0;
 qboolean prvm_runawaycheck = true;
 
 // LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
@@ -243,6 +244,8 @@ qboolean PRVM_ED_CanAlloc(prvm_edict_t *e)
 {
 	if(!e->priv.required->free)
 		return false;
+	if(prvm_reuseedicts_always_allow == realtime)
+		return true;
 	if(realtime <= e->priv.required->freetime && prvm_reuseedicts_neverinsameframe.integer)
 		return false; // never allow reuse in same frame (causes networking trouble)
 	if(e->priv.required->freetime < prog->starttime + prvm_reuseedicts_startuptime.value)
@@ -1406,6 +1409,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 	spawned = 0;
 	died = 0;
 
+	prvm_reuseedicts_always_allow = realtime;
 
 // parse ents
 	while (1)
@@ -1517,6 +1521,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 	}
 
 	Con_DPrintf("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
+
+	prvm_reuseedicts_always_allow = 0;
 }
 
 void PRVM_FindOffsets(void)
