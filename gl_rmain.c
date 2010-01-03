@@ -4164,10 +4164,14 @@ void R_GLSL_DumpShader_f(void)
 	{
 		FS_Print(file, "/* The engine may define the following macros:\n");
 		FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
-		for (i = 0;i < SHADERMODE_COUNT;i++)
-			FS_Print(file, glslshadermodeinfo[i].pretext);
-		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-			FS_Print(file, shaderpermutationinfo[i].pretext);
+		for (i = 0;i < SHADERMODE_COUNT;i++) {
+			if (glslshadermodeinfo[i].pretext)
+				FS_Print(file, glslshadermodeinfo[i].pretext);
+		}
+		for (i = 0;i < SHADERPERMUTATION_COUNT;i++) {
+			if (shaderpermutationinfo[i].pretext)
+				FS_Print(file, shaderpermutationinfo[i].pretext);
+		}
 		FS_Print(file, "*/\n");
 		FS_Print(file, builtinshaderstring);
 		FS_Close(file);
