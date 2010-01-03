@@ -72,7 +72,8 @@ ft2_font_map_t *Font_MapForIndex(ft2_font_t *font, int index);
 qboolean        Font_LoadFont(const char *name, dp_font_t *dpfnt);
 qboolean        Font_GetKerningForSize(ft2_font_t *font, float w, float h, Uchar left, Uchar right, float *outx, float *outy);
 qboolean        Font_GetKerningForMap(ft2_font_t *font, int map_index, float w, float h, Uchar left, Uchar right, float *outx, float *outy);
-
+float           Font_VirtualToRealSize(float sz);
+float           Font_SnapTo(float val, float snapwidth);
 // since this is used on a font_map_t, let's name it FontMap_*
 ft2_font_map_t *FontMap_FindForChar(ft2_font_map_t *start, Uchar ch);
 #endif // DP_FREETYPE2_H__
