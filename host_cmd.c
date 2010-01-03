@@ -831,6 +831,9 @@ void Host_Loadgame_f (void)
 		}
 	}
 
+	// unlink all entities
+	World_UnlinkAll(&sv.world);
+
 // load the edicts out of the savegame file
 	end = t;
 	for (;;)
