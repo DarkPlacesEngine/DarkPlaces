@@ -1016,6 +1016,9 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	}
 
 	XmbSetWMProperties(vidx11_display, win, gamename, gamename, (char **) com_argv, com_argc, szhints, wmhints, clshints);
+	// strdup() allocates using malloc(), should be freed with free()
+	free(clshints->res_name);
+	free(clshints->res_class);
 	XFree(clshints);
 	XFree(wmhints);
 	XFree(szhints);
@@ -1042,6 +1045,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	//XSync(vidx11_display, False);
 
 	ctx = qglXCreateContext(vidx11_display, visinfo, NULL, True);
+	XFree(visinfo); // glXChooseVisual man page says to use XFree to free visinfo
 	if (!ctx)
 	{
 		Con_Printf ("glXCreateContext failed\n");
@@ -1153,6 +1157,8 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 				++k;
 			}
 		}
+		// manpage of XF86VidModeGetAllModeLines says it should be freed by the caller
+		XFree(vidmodes);
 		return k;
 	}
 	return 0; // FIXME implement this
