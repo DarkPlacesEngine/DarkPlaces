@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
 
-static int r_frame = 0; ///< used only by R_GetCurrentTexture
+static int r_textureframe = 0; ///< used only by R_GetCurrentTexture
 
 static qboolean r_loadnormalmap;
 static qboolean r_loadgloss;
@@ -7362,7 +7362,6 @@ void R_HDR_RenderBloomTexture(void)
 	r_refdef.view.width = oldwidth;
 	r_refdef.view.height = oldheight;
 	r_refdef.view.colorscale = oldcolorscale;
-	r_frame++; // used only by R_GetCurrentTexture
 
 	R_ResetViewRendering3D();
 
@@ -7740,7 +7739,6 @@ void R_RenderView(void)
 {
 	if (r_timereport_active)
 		R_TimeReport("start");
-	r_frame++; // used only by R_GetCurrentTexture
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 
 	if (!r_drawentities.integer)
@@ -7861,6 +7859,7 @@ extern qboolean r_shadow_usingdeferredprepass;
 void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
+	r_textureframe++; // used only by R_GetCurrentTexture
 
 	R_UpdateFogColor();
 
@@ -8569,9 +8568,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	dp_model_t *model = ent->model;
 	q3shaderinfo_layer_tcmod_t *tcmod;
 
-	if (t->update_lastrenderframe == r_frame && t->update_lastrenderentity == (void *)ent)
+	if (t->update_lastrenderframe == r_textureframe && t->update_lastrenderentity == (void *)ent)
 		return t->currentframe;
-	t->update_lastrenderframe = r_frame;
+	t->update_lastrenderframe = r_textureframe;
 	t->update_lastrenderentity = (void *)ent;
 
 	// switch to an alternate material if this is a q1bsp animated material
