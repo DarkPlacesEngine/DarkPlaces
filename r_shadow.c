@@ -2682,14 +2682,6 @@ static void R_Shadow_RenderLighting_Light_GLSL(int firstvertex, int numvertices,
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT);
-	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
-		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
-	else
-		R_Mesh_ColorPointer(NULL, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
-	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
-	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
-	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 	{
 		qglDepthFunc(GL_EQUAL);CHECKGLERROR
