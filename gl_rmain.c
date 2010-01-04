@@ -4306,13 +4306,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	unsigned int permutation = 0;
 	unsigned int mode = 0;
 	float m16f[16];
-	// TODO: implement geometry-shader based shadow volumes someday
-	if (r_glsl_offsetmapping.integer)
-	{
-		permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-		if (r_glsl_offsetmapping_reliefmapping.integer)
-			permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-	}
 	if (rsurfacepass == RSURFPASS_BACKGROUND)
 	{
 		// distorted background
@@ -4320,22 +4313,53 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			mode = SHADERMODE_WATER;
 		else
 			mode = SHADERMODE_REFRACTION;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+		R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+		R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest(false);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
 	{
-		// normalmap (deferred prepass), may use alpha test on diffuse
-		mode = SHADERMODE_DEFERREDGEOMETRY;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
-			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (r_glsl_offsetmapping.integer)
 		{
 			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+			permutation |= SHADERPERMUTATION_ALPHAKILL;
+		// normalmap (deferred prepass), may use alpha test on diffuse
+		mode = SHADERMODE_DEFERREDGEOMETRY;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+		R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+		R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+		else
+			R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest(false);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_RTLIGHT)
 	{
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		// light source
 		mode = SHADERMODE_LIGHTSOURCE;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
@@ -4345,7 +4369,11 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (diffusescale > 0)
 			permutation |= SHADERPERMUTATION_DIFFUSE;
 		if (specularscale > 0)
+		{
 			permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
+			if (r_shadow_glossexact.integer)
+				permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
+		}
 		if (r_refdef.fogenabled)
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
@@ -4368,40 +4396,90 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 		}
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
+		{
+			R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		}
+		else
+		{
+			R_Mesh_TexCoordPointer(1, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(2, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(3, 0, NULL, 0, 0);
+		}
+		//R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+		else
+			R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
-		// unshaded geometry (fullbright or ambient model lighting)
-		mode = SHADERMODE_FLATCOLOR;
-		ambientscale = diffusescale = specularscale = 0;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
-			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
-			permutation |= SHADERPERMUTATION_GLOW;
-		if (r_refdef.fogenabled)
-			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
-		if (rsurface.texture->colormapping)
-			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (r_glsl_offsetmapping.integer)
 		{
 			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
 			if (r_glsl_offsetmapping_reliefmapping.integer)
 				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
 		}
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		// unshaded geometry (fullbright or ambient model lighting)
+		mode = SHADERMODE_FLATCOLOR;
+		ambientscale = diffusescale = specularscale = 0;
+		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+			permutation |= SHADERPERMUTATION_GLOW;
+		if (r_refdef.fogenabled)
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
+		if (rsurface.texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
+		{
+			R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		}
+		else
+		{
+			R_Mesh_TexCoordPointer(1, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(2, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(3, 0, NULL, 0, 0);
+		}
+		R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+		else
+			R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT_DIRECTIONAL)
 	{
-		// directional model lighting
-		mode = SHADERMODE_LIGHTDIRECTION;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		// directional model lighting
+		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		permutation |= SHADERPERMUTATION_DIFFUSE;
 		if (specularscale > 0)
+		{
 			permutation |= SHADERPERMUTATION_SPECULAR;
+			if (r_shadow_glossexact.integer)
+				permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
+		}
 		if (r_refdef.fogenabled)
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
@@ -4410,13 +4488,36 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
+		{
+			R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		}
+		else
+		{
+			R_Mesh_TexCoordPointer(1, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(2, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(3, 0, NULL, 0, 0);
+		}
+		R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
-		// ambient model lighting
-		mode = SHADERMODE_LIGHTDIRECTION;
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		// ambient model lighting
+		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
@@ -4427,10 +4528,45 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
+		{
+			R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		}
+		else
+		{
+			R_Mesh_TexCoordPointer(1, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(2, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(3, 0, NULL, 0, 0);
+		}
+		R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+		R_Mesh_ColorPointer(NULL, 0, 0);
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else
 	{
+		if (r_glsl_offsetmapping.integer)
+		{
+			permutation |= SHADERPERMUTATION_OFFSETMAPPING;
+			if (r_glsl_offsetmapping_reliefmapping.integer)
+				permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+		}
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		// lightmapped wall
+		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+			permutation |= SHADERPERMUTATION_GLOW;
+		if (r_refdef.fogenabled)
+			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
+		if (rsurface.texture->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
+		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
+			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
@@ -4440,7 +4576,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 			permutation |= SHADERPERMUTATION_DIFFUSE;
 			if (specularscale > 0)
+			{
 				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
+				if (r_shadow_glossexact.integer)
+					permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
+			}
+			R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
+			if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+			else
+				R_Mesh_ColorPointer(NULL, 0, 0);
 		}
 		else if (r_glsl_deluxemapping.integer >= 2)
 		{
@@ -4448,36 +4593,50 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
 			permutation |= SHADERPERMUTATION_DIFFUSE;
 			if (specularscale > 0)
+			{
 				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
+				if (r_shadow_glossexact.integer)
+					permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
+			}
+			R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
+			if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+			else
+				R_Mesh_ColorPointer(NULL, 0, 0);
 		}
 		else if (rsurface.uselightmaptexture)
 		{
 			// ordinary lightmapping (q1bsp, q3bsp)
 			mode = SHADERMODE_LIGHTMAP;
+			R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
+			if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+			else
+				R_Mesh_ColorPointer(NULL, 0, 0);
 		}
 		else
 		{
 			// ordinary vertex coloring (q3bsp)
 			mode = SHADERMODE_VERTEXCOLOR;
+			R_Mesh_TexCoordPointer(4, 0, NULL, 0, 0);
+			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
 		}
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
-			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
-			permutation |= SHADERPERMUTATION_GLOW;
-		if (r_refdef.fogenabled)
-			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
-		if (rsurface.texture->colormapping)
-			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
-			permutation |= SHADERPERMUTATION_REFLECTION;
-		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
-			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
+		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
+		{
+			R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
+			R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
+		}
+		else
+		{
+			R_Mesh_TexCoordPointer(1, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(2, 0, NULL, 0, 0);
+			R_Mesh_TexCoordPointer(3, 0, NULL, 0, 0);
+		}
+		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
-	if(permutation & SHADERPERMUTATION_SPECULAR)
-		if(r_shadow_glossexact.integer)
-			permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
-	if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) && r_shadow_usingdeferredprepass)
-		permutation |= SHADERPERMUTATION_ALPHAKILL;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -10138,77 +10297,40 @@ extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass)
 {
-	qboolean reflect = (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)) && !prepass;
-	qboolean refract = (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)) && !prepass;
-
-	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
-		return;
-
-	if ((rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)) && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
-		R_Mesh_ColorPointer(NULL, 0, 0);
-	else
-		R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
-
-	if (refract)
+	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
+	if (prepass)
 	{
-		// render background
-		GL_BlendFunc(GL_ONE, GL_ZERO);
+		// render screenspace normalmap to texture
 		GL_DepthMask(true);
-		GL_AlphaTest(false);
-
-		GL_Color(1, 1, 1, 1);
-		R_Mesh_ColorPointer(NULL, 0, 0);
-
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
+		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		GL_LockArrays(0, 0);
+	}
+	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)) && !r_waterstate.renderingscene)
+	{
+		// render water or distortion background, then blend surface on top
+		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND);
-		RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
-		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
-		R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
-		R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
-		R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
-		R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
 		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
 		GL_LockArrays(0, 0);
-
-		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		GL_DepthMask(false);
-		if ((rsurface.uselightmaptexture || (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)) && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND))
-			R_Mesh_ColorPointer(NULL, 0, 0);
-		else
-			R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
+		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
+		GL_LockArrays(0, 0);
 	}
-
-	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
-
-	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
-	R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
-	R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
-	R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
-	R_Mesh_TexCoordPointer(3, 3, rsurface.normal3f, rsurface.normal3f_bufferobject, rsurface.normal3f_bufferoffset);
-	if (!prepass)
-		R_Mesh_TexCoordPointer(4, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
-
-	if (refract)
-		GL_DepthMask(true);
 	else
+	{
+		// render surface normally
 		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-	GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0 && !r_shadow_usingdeferredprepass);
-
-	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
-	{
-		if (refract || reflect)
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
-		else
+		else if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 			RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist);
-	}
-	else
-	{
-		if (refract || reflect)
-			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
 		else
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+		GL_LockArrays(0, 0);
 	}
-	GL_LockArrays(0, 0);
 }
 
 static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
