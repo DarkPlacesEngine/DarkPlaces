@@ -5060,7 +5060,7 @@ void VM_str2chr (void)
 		if (utf8_enable.integer)
 			ch = u8_getchar_noendptr(s + index);
 		else
-			ch = (unsigned char)s[(unsigned)PRVM_G_FLOAT(OFS_PARM1)];
+			ch = (unsigned char)s[index];
 		PRVM_G_FLOAT(OFS_RETURN) = ch;
 	}
 	else
