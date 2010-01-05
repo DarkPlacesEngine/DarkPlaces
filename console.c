@@ -1383,9 +1383,9 @@ void Con_DrawInput (void)
 
 	y = (int)strlen(text);
 
-// fill out remainder with spaces
-	for (i = y; i < (int)sizeof(editlinecopy)-1; i++)
-		text[i] = ' ';
+	// append enoug nul-bytes to cover the utf8-versions of the cursor too
+	for (i = y; i < y + 4 && i < sizeof(editlinecopy); ++i)
+		text[i] = 0;
 
 	// add the cursor frame
 	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
@@ -1415,7 +1415,7 @@ void Con_DrawInput (void)
 		x = 0;
 
 	// draw it
-	DrawQ_String(x, con_vislines - con_textsize.value*2, text, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
+	DrawQ_String(x, con_vislines - con_textsize.value*2, text, y + 3, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
 
 	// remove cursor
 //	key_line[key_linepos] = 0;
