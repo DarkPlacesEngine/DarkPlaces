@@ -336,10 +336,6 @@ extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #define GL_TEXTURE31_ARB				0x84DF
 #endif
 
-// GL_EXT_compiled_vertex_array
-extern void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
-extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
-
 // GL_ARB_texture_env_combine
 #ifndef GL_COMBINE_ARB
 #define GL_COMBINE_ARB					0x8570

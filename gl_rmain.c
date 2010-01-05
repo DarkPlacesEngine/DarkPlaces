@@ -9696,10 +9696,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesu
 	int numtriangles;
 	// TODO: lock all array ranges before render, rather than on each surface
 	if (texturenumsurfaces == 1)
-	{
-		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
-	}
 	else if (r_batchmode.integer == 2)
 	{
 		#define MAXBATCHTRIANGLES 4096
@@ -9744,7 +9741,6 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesu
 			surface2 = texturesurfacelist[j-1];
 			numvertices = surface2->num_firstvertex + surface2->num_vertices - surface->num_firstvertex;
 			numtriangles = surface2->num_firsttriangle + surface2->num_triangles - surface->num_firsttriangle;
-			GL_LockArrays(surface->num_firstvertex, numvertices);
 			R_Mesh_Draw(surface->num_firstvertex, numvertices, surface->num_firsttriangle, numtriangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 		}
 	}
@@ -9753,7 +9749,6 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesu
 		for (i = 0;i < texturenumsurfaces;i++)
 		{
 			surface = texturesurfacelist[i];
-			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 		}
 	}
@@ -9833,7 +9828,6 @@ static void RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(int 
 		surface = texturesurfacelist[i];
 		RSurf_BindLightmapForSurface(surface);
 		RSurf_BindReflectionForSurface(surface);
-		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 	}
 }
@@ -9851,7 +9845,6 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, const 
 	if (texturenumsurfaces == 1)
 	{
 		RSurf_BindLightmapForSurface(surface);
-		GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 	}
 	else if (r_batchmode.integer == 2)
@@ -9916,7 +9909,6 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, const 
 			surface2 = texturesurfacelist[j-1];
 			numvertices = surface2->num_firstvertex + surface2->num_vertices - surface->num_firstvertex;
 			numtriangles = surface2->num_firsttriangle + surface2->num_triangles - surface->num_firsttriangle;
-			GL_LockArrays(surface->num_firstvertex, numvertices);
 			R_Mesh_Draw(surface->num_firstvertex, numvertices, surface->num_firsttriangle, numtriangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 		}
 #if 0
@@ -9929,7 +9921,6 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, const 
 		{
 			surface = texturesurfacelist[i];
 			RSurf_BindLightmapForSurface(surface);
-			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 		}
 	}
@@ -9959,7 +9950,6 @@ static void RSurf_DrawBatch_ShowSurfaces(int texturenumsurfaces, const msurface_
 			const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			int k = (int)(((size_t)surface) / sizeof(msurface_t));
 			GL_Color((k & 15) * (1.0f / 16.0f) * r_refdef.view.colorscale, ((k >> 4) & 15) * (1.0f / 16.0f) * r_refdef.view.colorscale, ((k >> 8) & 15) * (1.0f / 16.0f) * r_refdef.view.colorscale, 1);
-			GL_LockArrays(surface->num_firstvertex, surface->num_vertices);
 			R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 		}
 	}
@@ -10334,7 +10324,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-		GL_LockArrays(0, 0);
 	}
 	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)) && !r_waterstate.renderingscene)
 	{
@@ -10342,11 +10331,9 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND);
 		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
-		GL_LockArrays(0, 0);
 		GL_DepthMask(false);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
 		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
-		GL_LockArrays(0, 0);
 	}
 	else
 	{
@@ -10359,7 +10346,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 			RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist);
 		else
 			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
-		GL_LockArrays(0, 0);
 	}
 }
 
@@ -10476,7 +10462,6 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 		default:
 			Con_Printf("R_DrawTextureSurfaceList: unknown layer type %i\n", layer->type);
 		}
-		GL_LockArrays(0, 0);
 	}
 	CHECKGLERROR
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
@@ -10528,7 +10513,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 					RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 				else
 					RSurf_DrawBatch_GL11_VertexColor(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
-				GL_LockArrays(0, 0);
 				// then apply the texture to it
 				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 				R_Mesh_TexBind(0, layer->texture);
@@ -10595,7 +10579,6 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 		default:
 			Con_Printf("R_DrawTextureSurfaceList: unknown layer type %i\n", layer->type);
 		}
-		GL_LockArrays(0, 0);
 	}
 	CHECKGLERROR
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
@@ -11727,9 +11710,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		GL_CullFace(GL_NONE);
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 		R_SetupShader_Generic(decalskinframe->base, NULL, GL_MODULATE, 1);
-		GL_LockArrays(0, numtris * 3);
 		R_Mesh_Draw(0, numtris * 3, 0, numtris, decalsystem->element3i, decalsystem->element3s, 0, 0);
-		GL_LockArrays(0, 0);
 	}
 }
 

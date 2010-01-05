@@ -222,9 +222,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 		R_Mesh_VertexPointer(e->vert[0], 0, 0);
 		// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 		GL_Color(e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, 1);
-		GL_LockArrays(0, numverts);
 		R_Mesh_Draw(0, numverts, 0, numtriangles, NULL, explosiontris[0], 0, 0);
-		GL_LockArrays(0, 0);
 	}
 }
 
