@@ -1330,7 +1330,6 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 		r_refdef.stats.lights_shadowtriangles += tris;
 		CHECKGLERROR
 		R_Mesh_VertexPointer(shadowvertex3f, 0, 0);
-		GL_LockArrays(0, outverts);
 		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
 		{
 			// increment stencil if frontface is infront of depthbuffer
@@ -1352,7 +1351,6 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 			qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 		}
 		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, 0);
-		GL_LockArrays(0, 0);
 		CHECKGLERROR
 	}
 }
@@ -3303,7 +3301,6 @@ void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, co
 		{
 			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
 			R_Mesh_VertexPointer(mesh->vertex3f, mesh->vbo, mesh->vbooffset_vertex3f);
-			GL_LockArrays(0, mesh->numverts);
 			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
 			{
 				// increment stencil if frontface is infront of depthbuffer
@@ -3325,7 +3322,6 @@ void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, co
 				qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 			}
 			R_Mesh_Draw(0, mesh->numverts, 0, mesh->numtriangles, mesh->element3i, mesh->element3s, mesh->ebo3i, mesh->ebo3s);
-			GL_LockArrays(0, 0);
 		}
 		CHECKGLERROR
 	}

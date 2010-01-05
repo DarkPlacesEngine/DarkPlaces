@@ -37,7 +37,6 @@ void GL_CullFace(int state);
 void GL_AlphaTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
-void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(unsigned int num);
 void GL_ClientActiveTexture(unsigned int num);
 void GL_Scissor(int x, int y, int width, int height);
@@ -47,8 +46,6 @@ void GL_Clear(int mask);
 unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
 void GL_Backend_FreeProgram(unsigned int prog);
 
-extern cvar_t gl_lockarrays;
-extern cvar_t gl_mesh_copyarrays;
 extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 

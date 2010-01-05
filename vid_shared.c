@@ -110,10 +110,6 @@ void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloa
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
 void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 
-// GL_EXT_compiled_vertex_array
-void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
-void (GLAPIENTRY *qglUnlockArraysEXT) (void);
-
 // general GL functions
 
 void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
@@ -593,13 +589,6 @@ static dllfunction_t multitexturefuncs[] =
 	{NULL, NULL}
 };
 
-static dllfunction_t compiledvertexarrayfuncs[] =
-{
-	{"glLockArraysEXT", (void **) &qglLockArraysEXT},
-	{"glUnlockArraysEXT", (void **) &qglUnlockArraysEXT},
-	{NULL, NULL}
-};
-
 static dllfunction_t texture3dextfuncs[] =
 {
 	{"glTexImage3DEXT", (void **) &qglTexImage3D},
@@ -829,7 +818,6 @@ void VID_CheckExtensions(void)
 	vid.support.ati_separate_stencil = GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
-	vid.support.ext_compiled_vertex_array = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 	vid.support.ext_draw_range_elements = GL_CheckExtension("1.2", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 	vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
@@ -842,7 +830,6 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -noblendsubtract disables GL_EXT_blend_subtract
 // COMMANDLINEOPTION: GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
-// COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 // COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
 // COMMANDLINEOPTION: GL: -nodrawbuffers disables use of GL_ARB_draw_buffers (required for r_shadow_deferredprepass)
 // COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
