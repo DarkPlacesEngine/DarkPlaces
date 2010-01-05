@@ -2979,7 +2979,7 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef MODE_LIGHTDIRECTION\n"
 "#define SHADING\n"
-"#ifdef USEDIFFUSE
+"#ifdef USEDIFFUSE\n"
 "	half3 lightnormal = half3(normalize(LightVector));\n"
 "#endif\n"
 "#define lightcolor LightColor\n"
