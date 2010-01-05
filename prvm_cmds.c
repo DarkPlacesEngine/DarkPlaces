@@ -5057,7 +5057,10 @@ void VM_str2chr (void)
 
 	if((unsigned)index < strlen(s))
 	{
-		ch = u8_getchar_noendptr(s + index);
+		if (utf8_enable.integer)
+			ch = u8_getchar_noendptr(s + index);
+		else
+			ch = s[index];
 		PRVM_G_FLOAT(OFS_RETURN) = ch;
 	}
 	else
