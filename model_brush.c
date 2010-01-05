@@ -6293,6 +6293,429 @@ void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Host_Error("Mod_MAP_Load: not yet implemented");
 }
 
+#define OBJASMODEL
+
+#ifdef OBJASMODEL
+typedef struct objvertex_s
+{
+	int nextindex;
+	int textureindex;
+	float v[3];
+	float vt[2];
+	float vn[3];
+}
+objvertex_t;
+
+void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	const char *textbase = (char *)buffer, *text = textbase;
+	char *s;
+	char *argv[512];
+	char line[1024];
+	char materialname[MAX_QPATH];
+	int i, j, numvertices, firstvertex, firsttriangle, elementindex, vertexindex, numsurfaces, surfacevertices, surfacetriangles, surfaceelements;
+	int index1, index2, index3;
+	objvertex_t vfirst, vprev, vcurrent;
+	int argc;
+	int linelen;
+	int numtriangles = 0;
+	int maxtriangles = 0;
+	objvertex_t *vertices = NULL;
+	int linenumber = 0;
+	int maxtextures = 0, numtextures = 0, textureindex = 0;
+	int maxv = 0, numv = 1;
+	int maxvt = 0, numvt = 1;
+	int maxvn = 0, numvn = 1;
+	char *texturenames = NULL;
+	float dist, modelradius, modelyawradius;
+	float *v = NULL;
+	float *vt = NULL;
+	float *vn = NULL;
+	float mins[3];
+	float maxs[3];
+	objvertex_t *thisvertex = NULL;
+	int vertexhashindex;
+	int *vertexhashtable = NULL;
+	objvertex_t *vertexhashdata = NULL;
+	objvertex_t *vdata = NULL;
+	int vertexhashsize = 0;
+	int vertexhashcount = 0;
+	skinfile_t *skinfiles = NULL;
+	unsigned char *data = NULL;
+
+	memset(&vfirst, 0, sizeof(vfirst));
+	memset(&vprev, 0, sizeof(vprev));
+	memset(&vcurrent, 0, sizeof(vcurrent));
+
+	dpsnprintf(materialname, sizeof(materialname), "%s", loadmodel->name);
+
+	loadmodel->modeldatatypestring = "OBJ";
+
+	loadmodel->type = mod_obj;
+	loadmodel->soundfromcenter = true;
+	loadmodel->TraceBox = NULL;
+	loadmodel->TraceLine = NULL;
+	loadmodel->TracePoint = NULL;
+	loadmodel->PointSuperContents = NULL;
+	loadmodel->brush.TraceLineOfSight = NULL;
+	loadmodel->brush.SuperContentsFromNativeContents = NULL;
+	loadmodel->brush.NativeContentsFromSuperContents = NULL;
+	loadmodel->brush.GetPVS = NULL;
+	loadmodel->brush.FatPVS = NULL;
+	loadmodel->brush.BoxTouchingPVS = NULL;
+	loadmodel->brush.BoxTouchingLeafPVS = NULL;
+	loadmodel->brush.BoxTouchingVisibleLeafs = NULL;
+	loadmodel->brush.FindBoxClusters = NULL;
+	loadmodel->brush.LightPoint = NULL;
+	loadmodel->brush.FindNonSolidLocation = NULL;
+	loadmodel->brush.AmbientSoundLevelsForPoint = NULL;
+	loadmodel->brush.RoundUpToHullSize = NULL;
+	loadmodel->brush.PointInLeaf = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
+	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
+	loadmodel->GetLightInfo = R_Q1BSP_GetLightInfo;
+	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+
+	skinfiles = Mod_LoadSkinFiles();
+	if (loadmodel->numskins < 1)
+		loadmodel->numskins = 1;
+
+	// make skinscenes for the skins (no groups)
+	loadmodel->skinscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
+	}
+
+	VectorClear(mins);
+	VectorClear(maxs);
+
+	// parse the OBJ text now
+	for(;;)
+	{
+		if (!*text)
+			break;
+		linenumber++;
+		linelen = 0;
+		for (linelen = 0;text[linelen] && text[linelen] != '\r' && text[linelen] != '\n';linelen++)
+			line[linelen] = text[linelen];
+		line[linelen] = 0;
+		for (argc = 0;argc < 4;argc++)
+			argv[argc] = "";
+		argc = 0;
+		s = line;
+		while (*s == ' ' || *s == '\t')
+			s++;
+		while (*s)
+		{
+			argv[argc++] = s;
+			while (*s > ' ')
+				s++;
+			if (!*s)
+				break;
+			*s++ = 0;
+			while (*s == ' ' || *s == '\t')
+				s++;
+		}
+		text += linelen;
+		if (*text == '\r')
+			text++;
+		if (*text == '\n')
+			text++;
+		if (!argc)
+			continue;
+		if (argv[0][0] == '#')
+			continue;
+		if (!strcmp(argv[0], "v"))
+		{
+			if (maxv <= numv)
+			{
+				maxv = max(maxv * 2, 1024);
+				v = (float *)Mem_Realloc(tempmempool, v, maxv * sizeof(float[3]));
+			}
+			v[numv*3+0] = atof(argv[1]);
+			v[numv*3+2] = atof(argv[2]);
+			v[numv*3+1] = atof(argv[3]);
+			numv++;
+		}
+		else if (!strcmp(argv[0], "vt"))
+		{
+			if (maxvt <= numvt)
+			{
+				maxvt = max(maxvt * 2, 1024);
+				vt = (float *)Mem_Realloc(tempmempool, vt, maxvt * sizeof(float[2]));
+			}
+			vt[numvt*2+0] = atof(argv[1]);
+			vt[numvt*2+1] = 1-atof(argv[2]);
+			numvt++;
+		}
+		else if (!strcmp(argv[0], "vn"))
+		{
+			if (maxvn <= numvn)
+			{
+				maxvn = max(maxvn * 2, 1024);
+				vn = (float *)Mem_Realloc(tempmempool, vn, maxvn * sizeof(float[3]));
+			}
+			vn[numvn*3+0] = atof(argv[1]);
+			vn[numvn*3+2] = atof(argv[2]);
+			vn[numvn*3+1] = atof(argv[3]);
+			numvn++;
+		}
+		else if (!strcmp(argv[0], "f"))
+		{
+			if (!numtextures)
+			{
+				if (maxtextures <= numtextures)
+				{
+					maxtextures = max(maxtextures * 2, 256);
+					texturenames = (char *)Mem_Realloc(loadmodel->mempool, texturenames, maxtextures * MAX_QPATH);
+				}
+				textureindex = numtextures++;
+				strlcpy(texturenames + textureindex*MAX_QPATH, loadmodel->name, MAX_QPATH);
+			}
+			for (j = 1;j < argc;j++)
+			{
+				index1 = atoi(argv[j]);
+				while(argv[j][0] && argv[j][0] != '/')
+					argv[j]++;
+				if (argv[j][0])
+					argv[j]++;
+				index2 = atoi(argv[j]);
+				while(argv[j][0] && argv[j][0] != '/')
+					argv[j]++;
+				if (argv[j][0])
+					argv[j]++;
+				index3 = atoi(argv[j]);
+				// negative refers to a recent vertex
+				// zero means not specified
+				// positive means an absolute vertex index
+				if (index1 < 0)
+					index1 = numv - index1;
+				if (index2 < 0)
+					index2 = numvt - index2;
+				if (index3 < 0)
+					index3 = numvn - index3;
+				vcurrent.nextindex = -1;
+				vcurrent.textureindex = textureindex;
+				VectorCopy(v + 3*index1, vcurrent.v);
+				Vector2Copy(vt + 2*index2, vcurrent.vt);
+				VectorCopy(vn + 3*index3, vcurrent.vn);
+				if (numtriangles == 0)
+				{
+					VectorCopy(vcurrent.v, mins);
+					VectorCopy(vcurrent.v, maxs);
+				}
+				else
+				{
+					mins[0] = min(mins[0], vcurrent.v[0]);
+					mins[1] = min(mins[1], vcurrent.v[1]);
+					mins[2] = min(mins[2], vcurrent.v[2]);
+					maxs[0] = max(maxs[0], vcurrent.v[0]);
+					maxs[1] = max(maxs[1], vcurrent.v[1]);
+					maxs[2] = max(maxs[2], vcurrent.v[2]);
+				}
+				if (j == 1)
+					vfirst = vcurrent;
+				else if (j >= 3)
+				{
+					if (maxtriangles <= numtriangles)
+					{
+						maxtriangles = max(maxtriangles * 2, 32768);
+						vertices = (objvertex_t*)Mem_Realloc(loadmodel->mempool, vertices, maxtriangles * sizeof(objvertex_t[3]));
+					}
+					vertices[numtriangles*3+0] = vfirst;
+					vertices[numtriangles*3+1] = vprev;
+					vertices[numtriangles*3+2] = vcurrent;
+					numtriangles++;
+				}
+				vprev = vcurrent;
+			}
+		}
+		else if (!strcmp(argv[0], "o") || !strcmp(argv[0], "g"))
+			;
+		else if (!strcmp(argv[0], "usemtl"))
+		{
+			for (i = 0;i < numtextures;i++)
+				if (!strcmp(texturenames+i*MAX_QPATH, argv[1]))
+					break;
+			if (i < numtextures)
+				textureindex = i;
+			else
+			{
+				if (maxtextures <= numtextures)
+				{
+					maxtextures = max(maxtextures * 2, 256);
+					texturenames = (char *)Mem_Realloc(loadmodel->mempool, texturenames, maxtextures * MAX_QPATH);
+				}
+				textureindex = numtextures++;
+				strlcpy(texturenames + textureindex*MAX_QPATH, argv[1], MAX_QPATH);
+			}
+		}
+	}
+
+	// now that we have the OBJ data loaded as-is, we can convert it
+
+	// copy the model bounds, then enlarge the yaw and rotated bounds according to radius
+	VectorCopy(mins, loadmodel->normalmins);
+	VectorCopy(maxs, loadmodel->normalmaxs);
+	dist = max(fabs(loadmodel->normalmins[0]), fabs(loadmodel->normalmaxs[0]));
+	modelyawradius = max(fabs(loadmodel->normalmins[1]), fabs(loadmodel->normalmaxs[1]));
+	modelyawradius = dist*dist+modelyawradius*modelyawradius;
+	modelradius = max(fabs(loadmodel->normalmins[2]), fabs(loadmodel->normalmaxs[2]));
+	modelradius = modelyawradius + modelradius * modelradius;
+	modelyawradius = sqrt(modelyawradius);
+	modelradius = sqrt(modelradius);
+	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -modelyawradius;
+	loadmodel->yawmins[2] = loadmodel->normalmins[2];
+	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] =  modelyawradius;
+	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -modelradius;
+	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] =  modelradius;
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
+
+	// allocate storage for triangles
+	loadmodel->num_surfaces = loadmodel->nummodelsurfaces = numsurfaces = numtextures;
+	loadmodel->surfmesh.data_element3i = Mem_Alloc(loadmodel->mempool, numtriangles * sizeof(int[3]));
+	loadmodel->data_surfaces = (msurface_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t));
+	// allocate vertex hash structures to build an optimal vertex subset
+	vertexhashsize = numtriangles*2;
+	vertexhashtable = Mem_Alloc(loadmodel->mempool, sizeof(int) * vertexhashsize);
+	memset(vertexhashtable, 0xFF, sizeof(int) * vertexhashsize);
+	vertexhashdata = Mem_Alloc(loadmodel->mempool, sizeof(*vertexhashdata) * numtriangles*3);
+	vertexhashcount = 0;
+
+	// gather surface stats for assigning vertex/triangle ranges
+	firstvertex = 0;
+	firsttriangle = 0;
+	elementindex = 0;
+	for (textureindex = 0;textureindex < numtextures;textureindex++)
+	{
+		msurface_t *surface = loadmodel->data_surfaces + textureindex;
+		// copy the mins/maxs of the model backwards so that the first vertex
+		// added will set the surface bounds to a point
+		VectorCopy(loadmodel->normalmaxs, surface->mins);
+		VectorCopy(loadmodel->normalmins, surface->maxs);
+		surfacevertices = 0;
+		surfaceelements = 0;
+		for (vertexindex = 0;vertexindex < numtriangles*3;vertexindex++)
+		{
+			thisvertex = vertices + vertexindex;
+			if (thisvertex->textureindex != textureindex)
+				continue;
+			surface->mins[0] = min(surface->mins[0], thisvertex->v[0]);
+			surface->mins[1] = min(surface->mins[1], thisvertex->v[1]);
+			surface->mins[2] = min(surface->mins[2], thisvertex->v[2]);
+			surface->maxs[0] = max(surface->maxs[0], thisvertex->v[0]);
+			surface->maxs[1] = max(surface->maxs[1], thisvertex->v[1]);
+			surface->maxs[2] = max(surface->maxs[2], thisvertex->v[2]);
+			vertexhashindex = (unsigned int)(thisvertex->v[0] * 3571 + thisvertex->v[0] * 1777 + thisvertex->v[0] * 457) % (unsigned int)vertexhashsize;
+			for (i = vertexhashtable[vertexhashindex];i >= 0;i = vertexhashdata[i].nextindex)
+			{
+				vdata = vertexhashdata + i;
+				if (vdata->textureindex == thisvertex->textureindex && VectorCompare(thisvertex->v, vdata->v) && VectorCompare(thisvertex->vn, vdata->vn) && Vector2Compare(thisvertex->vt, vdata->vt))
+					break;
+			}
+			if (i < 0)
+			{
+				i = vertexhashcount++;
+				vdata = vertexhashdata + i;
+				*vdata = *thisvertex;
+				vdata->nextindex = vertexhashtable[vertexhashindex];
+				vertexhashtable[vertexhashindex] = i;
+				surfacevertices++;
+			}
+			loadmodel->surfmesh.data_element3i[elementindex++] = i;
+			surfaceelements++;
+		}
+		surfacetriangles = surfaceelements / 3;
+		surface->num_vertices = surfacevertices;
+		surface->num_triangles = surfacetriangles;
+		surface->num_firstvertex = firstvertex;
+		surface->num_firsttriangle = firsttriangle;
+		firstvertex += surface->num_vertices;
+		firsttriangle += surface->num_triangles;
+	}
+	numvertices = firstvertex;
+
+	// allocate storage for final mesh data
+	loadmodel->num_textures = numtextures * loadmodel->numskins;
+	loadmodel->num_texturesperskin = numtextures;
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, numsurfaces * sizeof(int) + numsurfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + numvertices * sizeof(float[14]));
+	loadmodel->sortedmodelsurfaces = (int *)data;data += numsurfaces * sizeof(int);
+	loadmodel->data_textures = (texture_t *)data;data += numsurfaces * loadmodel->numskins * sizeof(texture_t);
+	loadmodel->surfmesh.num_vertices = numvertices;
+	loadmodel->surfmesh.num_triangles = numtriangles;
+	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += numtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += numvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += numvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += numvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += numvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += numvertices * sizeof(float[2]);
+	if (loadmodel->surfmesh.num_vertices <= 65536)
+		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
+
+	for (j = 0;j < loadmodel->surfmesh.num_vertices;j++)
+	{
+		VectorCopy(vertexhashdata[j].v, loadmodel->surfmesh.data_vertex3f + 3*j);
+		VectorCopy(vertexhashdata[j].vn, loadmodel->surfmesh.data_normal3f + 3*j);
+		VectorCopy(vertexhashdata[j].vt, loadmodel->surfmesh.data_texcoordtexture2f + 2*j);
+	}
+
+	// load the textures
+	for (textureindex = 0;textureindex < numtextures;textureindex++)
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + textureindex, skinfiles, texturenames + textureindex*MAX_QPATH, texturenames + textureindex*MAX_QPATH);
+	Mod_FreeSkinFiles(skinfiles);
+
+	// set the surface textures
+	for (textureindex = 0;textureindex < numtextures;textureindex++)
+	{
+		msurface_t *surface = loadmodel->data_surfaces + textureindex;
+		surface->texture = loadmodel->data_textures + textureindex;
+	}
+
+	// free data
+	Mem_Free(vertices);
+	Mem_Free(texturenames);
+	Mem_Free(v);
+	Mem_Free(vt);
+	Mem_Free(vn);
+	Mem_Free(vertexhashtable);
+	Mem_Free(vertexhashdata);
+
+	// compute all the mesh information that was not loaded from the file
+	Mod_MakeSortedSurfaces(loadmodel);
+	if (loadmodel->surfmesh.data_element3s)
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
+	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, loadmodel->surfmesh.num_vertices, __FILE__, __LINE__);
+	// generate normals if the file did not have them
+	if (!VectorLength2(loadmodel->surfmesh.data_normal3f))
+		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
+	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+}
+
+
+
+
+
+
+
+
+
+
+#else // OBJASMODEL
+
 #ifdef OBJWORKS
 typedef struct objvertex_s
 {
@@ -6914,10 +7337,10 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 					{
 						objtriangle_t *oldtriangles = triangles;
 						maxtriangles *= 2;
-						triangles = Mem_Alloc(tempmempool, numtriangles * sizeof(*triangles));
+						triangles = Mem_Alloc(tempmempool, maxtriangles * sizeof(*triangles));
 						if (oldtriangles)
 						{
-							memcpy(triangles, oldtriangles, numtriangles * sizeof(*triangles));
+							memcpy(triangles, oldtriangles, maxtriangles * sizeof(*triangles));
 							Mem_Free(oldtriangles);
 						}
 					}
@@ -6949,7 +7372,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 					textures = Mem_Alloc(tempmempool, maxtextures * sizeof(*textures));
 					if (oldtextures)
 					{
-						memcpy(textures, oldtextures, numtexutres * sizeof(*textures));
+						memcpy(textures, oldtextures, numtextures * sizeof(*textures));
 						Mem_Free(oldtextures);
 					}
 				}
@@ -7213,6 +7636,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 #endif
 }
+#endif // !OBJASMODEL
 
 qboolean Mod_CanSeeBox_Trace(int numsamples, float t, dp_model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX)
 {

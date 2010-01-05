@@ -30,7 +30,7 @@ m*_t structures are in-memory
 
 */
 
-typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_null} modtype_t;
+typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_obj, mod_null} modtype_t;
 
 typedef struct animscene_s
 {
@@ -1008,6 +1008,7 @@ skinfile_t;
 skinfile_t *Mod_LoadSkinFiles(void);
 void Mod_FreeSkinFiles(skinfile_t *skinfile);
 int Mod_CountSkinFiles(skinfile_t *skinfile);
+void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername);
 
 void Mod_SnapVertices(int numcomponents, int numvertices, float *vertices, float snap);
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
