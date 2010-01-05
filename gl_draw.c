@@ -1494,9 +1494,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 						if (batchcount)
 						{
 							// switching from freetype to non-freetype rendering
-							GL_LockArrays(0, batchcount * 4);
 							R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-							GL_LockArrays(0, 0);
 							batchcount = 0;
 							ac = color4f;
 							at = texcoord2f;
@@ -1533,9 +1531,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				batchcount++;
 				if (batchcount >= QUADELEMENTS_MAXQUADS)
 				{
-					GL_LockArrays(0, batchcount * 4);
 					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-					GL_LockArrays(0, 0);
 					batchcount = 0;
 					ac = color4f;
 					at = texcoord2f;
@@ -1549,9 +1545,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 					if (batchcount)
 					{
 						// we need a different character map, render what we currently have:
-						GL_LockArrays(0, batchcount * 4);
 						R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-						GL_LockArrays(0, 0);
 						batchcount = 0;
 						ac = color4f;
 						at = texcoord2f;
@@ -1610,9 +1604,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				batchcount++;
 				if (batchcount >= QUADELEMENTS_MAXQUADS)
 				{
-					GL_LockArrays(0, batchcount * 4);
 					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-					GL_LockArrays(0, 0);
 					batchcount = 0;
 					ac = color4f;
 					at = texcoord2f;
@@ -1630,11 +1622,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		}
 	}
 	if (batchcount > 0)
-	{
-		GL_LockArrays(0, batchcount * 4);
 		R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
-		GL_LockArrays(0, 0);
-	}
 
 	if (outcolor)
 		*outcolor = colorindex;
@@ -1751,9 +1739,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f, 0, 0);
 	R_SetupShader_Generic(mesh->texture, NULL, GL_MODULATE, 1);
 
-	GL_LockArrays(0, mesh->num_vertices);
 	R_Mesh_Draw(0, mesh->num_vertices, 0, mesh->num_triangles, mesh->data_element3i, mesh->data_element3s, 0, 0);
-	GL_LockArrays(0, 0);
 }
 
 void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
