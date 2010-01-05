@@ -1384,7 +1384,7 @@ void Con_DrawInput (void)
 	y = (int)strlen(text);
 
 	// append enoug nul-bytes to cover the utf8-versions of the cursor too
-	for (i = y; i < y + 4 && i < sizeof(editlinecopy); ++i)
+	for (i = y; i < y + 4 && i < (int)sizeof(editlinecopy); ++i)
 		text[i] = 0;
 
 	// add the cursor frame
