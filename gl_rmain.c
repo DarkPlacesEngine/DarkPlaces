@@ -3898,7 +3898,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	CHECKGLERROR
 
 	// compile the vertex program
-	if (vertstring[0] && (p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, CG_PROFILE_ARBVP1, NULL, NULL)))
+	if (vertstring[0] && (p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, vertexProfile, NULL, NULL)))
 	{
 		CHECKCGERROR
 		cgCompileProgram(p->vprogram);CHECKCGERROR
@@ -3929,7 +3929,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	}
 
 	// compile the fragment program
-	if (fragstring[0] && (p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, CG_PROFILE_ARBFP1, NULL, NULL)))
+	if (fragstring[0] && (p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, fragmentProfile, NULL, NULL)))
 	{
 		cgCompileProgram(p->fprogram);CHECKCGERROR
 		if (!cgIsProgramCompiled(p->fprogram))
@@ -4105,9 +4105,9 @@ void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 	if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
 }
 
-void CG_BindTexture(CGparameter param, int texnum)
+void CG_BindTexture(CGparameter param, rtexture_t *tex)
 {
-	cgGLSetTextureParameter(param, texnum);
+	cgGLSetTextureParameter(param, R_GetTexture(tex));
 	cgGLEnableTextureParameter(param);
 }
 #endif
