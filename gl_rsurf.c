@@ -1132,6 +1132,7 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		GL_CullFace(rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE ? GL_NONE : r_refdef.view.cullface_back);
 		RSurf_PrepareVerticesForBatch(false, false, batchsize, batch);
 		RSurf_DrawBatch_Simple(batchsize, batch);
+		GL_LockArrays(0, 0);
 	}
 }
 

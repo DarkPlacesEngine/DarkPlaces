@@ -2287,7 +2287,9 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1);
+	GL_LockArrays(0, numsurfaces*4);
 	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
+	GL_LockArrays(0, 0);
 }
 
 void R_DrawDecals (void)
@@ -2551,6 +2553,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	// now render batches of particles based on blendmode and texture
 	blendmode = PBLEND_INVALID;
 	texture = NULL;
+	GL_LockArrays(0, numsurfaces*4);
 	batchstart = 0;
 	batchcount = 0;
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
@@ -2592,6 +2595,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		batchcount = surfacelistindex - batchstart;
 		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, particle_elements, 0, 0);
 	}
+	GL_LockArrays(0, 0);
 }
 
 void R_DrawParticles (void)
