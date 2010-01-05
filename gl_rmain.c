@@ -1163,7 +1163,7 @@ static const char *builtinshaderstring =
 "#    ifdef USESHADOWMAPPCF\n"
 "#     if defined(GL_ARB_texture_gather) || defined(GL_AMD_texture_texture4)\n"
 "#      ifdef GL_ARB_texture_gather\n"
-"#        define texval(x, y) textureGather(Texture_ShadowMap2D, center + vec(x, y)*ShadowMap_TextureScale)\n"
+"#        define texval(x, y) textureGatherOffset(Texture_ShadowMap2D, center, ivec2(x, y))\n"
 "#      else\n"
 "#        define texval(x, y) texture4(Texture_ShadowMap2D, center + vec2(x, y)*ShadowMap_TextureScale)\n"
 "#      endif\n"
