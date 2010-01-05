@@ -14,8 +14,6 @@ cvar_t r_renderview = {0, "r_renderview", "1", "enables rendering 3D views (you 
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
-cvar_t gl_lockarrays = {0, "gl_lockarrays", "0", "enables use of glLockArraysEXT, may cause glitches with some broken drivers, and may be slower than normal"};
-cvar_t gl_lockarrays_minimumvertices = {0, "gl_lockarrays_minimumvertices", "1", "minimum number of vertices required for use of glLockArraysEXT, setting this too low may reduce performance"};
 cvar_t gl_vbo = {CVAR_SAVE, "gl_vbo", "3", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering, 0 disables VBO allocation or use, 1 enables VBOs for vertex and triangle data, 2 only for vertex data, 3 for vertex data and triangle data of simple meshes (ones with only one surface)"};
 cvar_t gl_fbo = {CVAR_SAVE, "gl_fbo", "1", "make use of GL_ARB_framebuffer_object extension to enable shadowmaps and other features using pixel formats different from the framebuffer"};
 
@@ -282,8 +280,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&v_flipped);
 	Cvar_RegisterVariable(&gl_dither);
-	Cvar_RegisterVariable(&gl_lockarrays);
-	Cvar_RegisterVariable(&gl_lockarrays_minimumvertices);
 	Cvar_RegisterVariable(&gl_vbo);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
@@ -978,33 +974,6 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		CHECKGLERROR
 		qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
 		CHECKGLERROR
-	}
-}
-
-void GL_LockArrays(int first, int count)
-{
-	if (count < gl_lockarrays_minimumvertices.integer)
-	{
-		first = 0;
-		count = 0;
-	}
-	if (gl_state.lockrange_count != count || gl_state.lockrange_first != first)
-	{
-		if (gl_state.lockrange_count)
-		{
-			gl_state.lockrange_count = 0;
-			CHECKGLERROR
-			qglUnlockArraysEXT();
-			CHECKGLERROR
-		}
-		if (count && vid.support.ext_compiled_vertex_array && gl_lockarrays.integer)
-		{
-			gl_state.lockrange_first = first;
-			gl_state.lockrange_count = count;
-			CHECKGLERROR
-			qglLockArraysEXT(first, count);
-			CHECKGLERROR
-		}
 	}
 }
 
