@@ -77,6 +77,13 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) ((a) - 360.0 * floor((a) / 360.0))
 
+#define DotProduct2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
+#define Vector2Clear(a) ((a)[0]=(a)[1]=0)
+#define Vector2Compare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1]))
+#define Vector2Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1])
+#define Vector2Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]))
+#define Vector2Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c))
+
 #define DotProduct4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
 #define Vector4Clear(a) ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
 #define Vector4Compare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2])&&((a)[3]==(b)[3]))
