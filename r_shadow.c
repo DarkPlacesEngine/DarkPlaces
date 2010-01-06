@@ -2208,7 +2208,7 @@ init_done:
 			int y1 = clear & 0x03 ? 0 : (clear & 0xC ? size : 2 * size);
 			int y2 = clear & 0x30 ? 3 * size : (clear & 0xC ? 2 * size : size);
 			GL_Scissor(x1, y1, x2 - x1, y2 - y1);
-			GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
+			GL_Clear(GL_DEPTH_BUFFER_BIT);
 		}
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	}
@@ -2217,7 +2217,7 @@ init_done:
 		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 		if (clear)
-			GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
+			GL_Clear(GL_DEPTH_BUFFER_BIT);
 	}
 	CHECKGLERROR
 }
