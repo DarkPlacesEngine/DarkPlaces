@@ -2053,7 +2053,7 @@ static void R_Shadow_MakeVSDCT(void)
 	r_shadow_shadowmapvsdcttexture = R_LoadTextureCubeMap(r_shadow_texturepool, "shadowmapvsdct", 1, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALPHA, NULL);
 }
 
-void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
+void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 {
 	int status;
 	int maxsize;
@@ -2194,20 +2194,31 @@ void R_Shadow_RenderMode_ShadowMap(int side, qboolean clear, int size)
 
 init_done:
 	R_SetViewport(&viewport);
-	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	if(r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE)
 	{
-		int flipped = (side&1)^(side>>2);
+		int flipped = (side & 1) ^ (side >> 2);
 		r_refdef.view.cullface_front = flipped ? r_shadow_cullface_back : r_shadow_cullface_front;
 		r_refdef.view.cullface_back = flipped ? r_shadow_cullface_front : r_shadow_cullface_back;
 		GL_CullFace(r_refdef.view.cullface_back);
+		if ((clear & ((2 << side) - 1)) == (1 << side)) // only clear if the side is the first in the mask
+		{
+			// get tightest scissor rectangle that encloses all viewports in the clear mask
+			int x1 = clear & 0x15 ? 0 : size;
+			int x2 = clear & 0x2A ? 2 * size : size;
+			int y1 = clear & 0x03 ? 0 : (clear & 0xC ? size : 2 * size);
+			int y2 = clear & 0x30 ? 3 * size : (clear & 0xC ? 2 * size : size);
+			GL_Scissor(x1, y1, x2 - x1, y2 - y1);
+			GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
+		}
+		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	}
 	else if(r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE)
 	{
 		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
+		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+		if (clear)
+			GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
 	}
-	if (clear)
-		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |  GL_STENCIL_BUFFER_BIT);
 	CHECKGLERROR
 }
 
@@ -3793,7 +3804,7 @@ void R_Shadow_DrawLight(rtlight_t *rtlight)
 		// render shadow casters into 6 sided depth texture
 		for (side = 0;side < 6;side++) if (receivermask & (1 << side))
 		{
-			R_Shadow_RenderMode_ShadowMap(side, true, size);
+			R_Shadow_RenderMode_ShadowMap(side, receivermask, size);
 			if (! (castermask & (1 << side))) continue;
 			if (numsurfaces)
 				R_Shadow_DrawWorldShadow_ShadowMap(numsurfaces, surfacelist, shadowtrispvs, surfacesides);
@@ -3815,7 +3826,7 @@ void R_Shadow_DrawLight(rtlight_t *rtlight)
 		{
 			for (side = 0;side < 6;side++) if ((receivermask & castermask) & (1 << side))
 			{
-				R_Shadow_RenderMode_ShadowMap(side, false, size);
+				R_Shadow_RenderMode_ShadowMap(side, 0, size);
 				for (i = 0;i < numshadowentities_noselfshadow;i++) if (entitysides_noselfshadow[i] & (1 << side))
 					R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
 			}
