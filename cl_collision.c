@@ -463,7 +463,10 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	vec3_t end;
 	vec_t len = 0;
 
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
+	if (VectorCompare(start, pEnd))
+		return CL_TracePoint(start, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
+
+	if(collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
 		VectorSubtract(pEnd, start, end);
@@ -472,10 +475,10 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	}
 	else
 		VectorCopy(pEnd, end);
-#endif
-
+#else
 	if (VectorCompare(start, end))
 		return CL_TracePoint(start, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
+#endif
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -701,6 +704,19 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	vec3_t end;
 	vec_t len = 0;
 
+	if (VectorCompare(mins, maxs))
+	{
+		vec3_t shiftstart, shiftend;
+		VectorAdd(start, mins, shiftstart);
+		VectorAdd(pEnd, mins, shiftend);
+		if (VectorCompare(start, pEnd))
+			trace = CL_TracePoint(shiftstart, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
+		else
+			trace = CL_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
+		VectorSubtract(trace.endpos, mins, trace.endpos);
+		return trace;
+	}
+
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
@@ -710,8 +726,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	}
 	else
 		VectorCopy(pEnd, end);
-#endif
-
+#else
 	if (VectorCompare(mins, maxs))
 	{
 		vec3_t shiftstart, shiftend;
@@ -724,6 +739,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		VectorSubtract(trace.endpos, mins, trace.endpos);
 		return trace;
 	}
+#endif
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;

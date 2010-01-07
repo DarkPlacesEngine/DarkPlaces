@@ -271,7 +271,10 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	vec3_t end;
 	vec_t len = 0;
 
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
+	if (VectorCompare(start, pEnd))
+		return SV_TracePoint(start, type, passedict, hitsupercontentsmask);
+
+	if(collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
 		VectorSubtract(pEnd, start, end);
@@ -280,12 +283,12 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	}
 	else
 		VectorCopy(pEnd, end);
+#else
+	if (VectorCompare(start, end))
+		return SV_TracePoint(start, type, passedict, hitsupercontentsmask);
 #endif
 
 	//return SV_TraceBox(start, vec3_origin, vec3_origin, end, type, passedict, hitsupercontentsmask);
-
-	if (VectorCompare(start, end))
-		return SV_TracePoint(start, type, passedict, hitsupercontentsmask);
 
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
@@ -450,6 +453,19 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	vec3_t end;
 	vec_t len = 0;
 
+	if (VectorCompare(mins, maxs))
+	{
+		vec3_t shiftstart, shiftend;
+		VectorAdd(start, mins, shiftstart);
+		VectorAdd(pEnd, mins, shiftend);
+		if (VectorCompare(start, pEnd))
+			trace = SV_TracePoint(shiftstart, type, passedict, hitsupercontentsmask);
+		else
+			trace = SV_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask);
+		VectorSubtract(trace.endpos, mins, trace.endpos);
+		return trace;
+	}
+
 	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
 	{
 		// TRICK: make the trace 1 qu longer!
@@ -459,8 +475,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	}
 	else
 		VectorCopy(pEnd, end);
-#endif
-
+#else
 	if (VectorCompare(mins, maxs))
 	{
 		vec3_t shiftstart, shiftend;
@@ -473,6 +488,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		VectorSubtract(trace.endpos, mins, trace.endpos);
 		return trace;
 	}
+#endif
 
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
