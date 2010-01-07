@@ -46,6 +46,7 @@ typedef struct textypeinfo_s
 }
 textypeinfo_t;
 
+
 static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 3, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE, 1, 4, 4.0f, GL_BGRA   , 4, GL_UNSIGNED_BYTE};
 static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA   , 4, 4, 4.0f, GL_RGBA   , 3, GL_UNSIGNED_BYTE};
@@ -63,6 +64,8 @@ static textypeinfo_t textype_dxt1                   = {TEXTYPE_DXT1   , 4, 0, 0.
 static textypeinfo_t textype_dxt1a                  = {TEXTYPE_DXT1A  , 4, 0, 0.5f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, 0};
 static textypeinfo_t textype_dxt3                   = {TEXTYPE_DXT3   , 4, 0, 1.0f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, 0};
 static textypeinfo_t textype_dxt5                   = {TEXTYPE_DXT5   , 4, 0, 1.0f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 0};
+static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, GL_BGRA, GL_BGRA, GL_UNSIGNED_BYTE};
+
 
 typedef enum gltexturetype_e
 {
@@ -188,6 +191,8 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 		return &textype_alpha;
 	case TEXTYPE_SHADOWMAP:
 		return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
+	case TEXTYPE_COLORBUFFER:
+		return &textype_colorbuffer;
 	default:
 		Host_Error("R_GetTexTypeInfo: unknown texture format");
 		return NULL;
@@ -966,6 +971,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		flags |= TEXF_ALPHA;
 		break;
 	case TEXTYPE_ALPHA:
+		flags |= TEXF_ALPHA;
+		break;
+	case TEXTYPE_COLORBUFFER:
 		flags |= TEXF_ALPHA;
 		break;
 	default:
