@@ -8,7 +8,7 @@
 #include "svbsp.h"
 #include "polygon.h"
 
-#define MAX_SVBSP_POLYGONPOINTS 64
+#define MAX_SVBSP_POLYGONPOINTS 16
 #define SVBSP_CLIP_EPSILON (1.0f / 1024.0f)
 
 #define SVBSP_DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
