@@ -726,55 +726,71 @@ static void GL_Backend_ResetState(void)
 
 	gl_state.unit = MAX_TEXTUREUNITS;
 	gl_state.clientunit = MAX_TEXTUREUNITS;
-	for (i = 0;i < vid.teximageunits;i++)
+	switch(vid.renderpath)
 	{
-		GL_ActiveTexture(i);
-		qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-		if (vid.support.ext_texture_3d)
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		for (i = 0;i < vid.teximageunits;i++)
 		{
-			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
+			GL_ActiveTexture(i);
+			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
+			if (vid.support.ext_texture_3d)
+			{
+				qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
+			}
+			if (vid.support.arb_texture_cube_map)
+			{
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
+			}
+			if (vid.support.arb_texture_rectangle)
+			{
+				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
+			}
 		}
-		if (vid.support.arb_texture_cube_map)
-		{
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_rectangle)
-		{
-			qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
-		}
-	}
 
-	for (i = 0;i < vid.texarrayunits;i++)
-	{
-		GL_ClientActiveTexture(i);
-		GL_BindVBO(0);
-		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
-		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-	}
-
-	for (i = 0;i < vid.texunits;i++)
-	{
-		GL_ActiveTexture(i);
-		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
-		if (vid.support.ext_texture_3d)
+		for (i = 0;i < vid.texarrayunits;i++)
 		{
-			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+			GL_ClientActiveTexture(i);
+			GL_BindVBO(0);
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
-		if (vid.support.arb_texture_cube_map)
-		{
-			qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-		}
-		if (vid.support.arb_texture_rectangle)
-		{
-			qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-		}
-		qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-		qglLoadIdentity();CHECKGLERROR
-		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		CHECKGLERROR
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		for (i = 0;i < vid.texunits;i++)
+		{
+			GL_ActiveTexture(i);
+			GL_ClientActiveTexture(i);
+			qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
+			if (vid.support.ext_texture_3d)
+			{
+				qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
+			}
+			if (vid.support.arb_texture_cube_map)
+			{
+				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
+			}
+			if (vid.support.arb_texture_rectangle)
+			{
+				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
+			}
+			GL_BindVBO(0);
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+			qglLoadIdentity();CHECKGLERROR
+			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
+		}
+		CHECKGLERROR
+		break;
 	}
-	CHECKGLERROR
 }
 
 void GL_ActiveTexture(unsigned int num)

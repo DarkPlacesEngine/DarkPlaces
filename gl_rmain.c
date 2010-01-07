@@ -840,10 +840,7 @@ static const char *builtinshaderstring =
 "varying vec3 CubeVector;\n"
 "#endif\n"
 "\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"varying vec3 LightVector;\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTION) && defined(USEDIFFUSE)\n"
+"#if (defined(MODE_LIGHTSOURCE) || defined(MODE_LIGHTDIRECTION)) && defined(USEDIFFUSE)\n"
 "varying vec3 LightVector;\n"
 "#endif\n"
 "\n"
@@ -922,12 +919,12 @@ static const char *builtinshaderstring =
 "#endif\n"
 "\n"
 "#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"uniform sampler2DRect Texture_ScreenDepth;\n"
-"uniform sampler2DRect Texture_ScreenNormalMap;\n"
+"uniform sampler2D Texture_ScreenDepth;\n"
+"uniform sampler2D Texture_ScreenNormalMap;\n"
 "#endif\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
-"uniform sampler2DRect Texture_ScreenDiffuse;\n"
-"uniform sampler2DRect Texture_ScreenSpecular;\n"
+"uniform sampler2D Texture_ScreenDiffuse;\n"
+"uniform sampler2D Texture_ScreenSpecular;\n"
 "#endif\n"
 "\n"
 "uniform myhalf3 Color_Pants;\n"
@@ -1313,14 +1310,16 @@ static const char *builtinshaderstring =
 "uniform myhalf3 DeferredColor_Specular;\n"
 "uniform myhalf SpecularPower;\n"
 "#endif\n"
+"uniform myhalf2 PixelToScreenTexCoord;\n"
 "void main(void)\n"
 "{\n"
 "	// calculate viewspace pixel position\n"
+"	vec2 ScreenTexCoord = gl_FragCoord.xy * PixelToScreenTexCoord;\n"
 "	vec3 position;\n"
-"	position.z = ScreenToDepth.y / (texture2DRect(Texture_ScreenDepth, gl_FragCoord.xy).r + ScreenToDepth.x);\n"
+"	position.z = ScreenToDepth.y / (texture2D(Texture_ScreenDepth, ScreenTexCoord).r + ScreenToDepth.x);\n"
 "	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n"
 "	// decode viewspace pixel normal\n"
-"	myhalf4 normalmap = texture2DRect(Texture_ScreenNormalMap, gl_FragCoord.xy);\n"
+"	myhalf4 normalmap = texture2D(Texture_ScreenNormalMap, ScreenTexCoord);\n"
 "	myhalf3 surfacenormal = normalize(normalmap.rgb - myhalf3(0.5,0.5,0.5));\n"
 "	// surfacenormal = pixel normal in viewspace\n"
 "	// LightVector = pixel to light in viewspace\n"
@@ -1448,6 +1447,7 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef FRAGMENT_SHADER\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
+"uniform myhalf2 PixelToScreenTexCoord;\n"
 "uniform myhalf3 DeferredMod_Diffuse;\n"
 "uniform myhalf3 DeferredMod_Specular;\n"
 "#endif\n"
@@ -1520,6 +1520,7 @@ static const char *builtinshaderstring =
 "\n"
 "#ifdef MODE_LIGHTSOURCE\n"
 "	// light source\n"
+"#ifdef USEDIFFUSE\n"
 "	myhalf3 lightnormal = myhalf3(normalize(LightVector));\n"
 "	myhalf diffuse = myhalf(max(float(dot(surfacenormal, lightnormal)), 0.0));\n"
 "	color.rgb = diffusetex * (Color_Ambient + diffuse * Color_Diffuse);\n"
@@ -1531,6 +1532,9 @@ static const char *builtinshaderstring =
 "	myhalf specular = pow(myhalf(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "#endif\n"
 "	color.rgb += glosstex * (specular * Color_Specular);\n"
+"#endif\n"
+"#else\n"
+"	color.rgb = diffusetex * Color_Ambient;\n"
 "#endif\n"
 "	color.rgb *= LightColor;\n"
 "	color.rgb *= myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
@@ -1616,8 +1620,9 @@ static const char *builtinshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
-"	color.rgb += diffusetex * myhalf3(texture2DRect(Texture_ScreenDiffuse, gl_FragCoord.xy)) * DeferredMod_Diffuse;\n"
-"	color.rgb += glosstex * myhalf3(texture2DRect(Texture_ScreenSpecular, gl_FragCoord.xy)) * DeferredMod_Specular;\n"
+"	vec2 ScreenTexCoord = gl_FragCoord.xy * PixelToScreenTexCoord;\n"
+"	color.rgb += diffusetex * myhalf3(texture2D(Texture_ScreenDiffuse, ScreenTexCoord)) * DeferredMod_Diffuse;\n"
+"	color.rgb += glosstex * myhalf3(texture2D(Texture_ScreenSpecular, ScreenTexCoord)) * DeferredMod_Specular;\n"
 "#endif\n"
 "\n"
 "#ifdef USEGLOW\n"
@@ -1814,7 +1819,7 @@ const char *builtincgshaderstring =
 "	gl_FragColor += tex2D(Texture_Second, TexCoord2);\n"
 "#endif\n"
 "#ifdef USEVIEWTINT\n"
-"	gl_FragColor = mix(gl_FragColor, ViewTintColor, ViewTintColor.a);\n"
+"	gl_FragColor = lerp(gl_FragColor, ViewTintColor, ViewTintColor.a);\n"
 "#endif\n"
 "\n"
 "#ifdef USEPOSTPROCESSING\n"
@@ -1832,7 +1837,7 @@ const char *builtincgshaderstring =
 "	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
 "	float y = dot(gl_FragColor.rgb, float3(0.299, 0.587, 0.114));\n"
 "	//gl_FragColor = float3(y) + (gl_FragColor.rgb - float3(y)) * Saturation;\n"
-"	gl_FragColor.rgb = mix(float3(y), gl_FragColor.rgb, Saturation);\n"
+"	gl_FragColor.rgb = lerp(float3(y), gl_FragColor.rgb, Saturation);\n"
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -1903,7 +1908,7 @@ const char *builtincgshaderstring =
 "	gl_FragColor += tex2;\n"
 "# endif\n"
 "# ifdef USEVERTEXTEXTUREBLEND\n"
-"	gl_FragColor = mix(gl_FragColor, tex2, tex2.a);\n"
+"	gl_FragColor = lerp(gl_FragColor, tex2, tex2.a);\n"
 "# endif\n"
 "#endif\n"
 "}\n"
@@ -1959,7 +1964,7 @@ const char *builtincgshaderstring =
 "float4 gl_Vertex : POSITION,\n"
 "uniform float4x4 ModelViewProjectionMatrix,\n"
 "float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"uniform mat4 TexMatrix,\n"
+"uniform float4x4 TexMatrix,\n"
 "uniform float3 EyePosition,\n"
 "out float4 gl_Position : POSITION,\n"
 "out float2 TexCoord : TEXCOORD0,\n"
@@ -2002,7 +2007,7 @@ const char *builtincgshaderstring =
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord = mix(SafeScreenTexCoord, ScreenTexCoord, f);\n"
+"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n"
 "	gl_FragColor = tex2D(Texture_Refraction, ScreenTexCoord) * RefractColor;\n"
 "}\n"
 "#endif\n"
@@ -2019,7 +2024,7 @@ const char *builtincgshaderstring =
 "float4 gl_Vertex : POSITION,\n"
 "uniform float4x4 ModelViewProjectionMatrix,\n"
 "float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"uniform mat4 TexMatrix,\n"
+"uniform float4x4 TexMatrix,\n"
 "uniform float3 EyePosition,\n"
 "out float4 gl_Position : POSITION,\n"
 "out float2 TexCoord : TEXCOORD0,\n"
@@ -2069,14 +2074,14 @@ const char *builtincgshaderstring =
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(0.01, -0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, 0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord.xy = mix(SafeScreenTexCoord.xy, ScreenTexCoord.xy, f);\n"
+"	ScreenTexCoord.xy = lerp(SafeScreenTexCoord.xy, ScreenTexCoord.xy, f);\n"
 "	f       = min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, 0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, -0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, 0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord.zw = mix(SafeScreenTexCoord.zw, ScreenTexCoord.zw, f);\n"
+"	ScreenTexCoord.zw = lerp(SafeScreenTexCoord.zw, ScreenTexCoord.zw, f);\n"
 "	float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0) * ReflectFactor + ReflectOffset;\n"
-"	gl_FragColor = mix(tex2D(Texture_Refraction, ScreenTexCoord.xy) * RefractColor, tex2D(Texture_Reflection, ScreenTexCoord.zw) * ReflectColor, Fresnel);\n"
+"	gl_FragColor = lerp(tex2D(Texture_Refraction, ScreenTexCoord.xy) * RefractColor, tex2D(Texture_Reflection, ScreenTexCoord.zw) * ReflectColor, Fresnel);\n"
 "}\n"
 "#endif\n"
 "#else // !MODE_WATER\n"
@@ -2162,13 +2167,13 @@ const char *builtincgshaderstring =
 "		{\n"
 "			ma = adir.x;\n"
 "			tc = dir.zy;\n"
-"			offset = float2(mix(0.5, 1.5, dir.x < 0.0), 0.5);\n"
+"			offset = float2(lerp(0.5, 1.5, dir.x < 0.0), 0.5);\n"
 "		}\n"
 "		else // Z\n"
 "		{\n"
 "			ma = adir.z;\n"
 "			tc = dir.xy;\n"
-"			offset = float2(mix(0.5, 1.5, dir.z < 0.0), 2.5);\n"
+"			offset = float2(lerp(0.5, 1.5, dir.z < 0.0), 2.5);\n"
 "		}\n"
 "	}\n"
 "	else\n"
@@ -2177,13 +2182,13 @@ const char *builtincgshaderstring =
 "		{\n"
 "			ma = adir.y;\n"
 "			tc = dir.xz;\n"
-"			offset = float2(mix(0.5, 1.5, dir.y < 0.0), 1.5);\n"
+"			offset = float2(lerp(0.5, 1.5, dir.y < 0.0), 1.5);\n"
 "		}\n"
 "		else // Z\n"
 "		{\n"
 "			ma = adir.z;\n"
 "			tc = dir.xy;\n"
-"			offset = float2(mix(0.5, 1.5, dir.z < 0.0), 2.5);\n"
+"			offset = float2(lerp(0.5, 1.5, dir.z < 0.0), 2.5);\n"
 "		}\n"
 "	}\n"
 "\n"
@@ -2198,7 +2203,7 @@ const char *builtincgshaderstring =
 "	float3 adir = abs(dir);\n"
 "	float4 proj = texCUBE(Texture_CubeProjection, dir);\n"
 "	float ma = max(max(adir.x, adir.y), adir.z);\n"
-"	float3 stc = float3(mix(dir.xy, dir.zz, proj.xy) * ShadowMap_Parameters.x, ShadowMap_Parameters.w) / ma;\n"
+"	float3 stc = float3(lerp(dir.xy, dir.zz, proj.xy) * ShadowMap_Parameters.x, ShadowMap_Parameters.w) / ma;\n"
 "	stc.xy += proj.zw * ShadowMap_Parameters.y;\n"
 "	stc.z += ShadowMap_Parameters.z;\n"
 "	return stc;\n"
@@ -2241,21 +2246,21 @@ const char *builtincgshaderstring =
 "#    ifdef USESHADOWMAPPCF\n"
 "#      if USESHADOWMAPPCF > 1\n"
 "#        define texval(x, y) texRECT(Texture_ShadowMapRect, center + float2(x, y)).r\n"
-"    float2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
+"    float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n"
 "    float4 row1 = step(shadowmaptc.z, float4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
 "    float4 row2 = step(shadowmaptc.z, float4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n"
 "    float4 row3 = step(shadowmaptc.z, float4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n"
 "    float4 row4 = step(shadowmaptc.z, float4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n"
-"    float4 cols = row2 + row3 + mix(row1, row4, offset.y);\n"
-"    f = dot(mix(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
+"    float4 cols = row2 + row3 + lerp(row1, row4, offset.y);\n"
+"    f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
 "#      else\n"
 "#        define texval(x, y) texRECT(Texture_ShadowMapRect, shadowmaptc.xy + float2(x, y)).r\n"
-"    float2 offset = fract(shadowmaptc.xy);\n"
+"    float2 offset = frac(shadowmaptc.xy);\n"
 "    float3 row1 = step(shadowmaptc.z, float3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n"
 "    float3 row2 = step(shadowmaptc.z, float3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n"
 "    float3 row3 = step(shadowmaptc.z, float3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
-"    float3 cols = row2 + mix(row1, row3, offset.y);\n"
-"    f = dot(mix(cols.xy, cols.yz, offset.x), float2(0.25));\n"
+"    float3 cols = row2 + lerp(row1, row3, offset.y);\n"
+"    f = dot(lerp(cols.xy, cols.yz, offset.x), float2(0.25));\n"
 "#      endif\n"
 "#    else\n"
 "    f = step(shadowmaptc.z, texRECT(Texture_ShadowMapRect, shadowmaptc.xy).r);\n"
@@ -2296,37 +2301,33 @@ const char *builtincgshaderstring =
 "#      else\n"
 "#        define texval(x, y) texture4(Texture_ShadowMap2D, center + float2(x,y)*ShadowMap_TextureScale)\n"
 "#      endif\n"
-"    float2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
+"    float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n"
 "    center *= ShadowMap_TextureScale;\n"
 "    float4 group1 = step(shadowmaptc.z, texval(-1.0, -1.0));\n"
 "    float4 group2 = step(shadowmaptc.z, texval( 1.0, -1.0));\n"
 "    float4 group3 = step(shadowmaptc.z, texval(-1.0,  1.0));\n"
 "    float4 group4 = step(shadowmaptc.z, texval( 1.0,  1.0));\n"
 "    float4 cols = float4(group1.rg, group2.rg) + float4(group3.ab, group4.ab) +\n"
-"                mix(float4(group1.ab, group2.ab), float4(group3.rg, group4.rg), offset.y);\n"
-"    f = dot(mix(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
+"                lerp(float4(group1.ab, group2.ab), float4(group3.rg, group4.rg), offset.y);\n"
+"    f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
 "#     else\n"
-"#      ifdef GL_EXT_gpu_shader4\n"
-"#        define texval(x, y) tex2DOffset(Texture_ShadowMap2D, center, ifloat2(x, y)).r\n"
-"#      else\n"
-"#        define texval(x, y) tex2D(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale).r  \n"
-"#      endif\n"
+"#        define texval(x, y) texDepth2D(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale)  \n"
 "#      if USESHADOWMAPPCF > 1\n"
-"    float2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
+"    float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n"
 "    center *= ShadowMap_TextureScale;\n"
 "    float4 row1 = step(shadowmaptc.z, float4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
 "    float4 row2 = step(shadowmaptc.z, float4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n"
 "    float4 row3 = step(shadowmaptc.z, float4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n"
 "    float4 row4 = step(shadowmaptc.z, float4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n"
-"    float4 cols = row2 + row3 + mix(row1, row4, offset.y);\n"
-"    f = dot(mix(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
+"    float4 cols = row2 + row3 + lerp(row1, row4, offset.y);\n"
+"    f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
 "#      else\n"
-"    float2 center = shadowmaptc.xy*ShadowMap_TextureScale, offset = fract(shadowmaptc.xy);\n"
+"    float2 center = shadowmaptc.xy*ShadowMap_TextureScale, offset = frac(shadowmaptc.xy);\n"
 "    float3 row1 = step(shadowmaptc.z, float3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n"
 "    float3 row2 = step(shadowmaptc.z, float3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n"
 "    float3 row3 = step(shadowmaptc.z, float3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
-"    float3 cols = row2 + mix(row1, row3, offset.y);\n"
-"    f = dot(mix(cols.xy, cols.yz, offset.x), float2(0.25));\n"
+"    float3 cols = row2 + lerp(row1, row3, offset.y);\n"
+"    f = dot(lerp(cols.xy, cols.yz, offset.x), float2(0.25));\n"
 "#      endif\n"
 "#     endif\n"
 "#    else\n"
@@ -2370,14 +2371,20 @@ const char *builtincgshaderstring =
 "float4 gl_MultiTexCoord1 : TEXCOORD1,\n"
 "float4 gl_MultiTexCoord2 : TEXCOORD2,\n"
 "float4 gl_MultiTexCoord3 : TEXCOORD3,\n"
-"uniform mat4 TexMatrix,\n"
+"uniform float4x4 TexMatrix,\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform mat4 BackgroundTexMatrix,\n"
+"uniform float4x4 BackgroundTexMatrix,\n"
 "#endif\n"
-"uniform mat4 ModelViewMatrix,\n"
+"uniform float4x4 ModelViewMatrix,\n"
+"#ifdef USEOFFSETMAPPING\n"
+"uniform float3 EyePosition,\n"
+"#endif\n"
 "out float4 gl_Position : POSITION,\n"
 "out float4 gl_FrontColor : COLOR,\n"
 "out float4 TexCoordBoth : TEXCOORD0,\n"
+"#ifdef USEOFFSETMAPPING\n"
+"out float3 EyeVector : TEXCOORD2,\n"
+"#endif\n"
 "out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
 "out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
 "out float3 VectorR : TEXCOORD7 // direction of R texcoord (surface normal)\n"
@@ -2446,7 +2453,7 @@ const char *builtincgshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"	float3 surfacenormal = mix(float3(tex2D(Texture_SecondaryNormal, TexCoord2)), float3(tex2D(Texture_Normal, TexCoord)), terrainblend) - float3(0.5, 0.5, 0.5);\n"
+"	float3 surfacenormal = lerp(float3(tex2D(Texture_SecondaryNormal, TexCoord2)), float3(tex2D(Texture_Normal, TexCoord)), terrainblend) - float3(0.5, 0.5, 0.5);\n"
 "#else\n"
 "	float3 surfacenormal = float3(tex2D(Texture_Normal, TexCoord)) - float3(0.5, 0.5, 0.5);\n"
 "#endif\n"
@@ -2465,7 +2472,7 @@ const char *builtincgshaderstring =
 "(\n"
 "float4 gl_Vertex : POSITION,\n"
 "uniform float4x4 ModelViewProjectionMatrix,\n"
-"uniform mat4 ModelViewMatrix,\n"
+"uniform float4x4 ModelViewMatrix,\n"
 "out float4 gl_Position : POSITION,\n"
 "out float4 ModelViewPosition : TEXCOORD0\n"
 ")\n"
@@ -2480,9 +2487,10 @@ const char *builtincgshaderstring =
 "(\n"
 "float2 Pixel : WPOS,\n"
 "float4 ModelViewPosition : TEXCOORD0,\n"
-"uniform mat4 ViewToLight,\n"
+"uniform float4x4 ViewToLight,\n"
 "uniform float2 ScreenToDepth, // ScreenToDepth = float2(Far / (Far - Near), Far * Near / (Near - Far));\n"
 "uniform float3 LightPosition,\n"
+"uniform half2 PixelToScreenTexCoord,\n"
 "uniform half3 DeferredColor_Ambient,\n"
 "uniform half3 DeferredColor_Diffuse,\n"
 "#ifdef USESPECULAR\n"
@@ -2490,8 +2498,8 @@ const char *builtincgshaderstring =
 "uniform half SpecularPower,\n"
 "#endif\n"
 "uniform sampler2D Texture_Attenuation,\n"
-"uniform samplerRECT Texture_ScreenDepth,\n"
-"uniform samplerRECT Texture_ScreenNormalMap,\n"
+"uniform sampler2D Texture_ScreenDepth,\n"
+"uniform sampler2D Texture_ScreenNormalMap,\n"
 "\n"
 "#ifdef USESHADOWMAPRECT\n"
 "# ifdef USESHADOWSAMPLER\n"
@@ -2531,11 +2539,13 @@ const char *builtincgshaderstring =
 ")\n"
 "{\n"
 "	// calculate viewspace pixel position\n"
+"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
+"	ScreenTexCoord.y = ScreenTexCoord.y * -1 + 1; // Cg is opposite?\n"
 "	float3 position;\n"
-"	position.z = ScreenToDepth.y / (texRECT(Texture_ScreenDepth, Pixel).r + ScreenToDepth.x);\n"
+"	position.z = ScreenToDepth.y / (texDepth2D(Texture_ScreenDepth, ScreenTexCoord) + ScreenToDepth.x);\n"
 "	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n"
 "	// decode viewspace pixel normal\n"
-"	half4 normalmap = texRECT(Texture_ScreenNormalMap, Pixel);\n"
+"	half4 normalmap = tex2D(Texture_ScreenNormalMap, ScreenTexCoord);\n"
 "	half3 surfacenormal = normalize(normalmap.rgb - half3(0.5,0.5,0.5));\n"
 "	// surfacenormal = pixel normal in viewspace\n"
 "	// LightVector = pixel to light in viewspace\n"
@@ -2615,12 +2625,12 @@ const char *builtincgshaderstring =
 "float4 gl_MultiTexCoord4 : TEXCOORD4,\n"
 "\n"
 "uniform float3 EyePosition,\n"
-"uniform mat4 TexMatrix,\n"
+"uniform float4x4 TexMatrix,\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform mat4 BackgroundTexMatrix,\n"
+"uniform float4x4 BackgroundTexMatrix,\n"
 "#endif\n"
 "#ifdef MODE_LIGHTSOURCE\n"
-"uniform mat4 ModelToLight,\n"
+"uniform float4x4 ModelToLight,\n"
 "#endif\n"
 "#ifdef MODE_LIGHTSOURCE\n"
 "uniform float3 LightPosition,\n"
@@ -2796,13 +2806,13 @@ const char *builtincgshaderstring =
 "uniform sampler2D Texture_Reflection,\n"
 "#endif\n"
 "\n"
-"//#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"uniform samplerRECT Texture_ScreenDepth,\n"
-"uniform samplerRECT Texture_ScreenNormalMap,\n"
-"//#endif\n"
+"#ifdef MODE_DEFERREDLIGHTSOURCE\n"
+"uniform sampler2D Texture_ScreenDepth,\n"
+"uniform sampler2D Texture_ScreenNormalMap,\n"
+"#endif\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
-"uniform samplerRECT Texture_ScreenDiffuse,\n"
-"uniform samplerRECT Texture_ScreenSpecular,\n"
+"uniform sampler2D Texture_ScreenDiffuse,\n"
+"uniform sampler2D Texture_ScreenSpecular,\n"
 "#endif\n"
 "\n"
 "#ifdef USECOLORMAPPING\n"
@@ -2821,6 +2831,7 @@ const char *builtincgshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
+"uniform half2 PixelToScreenTexCoord,\n"
 "uniform half3 DeferredMod_Diffuse,\n"
 "uniform half3 DeferredMod_Specular,\n"
 "#endif\n"
@@ -2910,14 +2921,14 @@ const char *builtincgshaderstring =
 "	float terrainblend = clamp(half(gl_FrontColor.a) * color.a * 2.0 - 0.5, half(0.0), half(1.0));\n"
 "	//half terrainblend = min(half(gl_FrontColor.a) * color.a * 2.0, half(1.0));\n"
 "	//half terrainblend = half(gl_FrontColor.a) * color.a > 0.5;\n"
-"	color.rgb = half3(mix(float3(tex2D(Texture_SecondaryColor, TexCoord2)), float3(color.rgb), terrainblend));\n"
+"	color.rgb = half3(lerp(float3(tex2D(Texture_SecondaryColor, TexCoord2)), float3(color.rgb), terrainblend));\n"
 "	color.a = 1.0;\n"
-"	//color = mix(half4(1, 0, 0, 1), color, terrainblend);\n"
+"	//color = lerp(half4(1, 0, 0, 1), color, terrainblend);\n"
 "#endif\n"
 "\n"
 "	// get the surface normal\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"	half3 surfacenormal = normalize(half3(mix(float3(tex2D(Texture_SecondaryNormal, TexCoord2)), float3(tex2D(Texture_Normal, TexCoord)), terrainblend)) - half3(0.5, 0.5, 0.5));\n"
+"	half3 surfacenormal = normalize(half3(lerp(float3(tex2D(Texture_SecondaryNormal, TexCoord2)), float3(tex2D(Texture_Normal, TexCoord)), terrainblend)) - half3(0.5, 0.5, 0.5));\n"
 "#else\n"
 "	half3 surfacenormal = normalize(half3(tex2D(Texture_Normal, TexCoord)) - half3(0.5, 0.5, 0.5));\n"
 "#endif\n"
@@ -2926,7 +2937,7 @@ const char *builtincgshaderstring =
 "	half3 diffusetex = color.rgb;\n"
 "#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n"
 "# ifdef USEVERTEXTEXTUREBLEND\n"
-"	half3 glosstex = half3(mix(float3(tex2D(Texture_SecondaryGloss, TexCoord2)), float3(tex2D(Texture_Gloss, TexCoord)), terrainblend));\n"
+"	half3 glosstex = half3(lerp(float3(tex2D(Texture_SecondaryGloss, TexCoord2)), float3(tex2D(Texture_Gloss, TexCoord)), terrainblend));\n"
 "# else\n"
 "	half3 glosstex = half3(tex2D(Texture_Gloss, TexCoord));\n"
 "# endif\n"
@@ -2937,6 +2948,7 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef MODE_LIGHTSOURCE\n"
 "	// light source\n"
+"#ifdef USEDIFFUSE\n"
 "	half3 lightnormal = half3(normalize(LightVector));\n"
 "	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n"
 "	color.rgb = diffusetex * (Color_Ambient + diffuse * Color_Diffuse);\n"
@@ -2948,6 +2960,9 @@ const char *builtincgshaderstring =
 "	half specular = pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower);\n"
 "#endif\n"
 "	color.rgb += glosstex * (specular * Color_Specular);\n"
+"#endif\n"
+"#else\n"
+"	color.rgb = diffusetex * Color_Ambient;\n"
 "#endif\n"
 "	color.rgb *= LightColor;\n"
 "	color.rgb *= half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)));\n"
@@ -3048,14 +3063,14 @@ const char *builtincgshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
-"	color.rgb += diffusetex * half3(texRECT(Texture_ScreenDiffuse, Pixel)) * DeferredMod_Diffuse;\n"
-"	color.rgb += glosstex * half3(texRECT(Texture_ScreenSpecular, Pixel)) * DeferredMod_Specular;\n"
-"	color.rgb = half3(texRECT(Texture_ScreenDepth, Pixel));\n"
+"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
+"	color.rgb += diffusetex * half3(tex2D(Texture_ScreenDiffuse, ScreenTexCoord)) * DeferredMod_Diffuse;\n"
+"	color.rgb += glosstex * half3(tex2D(Texture_ScreenSpecular, ScreenTexCoord)) * DeferredMod_Specular;\n"
 "#endif\n"
 "\n"
 "#ifdef USEGLOW\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
-"	color.rgb += mix(half3(tex2D(Texture_SecondaryGlow, TexCoord2)), half3(tex2D(Texture_Glow, TexCoord)), terrainblend) * Color_Glow;\n"
+"	color.rgb += lerp(half3(tex2D(Texture_SecondaryGlow, TexCoord2)), half3(tex2D(Texture_Glow, TexCoord)), terrainblend) * Color_Glow;\n"
 "#else\n"
 "	color.rgb += half3(tex2D(Texture_Glow, TexCoord)) * Color_Glow;\n"
 "#endif\n"
@@ -3063,9 +3078,9 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef USEFOG\n"
 "#ifdef MODE_LIGHTSOURCE\n"
-"	color.rgb *= half(FogVertex());\n"
+"	color.rgb *= half(FogVertex(EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask));\n"
 "#else\n"
-"	color.rgb = mix(FogColor, float3(color.rgb), FogVertex(EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask));\n"
+"	color.rgb = lerp(FogColor, float3(color.rgb), FogVertex(EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask));\n"
 "#endif\n"
 "#endif\n"
 "\n"
@@ -3084,8 +3099,8 @@ const char *builtincgshaderstring =
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n"
 "	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord = mix(SafeScreenTexCoord, ScreenTexCoord, f);\n"
-"	color.rgb = mix(color.rgb, half3(tex2D(Texture_Reflection, ScreenTexCoord)) * ReflectColor.rgb, ReflectColor.a);\n"
+"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n"
+"	color.rgb = lerp(color.rgb, half3(tex2D(Texture_Reflection, ScreenTexCoord)) * ReflectColor.rgb, ReflectColor.a);\n"
 "#endif\n"
 "\n"
 "	gl_FragColor = float4(color);\n"
@@ -3338,6 +3353,7 @@ typedef struct r_glsl_permutation_s
 	int loc_BackgroundTexMatrix;
 	int loc_ModelViewProjectionMatrix;
 	int loc_ModelViewMatrix;
+	int loc_PixelToScreenTexCoord;
 }
 r_glsl_permutation_t;
 
@@ -3550,6 +3566,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_BackgroundTexMatrix        = qglGetUniformLocationARB(p->program, "BackgroundTexMatrix");
 		p->loc_ModelViewMatrix            = qglGetUniformLocationARB(p->program, "ModelViewMatrix");
 		p->loc_ModelViewProjectionMatrix  = qglGetUniformLocationARB(p->program, "ModelViewProjectionMatrix");
+		p->loc_PixelToScreenTexCoord      = qglGetUniformLocationARB(p->program, "PixelToScreenTexCoord");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -3734,6 +3751,7 @@ typedef struct r_cg_permutation_s
 	CGparameter fp_UserVec4;
 	CGparameter fp_ViewTintColor;
 	CGparameter fp_ViewToLight;
+	CGparameter fp_PixelToScreenTexCoord;
 }
 r_cg_permutation_t;
 
@@ -3901,6 +3919,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	if (vertstring[0] && (p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, vertexProfile, NULL, NULL)))
 	{
 		CHECKCGERROR
+#if 0
 		cgCompileProgram(p->vprogram);CHECKCGERROR
 		if (!cgIsProgramCompiled(p->vprogram))
 		{
@@ -3909,6 +3928,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 			p->vprogram = 0;
 		}
 		else
+#endif
 		{
 			cgGLLoadProgram(p->vprogram);CHECKCGERROR CHECKGLERROR
 			cgGLEnableProfile(vertexProfile);CHECKCGERROR CHECKGLERROR
@@ -3931,6 +3951,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	// compile the fragment program
 	if (fragstring[0] && (p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, fragmentProfile, NULL, NULL)))
 	{
+#if 0
 		cgCompileProgram(p->fprogram);CHECKCGERROR
 		if (!cgIsProgramCompiled(p->fprogram))
 		{
@@ -3939,6 +3960,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 			p->fprogram = 0;
 		}
 		else
+#endif
 		{
 			cgGLLoadProgram(p->fprogram);CHECKCGERROR CHECKGLERROR
 			cgGLEnableProfile(fragmentProfile);CHECKCGERROR CHECKGLERROR
@@ -4014,6 +4036,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 			p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
 			p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
 			p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
+			p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
 			CHECKCGERROR
 		}
 	}
@@ -4079,13 +4102,13 @@ void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
 		CHECKCGERROR
 		if (r_cg_permutation->vprogram)
 		{
-			//cgGLLoadProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
+			cgGLLoadProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
 			cgGLBindProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
-			//cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
 		}
 		else
 		{
-			//cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
 			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
 		}
 		if (r_cg_permutation->fprogram)
@@ -4120,6 +4143,7 @@ void R_GLSL_Restart_f(void)
 	case RENDERPATH_GL20:
 		{
 			r_glsl_permutation_t *p;
+			r_glsl_permutation = NULL;
 			limit = Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
 			for (i = 0;i < limit;i++)
 			{
@@ -4136,6 +4160,11 @@ void R_GLSL_Restart_f(void)
 #ifdef SUPPORTCG
 		{
 			r_cg_permutation_t *p;
+			r_cg_permutation = NULL;
+			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
+			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
+			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 			limit = Mem_ExpandableArray_IndexRange(&r_cg_permutationarray);
 			for (i = 0;i < limit;i++)
 			{
@@ -4148,8 +4177,8 @@ void R_GLSL_Restart_f(void)
 					Mem_ExpandableArray_FreeRecord(&r_cg_permutationarray, (void*)p);
 				}
 			}
+			memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 		}
-		memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 		break;
 #endif
 	case RENDERPATH_GL13:
@@ -4723,6 +4752,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_FogHeightFade >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogHeightFade, rsurface.fogheightfade);
 		if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);
 		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2fARB(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
 	//	if (r_glsl_permutation->loc_Texture_First           >= 0) R_Mesh_TexBind(GL20TU_FIRST             , r_texture_white                                     );
 	//	if (r_glsl_permutation->loc_Texture_Second          >= 0) R_Mesh_TexBind(GL20TU_SECOND            , r_texture_white                                     );
@@ -4860,6 +4890,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_cg_permutation->fp_FogHeightFade) cgGLSetParameter1f(r_cg_permutation->fp_FogHeightFade, rsurface.fogheightfade);CHECKCGERROR
 		if (r_cg_permutation->fp_OffsetMapping_Scale) cgGLSetParameter1f(r_cg_permutation->fp_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);CHECKCGERROR
 		if (r_cg_permutation->fp_ScreenToDepth) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
+		if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
 
 	//	if (r_cg_permutation->fp_Texture_First          ) CG_BindTexture(r_cg_permutation->fp_Texture_First          , r_texture_white                                     );CHECKCGERROR
 	//	if (r_cg_permutation->fp_Texture_Second         ) CG_BindTexture(r_cg_permutation->fp_Texture_Second         , r_texture_white                                     );CHECKCGERROR
@@ -4969,6 +5000,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4fARB(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1fARB(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
 		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2fARB(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
 		if (r_glsl_permutation->loc_Texture_Attenuation       >= 0) R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
 		if (r_glsl_permutation->loc_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
@@ -4992,6 +5024,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_cg_permutation->fp_ShadowMap_Parameters     ) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
 		if (r_cg_permutation->fp_SpecularPower            ) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
 		if (r_cg_permutation->fp_ScreenToDepth            ) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
+		if (r_cg_permutation->fp_PixelToScreenTexCoord    ) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
 
 		if (r_cg_permutation->fp_Texture_Attenuation      ) CG_BindTexture(r_cg_permutation->fp_Texture_Attenuation    , r_shadow_attenuationgradienttexture                 );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_ScreenDepth      ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , r_shadow_prepassgeometrydepthtexture                );CHECKCGERROR
@@ -6982,7 +7015,7 @@ static void R_Water_ProcessPlanes(void)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			if (!p->texture_refraction)
-				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 			if (!p->texture_refraction)
 				goto error;
 		}
@@ -6990,7 +7023,7 @@ static void R_Water_ProcessPlanes(void)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			if (!p->texture_reflection)
-				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 			if (!p->texture_reflection)
 				goto error;
 		}
@@ -7127,7 +7160,7 @@ void R_Bloom_StartFrame(void)
 		r_bloomstate.screentexturewidth = screentexturewidth;
 		r_bloomstate.screentextureheight = screentextureheight;
 		if (r_bloomstate.screentexturewidth && r_bloomstate.screentextureheight)
-			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, TEXTYPE_BGRA, TEXF_FORCENEAREST | TEXF_CLAMP, NULL);
+			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCENEAREST | TEXF_CLAMP, NULL);
 	}
 	if (r_bloomstate.bloomtexturewidth != bloomtexturewidth || r_bloomstate.bloomtextureheight != bloomtextureheight)
 	{
@@ -7137,7 +7170,7 @@ void R_Bloom_StartFrame(void)
 		r_bloomstate.bloomtexturewidth = bloomtexturewidth;
 		r_bloomstate.bloomtextureheight = bloomtextureheight;
 		if (r_bloomstate.bloomtexturewidth && r_bloomstate.bloomtextureheight)
-			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
+			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 	}
 
 	// when doing a reduced render (HDR) we want to use a smaller area
@@ -7232,9 +7265,7 @@ void R_Bloom_MakeTexture(void)
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
 		// copy the vertically blurred bloom view to a texture
-		GL_ActiveTexture(0);
-		CHECKGLERROR
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_bloomstate.viewport.x, r_bloomstate.viewport.y, r_bloomstate.viewport.width, r_bloomstate.viewport.height);CHECKGLERROR
+		R_Mesh_CopyToTexture(r_bloomstate.texture_bloom, 0, 0, r_bloomstate.viewport.x, r_bloomstate.viewport.y, r_bloomstate.viewport.width, r_bloomstate.viewport.height);
 		r_refdef.stats.bloom_copypixels += r_bloomstate.viewport.width * r_bloomstate.viewport.height;
 	}
 
@@ -7284,9 +7315,7 @@ void R_Bloom_MakeTexture(void)
 		}
 
 		// copy the vertically blurred bloom view to a texture
-		GL_ActiveTexture(0);
-		CHECKGLERROR
-		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r_bloomstate.viewport.x, r_bloomstate.viewport.y, r_bloomstate.viewport.width, r_bloomstate.viewport.height);CHECKGLERROR
+		R_Mesh_CopyToTexture(r_bloomstate.texture_bloom, 0, 0, r_bloomstate.viewport.x, r_bloomstate.viewport.y, r_bloomstate.viewport.width, r_bloomstate.viewport.height);
 		r_refdef.stats.bloom_copypixels += r_bloomstate.viewport.width * r_bloomstate.viewport.height;
 	}
 
@@ -7497,6 +7526,7 @@ static void R_BlendView(void)
 			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
 			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
 			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1fARB(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
+			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
@@ -7512,6 +7542,7 @@ static void R_BlendView(void)
 			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);CHECKCGERROR
+			if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
 #endif
 			break;
 		default:

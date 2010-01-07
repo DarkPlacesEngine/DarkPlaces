@@ -1960,9 +1960,9 @@ void R_Shadow_RenderMode_Reset(void)
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilMask(~0);CHECKGLERROR
+	qglStencilMask(255);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, 255);CHECKGLERROR
 	r_refdef.view.cullface_front = r_shadow_cullface_front;
 	r_refdef.view.cullface_back = r_shadow_cullface_back;
 	GL_CullFace(r_refdef.view.cullface_back);
@@ -2014,20 +2014,20 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_front);CHECKGLERROR
-		qglStencilMask(~0);CHECKGLERROR
+		qglStencilMask(255);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);CHECKGLERROR
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_back);CHECKGLERROR
-		qglStencilMask(~0);CHECKGLERROR
+		qglStencilMask(255);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);CHECKGLERROR
 		break;
 	case R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE:
 		GL_CullFace(GL_NONE);
 		qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_front);CHECKGLERROR
-		qglStencilMask(~0);CHECKGLERROR
+		qglStencilMask(255);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);CHECKGLERROR
 		qglActiveStencilFaceEXT(r_refdef.view.cullface_back);CHECKGLERROR
-		qglStencilMask(~0);CHECKGLERROR
+		qglStencilMask(255);CHECKGLERROR
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);CHECKGLERROR
 		break;
 	}
@@ -2243,7 +2243,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 		// only draw light where this geometry was already rendered AND the
 		// stencil is 128 (values other than this mean shadow)
-		qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
+		qglStencilFunc(GL_EQUAL, 128, 255);CHECKGLERROR
 	}
 	r_shadow_rendermode = r_shadow_lightingrendermode;
 	// do global setup needed for the chosen lighting mode
@@ -2304,7 +2304,7 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 			qglEnable(GL_STENCIL_TEST);CHECKGLERROR
 			// only draw light where this geometry was already rendered AND the
 			// stencil is 128 (values other than this mean shadow)
-			qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
+			qglStencilFunc(GL_EQUAL, 128, 255);CHECKGLERROR
 		}
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_prepasslightingfbo);CHECKGLERROR
 		if (shadowmapping)
@@ -2363,7 +2363,7 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	if (stenciltest)
 	{
 		qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-		qglStencilFunc(GL_EQUAL, 128, ~0);CHECKGLERROR
+		qglStencilFunc(GL_EQUAL, 128, 255);CHECKGLERROR
 	}
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLELIGHTING;
 }
@@ -4026,7 +4026,7 @@ void R_Shadow_PrepareLights(void)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || !vid.support.arb_texture_rectangle || vid.maxdrawbuffers < 2)
+		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
 			if (r_shadow_prepass_width)
@@ -4042,19 +4042,22 @@ void R_Shadow_PrepareLights(void)
 			r_shadow_usingdeferredprepass = true;
 			r_shadow_prepass_width = vid.width;
 			r_shadow_prepass_height = vid.height;
-			r_shadow_prepassgeometrydepthtexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "prepassgeometrydepthmap", vid.width, vid.height, 24, false);
-			r_shadow_prepassgeometrynormalmaptexture = R_LoadTextureRectangle(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
-			r_shadow_prepasslightingdiffusetexture = R_LoadTextureRectangle(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
-			r_shadow_prepasslightingspeculartexture = R_LoadTextureRectangle(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
+			r_shadow_prepassgeometrydepthtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "prepassgeometrydepthmap", vid.width, vid.height, 24, false);
+			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
+			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
+			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, NULL);
 
 			// set up the geometry pass fbo (depth + normalmap)
 			qglGenFramebuffersEXT(1, &r_shadow_prepassgeometryfbo);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_prepassgeometryfbo);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_prepassgeometrydepthtexture), 0);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture), 0);CHECKGLERROR
+			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_prepassgeometrydepthtexture), 0);CHECKGLERROR
+			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_prepassgeometrynormalmaptexture), 0);CHECKGLERROR
 			// render depth into one texture and normalmap into the other
-			qglDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
-			qglReadBuffer(GL_NONE);CHECKGLERROR
+			if (qglDrawBuffersARB)
+			{
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
 			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
 			if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
@@ -4066,14 +4069,17 @@ void R_Shadow_PrepareLights(void)
 			// set up the lighting pass fbo (diffuse + specular)
 			qglGenFramebuffersEXT(1, &r_shadow_prepasslightingfbo);CHECKGLERROR
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_prepasslightingfbo);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_prepassgeometrydepthtexture), 0);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_prepasslightingdiffusetexture), 0);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_prepasslightingspeculartexture), 0);CHECKGLERROR
+			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_prepassgeometrydepthtexture), 0);CHECKGLERROR
+			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_prepasslightingdiffusetexture), 0);CHECKGLERROR
+			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_prepasslightingspeculartexture), 0);CHECKGLERROR
 			// render diffuse into one texture and specular into another,
 			// with depth and normalmap bound as textures,
 			// with depth bound as attachment as well
-			qglDrawBuffersARB(2, r_shadow_prepasslightingdrawbuffers);CHECKGLERROR
-			qglReadBuffer(GL_NONE);CHECKGLERROR
+			if (qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(2, r_shadow_prepasslightingdrawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
 			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
 			if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
 			{
@@ -4279,9 +4285,9 @@ void R_DrawModelShadows(void)
 	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	//qglDepthFunc(GL_ALWAYS);CHECKGLERROR
 	qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilMask(~0);CHECKGLERROR
+	qglStencilMask(255);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
-	qglStencilFunc(GL_NOTEQUAL, 128, ~0);CHECKGLERROR
+	qglStencilFunc(GL_NOTEQUAL, 128, 255);CHECKGLERROR
 
 	// apply the blend to the shadowed areas
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
