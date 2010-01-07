@@ -2126,6 +2126,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\ft2.c"
+				>
+			</File>
+			<File
 				RelativePath="gl_backend.c"
 				>
 				<FileConfiguration
@@ -5540,6 +5544,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\utf8lib.c"
+				>
+			</File>
+			<File
 				RelativePath="vid_sdl.c"
 				>
 				<FileConfiguration
@@ -6005,6 +6013,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ft2.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ft2_defs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ft2_fontdefs.h"
+				>
+			</File>
+			<File
 				RelativePath="gl_backend.h"
 				>
 			</File>
@@ -6226,6 +6246,10 @@
 			</File>
 			<File
 				RelativePath="sys.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utf8lib.h"
 				>
 			</File>
 			<File

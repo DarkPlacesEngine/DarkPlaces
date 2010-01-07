@@ -55,7 +55,7 @@
 				InlineFunctionExpansion="1"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;NDEBUG;_WINDOWS;SUPPORTDIRECTX"
+				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;NDEBUG;_WINDOWS"
 				RuntimeLibrary="2"
 				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)\darkplaces.pch"
 				WarningLevel="3"
@@ -229,7 +229,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;_DEBUG;_WINDOWS;SUPPORTDIRECTX"
+				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;_DEBUG;_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -409,7 +409,7 @@
 				InlineFunctionExpansion="1"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;NDEBUG;_WINDOWS;SUPPORTDIRECTX"
+				PreprocessorDefinitions="WIN32;WIN32_LEAN_AND_MEAN;NDEBUG;_WINDOWS"
 				RuntimeLibrary="2"
 				PrecompiledHeaderFile="$(PlatformName)\$(ConfigurationName)\darkplaces.pch"
 				WarningLevel="3"
@@ -2021,6 +2021,10 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\ft2.c"
+				>
 			</File>
 			<File
 				RelativePath="gl_backend.c"
@@ -5107,6 +5111,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\utf8lib.c"
+				>
+			</File>
+			<File
 				RelativePath="vid_shared.c"
 				>
 				<FileConfiguration
@@ -5536,6 +5544,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ft2.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ft2_defs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ft2_fontdefs.h"
+				>
+			</File>
+			<File
 				RelativePath="gl_backend.h"
 				>
 			</File>
@@ -5757,6 +5777,10 @@
 			</File>
 			<File
 				RelativePath="sys.h"
+				>
+			</File>
+			<File
+				RelativePath=".\utf8lib.h"
 				>
 			</File>
 			<File
