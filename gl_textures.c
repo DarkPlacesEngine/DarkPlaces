@@ -64,7 +64,7 @@ static textypeinfo_t textype_dxt1                   = {TEXTYPE_DXT1   , 4, 0, 0.
 static textypeinfo_t textype_dxt1a                  = {TEXTYPE_DXT1A  , 4, 0, 0.5f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, 0};
 static textypeinfo_t textype_dxt3                   = {TEXTYPE_DXT3   , 4, 0, 1.0f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, 0};
 static textypeinfo_t textype_dxt5                   = {TEXTYPE_DXT5   , 4, 0, 1.0f, 0         , GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 0};
-static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, GL_BGRA, GL_BGRA, GL_UNSIGNED_BYTE};
+static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, GL_BGRA, 4, GL_UNSIGNED_BYTE};
 
 
 typedef enum gltexturetype_e
