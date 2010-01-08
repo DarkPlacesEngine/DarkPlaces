@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MOVE_WORLDONLY  3
 #define MOVE_HITMODEL   4
 
-#define AREA_GRID 512
+#define AREA_GRID 128
 #define AREA_GRIDNODES (AREA_GRID * AREA_GRID)
 
 typedef struct link_s

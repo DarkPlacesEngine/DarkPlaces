@@ -150,8 +150,9 @@ int serverlist_sortflags;
 int serverlist_viewcount = 0;
 serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
-int serverlist_cachecount;
-serverlist_entry_t serverlist_cache[SERVERLIST_TOTALSIZE];
+int serverlist_maxcachecount = 0;
+int serverlist_cachecount = 0;
+serverlist_entry_t *serverlist_cache = NULL;
 
 qboolean serverlist_consoleoutput;
 
@@ -513,6 +514,11 @@ void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspoint
 static void _ServerList_Test(void)
 {
 	int i;
+	if (serverlist_maxcachecount <= 1024)
+	{
+		serverlist_maxcachecount = 1024;
+		serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
+	}
 	for( i = 0 ; i < 1024 ; i++ ) {
 		memset( &serverlist_cache[serverlist_cachecount], 0, sizeof( serverlist_entry_t ) );
 		serverlist_cache[serverlist_cachecount].info.ping = 1000 + 1024 - i;
@@ -535,6 +541,8 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 		serverreplycount = 0;
 		serverlist_cachecount = 0;
 		serverlist_viewcount = 0;
+		serverlist_maxcachecount = 0;
+		serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
 	} else {
 		// refresh all entries
 		int n;
@@ -1376,6 +1384,11 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
 			return -1;
 
+		if (serverlist_maxcachecount <= serverlist_cachecount)
+		{
+			serverlist_maxcachecount += 64;
+			serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
+		}
 		entry = &serverlist_cache[n];
 
 		memset(entry, 0, sizeof(*entry));
@@ -1451,12 +1464,18 @@ static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol,
 		if( !strcmp( ipstring, serverlist_cache[ n ].info.cname ) )
 			break;
 
-	entry = &serverlist_cache[n];
-
 	if( n < serverlist_cachecount ) {
 		// the entry has already been queried once or 
 		return true;
 	}
+
+	if (serverlist_maxcachecount <= n)
+	{
+		serverlist_maxcachecount += 64;
+		serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
+	}
+
+	entry = &serverlist_cache[n];
 
 	memset(entry, 0, sizeof(entry));
 	entry->protocol =	protocol;
