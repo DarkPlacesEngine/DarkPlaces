@@ -552,9 +552,15 @@ void VM_Cmd_Reset(void);
 
 void PRVM_Init (void);
 
+#ifdef PROFILING
 void MVM_ExecuteProgram (func_t fnum, const char *errormessage);
 void CLVM_ExecuteProgram (func_t fnum, const char *errormessage);
 void SVVM_ExecuteProgram (func_t fnum, const char *errormessage);
+#else
+#define MVM_ExecuteProgram SVVM_ExecuteProgram
+#define CLVM_ExecuteProgram SVVM_ExecuteProgram
+void SVVM_ExecuteProgram (func_t fnum, const char *errormessage);
+#endif
 #define PRVM_ExecuteProgram prog->ExecuteProgram
 
 #define PRVM_Alloc(buffersize) _PRVM_Alloc(buffersize, __FILE__, __LINE__)

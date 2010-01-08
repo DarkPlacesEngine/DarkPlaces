@@ -46,10 +46,6 @@ cvar_t prvm_reuseedicts_neverinsameframe = {0, "prvm_reuseedicts_neverinsamefram
 static double prvm_reuseedicts_always_allow = 0;
 qboolean prvm_runawaycheck = true;
 
-// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
-// enables detection of out of bounds memory access in the QuakeC code being run (in other words, prevents really exceedingly bad QuakeC code from doing nasty things to your computer)
-qboolean prvm_boundscheck = true;
-
 extern sizebuf_t vm_tempstringsbuf;
 
 //============================================================================
@@ -2715,9 +2711,6 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
-
-	// COMMANDLINEOPTION: PRVM: -noboundscheck disables the bounds checks (security hole if CSQC is in use!)
-	prvm_boundscheck = !COM_CheckParm("-noboundscheck");
 
 	Cvar_RegisterVariable (&prvm_language);
 	Cvar_RegisterVariable (&prvm_traceqc);
