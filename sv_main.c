@@ -1645,19 +1645,24 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	numcsqcsendstates = 0;
 	for (i = 0;i < sv.numsendentities;i++)
 	{
-		if (sv.sententities[sv.sendentities[i].number] == sv.sententitiesmark)
+		s = &sv.sendentities[i];
+		if (sv.sententities[s->number] == sv.sententitiesmark)
 		{
-			if(sv.sendentities[i].active == ACTIVE_NETWORK)
+			if(s->active == ACTIVE_NETWORK)
 			{
-				s = &sv.writeentitiestoclient_sendstates[numsendstates++];
-				*s = sv.sendentities[i];
-				if (s->exteriormodelforclient && s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
-					s->flags |= RENDER_EXTERIORMODEL;
+				if (s->exteriormodelforclient)
+				{
+					if (s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
+						s->flags |= RENDER_EXTERIORMODEL;
+					else
+						s->flags &= ~RENDER_EXTERIORMODEL;
+				}
+				sv.writeentitiestoclient_sendstates[numsendstates++] = s;
 			}
 			else if(sv.sendentities[i].active == ACTIVE_SHARED)
-				sv.writeentitiestoclient_csqcsendstates[numcsqcsendstates++] = sv.sendentities[i].number;
+				sv.writeentitiestoclient_csqcsendstates[numcsqcsendstates++] = s->number;
 			else
-				Con_Printf("entity %d is in sv.sendentities and marked, but not active, please breakpoint me\n", sv.sendentities[i].number);
+				Con_Printf("entity %d is in sv.sendentities and marked, but not active, please breakpoint me\n", s->number);
 		}
 	}
 

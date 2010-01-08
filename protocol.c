@@ -681,7 +681,7 @@ void Protocol_WriteStatsReliable(void)
 }
 
 
-qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states)
+qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t **states)
 {
 	const entity_state_t *s;
 	entity_state_t baseline;
@@ -696,9 +696,10 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 	buf.data = data;
 	buf.maxsize = sizeof(data);
 
-	for (i = 0, s = states;i < numstates;i++, s++)
+	for (i = 0;i < numstates;i++)
 	{
-		ENTITYSIZEPROFILING_START(msg, s->number);
+		ENTITYSIZEPROFILING_START(msg, states[i]->number);
+		s = states[i];
 		val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
 		if(val && val->function)
 			continue;
@@ -1284,8 +1285,60 @@ void EntityFrame_FetchFrame(entityframe_database_t *d, int framenum, entity_fram
 	}
 }
 
-// (server and client) adds a entity_frame to the database, for future reference
-void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata)
+// (client) adds a entity_frame to the database, for future reference
+void EntityFrame_AddFrame_Client(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata)
+{
+	int n, e;
+	entity_frameinfo_t *info;
+
+	VectorCopy(eye, d->eye);
+
+	// figure out how many entity slots are used already
+	if (d->numframes)
+	{
+		n = d->frames[d->numframes - 1].endentity - d->frames[0].firstentity;
+		if (n + numentities > MAX_ENTITY_DATABASE || d->numframes >= MAX_ENTITY_HISTORY)
+		{
+			// ran out of room, dump database
+			EntityFrame_ClearDatabase(d);
+		}
+	}
+
+	info = &d->frames[d->numframes];
+	info->framenum = framenum;
+	e = -1000;
+	// make sure we check the newly added frame as well, but we haven't incremented numframes yet
+	for (n = 0;n <= d->numframes;n++)
+	{
+		if (e >= d->frames[n].framenum)
+		{
+			if (e == framenum)
+				Con_Print("EntityFrame_AddFrame: tried to add out of sequence frame to database\n");
+			else
+				Con_Print("EntityFrame_AddFrame: out of sequence frames in database\n");
+			return;
+		}
+		e = d->frames[n].framenum;
+	}
+	// if database still has frames after that...
+	if (d->numframes)
+		info->firstentity = d->frames[d->numframes - 1].endentity;
+	else
+		info->firstentity = 0;
+	info->endentity = info->firstentity + numentities;
+	d->numframes++;
+
+	n = info->firstentity % MAX_ENTITY_DATABASE;
+	e = MAX_ENTITY_DATABASE - n;
+	if (e > numentities)
+		e = numentities;
+	memcpy(d->entitydata + n, entitydata, sizeof(entity_state_t) * e);
+	if (numentities > e)
+		memcpy(d->entitydata, entitydata + e, sizeof(entity_state_t) * (numentities - e));
+}
+
+// (server) adds a entity_frame to the database, for future reference
+void EntityFrame_AddFrame_Server(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t **entitydata)
 {
 	int n, e;
 	entity_frameinfo_t *info;
@@ -1337,7 +1390,7 @@ void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, i
 }
 
 // (server) writes a frame to network stream
-qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
+qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t **states, int viewentnum)
 {
 	int i, onum, number;
 	entity_frame_t *o = &d->deltaframe;
@@ -1350,14 +1403,15 @@ qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_databas
 	VectorClear(eye);
 	for (i = 0;i < numstates;i++)
 	{
-		if (states[i].number == viewentnum)
+		ent = states[i];
+		if (ent->number == viewentnum)
 		{
-			VectorSet(eye, states[i].origin[0], states[i].origin[1], states[i].origin[2] + 22);
+			VectorSet(eye, ent->origin[0], ent->origin[1], ent->origin[2] + 22);
 			break;
 		}
 	}
 
-	EntityFrame_AddFrame(d, eye, d->latestframenum, numstates, states);
+	EntityFrame_AddFrame_Server(d, eye, d->latestframenum, numstates, states);
 
 	EntityFrame_FetchFrame(d, d->ackframenum, o);
 
@@ -1371,7 +1425,7 @@ qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_databas
 	onum = 0;
 	for (i = 0;i < numstates;i++)
 	{
-		ent = states + i;
+		ent = states[i];
 		number = ent->number;
 
 		val = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
@@ -1498,7 +1552,7 @@ void EntityFrame_CL_ReadFrame(void)
 		f->entitydata[f->numentities] = *old++;
 		f->entitydata[f->numentities++].time = cl.mtime[0];
 	}
-	EntityFrame_AddFrame(d, f->eye, f->framenum, f->numentities, f->entitydata);
+	EntityFrame_AddFrame_Client(d, f->eye, f->framenum, f->numentities, f->entitydata);
 
 	memset(cl.entities_active, 0, cl.num_entities * sizeof(unsigned char));
 	number = 1;
@@ -1813,7 +1867,7 @@ void EntityFrame4_CL_ReadFrame(void)
 		EntityFrame4_ResetDatabase(d);
 }
 
-qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t *states)
+qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states)
 {
 	const entity_state_t *e, *s;
 	entity_state_t inactiveentitystate;
@@ -1874,9 +1928,9 @@ qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_datab
 		SZ_Clear(&buf);
 		// entity exists, build an update (if empty there is no change)
 		// find the state in the list
-		for (;i < numstates && states[i].number < n;i++);
+		for (;i < numstates && states[i]->number < n;i++);
 		// make the message
-		s = states + i;
+		s = states[i];
 		if (s->number == n)
 		{
 			// build the update
@@ -2520,7 +2574,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
 			d->packetlog[i].packetnumber = 0;
 }
 
-qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty)
+qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, int movesequence, qboolean need_empty)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -2553,8 +2607,9 @@ qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_datab
 
 	// detect changes in states
 	num = 1;
-	for (i = 0, n = states;i < numstates;i++, n++)
+	for (i = 0;i < numstates;i++)
 	{
+		n = states[i];
 		// mark gaps in entity numbering as removed entities
 		for (;num < n->number;num++)
 		{
