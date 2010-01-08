@@ -27,6 +27,7 @@ int		gl_filter_mag = GL_LINEAR;
 
 
 static mempool_t *texturemempool;
+static memexpandablearray_t texturearray;
 
 // note: this must not conflict with TEXF_ flags in r_textures.h
 // bitmask for mismatch checking
@@ -262,7 +263,7 @@ void R_FreeTexture(rtexture_t *rt)
 
 	if (glt->inputtexels)
 		Mem_Free(glt->inputtexels);
-	Mem_Free(glt);
+	Mem_ExpandableArray_FreeRecord(&texturearray, glt);
 }
 
 rtexturepool_t *R_AllocTexturePool(void)
@@ -523,6 +524,7 @@ static void r_textures_start(void)
 	qglPixelStorei(GL_PACK_ALIGNMENT, 1);CHECKGLERROR
 
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
+	Mem_ExpandableArray_NewArray(&texturearray, texturemempool, sizeof(gltexture_t), 512);
 
 	// Disable JPEG screenshots if the DLL isn't loaded
 	if (! JPEG_OpenLibrary ())
@@ -548,6 +550,7 @@ static void r_textures_shutdown(void)
 	resizebuffer = NULL;
 	colorconvertbuffer = NULL;
 	texturebuffer = NULL;
+	Mem_ExpandableArray_FreeArray(&texturearray);
 	Mem_FreePool(&texturemempool);
 }
 
@@ -986,7 +989,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	else
 		Con_Printf ("R_LoadTexture: input size changed after alpha fallback\n");
 
-	glt = (gltexture_t *)Mem_Alloc(texturemempool, sizeof(gltexture_t));
+	glt = (gltexture_t *)Mem_ExpandableArray_AllocRecord(&texturearray);
 	if (identifier)
 		strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
 	glt->pool = pool;
@@ -1366,7 +1369,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 
 	texinfo = R_GetTexTypeInfo(textype, flags);
 
-	glt = (gltexture_t *)Mem_Alloc(texturemempool, sizeof(gltexture_t));
+	glt = (gltexture_t *)Mem_ExpandableArray_AllocRecord(&texturearray);
 	strlcpy (glt->identifier, filename, sizeof(glt->identifier));
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
