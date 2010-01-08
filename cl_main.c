@@ -133,15 +133,15 @@ void CL_ClearState(void)
 
 	// tweak these if the game runs out
 	cl.max_csqcrenderentities = 0;
-	cl.max_entities = 256;
-	cl.max_static_entities = 256;
-	cl.max_effects = 256;
-	cl.max_beams = 256;
+	cl.max_entities = MAX_ENITIES_INITIAL;
+	cl.max_static_entities = MAX_STATICENTITIES;
+	cl.max_effects = MAX_EFFECTS;
+	cl.max_beams = MAX_BEAMS;
 	cl.max_dlights = MAX_DLIGHTS;
 	cl.max_lightstyle = MAX_LIGHTSTYLES;
 	cl.max_brushmodel_entities = MAX_EDICTS;
-	cl.max_particles = 8192; // grows dynamically
-	cl.max_decals = 2048; // grows dynamically
+	cl.max_particles = MAX_PARTICLES_INITIAL; // grows dynamically
+	cl.max_decals = MAX_DECALS_INITIAL; // grows dynamically
 	cl.max_showlmps = 0;
 
 	cl.num_dlights = 0;
@@ -2309,7 +2309,7 @@ void CL_Init (void)
 	r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
 	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-	r_refdef.scene.maxtempentities = 4096; // FIXME: make this grow
+	r_refdef.scene.maxtempentities = MAX_TEMPENTITIES; // FIXME: make this grow
 	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
 	CL_InitInput ();
