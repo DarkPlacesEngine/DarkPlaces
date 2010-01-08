@@ -11469,7 +11469,6 @@ typedef struct r_decalsystem_splatqueue_s
 r_decalsystem_splatqueue_t;
 
 int r_decalsystem_numqueued = 0;
-#define MAX_DECALSYSTEM_QUEUE 1024
 r_decalsystem_splatqueue_t r_decalsystem_queue[MAX_DECALSYSTEM_QUEUE];
 
 void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize)
