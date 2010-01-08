@@ -315,13 +315,13 @@ typedef enum keynum_e
 	K_MIDINOTE125,
 	K_MIDINOTE126,
 	K_MIDINOTE127,
+
+	MAX_KEYS
 }
 keynum_t;
 
 typedef enum keydest_e { key_game, key_message, key_menu, key_menu_grabbed, key_console, key_void } keydest_t;
 
-#define MAX_BINDMAPS 8
-#define MAX_KEYS 1024
 extern	char		key_line[MAX_INPUTLINE];
 extern	int			key_linepos;
 extern	qboolean	key_insert;	// insert key toggle (for editing)

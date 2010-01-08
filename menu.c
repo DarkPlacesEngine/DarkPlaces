@@ -4486,7 +4486,6 @@ typedef struct modlist_entry_s
 static int modlist_cursor;
 //static int modlist_viewcount;
 
-#define MODLIST_TOTALSIZE		256
 static int modlist_count = 0;
 static modlist_entry_t modlist[MODLIST_TOTALSIZE];
 

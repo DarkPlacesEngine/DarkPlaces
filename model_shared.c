@@ -655,11 +655,11 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 		int element[2];
 	}
 	edgehashentry_t;
-	static edgehashentry_t *edgehash[TRIANGLEEDGEHASH];
+	static edgehashentry_t **edgehash;
 	edgehashentry_t *edgehashentries, *hash;
 	if (!numtriangles)
 		return;
-	memset(edgehash, 0, sizeof(edgehash));
+	edgehash = Mem_Alloc(tempmempool, TRIANGLEEDGEHASH * sizeof(*edgehash));
 	// if there are too many triangles for the stack array, allocate larger buffer
 	edgehashentries = (edgehashentry_t *)Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
 	// find neighboring triangles
@@ -711,6 +711,7 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 	}
 	// free the allocated buffer
 	Mem_Free(edgehashentries);
+	Mem_Free(edgehash);
 }
 #else
 // very slow but simple way
