@@ -385,8 +385,6 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	unsigned char glowmod[3];
-	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[2];
 }
 entity_state_t;
 
@@ -403,7 +401,7 @@ void Protocol_UpdateClientStats(const int *stats);
 void Protocol_WriteStatsReliable(void);
 // writes a list of quake entities to the network stream
 // (or as many will fit)
-qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t *states);
+qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t **states);
 // cleans up dead entities each frame after ReadEntity (which doesn't clear unused entities)
 void EntityFrameQuake_ISeeDeadEntities(void);
 
@@ -588,11 +586,12 @@ void EntityFrame_AckFrame(entityframe_database_t *d, int frame);
 void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum);
 // (server and client) reads a frame from the database
 void EntityFrame_FetchFrame(entityframe_database_t *d, int framenum, entity_frame_t *f);
-// (server and client) adds a entity_frame to the database, for future
-// reference
-void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata);
+// (client) adds a entity_frame to the database, for future reference
+void EntityFrame_AddFrame_Client(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata);
+// (server) adds a entity_frame to the database, for future reference
+void EntityFrame_AddFrame_Server(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t **entitydata);
 // (server) writes a frame to network stream
-qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum);
+qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t **states, int viewentnum);
 // (client) reads a frame from network stream
 void EntityFrame_CL_ReadFrame(void);
 // (client) returns the frame number of the most recent frame recieved
@@ -646,7 +645,7 @@ void EntityFrame4_ResetDatabase(entityframe4_database_t *d);
 // updates database to account for a frame-received acknowledgment
 int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermode);
 // writes a frame to the network stream
-qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t *states);
+qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states);
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(void);
 
@@ -803,7 +802,7 @@ int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
-qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int movesequence, qboolean need_empty);
+qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, int movesequence, qboolean need_empty);
 
 extern cvar_t developer_networkentities;
 
