@@ -5,10 +5,9 @@
 		{
 			st++;
 
-#if PRVMTRACE
-			PRVM_PrintStatement(st);
-#endif
-#if PRVMSTATEMENTPROFILING
+#if PRVMSLOWINTERPRETER
+			if (prog->trace)
+				PRVM_PrintStatement(st);
 			prog->statement_profile[st - prog->statements]++;
 #endif
 
@@ -152,7 +151,6 @@
 			case OP_STOREP_FLD:		// integers
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
-#if PRVMBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 1 > prog->entityfieldsarea)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -160,14 +158,12 @@
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-#endif
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
 					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
-#if PRVMBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 3 > prog->entityfieldsarea)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -175,7 +171,6 @@
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-#endif
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
 					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
@@ -185,7 +180,6 @@
 				break;
 
 			case OP_ADDRESS:
-#if PRVMBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -200,7 +194,6 @@
 					PRVM_ERROR("%s attempted to address an invalid field (%i) in an edict", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-#endif
 #if 0
 				if (OPA->edict == 0 && !prog->allowworldwrites)
 				{
@@ -219,7 +212,6 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
-#if PRVMBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -234,13 +226,11 @@
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-#endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
 				OPC->_int = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->_int;
 				break;
 
 			case OP_LOAD_V:
-#if PRVMBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -255,7 +245,6 @@
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-#endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
 				OPC->ivector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[0];
 				OPC->ivector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[1];
@@ -274,14 +263,12 @@
 					st += st->b - 1;	// offset the s++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
-#if PRVMRUNAWAYCHECK
-					if (++jumpcount == 10000000)
+					if (++jumpcount == 10000000 && prvm_runawaycheck)
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_Profile(1<<30, 1000000, 0);
 						PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 					}
-#endif
 				}
 				break;
 
@@ -295,14 +282,12 @@
 					st += st->b - 1;	// offset the s++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
-#if PRVMRUNAWAYCHECK
-					if (++jumpcount == 10000000)
+					if (++jumpcount == 10000000 && prvm_runawaycheck)
 					{
 						prog->xstatement = st - prog->statements;
 						PRVM_Profile(1<<30, 1000000, 0);
 						PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 					}
-#endif
 				}
 				break;
 
@@ -311,14 +296,12 @@
 				st += st->a - 1;	// offset the s++
 				startst = st;
 				// no bounds check needed, it is done when loading progs
-#if PRVMRUNAWAYCHECK
-				if (++jumpcount == 10000000)
+				if (++jumpcount == 10000000 && prvm_runawaycheck)
 				{
 					prog->xstatement = st - prog->statements;
 					PRVM_Profile(1<<30, 1000000, 0);
 					PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 				}
-#endif
 				break;
 
 			case OP_CALL0:
@@ -337,7 +320,6 @@
 				if (!OPA->function)
 					PRVM_ERROR("NULL function in %s", PRVM_NAME);
 
-#if PRVMBOUNDSCHECK
 				if(!OPA->function || OPA->function >= (unsigned int)prog->progs->numfunctions)
 				{
 					prog->xfunction->profile += (st - startst);
@@ -345,7 +327,6 @@
 					PRVM_ERROR("%s CALL outside the program", PRVM_NAME);
 					goto cleanup;
 				}
-#endif
 
 				newf = &prog->functions[OPA->function];
 				newf->callcount++;

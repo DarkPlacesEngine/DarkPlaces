@@ -642,12 +642,6 @@ void PRVM_Init_Exec(void)
 	// nothing here yet
 }
 
-/*
-====================
-MVM_ExecuteProgram
-====================
-*/
-// LordHavoc: optimized
 #define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
 #define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
 #define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
@@ -655,7 +649,13 @@ extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern sizebuf_t vm_tempstringsbuf;
 extern qboolean prvm_runawaycheck;
-extern qboolean prvm_boundscheck;
+
+#ifdef PROFILING
+/*
+====================
+MVM_ExecuteProgram
+====================
+*/
 void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
@@ -698,141 +698,15 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_runawaycheck)
+	if (prvm_statementprofiling.integer || prog->trace)
 	{
-#define PRVMRUNAWAYCHECK 1
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
+#define PRVMSLOWINTERPRETER 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
-#undef PRVMRUNAWAYCHECK
+#undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
 	}
 
 cleanup:
@@ -851,15 +725,6 @@ cleanup:
 CLVM_ExecuteProgram
 ====================
 */
-// LordHavoc: optimized
-#define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
-#define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
-#define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
-extern cvar_t prvm_traceqc;
-extern cvar_t prvm_statementprofiling;
-extern sizebuf_t vm_tempstringsbuf;
-extern qboolean prvm_runawaycheck;
-extern qboolean prvm_boundscheck;
 void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
@@ -902,141 +767,15 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_runawaycheck)
+	if (prvm_statementprofiling.integer || prog->trace)
 	{
-#define PRVMRUNAWAYCHECK 1
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
+#define PRVMSLOWINTERPRETER 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
-#undef PRVMRUNAWAYCHECK
+#undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
 	}
 
 cleanup:
@@ -1049,21 +788,13 @@ cleanup:
 
 	SV_FlushBroadcastMessages();
 }
+#endif
 
 /*
 ====================
 SVVM_ExecuteProgram
 ====================
 */
-// LordHavoc: optimized
-#define OPA ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->a])
-#define OPB ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->b])
-#define OPC ((prvm_eval_t *)&prog->globals.generic[(unsigned short) st->c])
-extern cvar_t prvm_traceqc;
-extern cvar_t prvm_statementprofiling;
-extern sizebuf_t vm_tempstringsbuf;
-extern qboolean prvm_runawaycheck;
-extern qboolean prvm_boundscheck;
 void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st, *startst;
@@ -1106,141 +837,15 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_runawaycheck)
+	if (prvm_statementprofiling.integer || prog->trace)
 	{
-#define PRVMRUNAWAYCHECK 1
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
+#define PRVMSLOWINTERPRETER 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
-#undef PRVMRUNAWAYCHECK
+#undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
-		if (prvm_statementprofiling.integer)
-		{
-#define PRVMSTATEMENTPROFILING 1
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
 #include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-#undef PRVMSTATEMENTPROFILING
-		}
-		else
-		{
-			if (prvm_boundscheck)
-			{
-#define PRVMBOUNDSCHECK 1
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-#undef PRVMBOUNDSCHECK
-			}
-			else
-			{
-				if (prog->trace)
-				{
-#define PRVMTRACE 1
-#include "prvm_execprogram.h"
-#undef PRVMTRACE
-				}
-				else
-				{
-#include "prvm_execprogram.h"
-				}
-			}
-		}
 	}
 
 cleanup:
