@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef QUAKEDEF_H
 #define QUAKEDEF_H
 
+#define DP_SMALLMEMORY
+
 /// on UNIX platforms we need to define this so that video saving does not cause a SIGFSZ (file size) signal when a video clip exceeds 2GB
 #define _FILE_OFFSET_BITS 64
 
@@ -94,7 +96,7 @@ extern char engineversion[128];
 #define	MAX_CACHED_PICS			1024 // this is 144 bytes each (or 152 on 64bit)
 #define	CACHEPICHASHSIZE		256
 #define	MAX_PARTICLEEFFECTNAME	256
-#define	MAX_PARTICLEEFFECTINFO	2048
+#define	MAX_PARTICLEEFFECTINFO	1024
 #define	MAX_PARTICLETEXTURES	96
 #define	MAXCLVIDEOS				1
 #define	MAX_GECKO_INSTANCES		1
@@ -104,6 +106,11 @@ extern char engineversion[128];
 #define	MAXTRACKS				256
 #define	MAX_DYNAMIC_CHANNELS	64
 #define	MAX_CHANNELS			260
+#define	MODLIST_TOTALSIZE		32
+#define	MAX_FAVORITESERVERS		32
+#define	MAX_DECALSYSTEM_QUEUE	64
+#define	PAINTBUFFER_SIZE		512
+#define	MAX_BINDMAPS			8
 #else
 #define	MAX_INPUTLINE			16384 ///< maximum length of console commandline, QuakeC strings, and many other text processing buffers
 #define	CON_TEXTSIZE			1048576 ///< max scrollback buffer characters in console
@@ -156,6 +163,11 @@ extern char engineversion[128];
 // NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS to total_channels = static sounds
 #define	MAX_DYNAMIC_CHANNELS	512
 #define	MAX_CHANNELS			1028
+#define	MODLIST_TOTALSIZE		256
+#define	MAX_FAVORITESERVERS		256
+#define	MAX_DECALSYSTEM_QUEUE	1024
+#define	PAINTBUFFER_SIZE		2048
+#define	MAX_BINDMAPS			8
 #endif
 
 

@@ -195,8 +195,6 @@ typedef struct portable_samplepair_s
 {
 	int sample[SND_LISTENERS];
 } portable_sampleframe_t;
-// LordHavoc: was 512, expanded to 2048
-#define	PAINTBUFFER_SIZE 2048
 
 typedef struct listener_s
 {
