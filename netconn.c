@@ -157,7 +157,7 @@ serverlist_entry_t *serverlist_cache = NULL;
 qboolean serverlist_consoleoutput;
 
 static int nFavorites = 0;
-static lhnetaddress_t favorites[256];
+static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
 
 void NetConn_UpdateFavorites(void)
 {
