@@ -51,8 +51,6 @@ entity_state_t defaultstate =
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
 	{32, 32, 32},//unsigned char glowmod[3];
-	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0}//unsigned char unused[2]; // !
 };
 
 // LordHavoc: I own protocol ranges 96, 97, 3500-3599
