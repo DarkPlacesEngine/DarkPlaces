@@ -2716,7 +2716,7 @@ static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numve
 	int maxtriangles = 4096;
 	static int newelements[4096*3];
 	R_Shadow_RenderLighting_Light_Vertex_Shading(firstvertex, numvertices, numtriangles, element3i, diffusecolor2, ambientcolor2);
-	for (renders = 0;renders < 64;renders++)
+	for (renders = 0;renders < 4;renders++)
 	{
 		stop = true;
 		newfirstvertex = 0;
