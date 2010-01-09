@@ -1153,6 +1153,16 @@ void FS_AddGameDirectory (const char *dir)
 		}
 	}
 
+	// add any virtual packs in the directory
+	for (i = 0;i < list.numstrings;i++)
+	{
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "dir") || (!strcasecmp(FS_FileExtension(list.strings[i]), "d"))
+			// we don't want precedence of .d vs .dir, but use the name as primary key
+		{
+			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
+		}
+	}
+
 	stringlistfreecontents(&list);
 
 	// Add the directory to the search path
