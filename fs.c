@@ -998,6 +998,7 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 	searchpath_t *search;
 	pack_t *pak = NULL;
 	const char *ext = FS_FileExtension(pakfile);
+	size_t l;
 
 	for(search = fs_searchpaths; search; search = search->next)
 	{
