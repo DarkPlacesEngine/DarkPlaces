@@ -276,6 +276,7 @@ typedef struct pack_s
 	int handle;
 	int ignorecase;  ///< PK3 ignores case
 	int numfiles;
+	qboolean vpack;
 	packfile_t *files;
 } pack_t;
 //@}
@@ -286,7 +287,6 @@ typedef struct searchpath_s
 	// only one of filename / pack will be used
 	char filename[MAX_OSPATH];
 	pack_t *pack;
-	const char *vpack; // points into filename where the pack short name starts
 	struct searchpath_s *next;
 } searchpath_t;
 
@@ -858,9 +858,12 @@ void FS_Path_f (void)
 	for (s=fs_searchpaths ; s ; s=s->next)
 	{
 		if (s->pack)
-			Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
-		else if (s->vpack)
-			Con_Printf("%s (virtual pack)\n", s->filename);
+		{
+			if(s->pack->vpack)
+				Con_Printf("%s (virtual pack)\n", s->pack->filename);
+			else
+				Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
+		}
 		else
 			Con_Printf("%s\n", s->filename);
 	}
@@ -955,6 +958,27 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 }
 
 /*
+====================
+FS_LoadPackVirtual
+
+Create a package entry associated with a directory file
+====================
+*/
+pack_t *FS_LoadPackVirtual (const char *dirname)
+{
+	pack_t *pack;
+	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
+	pack->vpack = true;
+	pack->ignorecase = false;
+	strlcpy (pack->filename, dirname, sizeof(pack->filename));
+	pack->handle = -1;
+	pack->numfiles = -1;
+	pack->files = NULL;
+	Con_DPrintf("Added packfile %s (virtual pack)\n", dirname);
+	return pack;
+}
+
+/*
 ================
 FS_AddPack_Fullpath
 ================
@@ -973,12 +997,11 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 {
 	searchpath_t *search;
 	pack_t *pak = NULL;
-	qboolean fakepack = true;
 	const char *ext = FS_FileExtension(pakfile);
 
 	for(search = fs_searchpaths; search; search = search->next)
 	{
-		if(search->pack ? !strcasecmp(search->pack->filename, pakfile) : (search->vpack && !strcasecmp(search->filename, pakfile)))
+		if(search->pack && !strcasecmp(search->pack->filename, pakfile))
 		{
 			if(already_loaded)
 				*already_loaded = true;
@@ -990,10 +1013,7 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 		*already_loaded = false;
 
 	if(FS_SysFileType(pakfile) == FS_FILETYPE_DIRECTORY)
-	{
-		fakepack = true;
-		Con_DPrintf("Added packfile %s (virtual pack)\n", pakfile);
-	}
+		pak = FS_LoadPackVirtual (pakfile);
 	else if(!strcasecmp(ext, "pak"))
 		pak = FS_LoadPackPAK (pakfile);
 	else if(!strcasecmp(ext, "pk3"))
@@ -1001,9 +1021,10 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 	else
 		Con_Printf("\"%s\" does not have a pack extension\n", pakfile);
 
-	if (pak)
+	if(pak)
 	{
 		strlcpy(pak->shortname, shortname, sizeof(pak->shortname));
+
 		//Con_DPrintf("  Registered pack with short name %s\n", shortname);
 		if(keep_plain_dirs)
 		{
@@ -1016,7 +1037,7 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 				{
 					if(!insertion_point->next)
 						break;
-					if(insertion_point->next->vpack)
+					if(insertion_point->next->pack)
 						break;
 					insertion_point = insertion_point->next;
 				}
@@ -1045,16 +1066,8 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 			fs_searchpaths = search;
 		}
 		search->pack = pak;
-		if(!pak)
-		{
-			strlcpy(search->filename, pakfile, sizeof(search->filename));
-			if(strlen(search->filename) >= strlen(shortname))
-				search->vpack = search->filename + strlen(search->filename) - strlen(shortname);
-			else
-				search->vpack = search->filename;
-		}
-		else
-			search->vpack = search->pack->shortname;
+		if(pak->vpack)
+			dpsnprintf(search->filename, sizeof(search->filename), "%s/", pakfile);
 		return true;
 	}
 	else
@@ -1090,7 +1103,7 @@ qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep
 
 	// then find the real name...
 	search = FS_FindFile(pakfile, &index, true);
-	if(!search || search->vpack)
+	if(!search || search->pack)
 	{
 		Con_Printf("could not find pak \"%s\"\n", pakfile);
 		return false;
@@ -1227,11 +1240,14 @@ void FS_ClearSearchPath (void)
 		fs_searchpaths = search->next;
 		if (search->pack)
 		{
-			// close the file
-			close(search->pack->handle);
-			// free any memory associated with it
-			if (search->pack->files)
-				Mem_Free(search->pack->files);
+			if(!search->pack->vpack)
+			{
+				// close the file
+				close(search->pack->handle);
+				// free any memory associated with it
+				if (search->pack->files)
+					Mem_Free(search->pack->files);
+			}
 			Mem_Free(search->pack);
 		}
 		Mem_Free(search);
@@ -2013,7 +2029,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 	for (search = fs_searchpaths;search;search = search->next)
 	{
 		// is the element a pak file?
-		if (search->pack)
+		if (search->pack && !search->pack->vpack)
 		{
 			int (*strcmp_funct) (const char* str1, const char* str2);
 			int left, right, middle;
@@ -2893,7 +2909,7 @@ int FS_FileType (const char *filename)
 	if(!search)
 		return FS_FILETYPE_NONE;
 
-	if(search->pack)
+	if(search->pack && !search->pack->vpack)
 		return FS_FILETYPE_FILE; // TODO can't check directories in paks yet, maybe later
 
 	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", search->filename, filename);
@@ -3014,7 +3030,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	for (searchpath = fs_searchpaths;searchpath;searchpath = searchpath->next)
 	{
 		// is the element a pak file?
-		if (searchpath->pack)
+		if (searchpath->pack && !searchpath->pack->vpack)
 		{
 			// look through all the pak file elements
 			pak = searchpath->pack;
@@ -3291,8 +3307,6 @@ void FS_Which_f(void)
 	}
 	if (sp->pack)
 		Con_Printf("%s is in package %s\n", filename, sp->pack->shortname);
-	else if (sp->vpack)
-		Con_Printf("%s is in virtual package %s\n", filename, sp->vpack);
 	else
 		Con_Printf("%s is file %s%s\n", filename, sp->filename, filename);
 }
@@ -3304,8 +3318,6 @@ const char *FS_WhichPack(const char *filename)
 	searchpath_t *sp = FS_FindFile(filename, &index, true);
 	if(sp && sp->pack)
 		return sp->pack->shortname;
-	else if(sp && sp->vpack)
-		return sp->vpack;
 	else
 		return 0;
 }
@@ -3327,7 +3339,8 @@ qboolean FS_IsRegisteredQuakePack(const char *name)
 	// search through the path, one element at a time
 	for (search = fs_searchpaths;search;search = search->next)
 	{
-		if (search->pack && !strcasecmp(FS_FileWithoutPath(search->filename), name))
+		if (search->pack && !search->pack->vpack && !strcasecmp(FS_FileWithoutPath(search->filename), name))
+			// TODO do we want to support vpacks in here too?
 		{
 			int (*strcmp_funct) (const char* str1, const char* str2);
 			int left, right, middle;
@@ -3359,7 +3372,6 @@ qboolean FS_IsRegisteredQuakePack(const char *name)
 			// we found the requested pack but it is not registered quake
 			return false;
 		}
-		// TODO do we want to support vpacks in here too?
 	}
 
 	return false;
