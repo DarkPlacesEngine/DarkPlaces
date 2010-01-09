@@ -1046,11 +1046,15 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 		}
 		search->pack = pak;
 		if(!pak)
-			search->filename = fn;
-		if(strlen(filename) >= strlen(shortname))
-			search->vpack = search->filename + strlen(search->filename) - strlen(shortname);
+		{
+			strlcpy(search->filename, pakfile, sizeof(search->filename));
+			if(strlen(search->filename) >= strlen(shortname))
+				search->vpack = search->filename + strlen(search->filename) - strlen(shortname);
+			else
+				search->vpack = search->filename;
+		}
 		else
-			search->vpack = search->filename;
+			search->vpack = search->pack->shortname;
 		return true;
 	}
 	else
