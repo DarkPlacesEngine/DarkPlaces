@@ -860,7 +860,7 @@ void FS_Path_f (void)
 		if (s->pack)
 		{
 			if(s->pack->vpack)
-				Con_Printf("%s (virtual pack)\n", s->pack->filename);
+				Con_Printf("%sdir (virtual pack)\n", s->pack->filename);
 			else
 				Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
 		}
@@ -1012,7 +1012,7 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 	if(already_loaded)
 		*already_loaded = false;
 
-	if(FS_SysFileType(pakfile) == FS_FILETYPE_DIRECTORY)
+	if(!strcasecmp(ext, "pk3dir"))
 		pak = FS_LoadPackVirtual (pakfile);
 	else if(!strcasecmp(ext, "pak"))
 		pak = FS_LoadPackPAK (pakfile);
@@ -1067,7 +1067,19 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 		}
 		search->pack = pak;
 		if(pak->vpack)
+		{
 			dpsnprintf(search->filename, sizeof(search->filename), "%s/", pakfile);
+			// if shortname ends with "pk3dir", strip that suffix to make it just "pk3"
+			// same goes for the name inside the pack structure
+			l = strlen(pak->shortname);
+			if(l >= 7)
+				if(!strcasecmp(pak->shortname + l - 7, ".pk3dir"))
+					pak->shortname[l - 3] = 0;
+			l = strlen(pak->filename);
+			if(l >= 7)
+				if(!strcasecmp(pak->filename + l - 7, ".pk3dir"))
+					pak->filename[l - 3] = 0;
+		}
 		return true;
 	}
 	else
@@ -1147,17 +1159,7 @@ void FS_AddGameDirectory (const char *dir)
 	// add any PK3 package in the directory
 	for (i = 0;i < list.numstrings;i++)
 	{
-		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3"))
-		{
-			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
-		}
-	}
-
-	// add any virtual packs in the directory
-	for (i = 0;i < list.numstrings;i++)
-	{
-		if (!strcasecmp(FS_FileExtension(list.strings[i]), "dir") || (!strcasecmp(FS_FileExtension(list.strings[i]), "d"))
-			// we don't want precedence of .d vs .dir, but use the name as primary key
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir"))
 		{
 			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
 		}
@@ -3316,7 +3318,12 @@ void FS_Which_f(void)
 		return;
 	}
 	if (sp->pack)
-		Con_Printf("%s is in package %s\n", filename, sp->pack->shortname);
+	{
+		if(sp->pack->vpack)
+			Con_Printf("%s is in virtual package %sdir\n", filename, sp->pack->shortname);
+		else
+			Con_Printf("%s is in package %s\n", filename, sp->pack->shortname);
+	}
 	else
 		Con_Printf("%s is file %s%s\n", filename, sp->filename, filename);
 }
