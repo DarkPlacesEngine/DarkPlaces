@@ -1219,7 +1219,10 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	ddssize = ddsfilesize;
 
 	if (!dds)
+	{
+		Log_Printf("ddstexturefailures.log", "%s\n", filename);
 		return NULL; // not found
+	}
 
 	if (ddsfilesize <= 128 || memcmp(dds, "DDS ", 4) || ddssize < (unsigned int)BuffLittleLong(dds+4) || BuffLittleLong(dds+76) != 32)
 	{
