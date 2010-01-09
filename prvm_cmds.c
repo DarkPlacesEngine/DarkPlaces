@@ -204,19 +204,19 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 			int blendindex;
 			int bonenum;
 			int numbones = ed->priv.server->skeleton.model->num_bones;
-			const float *poses = ed->priv.server->skeleton.model->data_poses;
-			const float *framebones;
+			const short *framebones6s;
 			float lerp;
+			float scale = ed->priv.server->skeleton.model->num_posescale;
 			matrix4x4_t *relativetransforms = ed->priv.server->skeleton.relativetransforms;
 			matrix4x4_t matrix;
 			memset(relativetransforms, 0, numbones * sizeof(matrix4x4_t));
 			for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 			{
 				lerp = frameblend[blendindex].lerp;
-				framebones = poses + 12 * frameblend[blendindex].subframe * numbones;
+				framebones6s = ed->priv.server->skeleton.model->data_poses6s + 6 * frameblend[blendindex].subframe * numbones;
 				for (bonenum = 0;bonenum < numbones;bonenum++)
 				{
-					Matrix4x4_FromArray12FloatD3D(&matrix, framebones + 12 * bonenum);
+					Matrix4x4_FromBonePose6s(&matrix, scale, framebones6s + 6 * bonenum);
 					Matrix4x4_Accumulate(&ed->priv.server->skeleton.relativetransforms[bonenum], &matrix, lerp);
 				}
 			}
