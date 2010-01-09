@@ -1687,7 +1687,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	zymtype1header_t *pinmodel, *pheader;
 	unsigned char *pbase;
 	int i, j, k, numposes, meshvertices, meshtriangles, *bonecount, *vertbonecounts, count, *renderlist, *renderlistend, *outelements;
-	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f, *bonepose, f, biggestorigin;
+	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f, *bonepose, f, biggestorigin, tempvec[3], modelscale;
 	zymvertex_t *verts, *vertdata;
 	zymscene_t *scene;
 	zymbone_t *bone;
@@ -1882,6 +1882,11 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 	poses = (float *) (pheader->lump_poses.start + pbase);
+	// figure out scale of model from root bone, for compatibility with old zmodel versions
+	tempvec[0] = BigFloat(poses[0]);
+	tempvec[1] = BigFloat(poses[1]);
+	tempvec[2] = BigFloat(poses[2]);
+	modelscale = VectorLength(tempvec);
 	biggestorigin = 0;
 	for (i = 0;i < loadmodel->num_bones * numposes * 12;i++)
 	{
@@ -1890,14 +1895,31 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	loadmodel->num_posescale = biggestorigin / 32767.0f;
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
-	for (i = 0;i < loadmodel->num_bones * numposes;i++)
+	for (i = 0;i < numposes;i++)
 	{
-		float pose[12];
-		matrix4x4_t posematrix;
-		for (j = 0;j < 12;j++)
-			pose[j] = BigFloat(poses[i*12+j]);
-		Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
-		Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*i);
+		const float *frameposes = (float *) (pheader->lump_poses.start + pbase) + 12*i*loadmodel->num_bones;
+		for (j = 0;j < loadmodel->num_bones;j++)
+		{
+			float pose[12];
+			matrix4x4_t posematrix;
+			for (k = 0;k < 12;k++)
+				pose[k] = BigFloat(frameposes[j*12+k]);
+			//if (j < loadmodel->num_bones)
+			//	Con_Printf("%s: bone %i = %f %f %f %f : %f %f %f %f : %f %f %f %f : scale = %f\n", loadmodel->name, j, pose[0], pose[1], pose[2], pose[3], pose[4], pose[5], pose[6], pose[7], pose[8], pose[9], pose[10], pose[11], VectorLength(pose));
+			// scale child bones to match the root scale
+			if (loadmodel->data_bones[j].parent >= 0)
+			{
+				pose[3] *= modelscale;
+				pose[7] *= modelscale;
+				pose[11] *= modelscale;
+			}
+			// normalize rotation matrix
+			VectorNormalize(pose + 0);
+			VectorNormalize(pose + 4);
+			VectorNormalize(pose + 8);
+			Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
+			Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*(i*loadmodel->num_bones+j));
+		}
 	}
 
 	//zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
@@ -2034,7 +2056,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	unsigned char *data;
 	float *bonepose;
-	float biggestorigin;
+	float biggestorigin, tempvec[3], modelscale;
 	float f;
 	float *poses;
 
@@ -2177,10 +2199,15 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	// load the frames
 	frames = (dpmframe_t *) (pbase + pheader->ofs_frames);
+	// figure out scale of model from root bone, for compatibility with old dpmodel versions
+	poses = (float *) (pbase + BigLong(frames[0].ofs_bonepositions));
+	tempvec[0] = BigFloat(poses[0]);
+	tempvec[1] = BigFloat(poses[1]);
+	tempvec[2] = BigFloat(poses[2]);
+	modelscale = VectorLength(tempvec);
 	biggestorigin = 0;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
-		const float *poses;
 		memcpy(loadmodel->animscenes[i].name, frames[i].name, sizeof(frames[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
@@ -2199,13 +2226,24 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
-		poses = (float *) (pbase + BigLong(frames[i].ofs_bonepositions));
+		const float *frameposes = (float *) (pbase + BigLong(frames[i].ofs_bonepositions));
 		for (j = 0;j < loadmodel->num_bones;j++)
 		{
 			float pose[12];
 			matrix4x4_t posematrix;
 			for (k = 0;k < 12;k++)
-				pose[k] = BigFloat(poses[j*12+k]);
+				pose[k] = BigFloat(frameposes[j*12+k]);
+			// scale child bones to match the root scale
+			if (loadmodel->data_bones[j].parent >= 0)
+			{
+				pose[3] *= modelscale;
+				pose[7] *= modelscale;
+				pose[11] *= modelscale;
+			}
+			// normalize rotation matrix
+			VectorNormalize(pose + 0);
+			VectorNormalize(pose + 4);
+			VectorNormalize(pose + 8);
 			Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
 			Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*(i*loadmodel->num_bones+j));
 		}
