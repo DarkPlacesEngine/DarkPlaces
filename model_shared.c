@@ -2651,7 +2651,9 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	int poseindex;
 	int cornerindex;
 	const int *e;
+#if 0
 	const float *pose;
+#endif
 	size_t l;
 	size_t outbufferpos = 0;
 	size_t outbuffermax = 0x100000;
@@ -2684,7 +2686,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "time %i\n", poseindex);
 		if (l > 0)
 			outbufferpos += l;
-		for (transformindex = 0;transformindex < model->num_bones;transformindex++, pose += 12)
+		for (transformindex = 0;transformindex < model->num_bones;transformindex++ /*, pose += 12 */)
 		{
 			float a, b, c;
 			float angles[3];
