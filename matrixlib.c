@@ -1427,12 +1427,35 @@ void Matrix4x4_FromOriginQuat(matrix4x4_t *m, double ox, double oy, double oz, d
 #endif
 }
 
+// see http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+void Matrix4x4_ToOrigin3Quat4Float(const matrix4x4_t *m, float *origin, float *quat)
+{
+	float s;
+	quat[3] = sqrt(1.0f + m->m[0][0] + m->m[1][1] + m->m[2][2]) * 0.5f;
+	s = 0.25f / quat[3];
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	origin[0] = m->m[3][0];
+	origin[1] = m->m[3][1];
+	origin[2] = m->m[3][2];
+	quat[0] = (m->m[1][2] - m->m[2][1]) * s;
+	quat[1] = (m->m[2][0] - m->m[0][2]) * s;
+	quat[2] = (m->m[0][1] - m->m[1][0]) * s;
+#else
+	origin[0] = m->m[0][3];
+	origin[1] = m->m[1][3];
+	origin[2] = m->m[2][3];
+	quat[0] = (m->m[2][1] - m->m[1][2]) * s;
+	quat[1] = (m->m[0][2] - m->m[2][0]) * s;
+	quat[2] = (m->m[1][0] - m->m[0][1]) * s;
+#endif
+}
+
 // LordHavoc: I got this code from:
 //http://www.doom3world.org/phpbb2/viewtopic.php?t=2884
 void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z)
 {
-	double w = 1.0 - (x*x+y*y+z*z);
-	w = w > 0.0 ? -sqrt(w) : 0.0;
+	double w = 1.0f - (x*x+y*y+z*z);
+	w = w > 0.0f ? -sqrt(w) : 0.0f;
 #ifdef MATRIX4x4_OPENGLORIENTATION
 	m->m[0][0]=1-2*(y*y+z*z);m->m[1][0]=  2*(x*y-z*w);m->m[2][0]=  2*(x*z+y*w);m->m[3][0]=ox;
 	m->m[0][1]=  2*(x*y+z*w);m->m[1][1]=1-2*(x*x+z*z);m->m[2][1]=  2*(y*z-x*w);m->m[3][1]=oy;
@@ -1444,6 +1467,47 @@ void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, d
 	m->m[2][0]=  2*(x*z-y*w);m->m[2][1]=  2*(y*z+x*w);m->m[2][2]=1-2*(x*x+y*y);m->m[2][3]=oz;
 	m->m[3][0]=  0          ;m->m[3][1]=  0          ;m->m[3][2]=  0          ;m->m[3][3]=1;
 #endif
+}
+
+void Matrix4x4_FromBonePose6s(matrix4x4_t *m, float originscale, const short *pose6s)
+{
+	float origin[3];
+	float quat[4];
+	origin[0] = pose6s[0] * originscale;
+	origin[1] = pose6s[1] * originscale;
+	origin[2] = pose6s[2] * originscale;
+	quat[0] = pose6s[3] * (1.0f / 32767.0f);
+	quat[1] = pose6s[4] * (1.0f / 32767.0f);
+	quat[2] = pose6s[5] * (1.0f / 32767.0f);
+	quat[3] = 1.0f - (quat[0]*quat[0]+quat[1]*quat[1]+quat[2]*quat[2]);
+	quat[3] = quat[3] > 0.0f ? -sqrt(quat[3]) : 0.0f;
+	Matrix4x4_FromOriginQuat(m, origin[0], origin[1], origin[2], quat[0], quat[1], quat[2], quat[3]);
+}
+
+void Matrix4x4_ToBonePose6s(const matrix4x4_t *m, float origininvscale, short *pose6s)
+{
+	float origin[3];
+	float quat[4];
+	float s;
+	Matrix4x4_ToOrigin3Quat4Float(m, origin, quat);
+	// normalize quaternion so that it is unit length
+	s = quat[0]*quat[0]+quat[1]*quat[1]+quat[2]*quat[2]+quat[3]*quat[3];
+	if (s)
+	{
+		s = 1.0f / sqrt(s);
+		quat[0] *= s;
+		quat[1] *= s;
+		quat[2] *= s;
+		quat[3] *= s;
+	}
+	// use a negative scale on the quat because the above function produces a
+	// positive quat[3] and canonical quaternions have negative quat[3]
+	pose6s[0] = origin[0] * origininvscale;
+	pose6s[1] = origin[1] * origininvscale;
+	pose6s[2] = origin[2] * origininvscale;
+	pose6s[3] = quat[0] * -32767.0f;
+	pose6s[4] = quat[1] * -32767.0f;
+	pose6s[5] = quat[2] * -32767.0f;
 }
 
 void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, double blend)

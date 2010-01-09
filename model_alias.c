@@ -52,9 +52,8 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	// vertex weighted skeletal
 	int i, k;
 	int blends;
-	float desiredscale[3];
 	float boneposerelative[MAX_BONES][12];
-	float *matrix, m[12], bonepose[MAX_BONES][12];
+	float matrix[12], m[12], bonepose[MAX_BONES][12];
 
 	if (skeleton && !skeleton->relativetransforms)
 		skeleton = NULL;
@@ -78,26 +77,39 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	}
 	else
 	{
+		float originscale = model->num_posescale;
+		float x,y,z,w;
+		const short *pose6s;
 		for (i = 0;i < model->num_bones;i++)
 		{
 			for (k = 0;k < 12;k++)
 				m[k] = 0;
-			VectorClear(desiredscale);
 			for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
-				matrix = model->data_poses + (frameblend[blends].subframe * model->num_bones + i) * 12;
+				pose6s = model->data_poses6s + 6 * (frameblend[blends].subframe * model->num_bones + i);
+				x = pose6s[3] * (1.0f / 32767.0f);
+				y = pose6s[4] * (1.0f / 32767.0f);
+				z = pose6s[5] * (1.0f / 32767.0f);
+				w = 1.0f - (x*x+y*y+z*z);
+				w = w > 0.0f ? -sqrt(w) : 0.0f;
+				matrix[ 0]=1-2*(y*y+z*z);
+				matrix[ 1]=  2*(x*y-z*w);
+				matrix[ 2]=  2*(x*z+y*w);
+				matrix[ 3]=pose6s[0] * originscale;
+				matrix[ 4]=  2*(x*y+z*w);
+				matrix[ 5]=1-2*(x*x+z*z);
+				matrix[ 6]=  2*(y*z-x*w);
+				matrix[ 7]=pose6s[1] * originscale;
+				matrix[ 8]=  2*(x*z-y*w);
+				matrix[ 9]=  2*(y*z+x*w);
+				matrix[10]=1-2*(x*x+y*y);
+				matrix[11]=pose6s[2] * originscale;
 				for (k = 0;k < 12;k++)
 					m[k] += matrix[k] * frameblend[blends].lerp;
-				desiredscale[0] += frameblend[blends].lerp * VectorLength(matrix    );
-				desiredscale[1] += frameblend[blends].lerp * VectorLength(matrix + 4);
-				desiredscale[2] += frameblend[blends].lerp * VectorLength(matrix + 8);
 			}
 			VectorNormalize(m    );
 			VectorNormalize(m + 4);
 			VectorNormalize(m + 8);
-			VectorScale(m    , desiredscale[0], m    );
-			VectorScale(m + 4, desiredscale[1], m + 4);
-			VectorScale(m + 8, desiredscale[2], m + 8);
 			if (i == r_skeletal_debugbone.integer)
 				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
 			m[3] *= r_skeletal_debugtranslatex.value;
@@ -440,13 +452,16 @@ void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, matrix4x4_t *outmatrix)
 {
 	matrix4x4_t temp;
-	const float *boneframe;
-	const float *input;
+	matrix4x4_t parentbonematrix;
+	matrix4x4_t tempbonematrix;
+	matrix4x4_t bonematrix;
+	matrix4x4_t blendmatrix;
 	int blendindex;
 	int parenttagindex;
 	int k;
 	float lerp;
-	float tempbonematrix[12], bonematrix[12], blendmatrix[12];
+	const float *input;
+	float blendtag[12];
 	*outmatrix = identitymatrix;
 	if (skeleton && skeleton->relativetransforms)
 	{
@@ -463,42 +478,36 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameble
 	{
 		if (tagindex < 0 || tagindex >= model->num_bones)
 			return 4;
-		for (k = 0;k < 12;k++)
-			blendmatrix[k] = 0;
+		Matrix4x4_Clear(&blendmatrix);
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
-			boneframe = model->data_poses + frameblend[blendindex].subframe * model->num_bones * 12;
-			input = boneframe + tagindex * 12;
-			for (k = 0;k < 12;k++)
-				bonematrix[k] = input[k];
+			Matrix4x4_FromBonePose6s(&bonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
 			parenttagindex = tagindex;
 			while ((parenttagindex = model->data_bones[parenttagindex].parent) >= 0)
 			{
-				for (k = 0;k < 12;k++)
-					tempbonematrix[k] = bonematrix[k];
-				input = boneframe + parenttagindex * 12;
-				R_ConcatTransforms(input, tempbonematrix, bonematrix);
+				Matrix4x4_FromBonePose6s(&parentbonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + parenttagindex));
+				tempbonematrix = bonematrix;
+				Matrix4x4_Concat(&bonematrix, &parentbonematrix, &tempbonematrix);
 			}
-			for (k = 0;k < 12;k++)
-				blendmatrix[k] += bonematrix[k] * lerp;
+			Matrix4x4_Accumulate(&blendmatrix, &bonematrix, lerp);
 		}
-		Matrix4x4_FromArray12FloatD3D(outmatrix, blendmatrix);
+		*outmatrix = blendmatrix;
 	}
 	else if (model->num_tags)
 	{
 		if (tagindex < 0 || tagindex >= model->num_tags)
 			return 4;
 		for (k = 0;k < 12;k++)
-			blendmatrix[k] = 0;
+			blendtag[k] = 0;
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
 			input = model->data_tags[frameblend[blendindex].subframe * model->num_tags + tagindex].matrixgl;
 			for (k = 0;k < 12;k++)
-				blendmatrix[k] += input[k] * lerp;
+				blendtag[k] += input[k] * lerp;
 		}
-		Matrix4x4_FromArray12FloatGL(outmatrix, blendmatrix);
+		Matrix4x4_FromArray12FloatGL(outmatrix, blendtag);
 	}
 
 	if(!mod_alias_supporttagscale.integer)
@@ -509,12 +518,13 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameble
 
 int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
-	const float *boneframe;
-	const float *input;
 	int blendindex;
 	int k;
 	float lerp;
-	float blendmatrix[12];
+	matrix4x4_t bonematrix;
+	matrix4x4_t blendmatrix;
+	const float *input;
+	float blendtag[12];
 
 	if (skeleton && skeleton->relativetransforms)
 	{
@@ -527,37 +537,36 @@ int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int s
 	}
 	else if (model->num_bones)
 	{
-		if(tagindex >= model->num_bones || tagindex < 0)
+		if (tagindex < 0 || tagindex >= model->num_bones)
 			return 1;
 		*parentindex = model->data_bones[tagindex].parent;
 		*tagname = model->data_bones[tagindex].name;
-		memset(blendmatrix, 0, sizeof(blendmatrix));
+		Matrix4x4_Clear(&blendmatrix);
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
-			boneframe = model->data_poses + frameblend[blendindex].subframe * model->num_bones * 12;
-			input = boneframe + tagindex * 12;
-			for (k = 0;k < 12;k++)
-				blendmatrix[k] += input[k] * lerp;
+			Matrix4x4_FromBonePose6s(&bonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
+			Matrix4x4_Accumulate(&blendmatrix, &bonematrix, lerp);
 		}
-		Matrix4x4_FromArray12FloatD3D(tag_localmatrix, blendmatrix);
+		*tag_localmatrix = blendmatrix;
 		return 0;
 	}
 	else if (model->num_tags)
 	{
-		if(tagindex >= model->num_tags || tagindex < 0)
+		if (tagindex < 0 || tagindex >= model->num_tags)
 			return 1;
 		*parentindex = -1;
 		*tagname = model->data_tags[tagindex].name;
-		memset(blendmatrix, 0, sizeof(blendmatrix));
+		for (k = 0;k < 12;k++)
+			blendtag[k] = 0;
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
 			input = model->data_tags[frameblend[blendindex].subframe * model->num_tags + tagindex].matrixgl;
 			for (k = 0;k < 12;k++)
-				blendmatrix[k] += input[k] * lerp;
+				blendtag[k] += input[k] * lerp;
 		}
-		Matrix4x4_FromArray12FloatGL(tag_localmatrix, blendmatrix);
+		Matrix4x4_FromArray12FloatGL(tag_localmatrix, blendtag);
 		return 0;
 	}
 
@@ -582,47 +591,25 @@ int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, con
 
 static void Mod_BuildBaseBonePoses(void)
 {
-	int i, k;
-	double scale;
-	float *basebonepose;
-	float *in12f = loadmodel->data_poses;
-	float *out12f;
-	float *outinv12f = loadmodel->data_baseboneposeinverse;
+	int boneindex;
+	matrix4x4_t *basebonepose;
+	float *outinvmatrix = loadmodel->data_baseboneposeinverse;
+	matrix4x4_t bonematrix;
+	matrix4x4_t tempbonematrix;
 	if (!loadmodel->num_bones)
 		return;
-	out12f = basebonepose = (float *) Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(float[12]));
-	for (i = 0;i < loadmodel->num_bones;i++, in12f += 12, out12f += 12, outinv12f += 12)
+	basebonepose = (matrix4x4_t *)Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(matrix4x4_t));
+	for (boneindex = 0;boneindex < loadmodel->num_bones;boneindex++)
 	{
-		if (loadmodel->data_bones[i].parent >= 0)
-			R_ConcatTransforms(basebonepose + 12 * loadmodel->data_bones[i].parent, in12f, out12f);
-		else
-			for (k = 0;k < 12;k++)
-				out12f[k] = in12f[k];
-
-		// invert The Matrix
-
-		// we only support uniform scaling, so assume the first row is enough
-		// (note the lack of sqrt here, because we're trying to undo the scaling,
-		// this means multiplying by the inverse scale twice - squaring it, which
-		// makes the sqrt a waste of time)
-		scale = 1.0 / (out12f[ 0] * out12f[ 0] + out12f[ 1] * out12f[ 1] + out12f[ 2] * out12f[ 2]);
-
-		// invert the rotation by transposing and multiplying by the squared
-		// recipricol of the input matrix scale as described above
-		outinv12f[ 0] = (float)(out12f[ 0] * scale);
-		outinv12f[ 1] = (float)(out12f[ 4] * scale);
-		outinv12f[ 2] = (float)(out12f[ 8] * scale);
-		outinv12f[ 4] = (float)(out12f[ 1] * scale);
-		outinv12f[ 5] = (float)(out12f[ 5] * scale);
-		outinv12f[ 6] = (float)(out12f[ 9] * scale);
-		outinv12f[ 8] = (float)(out12f[ 2] * scale);
-		outinv12f[ 9] = (float)(out12f[ 6] * scale);
-		outinv12f[10] = (float)(out12f[10] * scale);
-
-		// invert the translate
-		outinv12f[ 3] = -(out12f[ 3] * outinv12f[ 0] + out12f[ 7] * outinv12f[ 1] + out12f[11] * outinv12f[ 2]);
-		outinv12f[ 7] = -(out12f[ 3] * outinv12f[ 4] + out12f[ 7] * outinv12f[ 5] + out12f[11] * outinv12f[ 6]);
-		outinv12f[11] = -(out12f[ 3] * outinv12f[ 8] + out12f[ 7] * outinv12f[ 9] + out12f[11] * outinv12f[10]);
+		Matrix4x4_FromBonePose6s(&bonematrix, loadmodel->num_posescale, loadmodel->data_poses6s + 6 * boneindex);
+		if (loadmodel->data_bones[boneindex].parent >= 0)
+		{
+			tempbonematrix = bonematrix;
+			Matrix4x4_Concat(&bonematrix, basebonepose + loadmodel->data_bones[boneindex].parent, &tempbonematrix);
+		}
+		basebonepose[boneindex] = bonematrix;
+		Matrix4x4_Invert_Simple(&tempbonematrix, basebonepose + boneindex);
+		Matrix4x4_ToArray12FloatD3D(&tempbonematrix, outinvmatrix + 12*boneindex);
 	}
 	Mem_Free(basebonepose);
 }
@@ -1700,7 +1687,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	zymtype1header_t *pinmodel, *pheader;
 	unsigned char *pbase;
 	int i, j, k, numposes, meshvertices, meshtriangles, *bonecount, *vertbonecounts, count, *renderlist, *renderlistend, *outelements;
-	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f, *bonepose;
+	float modelradius, corner[2], *poses, *intexcoord2f, *outtexcoord2f, *bonepose, f, biggestorigin;
 	zymvertex_t *verts, *vertdata;
 	zymscene_t *scene;
 	zymbone_t *bone;
@@ -1873,7 +1860,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(int[4]) + meshvertices * sizeof(float[4]) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1888,15 +1875,30 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	if (loadmodel->surfmesh.num_vertices <= 65536)
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
+	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 	poses = (float *) (pheader->lump_poses.start + pbase);
-	for (i = 0;i < pheader->lump_poses.length / 4;i++)
-		loadmodel->data_poses[i] = BigFloat(poses[i]);
+	biggestorigin = 0;
+	for (i = 0;i < loadmodel->num_bones * numposes * 12;i++)
+	{
+		f = fabs(BigFloat(poses[i]));
+		biggestorigin = max(biggestorigin, f);
+	}
+	loadmodel->num_posescale = biggestorigin / 32767.0f;
+	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+	for (i = 0;i < loadmodel->num_bones * numposes;i++)
+	{
+		float pose[12];
+		matrix4x4_t posematrix;
+		for (j = 0;j < 12;j++)
+			pose[j] = BigFloat(poses[i*12+j]);
+		Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
+		Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*i);
+	}
 
 	//zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 	verts = (zymvertex_t *)Mem_Alloc(loadmodel->mempool, pheader->lump_verts.length);
@@ -1907,7 +1909,9 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	bonepose = (float *)Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
-		const float *m = loadmodel->data_poses + i * 12;
+		float m[12];
+		for (k = 0;k < 12;k++)
+			m[k] = BigFloat(poses[i*12+k]);
 		if (loadmodel->data_bones[i].parent >= 0)
 			R_ConcatTransforms(bonepose + 12 * loadmodel->data_bones[i].parent, m, bonepose + 12 * i);
 		else
@@ -2022,7 +2026,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	dpmheader_t *pheader;
-	dpmframe_t *frame;
+	dpmframe_t *frames;
 	dpmbone_t *bone;
 	dpmmesh_t *dpmmesh;
 	unsigned char *pbase;
@@ -2030,6 +2034,9 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	unsigned char *data;
 	float *bonepose;
+	float biggestorigin;
+	float f;
+	float *poses;
 
 	pheader = (dpmheader_t *)buffer;
 	pbase = (unsigned char *)buffer;
@@ -2126,7 +2133,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(int[4]) + sizeof(float[4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -2141,13 +2148,13 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += meshvertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += meshvertices * sizeof(float[4]);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	if (meshvertices <= 65536)
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
+	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
@@ -2169,21 +2176,39 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load the frames
-	frame = (dpmframe_t *) (pbase + pheader->ofs_frames);
+	frames = (dpmframe_t *) (pbase + pheader->ofs_frames);
+	biggestorigin = 0;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
 		const float *poses;
-		memcpy(loadmodel->animscenes[i].name, frame->name, sizeof(frame->name));
+		memcpy(loadmodel->animscenes[i].name, frames[i].name, sizeof(frames[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].loop = true;
 		loadmodel->animscenes[i].framerate = 10;
 		// load the bone poses for this frame
-		poses = (float *) (pbase + BigLong(frame->ofs_bonepositions));
+		poses = (float *) (pbase + BigLong(frames[i].ofs_bonepositions));
 		for (j = 0;j < loadmodel->num_bones*12;j++)
-			loadmodel->data_poses[i * loadmodel->num_bones*12 + j] = BigFloat(poses[j]);
+		{
+			f = fabs(BigFloat(poses[j]));
+			biggestorigin = max(biggestorigin, f);
+		}
 		// stuff not processed here: mins, maxs, yawradius, allradius
-		frame++;
+	}
+	loadmodel->num_posescale = biggestorigin / 32767.0f;
+	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+	for (i = 0;i < loadmodel->numframes;i++)
+	{
+		poses = (float *) (pbase + BigLong(frames[i].ofs_bonepositions));
+		for (j = 0;j < loadmodel->num_bones;j++)
+		{
+			float pose[12];
+			matrix4x4_t posematrix;
+			for (k = 0;k < 12;k++)
+				pose[k] = BigFloat(poses[j*12+k]);
+			Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
+			Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*(i*loadmodel->num_bones+j));
+		}
 	}
 
 	// load the meshes now
@@ -2193,10 +2218,13 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// reconstruct frame 0 matrices to allow reconstruction of the base mesh
 	// (converting from weight-blending skeletal animation to
 	//  deformation-based skeletal animation)
+	poses = (float *) (pbase + BigLong(frames[0].ofs_bonepositions));
 	bonepose = (float *)Z_Malloc(loadmodel->num_bones * sizeof(float[12]));
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
-		const float *m = loadmodel->data_poses + i * 12;
+		float m[12];
+		for (k = 0;k < 12;k++)
+			m[k] = BigFloat(poses[i*12+k]);
 		if (loadmodel->data_bones[i].parent >= 0)
 			R_ConcatTransforms(bonepose + 12 * loadmodel->data_bones[i].parent, m, bonepose + 12 * i);
 		else
@@ -2346,6 +2374,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	char animname[MAX_QPATH];
 	size_t size;
+	float biggestorigin;
 
 	pchunk = (pskchunk_t *)buffer;
 	if (strcmp(pchunk->id, "ACTRHEAD"))
@@ -2719,7 +2748,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
 	// do most allocations as one merged chunk
-	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(int[4]) + loadmodel->surfmesh.num_vertices * sizeof(float[4]) + loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
+	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(int[4]) + loadmodel->surfmesh.num_vertices * sizeof(float[4]) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -2733,13 +2762,13 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
 	loadmodel->surfmesh.data_vertexweightindex4i = (int *)data;data += loadmodel->surfmesh.num_vertices * sizeof(int[4]);
 	loadmodel->surfmesh.data_vertexweightinfluence4f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
-	loadmodel->data_poses = (float *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	if (loadmodel->surfmesh.num_vertices <= 65536)
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
+	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
@@ -2851,13 +2880,34 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
+	// calculate the scaling value for bone origins so they can be compressed to short
+	biggestorigin = 0;
+	for (index = 0;index < numanimkeys;index++)
+	{
+		pskanimkeys_t *k = animkeys + index;
+		biggestorigin = max(biggestorigin, fabs(k->origin[0]));
+		biggestorigin = max(biggestorigin, fabs(k->origin[1]));
+		biggestorigin = max(biggestorigin, fabs(k->origin[2]));
+	}
+	loadmodel->num_posescale = biggestorigin / 32767.0f;
+	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+
 	// load the poses from the animkeys
 	for (index = 0;index < numanimkeys;index++)
 	{
 		pskanimkeys_t *k = animkeys + index;
-		matrix4x4_t matrix;
-		Matrix4x4_FromOriginQuat(&matrix, k->origin[0], k->origin[1], k->origin[2], k->quat[0], k->quat[1], k->quat[2], k->quat[3]);
-		Matrix4x4_ToArray12FloatD3D(&matrix, loadmodel->data_poses + index*12);
+		float quat[4];
+		Vector4Copy(k->quat, quat);
+		if (quat[3] > 0)
+			Vector4Negate(quat, quat);
+		Vector4Normalize2(quat, quat);
+		// compress poses to the short[6] format for longterm storage
+		loadmodel->data_poses6s[index*6+0] = k->origin[0] * loadmodel->num_poseinvscale;
+		loadmodel->data_poses6s[index*6+1] = k->origin[1] * loadmodel->num_poseinvscale;
+		loadmodel->data_poses6s[index*6+2] = k->origin[2] * loadmodel->num_poseinvscale;
+		loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
+		loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
+		loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
 	}
 	Mod_FreeSkinFiles(skinfiles);
 	Mem_Free(animfilebuffer);
