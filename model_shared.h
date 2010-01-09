@@ -868,8 +868,10 @@ typedef struct model_s
 	// for skeletal models
 	int				num_bones;
 	aliasbone_t		*data_bones;
+	float			num_posescale; // scaling factor from origin in poses6s format (includes divide by 32767)
+	float			num_poseinvscale; // scaling factor to origin in poses6s format (includes multiply by 32767)
 	int				num_poses;
-	float			*data_poses;
+	short			*data_poses6s; // origin xyz, quat xyz, w implied negative, unit length, values normalized to +/-32767 range
 	float			*data_baseboneposeinverse;
 	// textures of this model
 	int				num_textures;

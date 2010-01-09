@@ -115,8 +115,15 @@ void Matrix4x4_FromArray12FloatD3D(matrix4x4_t *out, const float in[12]);
 
 // creates a matrix4x4 from an origin and quaternion (used mostly with skeletal model formats such as PSK)
 void Matrix4x4_FromOriginQuat(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z, double w);
+// creates an origin and quaternion from a matrix4x4_t, quat[3] is always positive
+void Matrix4x4_ToOrigin3Quat4Float(const matrix4x4_t *m, float *origin, float *quat);
 // creates a matrix4x4 from an origin and canonical unit-length quaternion (used mostly with skeletal model formats such as MD5)
 void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z);
+
+// creates a matrix4x4_t from an origin and canonical unit-length quaternion in short[6] normalized format
+void Matrix4x4_FromBonePose6s(matrix4x4_t *m, float originscale, const short *pose6s);
+// creates a short[6] representation from normalized matrix4x4_t
+void Matrix4x4_ToBonePose6s(const matrix4x4_t *m, float origininvscale, short *pose6s);
 
 // blends two matrices together, at a given percentage (blend controls percentage of in2)
 void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, double blend);

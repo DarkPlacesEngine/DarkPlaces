@@ -83,6 +83,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector2Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1])
 #define Vector2Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]))
 #define Vector2Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c))
+#define Vector2Normalize2(v,dest) {float ilength = (float) sqrt(DotProduct2((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;}
 
 #define DotProduct4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
 #define Vector4Clear(a) ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
@@ -90,6 +91,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector4Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
 #define Vector4Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]),(b)[3]=-((a)[3]))
 #define Vector4Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d),(a)[3]=(e))
+#define Vector4Normalize2(v,dest) {float ilength = (float) sqrt(DotProduct4((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;dest[3] = (v)[3] * ilength;}
 
 #define VectorNegate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]))
 #define VectorSet(a,b,c,d) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d))

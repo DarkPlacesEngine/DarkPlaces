@@ -2650,7 +2650,6 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	int transformindex;
 	int poseindex;
 	int cornerindex;
-	float modelscale;
 	const int *e;
 	const float *pose;
 	size_t l;
@@ -2661,16 +2660,6 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "version 1\nnodes\n");
 	if (l > 0)
 		outbufferpos += l;
-	modelscale = 1;
-	if(model->num_poses >= 0)
-		modelscale = sqrt(model->data_poses[0] * model->data_poses[0] + model->data_poses[1] * model->data_poses[1] + model->data_poses[2] * model->data_poses[2]);
-	if(fabs(modelscale - 1) > 1e-4)
-	{
-		if(firstpose == 0) // only print the when writing the reference pose
-			Con_Printf("The model has an old-style model scale of %f\n", modelscale);
-	}
-	else
-		modelscale = 1;
 	for (transformindex = 0;transformindex < model->num_bones;transformindex++)
 	{
 		if (outbufferpos >= outbuffermax >> 1)
@@ -2689,7 +2678,7 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "end\nskeleton\n");
 	if (l > 0)
 		outbufferpos += l;
-	for (poseindex = 0, pose = model->data_poses + model->num_bones * 12 * firstpose;poseindex < numposes;poseindex++)
+	for (poseindex = 0;poseindex < numposes;poseindex++)
 	{
 		countframes++;
 		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "time %i\n", poseindex);
@@ -2699,7 +2688,8 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 		{
 			float a, b, c;
 			float angles[3];
-			float mtest[3][4];
+			float mtest[4][3];
+			matrix4x4_t posematrix;
 			if (outbufferpos >= outbuffermax >> 1)
 			{
 				outbuffermax *= 2;
@@ -2711,18 +2701,8 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 
 			// strangely the smd angles are for a transposed matrix, so we
 			// have to generate a transposed matrix, then convert that...
-			mtest[0][0] = pose[ 0];
-			mtest[0][1] = pose[ 4];
-			mtest[0][2] = pose[ 8];
-			mtest[0][3] = pose[ 3];
-			mtest[1][0] = pose[ 1];
-			mtest[1][1] = pose[ 5];
-			mtest[1][2] = pose[ 9];
-			mtest[1][3] = pose[ 7];
-			mtest[2][0] = pose[ 2];
-			mtest[2][1] = pose[ 6];
-			mtest[2][2] = pose[10];
-			mtest[2][3] = pose[11];
+			Matrix4x4_FromBonePose6s(&posematrix, model->num_posescale, model->data_poses6s + 6*(model->num_bones * poseindex + transformindex));
+			Matrix4x4_ToArray12FloatGL(&posematrix, mtest[0]);
 			AnglesFromVectors(angles, mtest[0], mtest[2], false);
 			if (angles[0] >= 180) angles[0] -= 360;
 			if (angles[1] >= 180) angles[1] -= 360;
@@ -2735,8 +2715,8 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 #if 0
 {
 			float cy, sy, cp, sp, cr, sr;
-			float test[3][4];
-			// smd matrix construction, for comparing to non-transposed m
+			float test[4][3];
+			// smd matrix construction, for comparing
 			sy = sin(c);
 			cy = cos(c);
 			sp = sin(b);
@@ -2745,20 +2725,20 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 			cr = cos(a);
 
 			test[0][0] = cp*cy;
-			test[1][0] = cp*sy;
-			test[2][0] = -sp;
-			test[0][1] = sr*sp*cy+cr*-sy;
+			test[0][1] = cp*sy;
+			test[0][2] = -sp;
+			test[1][0] = sr*sp*cy+cr*-sy;
 			test[1][1] = sr*sp*sy+cr*cy;
-			test[2][1] = sr*cp;
-			test[0][2] = (cr*sp*cy+-sr*-sy);
-			test[1][2] = (cr*sp*sy+-sr*cy);
+			test[1][2] = sr*cp;
+			test[2][0] = (cr*sp*cy+-sr*-sy);
+			test[2][1] = (cr*sp*sy+-sr*cy);
 			test[2][2] = cr*cp;
-			test[0][3] = pose[3];
-			test[1][3] = pose[7];
-			test[2][3] = pose[11];
+			test[3][0] = pose[9];
+			test[3][1] = pose[10];
+			test[3][2] = pose[11];
 }
 #endif
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f\n", transformindex, pose[3] * modelscale, pose[7] * modelscale, pose[11] * modelscale, DEG2RAD(angles[ROLL]), DEG2RAD(angles[PITCH]), DEG2RAD(angles[YAW]));
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f\n", transformindex, mtest[3][0], mtest[3][1], mtest[3][2], DEG2RAD(angles[ROLL]), DEG2RAD(angles[PITCH]), DEG2RAD(angles[YAW]));
 			if (l > 0)
 				outbufferpos += l;
 		}
