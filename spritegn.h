@@ -100,6 +100,7 @@ typedef struct dsprite2_s
 #define SPR_VP_PARALLEL_ORIENTED	4
 #define SPR_LABEL               	5
 #define SPR_LABEL_SCALE         	6
+#define SPR_OVERHEAD				7
 
 #define SPRHL_OPAQUE	0
 #define SPRHL_ADDITIVE	1
