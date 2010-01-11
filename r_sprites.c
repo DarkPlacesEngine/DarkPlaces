@@ -356,9 +356,6 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 	case SPR_OVERHEAD:
 		VectorScale(r_refdef.view.left, ent->scale, left);
 		VectorScale(r_refdef.view.up, ent->scale, up);
-		Con_Printf("mup: %f %f %f\n", mup[0], mup[1], mup[2]);
-		Con_Printf("mleft: %f %f %f\n", mleft[0], mleft[1], mleft[2]);
-		Con_Printf("m_forward: %f %f %f\n", mforward[0], mforward[1], mforward[2]);
 		// offset
 		VectorSubtract(r_refdef.view.origin, org, middle);
 		VectorNormalize(middle);
