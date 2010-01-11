@@ -162,6 +162,9 @@ cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* s
 cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accodringly, 2: Make it a continuous rotation"};
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
+cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "0.15", "fake perspective effect for SPR_OVERHEAD sprites"};
+cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "16", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
+
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 
 cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "1", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
@@ -5976,6 +5979,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_track_sprites_flags);
 	Cvar_RegisterVariable(&r_track_sprites_scalew);
 	Cvar_RegisterVariable(&r_track_sprites_scaleh);
+	Cvar_RegisterVariable(&r_overheadsprites_perspective);
+	Cvar_RegisterVariable(&r_overheadsprites_pushback);
 }
 
 extern void R_Textures_Init(void);
