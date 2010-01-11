@@ -53,7 +53,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	int i, k;
 	int blends;
 	float boneposerelative[MAX_BONES][12];
-	float matrix[12], m[12], bonepose[MAX_BONES][12];
+	float m[12], bonepose[MAX_BONES][12];
 
 	if (skeleton && !skeleton->relativetransforms)
 		skeleton = NULL;
@@ -78,7 +78,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 	else
 	{
 		float originscale = model->num_posescale;
-		float x,y,z,w;
+		float x,y,z,w,lerp;
 		const short *pose6s;
 		for (i = 0;i < model->num_bones;i++)
 		{
@@ -87,25 +87,24 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t *model, const frameblend_t *f
 			for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
 				pose6s = model->data_poses6s + 6 * (frameblend[blends].subframe * model->num_bones + i);
+				lerp = frameblend[blends].lerp;
 				x = pose6s[3] * (1.0f / 32767.0f);
 				y = pose6s[4] * (1.0f / 32767.0f);
 				z = pose6s[5] * (1.0f / 32767.0f);
 				w = 1.0f - (x*x+y*y+z*z);
 				w = w > 0.0f ? -sqrt(w) : 0.0f;
-				matrix[ 0]=1-2*(y*y+z*z);
-				matrix[ 1]=  2*(x*y-z*w);
-				matrix[ 2]=  2*(x*z+y*w);
-				matrix[ 3]=pose6s[0] * originscale;
-				matrix[ 4]=  2*(x*y+z*w);
-				matrix[ 5]=1-2*(x*x+z*z);
-				matrix[ 6]=  2*(y*z-x*w);
-				matrix[ 7]=pose6s[1] * originscale;
-				matrix[ 8]=  2*(x*z-y*w);
-				matrix[ 9]=  2*(y*z+x*w);
-				matrix[10]=1-2*(x*x+y*y);
-				matrix[11]=pose6s[2] * originscale;
-				for (k = 0;k < 12;k++)
-					m[k] += matrix[k] * frameblend[blends].lerp;
+				m[ 0] += (1-2*(y*y+z*z)) * lerp;
+				m[ 1] += (  2*(x*y-z*w)) * lerp;
+				m[ 2] += (  2*(x*z+y*w)) * lerp;
+				m[ 3] += (pose6s[0] * originscale) * lerp;
+				m[ 4] += (  2*(x*y+z*w)) * lerp;
+				m[ 5] += (1-2*(x*x+z*z)) * lerp;
+				m[ 6] += (  2*(y*z-x*w)) * lerp;
+				m[ 7] += (pose6s[1] * originscale) * lerp;
+				m[ 8] += (  2*(x*z-y*w)) * lerp;
+				m[ 9] += (  2*(y*z+x*w)) * lerp;
+				m[10] += (1-2*(x*x+y*y)) * lerp;
+				m[11] += (pose6s[2] * originscale) * lerp;
 			}
 			VectorNormalize(m    );
 			VectorNormalize(m + 4);
