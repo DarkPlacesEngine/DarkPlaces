@@ -8,6 +8,8 @@ extern cvar_t r_track_sprites;
 extern cvar_t r_track_sprites_flags;
 extern cvar_t r_track_sprites_scalew;
 extern cvar_t r_track_sprites_scaleh;
+extern cvar_t r_overheadsprites_perspective;
+extern cvar_t r_overheadsprites_pushback;
 
 #define TSF_ROTATE 1
 #define TSF_ROTATE_CONTINOUSLY 2
@@ -357,13 +359,17 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		VectorScale(r_refdef.view.left, ent->scale, left);
 		VectorScale(r_refdef.view.up, ent->scale, up);
 		// offset
+		VectorCopy(r_refdef.view.up, up);
+		up[2] = up[2] + r_overheadsprites_perspective.value; VectorNormalize(up); // some rotation
+		VectorScale(up, ent->scale, up);
+		// offset (move nearer to player, yz is camera plane)
 		VectorSubtract(r_refdef.view.origin, org, middle);
 		VectorNormalize(middle);
-		org[0] = org[0] + middle[0]*17;
-		org[1] = org[1] + middle[1]*17;
-		org[2] = org[2] + middle[2]*17;
-		// simlulate a bit of perspective effect
-		up[2] = up[2] + 0.15;
+		org[0] = org[0] + middle[0]*r_overheadsprites_pushback.value;
+		org[1] = org[1] + middle[1]*r_overheadsprites_pushback.value;
+		org[2] = org[2] + middle[2]*r_overheadsprites_pushback.value;
+		 // simlulate a bit of perspective effect
+		up[2] = up[2] + r_overheadsprites_perspective.value;
 		break;
 	}
 
