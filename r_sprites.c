@@ -353,6 +353,21 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		up[1] = mup[0] * r_refdef.view.forward[1] + mup[1] * r_refdef.view.left[1] + mup[2] * r_refdef.view.up[1];
 		up[2] = mup[0] * r_refdef.view.forward[2] + mup[1] * r_refdef.view.left[2] + mup[2] * r_refdef.view.up[2];
 		break;
+	case SPR_OVERHEAD:
+		VectorScale(r_refdef.view.left, ent->scale, left);
+		VectorScale(r_refdef.view.up, ent->scale, up);
+		Con_Printf("mup: %f %f %f\n", mup[0], mup[1], mup[2]);
+		Con_Printf("mleft: %f %f %f\n", mleft[0], mleft[1], mleft[2]);
+		Con_Printf("m_forward: %f %f %f\n", mforward[0], mforward[1], mforward[2]);
+		// offset
+		VectorSubtract(r_refdef.view.origin, org, middle);
+		VectorNormalize(middle);
+		org[0] = org[0] + middle[0]*17;
+		org[1] = org[1] + middle[1]*17;
+		org[2] = org[2] + middle[2]*17;
+		// simlulate a bit of perspective effect
+		up[2] = up[2] + 0.15;
+		break;
 	}
 
 	// LordHavoc: interpolated sprite rendering
