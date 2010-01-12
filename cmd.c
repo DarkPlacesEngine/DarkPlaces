@@ -743,6 +743,10 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 				*is_multiple = true;
 			return Cmd_Args();
 		}
+		else if(!strcmp(varname, "#"))
+		{
+			return va("%d", Cmd_Argc());
+		}
 		else if(varname[strlen(varname) - 1] == '-')
 		{
 			argno = strtol(varname, &endptr, 10);
@@ -992,7 +996,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 					eat = varlen + 1;
 				}
 			} else {
-				varlen = strspn(in, "*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
+				varlen = strspn(in, "#*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
 				val = Cmd_GetCvarValue(in, varlen, alias);
 				eat = varlen;
 			}
