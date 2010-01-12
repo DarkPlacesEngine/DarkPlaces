@@ -2627,7 +2627,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 int SV_GetEntityLocalTagMatrix(prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
 {
 	dp_model_t *model;
-	if (tagindex >= 0 && (model = SV_GetModelFromEdict(ent)) && model->num_bones)
+	if (tagindex >= 0 && (model = SV_GetModelFromEdict(ent)) && model->animscenes)
 	{
 		VM_GenerateFrameGroupBlend(ent->priv.server->framegroupblend, ent);
 		VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
