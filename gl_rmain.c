@@ -10403,7 +10403,7 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 		{
 		case TEXTURELAYERTYPE_LITTEXTURE:
 			// single-pass lightmapped texture with 2x rgbscale
-			//R_Mesh_TexBind(0, r_texture_white);
+			R_Mesh_TexBind(0, r_texture_white);
 			R_Mesh_TexMatrix(0, NULL);
 			R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
 			R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
@@ -10508,7 +10508,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 			{
 				// two-pass lit texture with 2x rgbscale
 				// first the lightmap pass
-				//R_Mesh_TexBind(0, r_texture_white);
+				R_Mesh_TexBind(0, r_texture_white);
 				R_Mesh_TexMatrix(0, NULL);
 				R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
 				R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
