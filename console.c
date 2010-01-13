@@ -1769,6 +1769,7 @@ void Con_DrawConsole (int lines)
 {
 	int mask_must = 0;
 	int mask_mustnot = developer.integer ? 0 : CON_MASK_DEVELOPER;
+	cachepic_t *conbackpic;
 
 	if (lines <= 0)
 		return;
@@ -1779,7 +1780,11 @@ void Con_DrawConsole (int lines)
 	con_vislines = lines;
 
 // draw the background
-	DrawQ_Pic(0, lines - vid_conheight.integer, scr_conbrightness.value >= 0.01f ? Draw_CachePic ("gfx/conback") : NULL, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0, 0); // always full alpha when not in game
+	conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback") : NULL;
+	if (conbackpic && conbackpic->tex != r_texture_notexture)
+		DrawQ_Pic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0f, 0); // always full alpha when not in game
+	else
+		DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0.0f, 0.0f, 0.0f, cls.signon == SIGNONS ? scr_conalpha.value : 1.0f, 0); // always full alpha when not in game
 	DrawQ_String(vid_conwidth.integer - DrawQ_TextWidth(engineversion, 0, con_textsize.value, con_textsize.value, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
