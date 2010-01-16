@@ -1493,10 +1493,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 	if (trailtype)
 		CL_ParticleTrail(trailtype, 0, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false);
 
-	// don't show viewmodels in certain situations
-	if (e->render.flags & RENDER_VIEWMODEL)
-		if (!r_drawviewmodel.integer || chase_active.integer || r_refdef.envmap)
-			return;
 	// don't show entities with no modelindex (note: this still shows
 	// entities which have a modelindex that resolved to a NULL model)
 	if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.scene.numentities < r_refdef.scene.maxentities)
