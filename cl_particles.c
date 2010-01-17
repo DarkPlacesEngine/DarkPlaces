@@ -194,7 +194,10 @@ cvar_t cl_particles_alpha = {CVAR_SAVE, "cl_particles_alpha", "1", "multiplies o
 cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
 cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
 cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
-cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "1", "opacity of blood"};
+cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "1", "opacity of blood, does not affect decals"};
+cvar_t cl_particles_blood_decal_alpha = {CVAR_SAVE, "cl_particles_blood_decal_alpha", "1", "opacity of blood decal"};
+cvar_t cl_particles_blood_decal_scalemin = {CVAR_SAVE, "cl_particles_blood_decal_scalemin", "1.5", "minimal random scale of decal"};
+cvar_t cl_particles_blood_decal_scalemax = {CVAR_SAVE, "cl_particles_blood_decal_scalemax", "2", "maximal random scale of decal"};
 cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
 cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
@@ -490,6 +493,9 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_quake);
 	Cvar_RegisterVariable (&cl_particles_blood);
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
+	Cvar_RegisterVariable (&cl_particles_blood_decal_alpha);
+	Cvar_RegisterVariable (&cl_particles_blood_decal_scalemin);
+	Cvar_RegisterVariable (&cl_particles_blood_decal_scalemax);
 	Cvar_RegisterVariable (&cl_particles_blood_bloodhack);
 	Cvar_RegisterVariable (&cl_particles_explosions_sparks);
 	Cvar_RegisterVariable (&cl_particles_explosions_shell);
@@ -2702,7 +2708,7 @@ void R_DrawParticles (void)
 								if (cl_decals.integer)
 								{
 									// create a decal for the blood splat
-									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * 2, p->alpha);
+									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * lhrandom(cl_particles_blood_decal_scalemin.value, cl_particles_blood_decal_scalemax.value), cl_particles_blood_decal_alpha.value * 768);
 								}
 							}
 							goto killparticle;
