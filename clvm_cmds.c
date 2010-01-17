@@ -2655,12 +2655,12 @@ void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme)
 	*vmpartspawner.particle_velocityjitter = theme->velocityjitter;
 	*vmpartspawner.particle_qualityreduction = theme->qualityreduction;
 	*vmpartspawner.particle_stretch = theme->stretch;
-	vmpartspawner.particle_staincolor1[0] = (theme->staincolor1 >> 16) & 0xFF;
-	vmpartspawner.particle_staincolor1[1] = (theme->staincolor1 >> 8) & 0xFF;
-	vmpartspawner.particle_staincolor1[2] = (theme->staincolor1 >> 0) & 0xFF;
-	vmpartspawner.particle_staincolor2[0] = (theme->staincolor2 >> 16) & 0xFF;
-	vmpartspawner.particle_staincolor2[1] = (theme->staincolor2 >> 8) & 0xFF;
-	vmpartspawner.particle_staincolor2[2] = (theme->staincolor2 >> 0) & 0xFF;
+	vmpartspawner.particle_staincolor1[0] = ((int)theme->staincolor1 >> 16) & 0xFF;
+	vmpartspawner.particle_staincolor1[1] = ((int)theme->staincolor1 >> 8) & 0xFF;
+	vmpartspawner.particle_staincolor1[2] = ((int)theme->staincolor1 >> 0) & 0xFF;
+	vmpartspawner.particle_staincolor2[0] = ((int)theme->staincolor2 >> 16) & 0xFF;
+	vmpartspawner.particle_staincolor2[1] = ((int)theme->staincolor2 >> 8) & 0xFF;
+	vmpartspawner.particle_staincolor2[2] = ((int)theme->staincolor2 >> 0) & 0xFF;
 	*vmpartspawner.particle_staintex = (float)theme->staintex;
 	*vmpartspawner.particle_delayspawn = theme->delayspawn;
 	*vmpartspawner.particle_delaycollision = theme->delaycollision;
@@ -2688,8 +2688,8 @@ void VM_CL_ParticleThemeFromGlobals(vmparticletheme_t *theme)
 	theme->velocityjitter = *vmpartspawner.particle_velocityjitter;
 	theme->qualityreduction = (*vmpartspawner.particle_qualityreduction) ? true : false;
 	theme->stretch = *vmpartspawner.particle_stretch;
-	theme->staincolor1 = vmpartspawner.particle_staincolor1[0]*65536 + vmpartspawner.particle_staincolor1[1]*256 + vmpartspawner.particle_staincolor1[2];
-	theme->staincolor2 = vmpartspawner.particle_staincolor2[0]*65536 + vmpartspawner.particle_staincolor2[1]*256 + vmpartspawner.particle_staincolor2[2];
+	theme->staincolor1 = ((int)vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]);
+	theme->staincolor2 = (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]);
 	theme->staintex =(int)*vmpartspawner.particle_staintex;
 	theme->delayspawn = *vmpartspawner.particle_delayspawn;
 	theme->delaycollision = *vmpartspawner.particle_delaycollision;
@@ -2839,7 +2839,7 @@ void VM_CL_SpawnParticle (void)
 	
 	if (prog->argc < 3) // global-set particle
 	{
-		part = CL_NewParticle((unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, (int)(*vmpartspawner.particle_alpha*256), (int)(*vmpartspawner.particle_alphafade*256), *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex);
+		part = CL_NewParticle((unsigned short)*vmpartspawner.particle_type, ((int)(vmpartspawner.particle_color1[0]) << 16) + ((int)(vmpartspawner.particle_color1[1]) << 8) + ((int)(vmpartspawner.particle_color1[2])), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, (int)(*vmpartspawner.particle_alpha*256), (int)(*vmpartspawner.particle_alphafade*256), *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, (int)(vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]), (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex);
 		if (!part)
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = 0; 
