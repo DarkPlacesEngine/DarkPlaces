@@ -5805,6 +5805,11 @@ noflags:
 						else
 							width = argpos++;
 						width = GETARG_FLOAT(width);
+						if(width < 0)
+						{
+							flags |= PRINTF_LEFT;
+							width = -width;
+						}
 					}
 					else if(*s >= '0' && *s <= '9')
 					{
@@ -5815,12 +5820,13 @@ noflags:
 							goto finished;
 						}
 						s = err;
+						if(width < 0)
+						{
+							flags |= PRINTF_LEFT;
+							width = -width;
+						}
 					}
-					if(width < 0)
-					{
-						flags |= PRINTF_LEFT;
-						width = -width;
-					}
+					// otherwise width stays -1
 				}
 
 				if(*s == '.')
@@ -5896,24 +5902,28 @@ nolength:
 					*f++ = *s;
 					*f++ = 0;
 
-					if(width < 0)
+					if(width < 0) // not set
 						width = 0;
 
 					switch(*s)
 					{
 						case 'd': case 'i':
+							if(precision < 0) // not set
+								precision = 1;
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
 							break;
 						case 'o': case 'u': case 'x': case 'X':
+							if(precision < 0) // not set
+								precision = 1;
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
 							break;
 						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
-							if(precision < 0)
+							if(precision < 0) // not set
 								precision = 6;
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
 							break;
 						case 'c':
-							if(precision < 0)
+							if(precision < 0) // not set
 								precision = end - o - 1;
 							if(flags & PRINTF_ALTERNATE)
 								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
@@ -5927,7 +5937,7 @@ nolength:
 							}
 							break;
 						case 's':
-							if(precision < 0)
+							if(precision < 0) // not set
 								precision = end - o - 1;
 							if(flags & PRINTF_ALTERNATE)
 								o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
