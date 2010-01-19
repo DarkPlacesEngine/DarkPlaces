@@ -1202,7 +1202,7 @@ qboolean Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_fo
 
 ft2_font_map_t *FontMap_FindForChar(ft2_font_map_t *start, Uchar ch)
 {
-	while (start && start->start + FONT_CHARS_PER_MAP < ch)
+	while (start && start->start + FONT_CHARS_PER_MAP <= ch)
 		start = start->next;
 	if (start && start->start > ch)
 		return NULL;
