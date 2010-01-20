@@ -585,7 +585,7 @@ int u8_fromchar(Uchar w, char *to, size_t maxlen)
 		to[3] = 0x80 | (w & 0x3F); w >>= 6;
 		to[2] = 0x80 | (w & 0x3F); w >>= 6;
 		to[1] = 0x80 | (w & 0x3F); w >>= 6;
-		to[0] = 0xE0 | w;
+		to[0] = 0xF0 | w;
 		return 4;
 	}
 	return 0;
