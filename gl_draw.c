@@ -1241,7 +1241,6 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			}
 			x += width_of[ch] * dw;
 		} else {
-			//if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
 			if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
 			{
 				map = FontMap_FindForChar(fontmap, ch);
@@ -1513,7 +1512,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				}
 				x += width_of[ch] * dw;
 			} else {
-				if (!map || map == ft2_oldstyle_map || map->start < ch || map->start + FONT_CHARS_PER_MAP >= ch)
+				if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
 				{
 					// new charmap - need to render
 					if (batchcount)
