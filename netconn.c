@@ -148,7 +148,7 @@ serverlist_infofield_t serverlist_sortbyfield;
 int serverlist_sortflags;
 
 int serverlist_viewcount = 0;
-serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
+unsigned short serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
 int serverlist_maxcachecount = 0;
 int serverlist_cachecount = 0;
@@ -185,7 +185,7 @@ static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entr
 	for( ; i > index ; i-- )
 		serverlist_viewlist[ i ] = serverlist_viewlist[ i - 1 ];
 
-	serverlist_viewlist[index] = entry;
+	serverlist_viewlist[index] = (int)(entry - serverlist_cache);
 }
 
 /// we suppose serverlist_viewcount to be valid, ie > 0
@@ -431,11 +431,11 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 
 	// two special cases
 	// check whether to insert it as new first item
-	if( _ServerList_Entry_Compare( entry, serverlist_viewlist[0] ) ) {
+	if( _ServerList_Entry_Compare( entry, ServerList_GetViewEntry(0) ) ) {
 		_ServerList_ViewList_Helper_InsertBefore( 0, entry );
 		return;
 	} // check whether to insert it as new last item
-	else if( !_ServerList_Entry_Compare( entry, serverlist_viewlist[serverlist_viewcount - 1] ) ) {
+	else if( !_ServerList_Entry_Compare( entry, ServerList_GetViewEntry(serverlist_viewcount - 1) ) ) {
 		_ServerList_ViewList_Helper_InsertBefore( serverlist_viewcount, entry );
 		return;
 	}
@@ -445,7 +445,7 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	{
 		mid = (start + end) / 2;
 		// test the item that lies in the middle between start and end
-		if( _ServerList_Entry_Compare( entry, serverlist_viewlist[mid] ) )
+		if( _ServerList_Entry_Compare( entry, ServerList_GetViewEntry(mid) ) )
 			// the item has to be in the upper half
 			end = mid;
 		else
@@ -460,7 +460,7 @@ static void ServerList_ViewList_Remove( serverlist_entry_t *entry )
 	int i;
 	for( i = 0; i < serverlist_viewcount; i++ )
 	{
-		if (serverlist_viewlist[i] == entry)
+		if (ServerList_GetViewEntry(i) == entry)
 		{
 			_ServerList_ViewList_Helper_Remove(i);
 			break;
