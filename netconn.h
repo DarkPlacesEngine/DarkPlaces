@@ -348,16 +348,23 @@ typedef struct serverlist_mask_s
 	serverlist_info_t info;
 } serverlist_mask_t;
 
+#define ServerList_GetCacheEntry(x) (&serverlist_cache[(x)])
+#define ServerList_GetViewEntry(x) (ServerList_GetCacheEntry(serverlist_viewlist[(x)]))
+
 extern serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 extern serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
 extern serverlist_infofield_t serverlist_sortbyfield;
 extern int serverlist_sortflags; // not using the enum, as it is a bitmask
 
+#if SERVERLIST_TOTALSIZE > 65536
+#error too many servers, change type of index array
+#endif
 extern int serverlist_viewcount;
-extern serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
+extern unsigned short serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
 extern int serverlist_cachecount;
+extern serverlist_entry_t *serverlist_cache;
 
 extern qboolean serverlist_consoleoutput;
 
