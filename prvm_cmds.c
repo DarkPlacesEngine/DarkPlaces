@@ -5603,7 +5603,7 @@ void VM_CL_getextresponse (void)
 		int first;
 		--cl_net_extresponse_count;
 		first = (cl_net_extresponse_last + NET_EXTRESPONSE_MAX - cl_net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(cl_net_extresponse[first]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(cl_net_extresponse[first]);
 	}
 }
 
@@ -5618,7 +5618,7 @@ void VM_SV_getextresponse (void)
 		int first;
 		--sv_net_extresponse_count;
 		first = (sv_net_extresponse_last + NET_EXTRESPONSE_MAX - sv_net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetEngineString(sv_net_extresponse[first]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(sv_net_extresponse[first]);
 	}
 }
 
