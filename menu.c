@@ -4400,9 +4400,10 @@ static void M_ServerList_Draw (void)
 	{
 		for (n = start;n < end;n++)
 		{
+			serverlist_entry_t *entry = ServerList_GetViewEntry(n);
 			DrawQ_Fill(menu_x, menu_y + y, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_PrintColored(0, y, serverlist_viewlist[n]->line1);y += 8;
-			M_PrintColored(0, y, serverlist_viewlist[n]->line2);y += 8;
+			M_PrintColored(0, y, entry->line1);y += 8;
+			M_PrintColored(0, y, entry->line2);y += 8;
 		}
 	}
 	else if (realtime - masterquerytime > 10)
@@ -4456,7 +4457,7 @@ static void M_ServerList_Key(int k, int ascii)
 	case K_ENTER:
 		S_LocalSound ("sound/misc/menu2.wav");
 		if (serverlist_viewcount)
-			Cbuf_AddText(va("connect \"%s\"\n", serverlist_viewlist[slist_cursor]->info.cname));
+			Cbuf_AddText(va("connect \"%s\"\n", ServerList_GetViewEntry(slist_cursor)->info.cname));
 		break;
 
 	default:

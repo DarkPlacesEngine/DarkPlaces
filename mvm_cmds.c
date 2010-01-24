@@ -436,7 +436,7 @@ void VM_M_getserverliststring(void)
 		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 		return;
 	}
-	cache = serverlist_viewlist[hostnr];
+	cache = ServerList_GetViewEntry(hostnr);
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_CNAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.cname );
@@ -494,7 +494,7 @@ void VM_M_getserverlistnumber(void)
 		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 		return;
 	}
-	cache = serverlist_viewlist[hostnr];
+	cache = ServerList_GetViewEntry(hostnr);
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_MAXPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
