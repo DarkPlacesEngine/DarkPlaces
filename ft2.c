@@ -322,7 +322,7 @@ float Font_SnapTo(float val, float snapwidth)
 }
 
 static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font);
-static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean no_texture, qboolean no_kerning);
+static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only);
 qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 {
 	int s, count, i;
@@ -380,7 +380,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 		count = 0;
 		for (s = 0; s < MAX_FONT_SIZES && dpfnt->req_sizes[s] >= 0; ++s)
 		{
-			if (Font_LoadSize(fb, Font_VirtualToRealSize(dpfnt->req_sizes[s]), true, false))
+			if (Font_LoadSize(fb, Font_VirtualToRealSize(dpfnt->req_sizes[s]), true))
 				++count;
 		}
 		if (!count)
@@ -407,7 +407,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 	count = 0;
 	for (s = 0; s < MAX_FONT_SIZES && dpfnt->req_sizes[s] >= 0; ++s)
 	{
-		if (Font_LoadSize(ft2, Font_VirtualToRealSize(dpfnt->req_sizes[s]), false, false))
+		if (Font_LoadSize(ft2, Font_VirtualToRealSize(dpfnt->req_sizes[s]), false))
 			++count;
 	}
 	if (!count)
@@ -514,8 +514,9 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 	return true;
 }
 
+static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size);
 static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap);
-static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean no_texture, qboolean no_kerning)
+static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 {
 	int map_index;
 	ft2_font_map_t *fmap, temp;
@@ -528,69 +529,72 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean no_texture,
 	if (size < 2) // bogus sizes are not allowed - and they screw up our allocations
 		return false;
 
-	if (!no_texture)
+	for (map_index = 0; map_index < MAX_FONT_SIZES; ++map_index)
 	{
-		for (map_index = 0; map_index < MAX_FONT_SIZES; ++map_index)
-		{
-			if (!font->font_maps[map_index])
-				break;
-			// if a similar size has already been loaded, ignore this one
-			//abs(font->font_maps[map_index]->size - size) < 4
-			if (font->font_maps[map_index]->size == size)
-				return true;
-		}
-
-		if (map_index >= MAX_FONT_SIZES)
-			return false;
-
-		memset(&temp, 0, sizeof(temp));
-		temp.size = size;
-		temp.glyphSize = CeilPowerOf2(size*2);
-		temp.sfx = (1.0/64.0)/(double)size;
-		temp.sfy = (1.0/64.0)/(double)size;
-		temp.intSize = -1; // negative value: LoadMap must search now :)
-		if (!Font_LoadMap(font, &temp, 0, &fmap))
-		{
-			Con_Printf("ERROR: can't load the first character map for %s\n"
-				   "This is fatal\n",
-				   font->name);
-			Font_UnloadFont(font);
-			return false;
-		}
-		font->font_maps[map_index] = temp.next;
-
-		fmap->sfx = temp.sfx;
-		fmap->sfy = temp.sfy;
+		if (!font->font_maps[map_index])
+			break;
+		// if a similar size has already been loaded, ignore this one
+		//abs(font->font_maps[map_index]->size - size) < 4
+		if (font->font_maps[map_index]->size == size)
+			return true;
 	}
-	if (!no_kerning)
+
+	if (map_index >= MAX_FONT_SIZES)
+		return false;
+
+	if (check_only) {
+		FT_Face fontface;
+		if (font->image_font)
+			fontface = (FT_Face)font->next->face;
+		else
+			fontface = (FT_Face)font->face;
+		return (Font_SearchSize(font, fontface, size) > 0);
+	}
+
+	memset(&temp, 0, sizeof(temp));
+	temp.size = size;
+	temp.glyphSize = CeilPowerOf2(size*2);
+	temp.sfx = (1.0/64.0)/(double)size;
+	temp.sfy = (1.0/64.0)/(double)size;
+	temp.intSize = -1; // negative value: LoadMap must search now :)
+	if (!Font_LoadMap(font, &temp, 0, &fmap))
 	{
-		// load the default kerning vector:
-		if (font->has_kerning)
+		Con_Printf("ERROR: can't load the first character map for %s\n"
+			   "This is fatal\n",
+			   font->name);
+		Font_UnloadFont(font);
+		return false;
+	}
+	font->font_maps[map_index] = temp.next;
+
+	fmap->sfx = temp.sfx;
+	fmap->sfy = temp.sfy;
+
+	// load the default kerning vector:
+	if (font->has_kerning)
+	{
+		Uchar l, r;
+		FT_Vector kernvec;
+		for (l = 0; l < 256; ++l)
 		{
-			Uchar l, r;
-			FT_Vector kernvec;
-			for (l = 0; l < 256; ++l)
+			for (r = 0; r < 256; ++r)
 			{
-				for (r = 0; r < 256; ++r)
+				FT_ULong ul, ur;
+				ul = qFT_Get_Char_Index(font->face, l);
+				ur = qFT_Get_Char_Index(font->face, r);
+				if (qFT_Get_Kerning(font->face, ul, ur, FT_KERNING_DEFAULT, &kernvec))
 				{
-					FT_ULong ul, ur;
-					ul = qFT_Get_Char_Index(font->face, l);
-					ur = qFT_Get_Char_Index(font->face, r);
-					if (qFT_Get_Kerning(font->face, ul, ur, FT_KERNING_DEFAULT, &kernvec))
-					{
-						fmap->kerning.kerning[l][r][0] = 0;
-						fmap->kerning.kerning[l][r][1] = 0;
-					}
-					else
-					{
-						fmap->kerning.kerning[l][r][0] = Font_SnapTo((kernvec.x / 64.0) / fmap->size, 1 / fmap->size);
-						fmap->kerning.kerning[l][r][1] = Font_SnapTo((kernvec.y / 64.0) / fmap->size, 1 / fmap->size);
-					}
+					fmap->kerning.kerning[l][r][0] = 0;
+					fmap->kerning.kerning[l][r][1] = 0;
+				}
+				else
+				{
+					fmap->kerning.kerning[l][r][0] = Font_SnapTo((kernvec.x / 64.0) / fmap->size, 1 / fmap->size);
+					fmap->kerning.kerning[l][r][1] = Font_SnapTo((kernvec.y / 64.0) / fmap->size, 1 / fmap->size);
 				}
 			}
 		}
 	}
-
 	return true;
 }
 
@@ -782,6 +786,27 @@ void Font_UnloadFont(ft2_font_t *font)
 	}
 }
 
+static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size)
+{
+	float intSize = size;
+	while (1)
+	{
+		if (!Font_SetSize(font, intSize, intSize))
+		{
+			Con_Printf("ERROR: can't set size for font %s: %f ((%f))\n", font->name, size, intSize);
+			return -1;
+		}
+		if ((fontface->size->metrics.height>>6) <= size)
+			return intSize;
+		if (intSize < 2)
+		{
+			Con_Printf("ERROR: no appropriate size found for font %s: %f\n", font->name, size);
+			return -1;
+		}
+		--intSize;
+	}
+}
+
 static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
 {
 	char map_identifier[MAX_QPATH];
@@ -858,6 +883,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		mapstart->intSize = mapstart->size;
 	if (mapstart->intSize < 0)
 	{
+		/*
 		mapstart->intSize = mapstart->size;
 		while (1)
 		{
@@ -875,6 +901,9 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			}
 			--mapstart->intSize;
 		}
+		*/
+		if ((mapstart->intSize = Font_SearchSize(font, fontface, mapstart->size)) <= 0)
+			return false;
 		Con_DPrintf("Using size: %f for requested size %f\n", mapstart->intSize, mapstart->size);
 	}
 
