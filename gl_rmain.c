@@ -7775,6 +7775,7 @@ void R_RenderView(void)
 {
 	if (r_timereport_active)
 		R_TimeReport("start");
+	r_textureframe++; // used only by R_GetCurrentTexture
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 
 	if (!r_drawentities.integer)
@@ -7834,7 +7835,11 @@ void R_RenderView(void)
 
 	// this produces a bloom texture to be used in R_BlendView() later
 	if (r_hdr.integer && r_bloomstate.bloomwidth)
+	{
 		R_HDR_RenderBloomTexture();
+		// we have to bump the texture frame again because r_refdef.view.colorscale is cached in the textures
+		r_textureframe++; // used only by R_GetCurrentTexture
+	}
 
 	r_refdef.view.showdebug = true;
 
@@ -7895,7 +7900,6 @@ extern qboolean r_shadow_usingdeferredprepass;
 void R_RenderScene(void)
 {
 	r_refdef.stats.renders++;
-	r_textureframe++; // used only by R_GetCurrentTexture
 
 	R_UpdateFogColor();
 
