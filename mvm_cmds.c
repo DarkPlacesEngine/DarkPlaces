@@ -194,9 +194,9 @@ void VM_M_getgamedirinfo(void)
 	if(nr >= 0 && nr < fs_all_gamedirs_count)
 	{
 		if(item == 0)
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( fs_all_gamedirs[nr].name );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( fs_all_gamedirs[nr].name );
 		else if(item == 1)
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( fs_all_gamedirs[nr].description );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( fs_all_gamedirs[nr].description );
 	}
 }
 
@@ -439,32 +439,32 @@ void VM_M_getserverliststring(void)
 	cache = serverlist_viewlist[hostnr];
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_CNAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.cname );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.cname );
 			break;
 		case SLIF_NAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.name );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.name );
 			break;
 		case SLIF_QCSTATUS:
-			PRVM_G_INT (OFS_RETURN ) = PRVM_SetEngineString (cache->info.qcstatus );
+			PRVM_G_INT (OFS_RETURN ) = PRVM_SetTempString (cache->info.qcstatus );
 			break;
 		case SLIF_PLAYERS:
-			PRVM_G_INT (OFS_RETURN ) = PRVM_SetEngineString (cache->info.players );
+			PRVM_G_INT (OFS_RETURN ) = PRVM_SetTempString (cache->info.players );
 			break;
 		case SLIF_GAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.game );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.game );
 			break;
 		case SLIF_MOD:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.mod );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.mod );
 			break;
 		case SLIF_MAP:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->info.map );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->info.map );
 			break;
 		// TODO remove this again
 		case 1024:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->line1 );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->line1 );
 			break;
 		case 1025:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetEngineString( cache->line2 );
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( cache->line2 );
 			break;
 		default:
 			Con_Print("VM_M_getserverliststring: bad field number passed!\n");
