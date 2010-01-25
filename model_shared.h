@@ -566,6 +566,15 @@ typedef struct msurface_s
 	rtexture_t *lightmaptexture;
 	// the lighting direction texture fragment to use on the rendering mesh
 	rtexture_t *deluxemaptexture;
+	// lightmaptexture rebuild information not used in q3bsp
+	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
+	// fog volume info in q3bsp
+	struct q3deffect_s *effect; // q3bsp
+	// mesh information for collisions (only used by q3bsp curves)
+	int *data_collisionelement3i; // q3bsp
+	float *data_collisionvertex3f; // q3bsp
+	float *data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
+	float *data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
 
 	// surfaces own ranges of vertices and triangles in the model->surfmesh
 	int num_triangles; // number of triangles
@@ -576,23 +585,13 @@ typedef struct msurface_s
 	// shadow volume building information
 	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
 
-	// lightmaptexture rebuild information not used in q3bsp
-	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
-
 	// mesh information for collisions (only used by q3bsp curves)
 	int num_collisiontriangles; // q3bsp
-	int *data_collisionelement3i; // q3bsp
 	int num_collisionvertices; // q3bsp
-	float *data_collisionvertex3f; // q3bsp
-	struct q3deffect_s *effect; // q3bsp
+	int num_collisionbboxstride;
+	int num_bboxstride;
 	// FIXME: collisionmarkframe should be kept in a separate array
 	int collisionmarkframe; // q3bsp // don't collide twice in one trace
-
-	// optimization...
-	float *data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
-	int num_collisionbboxstride;
-	float *data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
-	int num_bboxstride;
 }
 msurface_t;
 
