@@ -595,7 +595,7 @@ void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h
 		// calculate gauss table
 		
 		// outline the font (RGBA only)
-		if(bpp == 4) // we can only do this in BGRA
+		if(bpp == 4 && (pp.outline > 0 || pp.blur > 0)) // we can only do this in BGRA
 		{
 			// this is like mplayer subtitle rendering
 			// bbuffer, bitmap buffer: this is our font
