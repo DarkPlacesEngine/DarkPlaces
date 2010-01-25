@@ -549,7 +549,7 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 	{
 		float sum = 0;
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
-			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x - pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x - pp.shadowz + 0.5) == 0)));
+			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x + pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x + pp.shadowz + 0.5) == 0)));
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			pp.gausstable[POSTPROCESS_MAXRADIUS+x] = floor(gausstable[POSTPROCESS_MAXRADIUS+x] / sum * 255 + 0.5);
 	}
@@ -558,7 +558,7 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 		for(y = -POSTPROCESS_MAXRADIUS; y <= POSTPROCESS_MAXRADIUS; ++y)
 			for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			{
-				float d = pp.outline + 1 - sqrt(pow(x - pp.shadowx, 2) + pow(y - pp.shadowy, 2));
+				float d = pp.outline + 1 - sqrt(pow(x + pp.shadowx, 2) + pow(y + pp.shadowy, 2));
 				pp.circlematrix[POSTPROCESS_MAXRADIUS+y][POSTPROCESS_MAXRADIUS+x] = (d >= 1) ? 255 : (d <= 0) ? 0 : floor(d * 255 + 0.5);
 			}
 	}
