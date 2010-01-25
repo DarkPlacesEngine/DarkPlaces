@@ -55,6 +55,8 @@ typedef struct ft2_font_s
 	size_t            attachmentcount;
 	ft2_attachment_t *attachments;
 
+	ft2_settings_t *settings;
+
 	// fallback mechanism
 	struct ft2_font_s *next;
 } ft2_font_t;
