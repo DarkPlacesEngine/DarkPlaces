@@ -514,7 +514,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 	return true;
 }
 
-void Font_Postprocess(unsigned char *imagedata, int pitch, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
+void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
 {
 	if(imagedata)
 	{
@@ -566,7 +566,7 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 		return (Font_SearchSize(font, fontface, size) > 0);
 	}
 
-	Font_Postprocess(NULL, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(NULL, 0, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
@@ -938,7 +938,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		return false;
 	}
 
-	Font_Postprocess(NULL, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(NULL, 0, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	// copy over the information
 	map->size = mapstart->size;
@@ -1155,7 +1155,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		pad_r = gpad_r;
 		pad_t = gpad_t;
 		pad_b = gpad_b;
-		Font_Postprocess(imagedata, pitch, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+		Font_Postprocess(imagedata, pitch, w, h, bytesPerPixel, &pad_l, &pad_r, &pad_t, &pad_b);
 
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
