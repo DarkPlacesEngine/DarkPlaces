@@ -514,12 +514,27 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 	return true;
 }
 
+void Font_Postprocess(unsigned char *imagedata, int pitch, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
+{
+	if(imagedata)
+	{
+		// perform operation, not exceeding the passed padding values,
+		// but possibly reducing them
+	}
+	else
+	{
+		// calculate parameters
+		*pad_l = *pad_r = *pad_t = *pad_b = 0;
+	}
+}
+
 static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size);
 static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap);
 static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 {
 	int map_index;
 	ft2_font_map_t *fmap, temp;
+	int gpad_l, gpad_r, gpad_t, gpad_b;
 
 	if (!(size > 0.001f && size < 1000.0f))
 		size = 0;
@@ -551,9 +566,11 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 		return (Font_SearchSize(font, fontface, size) > 0);
 	}
 
+	Font_Postprocess(NULL, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
-	temp.glyphSize = CeilPowerOf2(size*2);
+	temp.glyphSize = CeilPowerOf2(size*2 + max(gpad_l + gpad_r, gpad_t + gpad_b));
 	temp.sfx = (1.0/64.0)/(double)size;
 	temp.sfy = (1.0/64.0)/(double)size;
 	temp.intSize = -1; // negative value: LoadMap must search now :)
@@ -816,6 +833,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	int status;
 	int tp;
 	FT_Int32 load_flags;
+	int gpad_l, gpad_r, gpad_t, gpad_b;
 
 	int pitch;
 	int gR, gC; // glyph position: row and column
@@ -920,6 +938,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		return false;
 	}
 
+	Font_Postprocess(NULL, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+
 	// copy over the information
 	map->size = mapstart->size;
 	map->intSize = mapstart->intSize;
@@ -971,6 +991,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		unsigned char *imagedata, *dst, *src;
 		glyph_slot_t *mapglyph;
 		FT_Face face;
+		int pad_l, pad_r, pad_t, pad_b;
 
 		mapch = ch - map->start;
 
@@ -985,6 +1006,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		}
 
 		imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
+		imagedata += gpad_t * pitch + gpad_l;
 		//status = qFT_Load_Char(face, ch, FT_LOAD_RENDER);
 		// we need the glyphIndex
 		face = font->face;
@@ -1041,10 +1063,10 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		w = bmp->width;
 		h = bmp->rows;
 
-		if (w > map->glyphSize || h > map->glyphSize) {
+		if (w > (map->glyphSize - gpad_l - gpad_r) || h > (map->glyphSize - gpad_t - gpad_b)) {
 			Con_Printf("WARNING: Glyph %lu is too big in font %s, size %g: %i x %i\n", ch, font->name, map->size, w, h);
 			if (w > map->glyphSize)
-				w = map->glyphSize;
+				w = map->glyphSize - gpad_l - gpad_r;
 			if (h > map->glyphSize)
 				h = map->glyphSize;
 		}
@@ -1129,6 +1151,12 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			}
 		}
 
+		pad_l = gpad_l;
+		pad_r = gpad_r;
+		pad_t = gpad_t;
+		pad_b = gpad_b;
+		Font_Postprocess(imagedata, pitch, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
 
@@ -1143,17 +1171,17 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			//double mHeight = (glyph->metrics.height >> 6) / map->size;
 
 			mapglyph->txmin = ( (double)(gC * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
-			mapglyph->txmax = mapglyph->txmin + (double)bmp->width / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
+			mapglyph->txmax = mapglyph->txmin + (double)(bmp->width + pad_l + pad_r) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->tymin = ( (double)(gR * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
-			mapglyph->tymax = mapglyph->tymin + (double)bmp->rows / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
+			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			//mapglyph->vxmin = bearingX;
 			//mapglyph->vxmax = bearingX + mWidth;
 			mapglyph->vxmin = glyph->bitmap_left / map->size;
-			mapglyph->vxmax = mapglyph->vxmin + bmp->width / map->size; // don't ask
+			mapglyph->vxmax = mapglyph->vxmin + (bmp->width + pad_l + pad_r) / map->size; // don't ask
 			//mapglyph->vymin = -bearingY;
 			//mapglyph->vymax = mHeight - bearingY;
 			mapglyph->vymin = -glyph->bitmap_top / map->size;
-			mapglyph->vymax = mapglyph->vymin + bmp->rows / map->size;
+			mapglyph->vymax = mapglyph->vymin + (bmp->rows + pad_t + pad_b) / map->size;
 			//Con_Printf("dpi = %f %f (%f %d) %d %d\n", bmp->width / (mapglyph->vxmax - mapglyph->vxmin), bmp->rows / (mapglyph->vymax - mapglyph->vymin), map->size, map->glyphSize, (int)fontface->size->metrics.x_ppem, (int)fontface->size->metrics.y_ppem);
 			//mapglyph->advance_x = advance * usefont->size;
 			//mapglyph->advance_x = advance;
