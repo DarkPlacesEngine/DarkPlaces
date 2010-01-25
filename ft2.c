@@ -32,13 +32,9 @@ CVars introduced with the freetype extension
 ================================================================================
 */
 
-cvar_t r_font_postprocess_blur = {CVAR_SAVE, "r_font_postprocess_blur", "0", "font blur amount"};
-cvar_t r_font_postprocess_outline = {CVAR_SAVE, "r_font_postprocess_outline", "0", "font outline amount"};
 cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "disable freetype support for fonts entirely"};
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
-cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
-cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
 cvar_t r_font_kerning = {CVAR_SAVE, "r_font_kerning", "1", "Use kerning if available"};
 cvar_t developer_font = {CVAR_SAVE, "developer_font", "0", "prints debug messages about fonts"};
 
@@ -148,7 +144,7 @@ typedef struct
 {
 	unsigned char *buf, *buf2;
 	int bufsize, bufwidth, bufheight, bufpitch;
-	double blur, outline;
+	float blur, outline, shadowx, shadowy, shadowz;
 	int padding, blurpadding, outlinepadding;
 	unsigned char circlematrix[2*POSTPROCESS_MAXRADIUS+1][2*POSTPROCESS_MAXRADIUS+1];
 	unsigned char gausstable[2*POSTPROCESS_MAXRADIUS+1];
@@ -272,13 +268,9 @@ void font_newmap(void)
 
 void Font_Init(void)
 {
-	Cvar_RegisterVariable(&r_font_postprocess_blur);
-	Cvar_RegisterVariable(&r_font_postprocess_outline);
 	Cvar_RegisterVariable(&r_font_disable_freetype);
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
-	Cvar_RegisterVariable(&r_font_hinting);
-	Cvar_RegisterVariable(&r_font_antialias);
 	Cvar_RegisterVariable(&r_font_kerning);
 	Cvar_RegisterVariable(&developer_font);
 	// let's open it at startup already
@@ -339,7 +331,7 @@ float Font_SnapTo(float val, float snapwidth)
 	return floor(val / snapwidth + 0.5f) * snapwidth;
 }
 
-static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font);
+static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font);
 static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only);
 qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 {
@@ -361,7 +353,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 			break;
 	}
 
-	if (!Font_LoadFile(name, dpfnt->req_face, ft2))
+	if (!Font_LoadFile(name, dpfnt->req_face, &dpfnt->settings, ft2))
 	{
 		if (i >= MAX_FONT_FALLBACKS)
 		{
@@ -389,7 +381,8 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 			Con_Printf("Failed to allocate font for fallback %i of font %s\n", i, name);
 			break;
 		}
-		if (!Font_LoadFile(dpfnt->fallbacks[i], dpfnt->fallback_faces[i], fb))
+
+		if (!Font_LoadFile(dpfnt->fallbacks[i], dpfnt->fallback_faces[i], &dpfnt->settings, fb))
 		{
 			Con_Printf("Failed to allocate font for fallback %i of font %s\n", i, name);
 			Mem_Free(fb);
@@ -442,7 +435,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 	return true;
 }
 
-static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
+static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font)
 {
 	size_t namelen;
 	char filename[MAX_QPATH];
@@ -463,6 +456,8 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 		}
 		return false;
 	}
+
+	font->settings = settings;
 
 	namelen = strlen(name);
 
@@ -532,25 +527,29 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 	return true;
 }
 
-void Font_Postprocess_Update(int bpp, int w, int h)
+void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 {
 	qboolean need_gauss, need_circle;
 	int needed, x, y;
-	double gausstable[2*POSTPROCESS_MAXRADIUS+1];
-	if(!pp.buf || pp.blur != r_font_postprocess_blur.value)
+	float gausstable[2*POSTPROCESS_MAXRADIUS+1];
+	if(!pp.buf || pp.blur != fnt->settings->blur || pp.shadowz != fnt->settings->shadowz)
 		need_gauss = true;
-	if(!pp.buf || pp.outline != r_font_postprocess_outline.value)
+	if(!pp.buf || pp.outline != fnt->settings->outline || pp.shadowx != fnt->settings->shadowx || pp.shadowy != fnt->settings->shadowy)
 		need_circle = true;
-	pp.blur = r_font_postprocess_blur.value;
-	pp.outline = r_font_postprocess_outline.value;
-	pp.outlinepadding = bound(0, ceil(pp.outline), POSTPROCESS_MAXRADIUS);
-	pp.blurpadding = bound(0, ceil(pp.blur), POSTPROCESS_MAXRADIUS);
+	pp.blur = fnt->settings->blur;
+	pp.outline = fnt->settings->outline;
+	pp.shadowx = fnt->settings->shadowx;
+	pp.shadowy = fnt->settings->shadowy;
+	pp.shadowz = fnt->settings->shadowz;
+	pp.outlinepadding = bound(0, ceil(pp.outline) + ceil(max(max(pp.shadowx, pp.shadowy), max(-pp.shadowx, -pp.shadowy))), POSTPROCESS_MAXRADIUS);
+	pp.blurpadding = bound(0, ceil(pp.blur) + ceil(max(pp.shadowz, -pp.shadowz)), POSTPROCESS_MAXRADIUS);
+		// FIXME for high values of shadow, we can do better by doing different x and y padding...
 	pp.padding = pp.blurpadding + pp.outlinepadding;
 	if(need_gauss)
 	{
-		double sum = 0;
+		float sum = 0;
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
-			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(x*x)/(pp.blur*pp.blur * 2)) : (x == 0)));
+			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x - pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x - pp.shadowz + 0.5) == 0)));
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			pp.gausstable[POSTPROCESS_MAXRADIUS+x] = floor(gausstable[POSTPROCESS_MAXRADIUS+x] / sum * 255 + 0.5);
 	}
@@ -559,7 +558,7 @@ void Font_Postprocess_Update(int bpp, int w, int h)
 		for(y = -POSTPROCESS_MAXRADIUS; y <= POSTPROCESS_MAXRADIUS; ++y)
 			for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			{
-				double d = pp.outline + 1 - sqrt(x*x + y*y);
+				float d = pp.outline + 1 - sqrt(pow(x - pp.shadowx, 2) + pow(y - pp.shadowy, 2));
 				pp.circlematrix[POSTPROCESS_MAXRADIUS+y][POSTPROCESS_MAXRADIUS+x] = (d >= 1) ? 255 : (d <= 0) ? 0 : floor(d * 255 + 0.5);
 			}
 	}
@@ -577,10 +576,10 @@ void Font_Postprocess_Update(int bpp, int w, int h)
 	}
 }
 
-void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
+void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
 {
 	int x, y;
-	Font_Postprocess_Update(bpp, w, h);
+	Font_Postprocess_Update(fnt, bpp, w, h);
 	if(imagedata)
 	{
 		// enlarge buffer
@@ -595,7 +594,7 @@ void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h
 		// calculate gauss table
 		
 		// outline the font (RGBA only)
-		if(bpp == 4 && (pp.outline > 0 || pp.blur > 0)) // we can only do this in BGRA
+		if(bpp == 4 && (pp.outline > 0 || pp.blur > 0 || pp.shadowx != 0 || pp.shadowy != 0 || pp.shadowz != 0)) // we can only do this in BGRA
 		{
 			// this is like mplayer subtitle rendering
 			// bbuffer, bitmap buffer: this is our font
@@ -625,7 +624,7 @@ void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h
 				}
 
 			// blur the outline buffer
-			if(pp.blur > 0)
+			if(pp.blur > 0 || pp.shadowz != 0)
 			{
 				// horizontal blur
 				for(y = 0; y < pp.bufheight; ++y)
@@ -724,7 +723,7 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 		return (Font_SearchSize(font, fontface, size) > 0);
 	}
 
-	Font_Postprocess(NULL, 0, 4, size*2, size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(font, NULL, 0, 4, size*2, size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
@@ -1014,10 +1013,10 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	else
 		fontface = (FT_Face)font->face;
 
-	switch(r_font_antialias.integer)
+	switch(font->settings->antialias)
 	{
 		case 0:
-			switch(r_font_hinting.integer)
+			switch(font->settings->hinting)
 			{
 				case 0:
 					load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT | FT_LOAD_TARGET_MONO | FT_LOAD_MONOCHROME;
@@ -1034,7 +1033,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			break;
 		default:
 		case 1:
-			switch(r_font_hinting.integer)
+			switch(font->settings->hinting)
 			{
 				case 0:
 					load_flags = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT | FT_LOAD_TARGET_NORMAL;
@@ -1096,7 +1095,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		return false;
 	}
 
-	Font_Postprocess(NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	// copy over the information
 	map->size = mapstart->size;
@@ -1313,7 +1312,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		pad_r = gpad_r;
 		pad_t = gpad_t;
 		pad_b = gpad_b;
-		Font_Postprocess(imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+		Font_Postprocess(font, imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
 
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
