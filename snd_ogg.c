@@ -27,6 +27,23 @@
 #include "snd_ogg.h"
 #include "snd_wav.h"
 
+#ifdef LINK_TO_LIBVORBIS
+#define OV_EXCLUDE_STATIC_CALLBACKS
+#include <ogg/ogg.h>
+#include <vorbis/vorbisfile.h>
+
+#define qov_clear ov_clear
+#define qov_info ov_info
+#define qov_comment ov_comment
+#define qov_open_callbacks ov_open_callbacks
+#define qov_pcm_seek ov_pcm_seek
+#define qov_pcm_total ov_pcm_total
+#define qov_read ov_read
+#define qvorbis_comment_query vorbis_comment_query
+
+qboolean OGG_OpenLibrary (void) {return true;}
+void OGG_CloseLibrary (void) {}
+#else
 
 /*
 =================================================================
@@ -236,63 +253,6 @@ static dllfunction_t vorbisfuncs[] =
 static dllhandle_t vo_dll = NULL;
 static dllhandle_t vf_dll = NULL;
 
-typedef struct
-{
-	unsigned char *buffer;
-	ogg_int64_t ind, buffsize;
-} ov_decode_t;
-
-
-static size_t ovcb_read (void *ptr, size_t size, size_t nb, void *datasource)
-{
-	ov_decode_t *ov_decode = (ov_decode_t*)datasource;
-	size_t remain, len;
-
-	remain = ov_decode->buffsize - ov_decode->ind;
-	len = size * nb;
-	if (remain < len)
-		len = remain - remain % size;
-
-	memcpy (ptr, ov_decode->buffer + ov_decode->ind, len);
-	ov_decode->ind += len;
-
-	return len / size;
-}
-
-static int ovcb_seek (void *datasource, ogg_int64_t offset, int whence)
-{
-	ov_decode_t *ov_decode = (ov_decode_t*)datasource;
-
-	switch (whence)
-	{
-		case SEEK_SET:
-			break;
-		case SEEK_CUR:
-			offset += ov_decode->ind;
-			break;
-		case SEEK_END:
-			offset += ov_decode->buffsize;
-			break;
-		default:
-			return -1;
-	}
-	if (offset < 0 || offset > ov_decode->buffsize)
-		return -1;
-
-	ov_decode->ind = offset;
-	return 0;
-}
-
-static int ovcb_close (void *ov_decode)
-{
-	return 0;
-}
-
-static long ovcb_tell (void *ov_decode)
-{
-	return ((ov_decode_t*)ov_decode)->ind;
-}
-
 
 /*
 =================================================================
@@ -366,6 +326,7 @@ void OGG_CloseLibrary (void)
 	Sys_UnloadLibrary (&vo_dll);
 }
 
+#endif
 
 /*
 =================================================================
@@ -374,6 +335,62 @@ void OGG_CloseLibrary (void)
 
 =================================================================
 */
+
+typedef struct
+{
+	unsigned char *buffer;
+	ogg_int64_t ind, buffsize;
+} ov_decode_t;
+
+static size_t ovcb_read (void *ptr, size_t size, size_t nb, void *datasource)
+{
+	ov_decode_t *ov_decode = (ov_decode_t*)datasource;
+	size_t remain, len;
+
+	remain = ov_decode->buffsize - ov_decode->ind;
+	len = size * nb;
+	if (remain < len)
+		len = remain - remain % size;
+
+	memcpy (ptr, ov_decode->buffer + ov_decode->ind, len);
+	ov_decode->ind += len;
+
+	return len / size;
+}
+
+static int ovcb_seek (void *datasource, ogg_int64_t offset, int whence)
+{
+	ov_decode_t *ov_decode = (ov_decode_t*)datasource;
+
+	switch (whence)
+	{
+		case SEEK_SET:
+			break;
+		case SEEK_CUR:
+			offset += ov_decode->ind;
+			break;
+		case SEEK_END:
+			offset += ov_decode->buffsize;
+			break;
+		default:
+			return -1;
+	}
+	if (offset < 0 || offset > ov_decode->buffsize)
+		return -1;
+
+	ov_decode->ind = offset;
+	return 0;
+}
+
+static int ovcb_close (void *ov_decode)
+{
+	return 0;
+}
+
+static long ovcb_tell (void *ov_decode)
+{
+	return ((ov_decode_t*)ov_decode)->ind;
+}
 
 // Per-sfx data structure
 typedef struct
@@ -655,8 +672,10 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	ogg_int64_t len, buff_len;
 	double peak, gaindb;
 
+#ifndef LINK_TO_LIBVORBIS
 	if (!vf_dll)
 		return false;
+#endif
 
 	// Already loaded?
 	if (sfx->fetcher != NULL)
