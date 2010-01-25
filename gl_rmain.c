@@ -10326,12 +10326,14 @@ extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass)
 {
+	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
+		return;
 	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
 	if (prepass)
 	{
 		// render screenspace normalmap to texture
 		GL_DepthMask(true);
-		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
 	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)) && !r_waterstate.renderingscene)
@@ -10341,14 +10343,17 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND);
 		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
 		GL_DepthMask(false);
-		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
-		RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE);
+		if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			RSurf_DrawBatch_WithLightmapSwitching(texturenumsurfaces, texturesurfacelist);
+		else
+			RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
 	else
 	{
 		// render surface normally
 		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, prepass ? RSURFPASS_DEFERREDGEOMETRY : RSURFPASS_BASE);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE);
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			RSurf_DrawBatch_WithLightmapSwitching_WithWaterTextureSwitching(texturenumsurfaces, texturesurfacelist);
 		else if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
