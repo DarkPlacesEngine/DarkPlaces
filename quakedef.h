@@ -65,7 +65,7 @@ extern char engineversion[128];
 #define	CMDBUFSIZE				131072
 #define	MAX_ARGS				80
 
-#define	NET_MAXMESSAGE			32768
+#define	NET_MAXMESSAGE			65536
 #define	MAX_PACKETFRAGMENT		1024
 #define	MAX_EDICTS				4096
 #define	MAX_MODELS				1024
