@@ -32,6 +32,8 @@ CVars introduced with the freetype extension
 ================================================================================
 */
 
+cvar_t r_font_postprocess_blur = {CVAR_SAVE, "r_font_postprocess_blur", "0", "font blur amount"};
+cvar_t r_font_postprocess_outline = {CVAR_SAVE, "r_font_postprocess_outline", "0", "font outline amount"};
 cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "disable freetype support for fonts entirely"};
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
@@ -141,6 +143,19 @@ static rtexturepool_t *font_texturepool = NULL;
 /// FreeType library handle
 static FT_Library font_ft2lib = NULL;
 
+#define POSTPROCESS_MAXRADIUS 8
+typedef struct
+{
+	unsigned char *buf, *buf2;
+	int bufsize, bufwidth, bufheight, bufpitch;
+	double blur, outline;
+	int padding, blurpadding, outlinepadding;
+	unsigned char circlematrix[2*POSTPROCESS_MAXRADIUS+1][2*POSTPROCESS_MAXRADIUS+1];
+	unsigned char gausstable[2*POSTPROCESS_MAXRADIUS+1];
+}
+font_postprocess_t;
+static font_postprocess_t pp = {};
+
 /*
 ====================
 Font_CloseLibrary
@@ -160,6 +175,7 @@ void Font_CloseLibrary (void)
 		font_ft2lib = NULL;
 	}
 	Sys_UnloadLibrary (&ft2_dll);
+	pp.buf = NULL;
 }
 
 /*
@@ -256,6 +272,8 @@ void font_newmap(void)
 
 void Font_Init(void)
 {
+	Cvar_RegisterVariable(&r_font_postprocess_blur);
+	Cvar_RegisterVariable(&r_font_postprocess_outline);
 	Cvar_RegisterVariable(&r_font_disable_freetype);
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
@@ -514,17 +532,157 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_font_t *font)
 	return true;
 }
 
+void Font_Postprocess_Update(int bpp, int w, int h)
+{
+	qboolean need_gauss, need_circle;
+	int needed, x, y;
+	double gausstable[2*POSTPROCESS_MAXRADIUS+1];
+	if(!pp.buf || pp.blur != r_font_postprocess_blur.value)
+		need_gauss = true;
+	if(!pp.buf || pp.outline != r_font_postprocess_outline.value)
+		need_circle = true;
+	pp.blur = r_font_postprocess_blur.value;
+	pp.outline = r_font_postprocess_outline.value;
+	pp.outlinepadding = bound(0, ceil(pp.outline), POSTPROCESS_MAXRADIUS);
+	pp.blurpadding = bound(0, ceil(pp.blur), POSTPROCESS_MAXRADIUS);
+	pp.padding = pp.blurpadding + pp.outlinepadding;
+	if(need_gauss)
+	{
+		double sum = 0;
+		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
+			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(x*x)/(pp.blur*pp.blur * 2)) : (x == 0)));
+		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
+			pp.gausstable[POSTPROCESS_MAXRADIUS+x] = floor(gausstable[POSTPROCESS_MAXRADIUS+x] / sum * 255 + 0.5);
+	}
+	if(need_circle)
+	{
+		for(y = -POSTPROCESS_MAXRADIUS; y <= POSTPROCESS_MAXRADIUS; ++y)
+			for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
+			{
+				double d = pp.outline + 1 - sqrt(x*x + y*y);
+				pp.circlematrix[POSTPROCESS_MAXRADIUS+y][POSTPROCESS_MAXRADIUS+x] = (d >= 1) ? 255 : (d <= 0) ? 0 : floor(d * 255 + 0.5);
+			}
+	}
+	pp.bufwidth = w + 2 * pp.padding;
+	pp.bufheight = h + 2 * pp.padding;
+	pp.bufpitch = pp.bufwidth;
+	needed = pp.bufwidth * pp.bufheight;
+	if(!pp.buf || pp.bufsize < needed * 2)
+	{
+		if(pp.buf)
+			Mem_Free(pp.buf);
+		pp.bufsize = needed * 4;
+		pp.buf = Mem_Alloc(font_mempool, pp.bufsize);
+		pp.buf2 = pp.buf + needed;
+	}
+}
+
 void Font_Postprocess(unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
 {
+	int x, y;
+	Font_Postprocess_Update(bpp, w, h);
 	if(imagedata)
 	{
+		// enlarge buffer
+
 		// perform operation, not exceeding the passed padding values,
 		// but possibly reducing them
+		*pad_l = min(*pad_l, pp.padding);
+		*pad_r = min(*pad_r, pp.padding);
+		*pad_t = min(*pad_t, pp.padding);
+		*pad_b = min(*pad_b, pp.padding);
+
+		// calculate gauss table
+		
+		// outline the font (RGBA only)
+		if(bpp == 4) // we can only do this in BGRA
+		{
+			// this is like mplayer subtitle rendering
+			// bbuffer, bitmap buffer: this is our font
+			// abuffer, alpha buffer: this is pp.buf
+			// tmp: this is pp.buf2
+
+			// create outline buffer
+			memset(pp.buf, 0, pp.bufwidth * pp.bufheight);
+			for(y = -*pad_t; y < h + *pad_b; ++y)
+				for(x = -*pad_l; x < w + *pad_r; ++x)
+				{
+					int x1 = max(-x, -pp.outlinepadding);
+					int y1 = max(-y, -pp.outlinepadding);
+					int x2 = min(pp.outlinepadding, w-1-x);
+					int y2 = min(pp.outlinepadding, h-1-y);
+					int mx, my;
+					int cur = 0;
+					int highest = 0;
+					for(my = y1; my <= y2; ++my)
+						for(mx = x1; mx <= x2; ++mx)
+						{
+							cur = pp.circlematrix[POSTPROCESS_MAXRADIUS+my][POSTPROCESS_MAXRADIUS+mx] * (int)imagedata[(x+mx) * bpp + pitch * (y+my) + (bpp - 1)];
+							if(cur > highest)
+								highest = cur;
+						}
+					pp.buf[((x + pp.padding) + pp.bufpitch * (y + pp.padding))] = (highest + 128) / 255;
+				}
+
+			// blur the outline buffer
+			if(pp.blur > 0)
+			{
+				// horizontal blur
+				for(y = 0; y < pp.bufheight; ++y)
+					for(x = 0; x < pp.bufwidth; ++x)
+					{
+						int x1 = max(-x, -pp.blurpadding);
+						int x2 = min(pp.blurpadding, pp.bufwidth-1-x);
+						int mx;
+						int blurred = 0;
+						for(mx = x1; mx <= x2; ++mx)
+							blurred += pp.gausstable[POSTPROCESS_MAXRADIUS+mx] * (int)pp.buf[(x+mx) + pp.bufpitch * y];
+						pp.buf2[x + pp.bufpitch * y] = blurred / 255;
+					}
+
+				// vertical blur
+				for(y = 0; y < pp.bufheight; ++y)
+					for(x = 0; x < pp.bufwidth; ++x)
+					{
+						int y1 = max(-y, -pp.blurpadding);
+						int y2 = min(pp.blurpadding, pp.bufheight-1-y);
+						int my;
+						int blurred = 0;
+						for(my = y1; my <= y2; ++my)
+							blurred += pp.gausstable[POSTPROCESS_MAXRADIUS+my] * (int)pp.buf2[x + pp.bufpitch * (y+my)];
+						pp.buf[x + pp.bufpitch * y] = blurred / 255;
+					}
+			}
+
+			// paste the outline below the font
+			for(y = -*pad_t; y < h + *pad_b; ++y)
+				for(x = -*pad_l; x < w + *pad_r; ++x)
+				{
+					unsigned char outlinealpha = pp.buf[(x + pp.padding) + pp.bufpitch * (y + pp.padding)];
+					if(outlinealpha > 0)
+					{
+						unsigned char oldalpha = imagedata[x * bpp + pitch * y + (bpp - 1)];
+						// a' = 1 - (1 - a1) (1 - a2)
+						unsigned char newalpha = 255 - ((255 - (int)outlinealpha) * (255 - (int)oldalpha)) / 255; // this is >= oldalpha
+						// c' = (a2 c2 - a1 a2 c1 + a1 c1) / a' = (a2 c2 + a1 (1 - a2) c1) / a'
+						unsigned char oldfactor     = (255 * (int)oldalpha) / newalpha;
+						//unsigned char outlinefactor = ((255 - oldalpha) * (int)outlinealpha) / newalpha;
+						int i;
+						for(i = 0; i < bpp-1; ++i)
+						{
+							unsigned char c = imagedata[x * bpp + pitch * y + i];
+							c = (c * (int)oldfactor) / 255 /* + outlinecolor[i] * (int)outlinefactor */;
+							imagedata[x * bpp + pitch * y + i] = c;
+						}
+						imagedata[x * bpp + pitch * y + (bpp - 1)] = newalpha;
+					}
+				}
+		}
 	}
 	else
 	{
-		// calculate parameters
-		*pad_l = *pad_r = *pad_t = *pad_b = 0;
+		// just calculate parameters
+		*pad_l = *pad_r = *pad_t = *pad_b = pp.padding;
 	}
 }
 
@@ -566,7 +724,7 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 		return (Font_SearchSize(font, fontface, size) > 0);
 	}
 
-	Font_Postprocess(NULL, 0, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(NULL, 0, 4, size*2, size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
@@ -938,7 +1096,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		return false;
 	}
 
-	Font_Postprocess(NULL, 0, 0, 0, 0, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	// copy over the information
 	map->size = mapstart->size;
@@ -1006,7 +1164,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		}
 
 		imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
-		imagedata += gpad_t * pitch + gpad_l;
+		imagedata += gpad_t * pitch + gpad_l * bytesPerPixel;
 		//status = qFT_Load_Char(face, ch, FT_LOAD_RENDER);
 		// we need the glyphIndex
 		face = font->face;
@@ -1155,7 +1313,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		pad_r = gpad_r;
 		pad_t = gpad_t;
 		pad_b = gpad_b;
-		Font_Postprocess(imagedata, pitch, w, h, bytesPerPixel, &pad_l, &pad_r, &pad_t, &pad_b);
+		Font_Postprocess(imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
 
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
@@ -1176,11 +1334,11 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			//mapglyph->vxmin = bearingX;
 			//mapglyph->vxmax = bearingX + mWidth;
-			mapglyph->vxmin = glyph->bitmap_left / map->size;
+			mapglyph->vxmin = (glyph->bitmap_left - pad_l) / map->size;
 			mapglyph->vxmax = mapglyph->vxmin + (bmp->width + pad_l + pad_r) / map->size; // don't ask
 			//mapglyph->vymin = -bearingY;
 			//mapglyph->vymax = mHeight - bearingY;
-			mapglyph->vymin = -glyph->bitmap_top / map->size;
+			mapglyph->vymin = (-glyph->bitmap_top - pad_t) / map->size;
 			mapglyph->vymax = mapglyph->vymin + (bmp->rows + pad_t + pad_b) / map->size;
 			//Con_Printf("dpi = %f %f (%f %d) %d %d\n", bmp->width / (mapglyph->vxmax - mapglyph->vxmin), bmp->rows / (mapglyph->vymax - mapglyph->vymin), map->size, map->glyphSize, (int)fontface->size->metrics.x_ppem, (int)fontface->size->metrics.y_ppem);
 			//mapglyph->advance_x = advance * usefont->size;
