@@ -3720,11 +3720,15 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
 		//mod->brushq1.num_visleafs = bm->visleafs;
+
+		// generate VBOs and other shared data before cloning submodels
+		if (i == 0)
+		{
+			Mod_BuildVBOs();
+			Mod_Q1BSP_LoadMapBrushes();
+			//Mod_Q1BSP_ProcessLightList();
+		}
 	}
-
-	Mod_Q1BSP_LoadMapBrushes();
-
-	//Mod_Q1BSP_ProcessLightList();
 
 	Con_DPrintf("Stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
 }
@@ -6272,6 +6276,10 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+
+		// generate VBOs and other shared data before cloning submodels
+		if (i == 0)
+			Mod_BuildVBOs();
 	}
 
 	Con_DPrintf("Stats for q3bsp model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
