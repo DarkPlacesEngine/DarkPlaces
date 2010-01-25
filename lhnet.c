@@ -1088,7 +1088,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 			address->port = ntohs(address->addr.in.sin_port);
 			return value;
 		}
-		else if (value == -1)
+		else if (value < 0)
 		{
 			int e = SOCKETERRNO;
 			if (e == EWOULDBLOCK)
