@@ -90,6 +90,13 @@ DRAWFLAG_MASK = 0xFF,   // ONLY R_BeginPolygon()
 DRAWFLAG_MIPMAP = 0x100 // ONLY R_BeginPolygon()
 };
 
+typedef struct ft2_settings_s
+{
+	// cvar parameters (only read on loadfont command)
+	int antialias, hinting;
+	float outline, blur, shadowx, shadowy, shadowz;
+} ft2_settings_t;
+
 #define MAX_FONT_SIZES 8
 #define MAX_FONT_FALLBACKS 3
 typedef struct dp_font_s
@@ -106,6 +113,8 @@ typedef struct dp_font_s
 	char fallbacks[MAX_FONT_FALLBACKS][MAX_QPATH];
 	int fallback_faces[MAX_FONT_FALLBACKS];
 	struct ft2_font_s *ft2;
+
+	ft2_settings_t settings;
 }
 dp_font_t;
 

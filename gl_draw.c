@@ -34,6 +34,14 @@ cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all te
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
 cvar_t r_textcontrast = {CVAR_SAVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
 
+cvar_t r_font_postprocess_blur = {CVAR_SAVE, "r_font_postprocess_blur", "0", "font blur amount"};
+cvar_t r_font_postprocess_outline = {CVAR_SAVE, "r_font_postprocess_outline", "0", "font outline amount"};
+cvar_t r_font_postprocess_shadow_x = {CVAR_SAVE, "r_font_postprocess_shadow_x", "0", "font shadow X shift amount, applied during outlining"};
+cvar_t r_font_postprocess_shadow_y = {CVAR_SAVE, "r_font_postprocess_shadow_y", "0", "font shadow Y shift amount, applied during outlining"};
+cvar_t r_font_postprocess_shadow_z = {CVAR_SAVE, "r_font_postprocess_shadow_z", "0", "font shadow Z shift amount, applied during blurring"};
+cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
+cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
+
 extern cvar_t v_glslgamma;
 
 //=============================================================================
@@ -543,7 +551,18 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	fs_offset_t widthbufsize;
 
 	if(override || !fnt->texpath[0])
+	{
 		strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
+
+		// load the cvars when the font is FIRST loaded
+		fnt->settings.antialias = r_font_antialias.integer;
+		fnt->settings.hinting = r_font_hinting.integer;
+		fnt->settings.outline = r_font_postprocess_outline.value;
+		fnt->settings.blur = r_font_postprocess_blur.value;
+		fnt->settings.shadowx = r_font_postprocess_shadow_x.value;
+		fnt->settings.shadowy = r_font_postprocess_shadow_y.value;
+		fnt->settings.shadowz = r_font_postprocess_shadow_z.value;
+	}
 
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
@@ -804,6 +823,7 @@ static void LoadFont_f(void)
 				f->req_sizes[i] = sz;
 		}
 	}
+
 	LoadFont(true, mainfont, f);
 }
 
@@ -847,6 +867,13 @@ static void gl_draw_newmap(void)
 void GL_Draw_Init (void)
 {
 	int i, j;
+	Cvar_RegisterVariable(&r_font_postprocess_blur);
+	Cvar_RegisterVariable(&r_font_postprocess_outline);
+	Cvar_RegisterVariable(&r_font_postprocess_shadow_x);
+	Cvar_RegisterVariable(&r_font_postprocess_shadow_y);
+	Cvar_RegisterVariable(&r_font_postprocess_shadow_z);
+	Cvar_RegisterVariable(&r_font_hinting);
+	Cvar_RegisterVariable(&r_font_antialias);
 	Cvar_RegisterVariable(&r_textshadow);
 	Cvar_RegisterVariable(&r_textbrightness);
 	Cvar_RegisterVariable(&r_textcontrast);
