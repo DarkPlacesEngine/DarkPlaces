@@ -148,7 +148,6 @@ Mod_Init
 static void Mod_Print(void);
 static void Mod_Precache (void);
 static void Mod_Decompile_f(void);
-static void Mod_BuildVBOs(void);
 static void Mod_GenerateLightmaps_f(void);
 void Mod_Init (void)
 {
@@ -1148,6 +1147,8 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 {
 	if (!vid.support.arb_vertex_buffer_object)
+		return;
+	if (mesh->vbo)
 		return;
 
 	// element buffer is easy because it's just one array
@@ -2481,7 +2482,7 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	Mem_Free(numsurfacesfortexture);
 }
 
-static void Mod_BuildVBOs(void)
+void Mod_BuildVBOs(void)
 {
 	if (gl_paranoid.integer && loadmodel->surfmesh.data_element3s && loadmodel->surfmesh.data_element3i)
 	{
@@ -2497,6 +2498,9 @@ static void Mod_BuildVBOs(void)
 	}
 
 	if (!vid.support.arb_vertex_buffer_object)
+		return;
+	// only build a vbo if one has not already been created (this is important for brush models which load specially)
+	if (loadmodel->surfmesh.vbo)
 		return;
 
 	// element buffer is easy because it's just one array

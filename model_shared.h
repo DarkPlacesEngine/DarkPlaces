@@ -965,6 +965,10 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
 void Mod_MakeSortedSurfaces(dp_model_t *mod);
 
+// called specially by brush model loaders before generating submodels
+// automatically called after model loader returns
+void Mod_BuildVBOs(void);
+
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f);
