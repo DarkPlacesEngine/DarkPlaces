@@ -3121,6 +3121,9 @@ const char *builtincgshaderstring =
 "#endif // !MODE_DEPTH_OR_SHADOW\n"
 ;
 
+char *glslshaderstring = NULL;
+char *cgshaderstring = NULL;
+
 //=======================================================================================================================================================
 
 typedef struct shaderpermutationinfo_s
@@ -3251,7 +3254,7 @@ shadermodeinfo_t cgshadermodeinfo[SHADERMODE_COUNT] =
 {
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_GENERIC\n", " generic"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"cg/default.cg", NULL, NULL           , "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+	{"cg/default.cg", NULL, NULL           , "#define MODE_DEPTH_OR_SHADOW\n", " depth"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTMAP\n", " lightmap"},
@@ -3399,17 +3402,26 @@ static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 	char *shaderstring;
 	if (!filename || !filename[0])
 		return NULL;
+	if (!strcmp(filename, "glsl/default.glsl"))
+	{
+		if (!glslshaderstring)
+		{
+			glslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+			if (glslshaderstring)
+				Con_DPrintf("Loading shaders from file %s...\n", filename);
+			else
+				glslshaderstring = (char *)builtinshaderstring;
+		}
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(glslshaderstring) + 1);
+		memcpy(shaderstring, glslshaderstring, strlen(glslshaderstring) + 1);
+		return shaderstring;
+	}
 	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
 		if (printfromdisknotice)
 			Con_DPrintf("from disk %s... ", filename);
 		return shaderstring;
-	}
-	else if (!strcmp(filename, "glsl/default.glsl"))
-	{
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(builtinshaderstring) + 1);
-		memcpy(shaderstring, builtinshaderstring, strlen(builtinshaderstring) + 1);
 	}
 	return shaderstring;
 }
@@ -3797,6 +3809,20 @@ static char *R_CG_GetText(const char *filename, qboolean printfromdisknotice)
 	char *shaderstring;
 	if (!filename || !filename[0])
 		return NULL;
+	if (!strcmp(filename, "cg/default.cg"))
+	{
+		if (!cgshaderstring)
+		{
+			cgshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+			if (cgshaderstring)
+				Con_DPrintf("Loading shaders from file %s...\n", filename);
+			else
+				cgshaderstring = (char *)builtincgshaderstring;
+		}
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(cgshaderstring) + 1);
+		memcpy(shaderstring, cgshaderstring, strlen(cgshaderstring) + 1);
+		return shaderstring;
+	}
 	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
@@ -3804,12 +3830,12 @@ static char *R_CG_GetText(const char *filename, qboolean printfromdisknotice)
 			Con_DPrintf("from disk %s... ", filename);
 		return shaderstring;
 	}
-	else if (!strcmp(filename, "cg/default.cg"))
-	{
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(builtincgshaderstring) + 1);
-		memcpy(shaderstring, builtincgshaderstring, strlen(builtincgshaderstring) + 1);
-	}
 	return shaderstring;
+}
+
+static void R_CG_CacheShader(r_cg_permutation_t *p, const char *cachename, const char *vertstring, const char *fragstring)
+{
+	// TODO: load or create .fp and .vp shader files
 }
 
 static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, unsigned int permutation)
@@ -3826,6 +3852,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	const char *geomstrings_list[32+3];
 	const char *fragstrings_list[32+3];
 	char permutationname[256];
+	char cachename[256];
 	CGprofile vertexProfile;
 	CGprofile fragmentProfile;
 
@@ -3836,11 +3863,13 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	p->fprogram = NULL;
 
 	permutationname[0] = 0;
+	cachename[0] = 0;
 	vertexstring   = R_CG_GetText(modeinfo->vertexfilename, true);
 	geometrystring = R_CG_GetText(modeinfo->geometryfilename, false);
 	fragmentstring = R_CG_GetText(modeinfo->fragmentfilename, false);
 
 	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
+	strlcat(cachename, "cg/", sizeof(cachename));
 
 	// the first pretext is which type of shader to compile as
 	// (later these will all be bound together as a program object)
@@ -3853,6 +3882,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	geomstrings_list[geomstrings_count++] = modeinfo->pretext;
 	fragstrings_list[fragstrings_count++] = modeinfo->pretext;
 	strlcat(permutationname, modeinfo->name, sizeof(permutationname));
+	strlcat(cachename, modeinfo->name, sizeof(cachename));
 
 	// now add all the permutation pretexts
 	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
@@ -3863,6 +3893,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i].pretext;
 			fragstrings_list[fragstrings_count++] = shaderpermutationinfo[i].pretext;
 			strlcat(permutationname, shaderpermutationinfo[i].name, sizeof(permutationname));
+			strlcat(cachename, shaderpermutationinfo[i].name, sizeof(cachename));
 		}
 		else
 		{
@@ -3872,6 +3903,11 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 			fragstrings_list[fragstrings_count++] = "\n";
 		}
 	}
+
+	// replace spaces in the cachename with _ characters
+	for (i = 0;cachename[i];i++)
+		if (cachename[i] == ' ')
+			cachename[i] = '_';
 
 	// now append the shader text itself
 	vertstrings_list[vertstrings_count++] = vertexstring;
@@ -3918,130 +3954,114 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	//cgSetAutoCompile(vid.cgcontext, CG_COMPILE_MANUAL);CHECKCGERROR
 	CHECKGLERROR
 
-	// compile the vertex program
-	if (vertstring[0] && (p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, vertexProfile, NULL, NULL)))
+	// try to load the cached shader, or generate one
+	R_CG_CacheShader(p, cachename, vertstring, fragstring);
+
+	// if caching failed, do a dynamic compile for now
+	CHECKCGERROR
+	if (vertstring[0] && !p->vprogram)
+		p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, vertexProfile, NULL, NULL);
+	CHECKCGERROR
+	if (fragstring[0] && !p->fprogram)
+		p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, fragmentProfile, NULL, NULL);
+	CHECKCGERROR
+
+	// look up all the uniform variable names we care about, so we don't
+	// have to look them up every time we set them
+	if (p->vprogram)
 	{
 		CHECKCGERROR
-#if 0
-		cgCompileProgram(p->vprogram);CHECKCGERROR
-		if (!cgIsProgramCompiled(p->vprogram))
-		{
-			CHECKCGERROR
-			cgDestroyProgram(p->vprogram);CHECKCGERROR
-			p->vprogram = 0;
-		}
-		else
-#endif
-		{
-			cgGLLoadProgram(p->vprogram);CHECKCGERROR CHECKGLERROR
-			cgGLEnableProfile(vertexProfile);CHECKCGERROR CHECKGLERROR
-			// look up all the uniform variable names we care about, so we don't
-			// have to look them up every time we set them
-			CHECKCGERROR
-			p->vp_EyePosition                = cgGetNamedParameter(p->vprogram, "EyePosition");
-			p->vp_FogPlane                   = cgGetNamedParameter(p->vprogram, "FogPlane");
-			p->vp_LightDir                   = cgGetNamedParameter(p->vprogram, "LightDir");
-			p->vp_LightPosition              = cgGetNamedParameter(p->vprogram, "LightPosition");
-			p->vp_ModelToLight               = cgGetNamedParameter(p->vprogram, "ModelToLight");
-			p->vp_TexMatrix                  = cgGetNamedParameter(p->vprogram, "TexMatrix");
-			p->vp_BackgroundTexMatrix        = cgGetNamedParameter(p->vprogram, "BackgroundTexMatrix");
-			p->vp_ModelViewProjectionMatrix  = cgGetNamedParameter(p->vprogram, "ModelViewProjectionMatrix");
-			p->vp_ModelViewMatrix            = cgGetNamedParameter(p->vprogram, "ModelViewMatrix");
-			CHECKCGERROR
-		}
+		cgGLLoadProgram(p->vprogram);CHECKCGERROR CHECKGLERROR
+		cgGLEnableProfile(vertexProfile);CHECKCGERROR CHECKGLERROR
+		p->vp_EyePosition                = cgGetNamedParameter(p->vprogram, "EyePosition");
+		p->vp_FogPlane                   = cgGetNamedParameter(p->vprogram, "FogPlane");
+		p->vp_LightDir                   = cgGetNamedParameter(p->vprogram, "LightDir");
+		p->vp_LightPosition              = cgGetNamedParameter(p->vprogram, "LightPosition");
+		p->vp_ModelToLight               = cgGetNamedParameter(p->vprogram, "ModelToLight");
+		p->vp_TexMatrix                  = cgGetNamedParameter(p->vprogram, "TexMatrix");
+		p->vp_BackgroundTexMatrix        = cgGetNamedParameter(p->vprogram, "BackgroundTexMatrix");
+		p->vp_ModelViewProjectionMatrix  = cgGetNamedParameter(p->vprogram, "ModelViewProjectionMatrix");
+		p->vp_ModelViewMatrix            = cgGetNamedParameter(p->vprogram, "ModelViewMatrix");
+		CHECKCGERROR
 	}
-
-	// compile the fragment program
-	if (fragstring[0] && (p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, fragmentProfile, NULL, NULL)))
+	if (p->fprogram)
 	{
-#if 0
-		cgCompileProgram(p->fprogram);CHECKCGERROR
-		if (!cgIsProgramCompiled(p->fprogram))
-		{
-			CHECKCGERROR
-			cgDestroyProgram(p->fprogram);CHECKCGERROR
-			p->fprogram = 0;
-		}
-		else
-#endif
-		{
-			cgGLLoadProgram(p->fprogram);CHECKCGERROR CHECKGLERROR
-			cgGLEnableProfile(fragmentProfile);CHECKCGERROR CHECKGLERROR
-			CHECKCGERROR
-			p->fp_Texture_First              = cgGetNamedParameter(p->fprogram, "Texture_First");
-			p->fp_Texture_Second             = cgGetNamedParameter(p->fprogram, "Texture_Second");
-			p->fp_Texture_GammaRamps         = cgGetNamedParameter(p->fprogram, "Texture_GammaRamps");
-			p->fp_Texture_Normal             = cgGetNamedParameter(p->fprogram, "Texture_Normal");
-			p->fp_Texture_Color              = cgGetNamedParameter(p->fprogram, "Texture_Color");
-			p->fp_Texture_Gloss              = cgGetNamedParameter(p->fprogram, "Texture_Gloss");
-			p->fp_Texture_Glow               = cgGetNamedParameter(p->fprogram, "Texture_Glow");
-			p->fp_Texture_SecondaryNormal    = cgGetNamedParameter(p->fprogram, "Texture_SecondaryNormal");
-			p->fp_Texture_SecondaryColor     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryColor");
-			p->fp_Texture_SecondaryGloss     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGloss");
-			p->fp_Texture_SecondaryGlow      = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGlow");
-			p->fp_Texture_Pants              = cgGetNamedParameter(p->fprogram, "Texture_Pants");
-			p->fp_Texture_Shirt              = cgGetNamedParameter(p->fprogram, "Texture_Shirt");
-			p->fp_Texture_FogMask            = cgGetNamedParameter(p->fprogram, "Texture_FogMask");
-			p->fp_Texture_Lightmap           = cgGetNamedParameter(p->fprogram, "Texture_Lightmap");
-			p->fp_Texture_Deluxemap          = cgGetNamedParameter(p->fprogram, "Texture_Deluxemap");
-			p->fp_Texture_Attenuation        = cgGetNamedParameter(p->fprogram, "Texture_Attenuation");
-			p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
-			p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
-			p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
-			p->fp_Texture_ShadowMapRect      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapRect");
-			p->fp_Texture_ShadowMapCube      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapCube");
-			p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
-			p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
-			p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
-			p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
-			p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
-			p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
-			p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
-			p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
-			p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
-			p->fp_Color_Ambient              = cgGetNamedParameter(p->fprogram, "Color_Ambient");
-			p->fp_Color_Diffuse              = cgGetNamedParameter(p->fprogram, "Color_Diffuse");
-			p->fp_Color_Specular             = cgGetNamedParameter(p->fprogram, "Color_Specular");
-			p->fp_Color_Glow                 = cgGetNamedParameter(p->fprogram, "Color_Glow");
-			p->fp_Color_Pants                = cgGetNamedParameter(p->fprogram, "Color_Pants");
-			p->fp_Color_Shirt                = cgGetNamedParameter(p->fprogram, "Color_Shirt");
-			p->fp_DeferredColor_Ambient      = cgGetNamedParameter(p->fprogram, "DeferredColor_Ambient");
-			p->fp_DeferredColor_Diffuse      = cgGetNamedParameter(p->fprogram, "DeferredColor_Diffuse");
-			p->fp_DeferredColor_Specular     = cgGetNamedParameter(p->fprogram, "DeferredColor_Specular");
-			p->fp_DeferredMod_Diffuse        = cgGetNamedParameter(p->fprogram, "DeferredMod_Diffuse");
-			p->fp_DeferredMod_Specular       = cgGetNamedParameter(p->fprogram, "DeferredMod_Specular");
-			p->fp_DistortScaleRefractReflect = cgGetNamedParameter(p->fprogram, "DistortScaleRefractReflect");
-			p->fp_EyePosition                = cgGetNamedParameter(p->fprogram, "EyePosition");
-			p->fp_FogColor                   = cgGetNamedParameter(p->fprogram, "FogColor");
-			p->fp_FogHeightFade              = cgGetNamedParameter(p->fprogram, "FogHeightFade");
-			p->fp_FogPlane                   = cgGetNamedParameter(p->fprogram, "FogPlane");
-			p->fp_FogPlaneViewDist           = cgGetNamedParameter(p->fprogram, "FogPlaneViewDist");
-			p->fp_FogRangeRecip              = cgGetNamedParameter(p->fprogram, "FogRangeRecip");
-			p->fp_LightColor                 = cgGetNamedParameter(p->fprogram, "LightColor");
-			p->fp_LightDir                   = cgGetNamedParameter(p->fprogram, "LightDir");
-			p->fp_LightPosition              = cgGetNamedParameter(p->fprogram, "LightPosition");
-			p->fp_OffsetMapping_Scale        = cgGetNamedParameter(p->fprogram, "OffsetMapping_Scale");
-			p->fp_PixelSize                  = cgGetNamedParameter(p->fprogram, "PixelSize");
-			p->fp_ReflectColor               = cgGetNamedParameter(p->fprogram, "ReflectColor");
-			p->fp_ReflectFactor              = cgGetNamedParameter(p->fprogram, "ReflectFactor");
-			p->fp_ReflectOffset              = cgGetNamedParameter(p->fprogram, "ReflectOffset");
-			p->fp_RefractColor               = cgGetNamedParameter(p->fprogram, "RefractColor");
-			p->fp_Saturation                 = cgGetNamedParameter(p->fprogram, "Saturation");
-			p->fp_ScreenCenterRefractReflect = cgGetNamedParameter(p->fprogram, "ScreenCenterRefractReflect");
-			p->fp_ScreenScaleRefractReflect  = cgGetNamedParameter(p->fprogram, "ScreenScaleRefractReflect");
-			p->fp_ScreenToDepth              = cgGetNamedParameter(p->fprogram, "ScreenToDepth");
-			p->fp_ShadowMap_Parameters       = cgGetNamedParameter(p->fprogram, "ShadowMap_Parameters");
-			p->fp_ShadowMap_TextureScale     = cgGetNamedParameter(p->fprogram, "ShadowMap_TextureScale");
-			p->fp_SpecularPower              = cgGetNamedParameter(p->fprogram, "SpecularPower");
-			p->fp_UserVec1                   = cgGetNamedParameter(p->fprogram, "UserVec1");
-			p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
-			p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
-			p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
-			p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
-			p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
-			p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
-			CHECKCGERROR
-		}
+		CHECKCGERROR
+		cgGLLoadProgram(p->fprogram);CHECKCGERROR CHECKGLERROR
+		cgGLEnableProfile(fragmentProfile);CHECKCGERROR CHECKGLERROR
+		p->fp_Texture_First              = cgGetNamedParameter(p->fprogram, "Texture_First");
+		p->fp_Texture_Second             = cgGetNamedParameter(p->fprogram, "Texture_Second");
+		p->fp_Texture_GammaRamps         = cgGetNamedParameter(p->fprogram, "Texture_GammaRamps");
+		p->fp_Texture_Normal             = cgGetNamedParameter(p->fprogram, "Texture_Normal");
+		p->fp_Texture_Color              = cgGetNamedParameter(p->fprogram, "Texture_Color");
+		p->fp_Texture_Gloss              = cgGetNamedParameter(p->fprogram, "Texture_Gloss");
+		p->fp_Texture_Glow               = cgGetNamedParameter(p->fprogram, "Texture_Glow");
+		p->fp_Texture_SecondaryNormal    = cgGetNamedParameter(p->fprogram, "Texture_SecondaryNormal");
+		p->fp_Texture_SecondaryColor     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryColor");
+		p->fp_Texture_SecondaryGloss     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGloss");
+		p->fp_Texture_SecondaryGlow      = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGlow");
+		p->fp_Texture_Pants              = cgGetNamedParameter(p->fprogram, "Texture_Pants");
+		p->fp_Texture_Shirt              = cgGetNamedParameter(p->fprogram, "Texture_Shirt");
+		p->fp_Texture_FogMask            = cgGetNamedParameter(p->fprogram, "Texture_FogMask");
+		p->fp_Texture_Lightmap           = cgGetNamedParameter(p->fprogram, "Texture_Lightmap");
+		p->fp_Texture_Deluxemap          = cgGetNamedParameter(p->fprogram, "Texture_Deluxemap");
+		p->fp_Texture_Attenuation        = cgGetNamedParameter(p->fprogram, "Texture_Attenuation");
+		p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
+		p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
+		p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
+		p->fp_Texture_ShadowMapRect      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapRect");
+		p->fp_Texture_ShadowMapCube      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapCube");
+		p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
+		p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
+		p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
+		p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
+		p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
+		p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
+		p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
+		p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
+		p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
+		p->fp_Color_Ambient              = cgGetNamedParameter(p->fprogram, "Color_Ambient");
+		p->fp_Color_Diffuse              = cgGetNamedParameter(p->fprogram, "Color_Diffuse");
+		p->fp_Color_Specular             = cgGetNamedParameter(p->fprogram, "Color_Specular");
+		p->fp_Color_Glow                 = cgGetNamedParameter(p->fprogram, "Color_Glow");
+		p->fp_Color_Pants                = cgGetNamedParameter(p->fprogram, "Color_Pants");
+		p->fp_Color_Shirt                = cgGetNamedParameter(p->fprogram, "Color_Shirt");
+		p->fp_DeferredColor_Ambient      = cgGetNamedParameter(p->fprogram, "DeferredColor_Ambient");
+		p->fp_DeferredColor_Diffuse      = cgGetNamedParameter(p->fprogram, "DeferredColor_Diffuse");
+		p->fp_DeferredColor_Specular     = cgGetNamedParameter(p->fprogram, "DeferredColor_Specular");
+		p->fp_DeferredMod_Diffuse        = cgGetNamedParameter(p->fprogram, "DeferredMod_Diffuse");
+		p->fp_DeferredMod_Specular       = cgGetNamedParameter(p->fprogram, "DeferredMod_Specular");
+		p->fp_DistortScaleRefractReflect = cgGetNamedParameter(p->fprogram, "DistortScaleRefractReflect");
+		p->fp_EyePosition                = cgGetNamedParameter(p->fprogram, "EyePosition");
+		p->fp_FogColor                   = cgGetNamedParameter(p->fprogram, "FogColor");
+		p->fp_FogHeightFade              = cgGetNamedParameter(p->fprogram, "FogHeightFade");
+		p->fp_FogPlane                   = cgGetNamedParameter(p->fprogram, "FogPlane");
+		p->fp_FogPlaneViewDist           = cgGetNamedParameter(p->fprogram, "FogPlaneViewDist");
+		p->fp_FogRangeRecip              = cgGetNamedParameter(p->fprogram, "FogRangeRecip");
+		p->fp_LightColor                 = cgGetNamedParameter(p->fprogram, "LightColor");
+		p->fp_LightDir                   = cgGetNamedParameter(p->fprogram, "LightDir");
+		p->fp_LightPosition              = cgGetNamedParameter(p->fprogram, "LightPosition");
+		p->fp_OffsetMapping_Scale        = cgGetNamedParameter(p->fprogram, "OffsetMapping_Scale");
+		p->fp_PixelSize                  = cgGetNamedParameter(p->fprogram, "PixelSize");
+		p->fp_ReflectColor               = cgGetNamedParameter(p->fprogram, "ReflectColor");
+		p->fp_ReflectFactor              = cgGetNamedParameter(p->fprogram, "ReflectFactor");
+		p->fp_ReflectOffset              = cgGetNamedParameter(p->fprogram, "ReflectOffset");
+		p->fp_RefractColor               = cgGetNamedParameter(p->fprogram, "RefractColor");
+		p->fp_Saturation                 = cgGetNamedParameter(p->fprogram, "Saturation");
+		p->fp_ScreenCenterRefractReflect = cgGetNamedParameter(p->fprogram, "ScreenCenterRefractReflect");
+		p->fp_ScreenScaleRefractReflect  = cgGetNamedParameter(p->fprogram, "ScreenScaleRefractReflect");
+		p->fp_ScreenToDepth              = cgGetNamedParameter(p->fprogram, "ScreenToDepth");
+		p->fp_ShadowMap_Parameters       = cgGetNamedParameter(p->fprogram, "ShadowMap_Parameters");
+		p->fp_ShadowMap_TextureScale     = cgGetNamedParameter(p->fprogram, "ShadowMap_TextureScale");
+		p->fp_SpecularPower              = cgGetNamedParameter(p->fprogram, "SpecularPower");
+		p->fp_UserVec1                   = cgGetNamedParameter(p->fprogram, "UserVec1");
+		p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
+		p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
+		p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
+		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
+		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
+		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
+		CHECKCGERROR
 	}
 
 	if ((p->vprogram || !vertstring[0]) && (p->fprogram || !fragstring[0]))
@@ -4141,6 +4161,12 @@ void CG_BindTexture(CGparameter param, rtexture_t *tex)
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
+	if (glslshaderstring && glslshaderstring != builtinshaderstring)
+		Mem_Free(glslshaderstring);
+	glslshaderstring = NULL;
+	if (cgshaderstring && cgshaderstring != builtincgshaderstring)
+		Mem_Free(cgshaderstring);
+	cgshaderstring = NULL;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -5777,9 +5803,11 @@ void gl_main_start(void)
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_glsl_permutationarray, r_main_mempool, sizeof(r_glsl_permutation_t), 256);
+	glslshaderstring = NULL;
 #ifdef SUPPORTCG
 	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_cg_permutationarray, r_main_mempool, sizeof(r_cg_permutation_t), 256);
+	cgshaderstring = NULL;
 #endif
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 
@@ -11364,13 +11392,14 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	{
 		surfaceindex = surfacelist[surfacelistindex];
 		surface = surfaces + surfaceindex;
+		// check cull box first because it rejects more than any other check
+		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
+			continue;
 		// skip transparent surfaces
 		texture = surface->texture;
 		if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 			continue;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
-			continue;
-		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
 			continue;
 		decalsurfaceindex = ent == r_refdef.scene.worldentity ? surfaceindex : -1;
 		numvertices = surface->num_vertices;
