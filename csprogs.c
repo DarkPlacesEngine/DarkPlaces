@@ -946,7 +946,7 @@ void CL_VM_Init (void)
 		if(cls.demo_lastcsprogssize != csprogsdatasize || cls.demo_lastcsprogscrc != csprogsdatacrc)
 		{
 			int i;
-			char buf[NET_MAXMESSAGE];
+			static char buf[NET_MAXMESSAGE];
 			sizebuf_t sb;
 			unsigned char *demobuf; fs_offset_t demofilesize;
 
