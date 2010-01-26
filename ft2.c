@@ -150,7 +150,7 @@ typedef struct
 	unsigned char gausstable[2*POSTPROCESS_MAXRADIUS+1];
 }
 font_postprocess_t;
-static font_postprocess_t pp = {0};
+static font_postprocess_t pp;
 
 /*
 ====================
