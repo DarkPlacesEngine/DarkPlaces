@@ -621,7 +621,7 @@ void SCR_SetUpToDrawConsole (void)
 	if (scr_menuforcewhiledisconnected.integer && key_dest == key_game && cls.state == ca_disconnected)
 	{
 		if (framecounter >= 2)
-			MR_ToggleMenu_f();
+			MR_ToggleMenu(1);
 		else
 			framecounter++;
 	}

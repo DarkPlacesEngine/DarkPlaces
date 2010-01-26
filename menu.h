@@ -61,7 +61,7 @@ void M_Update_Return_Reason(char *s);
 void M_Init (void);
 void M_KeyEvent (int key);
 void M_Draw (void);
-void M_ToggleMenu_f (void);
+void M_ToggleMenu (int mode);
 
 //
 // menu prog menu
@@ -69,7 +69,7 @@ void M_ToggleMenu_f (void);
 void MP_Init (void);
 void MP_KeyEvent (int key);
 void MP_Draw (void);
-void MP_ToggleMenu_f (void);
+void MP_ToggleMenu (int mode);
 void MP_Shutdown (void);*/
 
 //
@@ -81,7 +81,7 @@ void MR_Init (void);
 void MR_Restart (void);
 extern void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
 extern void (*MR_Draw) (void);
-extern void (*MR_ToggleMenu_f) (void);
+extern void (*MR_ToggleMenu) (int mode);
 extern void (*MR_Shutdown) (void);
 
 typedef struct video_resolution_s
