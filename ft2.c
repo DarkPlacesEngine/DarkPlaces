@@ -145,7 +145,7 @@ typedef struct
 	unsigned char *buf, *buf2;
 	int bufsize, bufwidth, bufheight, bufpitch;
 	float blur, outline, shadowx, shadowy, shadowz;
-	int padding, blurpadding, outlinepadding;
+	int padding_t, padding_b, padding_l, padding_r, blurpadding_lt, blurpadding_rb, outlinepadding_t, outlinepadding_b, outlinepadding_l, outlinepadding_r;
 	unsigned char circlematrix[2*POSTPROCESS_MAXRADIUS+1][2*POSTPROCESS_MAXRADIUS+1];
 	unsigned char gausstable[2*POSTPROCESS_MAXRADIUS+1];
 }
@@ -541,15 +541,23 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 	pp.shadowx = fnt->settings->shadowx;
 	pp.shadowy = fnt->settings->shadowy;
 	pp.shadowz = fnt->settings->shadowz;
-	pp.outlinepadding = bound(0, ceil(pp.outline) + ceil(max(max(pp.shadowx, pp.shadowy), max(-pp.shadowx, -pp.shadowy))), POSTPROCESS_MAXRADIUS);
-	pp.blurpadding = bound(0, ceil(pp.blur) + ceil(max(pp.shadowz, -pp.shadowz)), POSTPROCESS_MAXRADIUS);
-		// FIXME for high values of shadow, we can do better by doing different x and y padding...
-	pp.padding = pp.blurpadding + pp.outlinepadding;
+	pp.outlinepadding_l = bound(0, ceil(pp.outline - pp.shadowx), POSTPROCESS_MAXRADIUS);
+	pp.outlinepadding_r = bound(0, ceil(pp.outline + pp.shadowx), POSTPROCESS_MAXRADIUS);
+	pp.outlinepadding_t = bound(0, ceil(pp.outline - pp.shadowy), POSTPROCESS_MAXRADIUS);
+	pp.outlinepadding_b = bound(0, ceil(pp.outline + pp.shadowy), POSTPROCESS_MAXRADIUS);
+	pp.blurpadding_lt = bound(0, ceil(pp.blur - pp.shadowz), POSTPROCESS_MAXRADIUS);
+	pp.blurpadding_rb = bound(0, ceil(pp.blur + pp.shadowz), POSTPROCESS_MAXRADIUS);
+	pp.padding_l = pp.blurpadding_lt + pp.outlinepadding_l;
+	pp.padding_r = pp.blurpadding_rb + pp.outlinepadding_r;
+	pp.padding_t = pp.blurpadding_lt + pp.outlinepadding_t;
+	pp.padding_b = pp.blurpadding_rb + pp.outlinepadding_b;
 	if(need_gauss)
 	{
 		float sum = 0;
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
-			sum += (gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x + pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x + pp.shadowz + 0.5) == 0)));
+			gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x + pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x + pp.shadowz + 0.5) == 0));
+		for(x = -pp.blurpadding_lt; x <= pp.blurpadding_rb; ++x)
+			sum += gausstable[POSTPROCESS_MAXRADIUS+x];
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			pp.gausstable[POSTPROCESS_MAXRADIUS+x] = floor(gausstable[POSTPROCESS_MAXRADIUS+x] / sum * 255 + 0.5);
 	}
@@ -562,8 +570,8 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 				pp.circlematrix[POSTPROCESS_MAXRADIUS+y][POSTPROCESS_MAXRADIUS+x] = (d >= 1) ? 255 : (d <= 0) ? 0 : floor(d * 255 + 0.5);
 			}
 	}
-	pp.bufwidth = w + 2 * pp.padding;
-	pp.bufheight = h + 2 * pp.padding;
+	pp.bufwidth = w + pp.padding_l + pp.padding_r;
+	pp.bufheight = h + pp.padding_t + pp.padding_b;
 	pp.bufpitch = pp.bufwidth;
 	needed = pp.bufwidth * pp.bufheight;
 	if(!pp.buf || pp.bufsize < needed * 2)
@@ -586,10 +594,10 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 
 		// perform operation, not exceeding the passed padding values,
 		// but possibly reducing them
-		*pad_l = min(*pad_l, pp.padding);
-		*pad_r = min(*pad_r, pp.padding);
-		*pad_t = min(*pad_t, pp.padding);
-		*pad_b = min(*pad_b, pp.padding);
+		*pad_l = min(*pad_l, pp.padding_l);
+		*pad_r = min(*pad_r, pp.padding_r);
+		*pad_t = min(*pad_t, pp.padding_t);
+		*pad_b = min(*pad_b, pp.padding_b);
 
 		// calculate gauss table
 		
@@ -606,10 +614,10 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 			for(y = -*pad_t; y < h + *pad_b; ++y)
 				for(x = -*pad_l; x < w + *pad_r; ++x)
 				{
-					int x1 = max(-x, -pp.outlinepadding);
-					int y1 = max(-y, -pp.outlinepadding);
-					int x2 = min(pp.outlinepadding, w-1-x);
-					int y2 = min(pp.outlinepadding, h-1-y);
+					int x1 = max(-x, -pp.outlinepadding_l);
+					int y1 = max(-y, -pp.outlinepadding_t);
+					int x2 = min(pp.outlinepadding_r, w-1-x);
+					int y2 = min(pp.outlinepadding_b, h-1-y);
 					int mx, my;
 					int cur = 0;
 					int highest = 0;
@@ -620,7 +628,7 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 							if(cur > highest)
 								highest = cur;
 						}
-					pp.buf[((x + pp.padding) + pp.bufpitch * (y + pp.padding))] = (highest + 128) / 255;
+					pp.buf[((x + pp.padding_l) + pp.bufpitch * (y + pp.padding_t))] = (highest + 128) / 255;
 				}
 
 			// blur the outline buffer
@@ -630,8 +638,8 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 				for(y = 0; y < pp.bufheight; ++y)
 					for(x = 0; x < pp.bufwidth; ++x)
 					{
-						int x1 = max(-x, -pp.blurpadding);
-						int x2 = min(pp.blurpadding, pp.bufwidth-1-x);
+						int x1 = max(-x, -pp.blurpadding_lt);
+						int x2 = min(pp.blurpadding_rb, pp.bufwidth-1-x);
 						int mx;
 						int blurred = 0;
 						for(mx = x1; mx <= x2; ++mx)
@@ -643,8 +651,8 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 				for(y = 0; y < pp.bufheight; ++y)
 					for(x = 0; x < pp.bufwidth; ++x)
 					{
-						int y1 = max(-y, -pp.blurpadding);
-						int y2 = min(pp.blurpadding, pp.bufheight-1-y);
+						int y1 = max(-y, -pp.blurpadding_lt);
+						int y2 = min(pp.blurpadding_rb, pp.bufheight-1-y);
 						int my;
 						int blurred = 0;
 						for(my = y1; my <= y2; ++my)
@@ -657,7 +665,7 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 			for(y = -*pad_t; y < h + *pad_b; ++y)
 				for(x = -*pad_l; x < w + *pad_r; ++x)
 				{
-					unsigned char outlinealpha = pp.buf[(x + pp.padding) + pp.bufpitch * (y + pp.padding)];
+					unsigned char outlinealpha = pp.buf[(x + pp.padding_l) + pp.bufpitch * (y + pp.padding_b)];
 					if(outlinealpha > 0)
 					{
 						unsigned char oldalpha = imagedata[x * bpp + pitch * y + (bpp - 1)];
@@ -681,7 +689,10 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 	else
 	{
 		// just calculate parameters
-		*pad_l = *pad_r = *pad_t = *pad_b = pp.padding;
+		*pad_l = pp.padding_l;
+		*pad_r = pp.padding_r;
+		*pad_t = pp.padding_t;
+		*pad_b = pp.padding_b;
 	}
 }
 
