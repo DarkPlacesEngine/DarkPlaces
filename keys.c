@@ -1492,7 +1492,7 @@ Key_Event (int key, int ascii, qboolean down)
 					if(key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 					{
 						key_consoleactive &= ~KEY_CONSOLEACTIVE_USER;
-						MR_ToggleMenu_f ();
+						MR_ToggleMenu(1);
 					}
 					else
 						Con_ToggleConsole_f();
@@ -1513,7 +1513,7 @@ Key_Event (int key, int ascii, qboolean down)
 				// csqc has priority over toggle menu if it wants to (e.g. handling escape for UI stuff in-game.. :sick:)
 				q = CL_VM_InputEvent(down, key, ascii);
 				if (!q && down)
-					MR_ToggleMenu_f ();
+					MR_ToggleMenu(1);
 				break;
 
 			default:
