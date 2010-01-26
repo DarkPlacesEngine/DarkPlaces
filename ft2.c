@@ -556,7 +556,7 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 		float sum = 0;
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			gausstable[POSTPROCESS_MAXRADIUS+x] = (pp.blur > 0 ? exp(-(pow(x + pp.shadowz, 2))/(pp.blur*pp.blur * 2)) : (floor(x + pp.shadowz + 0.5) == 0));
-		for(x = -pp.blurpadding_lt; x <= pp.blurpadding_rb; ++x)
+		for(x = -pp.blurpadding_rb; x <= pp.blurpadding_lt; ++x)
 			sum += gausstable[POSTPROCESS_MAXRADIUS+x];
 		for(x = -POSTPROCESS_MAXRADIUS; x <= POSTPROCESS_MAXRADIUS; ++x)
 			pp.gausstable[POSTPROCESS_MAXRADIUS+x] = floor(gausstable[POSTPROCESS_MAXRADIUS+x] / sum * 255 + 0.5);
@@ -614,10 +614,10 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 			for(y = -*pad_t; y < h + *pad_b; ++y)
 				for(x = -*pad_l; x < w + *pad_r; ++x)
 				{
-					int x1 = max(-x, -pp.outlinepadding_l);
-					int y1 = max(-y, -pp.outlinepadding_t);
-					int x2 = min(pp.outlinepadding_r, w-1-x);
-					int y2 = min(pp.outlinepadding_b, h-1-y);
+					int x1 = max(-x, -pp.outlinepadding_r);
+					int y1 = max(-y, -pp.outlinepadding_b);
+					int x2 = min(pp.outlinepadding_l, w-1-x);
+					int y2 = min(pp.outlinepadding_t, h-1-y);
 					int mx, my;
 					int cur = 0;
 					int highest = 0;
@@ -638,26 +638,26 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 				for(y = 0; y < pp.bufheight; ++y)
 					for(x = 0; x < pp.bufwidth; ++x)
 					{
-						int x1 = max(-x, -pp.blurpadding_lt);
-						int x2 = min(pp.blurpadding_rb, pp.bufwidth-1-x);
+						int x1 = max(-x, -pp.blurpadding_rb);
+						int x2 = min(pp.blurpadding_lt, pp.bufwidth-1-x);
 						int mx;
 						int blurred = 0;
 						for(mx = x1; mx <= x2; ++mx)
 							blurred += pp.gausstable[POSTPROCESS_MAXRADIUS+mx] * (int)pp.buf[(x+mx) + pp.bufpitch * y];
-						pp.buf2[x + pp.bufpitch * y] = blurred / 255;
+						pp.buf2[x + pp.bufpitch * y] = bound(0, blurred, 65025) / 255;
 					}
 
 				// vertical blur
 				for(y = 0; y < pp.bufheight; ++y)
 					for(x = 0; x < pp.bufwidth; ++x)
 					{
-						int y1 = max(-y, -pp.blurpadding_lt);
-						int y2 = min(pp.blurpadding_rb, pp.bufheight-1-y);
+						int y1 = max(-y, -pp.blurpadding_rb);
+						int y2 = min(pp.blurpadding_lt, pp.bufheight-1-y);
 						int my;
 						int blurred = 0;
 						for(my = y1; my <= y2; ++my)
 							blurred += pp.gausstable[POSTPROCESS_MAXRADIUS+my] * (int)pp.buf2[x + pp.bufpitch * (y+my)];
-						pp.buf[x + pp.bufpitch * y] = blurred / 255;
+						pp.buf[x + pp.bufpitch * y] = bound(0, blurred, 65025) / 255;
 					}
 			}
 
@@ -683,6 +683,7 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 						}
 						imagedata[x * bpp + pitch * y + (bpp - 1)] = newalpha;
 					}
+					//imagedata[x * bpp + pitch * y + (bpp - 1)] |= 0x80;
 				}
 		}
 	}
@@ -1338,9 +1339,9 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			//double mWidth = (glyph->metrics.width >> 6) / map->size;
 			//double mHeight = (glyph->metrics.height >> 6) / map->size;
 
-			mapglyph->txmin = ( (double)(gC * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
+			mapglyph->txmin = ( (double)(gC * map->glyphSize) + (double)(gpad_l - pad_l) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->txmax = mapglyph->txmin + (double)(bmp->width + pad_l + pad_r) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
-			mapglyph->tymin = ( (double)(gR * map->glyphSize) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
+			mapglyph->tymin = ( (double)(gR * map->glyphSize) + (double)(gpad_r - pad_r) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			//mapglyph->vxmin = bearingX;
 			//mapglyph->vxmax = bearingX + mWidth;
