@@ -665,7 +665,7 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 			for(y = -*pad_t; y < h + *pad_b; ++y)
 				for(x = -*pad_l; x < w + *pad_r; ++x)
 				{
-					unsigned char outlinealpha = pp.buf[(x + pp.padding_l) + pp.bufpitch * (y + pp.padding_b)];
+					unsigned char outlinealpha = pp.buf[(x + pp.padding_l) + pp.bufpitch * (y + pp.padding_t)];
 					if(outlinealpha > 0)
 					{
 						unsigned char oldalpha = imagedata[x * bpp + pitch * y + (bpp - 1)];
