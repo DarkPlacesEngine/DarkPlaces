@@ -3,6 +3,7 @@
 
 int CL_GetPitchSign(prvm_edict_t *ent);
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex);
+void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
 
 /* These are VM built-ins that originate in the client-side programs support
    but are reused by the other programs (usually the menu). */

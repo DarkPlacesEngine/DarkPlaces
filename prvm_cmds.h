@@ -450,3 +450,13 @@ void VM_isfunction(void);
 void VM_callfunction(void);
 
 void VM_sprintf(void);
+
+void VM_getsurfacenumpoints(void);
+void VM_getsurfacepoint(void);
+void VM_getsurfacepointattribute(void);
+void VM_getsurfacenormal(void);
+void VM_getsurfacetexture(void);
+void VM_getsurfacenearpoint(void);
+void VM_getsurfaceclippedpoint(void);
+void VM_getsurfacenumtriangles(void);
+void VM_getsurfacetriangle(void);
