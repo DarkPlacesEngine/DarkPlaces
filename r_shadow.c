@@ -399,13 +399,13 @@ void R_Shadow_SetShadowMode(void)
 		{
 			if(r_shadow_shadowmapfilterquality < 0)
 			{
-				if(strstr(gl_vendor, "NVIDIA")) 
+				if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
+					r_shadow_shadowmappcf = 1;
+				else if(strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) 
 				{
 					r_shadow_shadowmapsampler = vid.support.arb_shadow;
 					r_shadow_shadowmappcf = 1;
 				}
-				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) 
-					r_shadow_shadowmappcf = 1;
 				else if(strstr(gl_vendor, "ATI")) 
 					r_shadow_shadowmappcf = 1;
 				else 
