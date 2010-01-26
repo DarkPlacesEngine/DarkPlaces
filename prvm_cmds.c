@@ -10,6 +10,8 @@
 #include "libcurl.h"
 #include <time.h>
 
+#include "cl_collision.h"
+#include "clvm_cmds.h"
 #include "ft2.h"
 
 extern cvar_t prvm_backtraceforwarnings;
@@ -5961,4 +5963,343 @@ verbatim:
 finished:
 	*o = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(outbuf);
+}
+
+
+// surface querying
+
+static dp_model_t *getmodel(prvm_edict_t *ed)
+{
+	switch(PRVM_GetProgNr())
+	{
+		case PRVM_SERVERPROG:
+			return SV_GetModelFromEdict(ed);
+		case PRVM_CLIENTPROG:
+			return CL_GetModelFromEdict(ed);
+		default:
+			return NULL;
+	}
+}
+
+static void getmatrix(prvm_edict_t *ed, matrix4x4_t *out)
+{
+	switch(PRVM_GetProgNr())
+	{
+		case PRVM_SERVERPROG:
+			SV_GetEntityMatrix(ed, out, false);
+			break;
+		case PRVM_CLIENTPROG:
+			CL_GetEntityMatrix(ed, out, false);
+			break;
+		default:
+			*out = identitymatrix;
+			break;
+	}
+}
+
+static void applytransform_forward(const vec3_t in, prvm_edict_t *ed, vec3_t out)
+{
+	matrix4x4_t m;
+	getmatrix(ed, &m);
+	Matrix4x4_Transform(&m, in, out);
+}
+
+static void applytransform_forward_direction(const vec3_t in, prvm_edict_t *ed, vec3_t out)
+{
+	matrix4x4_t m;
+	getmatrix(ed, &m);
+	Matrix4x4_Transform3x3(&m, in, out);
+}
+
+static void applytransform_inverted(const vec3_t in, prvm_edict_t *ed, vec3_t out)
+{
+	matrix4x4_t m, n;
+	getmatrix(ed, &m);
+	Matrix4x4_Invert_Full(&m, &n);
+	Matrix4x4_Transform3x3(&n, in, out);
+}
+
+static void applytransform_forward_normal(const vec3_t in, prvm_edict_t *ed, vec3_t out)
+{
+	matrix4x4_t m;
+	float p[4];
+	getmatrix(ed, &m);
+	Matrix4x4_TransformPositivePlane(&m, in[0], in[1], in[2], 0, p);
+	VectorCopy(p, out);
+}
+
+static void clippointtosurface(dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
+{
+	int i, j, k;
+	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
+	const int *e;
+	bestdist = 1000000000;
+	VectorCopy(p, out);
+	for (i = 0, e = (model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);i < surface->num_triangles;i++, e += 3)
+	{
+		// clip original point to each triangle of the surface and find the
+		// triangle that is closest
+		v[0] = model->surfmesh.data_vertex3f + e[0] * 3;
+		v[1] = model->surfmesh.data_vertex3f + e[1] * 3;
+		v[2] = model->surfmesh.data_vertex3f + e[2] * 3;
+		TriangleNormal(v[0], v[1], v[2], facenormal);
+		VectorNormalize(facenormal);
+		offsetdist = DotProduct(v[0], facenormal) - DotProduct(p, facenormal);
+		VectorMA(p, offsetdist, facenormal, temp);
+		for (j = 0, k = 2;j < 3;k = j, j++)
+		{
+			VectorSubtract(v[k], v[j], edgenormal);
+			CrossProduct(edgenormal, facenormal, sidenormal);
+			VectorNormalize(sidenormal);
+			offsetdist = DotProduct(v[k], sidenormal) - DotProduct(temp, sidenormal);
+			if (offsetdist < 0)
+				VectorMA(temp, offsetdist, sidenormal, temp);
+		}
+		dist = VectorDistance2(temp, p);
+		if (bestdist > dist)
+		{
+			bestdist = dist;
+			VectorCopy(temp, out);
+		}
+	}
+}
+
+static msurface_t *getsurface(dp_model_t *model, int surfacenum)
+{
+	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
+		return NULL;
+	return model->data_surfaces + surfacenum + model->firstmodelsurface;
+}
+
+
+//PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
+void VM_getsurfacenumpoints(void)
+{
+	dp_model_t *model;
+	msurface_t *surface;
+	VM_SAFEPARMCOUNT(2, VM_getsurfacenumpoints);
+	// return 0 if no such surface
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	// note: this (incorrectly) assumes it is a simple polygon
+	PRVM_G_FLOAT(OFS_RETURN) = surface->num_vertices;
+}
+//PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
+void VM_getsurfacepoint(void)
+{
+	prvm_edict_t *ed;
+	dp_model_t *model;
+	msurface_t *surface;
+	int pointnum;
+	VM_SAFEPARMCOUNT(3, VM_getsurfacepoint);
+	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	// note: this (incorrectly) assumes it is a simple polygon
+	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
+	if (pointnum < 0 || pointnum >= surface->num_vertices)
+		return;
+	applytransform_forward(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+}
+//PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
+// float SPA_POSITION = 0;
+// float SPA_S_AXIS = 1;
+// float SPA_T_AXIS = 2;
+// float SPA_R_AXIS = 3; // same as SPA_NORMAL
+// float SPA_TEXCOORDS0 = 4;
+// float SPA_LIGHTMAP0_TEXCOORDS = 5;
+// float SPA_LIGHTMAP0_COLOR = 6;
+void VM_getsurfacepointattribute(void)
+{
+	prvm_edict_t *ed;
+	dp_model_t *model;
+	msurface_t *surface;
+	int pointnum;
+	int attributetype;
+
+	VM_SAFEPARMCOUNT(4, VM_getsurfacepoint);
+	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
+	if (pointnum < 0 || pointnum >= surface->num_vertices)
+		return;
+	attributetype = (int) PRVM_G_FLOAT(OFS_PARM3);
+
+	switch( attributetype ) {
+		// float SPA_POSITION = 0;
+		case 0:
+			applytransform_forward(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_S_AXIS = 1;
+		case 1:
+			applytransform_forward_direction(&(model->surfmesh.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_T_AXIS = 2;
+		case 2:
+			applytransform_forward_direction(&(model->surfmesh.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_R_AXIS = 3; // same as SPA_NORMAL
+		case 3:
+			applytransform_forward_direction(&(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		// float SPA_TEXCOORDS0 = 4;
+		case 4: {
+			float *ret = PRVM_G_VECTOR(OFS_RETURN);
+			float *texcoord = &(model->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[pointnum * 2];
+			ret[0] = texcoord[0];
+			ret[1] = texcoord[1];
+			ret[2] = 0.0f;
+			break;
+		}
+		// float SPA_LIGHTMAP0_TEXCOORDS = 5;
+		case 5: {
+			float *ret = PRVM_G_VECTOR(OFS_RETURN);
+			float *texcoord = &(model->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[pointnum * 2];
+			ret[0] = texcoord[0];
+			ret[1] = texcoord[1];
+			ret[2] = 0.0f;
+			break;
+		}
+		// float SPA_LIGHTMAP0_COLOR = 6;
+		case 6:
+			// ignore alpha for now..
+			VectorCopy( &(model->surfmesh.data_lightmapcolor4f + 4 * surface->num_firstvertex)[pointnum * 4], PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		default:
+			VectorSet( PRVM_G_VECTOR(OFS_RETURN), 0.0f, 0.0f, 0.0f );
+			break;
+	}
+}
+//PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
+void VM_getsurfacenormal(void)
+{
+	dp_model_t *model;
+	msurface_t *surface;
+	vec3_t normal;
+	VM_SAFEPARMCOUNT(2, VM_getsurfacenormal);
+	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	// note: this only returns the first triangle, so it doesn't work very
+	// well for curved surfaces or arbitrary meshes
+	TriangleNormal((model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 3, (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
+	applytransform_forward_normal(normal, PRVM_G_EDICT(OFS_PARM0), PRVM_G_VECTOR(OFS_RETURN));
+	VectorNormalize(PRVM_G_VECTOR(OFS_RETURN));
+}
+//PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
+void VM_getsurfacetexture(void)
+{
+	dp_model_t *model;
+	msurface_t *surface;
+	VM_SAFEPARMCOUNT(2, VM_getsurfacetexture);
+	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+	if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(surface->texture->name);
+}
+//PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
+void VM_getsurfacenearpoint(void)
+{
+	int surfacenum, best;
+	vec3_t clipped, p;
+	vec_t dist, bestdist;
+	prvm_edict_t *ed;
+	dp_model_t *model;
+	msurface_t *surface;
+	vec_t *point;
+	VM_SAFEPARMCOUNT(2, VM_getsurfacenearpoint);
+	PRVM_G_FLOAT(OFS_RETURN) = -1;
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	point = PRVM_G_VECTOR(OFS_PARM1);
+
+	if (!ed || ed->priv.server->free)
+		return;
+	model = getmodel(ed);
+	if (!model || !model->num_surfaces)
+		return;
+
+	applytransform_inverted(point, ed, p);
+	best = -1;
+	bestdist = 1000000000;
+	for (surfacenum = 0;surfacenum < model->nummodelsurfaces;surfacenum++)
+	{
+		surface = model->data_surfaces + surfacenum + model->firstmodelsurface;
+		// first see if the nearest point on the surface's box is closer than the previous match
+		clipped[0] = bound(surface->mins[0], p[0], surface->maxs[0]) - p[0];
+		clipped[1] = bound(surface->mins[1], p[1], surface->maxs[1]) - p[1];
+		clipped[2] = bound(surface->mins[2], p[2], surface->maxs[2]) - p[2];
+		dist = VectorLength2(clipped);
+		if (dist < bestdist)
+		{
+			// it is, check the nearest point on the actual geometry
+			clippointtosurface(model, surface, p, clipped);
+			VectorSubtract(clipped, p, clipped);
+			dist += VectorLength2(clipped);
+			if (dist < bestdist)
+			{
+				// that's closer too, store it as the best match
+				best = surfacenum;
+				bestdist = dist;
+			}
+		}
+	}
+	PRVM_G_FLOAT(OFS_RETURN) = best;
+}
+//PF_getsurfaceclippedpoint, // #439 vector(entity e, float s, vector p) getsurfaceclippedpoint = #439;
+void VM_getsurfaceclippedpoint(void)
+{
+	prvm_edict_t *ed;
+	dp_model_t *model;
+	msurface_t *surface;
+	vec3_t p, out;
+	VM_SAFEPARMCOUNT(3, VM_te_getsurfaceclippedpoint);
+	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+		return;
+	applytransform_inverted(PRVM_G_VECTOR(OFS_PARM2), ed, p);
+	clippointtosurface(model, surface, p, out);
+	VectorAdd(out, ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
+}
+
+//PF_getsurfacenumtriangles, // #??? float(entity e, float s) getsurfacenumtriangles = #???;
+void VM_getsurfacenumtriangles(void)
+{
+       dp_model_t *model;
+       msurface_t *surface;
+       VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenumtriangles);
+       // return 0 if no such surface
+       if (!(model = getmodel(PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+       {
+               PRVM_G_FLOAT(OFS_RETURN) = 0;
+               return;
+       }
+
+       // note: this (incorrectly) assumes it is a simple polygon
+       PRVM_G_FLOAT(OFS_RETURN) = surface->num_triangles;
+}
+//PF_getsurfacetriangle,     // #??? vector(entity e, float s, float n) getsurfacetriangle = #???;
+void VM_getsurfacetriangle(void)
+{
+       prvm_edict_t *ed;
+       dp_model_t *model;
+       msurface_t *surface;
+       int trinum;
+       VM_SAFEPARMCOUNT(3, VM_SV_getsurfacetriangle);
+       VectorClear(PRVM_G_VECTOR(OFS_RETURN));
+       ed = PRVM_G_EDICT(OFS_PARM0);
+       if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
+               return;
+       trinum = (int)PRVM_G_FLOAT(OFS_PARM2);
+       if (trinum < 0 || trinum >= surface->num_triangles)
+               return;
+       // FIXME: implement rotation/scaling
+       VectorCopy(&(model->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[trinum * 3], PRVM_G_VECTOR(OFS_RETURN));
 }

@@ -1939,225 +1939,6 @@ static void VM_CL_te_flamejet (void)
 }
 
 
-//====================================================================
-//DP_QC_GETSURFACE
-
-extern void clippointtosurface(dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out);
-
-static msurface_t *cl_getsurface(dp_model_t *model, int surfacenum)
-{
-	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
-		return NULL;
-	return model->data_surfaces + surfacenum + model->firstmodelsurface;
-}
-
-// #434 float(entity e, float s) getsurfacenumpoints
-static void VM_CL_getsurfacenumpoints(void)
-{
-	dp_model_t *model;
-	msurface_t *surface;
-	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenumpoints);
-	// return 0 if no such surface
-	if (!(model = CL_GetModelFromEdict(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
-		return;
-	}
-
-	// note: this (incorrectly) assumes it is a simple polygon
-	PRVM_G_FLOAT(OFS_RETURN) = surface->num_vertices;
-}
-
-// #435 vector(entity e, float s, float n) getsurfacepoint
-static void VM_CL_getsurfacepoint(void)
-{
-	prvm_edict_t *ed;
-	dp_model_t *model;
-	msurface_t *surface;
-	int pointnum;
-	VM_SAFEPARMCOUNT(3, VM_CL_getsurfacenumpoints);
-	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = CL_GetModelFromEdict(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-		return;
-	// note: this (incorrectly) assumes it is a simple polygon
-	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
-	if (pointnum < 0 || pointnum >= surface->num_vertices)
-		return;
-	// FIXME: implement rotation/scaling
-	VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
-}
-//PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
-// float SPA_POSITION = 0;
-// float SPA_S_AXIS = 1;
-// float SPA_T_AXIS = 2;
-// float SPA_R_AXIS = 3; // same as SPA_NORMAL
-// float SPA_TEXCOORDS0 = 4;
-// float SPA_LIGHTMAP0_TEXCOORDS = 5;
-// float SPA_LIGHTMAP0_COLOR = 6;
-// TODO: add some wrapper code and merge VM_CL/SV_getsurface* [12/16/2007 Black]
-static void VM_CL_getsurfacepointattribute(void)
-{
-	prvm_edict_t *ed;
-	dp_model_t *model;
-	msurface_t *surface;
-	int pointnum;
-	int attributetype;
-
-	VM_SAFEPARMCOUNT(4, VM_CL_getsurfacenumpoints);
-	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = CL_GetModelFromEdict(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-		return;
-	// note: this (incorrectly) assumes it is a simple polygon
-	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
-	if (pointnum < 0 || pointnum >= surface->num_vertices)
-		return;
-
-	// FIXME: implement rotation/scaling
-	attributetype = (int) PRVM_G_FLOAT(OFS_PARM3);
-
-	switch( attributetype ) {
-		// float SPA_POSITION = 0;
-		case 0:
-			VectorAdd(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
-			break;
-		// float SPA_S_AXIS = 1;
-		case 1:
-			VectorCopy(&(model->surfmesh.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
-			break;
-		// float SPA_T_AXIS = 2;
-		case 2:
-			VectorCopy(&(model->surfmesh.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
-			break;
-		// float SPA_R_AXIS = 3; // same as SPA_NORMAL
-		case 3:
-			VectorCopy(&(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], PRVM_G_VECTOR(OFS_RETURN));
-			break;
-		// float SPA_TEXCOORDS0 = 4;
-		case 4: {
-			float *ret = PRVM_G_VECTOR(OFS_RETURN);
-			float *texcoord = &(model->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[pointnum * 2];
-			ret[0] = texcoord[0];
-			ret[1] = texcoord[1];
-			ret[2] = 0.0f;
-			break;
-		}
-		// float SPA_LIGHTMAP0_TEXCOORDS = 5;
-		case 5: {
-			float *ret = PRVM_G_VECTOR(OFS_RETURN);
-			float *texcoord = &(model->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[pointnum * 2];
-			ret[0] = texcoord[0];
-			ret[1] = texcoord[1];
-			ret[2] = 0.0f;
-			break;
-		}
-		// float SPA_LIGHTMAP0_COLOR = 6;
-		case 6:
-			// ignore alpha for now..
-			VectorCopy( &(model->surfmesh.data_lightmapcolor4f + 4 * surface->num_firstvertex)[pointnum * 4], PRVM_G_VECTOR(OFS_RETURN));
-			break;
-		default:
-			VectorSet( PRVM_G_VECTOR(OFS_RETURN), 0.0f, 0.0f, 0.0f );
-			break;
-	}
-}
-// #436 vector(entity e, float s) getsurfacenormal
-static void VM_CL_getsurfacenormal(void)
-{
-	dp_model_t *model;
-	msurface_t *surface;
-	vec3_t normal;
-	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenormal);
-	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	if (!(model = CL_GetModelFromEdict(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-		return;
-	// FIXME: implement rotation/scaling
-	// note: this (incorrectly) assumes it is a simple polygon
-	// note: this only returns the first triangle, so it doesn't work very
-	// well for curved surfaces or arbitrary meshes
-	TriangleNormal((model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 3, (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
-	VectorNormalize(normal);
-	VectorCopy(normal, PRVM_G_VECTOR(OFS_RETURN));
-}
-
-// #437 string(entity e, float s) getsurfacetexture
-static void VM_CL_getsurfacetexture(void)
-{
-	dp_model_t *model;
-	msurface_t *surface;
-	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacetexture);
-	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
-	if (!(model = CL_GetModelFromEdict(PRVM_G_EDICT(OFS_PARM0))) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(surface->texture->name);
-}
-
-// #438 float(entity e, vector p) getsurfacenearpoint
-static void VM_CL_getsurfacenearpoint(void)
-{
-	int surfacenum, best;
-	vec3_t clipped, p;
-	vec_t dist, bestdist;
-	prvm_edict_t *ed;
-	dp_model_t *model = NULL;
-	msurface_t *surface;
-	vec_t *point;
-	VM_SAFEPARMCOUNT(2, VM_CL_getsurfacenearpoint);
-	PRVM_G_FLOAT(OFS_RETURN) = -1;
-	ed = PRVM_G_EDICT(OFS_PARM0);
-	if(!(model = CL_GetModelFromEdict(ed)) || !model->num_surfaces)
-		return;
-
-	// FIXME: implement rotation/scaling
-	point = PRVM_G_VECTOR(OFS_PARM1);
-	VectorSubtract(point, ed->fields.client->origin, p);
-	best = -1;
-	bestdist = 1000000000;
-	for (surfacenum = 0;surfacenum < model->nummodelsurfaces;surfacenum++)
-	{
-		surface = model->data_surfaces + surfacenum + model->firstmodelsurface;
-		// first see if the nearest point on the surface's box is closer than the previous match
-		clipped[0] = bound(surface->mins[0], p[0], surface->maxs[0]) - p[0];
-		clipped[1] = bound(surface->mins[1], p[1], surface->maxs[1]) - p[1];
-		clipped[2] = bound(surface->mins[2], p[2], surface->maxs[2]) - p[2];
-		dist = VectorLength2(clipped);
-		if (dist < bestdist)
-		{
-			// it is, check the nearest point on the actual geometry
-			clippointtosurface(model, surface, p, clipped);
-			VectorSubtract(clipped, p, clipped);
-			dist += VectorLength2(clipped);
-			if (dist < bestdist)
-			{
-				// that's closer too, store it as the best match
-				best = surfacenum;
-				bestdist = dist;
-			}
-		}
-	}
-	PRVM_G_FLOAT(OFS_RETURN) = best;
-}
-
-// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint
-static void VM_CL_getsurfaceclippedpoint(void)
-{
-	prvm_edict_t *ed;
-	dp_model_t *model;
-	msurface_t *surface;
-	vec3_t p, out;
-	VM_SAFEPARMCOUNT(3, VM_CL_getsurfaceclippedpoint);
-	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
-	ed = PRVM_G_EDICT(OFS_PARM0);
-	if (!(model = CL_GetModelFromEdict(ed)) || !(surface = cl_getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
-		return;
-	// FIXME: implement rotation/scaling
-	VectorSubtract(PRVM_G_VECTOR(OFS_PARM2), ed->fields.client->origin, p);
-	clippointtosurface(model, surface, p, out);
-	// FIXME: implement rotation/scaling
-	VectorAdd(out, ed->fields.client->origin, PRVM_G_VECTOR(OFS_RETURN));
-}
-
 // #443 void(entity e, entity tagentity, string tagname) setattachment
 void VM_CL_setattachment (void)
 {
@@ -4393,12 +4174,12 @@ VM_CL_te_lightning3,			// #430 void(entity own, vector start, vector end) te_lig
 VM_CL_te_beam,					// #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
 VM_vectorvectors,				// #432 void(vector dir) vectorvectors (DP_QC_VECTORVECTORS)
 VM_CL_te_plasmaburn,			// #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
-VM_CL_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
-VM_CL_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
-VM_CL_getsurfacenormal,			// #436 vector(entity e, float s) getsurfacenormal (DP_QC_GETSURFACE)
-VM_CL_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
-VM_CL_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
-VM_CL_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
+VM_getsurfacenumpoints,		// #434 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACE)
+VM_getsurfacepoint,			// #435 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACE)
+VM_getsurfacenormal,			// #436 vector(entity e, float s) getsurfacenormal (DP_QC_GETSURFACE)
+VM_getsurfacetexture,		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
+VM_getsurfacenearpoint,		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
+VM_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
 NULL,							// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
 VM_tokenize,					// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
 VM_argv,						// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
@@ -4445,7 +4226,7 @@ VM_cvar_defstring,				// #482 string(string s) cvar_defstring (DP_QC_CVAR_DEFSTR
 VM_CL_pointsound,				// #483 void(vector origin, string sample, float volume, float attenuation) pointsound (DP_SV_POINTSOUND)
 VM_strreplace,					// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
 VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
-VM_CL_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute
+VM_getsurfacepointattribute,// #486 vector(entity e, float s, float n, float a) getsurfacepointattribute
 VM_gecko_create,					// #487 float gecko_create( string name )
 VM_gecko_destroy,					// #488 void gecko_destroy( string name )
 VM_gecko_navigate,				// #489 void gecko_navigate( string name, string URI )
@@ -4587,7 +4368,9 @@ VM_CL_getextresponse,			// #624 string getextresponse(void)
 NULL,							// #625
 NULL,							// #626
 VM_sprintf,                     // #627 string sprintf(string format, ...)
-NULL,							// #628
+VM_getsurfacenumtriangles,		// #628 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACETRIANGLE)
+VM_getsurfacetriangle,			// #629 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACETRIANGLE)
+NULL,							// #630
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
