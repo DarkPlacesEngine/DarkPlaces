@@ -1209,7 +1209,7 @@ loc0:
 			surface = model->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
-				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo->samples)
+				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo || !surface->lightmapinfo->samples)
 					continue;	// no lightmaps
 
 				// location we want to sample in the lightmap
