@@ -63,8 +63,6 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 extern matrix4x4_t matrix_attenuationxyz;
 extern matrix4x4_t matrix_attenuationz;
 
-rtexture_t *R_Shadow_Cubemap(const char *basename);
-
 void R_Shadow_UpdateWorldLightSelection(void);
 
 extern rtlight_t *r_shadow_compilingrtlight;
