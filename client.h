@@ -141,7 +141,7 @@ typedef struct rtlight_s
 	float corona_visibility;
 	unsigned int corona_queryindex_visiblepixels;
 	unsigned int corona_queryindex_allpixels;
-	/// this is R_Shadow_Cubemap(rtlight->cubemapname)
+	/// this is R_GetCubemap(rtlight->cubemapname)
 	rtexture_t *currentcubemap;
 	/// set by R_Shadow_PrepareLight to decide whether R_Shadow_DrawLight should draw it
 	qboolean draw;

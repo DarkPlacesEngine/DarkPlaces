@@ -350,16 +350,6 @@ vec3_t r_editlights_cursorlocation;
 
 extern int con_vislines;
 
-typedef struct cubemapinfo_s
-{
-	char basename[64];
-	rtexture_t *texture;
-}
-cubemapinfo_t;
-
-static int numcubemaps;
-static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
-
 void R_Shadow_UncompileWorldLights(void);
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
@@ -505,7 +495,6 @@ void R_Shadow_FreeShadowMaps(void)
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
-	numcubemaps = 0;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -581,7 +570,6 @@ void r_shadow_shutdown(void)
 	r_shadow_prepass_width = r_shadow_prepass_height = 0;
 
 	CHECKGLERROR
-	numcubemaps = 0;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -3455,7 +3443,7 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	}
 
 	// load cubemap
-	rtlight->currentcubemap = rtlight->cubemapname[0] ? R_Shadow_Cubemap(rtlight->cubemapname) : r_texture_whitecube;
+	rtlight->currentcubemap = rtlight->cubemapname[0] ? R_GetCubemap(rtlight->cubemapname) : r_texture_whitecube;
 
 	// look up the light style value at this time
 	f = (rtlight->style >= 0 ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1) * r_shadow_lightintensityscale.value;
@@ -4482,140 +4470,6 @@ void R_Shadow_DrawCoronas(void)
 
 
 
-//static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
-typedef struct suffixinfo_s
-{
-	char *suffix;
-	qboolean flipx, flipy, flipdiagonal;
-}
-suffixinfo_t;
-static suffixinfo_t suffix[3][6] =
-{
-	{
-		{"px",   false, false, false},
-		{"nx",   false, false, false},
-		{"py",   false, false, false},
-		{"ny",   false, false, false},
-		{"pz",   false, false, false},
-		{"nz",   false, false, false}
-	},
-	{
-		{"posx", false, false, false},
-		{"negx", false, false, false},
-		{"posy", false, false, false},
-		{"negy", false, false, false},
-		{"posz", false, false, false},
-		{"negz", false, false, false}
-	},
-	{
-		{"rt",    true, false,  true},
-		{"lf",   false,  true,  true},
-		{"ft",    true,  true, false},
-		{"bk",   false, false, false},
-		{"up",    true, false,  true},
-		{"dn",    true, false,  true}
-	}
-};
-
-static int componentorder[4] = {0, 1, 2, 3};
-
-rtexture_t *R_Shadow_LoadCubemap(const char *basename)
-{
-	int i, j, cubemapsize;
-	unsigned char *cubemappixels, *image_buffer;
-	rtexture_t *cubemaptexture;
-	char name[256];
-	// must start 0 so the first loadimagepixels has no requested width/height
-	cubemapsize = 0;
-	cubemappixels = NULL;
-	cubemaptexture = NULL;
-	// keep trying different suffix groups (posx, px, rt) until one loads
-	for (j = 0;j < 3 && !cubemappixels;j++)
-	{
-		// load the 6 images in the suffix group
-		for (i = 0;i < 6;i++)
-		{
-			// generate an image name based on the base and and suffix
-			dpsnprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
-			// load it
-			if ((image_buffer = loadimagepixelsbgra(name, false, false)))
-			{
-				// an image loaded, make sure width and height are equal
-				if (image_width == image_height && (!cubemappixels || image_width == cubemapsize))
-				{
-					// if this is the first image to load successfully, allocate the cubemap memory
-					if (!cubemappixels && image_width >= 1)
-					{
-						cubemapsize = image_width;
-						// note this clears to black, so unavailable sides are black
-						cubemappixels = (unsigned char *)Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
-					}
-					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
-					if (cubemappixels)
-						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_buffer, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
-				}
-				else
-					Con_Printf("Cubemap image \"%s\" (%ix%i) is not square, OpenGL requires square cubemaps.\n", name, image_width, image_height);
-				// free the image
-				Mem_Free(image_buffer);
-			}
-		}
-	}
-	// if a cubemap loaded, upload it
-	if (cubemappixels)
-	{
-		if (developer_loading.integer)
-			Con_Printf("loading cubemap \"%s\"\n", basename);
-
-		if (!r_shadow_filters_texturepool)
-			r_shadow_filters_texturepool = R_AllocTexturePool();
-		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0) | TEXF_FORCELINEAR, NULL);
-		Mem_Free(cubemappixels);
-	}
-	else
-	{
-		Con_DPrintf("failed to load cubemap \"%s\"\n", basename);
-		if (developer_loading.integer)
-		{
-			Con_Printf("(tried tried images ");
-			for (j = 0;j < 3;j++)
-				for (i = 0;i < 6;i++)
-					Con_Printf("%s\"%s%s.tga\"", j + i > 0 ? ", " : "", basename, suffix[j][i].suffix);
-			Con_Print(" and was unable to find any of them).\n");
-		}
-	}
-	return cubemaptexture;
-}
-
-rtexture_t *R_Shadow_Cubemap(const char *basename)
-{
-	int i;
-	for (i = 0;i < numcubemaps;i++)
-		if (!strcasecmp(cubemaps[i].basename, basename))
-			return cubemaps[i].texture ? cubemaps[i].texture : r_texture_whitecube;
-	if (i >= MAX_CUBEMAPS)
-		return r_texture_whitecube;
-	numcubemaps++;
-	strlcpy(cubemaps[i].basename, basename, sizeof(cubemaps[i].basename));
-	cubemaps[i].texture = R_Shadow_LoadCubemap(cubemaps[i].basename);
-	return cubemaps[i].texture;
-}
-
-void R_Shadow_FreeCubemaps(void)
-{
-	int i;
-	for (i = 0;i < numcubemaps;i++)
-	{
-		if (developer_loading.integer)
-			Con_Printf("unloading cubemap \"%s\"\n", cubemaps[i].basename);
-		if (cubemaps[i].texture)
-			R_FreeTexture(cubemaps[i].texture);
-	}
-
-	numcubemaps = 0;
-	R_FreeTexturePool(&r_shadow_filters_texturepool);
-}
-
 dlight_t *R_Shadow_NewWorldLight(void)
 {
 	return (dlight_t *)Mem_ExpandableArray_AllocRecord(&r_shadow_worldlightsarray);
@@ -4682,7 +4536,6 @@ void R_Shadow_ClearWorldLights(void)
 			R_Shadow_FreeWorldLight(light);
 	}
 	r_shadow_selectedlight = NULL;
-	R_Shadow_FreeCubemaps();
 }
 
 void R_Shadow_SelectLight(dlight_t *light)

@@ -145,6 +145,8 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, const unsigned char *skindata, int width, int height, const unsigned int *palette, const unsigned int *alphapalette);
 skinframe_t *R_SkinFrame_LoadMissing(void);
 
+rtexture_t *R_GetCubemap(const char *basename);
+
 void R_View_WorldVisibility(qboolean forcenovis);
 void R_DrawDecals(void);
 void R_DrawParticles(void);
@@ -450,6 +452,9 @@ typedef enum gl20_texunit_e
 	// lightmap prepass data (screenspace diffuse and specular from lights)
 	GL20TU_SCREENDIFFUSE = 11,
 	GL20TU_SCREENSPECULAR = 12,
+	// fake reflections
+	GL20TU_REFLECTMASK = 14,
+	GL20TU_REFLECTCUBE = 15
 }
 gl20_texunit;
 

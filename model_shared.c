@@ -1905,6 +1905,8 @@ void Mod_LoadQ3Shaders(void)
 					shader.dpshadow = true;
 				else if (!strcasecmp(parameter[0], "dpnoshadow"))
 					shader.dpnoshadow = true;
+				else if (!strcasecmp(parameter[0], "dpreflectcube"))
+					strlcpy(shader.dpreflectcube, parameter[1], sizeof(shader.dpreflectcube));
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
 					// some q3 skies don't have the sky parm set
@@ -2209,6 +2211,8 @@ nothing                GL_ZERO GL_ONE
 		texture->r_water_wateralpha = shader->r_water_wateralpha;
 		texture->specularscalemod = shader->specularscalemod;
 		texture->specularpowermod = shader->specularpowermod;
+		if (shader->dpreflectcube[0])
+			texture->reflectcubetexture = R_GetCubemap(shader->dpreflectcube);
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
