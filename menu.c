@@ -279,14 +279,14 @@ void M_ToggleMenu(int mode)
 
 	if ((key_dest != key_menu && key_dest != key_menu_grabbed) || m_state != m_main)
 	{
-		if(mode == 1)
-			return;
+		if(mode == 0)
+			return; // the menu is off, and we want it off
 		M_Menu_Main_f ();
 	}
 	else
 	{
-		if(mode == 0)
-			return;
+		if(mode == 1)
+			return; // the menu is on, and we want it on
 		key_dest = key_game;
 		m_state = m_none;
 	}
