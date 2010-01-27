@@ -1515,7 +1515,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 
 	*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
 	bump = 0;
-	while (trace->startsolid && sv_gameplayfix_nudgeoutofsolid.integer)
+	while (trace->bmodelstartsolid && sv_gameplayfix_nudgeoutofsolid.integer)
 	{
 		vec_t nudge = -trace->startdepth + sv_gameplayfix_nudgeoutofsolid_bias.value;
 		VectorMA(ent->fields.server->origin, nudge, trace->startdepthnormal, ent->fields.server->origin);
