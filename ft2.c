@@ -529,13 +529,10 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 
 void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 {
-	qboolean need_gauss = false, need_circle = false;
 	int needed, x, y;
 	float gausstable[2*POSTPROCESS_MAXRADIUS+1];
-	if(!pp.buf || pp.blur != fnt->settings->blur || pp.shadowz != fnt->settings->shadowz)
-		need_gauss = true;
-	if(!pp.buf || pp.outline != fnt->settings->outline || pp.shadowx != fnt->settings->shadowx || pp.shadowy != fnt->settings->shadowy)
-		need_circle = true;
+	qboolean need_gauss  = (!pp.buf || pp.blur != fnt->settings->blur || pp.shadowz != fnt->settings->shadowz);
+	qboolean need_circle = (!pp.buf || pp.outline != fnt->settings->outline || pp.shadowx != fnt->settings->shadowx || pp.shadowy != fnt->settings->shadowy);
 	pp.blur = fnt->settings->blur;
 	pp.outline = fnt->settings->outline;
 	pp.shadowx = fnt->settings->shadowx;
