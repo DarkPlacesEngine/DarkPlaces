@@ -211,6 +211,18 @@ rtexture_t *r_texture_fogattenuation;
 rtexture_t *r_texture_gammaramps;
 unsigned int r_texture_gammaramps_serial;
 //rtexture_t *r_texture_fogintensity;
+rtexture_t *r_texture_reflectcube;
+
+// TODO: hash lookups?
+typedef struct cubemapinfo_s
+{
+	char basename[64];
+	rtexture_t *texture;
+}
+cubemapinfo_t;
+
+int r_texture_numcubemaps;
+cubemapinfo_t r_texture_cubemaps[MAX_CUBEMAPS];
 
 unsigned int r_queries[MAX_OCCLUSION_QUERIES];
 unsigned int r_numqueries;
@@ -477,7 +489,7 @@ static const char *builtinshaderstring =
 "#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "#define USELIGHTMAP\n"
 "#endif\n"
-"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING)\n"
+"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE)\n"
 "#define USEEYEVECTOR\n"
 "#endif\n"
 "\n"
@@ -804,6 +816,7 @@ static const char *builtinshaderstring =
 "	vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//vec4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(vec3(texture2D(Texture_Normal, TexCoord)) - vec3(0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	vec4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+"	//SafeScreenTexCoord = gl_FragCoord.xyxy * vec4(1.0 / 1920.0, 1.0 / 1200.0, 1.0 / 1920.0, 1.0 / 1200.0);\n"
 "	vec4 ScreenTexCoord = SafeScreenTexCoord + vec2(normalize(vec3(texture2D(Texture_Normal, TexCoord)) - vec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
 "	// FIXME temporary hack to detect the case that the reflection\n"
 "	// gets blackened at edges due to leaving the area that contains actual\n"
@@ -854,7 +867,7 @@ static const char *builtinshaderstring =
 "varying vec4 EyeVectorModelSpaceFogPlaneVertexDist;\n"
 "#endif\n"
 "\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY)\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
 "varying vec3 VectorS; // direction of S texcoord (sometimes crudely called tangent)\n"
 "varying vec3 VectorT; // direction of T texcoord (sometimes crudely called binormal)\n"
 "varying vec3 VectorR; // direction of R texcoord (surface normal)\n"
@@ -1430,7 +1443,7 @@ static const char *builtinshaderstring =
 "	EyeVectorModelSpaceFogPlaneVertexDist.w = dot(FogPlane, gl_Vertex);\n"
 "#endif\n"
 "\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(USEREFLECTCUBE)\n"
 "	VectorS = gl_MultiTexCoord1.xyz;\n"
 "	VectorT = gl_MultiTexCoord2.xyz;\n"
 "	VectorR = gl_MultiTexCoord3.xyz;\n"
@@ -1467,6 +1480,11 @@ static const char *builtinshaderstring =
 "uniform vec4 ScreenScaleRefractReflect;\n"
 "uniform vec4 ScreenCenterRefractReflect;\n"
 "uniform myhalf4 ReflectColor;\n"
+"#endif\n"
+"#ifdef USEREFLECTCUBE\n"
+"uniform mat4 ModelToReflectCube;\n"
+"uniform sampler2D Texture_ReflectMask;\n"
+"uniform samplerCube Texture_ReflectCube;\n"
 "#endif\n"
 "#ifdef MODE_LIGHTDIRECTION\n"
 "uniform myhalf3 LightColor;\n"
@@ -1516,6 +1534,13 @@ static const char *builtinshaderstring =
 "# else\n"
 "	myhalf3 glosstex = myhalf3(texture2D(Texture_Gloss, TexCoord));\n"
 "# endif\n"
+"#endif\n"
+"\n"
+"#ifdef USEREFLECTCUBE\n"
+"	vec3 TangentReflectVector = reflect(-EyeVector, surfacenormal);\n"
+"	vec3 ModelReflectVector = TangentReflectVector.x * VectorS + TangentReflectVector.y * VectorT + TangentReflectVector.z * VectorR;\n"
+"	vec3 ReflectCubeTexCoord = vec3(ModelToReflectCube * vec4(ModelReflectVector, 0));\n"
+"	diffusetex += myhalf3(texture2D(Texture_ReflectMask, TexCoord)) * myhalf3(textureCube(Texture_ReflectCube, ReflectCubeTexCoord));\n"
 "#endif\n"
 "\n"
 "\n"
@@ -1717,7 +1742,7 @@ const char *builtincgshaderstring =
 "#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "#define USELIGHTMAP\n"
 "#endif\n"
-"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING)\n"
+"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE)\n"
 "#define USEEYEVECTOR\n"
 "#endif\n"
 "\n"
@@ -2666,7 +2691,7 @@ const char *builtincgshaderstring =
 "#ifdef MODE_LIGHTSOURCE\n"
 "out float3 CubeVector : TEXCOORD3,\n"
 "#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY)\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
 "out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
 "out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
 "out float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n"
@@ -2768,7 +2793,7 @@ const char *builtincgshaderstring =
 "#ifdef MODE_DEFERREDLIGHTSOURCE\n"
 "float4 ModelViewPosition : TEXCOORD0,\n"
 "#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY)\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
 "float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
 "float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
 "float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n"
@@ -2851,6 +2876,11 @@ const char *builtincgshaderstring =
 "uniform float4 ScreenScaleRefractReflect,\n"
 "uniform float4 ScreenCenterRefractReflect,\n"
 "uniform half4 ReflectColor,\n"
+"#endif\n"
+"#ifdef USEREFLECTCUBE\n"
+"uniform float4x4 ModelToReflectCube,\n"
+"uniform sampler2D Texture_ReflectMask,\n"
+"uniform samplerCUBE Texture_ReflectCube,\n"
 "#endif\n"
 "#ifdef MODE_LIGHTDIRECTION\n"
 "uniform half3 LightColor,\n"
@@ -2944,6 +2974,13 @@ const char *builtincgshaderstring =
 "# else\n"
 "	half3 glosstex = half3(tex2D(Texture_Gloss, TexCoord));\n"
 "# endif\n"
+"#endif\n"
+"\n"
+"#ifdef USEREFLECTCUBE\n"
+"	vec3 TangentReflectVector = reflect(-EyeVector, surfacenormal);\n"
+"	vec3 ModelReflectVector = TangentReflectVector.x * VectorS + TangentReflectVector.y * VectorT + TangentReflectVector.z * VectorR;\n"
+"	vec3 ReflectCubeTexCoord = float3(mul(ModelToReflectCube, float4(ModelReflectVector, 0)));\n"
+"	diffusetex += half3(tex2D(Texture_ReflectMask, TexCoord)) * half3(texCUBE(Texture_ReflectCube, ReflectCubeTexCoord));\n"
 "#endif\n"
 "\n"
 "\n"
@@ -3171,8 +3208,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<23, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
 	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<24, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
 	SHADERPERMUTATION_ALPHAKILL = 1<<25, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
-	SHADERPERMUTATION_LIMIT = 1<<26, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 26 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_REFLECTCUBE = 1<<26, ///< fake reflections using global cubemap (not HDRI light probe)
+	SHADERPERMUTATION_LIMIT = 1<<27, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 27 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -3205,6 +3243,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"},
 	{"#define USEDEFERREDLIGHTMAP\n", " deferredlightmap"},
 	{"#define USEALPHAKILL\n", " alphakill"},
+	{"#define USEREFLECTCUBE\n", " reflectcube"},
 };
 
 /// this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -3311,6 +3350,8 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_ScreenNormalMap;
 	int loc_Texture_ScreenDiffuse;
 	int loc_Texture_ScreenSpecular;
+	int loc_Texture_ReflectMask;
+	int loc_Texture_ReflectCube;
 	int loc_Alpha;
 	int loc_BloomBlur_Parameters;
 	int loc_ClientTime;
@@ -3360,6 +3401,7 @@ typedef struct r_glsl_permutation_s
 	int loc_ModelViewProjectionMatrix;
 	int loc_ModelViewMatrix;
 	int loc_PixelToScreenTexCoord;
+	int loc_ModelToReflectCube;
 }
 r_glsl_permutation_t;
 
@@ -3533,6 +3575,8 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_ScreenNormalMap    = qglGetUniformLocationARB(p->program, "Texture_ScreenNormalMap");
 		p->loc_Texture_ScreenDiffuse      = qglGetUniformLocationARB(p->program, "Texture_ScreenDiffuse");
 		p->loc_Texture_ScreenSpecular     = qglGetUniformLocationARB(p->program, "Texture_ScreenSpecular");
+		p->loc_Texture_ReflectMask        = qglGetUniformLocationARB(p->program, "Texture_ReflectMask");
+		p->loc_Texture_ReflectCube        = qglGetUniformLocationARB(p->program, "Texture_ReflectCube");
 		p->loc_Alpha                      = qglGetUniformLocationARB(p->program, "Alpha");
 		p->loc_BloomBlur_Parameters       = qglGetUniformLocationARB(p->program, "BloomBlur_Parameters");
 		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
@@ -3582,6 +3626,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_ModelViewMatrix            = qglGetUniformLocationARB(p->program, "ModelViewMatrix");
 		p->loc_ModelViewProjectionMatrix  = qglGetUniformLocationARB(p->program, "ModelViewProjectionMatrix");
 		p->loc_PixelToScreenTexCoord      = qglGetUniformLocationARB(p->program, "PixelToScreenTexCoord");
+		p->loc_ModelToReflectCube         = qglGetUniformLocationARB(p->program, "ModelToReflectCube");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -3611,6 +3656,8 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1iARB(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
 		if (p->loc_Texture_ScreenDiffuse   >= 0) qglUniform1iARB(p->loc_Texture_ScreenDiffuse  , GL20TU_SCREENDIFFUSE);
 		if (p->loc_Texture_ScreenSpecular  >= 0) qglUniform1iARB(p->loc_Texture_ScreenSpecular , GL20TU_SCREENSPECULAR);
+		if (p->loc_Texture_ReflectMask     >= 0) qglUniform1iARB(p->loc_Texture_ReflectMask    , GL20TU_REFLECTMASK);
+		if (p->loc_Texture_ReflectCube     >= 0) qglUniform1iARB(p->loc_Texture_ReflectCube    , GL20TU_REFLECTCUBE);
 		CHECKGLERROR
 		Con_DPrintf("^5GLSL shader %s compiled.\n", permutationname);
 	}
@@ -3723,6 +3770,8 @@ typedef struct r_cg_permutation_s
 	CGparameter fp_Texture_ScreenNormalMap;
 	CGparameter fp_Texture_ScreenDiffuse;
 	CGparameter fp_Texture_ScreenSpecular;
+	CGparameter fp_Texture_ReflectMask;
+	CGparameter fp_Texture_ReflectCube;
 	CGparameter fp_Alpha;
 	CGparameter fp_BloomBlur_Parameters;
 	CGparameter fp_ClientTime;
@@ -3767,6 +3816,7 @@ typedef struct r_cg_permutation_s
 	CGparameter fp_ViewTintColor;
 	CGparameter fp_ViewToLight;
 	CGparameter fp_PixelToScreenTexCoord;
+	CGparameter fp_ModelToReflectCube;
 }
 r_cg_permutation_t;
 
@@ -4017,6 +4067,8 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
 		p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
 		p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
+		p->fp_Texture_ReflectMask        = cgGetNamedParameter(p->fprogram, "Texture_ReflectMask");
+		p->fp_Texture_ReflectCube        = qgGetNamedParameter(p->fprogram, "Texture_ReflectCube");
 		p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
 		p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
 		p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
@@ -4061,6 +4113,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
 		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
 		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
+		p->fp_ModelToReflectCube         = cgGetNamedParameter(p->fprogram, "ModelToReflectCube");
 		CHECKCGERROR
 	}
 
@@ -4454,6 +4507,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 		}
+		if (rsurface.texture->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
 		{
@@ -4496,6 +4551,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
+		if (rsurface.texture->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
 		{
@@ -4546,6 +4603,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		if (rsurface.texture->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
 		{
@@ -4586,6 +4645,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		if (rsurface.texture->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 		if (true || permutation & (SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_OFFSETMAPPING))
 		{
@@ -4625,6 +4686,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (r_shadow_usingdeferredprepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		if (rsurface.texture->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
@@ -4699,6 +4762,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 	case RENDERPATH_GL20:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
+		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
 			if (r_glsl_permutation->loc_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToLight, 1, false, m16f);}
@@ -4796,6 +4860,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_Texture_SecondaryGlow   >= 0) R_Mesh_TexBind(GL20TU_SECONDARY_GLOW    , rsurface.texture->backgroundglowtexture             );
 		if (r_glsl_permutation->loc_Texture_Pants           >= 0) R_Mesh_TexBind(GL20TU_PANTS             , rsurface.texture->pantstexture                      );
 		if (r_glsl_permutation->loc_Texture_Shirt           >= 0) R_Mesh_TexBind(GL20TU_SHIRT             , rsurface.texture->shirttexture                      );
+		if (r_glsl_permutation->loc_Texture_ReflectMask     >= 0) R_Mesh_TexBind(GL20TU_REFLECTMASK       , rsurface.texture->reflectmasktexture                );
+		if (r_glsl_permutation->loc_Texture_ReflectCube     >= 0) R_Mesh_TexBind(GL20TU_REFLECTCUBE       , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);
 		if (r_glsl_permutation->loc_Texture_FogMask         >= 0) R_Mesh_TexBind(GL20TU_FOGMASK           , r_texture_fogattenuation                            );
 		if (r_glsl_permutation->loc_Texture_Lightmap        >= 0) R_Mesh_TexBind(GL20TU_LIGHTMAP          , r_texture_white                                     );
 		if (r_glsl_permutation->loc_Texture_Deluxemap       >= 0) R_Mesh_TexBind(GL20TU_LIGHTMAP          , r_texture_blanknormalmap                            );
@@ -4820,6 +4886,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 		R_SetupShader_SetPermutationCG(mode, permutation);
+		if (r_cg_permutation->fp_ModelToReflectCube) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->fp_ModelToReflectCube, m16f);}CHECKCGERROR
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
 			if (r_cg_permutation->vp_ModelToLight) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelToLight, m16f);}CHECKCGERROR
@@ -4934,6 +5001,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_cg_permutation->fp_Texture_SecondaryGlow  ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryGlow  , rsurface.texture->backgroundglowtexture             );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Pants          ) CG_BindTexture(r_cg_permutation->fp_Texture_Pants          , rsurface.texture->pantstexture                      );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Shirt          ) CG_BindTexture(r_cg_permutation->fp_Texture_Shirt          , rsurface.texture->shirttexture                      );CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ReflectMask    ) CG_BindTexture(r_cg_permutation->fp_Texture_ReflectMask    , rsurface.texture->reflectmasktexture                );CHECKCGERROR
+		if (r_cg_permutation->fp_Texture_ReflectCube    ) CG_BindTexture(r_cg_permutation->fp_Texture_ReflectCube    , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_FogMask        ) CG_BindTexture(r_cg_permutation->fp_Texture_FogMask        , r_texture_fogattenuation                            );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Lightmap       ) CG_BindTexture(r_cg_permutation->fp_Texture_Lightmap       , r_texture_white                                     );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Deluxemap      ) CG_BindTexture(r_cg_permutation->fp_Texture_Deluxemap      , r_texture_blanknormalmap                            );CHECKCGERROR
@@ -5121,6 +5190,7 @@ void R_SkinFrame_Purge(void)
 				R_PurgeTexture(s->gloss );s->gloss  = NULL;
 				R_PurgeTexture(s->glow  );s->glow   = NULL;
 				R_PurgeTexture(s->fog   );s->fog    = NULL;
+				R_PurgeTexture(s->reflect);s->reflect = NULL;
 				s->loadsequence = 0;
 			}
 		}
@@ -5277,6 +5347,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
 
 	if (ddsbase)
@@ -5335,6 +5406,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 			skinframe->gloss = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_gloss.dds", skinframe->basename), textureflags, NULL, NULL);
 		skinframe->pants = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_pants.dds", skinframe->basename), textureflags, NULL, NULL);
 		skinframe->shirt = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_shirt.dds", skinframe->basename), textureflags, NULL, NULL);
+		skinframe->reflect = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_reflect.dds", skinframe->basename), textureflags, NULL, NULL);
 	}
 
 	// _norm is the name used by tenebrae and has been adopted as standard
@@ -5402,6 +5474,15 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		pixels = NULL;
 	}
 
+	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va("%s_reflect", skinframe->basename), false, false)))
+	{
+		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va("%s_reflect", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, skinframe->textureflags & (gl_texturecompression_reflectmask.integer ? ~0 : ~TEXF_COMPRESS), NULL);
+		if (r_savedds && qglGetCompressedTexImageARB && skinframe->reflect)
+			R_SaveTextureDDSFile(skinframe->reflect, va("dds/%s_reflect.dds", skinframe->basename), true);
+		Mem_Free(pixels);
+		pixels = NULL;
+	}
+
 	if (basepixels)
 		Mem_Free(basepixels);
 
@@ -5432,6 +5513,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
 
 	// if no data was provided, then clearly the caller wanted to get a blank skinframe
@@ -5500,6 +5582,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
 
 	// if no data was provided, then clearly the caller wanted to get a blank skinframe
@@ -5620,6 +5703,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
 
 	// if no data was provided, then clearly the caller wanted to get a blank skinframe
@@ -5667,6 +5751,7 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	skinframe->gloss = NULL;
 	skinframe->glow = NULL;
 	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
 
 	skinframe->avgcolor[0] = rand() / RAND_MAX;
@@ -5675,6 +5760,136 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	skinframe->avgcolor[3] = 1;
 
 	return skinframe;
+}
+
+//static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
+typedef struct suffixinfo_s
+{
+	char *suffix;
+	qboolean flipx, flipy, flipdiagonal;
+}
+suffixinfo_t;
+static suffixinfo_t suffix[3][6] =
+{
+	{
+		{"px",   false, false, false},
+		{"nx",   false, false, false},
+		{"py",   false, false, false},
+		{"ny",   false, false, false},
+		{"pz",   false, false, false},
+		{"nz",   false, false, false}
+	},
+	{
+		{"posx", false, false, false},
+		{"negx", false, false, false},
+		{"posy", false, false, false},
+		{"negy", false, false, false},
+		{"posz", false, false, false},
+		{"negz", false, false, false}
+	},
+	{
+		{"rt",    true, false,  true},
+		{"lf",   false,  true,  true},
+		{"ft",    true,  true, false},
+		{"bk",   false, false, false},
+		{"up",    true, false,  true},
+		{"dn",    true, false,  true}
+	}
+};
+
+static int componentorder[4] = {0, 1, 2, 3};
+
+rtexture_t *R_LoadCubemap(const char *basename)
+{
+	int i, j, cubemapsize;
+	unsigned char *cubemappixels, *image_buffer;
+	rtexture_t *cubemaptexture;
+	char name[256];
+	// must start 0 so the first loadimagepixels has no requested width/height
+	cubemapsize = 0;
+	cubemappixels = NULL;
+	cubemaptexture = NULL;
+	// keep trying different suffix groups (posx, px, rt) until one loads
+	for (j = 0;j < 3 && !cubemappixels;j++)
+	{
+		// load the 6 images in the suffix group
+		for (i = 0;i < 6;i++)
+		{
+			// generate an image name based on the base and and suffix
+			dpsnprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
+			// load it
+			if ((image_buffer = loadimagepixelsbgra(name, false, false)))
+			{
+				// an image loaded, make sure width and height are equal
+				if (image_width == image_height && (!cubemappixels || image_width == cubemapsize))
+				{
+					// if this is the first image to load successfully, allocate the cubemap memory
+					if (!cubemappixels && image_width >= 1)
+					{
+						cubemapsize = image_width;
+						// note this clears to black, so unavailable sides are black
+						cubemappixels = (unsigned char *)Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
+					}
+					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
+					if (cubemappixels)
+						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_buffer, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
+				}
+				else
+					Con_Printf("Cubemap image \"%s\" (%ix%i) is not square, OpenGL requires square cubemaps.\n", name, image_width, image_height);
+				// free the image
+				Mem_Free(image_buffer);
+			}
+		}
+	}
+	// if a cubemap loaded, upload it
+	if (cubemappixels)
+	{
+		if (developer_loading.integer)
+			Con_Printf("loading cubemap \"%s\"\n", basename);
+
+		cubemaptexture = R_LoadTextureCubeMap(r_main_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer ? TEXF_COMPRESS : 0) | TEXF_FORCELINEAR, NULL);
+		Mem_Free(cubemappixels);
+	}
+	else
+	{
+		Con_DPrintf("failed to load cubemap \"%s\"\n", basename);
+		if (developer_loading.integer)
+		{
+			Con_Printf("(tried tried images ");
+			for (j = 0;j < 3;j++)
+				for (i = 0;i < 6;i++)
+					Con_Printf("%s\"%s%s.tga\"", j + i > 0 ? ", " : "", basename, suffix[j][i].suffix);
+			Con_Print(" and was unable to find any of them).\n");
+		}
+	}
+	return cubemaptexture;
+}
+
+rtexture_t *R_GetCubemap(const char *basename)
+{
+	int i;
+	for (i = 0;i < r_texture_numcubemaps;i++)
+		if (!strcasecmp(r_texture_cubemaps[i].basename, basename))
+			return r_texture_cubemaps[i].texture ? r_texture_cubemaps[i].texture : r_texture_whitecube;
+	if (i >= MAX_CUBEMAPS)
+		return r_texture_whitecube;
+	r_texture_numcubemaps++;
+	strlcpy(r_texture_cubemaps[i].basename, basename, sizeof(r_texture_cubemaps[i].basename));
+	r_texture_cubemaps[i].texture = R_LoadCubemap(r_texture_cubemaps[i].basename);
+	return r_texture_cubemaps[i].texture;
+}
+
+void R_FreeCubemaps(void)
+{
+	int i;
+	for (i = 0;i < r_texture_numcubemaps;i++)
+	{
+		if (developer_loading.integer)
+			Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i].basename);
+		if (r_texture_cubemaps[i].texture)
+			R_FreeTexture(r_texture_cubemaps[i].texture);
+	}
+	r_texture_numcubemaps = 0;
 }
 
 void R_Main_FreeViewCache(void)
@@ -5740,6 +5955,7 @@ void gl_main_start(void)
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
 	r_texture_gammaramps = NULL;
+	r_texture_numcubemaps = 0;
 
 	r_loaddds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_load.integer;
 	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
@@ -5848,6 +6064,7 @@ void gl_main_shutdown(void)
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
 	r_texture_gammaramps = NULL;
+	r_texture_numcubemaps = 0;
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
@@ -8759,6 +8976,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->glosstexture = r_texture_black;
 	t->glowtexture = t->currentskinframe->glow;
 	t->fogtexture = t->currentskinframe->fog;
+	t->reflectmasktexture = t->currentskinframe->reflect;
 	if (t->backgroundnumskinframes)
 	{
 		t->backgroundbasetexture = (!t->colormapping && t->backgroundcurrentskinframe->merged) ? t->backgroundcurrentskinframe->merged : t->backgroundcurrentskinframe->base;
@@ -8812,6 +9030,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->glosstexture = r_texture_black;
 		t->glowtexture = NULL;
 		t->fogtexture = NULL;
+		t->reflectmasktexture = NULL;
 		t->backgroundbasetexture = NULL;
 		t->backgroundnmaptexture = r_texture_blanknormalmap;
 		t->backgroundglosstexture = r_texture_black;

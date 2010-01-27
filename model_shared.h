@@ -53,6 +53,7 @@ typedef struct skinframe_s
 	rtexture_t *gloss; // glossmap (for dot3)
 	rtexture_t *glow; // glow only (fullbrights)
 	rtexture_t *fog; // alpha of the base texture (if not opaque)
+	rtexture_t *reflect; // colored mask for cubemap reflections
 	// accounting data for hash searches:
 	// the compare variables are used to identify internal skins from certain
 	// model formats
@@ -383,6 +384,9 @@ typedef struct q3shaderinfo_s
 	qboolean dpshadow;
 	qboolean dpnoshadow;
 
+	// fake reflection
+	char dpreflectcube[Q3PATHLENGTH];
+
 	// reflection
 	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
 	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
@@ -487,6 +491,8 @@ typedef struct texture_s
 	rtexture_t *glosstexture; // glossmap (for dot3)
 	rtexture_t *glowtexture; // glow only (fullbrights)
 	rtexture_t *fogtexture; // alpha of the base texture (if not opaque)
+	rtexture_t *reflectmasktexture; // mask for fake reflections
+	rtexture_t *reflectcubetexture; // fake reflections cubemap
 	rtexture_t *backgroundbasetexture; // original texture without pants/shirt/glow
 	rtexture_t *backgroundnmaptexture; // normalmap (bumpmap for dot3)
 	rtexture_t *backgroundglosstexture; // glossmap (for dot3)

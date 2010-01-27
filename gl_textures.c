@@ -20,6 +20,7 @@ cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_SAVE, "gl_texturecompression
 cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
 cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
+cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
@@ -577,6 +578,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_q3bspdeluxemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_sky);
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
+	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
