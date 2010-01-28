@@ -5981,6 +5981,80 @@ static dp_model_t *getmodel(prvm_edict_t *ed)
 	}
 }
 
+typedef struct
+{
+	unsigned int progid;
+	dp_model_t *model;
+	frameblend_t frameblend[MAX_FRAMEBLENDS];
+	skeleton_t *skeleton_p;
+	skeleton_t skeleton;
+	float *data_vertex3f;
+	float *data_svector3f;
+	float *data_tvector3f;
+	float *data_normal3f;
+	int max_vertices;
+	float *buf_vertex3f;
+	float *buf_svector3f;
+	float *buf_tvector3f;
+	float *buf_normal3f;
+}
+animatemodel_cache_t;
+static animatemodel_cache_t animatemodel_cache;
+
+void animatemodel(dp_model_t *model, prvm_edict_t *ed)
+{
+	prvm_eval_t *val;
+	skeleton_t *skeleton;
+	int skeletonindex = 0;
+	qboolean need = false;
+	if(!model->AnimateVertices)
+	{
+		animatemodel_cache.data_vertex3f = model->surfmesh.data_vertex3f;
+		animatemodel_cache.data_svector3f = model->surfmesh.data_svector3f;
+		animatemodel_cache.data_tvector3f = model->surfmesh.data_tvector3f;
+		animatemodel_cache.data_normal3f = model->surfmesh.data_normal3f;
+		return;
+	}
+	if(animatemodel_cache.progid != prog->id)
+		memset(&animatemodel_cache, 0, sizeof(animatemodel_cache));
+	need |= (animatemodel_cache.model != model);
+	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
+	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
+	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend)));
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float;
+	if (!(skeletonindex > 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
+		skeleton = NULL;
+	need |= (animatemodel_cache.skeleton_p != skeleton);
+	if(skeleton)
+		need |= (memcmp(&animatemodel_cache.skeleton, skeleton, sizeof(ed->priv.server->skeleton)));
+	if(!need)
+		return;
+	if(model->surfmesh.num_vertices > animatemodel_cache.max_vertices)
+	{
+		animatemodel_cache.max_vertices = model->surfmesh.num_vertices * 2;
+		if(animatemodel_cache.buf_vertex3f) Mem_Free(animatemodel_cache.buf_vertex3f);
+		if(animatemodel_cache.buf_svector3f) Mem_Free(animatemodel_cache.buf_svector3f);
+		if(animatemodel_cache.buf_tvector3f) Mem_Free(animatemodel_cache.buf_tvector3f);
+		if(animatemodel_cache.buf_normal3f) Mem_Free(animatemodel_cache.buf_normal3f);
+		animatemodel_cache.buf_vertex3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_svector3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_tvector3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_normal3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+	}
+	animatemodel_cache.data_vertex3f = animatemodel_cache.buf_vertex3f;
+	animatemodel_cache.data_svector3f = animatemodel_cache.buf_svector3f;
+	animatemodel_cache.data_tvector3f = animatemodel_cache.buf_tvector3f;
+	animatemodel_cache.data_normal3f = animatemodel_cache.buf_normal3f;
+	VM_UpdateEdictSkeleton(ed, model, ed->priv.server->frameblend);
+	model->AnimateVertices(model, ed->priv.server->frameblend, &ed->priv.server->skeleton, animatemodel_cache.data_vertex3f, animatemodel_cache.data_normal3f, animatemodel_cache.data_svector3f, animatemodel_cache.data_tvector3f);
+	animatemodel_cache.progid = prog->id;
+	animatemodel_cache.model = model;
+	memcpy(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend));
+	animatemodel_cache.skeleton_p = skeleton;
+	if(skeleton)
+		memcpy(&animatemodel_cache.skeleton, skeleton, sizeof(ed->priv.server->skeleton));
+}
+
 static void getmatrix(prvm_edict_t *ed, matrix4x4_t *out)
 {
 	switch(PRVM_GetProgNr())
@@ -6028,20 +6102,21 @@ static void applytransform_forward_normal(const vec3_t in, prvm_edict_t *ed, vec
 	VectorCopy(p, out);
 }
 
-static void clippointtosurface(dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
+static void clippointtosurface(prvm_edict_t *ed, dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
 	const int *e;
+	animatemodel(model, ed);
 	bestdist = 1000000000;
 	VectorCopy(p, out);
 	for (i = 0, e = (model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);i < surface->num_triangles;i++, e += 3)
 	{
 		// clip original point to each triangle of the surface and find the
 		// triangle that is closest
-		v[0] = model->surfmesh.data_vertex3f + e[0] * 3;
-		v[1] = model->surfmesh.data_vertex3f + e[1] * 3;
-		v[2] = model->surfmesh.data_vertex3f + e[2] * 3;
+		v[0] = animatemodel_cache.data_vertex3f + e[0] * 3;
+		v[1] = animatemodel_cache.data_vertex3f + e[1] * 3;
+		v[2] = animatemodel_cache.data_vertex3f + e[2] * 3;
 		TriangleNormal(v[0], v[1], v[2], facenormal);
 		VectorNormalize(facenormal);
 		offsetdist = DotProduct(v[0], facenormal) - DotProduct(p, facenormal);
@@ -6104,7 +6179,8 @@ void VM_getsurfacepoint(void)
 	pointnum = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
-	applytransform_forward(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+	animatemodel(model, ed);
+	applytransform_forward(&(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
 // float SPA_POSITION = 0;
@@ -6132,22 +6208,24 @@ void VM_getsurfacepointattribute(void)
 		return;
 	attributetype = (int) PRVM_G_FLOAT(OFS_PARM3);
 
+	animatemodel(model, ed);
+
 	switch( attributetype ) {
 		// float SPA_POSITION = 0;
 		case 0:
-			applytransform_forward(&(model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward(&(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_S_AXIS = 1;
 		case 1:
-			applytransform_forward_direction(&(model->surfmesh.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(&(animatemodel_cache.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_T_AXIS = 2;
 		case 2:
-			applytransform_forward_direction(&(model->surfmesh.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(&(animatemodel_cache.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_R_AXIS = 3; // same as SPA_NORMAL
 		case 3:
-			applytransform_forward_direction(&(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(&(animatemodel_cache.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_TEXCOORDS0 = 4;
 		case 4: {
@@ -6189,7 +6267,8 @@ void VM_getsurfacenormal(void)
 		return;
 	// note: this only returns the first triangle, so it doesn't work very
 	// well for curved surfaces or arbitrary meshes
-	TriangleNormal((model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 3, (model->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
+	animatemodel(model, PRVM_G_EDICT(OFS_PARM0));
+	TriangleNormal((animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex), (animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex) + 3, (animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
 	applytransform_forward_normal(normal, PRVM_G_EDICT(OFS_PARM0), PRVM_G_VECTOR(OFS_RETURN));
 	VectorNormalize(PRVM_G_VECTOR(OFS_RETURN));
 }
@@ -6225,6 +6304,8 @@ void VM_getsurfacenearpoint(void)
 	if (!model || !model->num_surfaces)
 		return;
 
+	animatemodel(model, ed);
+
 	applytransform_inverted(point, ed, p);
 	best = -1;
 	bestdist = 1000000000;
@@ -6239,7 +6320,7 @@ void VM_getsurfacenearpoint(void)
 		if (dist < bestdist)
 		{
 			// it is, check the nearest point on the actual geometry
-			clippointtosurface(model, surface, p, clipped);
+			clippointtosurface(ed, model, surface, p, clipped);
 			VectorSubtract(clipped, p, clipped);
 			dist += VectorLength2(clipped);
 			if (dist < bestdist)
@@ -6264,8 +6345,9 @@ void VM_getsurfaceclippedpoint(void)
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
+	animatemodel(model, ed);
 	applytransform_inverted(PRVM_G_VECTOR(OFS_PARM2), ed, p);
-	clippointtosurface(model, surface, p, out);
+	clippointtosurface(ed, model, surface, p, out);
 	VectorAdd(out, ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
 }
 
