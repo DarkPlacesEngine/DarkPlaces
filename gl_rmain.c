@@ -8179,8 +8179,11 @@ void R_RenderScene(void)
 		if (skyrendermasked && skyrenderlater)
 		{
 			// we have to force off the water clipping plane while rendering sky
+			qboolean save = r_refdef.view.showdebug;
 			R_SetupView(false);
+			r_refdef.view.showdebug = false;
 			R_Sky();
+			r_refdef.view.showdebug = save;
 			R_SetupView(true);
 			if (r_timereport_active)
 				R_TimeReport("sky");
