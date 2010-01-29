@@ -67,6 +67,11 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	return -1;
 }
 
+int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
+{
+	return -1;
+}
+
 void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 {
 }
