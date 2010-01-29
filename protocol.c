@@ -112,7 +112,7 @@ int Protocol_NumberForEnum(protocolversion_t p)
 	int i;
 	for (i = 0;protocolversioninfo[i].name;i++)
 		if (protocolversioninfo[i].version == p)
-			return protocolversioninfo[p].number;
+			return protocolversioninfo[i].number;
 	return 0;
 }
 
