@@ -73,6 +73,7 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx);
 
 // S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
+int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition);
 qboolean S_LocalSound (const char *s);
 
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
