@@ -2188,7 +2188,7 @@ void VM_CL_gettagindex (void)
 	{
 		tag_index = CL_GetTagIndex(ent, tag_name);
 		if (tag_index == 0)
-			Con_Printf("VM_CL_gettagindex(entity #%i): tag \"%s\" not found\n", PRVM_NUM_FOR_EDICT(ent), tag_name);
+			Con_DPrintf("VM_CL_gettagindex(entity #%i): tag \"%s\" not found\n", PRVM_NUM_FOR_EDICT(ent), tag_name);
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = tag_index;
 }
