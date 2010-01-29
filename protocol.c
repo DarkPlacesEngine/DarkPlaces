@@ -58,54 +58,62 @@ entity_state_t defaultstate =
 struct protocolversioninfo_s
 {
 	int number;
+	protocolversion_t version;
 	const char *name;
 }
 protocolversioninfo[] =
 {
-	{0, "UNKNOWN"},
-	{3504, "DP7"},
-	{3503, "DP6"},
-	{3502, "DP5"},
-	{3501, "DP4"},
-	{3500, "DP3"},
-	{97, "DP2"},
-	{96, "DP1"},
-	{15, "QUAKEDP"},
-	{250, "NEHAHRAMOVIE"},
-	{15, "QUAKE"},
-	{28, "QW"},
-	{10000, "NEHAHRABJP"},
-	{10001, "NEHAHRABJP2"},
-	{10002, "NEHAHRABJP3"},
-	{0, NULL}
+	{ 3504, PROTOCOL_DARKPLACES7 , "DP7"},
+	{ 3503, PROTOCOL_DARKPLACES6 , "DP6"},
+	{ 3502, PROTOCOL_DARKPLACES5 , "DP5"},
+	{ 3501, PROTOCOL_DARKPLACES4 , "DP4"},
+	{ 3500, PROTOCOL_DARKPLACES3 , "DP3"},
+	{   97, PROTOCOL_DARKPLACES2 , "DP2"},
+	{   96, PROTOCOL_DARKPLACES1 , "DP1"},
+	{   15, PROTOCOL_QUAKEDP     , "QUAKEDP"},
+	{   15, PROTOCOL_QUAKE       , "QUAKE"},
+	{   28, PROTOCOL_QUAKEWORLD  , "QW"},
+	{  250, PROTOCOL_NEHAHRAMOVIE, "NEHAHRAMOVIE"},
+	{10000, PROTOCOL_NEHAHRABJP  , "NEHAHRABJP"},
+	{10001, PROTOCOL_NEHAHRABJP2 , "NEHAHRABJP2"},
+	{10002, PROTOCOL_NEHAHRABJP3 , "NEHAHRABJP3"},
+	{    0, PROTOCOL_UNKNOWN     , NULL}
 };
 
 protocolversion_t Protocol_EnumForName(const char *s)
 {
 	int i;
-	for (i = 1;protocolversioninfo[i].name;i++)
+	for (i = 0;protocolversioninfo[i].name;i++)
 		if (!strcasecmp(s, protocolversioninfo[i].name))
-			return (protocolversion_t)i;
+			return protocolversioninfo[i].version;
 	return PROTOCOL_UNKNOWN;
 }
 
 const char *Protocol_NameForEnum(protocolversion_t p)
 {
-	return protocolversioninfo[p].name;
+	int i;
+	for (i = 0;protocolversioninfo[i].name;i++)
+		if (protocolversioninfo[i].version == p)
+			return protocolversioninfo[i].name;
+	return "UNKNOWN";
 }
 
 protocolversion_t Protocol_EnumForNumber(int n)
 {
 	int i;
-	for (i = 1;protocolversioninfo[i].name;i++)
+	for (i = 0;protocolversioninfo[i].name;i++)
 		if (protocolversioninfo[i].number == n)
-			return (protocolversion_t)i;
+			return protocolversioninfo[i].version;
 	return PROTOCOL_UNKNOWN;
 }
 
 int Protocol_NumberForEnum(protocolversion_t p)
 {
-	return protocolversioninfo[p].number;
+	int i;
+	for (i = 0;protocolversioninfo[i].name;i++)
+		if (protocolversioninfo[i].version == p)
+			return protocolversioninfo[p].number;
+	return 0;
 }
 
 void Protocol_Names(char *buffer, size_t buffersize)
@@ -114,7 +122,7 @@ void Protocol_Names(char *buffer, size_t buffersize)
 	if (buffersize < 1)
 		return;
 	buffer[0] = 0;
-	for (i = 1;protocolversioninfo[i].name;i++)
+	for (i = 0;protocolversioninfo[i].name;i++)
 	{
 		if (i > 1)
 			strlcat(buffer, " ", buffersize);
