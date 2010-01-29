@@ -4070,7 +4070,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
 		p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
 		p->fp_Texture_ReflectMask        = cgGetNamedParameter(p->fprogram, "Texture_ReflectMask");
-		p->fp_Texture_ReflectCube        = qgGetNamedParameter(p->fprogram, "Texture_ReflectCube");
+		p->fp_Texture_ReflectCube        = cgGetNamedParameter(p->fprogram, "Texture_ReflectCube");
 		p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
 		p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
 		p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
