@@ -1456,7 +1456,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 }
 
 
-int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
+int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
 {
 	channel_t *target_chan, *check, *ch;
 	int		ch_idx, startpos;
@@ -1493,22 +1493,30 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	// if an identical sound has also been started this frame, offset the pos
 	// a bit to keep it from just making the first one louder
 	check = &channels[NUM_AMBIENTS];
-	startpos = 0;
-	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
+	startpos = (int)(startposition * S_GetSoundRate());
+	if (startpos == 0)
 	{
-		if (check == target_chan)
-			continue;
-		if (check->sfx == sfx && check->pos == 0)
+		for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
 		{
-			// use negative pos offset to delay this sound effect
-			startpos = (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
-			break;
+			if (check == target_chan)
+				continue;
+			if (check->sfx == sfx && check->pos == 0)
+			{
+				// use negative pos offset to delay this sound effect
+				startpos = (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
+				break;
+			}
 		}
 	}
 
 	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_NONE, origin, fvol, attenuation, false, entnum, entchannel, startpos);
 
 	return (target_chan - channels);
+}
+
+int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
+{
+	return S_StartSound_StartPosition(entnum, entchannel, sfx, origin, fvol, attenuation, 0);
 }
 
 void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
@@ -1652,6 +1660,8 @@ float S_GetChannelPosition (unsigned int ch_ind)
 	int s;
 	channel_t *ch = &channels[ch_ind];
 	sfx_t *sfx = ch->sfx;
+	if (!sfx)
+		return -1;
 
 	s = ch->pos;
 	/*

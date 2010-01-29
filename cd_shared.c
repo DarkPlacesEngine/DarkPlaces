@@ -43,6 +43,64 @@ extern void CDAudio_SysShutdown (void);
 cvar_t cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0","indicates if CD Audio system is active"};
 cvar_t cdaudio = {CVAR_SAVE,"cdaudio","1","CD playing mode (0 = never access CD drive, 1 = play CD tracks if no replacement available, 2 = play fake tracks if no CD track available, 3 = play only real CD tracks, 4 = play real CD tracks even instead of named fake tracks)"};
 
+#define MAX_PLAYLISTS 10
+int music_playlist_active = -1;
+int music_playlist_playing = 0; // 0 = not playing, 1 = playing, -1 = tried and failed
+
+cvar_t music_playlist_index = {0, "music_playlist_index", "-1", "selects which of the music_playlist_ variables is the active one, -1 disables playlists"};
+cvar_t music_playlist_list[MAX_PLAYLISTS] =
+{
+	{0, "music_playlist_list0", "", "list of tracks to play"},
+	{0, "music_playlist_list1", "", "list of tracks to play"},
+	{0, "music_playlist_list2", "", "list of tracks to play"},
+	{0, "music_playlist_list3", "", "list of tracks to play"},
+	{0, "music_playlist_list4", "", "list of tracks to play"},
+	{0, "music_playlist_list5", "", "list of tracks to play"},
+	{0, "music_playlist_list6", "", "list of tracks to play"},
+	{0, "music_playlist_list7", "", "list of tracks to play"},
+	{0, "music_playlist_list8", "", "list of tracks to play"},
+	{0, "music_playlist_list9", "", "list of tracks to play"}
+};
+cvar_t music_playlist_current[MAX_PLAYLISTS] =
+{
+	{0, "music_playlist_current0", "0", "current track index to play in list"},
+	{0, "music_playlist_current1", "0", "current track index to play in list"},
+	{0, "music_playlist_current2", "0", "current track index to play in list"},
+	{0, "music_playlist_current3", "0", "current track index to play in list"},
+	{0, "music_playlist_current4", "0", "current track index to play in list"},
+	{0, "music_playlist_current5", "0", "current track index to play in list"},
+	{0, "music_playlist_current6", "0", "current track index to play in list"},
+	{0, "music_playlist_current7", "0", "current track index to play in list"},
+	{0, "music_playlist_current8", "0", "current track index to play in list"},
+	{0, "music_playlist_current9", "0", "current track index to play in list"},
+};
+cvar_t music_playlist_random[MAX_PLAYLISTS] =
+{
+	{0, "music_playlist_random0", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random1", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random2", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random3", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random4", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random5", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random6", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random7", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random8", "0", "enables random play order if 1, 0 is sequential play"},
+	{0, "music_playlist_random9", "0", "enables random play order if 1, 0 is sequential play"},
+};
+cvar_t music_playlist_sampleposition[MAX_PLAYLISTS] =
+{
+	{0, "music_playlist_sampleposition0", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition1", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition2", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition3", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition4", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition5", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition6", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition7", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition8", "-1", "resume position for track, -1 restarts every time"},
+	{0, "music_playlist_sampleposition9", "-1", "resume position for track, -1 restarts every time"},
+};
+
 static qboolean wasPlaying = false;
 static qboolean initialized = false;
 static qboolean enabled = false;
@@ -142,7 +200,7 @@ qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
 	return true;
 }
 
-void CDAudio_Play_byName (const char *trackname, qboolean looping)
+void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryreal, float startposition)
 {
 	unsigned int track;
 	sfx_t* sfx;
@@ -153,7 +211,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	if (!enabled)
 		return;
 
-	if(strspn(trackname, "0123456789") == strlen(trackname))
+	if(tryreal && strspn(trackname, "0123456789") == strlen(trackname))
 	{
 		track = (unsigned char) atoi(trackname);
 #ifdef MAXTRACKS
@@ -187,7 +245,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 #endif
 	}
 
-	if(strspn(trackname, "0123456789") == strlen(trackname))
+	if(tryreal && strspn(trackname, "0123456789") == strlen(trackname))
 	{
 		track = (unsigned char) atoi(trackname);
 		if (track < 1)
@@ -260,7 +318,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping)
 	}
 	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, true)))
 	{
-		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
+		faketrack = S_StartSound_StartPosition (-1, 0, sfx, vec3_origin, cdvolume, 0, startposition);
 		if (faketrack != -1)
 		{
 			if (looping)
@@ -304,8 +362,10 @@ success:
 void CDAudio_Play (int track, qboolean looping)
 {
 	char buf[20];
+	if (music_playlist_index.integer >= 0)
+		return;
 	dpsnprintf(buf, sizeof(buf), "%d", (int) track);
-	CDAudio_Play_byName(buf, looping);
+	CDAudio_Play_byName(buf, looping, true, 0);
 }
 
 float CDAudio_GetPosition (void)
@@ -315,10 +375,15 @@ float CDAudio_GetPosition (void)
 	return -1;
 }
 
+static void CDAudio_StopPlaylistTrack(void);
+
 void CDAudio_Stop (void)
 {
 	if (!enabled)
 		return;
+
+	// save the playlist position
+	CDAudio_StopPlaylistTrack();
 
 	if (faketrack != -1)
 	{
@@ -435,30 +500,40 @@ static void CD_f (void)
 
 	if (strcasecmp(command, "play") == 0)
 	{
-		CDAudio_Play_byName(Cmd_Argv (2), false);
+		if (music_playlist_index.integer >= 0)
+			return;
+		CDAudio_Play_byName(Cmd_Argv (2), false, true, 0);
 		return;
 	}
 
 	if (strcasecmp(command, "loop") == 0)
 	{
-		CDAudio_Play_byName(Cmd_Argv (2), true);
+		if (music_playlist_index.integer >= 0)
+			return;
+		CDAudio_Play_byName(Cmd_Argv (2), true, true, 0);
 		return;
 	}
 
 	if (strcasecmp(command, "stop") == 0)
 	{
+		if (music_playlist_index.integer >= 0)
+			return;
 		CDAudio_Stop();
 		return;
 	}
 
 	if (strcasecmp(command, "pause") == 0)
 	{
+		if (music_playlist_index.integer >= 0)
+			return;
 		CDAudio_Pause();
 		return;
 	}
 
 	if (strcasecmp(command, "resume") == 0)
 	{
+		if (music_playlist_index.integer >= 0)
+			return;
 		CDAudio_Resume();
 		return;
 	}
@@ -530,22 +605,121 @@ void CDAudio_SetVolume (float newvol)
 	cdvolume = newvol;
 }
 
+static void CDAudio_StopPlaylistTrack(void)
+{
+	if (music_playlist_active >= 0 && music_playlist_active < MAX_PLAYLISTS && music_playlist_sampleposition[music_playlist_active].value >= 0)
+	{
+		// save position for resume
+		float position = CDAudio_GetPosition();
+		Cvar_SetValueQuick(&music_playlist_sampleposition[music_playlist_active], position >= 0 ? position : 0);
+	}
+	music_playlist_active = -1;
+	music_playlist_playing = 0; // not playing
+}
+
+void CDAudio_StartPlaylist(qboolean resume)
+{
+	const char *list;
+	const char *t;
+	int index;
+	int current;
+	int randomplay;
+	int count;
+	int listindex;
+	float position;
+	char trackname[MAX_QPATH];
+	CDAudio_Stop();
+	index = music_playlist_index.integer;
+	if (index >= 0 && index < MAX_PLAYLISTS && bgmvolume.value > 0)
+	{
+		list = music_playlist_list[index].string;
+		current = music_playlist_current[index].integer;
+		randomplay = music_playlist_random[index].integer;
+		position = music_playlist_sampleposition[index].value;
+		count = 0;
+		trackname[0] = 0;
+		if (list && list[0])
+		{
+			for (t = list;;count++)
+			{
+				if (!COM_ParseToken_Console(&t))
+					break;
+				// if we don't find the desired track, use the first one
+				if (count == 0)
+					strlcpy(trackname, com_token, sizeof(trackname));
+			}
+		}
+		if (count > 0)
+		{
+			// position < 0 means never resume track
+			if (position < 0)
+				position = 0;
+			// advance to next track in playlist if the last one ended
+			if (!resume)
+			{
+				position = 0;
+				current++;
+				if (randomplay)
+					current = (int)lhrandom(0, count);
+			}
+			// wrap playlist position if needed
+			if (current >= count)
+				current = 0;
+			// set current
+			Cvar_SetValueQuick(&music_playlist_current[index], current);
+			// get the Nth trackname
+			if (current >= 0 && current < count)
+			{
+				for (listindex = 0, t = list;;listindex++)
+				{
+					if (!COM_ParseToken_Console(&t))
+						break;
+					if (listindex == current)
+					{
+						strlcpy(trackname, com_token, sizeof(trackname));
+						break;
+					}
+				}
+			}
+			if (trackname[0])
+			{
+				CDAudio_Play_byName(trackname, false, false, position);
+				if (faketrack != -1)
+					music_playlist_active = index;
+			}
+		}
+	}
+	music_playlist_playing = music_playlist_active >= 0 ? 1 : -1;
+}
+
 void CDAudio_Update (void)
 {
+	static int lastplaylist = -1;
 	if (!enabled)
 		return;
 
 	CDAudio_SetVolume (bgmvolume.value);
-	
+	if (music_playlist_playing > 0 && CDAudio_GetPosition() < 0)
+	{
+		// this track ended, start a new track from the beginning
+		CDAudio_StartPlaylist(false);
+		lastplaylist = music_playlist_index.integer;
+	}
+	else if (lastplaylist != music_playlist_index.integer
+	|| (bgmvolume.value > 0 && !music_playlist_playing))
+	{
+		// active playlist changed, save position and switch track
+		CDAudio_StartPlaylist(true);
+		lastplaylist = music_playlist_index.integer;
+	}
+
 	if (faketrack == -1 && cdaudio.integer != 0 && bgmvolume.value != 0)
 		CDAudio_SysUpdate();
 }
 
 int CDAudio_Init (void)
 {
-#ifdef MAXTRACKS
 	int i;
-#endif
 
 	if (cls.state == ca_dedicated)
 		return -1;
@@ -565,6 +739,15 @@ int CDAudio_Init (void)
 	Cvar_RegisterVariable(&cdaudioinitialized);
 	Cvar_SetValueQuick(&cdaudioinitialized, true);
 	enabled = true;
+
+	Cvar_RegisterVariable(&music_playlist_index);
+	for (i = 0;i < MAX_PLAYLISTS;i++)
+	{
+		Cvar_RegisterVariable(&music_playlist_list[i]);
+		Cvar_RegisterVariable(&music_playlist_current[i]);
+		Cvar_RegisterVariable(&music_playlist_random[i]);
+		Cvar_RegisterVariable(&music_playlist_sampleposition[i]);
+	}
 
 	Cmd_AddCommand("cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
 
