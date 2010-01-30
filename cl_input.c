@@ -438,8 +438,8 @@ cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast yo
 cvar_t cl_movement_airaccelerate = {0, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
 cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
 cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
-cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (should match sv_airaccel_qw)"};
-cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction)"};
+cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
+cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far downward you can aim (quake used -70"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far upward you can aim (quake used 80"};
@@ -1104,31 +1104,41 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 
 void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t sidefric)
 {
-	vec_t vel_straight, vel_z;
+	vec_t vel_straight;
+	vec_t vel_z;
 	vec3_t vel_perpend;
-	vec_t addspeed;
-	vec_t savespeed;
+	vec_t step;
+	vec3_t vel_xy;
+	vec_t vel_xy_current;
+	vec_t vel_xy_backward, vel_xy_forward;
+	qboolean speedclamp;
+
+	speedclamp = (accelqw < 0);
+	if(speedclamp)
+		accelqw = -accelqw;
 
 	if(cl.moveflags & MOVEFLAG_Q2AIRACCELERATE)
 		wishspeed0 = wishspeed; // don't need to emulate this Q1 bug
 
-	savespeed = VectorLength2(s->velocity);
-
 	vel_straight = DotProduct(s->velocity, wishdir);
 	vel_z = s->velocity[2];
-	VectorMA(s->velocity, -vel_straight, wishdir, vel_perpend); vel_perpend[2] -= vel_z;
+	VectorCopy(s->velocity, vel_xy); vel_xy[2] -= vel_z;
+	VectorMA(vel_xy, -vel_straight, wishdir, vel_perpend);
 
-	addspeed = wishspeed - vel_straight;
-	if(addspeed > 0)
-		vel_straight = vel_straight + min(addspeed, accel * s->cmd.frametime * wishspeed0) * accelqw;
-	if(wishspeed > 0)
-		vel_straight = vel_straight + min(wishspeed, accel * s->cmd.frametime * wishspeed0) * (1 - accelqw);
-	
+	step = accel * s->cmd.frametime * wishspeed0;
+
+	vel_xy_current  = VectorLength(vel_xy);
+	vel_xy_forward  = vel_xy_current + bound(0, wishspeed - vel_xy_current, step) * accelqw + step * (1 - accelqw);
+	vel_xy_backward = vel_xy_current - bound(0, wishspeed + vel_xy_current, step) * accelqw - step * (1 - accelqw);
+
+	vel_straight    = vel_straight   + bound(0, wishspeed - vel_straight,   step) * accelqw + step * (1 - accelqw);
+
 	if(sidefric < 0 && VectorLength2(vel_perpend))
+		// negative: only apply so much sideways friction to stay below the speed you could get by "braking"
 	{
 		vec_t f, fmin;
 		f = 1 - s->cmd.frametime * wishspeed * sidefric;
-		fmin = (savespeed - vel_straight*vel_straight) / VectorLength2(vel_perpend);
+		fmin = (vel_xy_backward*vel_xy_backward - vel_straight*vel_straight) / VectorLength2(vel_perpend);
 		if(fmin <= 0)
 			VectorScale(vel_perpend, f, vel_perpend);
 		else
@@ -1138,6 +1148,17 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 		VectorScale(vel_perpend, 1 - s->cmd.frametime * wishspeed * sidefric, vel_perpend);
 
 	VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
+
+	if(speedclamp)
+	{
+		vel_xy_current = min(VectorLength(s->velocity), vel_xy_forward);
+		if(vel_xy_current > 0) // prevent division by zero
+		{
+			VectorNormalize(s->velocity);
+			VectorScale(s->velocity, vel_xy_current, s->velocity);
+		}
+	}
+
 	s->velocity[2] += vel_z;
 }
 
