@@ -113,16 +113,16 @@ void World_SetSize(world_t *world, const char *filename, const vec3_t mins, cons
 	if (world->areagrid_marknumber < 1)
 		world->areagrid_marknumber = 1;
 	// choose either the world box size, or a larger box to ensure the grid isn't too fine
-	world->areagrid_size[0] = max(world->areagrid_maxs[0] - world->areagrid_mins[0], AREA_GRID * sv_areagrid_mingridsize.value);
-	world->areagrid_size[1] = max(world->areagrid_maxs[1] - world->areagrid_mins[1], AREA_GRID * sv_areagrid_mingridsize.value);
-	world->areagrid_size[2] = max(world->areagrid_maxs[2] - world->areagrid_mins[2], AREA_GRID * sv_areagrid_mingridsize.value);
+	world->areagrid_size[0] = max(world->maxs[0] - world->mins[0], AREA_GRID * sv_areagrid_mingridsize.value);
+	world->areagrid_size[1] = max(world->maxs[1] - world->mins[1], AREA_GRID * sv_areagrid_mingridsize.value);
+	world->areagrid_size[2] = max(world->maxs[2] - world->mins[2], AREA_GRID * sv_areagrid_mingridsize.value);
 	// figure out the corners of such a box, centered at the center of the world box
-	world->areagrid_mins[0] = (world->areagrid_mins[0] + world->areagrid_maxs[0] - world->areagrid_size[0]) * 0.5f;
-	world->areagrid_mins[1] = (world->areagrid_mins[1] + world->areagrid_maxs[1] - world->areagrid_size[1]) * 0.5f;
-	world->areagrid_mins[2] = (world->areagrid_mins[2] + world->areagrid_maxs[2] - world->areagrid_size[2]) * 0.5f;
-	world->areagrid_maxs[0] = (world->areagrid_mins[0] + world->areagrid_maxs[0] + world->areagrid_size[0]) * 0.5f;
-	world->areagrid_maxs[1] = (world->areagrid_mins[1] + world->areagrid_maxs[1] + world->areagrid_size[1]) * 0.5f;
-	world->areagrid_maxs[2] = (world->areagrid_mins[2] + world->areagrid_maxs[2] + world->areagrid_size[2]) * 0.5f;
+	world->areagrid_mins[0] = (world->mins[0] + world->maxs[0] - world->areagrid_size[0]) * 0.5f;
+	world->areagrid_mins[1] = (world->mins[1] + world->maxs[1] - world->areagrid_size[1]) * 0.5f;
+	world->areagrid_mins[2] = (world->mins[2] + world->maxs[2] - world->areagrid_size[2]) * 0.5f;
+	world->areagrid_maxs[0] = (world->mins[0] + world->maxs[0] + world->areagrid_size[0]) * 0.5f;
+	world->areagrid_maxs[1] = (world->mins[1] + world->maxs[1] + world->areagrid_size[1]) * 0.5f;
+	world->areagrid_maxs[2] = (world->mins[2] + world->maxs[2] + world->areagrid_size[2]) * 0.5f;
 	// now calculate the actual useful info from that
 	VectorNegate(world->areagrid_mins, world->areagrid_bias);
 	world->areagrid_scale[0] = AREA_GRID / world->areagrid_size[0];
