@@ -1130,6 +1130,8 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	vel_xy_current  = VectorLength(vel_xy);
 	vel_xy_forward  = vel_xy_current + bound(0, wishspeed - vel_xy_current, step) * accelqw + step * (1 - accelqw);
 	vel_xy_backward = vel_xy_current - bound(0, wishspeed + vel_xy_current, step) * accelqw - step * (1 - accelqw);
+	if(vel_xy_backward < 0)
+		vel_xy_backward = 0; // not that it REALLY occurs that this would cause wrong behaviour afterwards
 
 	vel_straight    = vel_straight   + bound(0, wishspeed - vel_straight,   step) * accelqw + step * (1 - accelqw);
 
