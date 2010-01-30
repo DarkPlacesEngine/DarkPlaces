@@ -1080,13 +1080,15 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 
 static vec_t CL_IsMoveInDirection(vec_t forward, vec_t side, vec_t angle)
 {
+	if(forward == 0 && side == 0)
+		return 0; // avoid division by zero
 	angle -= RAD2DEG(atan2(side, forward));
-	angle = (ANGLEMOD(angle + 180) - 180) / 22.5;
+	angle = (ANGLEMOD(angle + 180) - 180) / 45;
 	if(angle >  1)
 		return 0;
 	if(angle < -1)
 		return 0;
-	return 1 - angle * angle;
+	return 1 - fabs(angle);
 }
 
 void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
@@ -1099,10 +1101,12 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 		return;
 	k = 32;
 #else
-	k = 32 * CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, 0);
+	k = 32 * (2 * CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, 0) - 1);
 	if(k <= 0)
 		return;
 #endif
+
+	k *= bound(0, wishspeed / cl.movevars_maxairspeed, 1);
 
 	zspeed = s->velocity[2];
 	s->velocity[2] = 0;
