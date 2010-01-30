@@ -1078,19 +1078,37 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	CL_ClientMovement_Move(s);
 }
 
+static vec_t CL_IsMoveInDirection(vec_t forward, vec_t side, vec_t angle)
+{
+	angle -= RAD2DEG(atan2(side, forward));
+	angle = (ANGLEMOD(angle + 180) - 180) / 22.5;
+	if(angle >  1)
+		return 0;
+	if(angle < -1)
+		return 0;
+	return 1 - angle * angle;
+}
+
 void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
 {
 	vec_t zspeed, speed, dot, k;
 
+#if 0
+	// this doesn't play well with analog input
 	if(s->cmd.forwardmove == 0 || s->cmd.sidemove != 0)
 		return;
-	
+	k = 32;
+#else
+	k = 32 * CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, 0);
+	if(k <= 0)
+		return;
+#endif
+
 	zspeed = s->velocity[2];
 	s->velocity[2] = 0;
 	speed = VectorNormalizeLength(s->velocity);
 
 	dot = DotProduct(s->velocity, wishdir);
-	k = 32;
 	k *= cl.movevars_aircontrol*dot*dot*s->cmd.frametime;
 
 	if(dot > 0) { // we can't change direction while slowing down
@@ -1322,6 +1340,9 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_airstopaccelerate != 0)
 				if(DotProduct(s->velocity, wishdir) < 0)
 					accel = cl.movevars_airstopaccelerate;
+			// this doesn't play well with analog input, but can't really be
+			// fixed like the AirControl can. So, don't set the maxairstrafe*
+			// cvars when you want to support analog input.
 			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
 			{
 				if(cl.movevars_maxairstrafespeed)
