@@ -706,7 +706,7 @@ void CDAudio_Update (void)
 		lastplaylist = music_playlist_index.integer;
 	}
 	else if (lastplaylist != music_playlist_index.integer
-	|| (bgmvolume.value > 0 && !music_playlist_playing))
+	|| (bgmvolume.value > 0 && !music_playlist_playing && music_playlist_index.integer >= 0))
 	{
 		// active playlist changed, save position and switch track
 		CDAudio_StartPlaylist(true);
