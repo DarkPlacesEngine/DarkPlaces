@@ -191,11 +191,11 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 		ed->priv.server->skeleton.relativetransforms = Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
 	if (ed->priv.server->skeleton.relativetransforms)
 	{
-		int skeletonindex = 0;
+		int skeletonindex = -1;
 		skeleton_t *skeleton;
 		prvm_eval_t *val;
-		if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float;
-		if (skeletonindex > 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones)
+		if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float - 1;
+		if (skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones)
 		{
 			// custom skeleton controlled by the game (FTE_CSQC_SKELETONOBJECTS)
 			memcpy(ed->priv.server->skeleton.relativetransforms, skeleton->relativetransforms, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
@@ -6005,7 +6005,7 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 {
 	prvm_eval_t *val;
 	skeleton_t *skeleton;
-	int skeletonindex = 0;
+	int skeletonindex = -1;
 	qboolean need = false;
 	if(!model->AnimateVertices)
 	{
@@ -6021,8 +6021,8 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
 	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend)));
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float;
-	if (!(skeletonindex > 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
+	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float - 1;
+	if (!(skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
 		skeleton = NULL;
 	need |= (animatemodel_cache.skeleton_p != skeleton);
 	if(skeleton)
