@@ -3483,7 +3483,7 @@ static void VM_CL_skel_build(void)
 		}
 		skeleton->relativetransforms[bonenum] = blendedmatrix;
 	}
-	PRVM_G_FLOAT(OFS_RETURN) = skeletonindex;
+	PRVM_G_FLOAT(OFS_RETURN) = skeletonindex + 1;
 }
 
 // #265 float(float skel) skel_get_numbones = #265; // (FTE_CSQC_SKELETONOBJECTS) returns how many bones exist in the created skeleton
