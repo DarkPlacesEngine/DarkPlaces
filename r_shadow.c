@@ -3414,7 +3414,10 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	float f;
 	int numleafs, numsurfaces;
 	int *leaflist, *surfacelist;
-	unsigned char *leafpvs, *shadowtrispvs, *lighttrispvs, *surfacesides;
+	unsigned char *leafpvs;
+	unsigned char *shadowtrispvs;
+	unsigned char *lighttrispvs;
+	//unsigned char *surfacesides;
 	int numlightentities;
 	int numlightentities_noselfshadow;
 	int numshadowentities;
@@ -3478,7 +3481,7 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 		leafpvs = rtlight->static_leafpvs;
 		numsurfaces = rtlight->static_numsurfaces;
 		surfacelist = rtlight->static_surfacelist;
-		surfacesides = NULL;
+		//surfacesides = NULL;
 		shadowtrispvs = rtlight->static_shadowtrispvs;
 		lighttrispvs = rtlight->static_lighttrispvs;
 	}
@@ -3491,7 +3494,7 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
-		surfacesides = r_shadow_buffer_surfacesides;
+		//surfacesides = r_shadow_buffer_surfacesides;
 		shadowtrispvs = r_shadow_buffer_shadowtrispvs;
 		lighttrispvs = r_shadow_buffer_lighttrispvs;
 		// if the reduced leaf bounds are offscreen, skip it
@@ -3506,7 +3509,7 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 		leafpvs = NULL;
 		numsurfaces = 0;
 		surfacelist = NULL;
-		surfacesides = NULL;
+		//surfacesides = NULL;
 		shadowtrispvs = NULL;
 		lighttrispvs = NULL;
 	}
@@ -4877,7 +4880,14 @@ typedef enum lighttype_e {LIGHTTYPE_MINUSX, LIGHTTYPE_RECIPX, LIGHTTYPE_RECIPXX,
 
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
-	int entnum, style, islight, skin, pflags, effects, type, n;
+	int entnum;
+	int style;
+	int islight;
+	int skin;
+	int pflags;
+	//int effects;
+	int type;
+	int n;
 	char *entfiledata;
 	const char *data;
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
@@ -4911,7 +4921,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		style = 0;
 		skin = 0;
 		pflags = 0;
-		effects = 0;
+		//effects = 0;
 		islight = false;
 		while (1)
 		{
@@ -5038,8 +5048,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				skin = (int)atof(value);
 			else if (!strcmp("pflags", key))
 				pflags = (int)atof(value);
-			else if (!strcmp("effects", key))
-				effects = (int)atof(value);
+			//else if (!strcmp("effects", key))
+			//	effects = (int)atof(value);
 			else if (cl.worldmodel->type == mod_brushq3)
 			{
 				if (!strcmp("scale", key))

@@ -2142,7 +2142,13 @@ Only used by players
 */
 void SV_WalkMove (prvm_edict_t *ent)
 {
-	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity, hitsupercontentsmask, type;
+	int clip;
+	int oldonground;
+	//int originalmove_clip;
+	int originalmove_flags;
+	int originalmove_groundentity;
+	int hitsupercontentsmask;
+	int type;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace, trace;
 	qboolean applygravity;
@@ -2206,7 +2212,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 	VectorCopy(ent->fields.server->origin, originalmove_origin);
 	VectorCopy(ent->fields.server->velocity, originalmove_velocity);
-	originalmove_clip = clip;
+	//originalmove_clip = clip;
 	originalmove_flags = (int)ent->fields.server->flags;
 	originalmove_groundentity = ent->fields.server->groundentity;
 

@@ -158,7 +158,7 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 {
 	// now we need to create up to numpoints + 1 new nodes, forming a BSP tree
 	// describing the occluder polygon's shadow volume
-	int i, j, p, basenum;
+	int i, j, p;
 	svbsp_node_t *node;
 
 	// points and lines are valid testers but not occluders
@@ -187,7 +187,6 @@ static void SVBSP_InsertOccluderPolygonNodes(svbsp_t *b, int *parentnodenumpoint
 	// note down the first available nodenum for the *parentnodenumpointer
 	// line which is done last to allow multithreaded queries during an
 	// insertion
-	basenum = b->numnodes;
 	for (i = 0, p = poly->numpoints - 1;i < poly->numpoints;p = i, i++)
 	{
 #if 1
