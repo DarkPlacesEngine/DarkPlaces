@@ -124,7 +124,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 	switch(addresstype)
 	{
 	default:
-		return 0;
+		break;
 	case LHNETADDRESSTYPE_LOOP:
 		// local:port  (loopback)
 		memset(address, 0, sizeof(*address));

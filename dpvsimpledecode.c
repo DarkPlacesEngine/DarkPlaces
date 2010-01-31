@@ -279,7 +279,6 @@ static int dpvsimpledecode_setpixelformat(dpvsimpledecodestream_t *s, unsigned i
 	default:
 		s->error = DPVSIMPLEDECODEERROR_UNSUPPORTEDBPP;
 		return s->error;
-		break;
 	}
 	for (Rshift = 0;!(Rmask & 1);Rshift++, Rmask >>= 1);
 	for (Gshift = 0;!(Gmask & 1);Gshift++, Gmask >>= 1);

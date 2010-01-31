@@ -1174,7 +1174,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
 	int i, k, kend, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex, batchfirsttriangle;
-	qboolean usebufferobject;
 	const int *element3i;
 	static msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	static int batchelements[BATCHSIZE*3];
@@ -1240,14 +1239,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
 				for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
 				{
-					if (lighttrispvs && r_test.integer)
-					{
-						if (!CHECKPVSBIT(lighttrispvs, m))
-						{
-							usebufferobject = false;
-							continue;
-						}
-					}
+					if (lighttrispvs && r_test.integer && !CHECKPVSBIT(lighttrispvs, m))
+						continue;
 					if (batchnumtriangles >= BATCHSIZE)
 					{
 						r_refdef.stats.lights_lighttriangles += batchnumtriangles;
@@ -1257,7 +1250,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchfirsttriangle, batchnumtriangles, ent->model->surfmesh.data_element3i, ent->model->surfmesh.data_element3s, ent->model->surfmesh.ebo3i, ent->model->surfmesh.ebo3s);
 						else
 							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, 0, batchnumtriangles, batchelements, NULL, 0, 0);
-						usebufferobject = true;
 						batchnumtriangles = 0;
 						batchfirsttriangle = m;
 					}

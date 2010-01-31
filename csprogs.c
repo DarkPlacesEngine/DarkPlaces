@@ -670,7 +670,7 @@ void CSQC_ReadEntities (void)
 		{
 			entnum = MSG_ReadShort();
 			if(!entnum || msg_badread)
-				return;
+				break;
 			realentnum = entnum & 0x7FFF;
 			prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum];
 			if(entnum & 0x8000)
@@ -798,7 +798,7 @@ void Cmd_ClearCsqcFuncs (void);
 
 // returns true if the packet is valid, false if end of file is reached
 // used for dumping the CSQC download into demo files
-qboolean MakeDownloadPacket(const char *filename, unsigned char *data, unsigned long len, int crc, int cnt, sizebuf_t *buf, int protocol)
+qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t len, int crc, int cnt, sizebuf_t *buf, int protocol)
 {
 	int packetsize = buf->maxsize - 7; // byte short long
 	int npackets = (len + packetsize - 1) / (packetsize);
@@ -867,7 +867,7 @@ void CL_VM_Init (void)
 	}
 	if (csprogsdata)
 	{
-		csprogsdatacrc = CRC_Block(csprogsdata, csprogsdatasize);
+		csprogsdatacrc = CRC_Block(csprogsdata, (size_t)csprogsdatasize);
 		if (csprogsdatacrc != requiredcrc || csprogsdatasize != requiredsize)
 		{
 			if (cls.demoplayback)
@@ -955,7 +955,7 @@ void CL_VM_Init (void)
 			i = 0;
 
 			CL_CutDemo(&demobuf, &demofilesize);
-			while(MakeDownloadPacket(csqc_progname.string, csprogsdata, csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
+			while(MakeDownloadPacket(csqc_progname.string, csprogsdata, (size_t)csprogsdatasize, csprogsdatacrc, i++, &sb, cls.protocol))
 				CL_WriteDemoMessage(&sb);
 			CL_PasteDemo(&demobuf, &demofilesize);
 

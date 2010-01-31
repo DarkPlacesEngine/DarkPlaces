@@ -309,7 +309,8 @@ static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
 static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 {
 	LOAD_FORMATSPECIFIC_AVI();
-	fs_offset_t cursize, curfilesize;
+	fs_offset_t cursize;
+	//fs_offset_t curfilesize;
 	if (format->riffstacklevel != 2)
 		Sys_Error("SCR_CaptureVideo_RIFF_OverflowCheck: chunk stack leakage!\n");
 	
@@ -319,7 +320,7 @@ static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 	// check where we are in the file
 	SCR_CaptureVideo_RIFF_Flush();
 	cursize = SCR_CaptureVideo_RIFF_GetPosition() - format->riffstackstartoffset[0];
-	curfilesize = SCR_CaptureVideo_RIFF_GetPosition();
+	//curfilesize = SCR_CaptureVideo_RIFF_GetPosition();
 
 	// if this would overflow the windows limit of 1GB per RIFF chunk, we need
 	// to close the current RIFF chunk and open another for future frames
