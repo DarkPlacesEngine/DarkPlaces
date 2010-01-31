@@ -1223,7 +1223,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 static float SV_Gravity (prvm_edict_t *ent);
 static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink);
 #define MAX_CLIP_PLANES 5
-static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask)
+static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask, float stepheight)
 {
 	int blocked, bumpcount;
 	int i, j, numplanes;
@@ -1260,9 +1260,6 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 			break;
 
 		VectorScale(ent->fields.server->velocity, time_left, push);
-#if 0
-		VectorAdd(ent->fields.server->origin, push, end);
-#endif
 		if(!SV_PushEntity(&trace, ent, push, false, false))
 		{
 			// we got teleported by a touch function
@@ -1270,64 +1267,6 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 			blocked |= 8;
 			break;
 		}
-
-#if 0
-		//if (trace.fraction < 0.002)
-		{
-#if 1
-			vec3_t start;
-			trace_t testtrace;
-			VectorCopy(ent->fields.server->origin, start);
-			start[2] += 3;//0.03125;
-			VectorMA(ent->fields.server->origin, time_left, ent->fields.server->velocity, end);
-			end[2] += 3;//0.03125;
-			testtrace = SV_TraceBox(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
-			if (trace.fraction < testtrace.fraction && !testtrace.startsolid && (testtrace.fraction == 1 || DotProduct(trace.plane.normal, ent->fields.server->velocity) < DotProduct(testtrace.plane.normal, ent->fields.server->velocity)))
-			{
-				Con_Printf("got further (new %f > old %f)\n", testtrace.fraction, trace.fraction);
-				trace = testtrace;
-			}
-#endif
-#if 0
-			//j = -1;
-			for (i = 0;i < numplanes;i++)
-			{
-				VectorCopy(ent->fields.server->origin, start);
-				VectorMA(ent->fields.server->origin, time_left, ent->fields.server->velocity, end);
-				VectorMA(start, 3, planes[i], start);
-				VectorMA(end, 3, planes[i], end);
-				testtrace = SV_TraceBox(start, ent->fields.server->mins, ent->fields.server->maxs, end, MOVE_NORMAL, ent, hitsupercontentsmask);
-				if (trace.fraction < testtrace.fraction)
-				{
-					trace = testtrace;
-					VectorCopy(start, ent->fields.server->origin);
-					//j = i;
-				}
-			}
-			//if (j >= 0)
-			//	VectorAdd(ent->fields.server->origin, planes[j], start);
-#endif
-		}
-#endif
-
-#if 0
-		Con_Printf("entity %i bump %i: velocity %f %f %f trace %f", ent - prog->edicts, bumpcount, ent->fields.server->velocity[0], ent->fields.server->velocity[1], ent->fields.server->velocity[2], trace.fraction);
-		if (trace.fraction < 1)
-			Con_Printf(" : %f %f %f", trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-		Con_Print("\n");
-#endif
-
-#if 0
-		if (trace.bmodelstartsolid)
-		{
-			// LordHavoc: note: this code is what makes entities stick in place
-			// if embedded in world only (you can walk through other objects if
-			// stuck)
-			// entity is trapped in another solid
-			VectorClear(ent->fields.server->velocity);
-			return 3;
-		}
-#endif
 
 		if (trace.fraction == 1)
 			break;
@@ -1348,9 +1287,43 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 				ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
 			}
 		}
+		else if (stepheight)
+		{
+			// step - handle it immediately
+			vec3_t org;
+			vec3_t steppush;
+			trace_t steptrace;
+			trace_t steptrace2;
+			trace_t steptrace3;
+			//Con_Printf("step %f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
+			VectorSet(steppush, 0, 0, stepheight);
+			VectorCopy(ent->fields.server->origin, org);
+			SV_PushEntity(&steptrace, ent, steppush, false, false);
+			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
+			SV_PushEntity(&steptrace2, ent, push, false, false);
+			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
+			VectorSet(steppush, 0, 0, org[2] - ent->fields.server->origin[2]);
+			SV_PushEntity(&steptrace3, ent, steppush, false, false);
+			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
+			// accept the new position if it made some progress...
+			if (fabs(ent->fields.server->origin[0] - org[0]) >= 0.03125 || fabs(ent->fields.server->origin[1] - org[1]) >= 0.03125)
+			{
+				//Con_Printf("accepted (delta %f %f %f)\n", ent->fields.server->origin[0] - org[0], ent->fields.server->origin[1] - org[1], ent->fields.server->origin[2] - org[2]);
+				trace = steptrace2;
+				VectorCopy(ent->fields.server->origin, trace.endpos);
+				time_left *= 1 - trace.fraction;
+				numplanes = 0;
+				continue;
+			}
+			else
+			{
+				//Con_Printf("REJECTED (delta %f %f %f)\n", ent->fields.server->origin[0] - org[0], ent->fields.server->origin[1] - org[1], ent->fields.server->origin[2] - org[2]);
+				VectorCopy(org, ent->fields.server->origin);
+			}
+		}
 		else
 		{
-			// step
+			// step - return it to caller
 			blocked |= 2;
 			// save the trace for player extrafriction
 			if (stepnormal)
@@ -1388,47 +1361,42 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 		VectorCopy(trace.plane.normal, planes[numplanes]);
 		numplanes++;
 
-		if (sv_newflymove.integer)
-			ClipVelocity(ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 1);
+		// modify original_velocity so it parallels all of the clip planes
+		for (i = 0;i < numplanes;i++)
+		{
+			ClipVelocity(original_velocity, planes[i], new_velocity, 1);
+			for (j = 0;j < numplanes;j++)
+			{
+				if (j != i)
+				{
+					// not ok
+					if (DotProduct(new_velocity, planes[j]) < 0)
+						break;
+				}
+			}
+			if (j == numplanes)
+				break;
+		}
+
+		if (i != numplanes)
+		{
+			// go along this plane
+			VectorCopy(new_velocity, ent->fields.server->velocity);
+		}
 		else
 		{
-			// modify original_velocity so it parallels all of the clip planes
-			for (i = 0;i < numplanes;i++)
+			// go along the crease
+			if (numplanes != 2)
 			{
-				ClipVelocity(original_velocity, planes[i], new_velocity, 1);
-				for (j = 0;j < numplanes;j++)
-				{
-					if (j != i)
-					{
-						// not ok
-						if (DotProduct(new_velocity, planes[j]) < 0)
-							break;
-					}
-				}
-				if (j == numplanes)
-					break;
+				VectorClear(ent->fields.server->velocity);
+				blocked = 7;
+				break;
 			}
-
-			if (i != numplanes)
-			{
-				// go along this plane
-				VectorCopy(new_velocity, ent->fields.server->velocity);
-			}
-			else
-			{
-				// go along the crease
-				if (numplanes != 2)
-				{
-					VectorClear(ent->fields.server->velocity);
-					blocked = 7;
-					break;
-				}
-				CrossProduct(planes[0], planes[1], dir);
-				// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
-				VectorNormalize(dir);
-				d = DotProduct(dir, ent->fields.server->velocity);
-				VectorScale(dir, d, ent->fields.server->velocity);
-			}
+			CrossProduct(planes[0], planes[1], dir);
+			// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
+			VectorNormalize(dir);
+			d = DotProduct(dir, ent->fields.server->velocity);
+			VectorScale(dir, d, ent->fields.server->velocity);
 		}
 
 		// if current velocity is against the original velocity,
@@ -2198,7 +2166,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (ent->fields.server->origin, start_origin);
 	VectorCopy (ent->fields.server->velocity, start_velocity);
 
-	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask);
+	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask, sv_gameplayfix_stepmultipletimes.integer ? sv_stepheight.value : 0);
 
 	if(sv_gameplayfix_downtracesupportsongroundflag.integer)
 	if(!(clip & 1))
@@ -2277,7 +2245,7 @@ void SV_WalkMove (prvm_edict_t *ent)
 
 		// move forward
 		ent->fields.server->velocity[2] = 0;
-		clip = SV_FlyMove (ent, sv.frametime, applygravity, stepnormal, hitsupercontentsmask);
+		clip = SV_FlyMove (ent, sv.frametime, applygravity, stepnormal, hitsupercontentsmask, 0);
 		ent->fields.server->velocity[2] += start_velocity[2];
 		if(clip & 8)
 		{
@@ -2653,7 +2621,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			{
 				ent->fields.server->flags -= FL_ONGROUND;
 				SV_CheckVelocity(ent);
-				SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent));
+				SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent), 0);
 				SV_LinkEdict(ent);
 				SV_LinkEdict_TouchAreaGrid(ent);
 				ent->priv.server->waterposition_forceupdate = true;
@@ -2665,7 +2633,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			int hitsound = ent->fields.server->velocity[2] < sv_gravity.value * -0.1;
 
 			SV_CheckVelocity(ent);
-			SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent));
+			SV_FlyMove(ent, sv.frametime, true, NULL, SV_GenericHitSuperContentsMask(ent), 0);
 			SV_LinkEdict(ent);
 			SV_LinkEdict_TouchAreaGrid(ent);
 
