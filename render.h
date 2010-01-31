@@ -195,6 +195,12 @@ extern cvar_t r_smoothnormals_areaweighting;
 
 extern cvar_t r_test;
 
+extern cvar_t r_texture_convertsRGB_2d;
+extern cvar_t r_texture_convertsRGB_skin;
+extern cvar_t r_texture_convertsRGB_cubemap;
+extern cvar_t r_texture_convertsRGB_skybox;
+extern cvar_t r_texture_convertsRGB_particles;
+
 #include "gl_backend.h"
 
 extern rtexture_t *r_texture_blanknormalmap;
