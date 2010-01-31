@@ -6676,6 +6676,10 @@ static qboolean R_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t en
 	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2];
 	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2];
 
+	// return true if eye is inside enlarged box
+	if (BoxesOverlap(boxmins, boxmaxs, eye, eye))
+		return true;
+
 	// try center
 	VectorCopy(eye, start);
 	VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, end);
