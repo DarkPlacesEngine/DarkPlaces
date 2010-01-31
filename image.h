@@ -23,13 +23,13 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out);
 unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize);
 
 // loads a texture, as pixel data
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans);
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB);
 
 // loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
 qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);
 
 // loads a texture, as a texture
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans);
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean convertsRGB);
 
 // writes an upside down BGR image into a TGA
 qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);

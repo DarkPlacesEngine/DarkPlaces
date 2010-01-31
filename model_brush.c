@@ -1567,7 +1567,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(tx->name, false, false);
+				data = loadimagepixelsbgra(tx->name, false, false, r_texture_convertsRGB_skin.integer);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
@@ -4546,7 +4546,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		if (developer_loading.integer)
 			Con_Printf("Using external lightmaps\n");
 		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
-		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false);
+		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false, false);
 		if(!inpixels[0])
 			return;
 
@@ -4566,7 +4566,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 		for(count = 1; ; ++count)
 		{
-			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false);
+			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false, false);
 			if(!inpixels[count])
 				break; // we got all of them
 			if(image_width != size || image_height != size)

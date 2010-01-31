@@ -355,9 +355,9 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
-	pixels = loadimagepixelsbgra(path, false, true);
+	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer);
 	if (pixels == NULL && !strncmp(path, "gfx/", 4))
-		pixels = loadimagepixelsbgra(path+4, false, true);
+		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer);
 	if (pixels)
 	{
 		pic->width = image_width;
@@ -443,9 +443,9 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
 	if (pic->autoload && !pic->tex)
 	{
-		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true);
+		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
 	}
