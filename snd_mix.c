@@ -467,8 +467,8 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 		for (i = 0; i < total_channels ; i++, ch++)
 		{
 			sfx_t *sfx;
-			unsigned int ltime;
-			unsigned int count;
+			int ltime;
+			int count;
 
 			sfx = ch->sfx;
 			if (sfx == NULL)

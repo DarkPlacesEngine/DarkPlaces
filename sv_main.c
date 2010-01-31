@@ -2705,7 +2705,9 @@ int SV_ParticleEffectIndex(const char *name)
 	int filepass;
 	fs_offset_t filesize;
 	unsigned char *filedata;
-	const char *text, *textstart, *textend;
+	const char *text;
+	const char *textstart;
+	//const char *textend;
 	char argv[16][1024];
 	char filename[MAX_QPATH];
 	if (!sv.particleeffectnamesloaded)
@@ -2726,7 +2728,7 @@ int SV_ParticleEffectIndex(const char *name)
 			if (!filedata)
 				continue;
 			textstart = (const char *)filedata;
-			textend = (const char *)filedata + filesize;
+			//textend = (const char *)filedata + filesize;
 			text = textstart;
 			for (linenumber = 1;;linenumber++)
 			{

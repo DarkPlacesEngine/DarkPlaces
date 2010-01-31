@@ -50,7 +50,7 @@ explosion_t;
 static explosion_t explosion[MAX_EXPLOSIONS];
 
 static rtexture_t	*explosiontexture;
-static rtexture_t	*explosiontexturefog;
+//static rtexture_t	*explosiontexturefog;
 
 static rtexturepool_t	*explosiontexturepool;
 #endif
@@ -59,14 +59,14 @@ cvar_t r_explosionclip = {CVAR_SAVE, "r_explosionclip", "1", "enables collision 
 #ifdef MAX_EXPLOSIONS
 static cvar_t r_drawexplosions = {0, "r_drawexplosions", "1", "enables rendering of explosion shells (see also cl_particles_explosions_shell)"};
 
-extern qboolean r_loadfog;
+//extern qboolean r_loadfog;
 static void r_explosion_start(void)
 {
 	int x, y;
 	static unsigned char noise1[128][128], noise2[128][128], noise3[128][128], data[128][128][4];
 	explosiontexturepool = R_AllocTexturePool();
 	explosiontexture = NULL;
-	explosiontexturefog = NULL;
+	//explosiontexturefog = NULL;
 	fractalnoise(&noise1[0][0], 128, 32);
 	fractalnoise(&noise2[0][0], 128, 4);
 	fractalnoise(&noise3[0][0], 128, 4);
@@ -87,13 +87,13 @@ static void r_explosion_start(void)
 		}
 	}
 	explosiontexture = R_LoadTexture2D(explosiontexturepool, "explosiontexture", 128, 128, &data[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
-	if (r_loadfog)
-	{
-		for (y = 0;y < 128;y++)
-			for (x = 0;x < 128;x++)
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-		explosiontexturefog = R_LoadTexture2D(explosiontexturepool, "explosiontexture_fog", 128, 128, &data[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
-	}
+//	if (r_loadfog)
+//	{
+//		for (y = 0;y < 128;y++)
+//			for (x = 0;x < 128;x++)
+//				data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
+//		explosiontexturefog = R_LoadTexture2D(explosiontexturepool, "explosiontexture_fog", 128, 128, &data[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
+//	}
 	// note that explosions survive the restart
 }
 

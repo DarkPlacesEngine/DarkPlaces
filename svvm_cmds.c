@@ -1216,7 +1216,7 @@ static void VM_SV_aim (void)
 	int		i, j;
 	trace_t	tr;
 	float	dist, bestdist;
-	float	speed;
+	//float	speed;
 
 	VM_SAFEPARMCOUNT(2, VM_SV_aim);
 
@@ -1237,7 +1237,7 @@ static void VM_SV_aim (void)
 		VM_Warning("aim: can not use free entity\n");
 		return;
 	}
-	speed = PRVM_G_FLOAT(OFS_PARM1);
+	//speed = PRVM_G_FLOAT(OFS_PARM1);
 
 	VectorCopy (ent->fields.server->origin, start);
 	start[2] += 20;
@@ -1349,7 +1349,7 @@ sizebuf_t *WriteDest (void)
 		return sv.writeentitiestoclient_msg;
 	}
 
-	return NULL;
+	//return NULL;
 }
 
 static void VM_SV_WriteByte (void)
