@@ -3346,7 +3346,7 @@ void VM_drawcolorcodedstring(void)
 {
 	float *pos,*scale;
 	const char  *string;
-	int flag,color;
+	int flag;
 	float sx, sy;
 	VM_SAFEPARMCOUNT(5,VM_drawstring);
 
@@ -3372,7 +3372,6 @@ void VM_drawcolorcodedstring(void)
 	if(pos[2] || scale[2])
 		Con_Printf("VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
-	color = -1;
 	getdrawfontscale(&sx, &sy);
 	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false, getdrawfont());
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
@@ -4346,18 +4345,16 @@ string	altstr_ins(string altstr, float num, string set)
 void VM_altstr_ins(void)
 {
 	int num;
-	const char *setstr;
 	const char *set;
-	const char *instr;
 	const char *in;
 	char *out;
 	char outstr[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT(3, VM_altstr_ins);
 
-	in = instr = PRVM_G_STRING( OFS_PARM0 );
+	in = PRVM_G_STRING( OFS_PARM0 );
 	num = (int)PRVM_G_FLOAT( OFS_PARM1 );
-	set = setstr = PRVM_G_STRING( OFS_PARM2 );
+	set = PRVM_G_STRING( OFS_PARM2 );
 
 	out = outstr;
 	for( num = num * 2 + 2 ; *in && num > 0 ; *out++ = *in++ )
@@ -5732,7 +5729,6 @@ void VM_sprintf(void)
 		{
 			case 0:
 				goto finished;
-				break;
 			case '%':
 				++s;
 

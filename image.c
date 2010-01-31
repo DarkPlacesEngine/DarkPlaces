@@ -914,7 +914,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			data = format->loadfunc(f, filesize);
+			data = format->loadfunc(f, (int)filesize);
 			Mem_Free(f);
 			if(format->loadfunc == JPEG_LoadImage_BGRA) // jpeg can't do alpha, so let's simulate it by loading another jpeg
 			{
@@ -922,7 +922,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 				f = FS_LoadFile(name2, tempmempool, true, &filesize);
 				if(f)
 				{
-					data2 = format->loadfunc(f, filesize);
+					data2 = format->loadfunc(f, (int)filesize);
 					Mem_Free(f);
 					Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
 					Mem_Free(data2);
@@ -1497,9 +1497,7 @@ void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned cha
 	const unsigned char *b, *row[3];
 	int p[5];
 	unsigned char *out;
-	float iwidth, iheight, ibumpscale, n[3];
-	iwidth = 1.0f / width;
-	iheight = 1.0f / height;
+	float ibumpscale, n[3];
 	ibumpscale = (255.0f * 6.0f) / bumpscale;
 	out = outpixels;
 	for (y = 0, y1 = height-1;y < height;y1 = y, y++)

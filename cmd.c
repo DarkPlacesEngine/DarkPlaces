@@ -1633,7 +1633,6 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(0));
 				found = true;
 				goto command_found;
-				break;
 			case src_client:
 				if (cmd->clientfunction)
 				{

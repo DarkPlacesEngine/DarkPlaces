@@ -312,11 +312,13 @@ qboolean Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
 
 float Font_VirtualToRealSize(float sz)
 {
-	int vh, vw, si;
+	int vh;
+	//int vw;
+	int si;
 	float sn;
 	if(sz < 0)
 		return sz;
-	vw = ((vid.width > 0) ? vid.width : vid_width.value);
+	//vw = ((vid.width > 0) ? vid.width : vid_width.value);
 	vh = ((vid.height > 0) ? vid.height : vid_height.value);
 	// now try to scale to our actual size:
 	sn = sz * vh / vid_conheight.value;

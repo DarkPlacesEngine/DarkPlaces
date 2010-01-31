@@ -458,11 +458,9 @@ void Draw_Frame(void)
 	int i;
 	cachepic_t *pic;
 	static double nextpurgetime;
-	int purgeframe;
 	if (nextpurgetime > realtime)
 		return;
 	nextpurgetime = realtime + 0.05;
-	purgeframe = draw_frame - 1;
 	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
 	{
 		if (pic->autoload && pic->tex && pic->lastusedframe < draw_frame)
@@ -1124,12 +1122,13 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	size_t bytes_left;
 	ft2_font_map_t *fontmap = NULL;
 	ft2_font_map_t *map = NULL;
-	ft2_font_map_t *prevmap = NULL;
+	//ft2_font_map_t *prevmap = NULL;
 	ft2_font_t *ft2 = fnt->ft2;
 	// float ftbase_x;
 	qboolean snap = true;
 	qboolean least_one = false;
-	float dw, dh; // display w/h
+	float dw; // display w
+	//float dh; // display h
 	const float *width_of;
 
 	if (!h) h = w;
@@ -1152,7 +1151,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	}
 
 	dw = w * sw;
-	dh = h * sh;
+	//dh = h * sh;
 
 	if (*maxlen < 1)
 		*maxlen = 1<<30;
@@ -1283,7 +1282,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, NULL))
 				x += kx * dw;
 			x += map->glyphs[mapch].advance_x * dw;
-			prevmap = map;
+			//prevmap = map;
 			prevch = ch;
 		}
 	}
@@ -1311,7 +1310,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	Uchar prevch = 0; // used for kerning
 	int tempcolorindex;
 	int map_index = 0;
-	ft2_font_map_t *prevmap = NULL; // the previous map
+	//ft2_font_map_t *prevmap = NULL; // the previous map
 	ft2_font_map_t *map = NULL;     // the currently used map
 	ft2_font_map_t *fontmap = NULL; // the font map for the size
 	float ftbase_y;
@@ -1611,7 +1610,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 					av = vertex3f;
 				}
 
-				prevmap = map;
+				//prevmap = map;
 				prevch = ch;
 			}
 			if (shadow)

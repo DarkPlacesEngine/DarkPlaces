@@ -179,7 +179,7 @@ Handles playback of demos
 */
 void CL_ReadDemoMessage(void)
 {
-	int r, i;
+	int i;
 	float f;
 
 	if (!cls.demoplayback)
@@ -251,7 +251,7 @@ void CL_ReadDemoMessage(void)
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 		for (i = 0;i < 3;i++)
 		{
-			r = (int)FS_Read(cls.demofile, &f, 4);
+			FS_Read(cls.demofile, &f, 4);
 			cl.mviewangles[0][i] = LittleFloat(f);
 		}
 
