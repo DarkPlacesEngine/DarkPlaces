@@ -304,25 +304,25 @@ void VM_M_setserverlistmaskstring( void )
 
 	switch( field ) {
 		case SLIF_CNAME:
-			strlcpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
+			strlcpy( mask->info.cname, str, sizeof(mask->info.cname) );
 			break;
 		case SLIF_NAME:
-			strlcpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
+			strlcpy( mask->info.name, str, sizeof(mask->info.name)  );
 			break;
 		case SLIF_QCSTATUS:
-			strlcpy( mask->info.qcstatus, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.qcstatus)  );
+			strlcpy( mask->info.qcstatus, str, sizeof(mask->info.qcstatus)  );
 			break;
 		case SLIF_PLAYERS:
-			strlcpy( mask->info.players, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.players)  );
+			strlcpy( mask->info.players, str, sizeof(mask->info.players)  );
 			break;
 		case SLIF_MAP:
-			strlcpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
+			strlcpy( mask->info.map, str, sizeof(mask->info.map)  );
 			break;
 		case SLIF_MOD:
-			strlcpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
+			strlcpy( mask->info.mod, str, sizeof(mask->info.mod)  );
 			break;
 		case SLIF_GAME:
-			strlcpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
+			strlcpy( mask->info.game, str, sizeof(mask->info.game)  );
 			break;
 		default:
 			VM_Warning( "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
