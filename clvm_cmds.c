@@ -3434,12 +3434,12 @@ static void VM_CL_skel_create(void)
 	if (i == MAX_EDICTS)
 		return;
 	prog->skeletons[i] = skeleton = Mem_Alloc(cls.levelmempool, sizeof(skeleton_t) + model->num_bones * sizeof(matrix4x4_t));
+	PRVM_G_FLOAT(OFS_RETURN) = i + 1;
 	skeleton->model = model;
 	skeleton->relativetransforms = (matrix4x4_t *)(skeleton+1);
 	// initialize to identity matrices
 	for (i = 0;i < skeleton->model->num_bones;i++)
 		skeleton->relativetransforms[i] = identitymatrix;
-	PRVM_G_FLOAT(OFS_RETURN) = i + 1;
 }
 
 // #264 float(float skel, entity ent, float modlindex, float retainfrac, float firstbone, float lastbone) skel_build = #264; // (FTE_CSQC_SKELETONOBJECTS) blend in a percentage of standard animation, 0 replaces entirely, 1 does nothing, 0.5 blends half, etc, and this only alters the bones in the specified range for which out of bounds values like 0,100000 are safe (uses .frame, .frame2, .frame3, .frame4, .lerpfrac, .lerpfrac3, .lerpfrac4, .frame1time, .frame2time, .frame3time, .frame4time), returns skel on success, 0 on failure
