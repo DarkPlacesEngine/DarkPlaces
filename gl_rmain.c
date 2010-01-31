@@ -8860,7 +8860,7 @@ void R_LoadQWSkin(r_qwskincache_t *cache, const char *skinname)
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			if (LoadPCX_QWSkin(f, filesize, pixels, 296, 194))
+			if (LoadPCX_QWSkin(f, (int)filesize, pixels, 296, 194))
 				skinframe = R_SkinFrame_LoadInternalQuake(name, textureflags, true, r_fullbrights.integer, pixels, image_width, image_height);
 			Mem_Free(f);
 		}
@@ -11436,7 +11436,6 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	tridecal_t *decal;
 	tridecal_t *decals;
 	int i;
-	int maxdecals;
 
 	// expand or initialize the system
 	if (decalsystem->maxdecals <= decalsystem->numdecals)
@@ -11463,7 +11462,6 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	}
 
 	// grab a decal and search for another free slot for the next one
-	maxdecals = decalsystem->maxdecals;
 	decals = decalsystem->decals;
 	decal = decalsystem->decals + (i = decalsystem->freedecal++);
 	for (i = decalsystem->freedecal;i < decalsystem->numdecals && decals[i].color4ub[0][3];i++)
@@ -11520,13 +11518,11 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	const msurface_t *surfaces;
 	const int *surfacelist;
 	const texture_t *texture;
-	int numvertices;
 	int numtriangles;
 	int numsurfacelist;
 	int surfacelistindex;
 	int surfaceindex;
 	int triangleindex;
-	int decalsurfaceindex;
 	int cornerindex;
 	int index;
 	int numpoints;
@@ -11536,7 +11532,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	float localmins[3];
 	float localmaxs[3];
 	float localsize;
-	float ilocalsize;
 	float v[9][3];
 	float tc[9][2];
 	float c[9][4];
@@ -11572,7 +11567,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	Matrix4x4_Transform3x3(&rsurface.inversematrix, worldnormal, localnormal);
 	VectorNormalize(localnormal);
 	localsize = worldsize*rsurface.inversematrixscale;
-	ilocalsize = 1.0f / localsize;
 	localmins[0] = localorigin[0] - localsize;
 	localmins[1] = localorigin[1] - localsize;
 	localmins[2] = localorigin[2] - localsize;
@@ -11642,8 +11636,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 			continue;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
 			continue;
-		decalsurfaceindex = ent == r_refdef.scene.worldentity ? surfaceindex : -1;
-		numvertices = surface->num_vertices;
 		numtriangles = surface->num_triangles;
 		for (triangleindex = 0, e = model->surfmesh.data_element3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
 		{
@@ -11858,7 +11850,6 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	decalsystem_t *decalsystem = &ent->decalsystem;
 	int numdecals;
 	tridecal_t *decal;
-	float fadedelay;
 	float faderate;
 	float alpha;
 	float *v3f;
@@ -11892,7 +11883,6 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	decalsystem->lastupdatetime = cl.time;
 	decal = decalsystem->decals;
 
-	fadedelay = cl_decals_time.value;
 	faderate = 1.0f / max(0.001f, cl_decals_fadetime.value);
 
 	// update vertex positions for animated models
@@ -12038,7 +12028,6 @@ void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
 	int i, j, k, l, flagsmask;
-	const int *elements;
 	q3mbrush_t *brush;
 	const msurface_t *surface;
 	dp_model_t *model = ent->model;
@@ -12107,7 +12096,6 @@ void R_DrawDebugModel(void)
 						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, r_showtris.value);
 					else
 						GL_Color(0, r_refdef.view.colorscale, 0, r_showtris.value);
-					elements = (model->surfmesh.data_element3i + 3 * surface->num_firsttriangle);
 					R_Mesh_VertexPointer(rsurface.vertex3f, 0, 0);
 					R_Mesh_ColorPointer(NULL, 0, 0);
 					R_Mesh_TexCoordPointer(0, 0, NULL, 0, 0);
@@ -12182,8 +12170,7 @@ int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass)
 {
-	int i, j, endj, f, flagsmask;
-	texture_t *t;
+	int i, j, endj, flagsmask;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	msurface_t *surfaces;
 	unsigned char *update;
@@ -12229,8 +12216,6 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 		return;
 	}
 
-	f = 0;
-	t = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;
@@ -12279,8 +12264,7 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass)
 {
-	int i, j, endj, f, flagsmask;
-	texture_t *t;
+	int i, j, endj, flagsmask;
 	dp_model_t *model = ent->model;
 	msurface_t *surfaces;
 	unsigned char *update;
@@ -12350,8 +12334,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		return;
 	}
 
-	f = 0;
-	t = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;

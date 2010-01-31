@@ -161,7 +161,6 @@ static gltexturepool_t *gltexturepoolchain = NULL;
 static unsigned char *resizebuffer = NULL, *colorconvertbuffer;
 static int resizebuffersize = 0;
 static const unsigned char *texturebuffer;
-static int texturebuffersize = 0;
 
 static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 {
@@ -180,15 +179,11 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 	case TEXTYPE_RGBA:
 		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.arb_texture_compression)
 			return (flags & TEXF_ALPHA) ? &textype_rgba_alpha_compress : &textype_rgba_compress;
-		else
-			return (flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba;
-		break;
+		return (flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba;
 	case TEXTYPE_BGRA:
 		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.arb_texture_compression)
 			return (flags & TEXF_ALPHA) ? &textype_bgra_alpha_compress : &textype_bgra_compress;
-		else
-			return (flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra;
-		break;
+		return (flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra;
 	case TEXTYPE_ALPHA:
 		return &textype_alpha;
 	case TEXTYPE_SHADOWMAP:
@@ -197,9 +192,9 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 		return &textype_colorbuffer;
 	default:
 		Host_Error("R_GetTexTypeInfo: unknown texture format");
-		return NULL;
+		break;
 	}
-	return NULL; // this line only to hush compiler warnings
+	return NULL;
 }
 
 // dynamic texture code [11/22/2007 Black]
@@ -547,7 +542,6 @@ static void r_textures_shutdown(void)
 	}
 
 	resizebuffersize = 0;
-	texturebuffersize = 0;
 	resizebuffer = NULL;
 	colorconvertbuffer = NULL;
 	texturebuffer = NULL;
@@ -1200,7 +1194,9 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 
 rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor)
 {
-	int i, size, dds_flags, dds_format_flags, dds_miplevels, dds_width, dds_height, textype;
+	int i, size, dds_format_flags, dds_miplevels, dds_width, dds_height;
+	//int dds_flags;
+	textype_t textype;
 	int bytesperblock, bytesperpixel;
 	int mipcomplete;
 	gltexture_t *glt;
@@ -1233,7 +1229,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		return NULL;
 	}
 
-	dds_flags = BuffLittleLong(dds+8);
+	//dds_flags = BuffLittleLong(dds+8);
 	dds_format_flags = BuffLittleLong(dds+80);
 	dds_miplevels = (BuffLittleLong(dds+108) & 0x400000) ? BuffLittleLong(dds+28) : 1;
 	dds_width = BuffLittleLong(dds+16);

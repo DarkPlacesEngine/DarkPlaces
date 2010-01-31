@@ -1307,14 +1307,12 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 // these parameters, only trail handling does
 void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
 {
-	vec3_t center;
 	qboolean found = false;
 	if (effectnameindex < 1 || effectnameindex >= MAX_PARTICLEEFFECTNAME || !particleeffectname[effectnameindex][0])
 	{
 		Con_DPrintf("Unknown effect number %i received from server\n", effectnameindex);
 		return; // no such effect
 	}
-	VectorLerp(originmins, 0.5, originmaxs, center);
 	if (!cl_particles_quake.integer && particleeffectinfo[0].effectnameindex)
 	{
 		int effectinfoindex;
@@ -1322,7 +1320,6 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		int tex, staintex;
 		particleeffectinfo_t *info;
 		vec3_t center;
-		vec3_t centervelocity;
 		vec3_t traildir;
 		vec3_t trailpos;
 		vec3_t rvec;
@@ -1333,7 +1330,6 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		particle_t *part;
 		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
 		VectorLerp(originmins, 0.5, originmaxs, center);
-		VectorLerp(velocitymins, 0.5, velocitymaxs, centervelocity);
 		supercontents = CL_PointSuperContents(center);
 		underwater = (supercontents & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME)) != 0;
 		VectorSubtract(originmaxs, originmins, traildir);
@@ -2596,11 +2592,11 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 void R_DrawParticles (void)
 {
-	int i, a, content;
+	int i, a;
 	int drawparticles = r_drawparticles.integer;
 	float minparticledist;
 	particle_t *p;
-	float gravity, dvel, decalfade, frametime, f, dist, oldorg[3];
+	float gravity, frametime, f, dist, oldorg[3];
 	float drawdist2;
 	int hitent;
 	trace_t trace;
@@ -2615,8 +2611,6 @@ void R_DrawParticles (void)
 
 	minparticledist = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + 4.0f;
 	gravity = frametime * cl.movevars_gravity;
-	dvel = 1+4*frametime;
-	decalfade = frametime * 255 / cl_decals_fadetime.value;
 	update = frametime > 0;
 	drawdist2 = r_drawparticles_drawdistance.value * r_refdef.view.quality;
 	drawdist2 = drawdist2*drawdist2;
@@ -2635,8 +2629,6 @@ void R_DrawParticles (void)
 			if (p->delayedspawn > cl.time)
 				continue;
 			p->delayedspawn = 0;
-
-			content = 0;
 
 			p->size += p->sizeincrease * frametime;
 			p->alpha -= p->alphafade * frametime;

@@ -305,13 +305,11 @@ static void EntityFrameCSQC_LostAllFrames(client_t *client)
 void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
 {
 	// marks a frame as lost
-	int i, j, n;
+	int i, j;
 	qboolean valid;
 	int ringfirst, ringlast;
 	static int recoversendflags[MAX_EDICTS];
 	csqcentityframedb_t *d;
-
-	n = client->csqcnumedicts;
 
 	// is our frame out of history?
 	ringfirst = client->csqcentityframehistory_next; // oldest entry
@@ -2036,7 +2034,7 @@ static void EntityFrame5_ExpandEdicts(entityframe5_database_t *d, int newmax)
 static int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 {
 	int limit, priority;
-	entity_state_t *s;
+	entity_state_t *s = NULL; // hush compiler warning by initializing this
 	// if it is the player, update urgently
 	if (stateindex == d->viewentnum)
 		return ENTITYFRAME5_PRIORITYLEVELS - 1;

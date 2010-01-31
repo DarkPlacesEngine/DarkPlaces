@@ -1006,7 +1006,7 @@ static void Host_Init (void)
 	if (COM_CheckParm("-benchmark"))
 		srand(0); // predictable random sequence for -benchmark
 	else
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
 	// LordHavoc: doesn't seem very temporary...

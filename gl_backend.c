@@ -1681,8 +1681,6 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	}
 }
 
-static const float gl_identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
-
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;

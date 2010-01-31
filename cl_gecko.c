@@ -37,10 +37,10 @@ typedef struct OSGK_BaseObject_s OSGK_BaseObject;
 static int (*osgk_addref) (OSGK_BaseObject* obj);
 static int (*osgk_release) (OSGK_BaseObject* obj);
 
-static OSGK_INLINE int osgk_addref_real (OSGK_BaseObject* obj)
+/*static OSGK_INLINE int osgk_addref_real (OSGK_BaseObject* obj)
 {
   return osgk_addref (obj);
-}
+}*/
 
 static OSGK_INLINE int osgk_release_real (OSGK_BaseObject* obj)
 {
@@ -71,11 +71,11 @@ static OSGK_Embedding* (*osgk_embedding_create2) (
   unsigned int apiVer, OSGK_EmbeddingOptions* options, 
   OSGK_GeckoResult* geckoResult);
 
-static OSGK_INLINE OSGK_Embedding* osgk_embedding_create (
+/*static OSGK_INLINE OSGK_Embedding* osgk_embedding_create (
   OSGK_GeckoResult* geckoResult)
 {
   return osgk_embedding_create2 (OSGK_API_VERSION, 0, geckoResult);
-}
+}*/
 
 static OSGK_INLINE OSGK_Embedding* osgk_embedding_create_with_options (
   OSGK_EmbeddingOptions* options, OSGK_GeckoResult* geckoResult)

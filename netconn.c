@@ -1094,7 +1094,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		int sequence, sequence_ack;
 		int reliable_ack, reliable_message;
 		int count;
-		int qport;
+		//int qport;
 
 		sequence = LittleLong(*((int *)(data + 0)));
 		sequence_ack = LittleLong(*((int *)(data + 4)));
@@ -1107,7 +1107,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 			if (length < 2)
 				return 0;
 			// TODO: use qport to identify that this client really is who they say they are?  (and elsewhere in the code to identify the connection without a port match?)
-			qport = LittleShort(*((int *)(data + 8)));
+			//qport = LittleShort(*((int *)(data + 8)));
 			data += 2;
 			length -= 2;
 		}
@@ -1601,9 +1601,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.rcon_trying)
 		{
-			int i, j;
+			int i = 0, j;
 			for (j = 0;j < MAX_RCONS;j++)
 			{
+				// note: this value from i is used outside the loop too...
 				i = (cls.rcon_ringpos + j) % MAX_RCONS;
 				if(cls.rcon_commands[i][0])
 					if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
@@ -1623,24 +1624,26 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, n))
 				{
+					int k;
 					buf[45] = ' ';
 					strlcpy(buf + 46, argbuf, sizeof(buf) - 46);
 					NetConn_Write(mysocket, buf, 46 + strlen(buf + 46), peeraddress);
 					cls.rcon_commands[i][0] = 0;
 					--cls.rcon_trying;
 
-					for (i = 0;i < MAX_RCONS;i++)
-						if(cls.rcon_commands[i][0])
-							if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
+					for (k = 0;k < MAX_RCONS;k++)
+						if(cls.rcon_commands[k][0])
+							if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[k]))
 								break;
-					if(i < MAX_RCONS)
+					if(k < MAX_RCONS)
 					{
+						int l;
 						NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", peeraddress);
 						// extend the timeout on other requests as we asked for a challenge
-						for (i = 0;i < MAX_RCONS;i++)
-							if(cls.rcon_commands[i][0])
-								if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[i]))
-									cls.rcon_timeout[i] = realtime + rcon_secure_challengetimeout.value;
+						for (l = 0;l < MAX_RCONS;l++)
+							if(cls.rcon_commands[l][0])
+								if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[l]))
+									cls.rcon_timeout[l] = realtime + rcon_secure_challengetimeout.value;
 					}
 
 					return true; // we used up the challenge, so we can't use this oen for connecting now anyway

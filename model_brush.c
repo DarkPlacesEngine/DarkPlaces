@@ -3402,7 +3402,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	int i, j, k;
 	dheader_t *header;
 	dmodel_t *bm;
-	mempool_t *mainmempool;
 	float dist, modelyawradius, modelradius;
 	msurface_t *surface;
 	int numshadowmeshtriangles;
@@ -3531,8 +3530,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->numframes = 2;		// regular and alternate animation
 	mod->numskins = 1;
-
-	mainmempool = mod->mempool;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
@@ -4502,7 +4499,7 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 {
 	q3dlightmap_t *input_pointer;
-	int i, j, k, count, power, power2, mask, endlightmap, mergewidth, mergeheight;
+	int i, j, k, count, power, power2, endlightmap, mergewidth, mergeheight;
 	unsigned char *c;
 
 	unsigned char *convertedpixels;
@@ -4670,7 +4667,6 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 	power = loadmodel->brushq3.num_lightmapmergepower;
 	power2 = power * 2;
-	mask = (1 << power) - 1;
 	for (i = 0;i < count;i++)
 	{
 		// figure out which merged lightmap texture this fits into
@@ -6676,7 +6672,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		VectorCopy(vertexhashdata[j].v, loadmodel->surfmesh.data_vertex3f + 3*j);
 		VectorCopy(vertexhashdata[j].vn, loadmodel->surfmesh.data_normal3f + 3*j);
-		VectorCopy(vertexhashdata[j].vt, loadmodel->surfmesh.data_texcoordtexture2f + 2*j);
+		Vector2Copy(vertexhashdata[j].vt, loadmodel->surfmesh.data_texcoordtexture2f + 2*j);
 	}
 
 	// load the textures

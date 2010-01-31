@@ -743,7 +743,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	{
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
-		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
+		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
 		VectorSubtract(trace->endpos, boxmins, trace->endpos);
 		return;
 	}
@@ -997,7 +997,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->numframes = LittleLong(pinmodel->numframes);
 	BOUNDI(loadmodel->numframes,0,65536);
 	loadmodel->synctype = (synctype_t)LittleLong (pinmodel->synctype);
-	BOUNDI(loadmodel->synctype,0,2);
+	BOUNDI((int)loadmodel->synctype,0,2);
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
 	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
@@ -2402,7 +2402,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	pskmatt_t *matts;
 	pskboneinfo_t *bones;
 	pskrawweights_t *rawweights;
-	pskboneinfo_t *animbones;
+	//pskboneinfo_t *animbones;
 	pskaniminfo_t *anims;
 	pskanimkeys_t *animkeys;
 	void *animfilebuffer, *animbuffer, *animbufferend;
@@ -2654,7 +2654,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				Host_Error("%s: %s has unsupported recordsize", animname, pchunk->id);
 			// byteswap in place and keep the pointer
 			numanimbones = numrecords;
-			animbones = (pskboneinfo_t *)animbuffer;
+			//animbones = (pskboneinfo_t *)animbuffer;
 			// NOTE: supposedly psa does not need to match the psk model, the
 			// bones missing from the psa would simply use their base
 			// positions from the psk, but this is hard for me to implement
