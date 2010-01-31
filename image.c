@@ -775,6 +775,24 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 		strlcpy(out, in, size_out);
 }
 
+static unsigned char image_linearfromsrgb[256];
+
+void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pin, int numpixels)
+{
+	int i;
+	// this math from http://www.opengl.org/registry/specs/EXT/texture_sRGB.txt
+	if (!image_linearfromsrgb[255])
+		for (i = 0;i < 256;i++)
+			image_linearfromsrgb[i] = i < 11 ? (int)(i / 12.92f) : (int)(pow((i/256.0f + 0.055f)/1.0555f, 2.4)*256.0f);
+	for (i = 0;i < numpixels;i++)
+	{
+		pout[i*4+0] = image_linearfromsrgb[pin[i*4+0]];
+		pout[i*4+1] = image_linearfromsrgb[pin[i*4+1]];
+		pout[i*4+2] = image_linearfromsrgb[pin[i*4+2]];
+		pout[i*4+3] = pin[i*4+3];
+	}
+}
+
 typedef struct imageformat_s
 {
 	const char *formatstring;
@@ -854,7 +872,7 @@ imageformat_t imageformats_other[] =
 };
 
 int fixtransparentpixels(unsigned char *data, int w, int h);
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans)
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB)
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
@@ -932,6 +950,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 						}
 					}
 				}
+				if (convertsRGB)
+					Image_MakeLinearColorsFromsRGB(data, data, image_width * image_height);
 				return data;
 			}
 			else
@@ -956,11 +976,11 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	return NULL;
 }
 
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean convertsRGB)
 {
 	unsigned char *data;
 	rtexture_t *rt;
-	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans)))
+	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans, convertsRGB)))
 		return 0;
 	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_BGRA, flags, NULL);
 	Mem_Free(data);
@@ -1108,7 +1128,7 @@ void Image_FixTransparentPixels_f(void)
 		Con_Printf("Processing %s... ", filename);
 		Image_StripImageExtension(filename, buf, sizeof(buf));
 		dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-		if(!(data = loadimagepixelsbgra(filename, true, false)))
+		if(!(data = loadimagepixelsbgra(filename, true, false, false)))
 			return;
 		if((n = fixtransparentpixels(data, image_width, image_height)))
 		{

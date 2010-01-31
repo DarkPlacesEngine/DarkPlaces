@@ -1048,7 +1048,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	}
 
 	// load the image
-	imagedata = loadimagepixelsbgra(imagename, true, false);
+	imagedata = loadimagepixelsbgra(imagename, true, false, false);
 	if(!imagedata)
 		return false;
 
