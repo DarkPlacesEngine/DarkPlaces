@@ -2531,10 +2531,8 @@ allow:
 	userpass_startpass = strchr(userpass_start, ':');
 	if(have_usernames && userpass_startpass && userpass_startpass < userpass_end)
 		return va("%srcon (username %.*s)", restricted ? "restricted " : "", (int)(userpass_startpass-userpass_start), userpass_start);
-	else
-		return va("%srcon", restricted ? "restricted " : "");
 
-	return "restricted rcon";
+	return va("%srcon", restricted ? "restricted " : "");
 }
 
 void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos)
