@@ -1569,26 +1569,20 @@ void Matrix4x4_ToBonePose6s(const matrix4x4_t *m, float origininvscale, short *p
 {
 	float origin[3];
 	float quat[4];
-	float s;
+	float quatscale;
 	Matrix4x4_ToOrigin3Quat4Float(m, origin, quat);
 	// normalize quaternion so that it is unit length
-	s = quat[0]*quat[0]+quat[1]*quat[1]+quat[2]*quat[2]+quat[3]*quat[3];
-	if (s)
-	{
-		s = 1.0f / sqrt(s);
-		quat[0] *= s;
-		quat[1] *= s;
-		quat[2] *= s;
-		quat[3] *= s;
-	}
+	quatscale = quat[0]*quat[0]+quat[1]*quat[1]+quat[2]*quat[2]+quat[3]*quat[3];
+	if (quatscale)
+		quatscale = (quat[3] >= 0 ? -32767.0f : 32767.0f) / sqrt(quatscale);
 	// use a negative scale on the quat because the above function produces a
 	// positive quat[3] and canonical quaternions have negative quat[3]
 	pose6s[0] = origin[0] * origininvscale;
 	pose6s[1] = origin[1] * origininvscale;
 	pose6s[2] = origin[2] * origininvscale;
-	pose6s[3] = quat[0] * -32767.0f;
-	pose6s[4] = quat[1] * -32767.0f;
-	pose6s[5] = quat[2] * -32767.0f;
+	pose6s[3] = quat[0] * quatscale;
+	pose6s[4] = quat[1] * quatscale;
+	pose6s[5] = quat[2] * quatscale;
 }
 
 void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, double blend)
