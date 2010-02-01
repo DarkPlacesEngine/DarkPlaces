@@ -1430,6 +1430,7 @@ void Matrix4x4_FromOriginQuat(matrix4x4_t *m, double ox, double oy, double oz, d
 // see http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 void Matrix4x4_ToOrigin3Quat4Float(const matrix4x4_t *m, float *origin, float *quat)
 {
+#if 0
 	float s;
 	quat[3] = sqrt(1.0f + m->m[0][0] + m->m[1][1] + m->m[2][2]) * 0.5f;
 	s = 0.25f / quat[3];
@@ -1447,6 +1448,86 @@ void Matrix4x4_ToOrigin3Quat4Float(const matrix4x4_t *m, float *origin, float *q
 	quat[0] = (m->m[2][1] - m->m[1][2]) * s;
 	quat[1] = (m->m[0][2] - m->m[2][0]) * s;
 	quat[2] = (m->m[1][0] - m->m[0][1]) * s;
+#endif
+
+#else
+
+#ifdef MATRIX4x4_OPENGLORIENTATION
+	float trace = m->m[0][0] + m->m[1][1] + m->m[2][2];
+	origin[0] = m->m[3][0];
+	origin[1] = m->m[3][1];
+	origin[2] = m->m[3][2];
+	if(trace > 0)
+	{
+		float r = sqrt(1.0f + trace), inv = 0.5f / r;
+		quat[0] = (m->m[1][2] - m->m[2][1]) * inv;
+		quat[1] = (m->m[2][0] - m->m[0][2]) * inv;
+		quat[2] = (m->m[0][1] - m->m[1][0]) * inv;
+		quat[3] = 0.5f * r;
+	}
+	else if(m->m[0][0] > m->m[1][1] && m->m[0][0] > m->m[2][2])
+	{
+		float r = sqrt(1.0f + m->m[0][0] - m->m[1][1] - m->m[2][2]), inv = 0.5f / r;
+		quat[0] = 0.5f * r;
+		quat[1] = (m->m[0][1] + m->m[1][0]) * inv;
+		quat[2] = (m->m[2][0] + m->m[0][2]) * inv;
+		quat[3] = (m->m[1][2] - m->m[2][1]) * inv;
+	}
+	else if(m->m[1][1] > m->m[2][2])
+	{
+		float r = sqrt(1.0f + m->m[1][1] - m->m[0][0] - m->m[2][2]), inv = 0.5f / r;
+		quat[0] = (m->m[0][1] + m->m[1][0]) * inv;
+		quat[1] = 0.5f * r;
+		quat[2] = (m->m[1][2] + m->m[2][1]) * inv;
+		quat[3] = (m->m[2][0] - m->m[0][2]) * inv;
+	}
+	else
+	{
+		float r = sqrt(1.0f + m->m[2][2] - m->m[0][0] - m->m[1][1]), inv = 0.5f / r;
+		quat[0] = (m->m[2][0] + m->m[0][2]) * inv;
+		quat[1] = (m->m[1][2] + m->m[2][1]) * inv;
+		quat[2] = 0.5f * r;
+		quat[3] = (m->m[0][1] - m->m[1][0]) * inv;
+	}
+#else
+	float trace = m->m[0][0] + m->m[1][1] + m->m[2][2];
+	origin[0] = m->m[0][3];
+	origin[1] = m->m[1][3];
+	origin[2] = m->m[2][3];
+	if(trace > 0)
+	{
+		float r = sqrt(1.0f + trace), inv = 0.5f / r;
+		quat[0] = (m->m[2][1] - m->m[1][2]) * inv;
+		quat[1] = (m->m[0][2] - m->m[2][0]) * inv;
+		quat[2] = (m->m[1][0] - m->m[0][1]) * inv;
+		quat[3] = 0.5f * r;
+	}
+	else if(m->m[0][0] > m->m[1][1] && m->m[0][0] > m->m[2][2])
+	{
+		float r = sqrt(1.0f + m->m[0][0] - m->m[1][1] - m->m[2][2]), inv = 0.5f / r;
+		quat[0] = 0.5f * r;
+		quat[1] = (m->m[1][0] + m->m[0][1]) * inv;
+		quat[2] = (m->m[0][2] + m->m[2][0]) * inv;
+		quat[3] = (m->m[2][1] - m->m[1][2]) * inv;
+	}
+	else if(m->m[1][1] > m->m[2][2])
+	{
+		float r = sqrt(1.0f + m->m[1][1] - m->m[0][0] - m->m[2][2]), inv = 0.5f / r;
+		quat[0] = (m->m[1][0] + m->m[0][1]) * inv;
+		quat[1] = 0.5f * r;
+		quat[2] = (m->m[2][1] + m->m[1][2]) * inv;
+		quat[3] = (m->m[0][2] - m->m[2][0]) * inv;
+	}
+	else
+	{
+		float r = sqrt(1.0f + m->m[2][2] - m->m[0][0] - m->m[1][1]), inv = 0.5f / r;
+		quat[0] = (m->m[0][2] + m->m[2][0]) * inv;
+		quat[1] = (m->m[2][1] + m->m[1][2]) * inv;
+		quat[2] = 0.5f * r;
+		quat[3] = (m->m[1][0] - m->m[0][1]) * inv;
+	}
+#endif
+
 #endif
 }
 
