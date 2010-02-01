@@ -12287,7 +12287,19 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	else if (prepass)
 		RSurf_ActiveModelEntity(ent, true, true, true);
 	else if (depthonly)
-		RSurf_ActiveModelEntity(ent, false, false, false);
+	{
+		switch (vid.renderpath)
+		{
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			RSurf_ActiveModelEntity(ent, model->wantnormals, model->wanttangents, false);
+			break;
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL11:
+			RSurf_ActiveModelEntity(ent, model->wantnormals, false, false);
+			break;
+		}
+	}
 	else
 	{
 		switch (vid.renderpath)
