@@ -810,7 +810,7 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 	if(cnt == 0)
 	{
 		MSG_WriteByte(buf, svc_stufftext);
-		MSG_WriteString(buf, va("\ncl_downloadbegin %lu %s\n", len, filename));
+		MSG_WriteString(buf, va("\ncl_downloadbegin %lu %s\n", (unsigned long)len, filename));
 		return true;
 	}
 	else if(cnt >= 1 && cnt <= npackets)
@@ -830,7 +830,7 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 	else if(cnt == npackets + 1)
 	{
 		MSG_WriteByte(buf, svc_stufftext);
-		MSG_WriteString(buf, va("\ncl_downloadfinished %lu %d\n", len, crc));
+		MSG_WriteString(buf, va("\ncl_downloadfinished %lu %d\n", (unsigned long)len, crc));
 		return true;
 	}
 	return false;
