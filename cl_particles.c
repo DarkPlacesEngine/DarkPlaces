@@ -2256,6 +2256,9 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 		// calculate color
 		c4f = particle_color4f + 16*surfacelistindex;
 		ca = d->alpha * alphascale;
+		// ensure alpha multiplier saturates properly
+		if (ca > 1.0f / 256.0f)
+			ca = 1.0f / 256.0f;	
 		if (r_refdef.fogenabled)
 			ca *= RSurf_FogVertex(d->org);
 		Vector4Set(c4f, d->color[0] * ca, d->color[1] * ca, d->color[2] * ca, 1);
@@ -2385,7 +2388,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	rtexture_t *texture;
 	float *v3f, *t2f, *c4f;
 	particletexture_t *tex;
-	float up2[3], v[3], right[3], up[3], fog, ifog, size, len, lenfactor;
+	float up2[3], v[3], right[3], up[3], fog, ifog, size, len, lenfactor, alpha;
 	float ambient[3], diffuse[3], diffusenormal[3];
 	vec4_t colormultiplier;
 
@@ -2415,31 +2418,32 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		{
 		case PBLEND_INVALID:
 		case PBLEND_INVMOD:
-			c4f[0] = p->color[0] * (1.0f / 256.0f);
-			c4f[1] = p->color[1] * (1.0f / 256.0f);
-			c4f[2] = p->color[2] * (1.0f / 256.0f);
-			c4f[3] = p->alpha * colormultiplier[3];
+			alpha = p->alpha * colormultiplier[3];
+			// ensure alpha multiplier saturates properly
+			if (alpha > 1.0f)
+				alpha = 1.0f;
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
-				c4f[3] *= RSurf_FogVertex(p->org);
+				alpha *= RSurf_FogVertex(p->org);
 			// collapse alpha into color for these blends (so that the particlefont does not need alpha on most textures)
-			c4f[0] *= c4f[3];
-			c4f[1] *= c4f[3];
-			c4f[2] *= c4f[3];
+			alpha *= 1.0f / 256.0f;
+			c4f[0] = p->color[0] * alpha;
+			c4f[1] = p->color[1] * alpha;
+			c4f[2] = p->color[2] * alpha;
 			c4f[3] = 1;
 			break;
 		case PBLEND_ADD:
-			c4f[0] = p->color[0] * colormultiplier[0];
-			c4f[1] = p->color[1] * colormultiplier[1];
-			c4f[2] = p->color[2] * colormultiplier[2];
-			c4f[3] = p->alpha * colormultiplier[3];
+			alpha = p->alpha * colormultiplier[3];
+			// ensure alpha multiplier saturates properly
+			if (alpha > 1.0f)
+				alpha = 1.0f;
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
-				c4f[3] *= RSurf_FogVertex(p->org);
+				alpha *= RSurf_FogVertex(p->org);
 			// collapse alpha into color for these blends (so that the particlefont does not need alpha on most textures)
-			c4f[0] *= c4f[3];
-			c4f[1] *= c4f[3];
-			c4f[2] *= c4f[3];
+			c4f[0] = p->color[0] * colormultiplier[0] * alpha;
+			c4f[1] = p->color[1] * colormultiplier[1] * alpha;
+			c4f[2] = p->color[2] * colormultiplier[2] * alpha;
 			c4f[3] = 1;
 			break;
 		case PBLEND_ALPHA:
