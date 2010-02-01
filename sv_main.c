@@ -863,7 +863,7 @@ void SV_SendServerinfo (client_t *client)
 		if(client->sv_demo_file != NULL)
 		{
 			int i;
-			char buf[NET_MAXMESSAGE];
+			static char buf[NET_MAXMESSAGE];
 			sizebuf_t sb;
 
 			sb.data = (unsigned char *) buf;
@@ -2055,7 +2055,7 @@ static void SV_SendClientDatagram (client_t *client)
 	int clientrate, maxrate, maxsize, maxsize2, downloadsize;
 	sizebuf_t msg;
 	int stats[MAX_CL_STATS];
-	unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE];
+	static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE];
 
 	// obey rate limit by limiting packet frequency if the packet size
 	// limiting fails
