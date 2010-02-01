@@ -482,16 +482,16 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			if (ch->pos < 0)
 			{
 				count = -ch->pos;
-				count = min(count, frames - ltime);
+				count = min(count, (int)frames - ltime);
 				ch->pos += count;
 				ltime += count;
 			}
 
-			while (ltime < frames)
+			while (ltime < (int)frames)
 			{
 				// paint up to end of buffer or of input, whichever is lower
 				count = sfx->total_length - ch->pos;
-				count = bound(0, count, frames - ltime);
+				count = bound(0, count, (int)frames - ltime);
 				if (count)
 				{
 					SND_PaintChannel (ch, paintbuffer + ltime, count);
