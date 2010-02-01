@@ -311,6 +311,31 @@ void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
 	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod);
 }
 
+void Mod_FindPotentialDeforms(dp_model_t *mod)
+{
+	int i, j;
+	texture_t *texture;
+	mod->wantnormals = false;
+	mod->wanttangents = false;
+	for (i = 0;i < mod->num_textures;i++)
+	{
+		texture = mod->data_textures + i;
+		if (texture->tcgen.tcgen == Q3TCGEN_ENVIRONMENT)
+			mod->wantnormals = true;
+		for (j = 0;j < Q3MAXDEFORMS;j++)
+		{
+			if (texture->deforms[j].deform == Q3DEFORM_AUTOSPRITE)
+			{
+				mod->wanttangents = true;
+				mod->wantnormals = true;
+				break;
+			}
+			if (texture->deforms[j].deform != Q3DEFORM_NONE)
+				mod->wantnormals = true;
+		}
+	}
+}
+
 /*
 ==================
 Mod_LoadModel
@@ -447,6 +472,8 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 		Mem_Free(buf);
 
+		Mod_FindPotentialDeforms(mod);
+					
 		buf = FS_LoadFile (va("%s.framegroups", mod->name), tempmempool, false, &filesize);
 		if(buf)
 		{
