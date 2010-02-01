@@ -3450,8 +3450,8 @@ static void VM_CL_skel_build(void)
 	prvm_edict_t *ed = PRVM_G_EDICT(OFS_PARM1);
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM2);
 	float retainfrac = PRVM_G_FLOAT(OFS_PARM3);
-	int firstbone = PRVM_G_FLOAT(OFS_PARM4);
-	int lastbone = PRVM_G_FLOAT(OFS_PARM5);
+	int firstbone = PRVM_G_FLOAT(OFS_PARM4) - 1;
+	int lastbone = PRVM_G_FLOAT(OFS_PARM5) - 1;
 	dp_model_t *model = CL_GetModelByIndex(modelindex);
 	float blendfrac;
 	int numblends;
