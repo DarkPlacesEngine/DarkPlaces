@@ -882,6 +882,8 @@ typedef struct model_s
 	int				num_textures;
 	int				num_texturesperskin;
 	texture_t		*data_textures;
+	qboolean		wantnormals;
+	qboolean		wanttangents;
 	// surfaces of this model
 	int				num_surfaces;
 	msurface_t		*data_surfaces;
