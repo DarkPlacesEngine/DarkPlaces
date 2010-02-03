@@ -1092,11 +1092,15 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 			r_shadow_compilingrtlight->static_shadowmap_casters &= ~(1 << i);
 }
 
+#define RSURF_MAX_BATCHSURFACES 8192
+
+static const msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
+
 void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
-	const msurface_t *surface, *batch[1024];
-	int modelsurfacelistindex, batchsize;
+	const msurface_t *surface;
+	int modelsurfacelistindex, batchnumsurfaces;
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
@@ -1113,25 +1117,25 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 			continue;
 		r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
 		r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
-		batch[0] = surface;
-		batchsize = 1;
-		while(++modelsurfacelistindex < modelnumsurfaces && batchsize < (int)(sizeof(batch)/sizeof(batch[0])))
+		batchsurfacelist[0] = surface;
+		batchnumsurfaces = 1;
+		while(++modelsurfacelistindex < modelnumsurfaces && batchnumsurfaces < RSURF_MAX_BATCHSURFACES)
 		{
 			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
 			if (surfacesides && !(surfacesides[modelsurfacelistindex] & (1 << side)))
 				continue;
-			if (surface->texture != batch[0]->texture)
+			if (surface->texture != batchsurfacelist[0]->texture)
 				break;
 			if (!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 				continue;
 			r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
 			r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
-			batch[batchsize++] = surface;
+			batchsurfacelist[batchnumsurfaces++] = surface;
 		}
 		--modelsurfacelistindex;
 		GL_CullFace(rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE ? GL_NONE : r_refdef.view.cullface_back);
-		RSurf_PrepareVerticesForBatch(false, false, batchsize, batch);
-		RSurf_DrawBatch_Simple(batchsize, batch);
+		RSurf_PrepareVerticesForBatch(false, false, batchnumsurfaces, batchsurfacelist);
+		RSurf_DrawBatch_Simple(batchnumsurfaces, batchsurfacelist);
 	}
 }
 
@@ -1166,8 +1170,6 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	R_Shadow_RenderMode_End();
 }
 
-#define RSURF_MAX_BATCHSURFACES 8192
-
 extern qboolean r_shadow_usingdeferredprepass;
 void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
 {
@@ -1175,7 +1177,6 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	const msurface_t *surface;
 	int i, k, kend, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex, batchfirsttriangle;
 	const int *element3i;
-	static msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 	static int batchelements[BATCHSIZE*3];
 	texture_t *tex;
 	CHECKGLERROR
