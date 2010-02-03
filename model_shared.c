@@ -1621,7 +1621,11 @@ void Mod_LoadQ3Shaders(void)
 						{
 							if (j < TEXTURE_MAXFRAMES + 4)
 							{
-								strlcpy(parameter[j], com_token, sizeof(parameter[j]));
+								// remap dp_water to dpwater, dp_reflect to dpreflect, etc.
+								if(j == 0 && !strncasecmp(com_token, "dp_"))
+									dpsnprintf(parameter[j], sizeof(parameter[j]), "dp%s", &com_token[3]);
+								else
+									strlcpy(parameter[j], com_token, sizeof(parameter[j]));
 								numparameters = j + 1;
 							}
 							if (!COM_ParseToken_QuakeC(&text, true))
@@ -1958,19 +1962,19 @@ void Mod_LoadQ3Shaders(void)
 					shader.textureflags |= Q3TEXTUREFLAG_NOPICMIP;
 				else if (!strcasecmp(parameter[0], "polygonoffset"))
 					shader.textureflags |= Q3TEXTUREFLAG_POLYGONOFFSET;
-				else if (!strcasecmp(parameter[0], "dp_refract") && numparameters >= 5)
+				else if (!strcasecmp(parameter[0], "dprefract") && numparameters >= 5)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_REFRACTION;
 					shader.refractfactor = atof(parameter[1]);
 					Vector4Set(shader.refractcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), 1);
 				}
-				else if (!strcasecmp(parameter[0], "dp_reflect") && numparameters >= 6)
+				else if (!strcasecmp(parameter[0], "dpreflect") && numparameters >= 6)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_REFLECTION;
 					shader.reflectfactor = atof(parameter[1]);
 					Vector4Set(shader.reflectcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), atof(parameter[5]));
 				}
-				else if (!strcasecmp(parameter[0], "dp_water") && numparameters >= 12)
+				else if (!strcasecmp(parameter[0], "dpwater") && numparameters >= 12)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_WATERSHADER;
 					shader.reflectmin = atof(parameter[1]);
@@ -1981,11 +1985,11 @@ void Mod_LoadQ3Shaders(void)
 					Vector4Set(shader.reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
 					shader.r_water_wateralpha = atof(parameter[11]);
 				}
-				else if (!strcasecmp(parameter[0], "dp_glossintensitymod") && numparameters >= 2)
+				else if (!strcasecmp(parameter[0], "dpglossintensitymod") && numparameters >= 2)
 				{
 					shader.specularscalemod = atof(parameter[1]);
 				}
-				else if (!strcasecmp(parameter[0], "dp_glossexponentmod") && numparameters >= 2)
+				else if (!strcasecmp(parameter[0], "dpglossexponentmod") && numparameters >= 2)
 				{
 					shader.specularpowermod = atof(parameter[1]);
 				}
