@@ -2041,15 +2041,53 @@ static void R_Shadow_MakeVSDCT(void)
 	r_shadow_shadowmapvsdcttexture = R_LoadTextureCubeMap(r_shadow_texturepool, "shadowmapvsdct", 1, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_CLAMP | TEXF_ALPHA, NULL);
 }
 
-void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
+static void R_Shadow_MakeShadowMap(int side, int size)
 {
 	int status;
-	int maxsize;
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+		if (r_shadow_shadowmap2dtexture) return;
+		r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", size*2, size*(vid.support.arb_texture_non_power_of_two ? 3 : 4), r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
+		qglGenFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbo2d);CHECKGLERROR
+		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_shadowmap2dtexture), 0);CHECKGLERROR
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+		if (r_shadow_shadowmaprectangletexture) return;
+		r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", size*2, size*3, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
+		qglGenFramebuffersEXT(1, &r_shadow_fborectangle);CHECKGLERROR
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fborectangle);CHECKGLERROR
+		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_shadowmaprectangletexture), 0);CHECKGLERROR
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
+		if (r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]) return;
+		r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", size, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
+		qglGenFramebuffersEXT(1, &r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
+		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
+		break;
+	default:
+		return;
+	}
+	// render depth into the fbo, do not render color at all
+	qglDrawBuffer(GL_NONE);CHECKGLERROR
+	qglReadBuffer(GL_NONE);CHECKGLERROR
+	status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
+	if (status != GL_FRAMEBUFFER_COMPLETE_EXT && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
+	{
+		Con_Printf("R_Shadow_MakeShadowMap: glCheckFramebufferStatusEXT returned %i\n", status);
+		Cvar_SetValueQuick(&r_shadow_shadowmapping, 0);
+		Cvar_SetValueQuick(&r_shadow_deferred, 0);
+	}
+}
+	
+void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
+{
 	float nearclip, farclip, bias;
 	r_viewport_t viewport;
 	GLuint fbo = 0;
 	CHECKGLERROR
-	maxsize = r_shadow_shadowmapmaxsize;
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
 	bias = r_shadow_shadowmapping_bias.value * nearclip * (1024.0f / size);// * rsurface.rtlight->radius;
@@ -2057,8 +2095,9 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	r_shadow_shadowmap_parameters[3] = -nearclip * farclip / (farclip - nearclip) - 0.5f * bias;
 	r_shadow_shadowmapside = side;
 	r_shadow_shadowmapsize = size;
-	if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
+	switch (r_shadow_shadowmode)
 	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
 		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
@@ -2068,33 +2107,14 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
 			R_Shadow_MakeVSDCT();
 		if (!r_shadow_shadowmap2dtexture)
-		{
-#if 1
-			int w = maxsize*2, h = vid.support.arb_texture_non_power_of_two ? maxsize*3 : maxsize*4;
-			r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", w, h, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
-			qglGenFramebuffersEXT(1, &r_shadow_fbo2d);CHECKGLERROR
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbo2d);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, R_GetTexture(r_shadow_shadowmap2dtexture), 0);CHECKGLERROR
-            // render depth into the fbo, do not render color at all
-			qglDrawBuffer(GL_NONE);CHECKGLERROR
-			qglReadBuffer(GL_NONE);CHECKGLERROR
-			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-			if (status != GL_FRAMEBUFFER_COMPLETE_EXT && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
-			{
-				Con_Printf("R_Shadow_RenderMode_ShadowMap: glCheckFramebufferStatusEXT returned %i\n", status);
-				Cvar_SetValueQuick(&r_shadow_shadowmapping, 0);
-				Cvar_SetValueQuick(&r_shadow_deferred, 0);
-			}
-#endif
-		}
+			R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
 		CHECKGLERROR
 		if (r_shadow_shadowmap2dtexture) fbo = r_shadow_fbo2d;
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
-	}
-	else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
-	{
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
 		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
@@ -2104,32 +2124,14 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
 			R_Shadow_MakeVSDCT();
 		if (!r_shadow_shadowmaprectangletexture)
-		{
-#if 1
-			r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", maxsize*2, maxsize*3, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
-			qglGenFramebuffersEXT(1, &r_shadow_fborectangle);CHECKGLERROR
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fborectangle);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_RECTANGLE_ARB, R_GetTexture(r_shadow_shadowmaprectangletexture), 0);CHECKGLERROR
-			// render depth into the fbo, do not render color at all
-			qglDrawBuffer(GL_NONE);CHECKGLERROR
-			qglReadBuffer(GL_NONE);CHECKGLERROR
-			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-			if (status != GL_FRAMEBUFFER_COMPLETE_EXT && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
-			{
-				Con_Printf("R_Shadow_RenderMode_ShadowMap: glCheckFramebufferStatusEXT returned %i\n", status);
-				Cvar_SetValueQuick(&r_shadow_shadowmapping, 0);
-				Cvar_SetValueQuick(&r_shadow_deferred, 0);
-			}
-#endif
-		}
+			R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
 		CHECKGLERROR
 		if(r_shadow_shadowmaprectangletexture) fbo = r_shadow_fborectangle;
 		r_shadow_shadowmap_texturescale[0] = 1.0f;
 		r_shadow_shadowmap_texturescale[1] = 1.0f;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
-	}
-	else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
-	{
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 		r_shadow_shadowmap_parameters[0] = 1.0f;
 		r_shadow_shadowmap_parameters[1] = 1.0f;
 		R_Viewport_InitCubeSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, nearclip, farclip, NULL);
@@ -2137,29 +2139,15 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 
 		// simple cube approach
 		if (!r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod])
-		{
- #if 1
-			r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", size, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
-			qglGenFramebuffersEXT(1, &r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_fbocubeside[r_shadow_shadowmaplod]);CHECKGLERROR
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
-			// render depth into the fbo, do not render color at all
-			qglDrawBuffer(GL_NONE);CHECKGLERROR
-			qglReadBuffer(GL_NONE);CHECKGLERROR
-			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-			if (status != GL_FRAMEBUFFER_COMPLETE_EXT && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
-			{
-				Con_Printf("R_Shadow_RenderMode_ShadowMap: glCheckFramebufferStatusEXT returned %i\n", status);
-				Cvar_SetValueQuick(&r_shadow_shadowmapping, 0);
-				Cvar_SetValueQuick(&r_shadow_deferred, 0);
-			}
- #endif
-		}
+			R_Shadow_MakeShadowMap(side, size);
 		CHECKGLERROR
 		if (r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]) fbo = r_shadow_fbocubeside[r_shadow_shadowmaplod];
 		r_shadow_shadowmap_texturescale[0] = 0.0f;
 		r_shadow_shadowmap_texturescale[1] = 0.0f;
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE;
+		break;
+	default:
+		break;
 	}
 
 	R_Shadow_RenderMode_Reset();
