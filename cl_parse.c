@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "csprogs.h"
 #include "libcurl.h"
+#include "utf8lib.h"
 
 char *svc_strings[128] =
 {
@@ -3231,6 +3232,7 @@ void CL_ParseServerMessage(void)
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 	qboolean	qwplayerupdatereceived;
+	qboolean	strip_pqc;
 
 	// LordHavoc: moved demo message writing from before the packet parse to
 	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
@@ -3727,7 +3729,42 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_stufftext:
-				CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
+				temp = MSG_ReadString();
+				/* if(utf8_enable.integer)
+				{
+					strip_pqc = true;
+					// we can safely strip and even
+					// interpret these in utf8 mode
+				}
+				else */ switch(cls.protocol)
+				{
+					case PROTOCOL_QUAKE:
+					case PROTOCOL_QUAKEDP:
+						// maybe add other protocols if
+						// so desired, but not DP7
+						strip_pqc = true;
+						break;
+					case PROTOCOL_DARKPLACES7:
+					default:
+						// ProQuake does not support
+						// these protocols
+						strip_pqc = false;
+						break;
+				}
+				if(strip_pqc)
+				{
+					// skip over ProQuake messages,
+					// TODO actually interpret them
+					// (they are sbar team score
+					// updates), see proquake cl_parse.c
+					if(*temp == 0x01)
+					{
+						++temp;
+						while(*temp >= 0x01 && *temp <= 0x1F)
+							++temp;
+					}
+				}
+				CL_VM_Parse_StuffCmd(temp);	//[515]: csqc
 				break;
 
 			case svc_damage:
