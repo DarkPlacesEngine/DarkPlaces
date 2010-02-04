@@ -4634,7 +4634,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaportho && (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d))
+		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			if (r_shadow_usingshadowmaprect)
@@ -4699,7 +4699,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaportho && (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d))
+		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			if (r_shadow_usingshadowmaprect)
@@ -4756,7 +4756,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaportho && (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d))
+		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			if (r_shadow_usingshadowmaprect)
@@ -4812,7 +4812,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE;
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaportho && (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d))
+		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			if (r_shadow_usingshadowmaprect)
@@ -5019,7 +5019,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_Texture_ScreenNormalMap >= 0) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP   , r_shadow_prepassgeometrynormalmaptexture            );
 		if (r_glsl_permutation->loc_Texture_ScreenDiffuse   >= 0) R_Mesh_TexBind(GL20TU_SCREENDIFFUSE     , r_shadow_prepasslightingdiffusetexture              );
 		if (r_glsl_permutation->loc_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
-		if (rsurface.rtlight || r_shadow_usingshadowmaportho)
+		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
 			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
 			if (r_glsl_permutation->loc_Texture_ShadowMapRect   >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHORECT : GL20TU_SHADOWMAPRECT, r_shadow_shadowmaprectangletexture                  );
@@ -5164,7 +5164,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_cg_permutation->fp_Texture_ScreenNormalMap) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, r_shadow_prepassgeometrynormalmaptexture            );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_ScreenDiffuse  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDiffuse  , r_shadow_prepasslightingdiffusetexture              );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_ScreenSpecular ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenSpecular , r_shadow_prepasslightingspeculartexture             );CHECKCGERROR
-		if (rsurface.rtlight || r_shadow_usingshadowmaportho)
+		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
 			if (r_cg_permutation->fp_Texture_ShadowMap2D    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , r_shadow_shadowmap2dtexture                         );CHECKCGERROR
 			if (r_cg_permutation->fp_Texture_ShadowMapRect  ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapRect  , r_shadow_shadowmaprectangletexture                  );CHECKCGERROR
