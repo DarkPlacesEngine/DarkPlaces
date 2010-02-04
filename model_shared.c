@@ -92,6 +92,7 @@ static void mod_shutdown(void)
 			Mod_UnloadModel(mod);
 
 	Mod_FreeQ3Shaders();
+	Mod_Skeletal_FreeBuffers();
 }
 
 static void mod_newmap(void)
