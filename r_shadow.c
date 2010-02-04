@@ -4287,7 +4287,7 @@ void R_DrawModelShadowMaps(void)
 	Matrix4x4_Invert_Full(&cameramatrix, &shadowmatrix);
 	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, size, size, 0, 0, -1, NULL); 
 
-    VectorMA(r_refdef.view.origin, fabs(dot1) * radius, shadowforward, shadoworigin);
+    VectorMA(r_refdef.view.origin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
  
 #if 0
 	qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);CHECKGLERROR
