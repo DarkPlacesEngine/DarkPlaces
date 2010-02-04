@@ -136,6 +136,8 @@ typedef struct surfmesh_s
 	// skeletal blending, these are NULL if model is morph or static
 	int *data_vertexweightindex4i;
 	float *data_vertexweightinfluence4f;
+	int num_blends;
+	unsigned short *blends;
 	// set if there is some kind of animation on this model
 	qboolean isanimated;
 }
@@ -1076,6 +1078,8 @@ void Mod_AliasInit(void);
 int Mod_Alias_GetTagMatrix(const dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, matrix4x4_t *outmatrix);
 int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname);
 int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
+
+void Mod_Skeletal_FreeBuffers(void);
 
 // sprite models
 void Mod_SpriteInit(void);
