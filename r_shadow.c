@@ -505,8 +505,6 @@ void R_Shadow_FreeShadowMaps(void)
 	r_shadow_shadowmapvsdcttexture = NULL;
 
 	CHECKGLERROR
-
-	r_shadow_usingshadowmaportho = false;
 }
 
 void r_shadow_start(void)
@@ -1978,6 +1976,7 @@ void R_Shadow_RenderMode_Reset(void)
 	r_shadow_usingshadowmaprect = false;
 	r_shadow_usingshadowmapcube = false;
 	r_shadow_usingshadowmap2d = false;
+	r_shadow_usingshadowmaportho = false;
 	CHECKGLERROR
 }
 
@@ -2315,12 +2314,20 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, r_shadow_prepasslightingfbo);CHECKGLERROR
 		if (shadowmapping)
 		{
-			if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
+			switch (r_shadow_shadowmode)
+			{
+			case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 				r_shadow_usingshadowmap2d = true;
-			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
+				break;
+			case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 				r_shadow_usingshadowmaprect = true;
-			else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
+				break;
+			case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 				r_shadow_usingshadowmapcube = true;
+				break;
+			default:
+				break;
+			}
 		}
 
 		// render the lighting
@@ -4291,7 +4298,7 @@ void R_DrawModelShadowMaps(void)
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	R_SetViewport(&viewport);
-	GL_Scissor(viewport.x, viewport.y, viewport.width + r_shadow_shadowmapborder, viewport.height + r_shadow_shadowmapborder);
+	GL_Scissor(viewport.x, viewport.y, min(viewport.width + r_shadow_shadowmapborder, 2*r_shadow_shadowmapmaxsize), viewport.height + r_shadow_shadowmapborder);
 	qglClearDepth(1);
 #if 0
 	qglClearColor(1,1,1,1);
