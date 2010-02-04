@@ -180,6 +180,7 @@ r_shadow_rendermode_t r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_N
 qboolean r_shadow_usingshadowmaprect;
 qboolean r_shadow_usingshadowmap2d;
 qboolean r_shadow_usingshadowmapcube;
+qboolean r_shadow_usingshadowmaportho;
 int r_shadow_shadowmapside;
 float r_shadow_shadowmap_texturescale[2];
 float r_shadow_shadowmap_parameters[4];
@@ -200,6 +201,7 @@ qboolean r_shadow_shadowmapvsdct;
 qboolean r_shadow_shadowmapsampler;
 int r_shadow_shadowmappcf;
 int r_shadow_shadowmapborder;
+matrix4x4_t r_shadow_shadowmapmatrix;
 int r_shadow_lightscissor[4];
 qboolean r_shadow_usingdeferredprepass;
 
@@ -449,6 +451,19 @@ void R_Shadow_SetShadowMode(void)
 	}
 }
 
+qboolean R_Shadow_ShadowMappingEnabled(void)
+{
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
+		return true;
+	default:
+		return false;
+	}
+}
+
 void R_Shadow_FreeShadowMaps(void)
 {
 	int i;
@@ -490,6 +505,8 @@ void R_Shadow_FreeShadowMaps(void)
 	r_shadow_shadowmapvsdcttexture = NULL;
 
 	CHECKGLERROR
+
+	r_shadow_usingshadowmaportho = false;
 }
 
 void r_shadow_start(void)
@@ -2086,6 +2103,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 {
 	float nearclip, farclip, bias;
 	r_viewport_t viewport;
+	int flipped;
 	GLuint fbo = 0;
 	CHECKGLERROR
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
@@ -2170,9 +2188,11 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 
 init_done:
 	R_SetViewport(&viewport);
-	if(r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE)
+	switch (r_shadow_rendermode)
 	{
-		int flipped = (side & 1) ^ (side >> 2);
+	case R_SHADOW_RENDERMODE_SHADOWMAP2D:
+	case R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE:
+		flipped = (side & 1) ^ (side >> 2);
 		r_refdef.view.cullface_front = flipped ? r_shadow_cullface_back : r_shadow_cullface_front;
 		r_refdef.view.cullface_back = flipped ? r_shadow_cullface_front : r_shadow_cullface_back;
 		GL_CullFace(r_refdef.view.cullface_back);
@@ -2187,13 +2207,15 @@ init_done:
 			GL_Clear(GL_DEPTH_BUFFER_BIT);
 		}
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
-	}
-	else if(r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE)
-	{
+		break;
+	case R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE:
 		qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 		if (clear)
 			GL_Clear(GL_DEPTH_BUFFER_BIT);
+		break;
+	default:
+		break;
 	}
 	CHECKGLERROR
 }
@@ -2230,12 +2252,20 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 	}
 	if (shadowmapping)
 	{
-		if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
+		switch (r_shadow_shadowmode)
+		{
+		case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 			r_shadow_usingshadowmap2d = true;
-		else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE)
+			break;
+		case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 			r_shadow_usingshadowmaprect = true;
-		else if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
+			break;
+		case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 			r_shadow_usingshadowmapcube = true;
+			break;
+		default:
+			break;
+		}
 	}
 	R_Mesh_ColorPointer(rsurface.array_color4f, 0, 0);
 	CHECKGLERROR
@@ -3345,12 +3375,17 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[0] = relativeshadoworigin[0] + relativeshadowradius;
 	relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
-	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE || r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D)
+	switch (r_shadow_rendermode)
 	{
+	case R_SHADOW_RENDERMODE_SHADOWMAP2D:
+	case R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE:
+	case R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE:
 		ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
-	}
-	else
+		break;
+	default:
 		ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
+		break;
+	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
@@ -4001,6 +4036,8 @@ void R_Shadow_PrepareLights(void)
 		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
 		R_Shadow_FreeShadowMaps();
 
+	r_shadow_usingshadowmaportho = false;
+
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -4158,6 +4195,151 @@ extern cvar_t r_shadows_drawafterrtlighting;
 extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
+
+void R_DrawModelShadowMaps(void)
+{
+	int i;
+	float relativethrowdistance, scale, size, nearclip, farclip, dot1, dot2;
+	entity_render_t *ent;
+	vec3_t relativelightorigin;
+	vec3_t relativelightdirection;
+	vec3_t relativeshadowmins, relativeshadowmaxs;
+	vec3_t shadowdir, shadowforward;
+	float m[12];
+	matrix4x4_t shadowmatrix, cameramatrix, mvpmatrix, invmvpmatrix;
+	r_viewport_t viewport;
+	GLuint fbo = 0;
+
+	if (!r_refdef.scene.numentities)
+		return;
+
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+		break;
+	default:
+		return;
+	}
+
+	CHECKGLERROR
+	R_ResetViewRendering3D();
+	R_Shadow_RenderMode_Begin();
+	R_Shadow_RenderMode_ActiveLight(NULL);
+
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+		if (!r_shadow_shadowmap2dtexture)
+			R_Shadow_MakeShadowMap(0, r_shadow_shadowmapmaxsize);
+		fbo = r_shadow_fbo2d;
+		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
+		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
+		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+		if (!r_shadow_shadowmaprectangletexture)
+			R_Shadow_MakeShadowMap(0, r_shadow_shadowmapmaxsize);
+		fbo = r_shadow_fborectangle;
+		r_shadow_shadowmap_texturescale[0] = 1.0f;
+		r_shadow_shadowmap_texturescale[1] = 1.0f;
+		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
+		break;
+	default:
+		break;
+	}
+
+	size = 2*r_shadow_shadowmapmaxsize;
+
+	r_shadow_shadowmap_parameters[0] = bound(0.0f, 1.0f - r_shadows_darken.value, 1.0f);
+	r_shadow_shadowmap_parameters[1] = 1.0f;
+	r_shadow_shadowmap_parameters[2] = size;
+	r_shadow_shadowmap_parameters[3] = size;
+
+	scale = r_shadow_shadowmapping_precision.value;
+	nearclip = -r_shadows_throwdistance.value;
+	farclip = r_shadows_throwdistance.value;
+	Math_atov(r_shadows_throwdirection.string, shadowdir);
+	VectorNormalize(shadowdir);
+	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
+	dot2 = DotProduct(r_refdef.view.up, shadowdir);
+	if (fabs(dot1) <= fabs(dot2)) 
+		VectorMA(r_refdef.view.forward, -dot1, shadowdir, shadowforward);
+	else
+		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
+	VectorNormalize(shadowforward);
+	VectorM(scale, shadowforward, &m[0]);
+	m[3] = fabs(dot1) * 0.5f * size - DotProduct(r_refdef.view.origin, &m[0]);
+	CrossProduct(shadowdir, shadowforward, &m[4]);
+	VectorM(scale, &m[4], &m[4]);
+	m[7] = 0.5f * size - DotProduct(r_refdef.view.origin, &m[4]);
+	VectorM(1.0f / (farclip - nearclip), shadowdir, &m[8]);
+	m[11] = 0.5f - DotProduct(r_refdef.view.origin, &m[8]);
+	Matrix4x4_FromArray12FloatD3D(&shadowmatrix, m);
+	Matrix4x4_Invert_Full(&cameramatrix, &shadowmatrix);
+	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, size, size, 0, 0, -1, NULL); 
+
+#if 0
+	qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);CHECKGLERROR
+	R_SetupShader_ShowDepth();
+#else
+	qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo);CHECKGLERROR
+	R_SetupShader_DepthOrShadow();
+#endif
+	CHECKGLERROR
+	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	R_SetViewport(&viewport);
+	GL_Scissor(viewport.x, viewport.y, viewport.width + r_shadow_shadowmapborder, viewport.height + r_shadow_shadowmapborder);
+	qglClearDepth(1);
+#if 0
+	qglClearColor(1,1,1,1);
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#else
+	GL_Clear(GL_DEPTH_BUFFER_BIT);
+#endif
+	GL_Scissor(viewport.x + r_shadow_shadowmapborder, viewport.y + r_shadow_shadowmapborder, viewport.width - 2*r_shadow_shadowmapborder, viewport.height - 2*r_shadow_shadowmapborder);
+	CHECKGLERROR
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+	{
+		ent = r_refdef.scene.entities[i];
+
+		// cast shadows from anything of the map (submodels are optional)
+		if (ent->model && ent->model->DrawShadowMap != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
+		{
+			relativethrowdistance = r_shadows_throwdistance.value * Matrix4x4_ScaleFromMatrix(&ent->inversematrix);
+			VectorSet(relativeshadowmins, -relativethrowdistance, -relativethrowdistance, -relativethrowdistance);
+			VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
+			Matrix4x4_Transform3x3(&ent->inversematrix, shadowdir, relativelightdirection);
+			VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
+			RSurf_ActiveModelEntity(ent, false, false, false);
+			ent->model->DrawShadowMap(0, ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
+			rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+		}
+	}
+
+	R_Shadow_RenderMode_End();
+
+	Matrix4x4_Concat(&mvpmatrix, &r_refdef.view.viewport.projectmatrix, &r_refdef.view.viewport.viewmatrix);
+	Matrix4x4_Invert_Full(&invmvpmatrix, &mvpmatrix);
+	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &shadowmatrix, &invmvpmatrix);
+
+	r_shadow_usingshadowmaportho = true;
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+		r_shadow_usingshadowmap2d = true;
+		break;
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+		r_shadow_usingshadowmaprect = true;
+		break;
+	default:
+		break;
+	}
+}
+
 void R_DrawModelShadows(void)
 {
 	int i;
@@ -4168,7 +4350,7 @@ void R_DrawModelShadows(void)
 	vec3_t relativeshadowmins, relativeshadowmaxs;
 	vec3_t tmp, shadowdir;
 
-	if (!r_refdef.scene.numentities || !vid.stencil)
+	if (!r_refdef.scene.numentities || !vid.stencil || r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL)
 		return;
 
 	CHECKGLERROR
