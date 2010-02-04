@@ -3727,9 +3727,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_Cube            >= 0) qglUniform1iARB(p->loc_Texture_Cube           , GL20TU_CUBE);
 		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
 		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
-		if (p->loc_Texture_ShadowMapRect   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapRect  , GL20TU_SHADOWMAPRECT);
+		if (p->loc_Texture_ShadowMapRect   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapRect  , permutation & SHADERPERMUTATION_SHADOWMAPORTHO ? GL20TU_SHADOWMAPORTHORECT : GL20TU_SHADOWMAPRECT);
 		if (p->loc_Texture_ShadowMapCube   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapCube  , GL20TU_SHADOWMAPCUBE);
-		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
+		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , permutation & SHADERPERMUTATION_SHADOWMAPORTHO ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D);
 		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1iARB(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
 		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1iARB(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
 		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1iARB(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
@@ -5021,8 +5021,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || r_shadow_usingshadowmaportho)
 		{
-			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAP2D       , r_shadow_shadowmap2dtexture                         );
-			if (r_glsl_permutation->loc_Texture_ShadowMapRect   >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAPRECT     , r_shadow_shadowmaprectangletexture                  );
+			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
+			if (r_glsl_permutation->loc_Texture_ShadowMapRect   >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHORECT : GL20TU_SHADOWMAPRECT, r_shadow_shadowmaprectangletexture                  );
 			if (rsurface.rtlight)
 			{
 				if (r_glsl_permutation->loc_Texture_Cube            >= 0) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
