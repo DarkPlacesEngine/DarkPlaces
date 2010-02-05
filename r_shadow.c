@@ -4208,7 +4208,7 @@ void R_Shadow_PrepareModelShadows(void)
 {
 	int i;
 	float scale, size, radius, dot1, dot2;
-	vec3_t shadowdir, shadowforward, shadowright, shadoworigin, shadowmins, shadowmaxs;
+	vec3_t shadowdir, shadowforward, shadowright, shadoworigin, shadowfocus, shadowmins, shadowmaxs;
 	entity_render_t *ent;
 
 	if (!r_refdef.scene.numentities)
@@ -4244,7 +4244,10 @@ void R_Shadow_PrepareModelShadows(void)
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
 	VectorNormalize(shadowforward);
 	CrossProduct(shadowdir, shadowforward, shadowright);
-	Math_atov(r_shadows_focus.string, shadoworigin);
+	Math_atov(r_shadows_focus.string, shadowfocus);
+	VectorM(shadowfocus[0], r_refdef.view.right, shadoworigin);
+	VectorMA(shadoworigin, shadowfocus[1], r_refdef.view.up, shadoworigin);
+	VectorMA(shadoworigin, -shadowfocus[2], r_refdef.view.forward, shadoworigin);
 	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
@@ -4274,7 +4277,7 @@ void R_DrawModelShadowMaps(void)
 	vec3_t relativelightorigin;
 	vec3_t relativelightdirection, relativeforward, relativeright;
 	vec3_t relativeshadowmins, relativeshadowmaxs;
-	vec3_t shadowdir, shadowforward, shadowright, shadoworigin;
+	vec3_t shadowdir, shadowforward, shadowright, shadoworigin, shadowfocus;
 	float m[12];
 	matrix4x4_t shadowmatrix, cameramatrix, mvpmatrix, invmvpmatrix, scalematrix, texmatrix;
 	r_viewport_t viewport;
@@ -4332,7 +4335,10 @@ void R_DrawModelShadowMaps(void)
 	farclip = r_shadows_throwdistance.value;
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
 	VectorNormalize(shadowdir);
-	Math_atov(r_shadows_focus.string, shadoworigin);
+	Math_atov(r_shadows_focus.string, shadowfocus);
+	VectorM(shadowfocus[0], r_refdef.view.right, shadoworigin);
+	VectorMA(shadoworigin, shadowfocus[1], r_refdef.view.up, shadoworigin);
+	VectorMA(shadoworigin, -shadowfocus[2], r_refdef.view.forward, shadoworigin);
 	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
 	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
 	dot2 = DotProduct(r_refdef.view.up, shadowdir);
