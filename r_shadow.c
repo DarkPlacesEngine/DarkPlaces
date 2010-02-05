@@ -4377,6 +4377,10 @@ void R_DrawModelShadowMaps(void)
 	GL_Scissor(viewport.x + r_shadow_shadowmapborder, viewport.y + r_shadow_shadowmapborder, viewport.width - 2*r_shadow_shadowmapborder, viewport.height - 2*r_shadow_shadowmapborder);
 	CHECKGLERROR
 
+	r_refdef.view.cullface_front = r_shadow_cullface_back;
+	r_refdef.view.cullface_back = r_shadow_cullface_front;
+	GL_CullFace(r_refdef.view.cullface_back);
+
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		ent = r_refdef.scene.entities[i];
