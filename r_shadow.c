@@ -4249,6 +4249,8 @@ void R_Shadow_PrepareModelShadows(void)
 	VectorMA(shadoworigin, shadowfocus[1], r_refdef.view.up, shadoworigin);
 	VectorMA(shadoworigin, -shadowfocus[2], r_refdef.view.forward, shadoworigin);
 	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
+	if (shadowfocus[0] || shadowfocus[1] || shadowfocus[2])
+		dot1 = 1;
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
 	shadowmins[0] = shadoworigin[0] - r_shadows_throwdistance.value * fabs(shadowdir[0]) - radius * (fabs(shadowforward[0]) + fabs(shadowright[0]));
@@ -4348,6 +4350,8 @@ void R_DrawModelShadowMaps(void)
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
 	VectorNormalize(shadowforward);
 	VectorM(scale, shadowforward, &m[0]);
+	if (shadowfocus[0] || shadowfocus[1] || shadowfocus[2])
+		dot1 = 1;
 	m[3] = fabs(dot1) * 0.5f - DotProduct(shadoworigin, &m[0]);
 	CrossProduct(shadowdir, shadowforward, shadowright);
 	VectorM(scale, shadowright, &m[4]);
