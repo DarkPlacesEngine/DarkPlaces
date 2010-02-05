@@ -1845,7 +1845,11 @@ void Mod_LoadQ3Shaders(void)
 				{
 					if (j < TEXTURE_MAXFRAMES + 4)
 					{
-						strlcpy(parameter[j], com_token, sizeof(parameter[j]));
+						// remap dp_water to dpwater, dp_reflect to dpreflect, etc.
+						if(j == 0 && !strncasecmp(com_token, "dp_", 3))
+							dpsnprintf(parameter[j], sizeof(parameter[j]), "dp%s", &com_token[3]);
+						else
+							strlcpy(parameter[j], com_token, sizeof(parameter[j]));
 						numparameters = j + 1;
 					}
 					if (!COM_ParseToken_QuakeC(&text, true))
