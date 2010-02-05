@@ -4202,6 +4202,7 @@ extern cvar_t r_shadows_drawafterrtlighting;
 extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
+extern cvar_t r_shadows_focus;
 
 void R_Shadow_PrepareModelShadows(void)
 {
@@ -4218,12 +4219,12 @@ void R_Shadow_PrepareModelShadows(void)
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 		break;
-	case R_SHADOW_SHADOWMODE_STENCIL;
+	case R_SHADOW_SHADOWMODE_STENCIL:
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
 			if (!ent->animcache_vertex3f && ent->model && ent->model->DrawShadowVolume != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
-				R_AnimCache_GetEntity(ent false, false);
+				R_AnimCache_GetEntity(ent, false, false);
 		}
 		return;
 	default:
@@ -4243,7 +4244,9 @@ void R_Shadow_PrepareModelShadows(void)
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
 	VectorNormalize(shadowforward);
 	CrossProduct(shadowdir, shadowforward, shadowright);
-	VectorMA(r_refdef.view.origin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
+	Math_atov(r_shadows_focus.string, shadoworigin);
+	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
+	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
 	shadowmins[0] = shadoworigin[0] - r_shadows_throwdistance.value * fabs(shadowdir[0]) - radius * (fabs(shadowforward[0]) + fabs(shadowright[0]));
 	shadowmins[1] = shadoworigin[1] - r_shadows_throwdistance.value * fabs(shadowdir[1]) - radius * (fabs(shadowforward[1]) + fabs(shadowright[1]));
@@ -4329,6 +4332,8 @@ void R_DrawModelShadowMaps(void)
 	farclip = r_shadows_throwdistance.value;
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
 	VectorNormalize(shadowdir);
+	Math_atov(r_shadows_focus.string, shadoworigin);
+	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
 	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
 	dot2 = DotProduct(r_refdef.view.up, shadowdir);
 	if (fabs(dot1) <= fabs(dot2)) 
@@ -4337,17 +4342,17 @@ void R_DrawModelShadowMaps(void)
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
 	VectorNormalize(shadowforward);
 	VectorM(scale, shadowforward, &m[0]);
-	m[3] = fabs(dot1) * 0.5f * size - DotProduct(r_refdef.view.origin, &m[0]);
+	m[3] = fabs(dot1) * 0.5f * size - DotProduct(shadoworigin, &m[0]);
 	CrossProduct(shadowdir, shadowforward, shadowright);
 	VectorM(scale, shadowright, &m[4]);
-	m[7] = 0.5f * size - DotProduct(r_refdef.view.origin, &m[4]);
+	m[7] = 0.5f * size - DotProduct(shadoworigin, &m[4]);
 	VectorM(1.0f / (farclip - nearclip), shadowdir, &m[8]);
-	m[11] = 0.5f - DotProduct(r_refdef.view.origin, &m[8]);
+	m[11] = 0.5f - DotProduct(shadoworigin, &m[8]);
 	Matrix4x4_FromArray12FloatD3D(&shadowmatrix, m);
 	Matrix4x4_Invert_Full(&cameramatrix, &shadowmatrix);
 	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, size, size, 0, 0, -1, NULL); 
 
-    VectorMA(r_refdef.view.origin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
+	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
  
 #if 0
 	qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);CHECKGLERROR
