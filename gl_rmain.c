@@ -6716,11 +6716,6 @@ void R_AnimCache_CacheVisibleEntities(void)
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 		if (r_refdef.viewcache.entityvisible[i])
 			R_AnimCache_GetEntity(r_refdef.scene.entities[i], wantnormals, wanttangents);
-
-	if (r_shadows.integer)
-		for (i = 0;i < r_refdef.scene.numentities;i++)
-			if (!r_refdef.viewcache.entityvisible[i])
-				R_AnimCache_GetEntity(r_refdef.scene.entities[i], false, false);
 }
 
 //==================================================================================
@@ -8357,6 +8352,8 @@ void R_RenderScene(void)
 		R_TimeReport("animation");
 
 	R_Shadow_PrepareLights();
+	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
+		R_Shadow_PrepareModelShadows();
 	if (r_timereport_active)
 		R_TimeReport("preparelights");
 
