@@ -4203,6 +4203,66 @@ extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
 
+void R_Shadow_PrepareModelShadows(void)
+{
+	int i;
+	float scale, size, radius, dot1, dot2;
+	vec3_t shadowdir, shadowforward, shadowright, shadoworigin, shadowmins, shadowmaxs;
+	entity_render_t *ent;
+
+	if (!r_refdef.scene.numentities)
+		return;
+
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
+		break;
+	case R_SHADOW_SHADOWMODE_STENCIL;
+		for (i = 0;i < r_refdef.scene.numentities;i++)
+		{
+			ent = r_refdef.scene.entities[i];
+			if (!ent->animcache_vertex3f && ent->model && ent->model->DrawShadowVolume != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
+				R_AnimCache_GetEntity(ent false, false);
+		}
+		return;
+	default:
+		return;
+	}
+
+	size = 2*r_shadow_shadowmapmaxsize;
+	scale = r_shadow_shadowmapping_precision.value;
+	radius = 0.5f * size / scale;
+	Math_atov(r_shadows_throwdirection.string, shadowdir);
+	VectorNormalize(shadowdir);
+	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
+	dot2 = DotProduct(r_refdef.view.up, shadowdir);
+	if (fabs(dot1) <= fabs(dot2))
+		VectorMA(r_refdef.view.forward, -dot1, shadowdir, shadowforward);
+	else
+		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
+	VectorNormalize(shadowforward);
+	CrossProduct(shadowdir, shadowforward, shadowright);
+	VectorMA(r_refdef.view.origin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
+
+	shadowmins[0] = shadoworigin[0] - r_shadows_throwdistance.value * fabs(shadowdir[0]) - radius * (fabs(shadowforward[0]) + fabs(shadowright[0]));
+	shadowmins[1] = shadoworigin[1] - r_shadows_throwdistance.value * fabs(shadowdir[1]) - radius * (fabs(shadowforward[1]) + fabs(shadowright[1]));
+	shadowmins[2] = shadoworigin[2] - r_shadows_throwdistance.value * fabs(shadowdir[2]) - radius * (fabs(shadowforward[2]) + fabs(shadowright[2]));
+	shadowmaxs[0] = shadoworigin[0] + r_shadows_throwdistance.value * fabs(shadowdir[0]) + radius * (fabs(shadowforward[0]) + fabs(shadowright[0]));
+	shadowmaxs[1] = shadoworigin[1] + r_shadows_throwdistance.value * fabs(shadowdir[1]) + radius * (fabs(shadowforward[1]) + fabs(shadowright[1]));
+	shadowmaxs[2] = shadoworigin[2] + r_shadows_throwdistance.value * fabs(shadowdir[2]) + radius * (fabs(shadowforward[2]) + fabs(shadowright[2]));
+
+	for (i = 0;i < r_refdef.scene.numentities;i++)
+	{
+		ent = r_refdef.scene.entities[i];
+		if (!BoxesOverlap(ent->mins, ent->maxs, shadowmins, shadowmaxs))
+			continue;
+		// cast shadows from anything of the map (submodels are optional)
+		if (!ent->animcache_vertex3f && ent->model && ent->model->DrawShadowMap != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
+			R_AnimCache_GetEntity(ent, false, false);
+	}
+}
+
 void R_DrawModelShadowMaps(void)
 {
 	int i;

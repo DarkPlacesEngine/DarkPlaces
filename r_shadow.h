@@ -90,6 +90,8 @@ extern unsigned char *shadowsides;
 extern int *shadowsideslist;
 void R_Shadow_PrepareShadowSides(int numtris);
 
+void R_Shadow_PrepareModelShadows(void);
+
 void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic);
 
 #endif
