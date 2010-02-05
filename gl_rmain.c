@@ -6728,13 +6728,14 @@ static void R_View_UpdateEntityLighting (void)
 	entity_render_t *ent;
 	vec3_t tempdiffusenormal, avg;
 	vec_t f, fa, fd, fdd;
+	qboolean skipunseen = r_shadows.integer != 1 || R_Shadow_ShadowMappingEnabled();
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		ent = r_refdef.scene.entities[i];
 
 		// skip unseen models
-		if (!r_refdef.viewcache.entityvisible[i] && r_shadows.integer != 1)
+		if (!r_refdef.viewcache.entityvisible[i] && skipunseen)
 			continue;
 
 		// skip bsp models
