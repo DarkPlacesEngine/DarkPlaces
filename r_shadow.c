@@ -4276,7 +4276,7 @@ void R_DrawModelShadowMaps(void)
 	vec3_t relativeshadowmins, relativeshadowmaxs;
 	vec3_t shadowdir, shadowforward, shadowright, shadoworigin;
 	float m[12];
-	matrix4x4_t shadowmatrix, cameramatrix, mvpmatrix, invmvpmatrix;
+	matrix4x4_t shadowmatrix, cameramatrix, mvpmatrix, invmvpmatrix, scalematrix, texmatrix;
 	r_viewport_t viewport;
 	GLuint fbo = 0;
 
@@ -4326,8 +4326,8 @@ void R_DrawModelShadowMaps(void)
 	r_shadow_shadowmap_parameters[2] = size;
 	r_shadow_shadowmap_parameters[3] = size;
 
-	scale = r_shadow_shadowmapping_precision.value;
-	radius = 0.5f * size / scale;
+	scale = r_shadow_shadowmapping_precision.value / size;
+	radius = 0.5f / scale;
 	nearclip = -r_shadows_throwdistance.value;
 	farclip = r_shadows_throwdistance.value;
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
@@ -4342,15 +4342,15 @@ void R_DrawModelShadowMaps(void)
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
 	VectorNormalize(shadowforward);
 	VectorM(scale, shadowforward, &m[0]);
-	m[3] = fabs(dot1) * 0.5f * size - DotProduct(shadoworigin, &m[0]);
+	m[3] = fabs(dot1) * 0.5f - DotProduct(shadoworigin, &m[0]);
 	CrossProduct(shadowdir, shadowforward, shadowright);
 	VectorM(scale, shadowright, &m[4]);
-	m[7] = 0.5f * size - DotProduct(shadoworigin, &m[4]);
+	m[7] = 0.5f - DotProduct(shadoworigin, &m[4]);
 	VectorM(1.0f / (farclip - nearclip), shadowdir, &m[8]);
 	m[11] = 0.5f - DotProduct(shadoworigin, &m[8]);
 	Matrix4x4_FromArray12FloatD3D(&shadowmatrix, m);
 	Matrix4x4_Invert_Full(&cameramatrix, &shadowmatrix);
-	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, size, size, 0, 0, -1, NULL); 
+	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, 0, 1, 1, 0, -1, NULL); 
 
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
  
@@ -4376,10 +4376,6 @@ void R_DrawModelShadowMaps(void)
 #endif
 	GL_Scissor(viewport.x + r_shadow_shadowmapborder, viewport.y + r_shadow_shadowmapborder, viewport.width - 2*r_shadow_shadowmapborder, viewport.height - 2*r_shadow_shadowmapborder);
 	CHECKGLERROR
-
-	r_refdef.view.cullface_front = r_shadow_cullface_back;
-	r_refdef.view.cullface_back = r_shadow_cullface_front;
-	GL_CullFace(r_refdef.view.cullface_back);
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
@@ -4409,7 +4405,10 @@ void R_DrawModelShadowMaps(void)
 
 	Matrix4x4_Concat(&mvpmatrix, &r_refdef.view.viewport.projectmatrix, &r_refdef.view.viewport.viewmatrix);
 	Matrix4x4_Invert_Full(&invmvpmatrix, &mvpmatrix);
-	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &shadowmatrix, &invmvpmatrix);
+	Matrix4x4_CreateScale3(&scalematrix, size, -size, 1); 
+	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, 0);
+	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
+	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
 
 	r_shadow_usingshadowmaportho = true;
 	switch (r_shadow_shadowmode)
