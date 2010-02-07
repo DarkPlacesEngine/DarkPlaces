@@ -4234,6 +4234,7 @@ void R_Shadow_PrepareModelShadows(void)
 	size = 2*r_shadow_shadowmapmaxsize;
 	scale = r_shadow_shadowmapping_precision.value;
 	radius = 0.5f * size / scale;
+
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
 	VectorNormalize(shadowdir);
 	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
@@ -4274,7 +4275,7 @@ void R_Shadow_PrepareModelShadows(void)
 void R_DrawModelShadowMaps(void)
 {
 	int i;
-	float relativethrowdistance, scale, size, radius, nearclip, farclip, dot1, dot2;
+	float relativethrowdistance, scale, size, radius, nearclip, farclip, bias, dot1, dot2;
 	entity_render_t *ent;
 	vec3_t relativelightorigin;
 	vec3_t relativelightdirection, relativeforward, relativeright;
@@ -4325,16 +4326,17 @@ void R_DrawModelShadowMaps(void)
 	}
 
 	size = 2*r_shadow_shadowmapmaxsize;
-
-	r_shadow_shadowmap_parameters[0] = bound(0.0f, 1.0f - r_shadows_darken.value, 1.0f);
-	r_shadow_shadowmap_parameters[1] = 1.0f;
-	r_shadow_shadowmap_parameters[2] = size;
-	r_shadow_shadowmap_parameters[3] = size;
-
 	scale = r_shadow_shadowmapping_precision.value / size;
 	radius = 0.5f / scale;
 	nearclip = -r_shadows_throwdistance.value;
 	farclip = r_shadows_throwdistance.value;
+	bias = r_shadow_shadowmapping_bias.value * r_shadow_shadowmapping_nearclip.value / (2 * r_shadows_throwdistance.value) * (1024.0f / size);
+
+	r_shadow_shadowmap_parameters[0] = size;
+	r_shadow_shadowmap_parameters[1] = size;
+	r_shadow_shadowmap_parameters[2] = 1.0;
+	r_shadow_shadowmap_parameters[3] = bound(0.0f, 1.0f - r_shadows_darken.value, 1.0f);
+
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
 	VectorNormalize(shadowdir);
 	Math_atov(r_shadows_focus.string, shadowfocus);
@@ -4416,7 +4418,7 @@ void R_DrawModelShadowMaps(void)
 	Matrix4x4_Concat(&mvpmatrix, &r_refdef.view.viewport.projectmatrix, &r_refdef.view.viewport.viewmatrix);
 	Matrix4x4_Invert_Full(&invmvpmatrix, &mvpmatrix);
 	Matrix4x4_CreateScale3(&scalematrix, size, -size, 1); 
-	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, 0);
+	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, -0.5f * bias);
 	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
 
