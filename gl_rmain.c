@@ -11073,7 +11073,7 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
-	if (r_showsurfaces.integer == 3 && !prepass && (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY))
+	if (r_showsurfaces.integer == 3 && !prepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY))
 	{
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
 		return;
@@ -11098,7 +11098,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
-	if (r_showsurfaces.integer == 3 && !prepass && (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY))
+	if (r_showsurfaces.integer == 3 && !prepass && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY))
 	{
 		R_DrawTextureSurfaceList_ShowSurfaces3(texturenumsurfaces, texturesurfacelist, writedepth);
 		return;
