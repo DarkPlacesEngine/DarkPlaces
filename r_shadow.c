@@ -2108,15 +2108,15 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
 	bias = r_shadow_shadowmapping_bias.value * nearclip * (1024.0f / size);// * rsurface.rtlight->radius;
-	r_shadow_shadowmap_parameters[2] = 0.5f + 0.5f * (farclip + nearclip) / (farclip - nearclip);
-	r_shadow_shadowmap_parameters[3] = -nearclip * farclip / (farclip - nearclip) - 0.5f * bias;
+	r_shadow_shadowmap_parameters[1] = -nearclip * farclip / (farclip - nearclip) - 0.5f * bias;
+	r_shadow_shadowmap_parameters[3] = 0.5f + 0.5f * (farclip + nearclip) / (farclip - nearclip);
 	r_shadow_shadowmapside = side;
 	r_shadow_shadowmapsize = size;
 	switch (r_shadow_shadowmode)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
+		r_shadow_shadowmap_parameters[2] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
 		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D) goto init_done;
 
@@ -2133,7 +2133,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		break;
 	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[1] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
+		r_shadow_shadowmap_parameters[2] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
 		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
 		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE) goto init_done;
 
@@ -2150,7 +2150,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		break;
 	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 		r_shadow_shadowmap_parameters[0] = 1.0f;
-		r_shadow_shadowmap_parameters[1] = 1.0f;
+		r_shadow_shadowmap_parameters[2] = 1.0f;
 		R_Viewport_InitCubeSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, nearclip, farclip, NULL);
 		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE) goto init_done;
 
