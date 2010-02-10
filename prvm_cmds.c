@@ -4439,18 +4439,33 @@ static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
 VM_buf_create
 creates new buffer, and returns it's index, returns -1 if failed
 float buf_create(void) = #460;
+float newbuf(string format, float flags) = #460;
 ========================
 */
+
 void VM_buf_create (void)
 {
 	prvm_stringbuffer_t *stringbuffer;
 	int i;
-	VM_SAFEPARMCOUNT(0, VM_buf_create);
+	
+	VM_SAFEPARMCOUNTRANGE(0, 2, VM_buf_create);
+
+	// VorteX: optional parm1 (buffer format) is unfinished, to keep intact with future databuffers extension must be set to "string"
+	if(prog->argc >= 1 && strcmp(PRVM_G_STRING(OFS_PARM0), "string"))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return;
+	}
 	stringbuffer = (prvm_stringbuffer_t *) Mem_ExpandableArray_AllocRecord(&prog->stringbuffersarray);
 	for (i = 0;stringbuffer != Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);i++);
 	stringbuffer->origin = PRVM_AllocationOrigin();
+	// optional flags parm
+	if(prog->argc == 2)
+		stringbuffer->flags = (int)PRVM_G_FLOAT(OFS_PARM1) & 0xFF;
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
+
+
 
 /*
 ========================
