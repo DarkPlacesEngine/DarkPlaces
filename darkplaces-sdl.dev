@@ -1,7 +1,15 @@
 [Project]
 FileName=darkplaces-sdl.dev
 Name=DarkPlaces
+<<<<<<< .mine
+<<<<<<< .mine
+UnitCount=182
+=======
+UnitCount=175
+=======
 UnitCount=181
+>>>>>>> .r9892
+>>>>>>> .r9586
 Type=0
 Ver=1
 ObjFiles=
@@ -1778,7 +1786,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit182]
-FileName=SDLMain.h
+FileName=intoverflow.h
 CompileCpp=0
 Folder=Header Files
 Compile=1

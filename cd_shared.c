@@ -301,8 +301,12 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryr
 	{
 		                              dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%03u.wav", track);
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%03u.ogg", track);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/track%03u.ogg", track);// added by motorsep
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/cdtracks/track%03u.ogg", track);// added by motorsep
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%02u.wav", track);
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/track%02u.ogg", track);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/track%02u.ogg", track);// added by motorsep
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/cdtracks/track%02u.ogg", track);// added by motorsep
 	}
 	else
 	{
@@ -315,6 +319,8 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryr
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s", trackname);
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.wav", trackname);
 		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "sound/cdtracks/%s.ogg", trackname);
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/%s.ogg", trackname); // added by motorsep
+		if (!FS_FileExists(filename)) dpsnprintf(filename, sizeof(filename), "music/cdtracks/%s.ogg", trackname); // added by motorsep
 	}
 	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, true)))
 	{
