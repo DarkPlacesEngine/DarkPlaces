@@ -535,9 +535,11 @@ LOAD / SAVE GAME
 void Host_Savegame_to (const char *name)
 {
 	qfile_t	*f;
-	int		i, lightstyles = 64;
+	int		i, k, l, lightstyles = 64;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
+	char	line[MAX_INPUTLINE];
 	qboolean isserver;
+	char	*s;
 
 	// first we have to figure out if this can be saved in 64 lightstyles
 	// (for Quake compatibility)
@@ -621,6 +623,51 @@ void Host_Savegame_to (const char *name)
 	for (i=1 ; i<MAX_SOUNDS ; i++)
 		if (sv.sound_precache[i][0])
 			FS_Printf(f,"sv.sound_precache %i %s\n", i, sv.sound_precache[i]);
+
+	// darkplaces extension - save buffers
+	for (i = 0; i < (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray); i++)
+	{
+		prvm_stringbuffer_t *stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
+		if(stringbuffer && (stringbuffer->flags & STRINGBUFFER_SAVED))
+		{
+			for(k = 0; k < stringbuffer->num_strings; k++)
+			{
+				if (!stringbuffer->strings[k])
+					continue;
+				// Parse the string a bit to turn special characters
+				// (like newline, specifically) into escape codes
+				s = stringbuffer->strings[k];
+				for (l = 0;l < (int)sizeof(line) - 2 && *s;)
+				{	
+					if (*s == '\n')
+					{
+						line[l++] = '\\';
+						line[l++] = 'n';
+					}
+					else if (*s == '\r')
+					{
+						line[l++] = '\\';
+						line[l++] = 'r';
+					}
+					else if (*s == '\\')
+					{
+						line[l++] = '\\';
+						line[l++] = '\\';
+					}
+					else if (*s == '"')
+					{
+						line[l++] = '\\';
+						line[l++] = '"';
+					}
+					else
+						line[l++] = *s;
+					s++;
+				}
+				line[l] = '\0';
+				FS_Printf(f,"sv.bufstr %i %i \"%s\"\n", i, k, line);
+			}
+		}
+	}
 	FS_Printf(f,"*/\n");
 #endif
 
@@ -687,6 +734,7 @@ void Host_Savegame_f (void)
 Host_Loadgame_f
 ===============
 */
+
 void Host_Loadgame_f (void)
 {
 	char filename[MAX_QPATH];
@@ -697,10 +745,12 @@ void Host_Loadgame_f (void)
 	const char *t;
 	char *text;
 	prvm_edict_t *ent;
-	int i;
+	int i, k;
 	int entnum;
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
+	prvm_stringbuffer_t *stringbuffer;
+	size_t alloclen;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -950,6 +1000,46 @@ void Host_Loadgame_f (void)
 					else
 						Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
 				}
+				else if (!strcmp(com_token, "sv.bufstr"))
+				{
+					COM_ParseToken_Simple(&t, false, false);
+					i = atoi(com_token);
+					COM_ParseToken_Simple(&t, false, false);
+					k = atoi(com_token);
+					COM_ParseToken_Simple(&t, false, false);
+					stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
+					// VorteX: nasty code, cleanup required
+					// create buffer at this index
+					if(!stringbuffer) 
+						stringbuffer = (prvm_stringbuffer_t *) Mem_ExpandableArray_AllocRecordAtIndex(&prog->stringbuffersarray, i);
+					if (!stringbuffer)
+						Con_Printf("cant write string %i into buffer %i\n", k, i);
+					else
+					{
+						// code copied from VM_bufstr_set
+						// expand buffer
+						if (stringbuffer->max_strings <= i)
+						{
+							char **oldstrings = stringbuffer->strings;
+							stringbuffer->max_strings = max(stringbuffer->max_strings * 2, 128);
+							while (stringbuffer->max_strings <= i)
+								stringbuffer->max_strings *= 2;
+							stringbuffer->strings = (char **) Mem_Alloc(prog->progs_mempool, stringbuffer->max_strings * sizeof(stringbuffer->strings[0]));
+							if (stringbuffer->num_strings > 0)
+								memcpy(stringbuffer->strings, oldstrings, stringbuffer->num_strings * sizeof(stringbuffer->strings[0]));
+							if (oldstrings)
+								Mem_Free(oldstrings);
+						}
+						// allocate string
+						stringbuffer->num_strings = max(stringbuffer->num_strings, k + 1);
+						if(stringbuffer->strings[k])
+							Mem_Free(stringbuffer->strings[k]);
+						stringbuffer->strings[k] = NULL;
+						alloclen = strlen(com_token) + 1;
+						stringbuffer->strings[k] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
+						memcpy(stringbuffer->strings[k], com_token, alloclen);
+					}
+				}	
 				// skip any trailing text or unrecognized commands
 				while (COM_ParseToken_Simple(&t, true, false) && strcmp(com_token, "\n"))
 					;
