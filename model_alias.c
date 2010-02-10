@@ -279,7 +279,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 		const unsigned short * RESTRICT b = model->surfmesh.blends;
 		for (i = 0;i < model->surfmesh.num_vertices;i++, sv += 3, b++, svector3f += 3)
 		{
-			const float *m = boneposerelative[*b];
+			const float * RESTRICT m = boneposerelative[*b];
 			svector3f[0] = (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
 			svector3f[1] = (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
 			svector3f[2] = (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
