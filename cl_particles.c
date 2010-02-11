@@ -614,7 +614,9 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 		g = part->color[1];
 		b = part->color[2];
 	}
-	part->staincolor = r * 65536 + g * 256 + b;
+	part->staincolor[0] = r;
+	part->staincolor[1] = g;
+	part->staincolor[2] = b;
 	part->stainalpha = palpha * stainalpha / 256;
 	part->stainsize = psize * stainsize;
 	part->texnum = ptex;
@@ -636,7 +638,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	part->airfriction = pairfriction;
 	part->liquidfriction = pliquidfriction;
 	part->die = cl.time + lifetime;
-	part->delayedcollisions = 0;
+//	part->delayedcollisions = 0;
 	part->qualityreduction = pqualityreduction;
 	// if it is rain or snow, trace ahead and shut off collisions until an actual collision event needs to occur to improve performance
 	if (part->typeindex == pt_rain)
@@ -668,6 +670,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 			}
 		}
 	}
+#if 0
 	else if (part->bounce != 0 && part->gravity == 0 && part->typeindex != pt_snow)
 	{
 		float lifetime = part->alpha / (part->alphafade ? part->alphafade : 1);
@@ -677,6 +680,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 		trace = CL_TraceLine(part->org, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY, true, false, NULL, false);
 		part->delayedcollisions = cl.time + lifetime * trace.fraction - 0.1;
 	}
+#endif
 
 	return part;
 }
@@ -692,7 +696,7 @@ static void CL_ImmediateBloodStain(particle_t *part)
 		VectorCopy(part->vel, v);
 		VectorNormalize(v);
 		staintex = part->staintexnum;
-		R_DecalSystem_SplatEntities(part->org, v, 1-((part->staincolor>>16)&255)*(1.0f/255.0f), 1-((part->staincolor>>8)&255)*(1.0f/255.0f), 1-((part->staincolor)&255)*(1.0f/255.0f), part->stainalpha*(1.0f/255.0f), particletexture[staintex].s1, particletexture[staintex].t1, particletexture[staintex].s2, particletexture[staintex].t2, part->stainsize);
+		R_DecalSystem_SplatEntities(part->org, v, 1-part->staincolor[0]*(1.0f/255.0f), 1-part->staincolor[1]*(1.0f/255.0f), 1-part->staincolor[2]*(1.0f/255.0f), part->stainalpha*(1.0f/255.0f), particletexture[staintex].s1, particletexture[staintex].t1, particletexture[staintex].s2, particletexture[staintex].t2, part->stainsize);
 	}
 
 	// blood creates a splash at spawn, not just at impact, this makes monsters bloody where they are shot
@@ -2500,7 +2504,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		tex = &particletexture[p->texnum];
 		switch(p->orientation)
 		{
-		case PARTICLE_INVALID:
+//		case PARTICLE_INVALID:
 		case PARTICLE_BILLBOARD:
 			VectorScale(r_refdef.view.left, -size * p->stretch, right);
 			VectorScale(r_refdef.view.up, size, up);
@@ -2696,7 +2700,8 @@ void R_DrawParticles (void)
 
 				VectorCopy(p->org, oldorg);
 				VectorMA(p->org, frametime, p->vel, p->org);
-				if (p->bounce && cl.time >= p->delayedcollisions)
+//				if (p->bounce && cl.time >= p->delayedcollisions)
+				if (p->bounce)
 				{
 					trace = CL_TraceLine(oldorg, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 					// if the trace started in or hit something of SUPERCONTENTS_NODROP
@@ -2716,12 +2721,13 @@ void R_DrawParticles (void)
 							if (!(trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS))
 							{
 								R_Stain(p->org, 16,
-									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->stainalpha * p->stainsize * (1.0f / 160.0f)),
-									(p->staincolor >> 16) & 0xFF, (p->staincolor >> 8) & 0xFF, p->staincolor & 0xFF, (int)(p->stainalpha * p->stainsize * (1.0f / 160.0f)));
+									p->staincolor[0], p->staincolor[1], p->staincolor[2], (int)(p->stainalpha * p->stainsize * (1.0f / 160.0f)),
+									p->staincolor[0], p->staincolor[1], p->staincolor[2], (int)(p->stainalpha * p->stainsize * (1.0f / 160.0f)));
 								if (cl_decals.integer)
 								{
 									// create a decal for the blood splat
-									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, 0xFFFFFF ^ p->staincolor, 0xFFFFFF ^ p->staincolor, p->staintexnum, p->stainsize, p->stainalpha); // staincolor needs to be inverted for decals!
+									a = 0xFFFFFF ^ (p->staincolor[0]*65536+p->staincolor[1]*256+p->staincolor[2]);
+									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, a, a, p->staintexnum, p->stainsize, p->stainalpha); // staincolor needs to be inverted for decals!
 								}
 							}
 						}
