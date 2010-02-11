@@ -12028,6 +12028,16 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 			VectorCopy(decal->vertex3f[2], v3f + 6);
 		}
 
+		if (r_refdef.fogenabled)
+		{
+			alpha = RSurf_FogVertex(v3f);
+			VectorScale(c4f, alpha, c4f);
+			alpha = RSurf_FogVertex(v3f + 3);
+			VectorScale(c4f + 4, alpha, c4f + 4);
+			alpha = RSurf_FogVertex(v3f + 6);
+			VectorScale(c4f + 8, alpha, c4f + 8);
+		}
+
 		v3f += 9;
 		c4f += 12;
 		t2f += 6;
@@ -12037,25 +12047,6 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	if (numtris > 0)
 	{
 		r_refdef.stats.drawndecals += numtris;
-
-		if (r_refdef.fogenabled)
-		{
-			switch(vid.renderpath)
-			{
-			case RENDERPATH_GL20:
-			case RENDERPATH_CGGL:
-			case RENDERPATH_GL13:
-			case RENDERPATH_GL11:
-				for (i = 0, v3f = decalsystem->vertex3f, c4f = decalsystem->color4f;i < numtris*3;i++, v3f += 3, c4f += 4)
-				{
-					alpha = RSurf_FogVertex(v3f);
-					c4f[0] *= alpha;
-					c4f[1] *= alpha;
-					c4f[2] *= alpha;
-				}
-				break;
-			}
-		}
 
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
