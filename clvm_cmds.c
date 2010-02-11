@@ -2639,8 +2639,8 @@ void VM_CL_SpawnParticle (void)
 		}
 		if (*vmpartspawner.particle_delayspawn)
 			part->delayedspawn = cl.time + *vmpartspawner.particle_delayspawn;
-		if (*vmpartspawner.particle_delaycollision)
-			part->delayedcollisions = cl.time + *vmpartspawner.particle_delaycollision;
+		//if (*vmpartspawner.particle_delaycollision)
+		//	part->delayedcollisions = cl.time + *vmpartspawner.particle_delaycollision;
 	}
 	else // quick themed particle
 	{
@@ -2660,8 +2660,8 @@ void VM_CL_SpawnParticle (void)
 		}
 		if (theme->delayspawn)
 			part->delayedspawn = cl.time + theme->delayspawn;
-		if (theme->delaycollision)
-			part->delayedcollisions = cl.time + theme->delaycollision;
+		//if (theme->delaycollision)
+		//	part->delayedcollisions = cl.time + theme->delaycollision;
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = 1; 
 }
@@ -2704,7 +2704,7 @@ void VM_CL_SpawnParticleDelayed (void)
 		return; 
 	}
 	part->delayedspawn = cl.time + PRVM_G_FLOAT(OFS_PARM2);
-	part->delayedcollisions = cl.time + PRVM_G_FLOAT(OFS_PARM3);
+	//part->delayedcollisions = cl.time + PRVM_G_FLOAT(OFS_PARM3);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 }
 
