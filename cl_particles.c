@@ -1924,10 +1924,11 @@ static void R_InitParticleTexture (void)
 {
 	int x, y, d, i, k, m;
 	int basex, basey, w, h;
-	float dx, dy, f;
+	float dx, dy, f, s1, t1, s2, t2;
 	vec3_t light;
 	char *buf;
 	fs_offset_t filesize;
+	char texturename[MAX_QPATH];
 
 	// a note: decals need to modulate (multiply) the background color to
 	// properly darken it (stain), and they need to be able to alpha fade,
@@ -2145,44 +2146,53 @@ static void R_InitParticleTexture (void)
 				break;
 			if(!strcmp(com_token, "\n"))
 				continue; // empty line
-			i = atoi(com_token) % MAX_PARTICLETEXTURES;
-			particletexture[i].texture = particlefonttexture;
+			i = atoi(com_token);
 
-			if (!COM_ParseToken_Simple(&bufptr, true, false))
-				break;
-			if (!strcmp(com_token, "\n"))
+			texturename[0] = 0;
+			s1 = 0;
+			t1 = 0;
+			s2 = 1;
+			t2 = 1;
+
+			if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
 			{
-				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				s1 = atof(com_token);
+				if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
+				{
+					t1 = atof(com_token);
+					if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
+					{
+						s2 = atof(com_token);
+						if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
+						{
+							t2 = atof(com_token);
+							strlcpy(texturename, "particles/particlefont.tga", sizeof(texturename));
+							if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
+								strlcpy(texturename, com_token, sizeof(texturename));
+						}
+					}
+				}
+				else
+				{
+					s1 = 0;
+					strlcpy(texturename, com_token, sizeof(texturename));
+				}
+			}
+			if (!texturename[0])
+			{
+				Con_Printf("particles/particlefont.txt: syntax should be texnum x1 y1 x2 y2 texturename or texnum x1 y1 x2 y2 or texnum texturename\n");
 				continue;
 			}
-			particletexture[i].s1 = atof(com_token);
-
-			if (!COM_ParseToken_Simple(&bufptr, true, false))
-				break;
-			if (!strcmp(com_token, "\n"))
+			if (i < 0 || i >= MAX_PARTICLETEXTURES)
 			{
-				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
+				Con_Printf("particles/particlefont.txt: texnum %i outside valid range (0 to %i)\n", i, MAX_PARTICLETEXTURES);
 				continue;
 			}
-			particletexture[i].t1 = atof(com_token);
-
-			if (!COM_ParseToken_Simple(&bufptr, true, false))
-				break;
-			if (!strcmp(com_token, "\n"))
-			{
-				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
-				continue;
-			}
-			particletexture[i].s2 = atof(com_token);
-
-			if (!COM_ParseToken_Simple(&bufptr, true, false))
-				break;
-			if (!strcmp(com_token, "\n"))
-			{
-				Con_Printf("particlefont file: syntax should be texnum texturename or texnum x y w h\n");
-				continue;
-			}
-			particletexture[i].t2 = atof(com_token);
+			particletexture[i].texture = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR, false)->base;
+			particletexture[i].s1 = s1;
+			particletexture[i].t1 = t1;
+			particletexture[i].s2 = s2;
+			particletexture[i].t2 = t2;
 		}
 		Mem_Free(buf);
 	}
@@ -2415,6 +2425,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(true);
+	GL_AlphaTest(false);
 	GL_CullFace(GL_NONE);
 
 	// first generate all the vertices at once

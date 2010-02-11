@@ -95,7 +95,7 @@ extern char engineversion[128];
 #define	CACHEPICHASHSIZE		256
 #define	MAX_PARTICLEEFFECTNAME	256
 #define	MAX_PARTICLEEFFECTINFO	1024
-#define	MAX_PARTICLETEXTURES	96
+#define	MAX_PARTICLETEXTURES	256
 #define	MAXCLVIDEOS				1
 #define	MAX_GECKO_INSTANCES		1
 #define	MAX_DYNAMIC_TEXTURE_COUNT	2
@@ -158,7 +158,7 @@ extern char engineversion[128];
 #define	CACHEPICHASHSIZE		256 ///< number of hash buckets for accelerating 2D pic name lookups
 #define	MAX_PARTICLEEFFECTNAME	256 ///< maximum number of unique names of particle effects (for particleeffectnum)
 #define	MAX_PARTICLEEFFECTINFO	4096 ///< maximum number of unique particle effects (each name may associate with several of these)
-#define	MAX_PARTICLETEXTURES	1024 ///< maximum number of unique particle textures in the particle font
+#define	MAX_PARTICLETEXTURES	256 ///< maximum number of unique particle textures in the particle font
 #define	MAXCLVIDEOS				65 ///< maximum number of video streams being played back at once (1 is reserved for the playvideo command)
 #define	MAX_GECKO_INSTANCES		16 ///< maximum number of web browser textures active at once
 #define	MAX_DYNAMIC_TEXTURE_COUNT	64 ///< maximum number of dynamic textures (web browsers, playvideo, etc)
