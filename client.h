@@ -789,36 +789,39 @@ decal_t;
 
 typedef struct particle_s
 {
-	// for faster batch rendering, particles are rendered in groups based on where they spawned
-	vec3_t			sortorigin;
-	// fields used by rendering: (40 bytes)
-	unsigned char   typeindex;
-	pblend_t   blendmode;
-	porientation_t   orientation;
-	unsigned char   texnum;
-	vec3_t			org;
-	vec3_t			vel; // velocity of particle, or orientation of decal, or end point of beam
-	float			size;
-	float			alpha; // 0-255
-	unsigned char	color[3];
-	unsigned char	qualityreduction; // enables skipping of this particle according to r_refdef.view.qualityreduction
-	float           stretch; // only for sparks
-	int             staincolor;
-	signed char     staintexnum;
-	float           stainsize;
-	float		stainalpha;
+	// for faster batch rendering, particles are rendered in groups by effect (resulting in less perfect sorting but far less state changes)
 
-	// fields not used by rendering:  (40 bytes)
-	float			sizeincrease; // rate of size change per second
-	float			alphafade; // how much alpha reduces per second
-	float			time2; // used for snow fluttering and decal fade
-	float			bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
-	float			gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
-	float			airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
-	float			liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
-	float			delayedcollisions; // time that p->bounce becomes active
-	float			delayedspawn; // time that particle appears and begins moving
-	float			die; // time when this particle should be removed, regardless of alpha
+	// fields used by rendering: (48 bytes)
+	vec3_t          sortorigin; // sort by this group origin, not particle org
+	vec3_t          org;
+	vec3_t          vel; // velocity of particle, or orientation of decal, or end point of beam
+	float           size;
+	float           alpha; // 0-255
+	float           stretch; // only for sparks
+
+	// fields not used by rendering:  (44 bytes)
+	float           stainsize;
+	float           stainalpha;
+	float           sizeincrease; // rate of size change per second
+	float           alphafade; // how much alpha reduces per second
+	float           time2; // used for snow fluttering and decal fade
+	float           bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
+	float           gravity; // how much gravity affects this particle (1.0 = normal gravity, 0.0 = none)
+	float           airfriction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
+	float           liquidfriction; // how much liquid friction affects this object (objects with a low mass/size ratio tend to get more liquid friction)
+//	float           delayedcollisions; // time that p->bounce becomes active
+	float           delayedspawn; // time that particle appears and begins moving
+	float           die; // time when this particle should be removed, regardless of alpha
+
+	// byte variables grouped to save memory (12 bytes)
+	unsigned char   color[3];
+	unsigned char   qualityreduction; // enables skipping of this particle according to r_refdef.view.qualityreduction
+	unsigned char   typeindex;
+	unsigned char   blendmode;
+	unsigned char   orientation;
+	unsigned char   texnum;
+	unsigned char   staincolor[3];
+	signed char     staintexnum;
 }
 particle_t;
 
