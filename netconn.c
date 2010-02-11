@@ -2444,7 +2444,7 @@ qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, c
 const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *password, const char *s, const char *endpos, rcon_matchfunc_t comparator, const char *cs, int cslen)
 {
 	const char *text, *userpass_start, *userpass_end, *userpass_startpass;
-	char buf[MAX_INPUTLINE];
+	static char buf[MAX_INPUTLINE];
 	qboolean hasquotes;
 	qboolean restricted = false;
 	qboolean have_usernames = false;
@@ -2582,7 +2582,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	int i, ret, clientnum, best;
 	double besttime;
 	client_t *client;
-	char *s, *string, response[1400], addressstring2[128], stringbuf[16384];
+	char *s, *string, response[1400], addressstring2[128];
+	static char stringbuf[16384];
 	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 
 	if (!sv.active)
