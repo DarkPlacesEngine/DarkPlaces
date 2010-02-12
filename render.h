@@ -489,6 +489,7 @@ typedef struct r_waterstate_s
 	qboolean enabled;
 
 	qboolean renderingscene; // true while rendering a refraction or reflection texture, disables water surfaces
+	qboolean renderingrefraction;
 
 	int waterwidth, waterheight;
 	int texturewidth, textureheight;
