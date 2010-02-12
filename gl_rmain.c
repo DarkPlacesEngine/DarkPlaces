@@ -6790,7 +6790,10 @@ static void R_View_UpdateEntityVisible (void)
 	int samples;
 	entity_render_t *ent;
 
-	renderimask = r_refdef.envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : ((chase_active.integer || r_waterstate.renderingscene) ? RENDER_VIEWMODEL : RENDER_EXTERIORMODEL);
+	renderimask = r_refdef.envmap                                    ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
+		: r_waterstate.renderingrefraction                       ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
+		: (chase_active.integer || r_waterstate.renderingscene)  ? RENDER_VIEWMODEL
+		:                                                          RENDER_EXTERIORMODEL;
 	if (!r_drawviewmodel.integer)
 		renderimask |= RENDER_VIEWMODEL;
 	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
@@ -7414,6 +7417,7 @@ static void R_Water_ProcessPlanes(void)
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
+			r_waterstate.renderingrefraction = true;
 			r_refdef.view = myview;
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
@@ -7426,6 +7430,7 @@ static void R_Water_ProcessPlanes(void)
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			r_waterstate.renderingrefraction = false;
 		}
 
 	}
