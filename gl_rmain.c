@@ -92,6 +92,7 @@ cvar_t r_shadows_throwdirection = {CVAR_SAVE, "r_shadows_throwdirection", "0 0 -
 cvar_t r_shadows_drawafterrtlighting = {CVAR_SAVE, "r_shadows_drawafterrtlighting", "0", "draw fake shadows AFTER realtime lightning is drawn. May be useful for simulating fast sunlight on large outdoor maps with only one noshadow rtlight. The price is less realistic appearance of dynamic light shadows."};
 cvar_t r_shadows_castfrombmodels = {CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
 cvar_t r_shadows_focus = {CVAR_SAVE, "r_shadows_focus", "0 0 0", "offset the shadowed area focus"};
+cvar_t r_shadows_shadowmapscale = {CVAR_SAVE, "r_shadows_shadowmapscale", "1", "increases shadowmap quality (multiply global shadowmap precision) for fake shadows. Needs shadowmapping ON."};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "14", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
@@ -6253,6 +6254,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_shadows_throwdistance);
 	Cvar_RegisterVariable(&r_shadows_throwdirection);
 	Cvar_RegisterVariable(&r_shadows_focus);
+	Cvar_RegisterVariable(&r_shadows_shadowmapscale);
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
