@@ -4203,6 +4203,7 @@ extern cvar_t r_shadows_castfrombmodels;
 extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
 extern cvar_t r_shadows_focus;
+extern cvar_t r_shadows_shadowmapscale;
 
 void R_Shadow_PrepareModelShadows(void)
 {
@@ -4232,7 +4233,7 @@ void R_Shadow_PrepareModelShadows(void)
 	}
 
 	size = 2*r_shadow_shadowmapmaxsize;
-	scale = r_shadow_shadowmapping_precision.value;
+	scale = r_shadow_shadowmapping_precision.value * r_shadows_shadowmapscale.value;
 	radius = 0.5f * size / scale;
 
 	Math_atov(r_shadows_throwdirection.string, shadowdir);
@@ -4326,7 +4327,7 @@ void R_DrawModelShadowMaps(void)
 	}
 
 	size = 2*r_shadow_shadowmapmaxsize;
-	scale = r_shadow_shadowmapping_precision.value / size;
+	scale = (r_shadow_shadowmapping_precision.value * r_shadows_shadowmapscale.value) / size;
 	radius = 0.5f / scale;
 	nearclip = -r_shadows_throwdistance.value;
 	farclip = r_shadows_throwdistance.value;
