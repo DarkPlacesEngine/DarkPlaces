@@ -522,17 +522,17 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		surface = info->model->data_surfaces + *mark;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
-			if(surface->num_bboxstride > 0)
+			if(surface->deprecatedq3num_bboxstride > 0)
 			{
 				int i, cnt, tri;
-				cnt = (surface->num_triangles + surface->num_bboxstride - 1) / surface->num_bboxstride;
+				cnt = (surface->num_triangles + surface->deprecatedq3num_bboxstride - 1) / surface->deprecatedq3num_bboxstride;
 				for(i = 0; i < cnt; ++i)
 				{
-					if(BoxesOverlap(surface->data_bbox6f + i * 6, surface->data_bbox6f + i * 6 + 3, info->absmin, info->absmax))
+					if(BoxesOverlap(surface->deprecatedq3data_bbox6f + i * 6, surface->deprecatedq3data_bbox6f + i * 6 + 3, info->absmin, info->absmax))
 					{
-						for(k = 0; k < surface->num_bboxstride; ++k)
+						for(k = 0; k < surface->deprecatedq3num_bboxstride; ++k)
 						{
-							tri = i * surface->num_bboxstride + k;
+							tri = i * surface->deprecatedq3num_bboxstride + k;
 							if(tri >= surface->num_triangles)
 								break;
 							Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, tri);
@@ -4797,7 +4797,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in, *oldin;
 	msurface_t *out, *oldout;
-	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, numvertices, numtriangles, cxtess, cytess;
+	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, collisionvertices, collisiontriangles, numvertices, numtriangles, cxtess, cytess;
 	float lightmaptcbase[2], lightmaptcscale[2];
 	//int *originalelement3i;
 	//int *originalneighbor3i;
@@ -4808,6 +4808,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	float *originalcolor4f;
 	float *originaltexcoordtexture2f;
 	float *originaltexcoordlightmap2f;
+	float *surfacecollisionvertex3f;
+	int *surfacecollisionelement3i;
 	float *v;
 	patchtess_t *patchtess = NULL;
 	int patchtesscount = 0;
@@ -4989,6 +4991,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	while (again);
 
 	// Calculate resulting number of triangles
+	collisionvertices = 0;
+	collisiontriangles = 0;
 	for(i = 0; i < patchtesscount; ++i)
 	{
 		finalwidth = Q3PatchDimForTess(patchtess[i].info.xsize, patchtess[i].info.lods[PATCH_LOD_VISUAL].xtess);
@@ -5000,14 +5004,31 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		oldout[patchtess[i].surface_id].num_triangles = numtriangles;
 		meshvertices += oldout[patchtess[i].surface_id].num_vertices;
 		meshtriangles += oldout[patchtess[i].surface_id].num_triangles;
+
+		finalwidth = Q3PatchDimForTess(patchtess[i].info.xsize, patchtess[i].info.lods[PATCH_LOD_COLLISION].xtess);
+		finalheight = Q3PatchDimForTess(patchtess[i].info.ysize,patchtess[i].info.lods[PATCH_LOD_COLLISION].ytess);
+		numvertices = finalwidth * finalheight;
+		numtriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+
+		oldout[patchtess[i].surface_id].num_collisionvertices = numvertices;
+		oldout[patchtess[i].surface_id].num_collisiontriangles = numtriangles;
+		collisionvertices += oldout[patchtess[i].surface_id].num_collisionvertices;
+		collisiontriangles += oldout[patchtess[i].surface_id].num_collisiontriangles;
 	}
 
 	i = oldi;
 	in = oldin;
 	out = oldout;
 	Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
+	if (collisiontriangles)
+	{
+		loadmodel->brush.data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, collisionvertices * sizeof(float[3]));
+		loadmodel->brush.data_collisionelement3i = Mem_Alloc(loadmodel->mempool, collisiontriangles * sizeof(int[3]));
+	}
 	meshvertices = 0;
 	meshtriangles = 0;
+	collisionvertices = 0;
+	collisiontriangles = 0;
 	for (;i < count && meshvertices + out->num_vertices <= loadmodel->surfmesh.num_vertices;i++, in++, out++)
 	{
 		if (out->num_vertices < 3 || out->num_triangles < 1)
@@ -5018,6 +5039,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		firstelement = LittleLong(in->firstelement);
 		out->num_firstvertex = meshvertices;
 		out->num_firsttriangle = meshtriangles;
+		out->num_firstcollisiontriangle = collisiontriangles;
 		switch(type)
 		{
 		case Q3FACETYPE_FLAT:
@@ -5098,26 +5120,40 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
-			out->data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
-			out->data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
+			// legacy collision geometry implementation
+			out->deprecatedq3data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
+			out->deprecatedq3data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
 			out->num_collisionvertices = finalvertices;
 			out->num_collisiontriangles = finaltriangles;
-			Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
-			Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight, 0);
+			Q3PatchTesselateFloat(3, sizeof(float[3]), out->deprecatedq3data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
+			Q3PatchTriangleElements(out->deprecatedq3data_collisionelement3i, finalwidth, finalheight, 0);
 
 			//Mod_SnapVertices(3, out->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), 0.25);
-			Mod_SnapVertices(3, out->num_collisionvertices, out->data_collisionvertex3f, 1);
+			Mod_SnapVertices(3, out->num_collisionvertices, out->deprecatedq3data_collisionvertex3f, 1);
 
 			oldnumtriangles = out->num_triangles;
 			oldnumtriangles2 = out->num_collisiontriangles;
-			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
+			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionvertex3f);
 
 			// now optimize the collision mesh by finding triangle bboxes...
-			Mod_Q3BSP_BuildBBoxes(out->data_collisionelement3i, out->num_collisiontriangles, out->data_collisionvertex3f, &out->data_collisionbbox6f, &out->num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
-			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f, &out->data_bbox6f, &out->num_bboxstride, mod_q3bsp_curves_stride.integer);
+			Mod_Q3BSP_BuildBBoxes(out->deprecatedq3data_collisionelement3i, out->num_collisiontriangles, out->deprecatedq3data_collisionvertex3f, &out->deprecatedq3data_collisionbbox6f, &out->deprecatedq3num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
+			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f, &out->deprecatedq3data_bbox6f, &out->deprecatedq3num_bboxstride, mod_q3bsp_curves_stride.integer);
+
+			// store collision geometry for BIH collision tree
+			surfacecollisionvertex3f = loadmodel->brush.data_collisionvertex3f + collisionvertices * 3;
+			surfacecollisionelement3i = loadmodel->brush.data_collisionelement3i + collisiontriangles * 3;
+			Q3PatchTesselateFloat(3, sizeof(float[3]), surfacecollisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
+			Q3PatchTriangleElements(surfacecollisionelement3i, finalwidth, finalheight, collisionvertices);
+			Mod_SnapVertices(3, finalvertices, surfacecollisionvertex3f, 1);
+			oldnumtriangles = out->num_triangles;
+			oldnumtriangles2 = out->num_collisiontriangles;
+			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, surfacecollisionelement3i, surfacecollisionelement3i, loadmodel->brush.data_collisionvertex3f);
 
 			if (developer_extra.integer)
 				Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
+
+			collisionvertices += finalvertices;
+			collisiontriangles += out->num_collisiontriangles;
 			break;
 		default:
 			break;
@@ -5727,10 +5763,10 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
 			surface = model->data_surfaces + leaf->firstleafsurface[i];
-			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
+			if (surface->num_collisiontriangles && surface->deprecatedq3collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
-				surface->collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+				surface->deprecatedq3collisionmarkframe = markframe;
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5808,10 +5844,10 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
 			surface = model->data_surfaces + leaf->firstleafsurface[i];
-			if (surface->num_collisiontriangles && surface->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
+			if (surface->num_collisiontriangles && surface->deprecatedq3collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
 			{
-				surface->collisionmarkframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+				surface->deprecatedq3collisionmarkframe = markframe;
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5868,7 +5904,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 		if (mod_q3bsp_curves_collisions.integer)
 			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 				if (surface->num_collisiontriangles)
-					Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+					Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 	}
 	else
 		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
@@ -5923,7 +5959,7 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 		if (mod_q3bsp_curves_collisions.integer)
 			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
 				if (surface->num_collisiontriangles)
-					Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_collisiontriangles, surface->data_collisionelement3i, surface->data_collisionvertex3f, surface->num_collisionbboxstride, surface->data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+					Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 	}
 	else
 		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, &thisbrush_start.brush, &thisbrush_end.brush, ++markframe, segmentmins, segmentmaxs);
@@ -5959,6 +5995,88 @@ static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const 
 		}
 	}
 	return supercontents;
+}
+
+void Mod_MakeCollisionData(dp_model_t *model)
+{
+	int j;
+	int bihnumleafs;
+	int bihmaxnodes;
+	int brushindex;
+	int triangleindex;
+	int bihleafindex;
+	int nummodelbrushes = model->nummodelbrushes;
+	int nummodelsurfaces = model->nummodelsurfaces;
+	const int *e;
+	const int *collisionelement3i;
+	const float *collisionvertex3f;
+	bih_leaf_t *bihleafs;
+	bih_node_t *bihnodes;
+	int *temp_leafsort;
+	int *temp_leafsortscratch;
+	const msurface_t *surface;
+	const q3mbrush_t *brush;
+
+	// find out how many BIH leaf nodes we need
+	bihnumleafs = model->nummodelbrushes;
+	surface = model->data_surfaces + model->firstmodelsurface;
+	for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
+		bihnumleafs += surface->num_collisiontriangles;
+	bihmaxnodes = bihnumleafs >> 1;
+
+	// allocate the memory for the BIH leaf nodes
+	bihleafs = Mem_Alloc(loadmodel->mempool, sizeof(bih_leaf_t) * bihnumleafs);
+
+	// add BIH leaf nodes for all the collision brushes
+	bihleafindex = 0;
+	for (brushindex = 0, brush = model->brush.data_brushes + brushindex+model->firstmodelbrush;brushindex < nummodelbrushes;brushindex++, brush++)
+	{
+		bihleafs[bihleafindex].type = BIH_LEAF;
+		bihleafs[bihleafindex].textureindex = brush->texture - model->data_textures;
+		bihleafs[bihleafindex].itemindex = brushindex+model->firstmodelbrush;
+		VectorCopy(brush->colbrushf->mins, bihleafs[bihleafindex].mins);
+		VectorCopy(brush->colbrushf->mins, bihleafs[bihleafindex].maxs);
+		bihleafindex++;
+	}
+
+	// add BIH leaf nodes for all the collision surfaces
+	collisionelement3i = model->brush.data_collisionelement3i;
+	collisionvertex3f = model->brush.data_collisionvertex3f;
+	for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
+	{
+		e = collisionelement3i + surface->num_firstcollisiontriangle;
+		for (triangleindex = 0;triangleindex < surface->num_collisiontriangles;triangleindex++)
+		{
+			bihleafs[bihleafindex].type = BIH_LEAF + 1;
+			bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
+			bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firstcollisiontriangle;
+			bihleafs[bihleafindex].mins[0] = min(collisionvertex3f[3*e[0]+0], min(collisionvertex3f[3*e[1]+0], collisionvertex3f[3*e[2]+0]));
+			bihleafs[bihleafindex].mins[1] = min(collisionvertex3f[3*e[0]+1], min(collisionvertex3f[3*e[1]+1], collisionvertex3f[3*e[2]+1]));
+			bihleafs[bihleafindex].mins[2] = min(collisionvertex3f[3*e[0]+2], min(collisionvertex3f[3*e[1]+2], collisionvertex3f[3*e[2]+2]));
+			bihleafs[bihleafindex].maxs[0] = max(collisionvertex3f[3*e[0]+0], max(collisionvertex3f[3*e[1]+0], collisionvertex3f[3*e[2]+0]));
+			bihleafs[bihleafindex].maxs[1] = max(collisionvertex3f[3*e[0]+1], max(collisionvertex3f[3*e[1]+1], collisionvertex3f[3*e[2]+1]));
+			bihleafs[bihleafindex].maxs[2] = max(collisionvertex3f[3*e[0]+2], max(collisionvertex3f[3*e[1]+2], collisionvertex3f[3*e[2]+2]));
+			bihleafindex++;
+		}
+	}
+
+	// allocate buffers for the produced and temporary data
+	bihnodes = Mem_Alloc(loadmodel->mempool, sizeof(bih_node_t) * bihmaxnodes);
+	temp_leafsort = Mem_Alloc(loadmodel->mempool, sizeof(int) * bihnumleafs * 2);
+	temp_leafsortscratch = temp_leafsort + bihnumleafs;
+
+	// now build it
+	BIH_Build(&model->collision_bih, bihnumleafs, bihleafs, bihmaxnodes, bihnodes, temp_leafsort, temp_leafsortscratch);
+
+	// we're done with the temporary data
+	Mem_Free(temp_leafsort);
+
+	// resize the BIH nodes array if it over-allocated
+	if (model->collision_bih.maxnodes > model->collision_bih.numnodes)
+	{
+		model->collision_bih.maxnodes = model->collision_bih.numnodes;
+		model->collision_bih.nodes = Mem_Realloc(loadmodel->mempool, model->collision_bih.nodes, model->collision_bih.numnodes * sizeof(bih_node_t));
+	}
 }
 
 static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents)
@@ -6272,6 +6390,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				break;
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+
+		Mod_MakeCollisionData(mod);
 
 		// generate VBOs and other shared data before cloning submodels
 		if (i == 0)

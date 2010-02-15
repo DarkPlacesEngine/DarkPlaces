@@ -579,10 +579,11 @@ typedef struct msurface_s
 	// fog volume info in q3bsp
 	struct q3deffect_s *effect; // q3bsp
 	// mesh information for collisions (only used by q3bsp curves)
-	int *data_collisionelement3i; // q3bsp
-	float *data_collisionvertex3f; // q3bsp
-	float *data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
-	float *data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
+	int num_firstcollisiontriangle;
+	int *deprecatedq3data_collisionelement3i; // q3bsp
+	float *deprecatedq3data_collisionvertex3f; // q3bsp
+	float *deprecatedq3data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
+	float *deprecatedq3data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
 
 	// surfaces own ranges of vertices and triangles in the model->surfmesh
 	int num_triangles; // number of triangles
@@ -596,14 +597,15 @@ typedef struct msurface_s
 	// mesh information for collisions (only used by q3bsp curves)
 	int num_collisiontriangles; // q3bsp
 	int num_collisionvertices; // q3bsp
-	int num_collisionbboxstride;
-	int num_bboxstride;
+	int deprecatedq3num_collisionbboxstride;
+	int deprecatedq3num_bboxstride;
 	// FIXME: collisionmarkframe should be kept in a separate array
-	int collisionmarkframe; // q3bsp // don't collide twice in one trace
+	int deprecatedq3collisionmarkframe; // q3bsp // don't collide twice in one trace
 }
 msurface_t;
 
 #include "matrixlib.h"
+#include "bih.h"
 
 #include "model_brush.h"
 #include "model_sprite.h"
@@ -682,6 +684,12 @@ typedef struct model_brush_s
 	// example
 	//pvschain = model->brush.data_pvsclusters + mycluster * model->brush.num_pvsclusterbytes;
 	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
+
+	// collision geometry for q3 curves
+	int num_collisionvertices;
+	int num_collisiontriangles;
+	float *data_collisionvertex3f;
+	int *data_collisionelement3i;
 
 	// a mesh containing all shadow casting geometry for the whole model (including submodels), portions of this are referenced by each surface's num_firstshadowmeshtriangle
 	shadowmesh_t *shadowmesh;
@@ -868,6 +876,8 @@ typedef struct model_s
 	// range of collision brush numbers in this (sub)model
 	int				firstmodelbrush;
 	int				nummodelbrushes;
+	// BIH (Bounding Interval Hierarchy) for this (sub)model
+	bih_t			collision_bih;
 	// for md3 models
 	int				num_tags;
 	int				num_tagframes;
