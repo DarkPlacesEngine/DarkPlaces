@@ -88,6 +88,7 @@ OBJ_NOCD=cd_null.o
 
 # Common objects
 OBJ_COMMON= \
+	bih.o \
 	cap_avi.o \
 	cap_ogg.o \
 	cd_shared.o \
