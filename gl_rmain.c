@@ -12113,7 +12113,6 @@ void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
 	int i, j, k, l, flagsmask;
-	q3mbrush_t *brush;
 	const msurface_t *surface;
 	dp_model_t *model = ent->model;
 	vec3_t v;
@@ -12128,25 +12127,43 @@ void R_DrawDebugModel(void)
 	GL_DepthMask(false);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (r_showcollisionbrushes.value > 0 && model->brush.num_brushes)
+	if (r_showcollisionbrushes.value > 0 && model->collision_bih.numleafs)
 	{
+		int triangleindex;
+		int bihleafindex;
+		qboolean cullbox = ent == r_refdef.scene.worldentity;
+		const q3mbrush_t *brush;
+		const bih_t *bih = &model->collision_bih;
+		const bih_leaf_t *bihleaf;
+		float vertex3f[3][3];
 		GL_PolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+		for (bihleafindex = 0, bihleaf = bih->leafs;bihleafindex < bih->numleafs;bihleafindex++, bihleaf++)
 		{
-			if (brush->colbrushf && brush->colbrushf->numtriangles)
+			if (cullbox && R_CullBox(bihleaf->mins, bihleaf->maxs))
+				continue;
+			switch (bihleaf->type)
 			{
-				R_Mesh_VertexPointer(brush->colbrushf->points->v, 0, 0);
-				GL_Color((i & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
-				R_Mesh_Draw(0, brush->colbrushf->numpoints, 0, brush->colbrushf->numtriangles, brush->colbrushf->elements, NULL, 0, 0);
-			}
-		}
-		for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-		{
-			if (surface->num_collisiontriangles)
-			{
-				R_Mesh_VertexPointer(surface->data_collisionvertex3f, 0, 0);
-				GL_Color((i & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
-				R_Mesh_Draw(0, surface->num_collisionvertices, 0, surface->num_collisiontriangles, surface->data_collisionelement3i, NULL, 0, 0);
+			case BIH_LEAF:
+				// brush
+				brush = model->brush.data_brushes + bihleaf->itemindex;
+				if (brush->colbrushf && brush->colbrushf->numtriangles)
+				{
+					GL_Color((bihleafindex & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
+					R_Mesh_Draw(0, brush->colbrushf->numpoints, 0, brush->colbrushf->numtriangles, brush->colbrushf->elements, NULL, 0, 0);
+				}
+				break;
+			case BIH_LEAF + 1:
+				// triangle
+				triangleindex = bihleaf->itemindex;
+				VectorCopy(model->brush.data_collisionvertex3f + 3*model->brush.data_collisionelement3i[triangleindex*3+0], vertex3f[0]);
+				VectorCopy(model->brush.data_collisionvertex3f + 3*model->brush.data_collisionelement3i[triangleindex*3+1], vertex3f[1]);
+				VectorCopy(model->brush.data_collisionvertex3f + 3*model->brush.data_collisionelement3i[triangleindex*3+2], vertex3f[2]);
+				R_Mesh_VertexPointer(vertex3f[0], 0, 0);
+				GL_Color((bihleafindex & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
+				R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
+				break;
+			default:
+				break;
 			}
 		}
 	}
