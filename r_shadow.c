@@ -1507,19 +1507,48 @@ int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
 	}
 	// this next test usually clips off more sides than the former, but occasionally clips fewer/different ones, so do both and combine results
 	// check if frustum corners/origin cross plane sides
+#if 1
+    // infinite version, assumes frustum corners merely give direction and extend to infinite distance
+    Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.origin, p);
+    dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn);
+    masks[0] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+    masks[1] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+    dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn);
+    masks[2] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+    masks[3] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+    dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn);
+    masks[4] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+    masks[5] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+    for (i = 0;i < 4;i++)
+    {
+        Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.frustumcorner[i], n);
+        VectorSubtract(n, p, n);
+        dp = n[0] + n[1], dn = n[0] - n[1], ap = fabs(dp), an = fabs(dn);
+        if(ap > 0) masks[0] |= dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2);
+        if(an > 0) masks[1] |= dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2);
+        dp = n[1] + n[2], dn = n[1] - n[2], ap = fabs(dp), an = fabs(dn);
+        if(ap > 0) masks[2] |= dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4);
+        if(an > 0) masks[3] |= dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4);
+        dp = n[2] + n[0], dn = n[2] - n[0], ap = fabs(dp), an = fabs(dn);
+        if(ap > 0) masks[4] |= dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0);
+        if(an > 0) masks[5] |= dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0);
+    }
+#else
+    // finite version, assumes corners are a finite distance from origin dependent on far plane
 	for (i = 0;i < 5;i++)
 	{
 		Matrix4x4_Transform(&rtlight->matrix_worldtolight, !i ? r_refdef.view.origin : r_refdef.view.frustumcorner[i-1], p);
-		dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn),
+		dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn);
 		masks[0] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
 		masks[1] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
-		dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn),
+		dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn);
 		masks[2] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
 		masks[3] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
-		dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn),
+		dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn);
 		masks[4] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
 		masks[5] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
 	}
+#endif
 	return sides & masks[0] & masks[1] & masks[2] & masks[3] & masks[4] & masks[5];
 }
 
