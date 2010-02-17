@@ -6294,7 +6294,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (surface->num_triangles > 0)
 				Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, loadmodel->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (loadmodel->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 		loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true, false);
-		Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
+		if (loadmodel->brush.shadowmesh)
+			Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 	}
 
 	loadmodel->brush.num_leafs = 0;
