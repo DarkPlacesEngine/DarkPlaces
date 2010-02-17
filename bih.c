@@ -5,7 +5,7 @@
 #include <memory.h>
 #include "bih.h"
 
-static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist)
+static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *totalmins, float *totalmaxs)
 {
 	int i;
 	int j;
@@ -21,17 +21,10 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist)
 	float mins[3];
 	float maxs[3];
 	float size[3];
-	if (numchildren < 2)
-		return -1-leaflist[0];
-	// if we run out of nodes it's the caller's fault, but don't crash
-	if (bih->numnodes == bih->maxnodes)
-	{
-		if (!bih->error)
-			bih->error = BIHERROR_OUT_OF_NODES;
-		return -1-leaflist[0];
-	}
-	nodenum = bih->numnodes++;
-	node = bih->nodes + nodenum;
+	float frontmins[3];
+	float frontmaxs[3];
+	float backmins[3];
+	float backmaxs[3];
 	// calculate bounds of children
 	child = bih->leafs + leaflist[0];
 	mins[0] = child->mins[0];
@@ -53,6 +46,25 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist)
 	size[0] = maxs[0] - mins[0];
 	size[1] = maxs[1] - mins[1];
 	size[2] = maxs[2] - mins[2];
+	// provide bounds to caller
+	totalmins[0] = mins[0];
+	totalmins[1] = mins[1];
+	totalmins[2] = mins[2];
+	totalmaxs[0] = maxs[0];
+	totalmaxs[1] = maxs[1];
+	totalmaxs[2] = maxs[2];
+	// if there is only one child this is a leaf
+	if (numchildren < 2)
+		return -1-leaflist[0];
+	// if we run out of nodes it's the caller's fault, but don't crash
+	if (bih->numnodes == bih->maxnodes)
+	{
+		if (!bih->error)
+			bih->error = BIHERROR_OUT_OF_NODES;
+		return -1-leaflist[0];
+	}
+	nodenum = bih->numnodes++;
+	node = bih->nodes + nodenum;
 	// store bounds for node
 	node->mins[0] = mins[0];
 	node->mins[1] = mins[1];
@@ -64,25 +76,14 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist)
 	longestaxis = 0;
 	if (size[0] < size[1]) longestaxis = 1;
 	if (size[longestaxis] < size[2]) longestaxis = 2;
-	// iterate possible split axis choices:
-	// longest (best raytracing performance)
-	// x (longest had identical children, try X axis)
-	// y (longest and X axis had identical children, try Y axis)
-	// z (longest and X and Y axes had identical children, try Z axis)
-	// arbitrary (all children have same bounds, divide the list)
+	// iterate possible split axis choices, starting with the longest axis, if
+	// all fail it means all children have the same bounds and we simply split
+	// the list in half because each node can only have two children.
 	for (j = 0;j < 3;j++)
 	{
-		// if longest axis fails, we try each one until something works
-		// (this also can fail, see below)
-		switch(j)
-		{
-		default:
-		case 0: axis = longestaxis;break;
-		case 1: axis = (longestaxis + 1) % 3;break;
-		case 2: axis = (longestaxis + 2) % 3;break;
-		}
+		// pick an axis
+		axis = (longestaxis + j) % 3;
 		// sort children into front and back lists
-		node->type = BIH_SPLITX + axis;
 		splitdist = (node->mins[axis] + node->maxs[axis]) * 0.5f;
 		front = 0;
 		back = 0;
@@ -104,16 +105,18 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist)
 	}
 	if (j == 3)
 	{
-		// the almost impossible case happened; all children have identical
-		// bounds, so just divide them arbitrarily into two lists.
-		node->type = BIH_SPLITX;
+		// somewhat common case: no good choice, divide children arbitrarily
+		axis = 0;
 		back = numchildren >> 1;
 		front = numchildren - back;
 	}
 
 	// we now have front and back children divided in leaflist...
-	node->children[0] = BIH_BuildNode(bih, front, leaflist);
-	node->children[1] = BIH_BuildNode(bih, back, leaflist + front);
+	node->type = BIH_SPLITX + axis;
+	node->front = BIH_BuildNode(bih, front, leaflist, frontmins, frontmaxs);
+	node->frontmin = frontmins[axis];
+	node->back = BIH_BuildNode(bih, back, leaflist + front, backmins, backmaxs);
+	node->backmax = backmaxs[axis];
 	return nodenum;
 }
 
@@ -135,6 +138,6 @@ int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_nod
 	for (i = 0;i < bih->numleafs;i++)
 		bih->leafsort[i] = i;
 
-	BIH_BuildNode(bih, bih->numleafs, bih->leafsort);
+	bih->rootnode = BIH_BuildNode(bih, bih->numleafs, bih->leafsort, bih->mins, bih->maxs);
 	return bih->error;
 }

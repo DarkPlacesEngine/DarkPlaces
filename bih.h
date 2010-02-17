@@ -30,7 +30,11 @@ typedef struct bih_node_s
 	float mins[3];
 	float maxs[3];
 	// < 0 is a leaf index (-1-leafindex), >= 0 is another node index (always >= this node's index)
-	int children[2];
+	int front;
+	int back;
+	// interval of children
+	float frontmin; // children[0]
+	float backmax; // children[1]
 }
 bih_node_t;
 
@@ -54,6 +58,10 @@ typedef struct bih_s
 	// nodes are constructed by BIH_Build
 	int numnodes;
 	bih_node_t *nodes;
+	int rootnode; // 0 if numnodes > 0, -1 otherwise
+	// bounds calculated by BIH_Build
+	float mins[3];
+	float maxs[3];
 
 	// fields used only during BIH_Build:
 	int maxnodes;
