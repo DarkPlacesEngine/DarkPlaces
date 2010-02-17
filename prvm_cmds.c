@@ -6381,6 +6381,7 @@ void VM_getsurfacenumtriangles(void)
 //PF_getsurfacetriangle,     // #??? vector(entity e, float s, float n) getsurfacetriangle = #???;
 void VM_getsurfacetriangle(void)
 {
+       const vec3_t d = {-1, -1, -1};
        prvm_edict_t *ed;
        dp_model_t *model;
        msurface_t *surface;
@@ -6394,5 +6395,5 @@ void VM_getsurfacetriangle(void)
        if (trinum < 0 || trinum >= surface->num_triangles)
                return;
        // FIXME: implement rotation/scaling
-       VectorCopy(&(model->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[trinum * 3], PRVM_G_VECTOR(OFS_RETURN));
+       VectorMA(&(model->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[trinum * 3], surface->num_firstvertex, d, PRVM_G_VECTOR(OFS_RETURN));
 }
