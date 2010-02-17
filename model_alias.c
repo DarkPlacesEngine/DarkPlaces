@@ -1312,6 +1312,15 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
 
 void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -1560,6 +1569,15 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
 
 void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -1731,6 +1749,15 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1
 	     || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
 
 void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -2094,6 +2121,15 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
 
 void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -2435,6 +2471,15 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
 
 // no idea why PSK/PSA files contain weird quaternions but they do...
@@ -3007,4 +3052,13 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Alias_CalculateBoundingBox();
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
 }
