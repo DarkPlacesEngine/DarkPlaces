@@ -48,21 +48,7 @@ void Mod_AliasInit (void)
 
 void Mod_Skeletal_InitBlends(dp_model_t *model)
 {
-	int i;
-	int *weightindex = model->surfmesh.data_vertexweightindex4i;
-	float *weightinfluence = model->surfmesh.data_vertexweightinfluence4f;
-	model->surfmesh.num_blends = model->num_bones;
-	for (i = 0;i < model->surfmesh.num_blends;i++, weightindex += 4, weightinfluence += 4)
-	{
-		weightindex[0] = i;
-		weightindex[1] = 0;
-		weightindex[2] = 0;
-		weightindex[3] = 0;
-		weightinfluence[0] = 1;
-		weightinfluence[1] = 0;
-		weightinfluence[2] = 0;
-		weightinfluence[3] = 0;
-	}
+	model->surfmesh.num_blends = 0;
 }
 
 int Mod_Skeletal_AddBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
@@ -70,16 +56,18 @@ int Mod_Skeletal_AddBlend(dp_model_t *model, const int *newindex, const float *n
 	int i;
 	int *weightindex = model->surfmesh.data_vertexweightindex4i;
 	float *weightinfluence = model->surfmesh.data_vertexweightinfluence4f;
+	if(newinfluence[0] == 1)
+		return newindex[0];
 	for (i = 0;i < model->surfmesh.num_blends;i++, weightindex += 4, weightinfluence += 4)
 	{
 		if (weightindex[0] == newindex[0] && weightindex[1] == newindex[1] && weightindex[2] == newindex[2] && weightindex[3] == newindex[3] &&
 			weightinfluence[0] == newinfluence[0] && weightinfluence[1] == newinfluence[1] && weightinfluence[2] == newinfluence[2] && weightinfluence[3] == newinfluence[3])
-			return i;
+			return model->num_bones + i;
 	}
 	model->surfmesh.num_blends++;
 	memcpy(weightindex, newindex, 4*sizeof(int));
 	memcpy(weightinfluence, newinfluence, 4*sizeof(float));
-	return i;
+	return model->num_bones + i;
 } 
 		 
 static int maxbonepose = 0;
@@ -109,11 +97,11 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 	const int * RESTRICT weightindex;
 	const float * RESTRICT weightinfluence;
 
-	if (maxbonepose < model->num_bones + model->surfmesh.num_blends)
+	if (maxbonepose < model->num_bones*2 + model->surfmesh.num_blends)
 	{
 		if (bonepose)
 			Mem_Free(bonepose);
-		maxbonepose = model->num_bones + model->surfmesh.num_blends;
+		maxbonepose = model->num_bones*2 + model->surfmesh.num_blends;
 		bonepose = (float (*)[12])Mem_Alloc(r_main_mempool, maxbonepose * sizeof(float[12]));
 	}
 
@@ -189,9 +177,9 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 	// generate matrices for all blend combinations
 	weightindex = model->surfmesh.data_vertexweightindex4i + model->num_bones*4;
 	weightinfluence = model->surfmesh.data_vertexweightinfluence4f + model->num_bones*4;
-	for (i = model->num_bones;i < model->surfmesh.num_blends;i++, weightindex += 4, weightinfluence += 4)
+	for (i = 0;i < model->surfmesh.num_blends;i++, weightindex += 4, weightinfluence += 4)
 	{
-		float * RESTRICT b = boneposerelative[i];
+		float * RESTRICT b = boneposerelative[model->num_bones + i];
 		const float * RESTRICT m = boneposerelative[weightindex[0]];
 		float f = weightinfluence[0];
 		b[ 0] = f*m[ 0]; b[ 1] = f*m[ 1]; b[ 2] = f*m[ 2]; b[ 3] = f*m[ 3];
