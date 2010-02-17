@@ -6536,7 +6536,9 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 	}
 	else
 	{
-		bihnumleafs += model->nummodelbrushes;
+		for (brushindex = 0, brush = model->brush.data_brushes + brushindex+model->firstmodelbrush;brushindex < nummodelbrushes;brushindex++, brush++)
+			if (brush->colbrushf)
+				bihnumleafs++;
 		for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
 			bihnumleafs += surface->num_collisiontriangles;
 	}
@@ -6576,6 +6578,8 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 		// add collision brushes
 		for (brushindex = 0, brush = model->brush.data_brushes + brushindex+model->firstmodelbrush;brushindex < nummodelbrushes;brushindex++, brush++)
 		{
+			if (!brush->colbrushf)
+				continue;
 			bihleafs[bihleafindex].type = BIH_LEAF;
 			bihleafs[bihleafindex].textureindex = brush->texture - model->data_textures;
 			bihleafs[bihleafindex].itemindex = brushindex+model->firstmodelbrush;
