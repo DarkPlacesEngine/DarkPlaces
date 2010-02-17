@@ -4490,7 +4490,7 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 		{
 			Con_Printf("Mod_Q3BSP_LoadTriangles: invalid vertexindex %i (%i vertices), setting to 0\n", *out, loadmodel->brushq3.num_vertices);
 			if(!loadmodel->brushq3.num_vertices)
-				Host_Error("Mod_Q1BSP_LoadTrianglles: %s has triangles but no vertexes, cannot fix\n", loadmodel->name);
+				Host_Error("Mod_Q3BSP_LoadTriangles: %s has triangles but no vertexes, cannot fix\n", loadmodel->name);
 			*out = 0;
 		}
 	}
