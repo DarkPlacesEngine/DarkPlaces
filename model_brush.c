@@ -4478,8 +4478,16 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 	if (l->filelen % sizeof(int[3]))
 		Host_Error("Mod_Q3BSP_LoadTriangles: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = (int *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
+	if(!loadmodel->brushq3.num_vertices)
+	{
+		if (count)
+			Con_Printf("Mod_Q3BSP_LoadTriangles: %s has triangles but no vertexes, broken compiler, ignoring problem\n", loadmodel->name);
+		loadmodel->brushq3.num_triangles = 0;
+		return;
+	}
+
+	out = (int *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 	loadmodel->brushq3.num_triangles = count / 3;
 	loadmodel->brushq3.data_element3i = out;
 
@@ -4489,8 +4497,6 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 		if (*out < 0 || *out >= loadmodel->brushq3.num_vertices)
 		{
 			Con_Printf("Mod_Q3BSP_LoadTriangles: invalid vertexindex %i (%i vertices), setting to 0\n", *out, loadmodel->brushq3.num_vertices);
-			if(!loadmodel->brushq3.num_vertices)
-				Host_Error("Mod_Q3BSP_LoadTriangles: %s has triangles but no vertexes, cannot fix\n", loadmodel->name);
 			*out = 0;
 		}
 	}
