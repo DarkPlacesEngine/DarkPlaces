@@ -94,6 +94,13 @@ typedef struct texvecvertex_s
 }
 texvecvertex_t;
 
+typedef struct blendweights_s
+{
+	unsigned char index[4];
+	unsigned char influence[4];
+}
+blendweights_t;
+
 // used for mesh lists in q1bsp/q3bsp map models
 // (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
@@ -134,8 +141,7 @@ typedef struct surfmesh_s
 	float num_morphmdlframescale[3];
 	float num_morphmdlframetranslate[3];
 	// skeletal blending, these are NULL if model is morph or static
-	int *data_vertexweightindex4i;
-	float *data_vertexweightinfluence4f;
+	struct blendweights_s *data_blendweights;
 	int num_blends;
 	unsigned short *blends;
 	// set if there is some kind of animation on this model
