@@ -2814,12 +2814,12 @@ static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int first
 					const float *v = model->surfmesh.data_vertex3f + index * 3;
 					const float *vn = model->surfmesh.data_normal3f + index * 3;
 					const float *vt = model->surfmesh.data_texcoordtexture2f + index * 2;
-					unsigned short b = model->surfmesh.blends[index];
+					const int b = model->surfmesh.blends[index];
 					if (b < model->num_bones)
 						l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f\n"                          , b, v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1]);
 					else
 					{
-						const blendweights_t *w = model->surfmesh.data_blendweights + b;
+						const blendweights_t *w = model->surfmesh.data_blendweights + b - model->num_bones;
 						const unsigned char *wi = w->index;
 						const unsigned char *wf = w->influence;
 					    if (wf[3]) l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "%3i %f %f %f %f %f %f %f %f 4 %i %f %i %f %i %f %i %f\n", wi[0], v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1 - vt[1], wi[0], wf[0]/255.0f, wi[1], wf[1]/255.0f, wi[2], wf[2]/255.0f, wi[3], wf[3]/255.0f);
