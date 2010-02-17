@@ -155,7 +155,7 @@ void Collision_CalcEdgeDirsForPolygonBrushFloat(colbrushf_t *brush)
 		VectorSubtract(brush->points[i].v, brush->points[j].v, brush->edgedirs[j].v);
 }
 
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, texture_t *texture, int hasaabbplanes)
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, const texture_t *texture, int hasaabbplanes)
 {
 	// TODO: planesbuf could be replaced by a remapping table
 	int j, k, l, m, w, xyzflags;
@@ -613,7 +613,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 	}
 }
 
-colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents, int q3surfaceflags, texture_t *texture)
+colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents, int q3surfaceflags, const texture_t *texture)
 {
 	colbrushf_t *brush;
 	brush = (colbrushf_t *)Mem_Alloc(mempool, sizeof(colbrushf_t) + sizeof(colplanef_t) * (numpoints + 2) + sizeof(colpointf_t) * numpoints);
@@ -647,7 +647,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 	vec4_t startplane;
 	vec4_t endplane;
 	vec4_t newimpactplane;
-	texture_t *hittexture = NULL;
+	const texture_t *hittexture = NULL;
 	vec_t startdepth = 1;
 	vec3_t startdepthnormal;
 
@@ -856,7 +856,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	vec4_t startplane;
 	vec4_t endplane;
 	vec4_t newimpactplane;
-	texture_t *hittexture = NULL;
+	const texture_t *hittexture = NULL;
 	vec_t startdepth = 1;
 	vec3_t startdepthnormal;
 
@@ -1034,7 +1034,7 @@ void Collision_SnapCopyPoints(int numpoints, const colpointf_t *in, colpointf_t 
 	}
 }
 
-void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
+void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, const texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 	colpointf_t points[3];
@@ -1116,7 +1116,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 	}
 }
 
-void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
+void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, const texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 	// FIXME: snap vertices?
@@ -1145,7 +1145,41 @@ void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart
 	}
 }
 
-void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, texture_t *texture)
+void Collision_TraceBrushTriangleFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const float *v0, const float *v1, const float *v2, int supercontents, int q3surfaceflags, const texture_t *texture)
+{
+	int i;
+	colpointf_t points[3];
+	colpointf_t edgedirs[3];
+	colplanef_t planes[5];
+	colbrushf_t brush;
+	memset(&brush, 0, sizeof(brush));
+	brush.isaabb = false;
+	brush.hasaabbplanes = false;
+	brush.numpoints = 3;
+	brush.numedgedirs = 3;
+	brush.numplanes = 5;
+	brush.points = points;
+	brush.edgedirs = edgedirs;
+	brush.planes = planes;
+	brush.supercontents = supercontents;
+	brush.q3surfaceflags = q3surfaceflags;
+	brush.texture = texture;
+	for (i = 0;i < brush.numplanes;i++)
+	{
+		brush.planes[i].q3surfaceflags = q3surfaceflags;
+		brush.planes[i].texture = texture;
+	}
+	VectorCopy(v0, points[0].v);
+	VectorCopy(v1, points[1].v);
+	VectorCopy(v2, points[2].v);
+	Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
+	Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
+	Collision_CalcPlanesForPolygonBrushFloat(&brush);
+	//Collision_PrintBrushAsQHull(&brush, "brush");
+	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
+}
+
+void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, const texture_t *texture)
 {
 	int i;
 	memset(boxbrush, 0, sizeof(*boxbrush));
@@ -1278,7 +1312,7 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 	return impactdist / linelength;
 }
 
-void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2, int supercontents, int q3surfaceflags, texture_t *texture)
+void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2, int supercontents, int q3surfaceflags, const texture_t *texture)
 {
 #if 1
 	// more optimized
