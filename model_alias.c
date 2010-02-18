@@ -109,12 +109,6 @@ void Mod_Skeletal_FreeBuffers(void)
 	bonepose = NULL;
 }
 
-#if defined(__GNUC__) || (defined(_MSC_VER) && _MSC_VER >= 1400)
-#define RESTRICT __restrict
-#else
-#define RESTRICT
-#endif
-
 void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex weighted skeletal
@@ -314,7 +308,7 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 	}
 }
 
-void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -403,7 +397,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t *model, const frameblend_t *frameb
 	}
 }
 
-void Mod_MDL_AnimateVertices(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
