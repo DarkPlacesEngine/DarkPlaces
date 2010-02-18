@@ -5986,6 +5986,8 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		break;
 	case BIH_LEAF + 1:
 		// collision triangle
+		if (!mod_q3bsp_curves_collisions.integer)
+			return;
 		e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
@@ -6049,6 +6051,8 @@ static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_mode
 		break;
 	case BIH_LEAF + 1:
 		// collision triangle
+		if (!mod_q3bsp_curves_collisions.integer)
+			return;
 		e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceBrushTriangleFloat(trace, thisbrush_start, thisbrush_end, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
