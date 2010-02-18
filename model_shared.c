@@ -2249,12 +2249,56 @@ nothing                GL_ZERO GL_ONE
 		texture->specularpowermod = shader->specularpowermod;
 		if (shader->dpreflectcube[0])
 			texture->reflectcubetexture = R_GetCubemap(shader->dpreflectcube);
+
+		// set up default supercontents (on q3bsp this is overridden by the q3bsp loader)
+		texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
+		if (shader->surfaceparms & Q3SURFACEPARM_LAVA         ) texture->supercontents  = SUPERCONTENTS_LAVA         ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SLIME        ) texture->supercontents  = SUPERCONTENTS_SLIME        ;
+		if (shader->surfaceparms & Q3SURFACEPARM_WATER        ) texture->supercontents  = SUPERCONTENTS_WATER        ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NONSOLID     ) texture->supercontents  = 0                          ;
+		if (shader->surfaceparms & Q3SURFACEPARM_PLAYERCLIP   ) texture->supercontents  = SUPERCONTENTS_PLAYERCLIP   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_BOTCLIP      ) texture->supercontents  = SUPERCONTENTS_MONSTERCLIP  ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SKY          ) texture->supercontents  = SUPERCONTENTS_SKY          ;
+
+	//	if (shader->surfaceparms & Q3SURFACEPARM_ALPHASHADOW  ) texture->supercontents |= SUPERCONTENTS_ALPHASHADOW  ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_AREAPORTAL   ) texture->supercontents |= SUPERCONTENTS_AREAPORTAL   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_CLUSTERPORTAL) texture->supercontents |= SUPERCONTENTS_CLUSTERPORTAL;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_DETAIL       ) texture->supercontents |= SUPERCONTENTS_DETAIL       ;
+		if (shader->surfaceparms & Q3SURFACEPARM_DONOTENTER   ) texture->supercontents |= SUPERCONTENTS_DONOTENTER   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_FOG          ) texture->supercontents |= SUPERCONTENTS_FOG          ;
+		if (shader->surfaceparms & Q3SURFACEPARM_LAVA         ) texture->supercontents |= SUPERCONTENTS_LAVA         ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTFILTER  ) texture->supercontents |= SUPERCONTENTS_LIGHTFILTER  ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_METALSTEPS   ) texture->supercontents |= SUPERCONTENTS_METALSTEPS   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NODAMAGE     ) texture->supercontents |= SUPERCONTENTS_NODAMAGE     ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NODLIGHT     ) texture->supercontents |= SUPERCONTENTS_NODLIGHT     ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NODRAW       ) texture->supercontents |= SUPERCONTENTS_NODRAW       ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NODROP       ) texture->supercontents |= SUPERCONTENTS_NODROP       ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NOIMPACT     ) texture->supercontents |= SUPERCONTENTS_NOIMPACT     ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NOLIGHTMAP   ) texture->supercontents |= SUPERCONTENTS_NOLIGHTMAP   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NOMARKS      ) texture->supercontents |= SUPERCONTENTS_NOMARKS      ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS    ) texture->supercontents |= SUPERCONTENTS_NOMIPMAPS    ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NONSOLID     ) texture->supercontents &=~SUPERCONTENTS_SOLID        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_ORIGIN       ) texture->supercontents |= SUPERCONTENTS_ORIGIN       ;
+		if (shader->surfaceparms & Q3SURFACEPARM_PLAYERCLIP   ) texture->supercontents |= SUPERCONTENTS_PLAYERCLIP   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SKY          ) texture->supercontents |= SUPERCONTENTS_SKY          ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_SLICK        ) texture->supercontents |= SUPERCONTENTS_SLICK        ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SLIME        ) texture->supercontents |= SUPERCONTENTS_SLIME        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_STRUCTURAL   ) texture->supercontents |= SUPERCONTENTS_STRUCTURAL   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_TRANS        ) texture->supercontents |= SUPERCONTENTS_TRANS        ;
+		if (shader->surfaceparms & Q3SURFACEPARM_WATER        ) texture->supercontents |= SUPERCONTENTS_WATER        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_POINTLIGHT   ) texture->supercontents |= SUPERCONTENTS_POINTLIGHT   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_HINT         ) texture->supercontents |= SUPERCONTENTS_HINT         ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_DUST         ) texture->supercontents |= SUPERCONTENTS_DUST         ;
+		if (shader->surfaceparms & Q3SURFACEPARM_BOTCLIP      ) texture->supercontents |= SUPERCONTENTS_BOTCLIP      | SUPERCONTENTS_MONSTERCLIP;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTGRID    ) texture->supercontents |= SUPERCONTENTS_LIGHTGRID    ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_ANTIPORTAL   ) texture->supercontents |= SUPERCONTENTS_ANTIPORTAL   ;
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
 		if (developer_extra.integer)
 			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
+		texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 	}
 	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
 	{
@@ -2262,6 +2306,7 @@ nothing                GL_ZERO GL_ONE
 			Con_DPrintf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
 		texture->surfaceparms = 0;
 		texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+		texture->supercontents = SUPERCONTENTS_SOLID;
 	}
 	else
 	{
@@ -2269,11 +2314,20 @@ nothing                GL_ZERO GL_ONE
 			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
 		texture->surfaceparms = 0;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
+		{
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+			texture->supercontents = SUPERCONTENTS_SOLID;
+		}
 		else if (texture->surfaceflags & Q3SURFACEFLAG_SKY)
+		{
 			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			texture->supercontents = SUPERCONTENTS_SKY;
+		}
 		else
+		{
 			texture->basematerialflags |= MATERIALFLAG_WALL;
+			texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
+		}
 		texture->numskinframes = 1;
 		if(cls.state == ca_dedicated)
 		{

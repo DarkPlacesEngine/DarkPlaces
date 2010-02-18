@@ -4276,13 +4276,14 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		strlcpy (out[i].name, in[i].name, sizeof (out[i].name));
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
+		if (cls.state != ca_dedicated)
+		{
+			Mod_LoadTextureFromQ3Shader(out + i, out[i].name, true, true, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
+			// restore the surfaceflags and supercontents
+			out[i].surfaceflags = LittleLong(in[i].surfaceflags);
+			out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
+		}
 	}
-
-	if (cls.state == ca_dedicated)
-		return;
-
-	for (i = 0;i < count;i++, in++, out++)
-		Mod_LoadTextureFromQ3Shader(out, out->name, true, true, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
 }
 
 static void Mod_Q3BSP_LoadPlanes(lump_t *l)
