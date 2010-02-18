@@ -51,6 +51,9 @@
 #define RF_USETRANSPARENTOFFSET 64 // Allows QC to customize origin used for transparent sorting via transparent_origin global, helps to fix transparent sorting bugs on a very large entities
 #define RF_NOCULL				128 // do not cull this entity using r_cullentities, for large outdoor entities (asteroids on the sky. etc)
 
+#define RF_FULLBRIGHT			256
+#define RF_NOSHADOW				512
+
 extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;
