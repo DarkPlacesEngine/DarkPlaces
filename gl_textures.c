@@ -23,6 +23,7 @@ cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 
+qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
 
@@ -324,6 +325,7 @@ static void GL_TextureMode_f (void)
 
 	if (Cmd_Argc() == 1)
 	{
+		Con_Printf("Texture mode is %sforced\n", gl_filter_force ? "" : "not ");
 		for (i = 0;i < 6;i++)
 		{
 			if (gl_filter_min == modes[i].minification)
@@ -336,7 +338,7 @@ static void GL_TextureMode_f (void)
 		return;
 	}
 
-	for (i = 0;i < 6;i++)
+	for (i = 0;i < sizeof(modes)/sizeof(*modes);i++)
 		if (!strcasecmp (modes[i].name, Cmd_Argv(1) ) )
 			break;
 	if (i == 6)
@@ -347,6 +349,7 @@ static void GL_TextureMode_f (void)
 
 	gl_filter_min = modes[i].minification;
 	gl_filter_mag = modes[i].magnification;
+	gl_filter_force = ((Cmd_Argc() > 2) && !strcasecmp(Cmd_Argv(2), "force"));
 
 	// change all the existing mipmap texture objects
 	// FIXME: force renderer(/client/something?) restart instead?
@@ -357,7 +360,7 @@ static void GL_TextureMode_f (void)
 		for (glt = pool->gltchain;glt;glt = glt->chain)
 		{
 			// only update already uploaded images
-			if (glt->texnum && !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
+			if (glt->texnum && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
 			{
 				oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
 				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
@@ -555,7 +558,7 @@ static void r_textures_newmap(void)
 
 void R_Textures_Init (void)
 {
-	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc)");
+	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
@@ -667,7 +670,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 	}
 
 	CHECKGLERROR
-	if (flags & TEXF_FORCENEAREST)
+	if (!gl_filter_force && flags & TEXF_FORCENEAREST)
 	{
 		if (flags & TEXF_MIPMAP)
 		{
@@ -679,7 +682,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 		}
 		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, GL_NEAREST);CHECKGLERROR
 	}
-	else if (flags & TEXF_FORCELINEAR)
+	else if (!gl_filter_force && flags & TEXF_FORCELINEAR)
 	{
 		if (flags & TEXF_MIPMAP)
 		{
