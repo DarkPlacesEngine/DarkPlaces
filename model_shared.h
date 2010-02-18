@@ -912,7 +912,7 @@ typedef struct model_s
 	// data type of model
 	const char		*modeldatatypestring;
 	// generates vertex data for a given frameblend
-	void(*AnimateVertices)(const struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f);
+	void(*AnimateVertices)(const struct model_s * RESTRICT model, const struct frameblend_s * RESTRICT frameblend, const struct skeleton_s *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f);
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
