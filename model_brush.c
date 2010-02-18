@@ -6214,6 +6214,12 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 	// walk the tree until we hit a leaf, recursing for any split cases
 	while (node->plane)
 	{
+#if 0
+		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
+			return;
+		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[0], start, end, startfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+		node = node->children[1];
+#else
 		// abort if this part of the bsp tree can not be hit by this trace
 //		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
 //			return;
@@ -6252,6 +6258,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 			return;
 		}
+#endif
 	}
 	// abort if this part of the bsp tree can not be hit by this trace
 //	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
@@ -6265,6 +6272,10 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 	nodesegmentmaxs[2] = max(start[2], end[2]) + 1;
 	// line trace the brushes
 	leaf = (mleaf_t *)node;
+#if 0
+	if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+		return;
+#endif
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
 		brush = model->brush.data_brushes[leaf->firstleafbrush[i]].colbrushf;
@@ -6302,6 +6313,12 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 	// walk the tree until we hit a leaf, recursing for any split cases
 	while (node->plane)
 	{
+#if 0
+		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
+			return;
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+		node = node->children[1];
+#else
 		// abort if this part of the bsp tree can not be hit by this trace
 //		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
 //			return;
@@ -6336,6 +6353,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 			return; // ERROR: NAN bounding box!
 		// take whichever side the segment box is on
 		node = node->children[sides - 1];
+#endif
 	}
 	// abort if this part of the bsp tree can not be hit by this trace
 //	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
@@ -6348,6 +6366,10 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *mo
 	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2] + 1);
 	// hit a leaf
 	leaf = (mleaf_t *)node;
+#if 0
+	if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+		return;
+#endif
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
 		brush = model->brush.data_brushes[leaf->firstleafbrush[i]].colbrushf;
