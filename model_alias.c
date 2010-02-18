@@ -942,6 +942,10 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	texture->currentmaterialflags = texture->basematerialflags;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1;
+	texture->surfaceflags = 0;
+	texture->supercontents = SUPERCONTENTS_SOLID;
+	if (!(texture->basematerialflags & MATERIALFLAG_BLENDED))
+		texture->supercontents |= SUPERCONTENTS_OPAQUE;
 }
 
 void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername)
