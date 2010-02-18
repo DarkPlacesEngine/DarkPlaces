@@ -47,7 +47,7 @@ cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower"
 cvar_t mod_q3bsp_nolightmaps = {CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not load lightmaps in Q3BSP maps (to save video RAM, but be warned: it looks ugly)"};
 cvar_t mod_q3bsp_tracelineofsight_brushes = {0, "mod_q3bsp_tracelineofsight_brushes", "0", "enables culling of entities behind detail brushes, curves, etc"};
 cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
-cvar_t mod_collision_bih = {0, "mod_collision_bih", "0", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
+cvar_t mod_collision_bih = {0, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
 cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 
 static texture_t mod_q1bsp_texture_solid;
