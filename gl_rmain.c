@@ -12145,8 +12145,7 @@ void R_DrawDebugModel(void)
 				continue;
 			switch (bihleaf->type)
 			{
-			case BIH_LEAF:
-				// brush
+			case BIH_BRUSH:
 				brush = model->brush.data_brushes + bihleaf->itemindex;
 				if (brush->colbrushf && brush->colbrushf->numtriangles)
 				{
@@ -12155,8 +12154,7 @@ void R_DrawDebugModel(void)
 					R_Mesh_Draw(0, brush->colbrushf->numpoints, 0, brush->colbrushf->numtriangles, brush->colbrushf->elements, NULL, 0, 0);
 				}
 				break;
-			case BIH_LEAF + 1:
-				// triangle
+			case BIH_COLLISIONTRIANGLE:
 				triangleindex = bihleaf->itemindex;
 				VectorCopy(model->brush.data_collisionvertex3f + 3*model->brush.data_collisionelement3i[triangleindex*3+0], vertex3f[0]);
 				VectorCopy(model->brush.data_collisionvertex3f + 3*model->brush.data_collisionelement3i[triangleindex*3+1], vertex3f[1]);
@@ -12165,7 +12163,14 @@ void R_DrawDebugModel(void)
 				GL_Color((bihleafindex & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
 				R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
 				break;
-			default:
+			case BIH_RENDERTRIANGLE:
+				triangleindex = bihleaf->itemindex;
+				VectorCopy(model->surfmesh.data_vertex3f + 3*model->surfmesh.data_element3i[triangleindex*3+0], vertex3f[0]);
+				VectorCopy(model->surfmesh.data_vertex3f + 3*model->surfmesh.data_element3i[triangleindex*3+1], vertex3f[1]);
+				VectorCopy(model->surfmesh.data_vertex3f + 3*model->surfmesh.data_element3i[triangleindex*3+2], vertex3f[2]);
+				R_Mesh_VertexPointer(vertex3f[0], 0, 0);
+				GL_Color((bihleafindex & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 5) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, ((bihleafindex >> 10) & 31) * (1.0f / 32.0f) * r_refdef.view.colorscale, r_showcollisionbrushes.value);
+				R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
 				break;
 			}
 		}
