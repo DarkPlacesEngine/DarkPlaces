@@ -2437,7 +2437,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
 
-		blendmode = p->blendmode;
+		blendmode = (pblend_t)p->blendmode;
 
 		switch (blendmode)
 		{
@@ -2596,7 +2596,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 		if (blendmode != p->blendmode)
 		{
-			blendmode = p->blendmode;
+			blendmode = (pblend_t)p->blendmode;
 			switch(blendmode)
 			{
 			case PBLEND_ALPHA:
