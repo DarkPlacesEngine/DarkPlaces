@@ -48,6 +48,7 @@ cvar_t mod_q3bsp_nolightmaps = {CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not
 cvar_t mod_q3bsp_tracelineofsight_brushes = {0, "mod_q3bsp_tracelineofsight_brushes", "0", "enables culling of entities behind detail brushes, curves, etc"};
 cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
 cvar_t mod_collision_bih = {0, "mod_collision_bih", "0", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
+cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 
 static texture_t mod_q1bsp_texture_solid;
 static texture_t mod_q1bsp_texture_sky;
@@ -79,6 +80,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_tracelineofsight_brushes);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
 	Cvar_RegisterVariable(&mod_collision_bih);
+	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
 
 	memset(&mod_q1bsp_texture_solid, 0, sizeof(mod_q1bsp_texture_solid));
 	strlcpy(mod_q1bsp_texture_solid.name, "solid" , sizeof(mod_q1bsp_texture_solid.name));
@@ -2967,10 +2969,13 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	// leafs (because qbsp is very sloppy)
 	leaf = loadmodel->brush.data_leafs;
 	endleaf = leaf + loadmodel->brush.num_leafs;
-	for (;leaf < endleaf;leaf++)
+	if (mod_recalculatenodeboxes.integer)
 	{
-		VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
-		VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
+		for (;leaf < endleaf;leaf++)
+		{
+			VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
+			VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
+		}
 	}
 	numportals = 0;
 	numpoints = 0;
@@ -3055,23 +3060,27 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				portal++;
 			}
 			// add the portal's polygon points to the leaf bounding boxes
-			for (i = 0;i < 2;i++)
+			if (mod_recalculatenodeboxes.integer)
 			{
-				leaf = (mleaf_t *)p->nodes[i];
-				for (j = 0;j < p->numpoints;j++)
+				for (i = 0;i < 2;i++)
 				{
-					if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
-					if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
-					if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
-					if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
-					if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
-					if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
+					leaf = (mleaf_t *)p->nodes[i];
+					for (j = 0;j < p->numpoints;j++)
+					{
+						if (leaf->mins[0] > p->points[j*3+0]) leaf->mins[0] = p->points[j*3+0];
+						if (leaf->mins[1] > p->points[j*3+1]) leaf->mins[1] = p->points[j*3+1];
+						if (leaf->mins[2] > p->points[j*3+2]) leaf->mins[2] = p->points[j*3+2];
+						if (leaf->maxs[0] < p->points[j*3+0]) leaf->maxs[0] = p->points[j*3+0];
+						if (leaf->maxs[1] < p->points[j*3+1]) leaf->maxs[1] = p->points[j*3+1];
+						if (leaf->maxs[2] < p->points[j*3+2]) leaf->maxs[2] = p->points[j*3+2];
+					}
 				}
 			}
 		}
 	}
 	// now recalculate the node bounding boxes from the leafs
-	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
+	if (mod_recalculatenodeboxes.integer)
+		Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
 }
 
 /*
