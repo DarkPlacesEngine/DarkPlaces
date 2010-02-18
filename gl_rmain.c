@@ -12128,7 +12128,7 @@ void R_DrawDebugModel(void)
 	GL_DepthMask(false);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if (r_showcollisionbrushes.value > 0 && model->collision_bih.numleafs && mod_collision_bih.integer)
+	if (r_showcollisionbrushes.value > 0 && model->collision_bih.numleafs)
 	{
 		int triangleindex;
 		int bihleafindex;
