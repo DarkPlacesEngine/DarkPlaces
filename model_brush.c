@@ -6142,13 +6142,17 @@ int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const 
 
 void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
 {
+#if 0
+	// broken - needs to be modified to count front faces and backfaces to figure out if it is in solid
 	vec3_t end;
 	int hitsupercontents;
 	VectorSet(end, start[0], start[1], model->normalmins[2]);
+#endif
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
+#if 0
 	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, start, end);
 	hitsupercontents = trace->hitsupercontents;
 	memset(trace, 0, sizeof(*trace));
@@ -6156,10 +6160,13 @@ void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *fra
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->startsupercontents = hitsupercontents;
+#endif
 }
 
 int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, const vec3_t start)
 {
+#if 0
+	// broken - needs to be modified to count front faces and backfaces to figure out if it is in solid
 	trace_t trace;
 	vec3_t end;
 	VectorSet(end, start[0], start[1], model->normalmins[2]);
@@ -6169,6 +6176,9 @@ int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, c
 	trace.hitsupercontentsmask = 0;
 	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(&trace, model, model->collision_bih.rootnode, start, end, start, end);
 	return trace.hitsupercontents;
+#else
+	return 0;
+#endif
 }
 
 static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, dp_model_t *model, mnode_t *node, const vec3_t point, int markframe)
