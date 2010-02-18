@@ -559,6 +559,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath=".\bih.c"
+				>
+			</File>
+			<File
 				RelativePath="builddate.c"
 				>
 				<FileConfiguration
@@ -5455,6 +5459,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath=".\bih.h"
+				>
+			</File>
 			<File
 				RelativePath="bspfile.h"
 				>
