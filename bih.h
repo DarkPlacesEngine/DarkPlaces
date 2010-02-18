@@ -18,9 +18,16 @@ typedef enum bih_nodetype_e
 	BIH_SPLITX = 0,
 	BIH_SPLITY = 1,
 	BIH_SPLITZ = 2,
-	BIH_LEAF = 3,
 }
 bih_nodetype_t;
+
+typedef enum bih_leaftype_e
+{
+	BIH_BRUSH = 3,
+	BIH_COLLISIONTRIANGLE = 4,
+	BIH_RENDERTRIANGLE = 5,
+}
+bih_leaftype_t;
 
 typedef struct bih_node_s
 {
@@ -40,7 +47,7 @@ bih_node_t;
 
 typedef struct bih_leaf_s
 {
-	bih_nodetype_t type; // = BIH_LEAF
+	bih_leaftype_t type; // = BIH_BRUSH And similar values
 	float mins[3];
 	float maxs[3];
 	// data past this point is generic and entirely up to the caller...

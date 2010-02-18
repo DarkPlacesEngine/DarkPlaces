@@ -5717,18 +5717,15 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 	leaf = model->collision_bih.leafs + (-1-nodenum);
 	switch(leaf->type)
 	{
-	case BIH_LEAF:
-		// brush
+	case BIH_BRUSH:
 		brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
 		Collision_TracePointBrushFloat(trace, point, brush);
 		break;
-	case BIH_LEAF + 1:
+	case BIH_COLLISIONTRIANGLE:
 		// collision triangle - skipped because they have no volume
 		break;
-	case BIH_LEAF + 2:
+	case BIH_RENDERTRIANGLE:
 		// render triangle - skipped because they have no volume
-		break;
-	default:
 		break;
 	}
 }
@@ -5980,26 +5977,21 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #endif
 	switch(leaf->type)
 	{
-	case BIH_LEAF:
-		// brush
+	case BIH_BRUSH:
 		brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
 		Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
 		break;
-	case BIH_LEAF + 1:
-		// collision triangle
+	case BIH_COLLISIONTRIANGLE:
 		if (!mod_q3bsp_curves_collisions.integer)
 			return;
 		e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
 		break;
-	case BIH_LEAF + 2:
-		// render triangle
+	case BIH_RENDERTRIANGLE:
 		e = model->surfmesh.data_element3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
-		break;
-	default:
 		break;
 	}
 }
@@ -6045,26 +6037,21 @@ static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_mode
 #endif
 	switch(leaf->type)
 	{
-	case BIH_LEAF:
-		// brush
+	case BIH_BRUSH:
 		brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
 		Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush, brush);
 		break;
-	case BIH_LEAF + 1:
-		// collision triangle
+	case BIH_COLLISIONTRIANGLE:
 		if (!mod_q3bsp_curves_collisions.integer)
 			return;
 		e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceBrushTriangleFloat(trace, thisbrush_start, thisbrush_end, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
 		break;
-	case BIH_LEAF + 2:
-		// render triangle
+	case BIH_RENDERTRIANGLE:
 		e = model->surfmesh.data_element3i + 3*leaf->itemindex;
 		texture = model->data_textures + leaf->textureindex;
 		Collision_TraceBrushTriangleFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
-		break;
-	default:
 		break;
 	}
 }
@@ -6606,7 +6593,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 		{
 			for (triangleindex = 0, e = renderelement3i + 3*surface->num_firsttriangle;triangleindex < surface->num_triangles;triangleindex++, e += 3)
 			{
-				bihleafs[bihleafindex].type = BIH_LEAF + 2;
+				bihleafs[bihleafindex].type = BIH_RENDERTRIANGLE;
 				bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
 				bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firsttriangle;
 				bihleafs[bihleafindex].mins[0] = min(rendervertex3f[3*e[0]+0], min(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) - 1;
@@ -6626,7 +6613,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 		{
 			if (!brush->colbrushf)
 				continue;
-			bihleafs[bihleafindex].type = BIH_LEAF;
+			bihleafs[bihleafindex].type = BIH_BRUSH;
 			bihleafs[bihleafindex].textureindex = brush->texture - model->data_textures;
 			bihleafs[bihleafindex].itemindex = brushindex+model->firstmodelbrush;
 			VectorCopy(brush->colbrushf->mins, bihleafs[bihleafindex].mins);
@@ -6641,7 +6628,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 		{
 			for (triangleindex = 0, e = collisionelement3i + 3*surface->num_firstcollisiontriangle;triangleindex < surface->num_collisiontriangles;triangleindex++, e += 3)
 			{
-				bihleafs[bihleafindex].type = BIH_LEAF + 1;
+				bihleafs[bihleafindex].type = BIH_COLLISIONTRIANGLE;
 				bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
 				bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firstcollisiontriangle;
 				bihleafs[bihleafindex].mins[0] = min(collisionvertex3f[3*e[0]+0], min(collisionvertex3f[3*e[1]+0], collisionvertex3f[3*e[2]+0])) - 1;

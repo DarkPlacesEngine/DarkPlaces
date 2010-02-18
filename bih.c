@@ -2,7 +2,7 @@
 // This code written in 2010 by Forest Hale (lordhavoc ghdigital com), and placed into public domain.
 
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include "bih.h"
 
 static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *totalmins, float *totalmaxs)
@@ -10,10 +10,10 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *tota
 	int i;
 	int j;
 	int longestaxis;
-	int axis;
+	int axis = 0;
 	int nodenum;
-	int front;
-	int back;
+	int front = 0;
+	int back = 0;
 	bih_node_t *node;
 	bih_leaf_t *child;
 	float splitdist;
@@ -112,7 +112,7 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *tota
 	}
 
 	// we now have front and back children divided in leaflist...
-	node->type = BIH_SPLITX + axis;
+	node->type = (bih_nodetype_t)((int)BIH_SPLITX + axis);
 	node->front = BIH_BuildNode(bih, front, leaflist, frontmins, frontmaxs);
 	node->frontmin = frontmins[axis];
 	node->back = BIH_BuildNode(bih, back, leaflist + front, backmins, backmaxs);
