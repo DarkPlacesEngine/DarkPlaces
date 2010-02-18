@@ -4596,9 +4596,10 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				break; // we got all of them
 			if(image_width != size || image_height != size)
 			{
-				for(i = 0; i <= count; ++i)
-					Mem_Free(inpixels[i]);
-				Host_Error("Mod_Q3BSP_LoadLightmaps: invalid external lightmap size in %s",loadmodel->name);
+				Mem_Free(inpixels[count]);
+				inpixels[count] = NULL;
+				Con_Printf("Mod_Q3BSP_LoadLightmaps: mismatched lightmap size in %s - external lightmap %s/lm_%04d does not match earlier ones\n", loadmodel->name, mapname, count);
+				break;
 			}
 		}
 	}
