@@ -6422,11 +6422,11 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf)
+			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
 				Collision_TraceLineBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
 		if (mod_q3bsp_curves_collisions.integer)
 			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-				if (surface->num_collisiontriangles)
+				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
 					Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 	}
 	else
@@ -6479,11 +6479,11 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf)
+			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
 				Collision_TraceBrushBrushFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, brush->colbrushf, brush->colbrushf);
 		if (mod_q3bsp_curves_collisions.integer)
 			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-				if (surface->num_collisiontriangles)
+				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
 					Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
 	}
 	else
