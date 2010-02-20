@@ -5739,7 +5739,8 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 	const int *e;
 	const texture_t *texture;
 	int axis;
-#if 0
+#define BIHLINECLIP
+#ifdef BIHLINECLIP
 	int sideflags;
 	vec_t frontdist1;
 	vec_t frontdist2;
@@ -5760,12 +5761,12 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 	while (nodenum >= 0)
 	{
 		node = model->collision_bih.nodes + nodenum;
-#if 1
+#if 0
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
 #endif
 		axis = node->type - BIH_SPLITX;
-#if 1
+#if 0
 		if (segmentmins[axis] <= node->backmax)
 		{
 			if (segmentmaxs[axis] >= node->frontmin)
@@ -5777,10 +5778,10 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		else
 			return; // trace falls between children
 #else
-		frontdist1 = start[axis] - node->backmax;
-		frontdist2 = end[axis] - node->backmax;
-		backdist1 = start[axis] - node->frontmin;
-		backdist2 = end[axis] - node->frontmin;
+		frontdist1 = start[axis] - node->frontmin;
+		frontdist2 = end[axis] - node->frontmin;
+		backdist1 = start[axis] - node->backmax;
+		backdist2 = end[axis] - node->backmax;
 		sideflags = 0;
 		if (frontdist1 < 0)
 			sideflags |= 1;
@@ -5790,6 +5791,18 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			sideflags |= 4;
 		if (backdist2 < 0)
 			sideflags |= 8;
+#if 0
+		if (sideflags & 12)
+		{
+			if ((sideflags & 3) != 3)
+				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			nodenum = node->back;
+		}
+		else if ((sideflags & 3) != 3)
+			nodenum = node->front;
+		else
+			return; // trace falls between children
+#else
 		switch(sideflags)
 		{
 		case 0:
@@ -5798,6 +5811,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			continue;
 		case 1:
 			// START end START END
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[0]);
 			start = clipped[0];
@@ -5807,9 +5821,11 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->front;
 			break;
 		case 2:
+#ifdef BIHLINECLIP
 			// start END START END
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[0]);
@@ -5820,6 +5836,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->front;
 			break;
 		case 3:
@@ -5828,6 +5845,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		case 4:
 			// start end start END
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, clipped[0]);
 			end = clipped[0];
@@ -5837,10 +5855,12 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->back;
 			break;
 		case 5:
 			// START end start END
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped[1], end, linestart, lineend);
@@ -5853,10 +5873,14 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 6:
 			// start END start END
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped[1], linestart, lineend);
@@ -5869,10 +5893,14 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 7:
 			// START END start END
+#ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, clipped[0]);
 			end = clipped[0];
@@ -5882,11 +5910,13 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->back;
 			break;
 		case 8:
 			// start end START end
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, clipped[0]);
 			start = clipped[0];
@@ -5896,10 +5926,12 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->back;
 			break;
 		case 9:
 			// START end START end
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped[1], end, linestart, lineend);
@@ -5912,10 +5944,14 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 10:
 			// start END START end
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped[1], linestart, lineend);
@@ -5928,10 +5964,14 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 11:
 			// START END START end
+#ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, clipped[0]);
 			start = clipped[0];
@@ -5941,6 +5981,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[0] = max(start[0], end[0]);
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
+#endif
 			nodenum = node->back;
 			break;
 		case 12:
@@ -5950,16 +5991,24 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			break;
 		case 13:
 			// START end start end
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped[1], end, linestart, lineend);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 14:
 			// start END start end
+#ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped[1]);
 			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped[1], linestart, lineend);
+#else
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+#endif
 			nodenum = node->back;
 			break;
 		case 15:
@@ -5967,6 +6016,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			nodenum = node->back;
 			continue;
 		}
+#endif
 #endif
 	}
 	if (!model->collision_bih.leafs)
