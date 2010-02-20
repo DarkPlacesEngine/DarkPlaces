@@ -1506,7 +1506,7 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { "omnicide", "-omnicide", "Blood Omnicide", "kain", NULL, "omnicide", "omnicide" },
 // GAME_STEELSTORM
 // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
-{ "steelstorm",				"-steelstorm",		"Steel Storm",		"gamedata",		NULL,			"steelstorm",			"steelstorm" },
+{ "steelstorm",				"-steelstorm",		"Steel-Storm",		"gamedata",		NULL,			"ss",			"steelstorm" },
 };
 
 void COM_InitGameType (void)
