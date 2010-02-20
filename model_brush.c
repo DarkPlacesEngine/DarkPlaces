@@ -5760,7 +5760,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 	while (nodenum >= 0)
 	{
 		node = model->collision_bih.nodes + nodenum;
-#if 0
+#if 1
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
 #endif
@@ -6009,11 +6009,11 @@ static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_mode
 	{
 		node = model->collision_bih.nodes + nodenum;
 		axis = node->type - BIH_SPLITX;
-#if 0
-#if 0
+#if 1
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
 #endif
+#if 0
 		Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, node->front, thisbrush_start, thisbrush_end, segmentmins, segmentmaxs);
 		nodenum = node->back;
 		continue;
