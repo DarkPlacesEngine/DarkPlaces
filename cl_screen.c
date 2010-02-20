@@ -1551,8 +1551,6 @@ void SCR_DrawScreen (void)
 
 	R_Mesh_Start();
 
-	R_TimeReport_BeginFrame();
-
 	R_UpdateVariables();
 
 	// Quake uses clockwise winding, so these are swapped
@@ -1703,7 +1701,10 @@ void SCR_DrawScreen (void)
 		R_TimeReport("2d");
 
 	if (cls.signon == SIGNONS)
+	{
 		R_TimeReport_EndFrame();
+		R_TimeReport_BeginFrame();
+	}
 
 	DrawQ_Finish();
 
