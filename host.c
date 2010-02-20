@@ -702,6 +702,7 @@ void Host_Main(void)
 			// process console commands
 			CL_VM_PreventInformationLeaks();
 			Cbuf_Execute();
+			R_TimeReport("console");
 		}
 
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
@@ -812,6 +813,7 @@ void Host_Main(void)
 				if (framelimit > 1 && Sys_DoubleTime() >= aborttime)
 					break;
 			}
+			R_TimeReport("serverphysics");
 
 			// send all messages to the clients
 			SV_SendClientMessages();
@@ -826,6 +828,7 @@ void Host_Main(void)
 
 			// send an heartbeat if enough time has passed since the last one
 			NetConn_Heartbeat(0);
+			R_TimeReport("servernetwork");
 		}
 
 	//-------------------
@@ -836,6 +839,7 @@ void Host_Main(void)
 
 		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
 		{
+			R_TimeReport("---");
 			// decide the simulation time
 			if (cls.capturevideo.active)
 			{
@@ -910,6 +914,8 @@ void Host_Main(void)
 			CL_Video_Frame();
 			CL_Gecko_Frame();
 
+			R_TimeReport("client");
+
 			CL_UpdateScreen();
 
 			if (host_speeds.integer)
@@ -925,6 +931,7 @@ void Host_Main(void)
 				S_Update(&r_refdef.view.matrix);
 
 			CDAudio_Update();
+			R_TimeReport("audio");
 
 			// reset gathering of mouse input
 			in_mouse_x = in_mouse_y = 0;
