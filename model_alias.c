@@ -934,6 +934,8 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	if (texture->currentskinframe->hasalpha)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
+	texture->offsetmapping = OFFSETMAPPING_OFF;
+	texture->offsetscale = 1;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1;
 	texture->surfaceflags = 0;
