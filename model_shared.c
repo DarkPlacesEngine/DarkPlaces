@@ -1540,6 +1540,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 }
 
 extern cvar_t r_picmipworld;
+extern cvar_t mod_q3shader_default_offsetmapping;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1580,6 +1581,8 @@ void Mod_LoadQ3Shaders(void)
 			shader.reflectfactor = 1;
 			Vector4Set(shader.reflectcolor4f, 1, 1, 1, 1);
 			shader.r_water_wateralpha = 1;
+			shader.offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
+			shader.offsetscale = 1;
 			shader.specularscalemod = 1;
 			shader.specularpowermod = 1;
 
@@ -1998,6 +2001,18 @@ void Mod_LoadQ3Shaders(void)
 				{
 					shader.specularpowermod = atof(parameter[1]);
 				}
+				else if (!strcasecmp(parameter[0], "dpoffsetmapping") && numparameters >= 3)
+				{
+					if (!strcasecmp(parameter[1], "disable") || !strcasecmp(parameter[1], "none") || !strcasecmp(parameter[1], "off"))
+						shader.offsetmapping = OFFSETMAPPING_OFF;
+					else if (!strcasecmp(parameter[1], "default"))
+						shader.offsetmapping = OFFSETMAPPING_DEFAULT;
+					else if (!strcasecmp(parameter[1], "linear"))
+						shader.offsetmapping = OFFSETMAPPING_LINEAR;
+					else if (!strcasecmp(parameter[1], "relief"))
+						shader.offsetmapping = OFFSETMAPPING_RELIEF;
+					shader.offsetscale = atof(parameter[2]);
+				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
 					int i, deformindex;
@@ -2106,8 +2121,11 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texflagsmask &= ~TEXF_PICMIP;
 	if(!(defaulttexflags & TEXF_COMPRESS))
 		texflagsmask &= ~TEXF_COMPRESS;
-	texture->specularscalemod = 1; // unless later loaded from the shader
-	texture->specularpowermod = 1; // unless later loaded from the shader
+	// unless later loaded from the shader
+	texture->offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
+	texture->offsetscale = 1;
+	texture->specularscalemod = 1;
+	texture->specularpowermod = 1; 
 	// WHEN ADDING DEFAULTS HERE, REMEMBER TO SYNC TO SHADER LOADING ABOVE
 	// HERE, AND Q1BSP LOADING
 	// JUST GREP FOR "specularscalemod = 1".
@@ -2245,6 +2263,8 @@ nothing                GL_ZERO GL_ONE
 		texture->reflectfactor = shader->reflectfactor;
 		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
 		texture->r_water_wateralpha = shader->r_water_wateralpha;
+		texture->offsetmapping = shader->offsetmapping;
+		texture->offsetscale = shader->offsetscale;
 		texture->specularscalemod = shader->specularscalemod;
 		texture->specularpowermod = shader->specularpowermod;
 		if (shader->dpreflectcube[0])
