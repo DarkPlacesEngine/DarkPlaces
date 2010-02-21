@@ -371,6 +371,15 @@ typedef struct q3shaderinfo_deform_s
 }
 q3shaderinfo_deform_t;
 
+typedef enum dpoffsetmapping_technique_s
+{
+	OFFSETMAPPING_OFF,			// none
+	OFFSETMAPPING_DEFAULT,		// cvar-set
+	OFFSETMAPPING_LINEAR,		// linear
+	OFFSETMAPPING_RELIEF		// relief
+}dpoffsetmapping_technique_t;
+
+
 typedef struct q3shaderinfo_s
 {
 	char name[Q3PATHLENGTH];
@@ -403,6 +412,10 @@ typedef struct q3shaderinfo_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+
+	// offsetmapping
+	dpoffsetmapping_technique_t offsetmapping;
+	float offsetscale;
 
 	// gloss
 	float specularscalemod;
@@ -536,11 +549,15 @@ typedef struct texture_s
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 
+	// offsetmapping
+	dpoffsetmapping_technique_t offsetmapping;
+	float offsetscale;
+
 	// gloss
 	float specularscalemod;
 	float specularpowermod;
 }
-texture_t;
+ texture_t;
 
 typedef struct mtexinfo_s
 {

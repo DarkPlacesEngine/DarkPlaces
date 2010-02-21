@@ -46,6 +46,8 @@ cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "select
 cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "4", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
 cvar_t mod_q3bsp_nolightmaps = {CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not load lightmaps in Q3BSP maps (to save video RAM, but be warned: it looks ugly)"};
 cvar_t mod_q3bsp_tracelineofsight_brushes = {0, "mod_q3bsp_tracelineofsight_brushes", "0", "enables culling of entities behind detail brushes, curves, etc"};
+cvar_t mod_q3shader_default_offsetmapping = {CVAR_SAVE, "mod_q3shader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces"};
+
 cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
 cvar_t mod_collision_bih = {0, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
 cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
@@ -78,6 +80,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
 	Cvar_RegisterVariable(&mod_q3bsp_nolightmaps);
 	Cvar_RegisterVariable(&mod_q3bsp_tracelineofsight_brushes);
+	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
 	Cvar_RegisterVariable(&mod_collision_bih);
 	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
@@ -1465,6 +1468,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->reflectfactor = 1;
 		Vector4Set(tx->reflectcolor4f, 1, 1, 1, 1);
 		tx->r_water_wateralpha = 1;
+		tx->offsetmapping = OFFSETMAPPING_OFF;
+		tx->offsetscale = 1;
 		tx->specularscalemod = 1;
 		tx->specularpowermod = 1;
 	}
