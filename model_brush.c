@@ -5127,7 +5127,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			finalwidth = Q3PatchDimForTess(patchsize[0],xtess); //((patchsize[0] - 1) * xtess) + 1;
 			finalheight = Q3PatchDimForTess(patchsize[1],ytess); //((patchsize[1] - 1) * ytess) + 1;
 			finalvertices = finalwidth * finalheight;
-			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+			oldnumtriangles = finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 			type = Q3FACETYPE_MESH;
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
@@ -5152,7 +5152,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			finalwidth = Q3PatchDimForTess(patchsize[0],cxtess); //((patchsize[0] - 1) * cxtess) + 1;
 			finalheight = Q3PatchDimForTess(patchsize[1],cytess); //((patchsize[1] - 1) * cytess) + 1;
 			finalvertices = finalwidth * finalheight;
-			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+			oldnumtriangles2 = finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
 			// legacy collision geometry implementation
 			out->deprecatedq3data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
@@ -5163,11 +5163,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTriangleElements(out->deprecatedq3data_collisionelement3i, finalwidth, finalheight, 0);
 
 			//Mod_SnapVertices(3, out->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), 0.25);
-			Mod_SnapVertices(3, out->num_collisionvertices, out->deprecatedq3data_collisionvertex3f, 1);
+			Mod_SnapVertices(3, finalvertices, out->deprecatedq3data_collisionvertex3f, 1);
 
-			oldnumtriangles = out->num_triangles;
-			oldnumtriangles2 = out->num_collisiontriangles;
-			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionvertex3f);
+			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(finaltriangles, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionvertex3f);
 
 			// now optimize the collision mesh by finding triangle bboxes...
 			Mod_Q3BSP_BuildBBoxes(out->deprecatedq3data_collisionelement3i, out->num_collisiontriangles, out->deprecatedq3data_collisionvertex3f, &out->deprecatedq3data_collisionbbox6f, &out->deprecatedq3num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
@@ -5179,9 +5177,19 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Q3PatchTesselateFloat(3, sizeof(float[3]), surfacecollisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
 			Q3PatchTriangleElements(surfacecollisionelement3i, finalwidth, finalheight, collisionvertices);
 			Mod_SnapVertices(3, finalvertices, surfacecollisionvertex3f, 1);
-			oldnumtriangles = out->num_triangles;
-			oldnumtriangles2 = out->num_collisiontriangles;
-			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, surfacecollisionelement3i, surfacecollisionelement3i, loadmodel->brush.data_collisionvertex3f);
+#if 1
+			// remove this once the legacy code is removed
+			{
+				int nc = out->num_collisiontriangles;
+#endif
+			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(finaltriangles, surfacecollisionelement3i, surfacecollisionelement3i, loadmodel->brush.data_collisionvertex3f);
+#if 1
+				if(nc != out->num_collisiontriangles)
+				{
+					Con_Printf("number of collision triangles differs between BIH and BSP. FAIL.\n");
+				}
+			}
+#endif
 
 			if (developer_extra.integer)
 				Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
