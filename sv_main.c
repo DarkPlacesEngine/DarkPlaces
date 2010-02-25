@@ -3003,7 +3003,7 @@ void SV_SpawnServer (const char *server)
 	// free q3 shaders so that any newly downloaded shaders will be active
 	Mod_FreeQ3Shaders();
 
-	worldmodel = Mod_ForName(modelname, false, true, NULL);
+	worldmodel = Mod_ForName(modelname, false, developer.integer != 0, NULL);
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
 		Con_Printf("Couldn't load map %s\n", modelname);
