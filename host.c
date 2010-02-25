@@ -700,6 +700,7 @@ void Host_Main(void)
 		if (sv.active ? sv_timer > 0 : cl_timer > 0)
 		{
 			// process console commands
+			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
 			Cbuf_Execute();
 			R_TimeReport("console");
@@ -724,6 +725,7 @@ void Host_Main(void)
 			else
 				Sys_Sleep((int)wait);
 			svs.perf_acc_sleeptime += Sys_DoubleTime() - time0;
+			R_TimeReport("sleep");
 			continue;
 		}
 
@@ -895,21 +897,27 @@ void Host_Main(void)
 			// update video
 			if (host_speeds.integer)
 				time1 = Sys_DoubleTime();
+			R_TimeReport("pre-input");
 
 			// Collect input into cmd
 			CL_Input();
+
+			R_TimeReport("input");
 
 			// check for new packets
 			NetConn_ClientFrame();
 
 			// read a new frame from a demo if needed
 			CL_ReadDemoMessage();
+			R_TimeReport("clientnetwork");
 
 			// now that packets have been read, send input to server
 			CL_SendMove();
+			R_TimeReport("sendmove");
 
 			// update client world (interpolate entities, create trails, etc)
 			CL_UpdateWorld();
+			R_TimeReport("lerpworld");
 
 			CL_Video_Frame();
 			CL_Gecko_Frame();
