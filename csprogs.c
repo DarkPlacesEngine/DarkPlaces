@@ -339,6 +339,7 @@ qboolean CL_VM_UpdateView (void)
 //	vec3_t oldangles;
 	if(!cl.csqc_loaded)
 		return false;
+	R_TimeReport("pre-UpdateView");
 	CSQC_BEGIN
 		//VectorCopy(cl.viewangles, oldangles);
 		prog->globals.client->time = cl.time;
@@ -356,6 +357,7 @@ qboolean CL_VM_UpdateView (void)
 		// Dresk : Reset Dmg Globals Here
 		CL_VM_UpdateDmgGlobals(0, 0, emptyvector);
 	CSQC_END
+	R_TimeReport("UpdateView");
 	return true;
 }
 
