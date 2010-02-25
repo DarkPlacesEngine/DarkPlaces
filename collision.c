@@ -18,6 +18,7 @@ cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 cvar_t collision_endposnudge = {0, "collision_endposnudge", "0", "workaround to fix trace_endpos sometimes being returned where it would be inside solid by making that collision hit (recommended: values like 1)"};
 #endif
+cvar_t collision_debug_tracelineasbox = {0, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
 
 void Collision_Init (void)
 {
@@ -30,6 +31,7 @@ void Collision_Init (void)
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	Cvar_RegisterVariable(&collision_endposnudge);
 #endif
+	Cvar_RegisterVariable(&collision_debug_tracelineasbox);
 }
 
 
@@ -859,6 +861,15 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	const texture_t *hittexture = NULL;
 	vec_t startdepth = 1;
 	vec3_t startdepthnormal;
+
+	if (collision_debug_tracelineasbox.integer)
+	{
+		colboxbrushf_t thisbrush_start, thisbrush_end;
+		Collision_BrushForBox(&thisbrush_start, linestart, linestart, 0, 0, NULL);
+		Collision_BrushForBox(&thisbrush_end, lineend, lineend, 0, 0, NULL);
+		Collision_TraceBrushBrushFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, other_start, other_end);
+		return;
+	}
 
 	VectorClear(startdepthnormal);
 	Vector4Clear(newimpactplane);
