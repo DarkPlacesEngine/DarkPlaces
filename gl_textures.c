@@ -338,7 +338,7 @@ static void GL_TextureMode_f (void)
 		return;
 	}
 
-	for (i = 0;i < sizeof(modes)/sizeof(*modes);i++)
+	for (i = 0;i < (int)(sizeof(modes)/sizeof(*modes));i++)
 		if (!strcasecmp (modes[i].name, Cmd_Argv(1) ) )
 			break;
 	if (i == 6)
