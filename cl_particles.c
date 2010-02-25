@@ -1389,7 +1389,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						// called when effect starts
 						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0], info->lightcolor[1], info->lightcolor[2], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 					}
-					else
+					else if (r_refdef.scene.numlights < MAX_DLIGHTS)
 					{
 						// glowing entity
 						// called by CL_LinkNetworkEntity
