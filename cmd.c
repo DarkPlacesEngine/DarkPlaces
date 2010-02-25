@@ -454,6 +454,7 @@ Cmd_Exec_f
 static void Cmd_Exec_f (void)
 {
 	char *f;
+	const char *filename;
 
 	if (Cmd_Argc () != 2)
 	{
@@ -461,18 +462,22 @@ static void Cmd_Exec_f (void)
 		return;
 	}
 
-	f = (char *)FS_LoadFile (Cmd_Argv(1), tempmempool, false, NULL);
+	filename = Cmd_Argv(1);
+	if (!strcmp(filename, "config.cfg"))
+		filename = CONFIGFILENAME;
+
+	f = (char *)FS_LoadFile (filename, tempmempool, false, NULL);
 	if (!f)
 	{
-		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));
+		Con_Printf("couldn't exec %s\n",filename);
 		return;
 	}
-	Con_Printf("execing %s\n",Cmd_Argv(1));
+	Con_Printf("execing %s\n",filename);
 
 	// if executing default.cfg for the first time, lock the cvar defaults
 	// it may seem backwards to insert this text BEFORE the default.cfg
 	// but Cbuf_InsertText inserts before, so this actually ends up after it.
-	if (!strcmp(Cmd_Argv(1), "default.cfg"))
+	if (strlen(filename) >= 11 && !strcmp(filename + strlen(filename) - 11, "default.cfg"))
 		Cbuf_InsertText("\ncvar_lockdefaults\n");
 
 	// insert newline after the text to make sure the last line is terminated (some text editors omit the trailing newline)

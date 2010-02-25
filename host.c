@@ -271,11 +271,11 @@ void Host_SaveConfig_to(const char *file)
 }
 void Host_SaveConfig(void)
 {
-	Host_SaveConfig_to("config.cfg");
+	Host_SaveConfig_to(CONFIGFILENAME);
 }
 void Host_SaveConfig_f(void)
 {
-	const char *file = "config.cfg";
+	const char *file = CONFIGFILENAME;
 
 	if(Cmd_Argc() >= 2) {
 		file = Cmd_Argv(1);
@@ -297,7 +297,7 @@ void Host_LoadConfig_f(void)
 	// unlock the cvar default strings so they can be updated by the new default.cfg
 	Cvar_UnlockDefaults();
 	// reset cvars to their defaults, and then exec startup scripts again
-	Cbuf_InsertText("cvar_resettodefaults_all;exec quake.rc\n");
+	Cbuf_InsertText("cvar_resettodefaults_all;exec " STARTCONFIGFILENAME "\n");
 }
 
 /*
@@ -1122,19 +1122,19 @@ static void Host_Init (void)
 	// set up the default startmap_sp and startmap_dm aliases (mods can
 	// override these) and then execute the quake.rc startup script
 	if (gamemode == GAME_NEHAHRA)
-		Cbuf_AddText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec " STARTCONFIGFILENAME "\n");
 	else if (gamemode == GAME_TRANSFUSION)
-		Cbuf_AddText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec " STARTCONFIGFILENAME "\n");
 	else if (gamemode == GAME_TEU)
 		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
-		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec quake.rc\n");
+		Cbuf_AddText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
 	Cbuf_Execute();
 
 	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
 	if (!host_stuffcmdsrun)
 	{
-		Cbuf_AddText("exec default.cfg\nexec config.cfg\nexec autoexec.cfg\nstuffcmds\n");
+		Cbuf_AddText("exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\nstuffcmds\n");
 		Cbuf_Execute();
 	}
 
