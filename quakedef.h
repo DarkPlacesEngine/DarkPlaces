@@ -394,6 +394,9 @@ extern cvar_t developer_insane;
 extern cvar_t developer_loadfile;
 extern cvar_t developer_loading;
 
+#define STARTCONFIGFILENAME "quake.rc"
+#define CONFIGFILENAME "config.cfg"
+
 /* Preprocessor macros to identify platform
     DP_OS_NAME 	- "friendly" name of the OS, for humans to read
     DP_OS_STR	- "identifier" of the OS, more suited for code to use
