@@ -6637,7 +6637,12 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 			if (brush->colbrushf)
 				bihnumleafs++;
 		for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
-			bihnumleafs += surface->num_collisiontriangles;
+		{
+			if (surface->texture->basematerialflags & MATERIALFLAG_MESHCOLLISIONS)
+				bihnumleafs += surface->num_triangles;
+			else
+				bihnumleafs += surface->num_collisiontriangles;
+		}
 	}
 
 	if (!bihnumleafs)
@@ -6648,29 +6653,30 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 
 	// now populate the BIH leaf nodes
 	bihleafindex = 0;
-	if (userendersurfaces)
+
+	// add render surfaces
+	renderelement3i = model->surfmesh.data_element3i;
+	rendervertex3f = model->surfmesh.data_vertex3f;
+	for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
 	{
-		// add render surfaces
-		renderelement3i = model->surfmesh.data_element3i;
-		rendervertex3f = model->surfmesh.data_vertex3f;
-		for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
+		for (triangleindex = 0, e = renderelement3i + 3*surface->num_firsttriangle;triangleindex < surface->num_triangles;triangleindex++, e += 3)
 		{
-			for (triangleindex = 0, e = renderelement3i + 3*surface->num_firsttriangle;triangleindex < surface->num_triangles;triangleindex++, e += 3)
-			{
-				bihleafs[bihleafindex].type = BIH_RENDERTRIANGLE;
-				bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
-				bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firsttriangle;
-				bihleafs[bihleafindex].mins[0] = min(rendervertex3f[3*e[0]+0], min(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) - 1;
-				bihleafs[bihleafindex].mins[1] = min(rendervertex3f[3*e[0]+1], min(rendervertex3f[3*e[1]+1], rendervertex3f[3*e[2]+1])) - 1;
-				bihleafs[bihleafindex].mins[2] = min(rendervertex3f[3*e[0]+2], min(rendervertex3f[3*e[1]+2], rendervertex3f[3*e[2]+2])) - 1;
-				bihleafs[bihleafindex].maxs[0] = max(rendervertex3f[3*e[0]+0], max(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) + 1;
-				bihleafs[bihleafindex].maxs[1] = max(rendervertex3f[3*e[0]+1], max(rendervertex3f[3*e[1]+1], rendervertex3f[3*e[2]+1])) + 1;
-				bihleafs[bihleafindex].maxs[2] = max(rendervertex3f[3*e[0]+2], max(rendervertex3f[3*e[1]+2], rendervertex3f[3*e[2]+2])) + 1;
-				bihleafindex++;
-			}
+			if (!userendersurfaces && !(surface->texture->basematerialflags & MATERIALFLAG_MESHCOLLISIONS))
+				continue;
+			bihleafs[bihleafindex].type = BIH_RENDERTRIANGLE;
+			bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
+			bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firsttriangle;
+			bihleafs[bihleafindex].mins[0] = min(rendervertex3f[3*e[0]+0], min(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) - 1;
+			bihleafs[bihleafindex].mins[1] = min(rendervertex3f[3*e[0]+1], min(rendervertex3f[3*e[1]+1], rendervertex3f[3*e[2]+1])) - 1;
+			bihleafs[bihleafindex].mins[2] = min(rendervertex3f[3*e[0]+2], min(rendervertex3f[3*e[1]+2], rendervertex3f[3*e[2]+2])) - 1;
+			bihleafs[bihleafindex].maxs[0] = max(rendervertex3f[3*e[0]+0], max(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) + 1;
+			bihleafs[bihleafindex].maxs[1] = max(rendervertex3f[3*e[0]+1], max(rendervertex3f[3*e[1]+1], rendervertex3f[3*e[2]+1])) + 1;
+			bihleafs[bihleafindex].maxs[2] = max(rendervertex3f[3*e[0]+2], max(rendervertex3f[3*e[1]+2], rendervertex3f[3*e[2]+2])) + 1;
+			bihleafindex++;
 		}
 	}
-	else
+
+	if (!userendersurfaces)
 	{
 		// add collision brushes
 		for (brushindex = 0, brush = model->brush.data_brushes + brushindex+model->firstmodelbrush;brushindex < nummodelbrushes;brushindex++, brush++)

@@ -1946,6 +1946,8 @@ void Mod_LoadQ3Shaders(void)
 					shader.dpnoshadow = true;
 				else if (!strcasecmp(parameter[0], "dpreflectcube"))
 					strlcpy(shader.dpreflectcube, parameter[1], sizeof(shader.dpreflectcube));
+				else if (!strcasecmp(parameter[0], "dpmeshcollisions"))
+					shader.dpmeshcollisions = true;
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
 					// some q3 skies don't have the sky parm set
@@ -2312,6 +2314,9 @@ nothing                GL_ZERO GL_ONE
 		if (shader->surfaceparms & Q3SURFACEPARM_BOTCLIP      ) texture->supercontents |= SUPERCONTENTS_BOTCLIP      | SUPERCONTENTS_MONSTERCLIP;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTGRID    ) texture->supercontents |= SUPERCONTENTS_LIGHTGRID    ;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_ANTIPORTAL   ) texture->supercontents |= SUPERCONTENTS_ANTIPORTAL   ;
+
+		if (shader->dpmeshcollisions)
+			texture->basematerialflags |= MATERIALFLAG_MESHCOLLISIONS;
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
