@@ -401,6 +401,9 @@ typedef struct q3shaderinfo_s
 	qboolean dpshadow;
 	qboolean dpnoshadow;
 
+	// add collisions to all triangles of the surface
+	qboolean dpmeshcollisions;
+
 	// fake reflection
 	char dpreflectcube[Q3PATHLENGTH];
 
