@@ -6145,10 +6145,12 @@ void gl_main_start(void)
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
+	r_glsl_permutation = NULL;
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_glsl_permutationarray, r_main_mempool, sizeof(r_glsl_permutation_t), 256);
 	glslshaderstring = NULL;
 #ifdef SUPPORTCG
+	r_cg_permutation = NULL;
 	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_cg_permutationarray, r_main_mempool, sizeof(r_cg_permutation_t), 256);
 	cgshaderstring = NULL;
@@ -6196,6 +6198,14 @@ void gl_main_shutdown(void)
 	//r_texture_fogintensity = NULL;
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
+	r_glsl_permutation = NULL;
+	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
+	glslshaderstring = NULL;
+#ifdef SUPPORTCG
+	r_cg_permutation = NULL;
+	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
+	cgshaderstring = NULL;
+#endif
 	R_GLSL_Restart_f();
 }
 
