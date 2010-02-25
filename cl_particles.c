@@ -212,6 +212,7 @@ cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade"
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
 cvar_t cl_particles_visculling = {CVAR_SAVE, "cl_particles_visculling", "0", "perform a costly check if each particle is visible before drawing"};
+cvar_t cl_particles_collisions = {CVAR_SAVE, "cl_particles_collisions", "1", "allow costly collision detection on particles (sparks that bounce, particles not going through walls, blood hitting surfaces, etc)"};
 cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
 cvar_t cl_decals_visculling = {CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
@@ -516,6 +517,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
 	Cvar_RegisterVariable (&cl_particles_visculling);
+	Cvar_RegisterVariable (&cl_particles_collisions);
 	Cvar_RegisterVariable (&cl_decals);
 	Cvar_RegisterVariable (&cl_decals_visculling);
 	Cvar_RegisterVariable (&cl_decals_time);
@@ -2679,7 +2681,7 @@ void R_DrawParticles (void)
 
 			if (p->orientation != PARTICLE_VBEAM && p->orientation != PARTICLE_HBEAM && frametime > 0)
 			{
-				if (p->liquidfriction && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
+				if (p->liquidfriction && cl_particles_collisions.integer && (CL_PointSuperContents(p->org) & SUPERCONTENTS_LIQUIDSMASK))
 				{
 					if (p->typeindex == pt_blood)
 						p->size += frametime * 8;
@@ -2701,7 +2703,7 @@ void R_DrawParticles (void)
 				VectorCopy(p->org, oldorg);
 				VectorMA(p->org, frametime, p->vel, p->org);
 //				if (p->bounce && cl.time >= p->delayedcollisions)
-				if (p->bounce)
+				if (p->bounce && cl_particles_collisions.integer)
 				{
 					trace = CL_TraceLine(oldorg, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 					// if the trace started in or hit something of SUPERCONTENTS_NODROP
