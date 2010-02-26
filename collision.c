@@ -1238,7 +1238,7 @@ void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const ve
 	boxbrush->brush.texture = texture;
 	VectorSet(boxbrush->brush.mins, mins[0] - 1, mins[1] - 1, mins[2] - 1);
 	VectorSet(boxbrush->brush.maxs, maxs[0] + 1, maxs[1] + 1, maxs[2] + 1);
-	Collision_ValidateBrush(&boxbrush->brush);
+	//Collision_ValidateBrush(&boxbrush->brush);
 }
 
 void Collision_ClipTrace_BrushBox(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int supercontents, int q3surfaceflags, texture_t *texture)
