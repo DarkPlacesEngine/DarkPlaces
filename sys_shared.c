@@ -210,9 +210,10 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 
 cvar_t sys_debugsleep = {0, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
 cvar_t sys_usenoclockbutbenchmark = {CVAR_SAVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
-cvar_t sys_usesdlgetticks = {CVAR_SAVE, "sys_usesdlgetticks", "1", "use SDL_GetTicks() timer"};
+cvar_t sys_usesdlgetticks = {CVAR_SAVE, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
+cvar_t sys_usesdldelay = {CVAR_SAVE, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
 #if HAVE_QUERYPERFORMANCECOUNTER
-cvar_t sys_usequeryperformancecounter = {CVAR_SAVE, "sys_usequeryperformancecounter", "1", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
+cvar_t sys_usequeryperformancecounter = {CVAR_SAVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
 #endif
 #if HAVE_CLOCKGETTIME
 cvar_t sys_useclockgettime = {CVAR_SAVE, "sys_useclockgettime", "0", "use POSIX clock_gettime function (which has issues if the system clock speed is far off, as it can't get fixed by NTP) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
@@ -226,7 +227,10 @@ void Sys_Init_Commands (void)
 	Cvar_RegisterVariable(&sys_usenoclockbutbenchmark);
 #if HAVE_TIMEGETTIME || HAVE_QUERYPERFORMANCECOUNTER || HAVE_CLOCKGETTIME || HAVE_GETTIMEOFDAY
 	if(sys_supportsdlgetticks)
+	{
 		Cvar_RegisterVariable(&sys_usesdlgetticks);
+		Cvar_RegisterVariable(&sys_usesdldelay);
+	}
 #endif
 #if HAVE_QUERYPERFORMANCECOUNTER
 	Cvar_RegisterVariable(&sys_usetimegettime);
@@ -304,7 +308,14 @@ double Sys_DoubleTime(void)
 	{
 		newtime = (double) Sys_SDL_GetTicks() / 1000.0;
 	}
-#if HAVE_TIMEGETTIME
+#if HAVE_GETTIMEOFDAY
+	else
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+	}
+#elif HAVE_TIMEGETTIME
 	else
 	{
 		static int firsttimegettime = true;
@@ -324,13 +335,6 @@ double Sys_DoubleTime(void)
 		}
 
 		newtime = (double) timeGetTime () / 1000.0;
-	}
-#elif HAVE_GETTIMEOFDAY
-	else
-	{
-		struct timeval tp;
-		gettimeofday(&tp, NULL);
-		newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
 	}
 #else
 	// fallback for using the SDL timer if no other timer is available
@@ -376,7 +380,12 @@ void Sys_Sleep(int microseconds)
 	{
 		t = Sys_DoubleTime();
 	}
+	if(sys_supportsdlgetticks && sys_usesdldelay.integer)
+	{
+		Sys_SDL_Delay(microseconds / 1000);
+	}
 #if HAVE_SELECT
+	else
 	{
 		struct timeval tv;
 		tv.tv_sec = microseconds / 1000000;
@@ -384,15 +393,24 @@ void Sys_Sleep(int microseconds)
 		select(0, NULL, NULL, NULL, &tv);
 	}
 #elif HAVE_USLEEP
-	usleep(microseconds);
+	else
+	{
+		usleep(microseconds);
+	}
 #elif HAVE_Sleep
-	Sleep(microseconds / 1000);
+	else
+	{
+		Sleep(microseconds / 1000);
+	}
 #else
-	Sys_SDL_Delay(microseconds / 1000);
+	else
+	{
+		Sys_SDL_Delay(microseconds / 1000);
+	}
 #endif
 	if(sys_debugsleep.integer)
 	{
 		t = Sys_DoubleTime() - t;
-		printf("%d %f # debugsleep\n", microseconds, t);
+		printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
 	}
 }
