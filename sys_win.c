@@ -119,93 +119,6 @@ void Sys_PrintToTerminal(const char *text)
 		WriteFile(houtput, text, (DWORD) strlen(text), &dummy, NULL);
 }
 
-/*
-================
-Sys_DoubleTime
-================
-*/
-double Sys_DoubleTime (void)
-{
-	static int first = true;
-	static double oldtime = 0.0, curtime = 0.0;
-	double newtime;
-	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
-	if (sys_usetimegettime.integer)
-	{
-		static int firsttimegettime = true;
-		// timeGetTime
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// reasonable accuracy (millisecond)
-		// issues:
-		// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
-
-		// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
-		if (firsttimegettime)
-		{
-			timeBeginPeriod (1);
-			firsttimegettime = false;
-		}
-
-		newtime = (double) timeGetTime () / 1000.0;
-	}
-	else
-	{
-		// QueryPerformanceCounter
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// very accurate (CPU cycles)
-		// known issues:
-		// does not necessarily match realtime too well (tends to get faster and faster in win98)
-		// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
-		double timescale;
-		LARGE_INTEGER PerformanceFreq;
-		LARGE_INTEGER PerformanceCount;
-
-		if (!QueryPerformanceFrequency (&PerformanceFreq))
-		{
-			Con_Printf ("No hardware timer available\n");
-			// fall back to timeGetTime
-			Cvar_SetValueQuick(&sys_usetimegettime, true);
-			return Sys_DoubleTime();
-		}
-		QueryPerformanceCounter (&PerformanceCount);
-
-		#ifdef __BORLANDC__
-		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
-		#else
-		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
-		#endif
-	}
-
-	if (first)
-	{
-		first = false;
-		oldtime = newtime;
-	}
-
-	if (newtime < oldtime)
-	{
-		// warn if it's significant
-		if (newtime - oldtime < -0.01)
-			Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else if (newtime > oldtime + 1800)
-	{
-		Con_Printf("Sys_DoubleTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else
-		curtime += newtime - oldtime;
-	oldtime = newtime;
-
-	return curtime;
-}
-
-
 char *Sys_ConsoleInput (void)
 {
 	static char text[MAX_INPUTLINE];
@@ -286,9 +199,14 @@ char *Sys_ConsoleInput (void)
 	return NULL;
 }
 
+double Sys_DoubleTime (void)
+{
+	return Sys_DoubleTime_Shared();
+}
+
 void Sys_Sleep(int microseconds)
 {
-	Sleep(microseconds / 1000);
+	Sys_Sleep_Shared(microseconds);
 }
 
 char *Sys_GetClipboardData (void)
@@ -375,11 +293,6 @@ void Sys_InitConsole (void)
 
 // because sound is off until we become active
 	S_BlockSound ();
-}
-
-void Sys_Init_Commands (void)
-{
-	Cvar_RegisterVariable(&sys_usetimegettime);
 }
 
 /*
@@ -483,3 +396,13 @@ int main (int argc, const char* argv[])
 }
 #endif
 
+qboolean sys_supportsdlgetticks = false;
+unsigned int Sys_SDL_GetTicks (void)
+{
+	Sys_Error("Called Sys_SDL_GetTicks on non-SDL target");
+	return 0;
+}
+void Sys_SDL_Delay (unsigned int milliseconds)
+{
+	Sys_Error("Called Sys_SDL_Delay on non-SDL target");
+}
