@@ -720,7 +720,7 @@ void Host_Main(void)
 		if (!cls.timedemo && wait >= 1)
 		{
 			double time0 = Sys_DoubleTime();
-			if (sv_checkforpacketsduringsleep.integer)
+			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer)
 				NetConn_SleepMicroseconds((int)wait);
 			else
 				Sys_Sleep((int)wait);
