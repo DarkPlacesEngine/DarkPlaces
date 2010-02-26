@@ -69,37 +69,6 @@ void Sys_PrintToTerminal(const char *text)
 	//fprintf(stdout, "%s", text);
 }
 
-double Sys_DoubleTime (void)
-{
-	static int first = true;
-	static double oldtime = 0.0, curtime = 0.0;
-	double newtime;
-	newtime = (double) SDL_GetTicks() / 1000.0;
-
-
-	if (first)
-	{
-		first = false;
-		oldtime = newtime;
-	}
-
-	if (newtime < oldtime)
-	{
-		// warn if it's significant
-		if (newtime - oldtime < -0.01)
-			Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else if (newtime > oldtime + 1800)
-	{
-		Con_Printf("Sys_DoubleTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else
-		curtime += newtime - oldtime;
-	oldtime = newtime;
-
-	return curtime;
-}
-
 char *Sys_ConsoleInput(void)
 {
 	if (cls.state == ca_dedicated)
@@ -160,11 +129,6 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
-void Sys_Sleep(int microseconds)
-{
-	SDL_Delay(microseconds / 1000);
-}
-
 char *Sys_GetClipboardData (void)
 {
 #ifdef WIN32
@@ -198,10 +162,6 @@ void Sys_InitConsole (void)
 {
 }
 
-void Sys_Init_Commands (void)
-{
-}
-
 int main (int argc, char *argv[])
 {
 	signal(SIGFPE, SIG_IGN);
@@ -219,4 +179,14 @@ int main (int argc, char *argv[])
 	Host_Main();
 
 	return 0;
+}
+
+qboolean sys_supportsdlgetticks = true;
+unsigned int Sys_SDL_GetTicks (void)
+{
+	return SDL_GetTicks();
+}
+void Sys_SDL_Delay (unsigned int milliseconds)
+{
+	SDL_Delay(milliseconds);
 }
