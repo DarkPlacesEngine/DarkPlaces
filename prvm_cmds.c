@@ -5056,7 +5056,7 @@ void VM_strstrofs (void)
 	if (!match)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	else
-		PRVM_G_FLOAT(OFS_RETURN) = match - instr;
+		PRVM_G_FLOAT(OFS_RETURN) = u8_strnlen(instr, match-instr);
 }
 
 //#222 string(string s, float index) str2chr (FTE_STRINGS)
