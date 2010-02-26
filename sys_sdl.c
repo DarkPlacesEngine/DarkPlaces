@@ -7,11 +7,23 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #include <signal.h>
 
 #include <SDL.h>
+
+cvar_t sys_usenoclockbutbenchmark = {CVAR_SAVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
+static unsigned long benchmark_time;
+
+#ifndef WIN32
+# ifndef MACOSX
+cvar_t sys_useclockgettime = {CVAR_SAVE, "sys_useclockgettime", "0", "use POSIX clock_gettime function (which has issues if the system clock speed is far off, as it can't get fixed by NTP) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
+# endif
+cvar_t sys_usegettimeofday = {CVAR_SAVE, "sys_usegettimeofday", "0", "use gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations) which has microsecond precision rather than SDL_GetTicks (which has only millisecond precision)"};
+#endif
+
 
 // =======================================================================
 // General routines
@@ -74,7 +86,36 @@ double Sys_DoubleTime (void)
 	static int first = true;
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
-	newtime = (double) SDL_GetTicks() / 1000.0;
+	if(sys_usenoclockbutbenchmark.integer)
+	{
+		benchmark_time += 1;
+		return ((double) benchmark_time) / 1e6;
+	}
+	// use higher precision timers on some platforms
+#ifndef WIN32
+# ifndef MACOSX
+	if (sys_useclockgettime.integer)
+	{
+		struct timespec ts;
+#  ifdef SUNOS
+		clock_gettime(CLOCK_HIGHRES, &ts);
+#  else
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#  endif
+		newtime = (double) ts.tv_sec + ts.tv_nsec / 1000000000.0;
+	}
+	else if (sys_usegettimeofday.integer)
+# endif
+	{
+		struct timeval tp;
+		gettimeofday(&tp, NULL);
+		newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+	}
+	else
+#endif
+	{
+		newtime = (double) SDL_GetTicks() / 1000.0;
+	}
 
 
 	if (first)
@@ -162,6 +203,11 @@ char *Sys_ConsoleInput(void)
 
 void Sys_Sleep(int microseconds)
 {
+	if(sys_usenoclockbutbenchmark.integer)
+	{
+		benchmark_time += microseconds;
+		return;
+	}
 	SDL_Delay(microseconds / 1000);
 }
 
@@ -200,6 +246,13 @@ void Sys_InitConsole (void)
 
 void Sys_Init_Commands (void)
 {
+	Cvar_RegisterVariable(&sys_usenoclockbutbenchmark);
+#ifndef WIN32
+# ifndef MACOSX
+	Cvar_RegisterVariable(&sys_useclockgettime);
+# endif
+	Cvar_RegisterVariable(&sys_usegettimeofday);
+#endif
 }
 
 int main (int argc, char *argv[])
