@@ -725,10 +725,6 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 			VectorCopy(startplane, startdepthnormal);
 		}
 
-		if (startdist >= -collision_impactnudge.value && enddist >= startdist)
-			return;
-		if (startdist <= 0 && enddist <= 0)
-			continue;
 		if (startdist > enddist)
 		{
 			// moving into brush
@@ -901,10 +897,6 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			VectorCopy(startplane, startdepthnormal);
 		}
 
-		if (startdist >= -collision_impactnudge.value && enddist >= startdist)
-			return;
-		if (startdist <= 0 && enddist <= 0)
-			continue;
 		if (startdist > enddist)
 		{
 			// moving into brush
