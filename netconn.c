@@ -2128,9 +2128,9 @@ void NetConn_ClientFrame(void)
 	{
 		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 		{
-			R_TimeReport("clientreadnetwork");
+//			R_TimeReport("clientreadnetwork");
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
-			R_TimeReport("clientparsepacket");
+//			R_TimeReport("clientparsepacket");
 		}
 	}
 	NetConn_QueryQueueFrame();
