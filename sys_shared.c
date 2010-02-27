@@ -4,6 +4,7 @@
 
 #ifdef WIN32
 # include <windows.h>
+# include <mmsystem.h> // timeGetTime
 #else
 # include <unistd.h>
 # include <fcntl.h>
