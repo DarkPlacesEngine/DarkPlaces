@@ -10171,7 +10171,7 @@ void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesu
 		R_Mesh_Draw(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, rsurface.modelelement3i, rsurface.modelelement3s, rsurface.modelelement3i_bufferobject, rsurface.modelelement3s_bufferobject);
 	else if (r_batchmode.integer == 2)
 	{
-		#define MAXBATCHTRIANGLES 4096
+		#define MAXBATCHTRIANGLES 65536
 		int batchtriangles = 0;
 		static int batchelements[MAXBATCHTRIANGLES*3];
 		for (i = 0;i < texturenumsurfaces;i = j)
@@ -10321,7 +10321,6 @@ static void RSurf_DrawBatch_WithLightmapSwitching(int texturenumsurfaces, const 
 	}
 	else if (r_batchmode.integer == 2)
 	{
-#define MAXBATCHTRIANGLES 4096
 		int batchtriangles = 0;
 		static int batchelements[MAXBATCHTRIANGLES*3];
 		for (i = 0;i < texturenumsurfaces;i = j)
