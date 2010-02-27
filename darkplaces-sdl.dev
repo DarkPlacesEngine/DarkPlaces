@@ -1,15 +1,7 @@
 [Project]
 FileName=darkplaces-sdl.dev
 Name=DarkPlaces
-<<<<<<< .mine
-<<<<<<< .mine
-UnitCount=182
-=======
-UnitCount=175
-=======
 UnitCount=183
->>>>>>> .r9892
->>>>>>> .r9586
 Type=0
 Ver=1
 ObjFiles=
@@ -20,7 +12,7 @@ ResourceIncludes=
 MakeIncludes=
 Compiler=-Wall -O2 -fno-strict-aliasing -ffast-math -funroll-loops -D_GNU_SOURCE=1 -Dmain=SDL_main_@@__@@_
 CppCompiler=
-Linker=-lws2_32 -luser32 -lgdi32 -lcomctl32 -Wl,--large-address-aware -lmingw32 -lSDLmain -lSDL  -mwindows_@@__@@_
+Linker=-lwinmm -lws2_32 -luser32 -lgdi32 -lcomctl32 -Wl,--large-address-aware -lmingw32 -lSDLmain -lSDL  -mwindows_@@__@@_
 IsCpp=0
 Icon=
 ExeOutput=
