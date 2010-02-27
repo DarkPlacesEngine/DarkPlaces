@@ -84,6 +84,7 @@ cvar_t cl_dlights_decaybrightness = {CVAR_SAVE, "cl_dlights_decaybrightness", "1
 cvar_t qport = {0, "qport", "0", "identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)"};
 
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
+cvar_t cl_prydoncursor_notrace = {0, "cl_prydoncursor_notrace", "0", "disables traceline used in prydon cursor reporting to the game, saving some cpu time"};
 
 cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
 
@@ -2378,6 +2379,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_dlights_decaybrightness);
 
 	Cvar_RegisterVariable(&cl_prydoncursor);
+	Cvar_RegisterVariable(&cl_prydoncursor_notrace);
 
 	Cvar_RegisterVariable(&cl_deathnoviewmodel);
 

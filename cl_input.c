@@ -625,7 +625,7 @@ void CL_Input (void)
 	if (!key_consoleactive && key_dest == key_game && !cl.csqc_wantsmousemove)
 	{
 		float modulatedsensitivity = sensitivity.value * cl.sensitivityscale;
-		if (cl_prydoncursor.integer)
+		if (cl_prydoncursor.integer > 0)
 		{
 			// mouse interacting with the scene, mostly stationary view
 			V_StopPitchDrift();
@@ -743,7 +743,7 @@ void CL_UpdatePrydonCursor(void)
 {
 	vec3_t temp;
 
-	if (!cl_prydoncursor.integer)
+	if (cl_prydoncursor.integer <= 0)
 		VectorClear(cl.cmd.cursor_screen);
 
 	/*
@@ -778,7 +778,15 @@ void CL_UpdatePrydonCursor(void)
 	VectorSet(temp, cl.cmd.cursor_screen[2] * 1000000, (v_flipped.integer ? -1 : 1) * cl.cmd.cursor_screen[0] * -r_refdef.view.frustum_x * 1000000, cl.cmd.cursor_screen[1] * -r_refdef.view.frustum_y * 1000000);
 	Matrix4x4_Transform(&r_refdef.view.matrix, temp, cl.cmd.cursor_end);
 	// trace from view origin to the cursor
-	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
+	if (cl_prydoncursor_notrace.integer)
+	{
+		cl.cmd.cursor_fraction = 1.0f;
+		VectorCopy(cl.cmd.cursor_end, cl.cmd.cursor_impact);
+		VectorClear(cl.cmd.cursor_normal);
+		cl.cmd.cursor_entitynumber = 0;
+	}
+	else
+		cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
 typedef enum waterlevel_e
@@ -1678,7 +1686,7 @@ void CL_SendMove(void)
 	if (in_button8.state  & 3) bits |= 128;
 	if (in_use.state      & 3) bits |= 256;
 	if (key_dest != key_game || key_consoleactive) bits |= 512;
-	if (cl_prydoncursor.integer) bits |= 1024;
+	if (cl_prydoncursor.integer > 0) bits |= 1024;
 	if (in_button9.state  & 3)  bits |=   2048;
 	if (in_button10.state  & 3) bits |=   4096;
 	if (in_button11.state  & 3) bits |=   8192;

@@ -1282,6 +1282,7 @@ extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmaps_clearonload;
 
 extern cvar_t cl_prydoncursor;
+extern cvar_t cl_prydoncursor_notrace;
 
 extern cvar_t cl_locs_enable;
 
