@@ -11226,7 +11226,8 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	int texturenumsurfaces, endsurface;
 	texture_t *texture;
 	const msurface_t *surface;
-	const msurface_t *texturesurfacelist[256];
+#define MAXBATCH_TRANSPARENTSURFACES 256
+	const msurface_t *texturesurfacelist[MAXBATCH_TRANSPARENTSURFACES];
 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
@@ -11303,7 +11304,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		rsurface.texture = R_GetCurrentTexture(texture);
 		rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
-		endsurface = min(i + 1024, numsurfaces);
+		endsurface = min(i + MAXBATCH_TRANSPARENTSURFACES, numsurfaces);
 		texturenumsurfaces = 0;
 		texturesurfacelist[texturenumsurfaces++] = surface;
 		for (;j < endsurface;j++)
