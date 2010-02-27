@@ -2,14 +2,16 @@
 
 #define SUPPORTDLL
 
-#ifndef WIN32
+#ifdef WIN32
+# include <windows.h>
+#else
 # include <unistd.h>
 # include <fcntl.h>
 # include <sys/time.h>
 # include <time.h>
-#ifdef SUPPORTDLL
-# include <dlfcn.h>
-#endif
+# ifdef SUPPORTDLL
+#  include <dlfcn.h>
+# endif
 #endif
 
 static char sys_timestring[128];
