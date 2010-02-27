@@ -374,7 +374,7 @@ double Sys_DoubleTime(void)
 
 void Sys_Sleep(int microseconds)
 {
-	double t;
+	double t = 0;
 	if(sys_usenoclockbutbenchmark.integer)
 	{
 		benchmark_time += microseconds;
