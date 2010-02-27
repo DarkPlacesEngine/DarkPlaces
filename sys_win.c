@@ -30,8 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "conproc.h"
 #include "direct.h"
 
-cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1", "use windows timeGetTime function (which has issues on some motherboards) for timing rather than QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power)"};
-
 HANDLE				hinput, houtput;
 
 #ifdef QHOST
@@ -197,16 +195,6 @@ char *Sys_ConsoleInput (void)
 	}
 
 	return NULL;
-}
-
-double Sys_DoubleTime (void)
-{
-	return Sys_DoubleTime_Shared();
-}
-
-void Sys_Sleep(int microseconds)
-{
-	Sys_Sleep_Shared(microseconds);
 }
 
 char *Sys_GetClipboardData (void)
