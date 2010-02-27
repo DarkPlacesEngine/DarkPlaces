@@ -700,10 +700,10 @@ void Host_Main(void)
 		if (sv.active ? sv_timer > 0 : cl_timer > 0)
 		{
 			// process console commands
-			R_TimeReport("preconsole");
+//			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
 			Cbuf_Execute();
-			R_TimeReport("console");
+//			R_TimeReport("console");
 		}
 
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
@@ -725,9 +725,11 @@ void Host_Main(void)
 			else
 				Sys_Sleep((int)wait);
 			svs.perf_acc_sleeptime += Sys_DoubleTime() - time0;
-			R_TimeReport("sleep");
+//			R_TimeReport("sleep");
 			continue;
 		}
+
+		R_TimeReport("---");
 
 	//-------------------
 	//
@@ -832,6 +834,12 @@ void Host_Main(void)
 			NetConn_Heartbeat(0);
 			R_TimeReport("servernetwork");
 		}
+		else
+		{
+			// don't let r_speeds display jump around
+			R_TimeReport("serverphysics");
+			R_TimeReport("servernetwork");
+		}
 
 	//-------------------
 	//
@@ -925,6 +933,7 @@ void Host_Main(void)
 			R_TimeReport("client");
 
 			CL_UpdateScreen();
+			R_TimeReport("render");
 
 			if (host_speeds.integer)
 				time2 = Sys_DoubleTime();

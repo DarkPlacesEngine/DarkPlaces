@@ -252,7 +252,7 @@ static void VM_CL_traceline (void)
 	int		move, svent;
 	prvm_edict_t	*ent;
 
-	R_TimeReport("pretraceline");
+//	R_TimeReport("pretraceline");
 
 	VM_SAFEPARMCOUNTRANGE(4, 4, VM_CL_traceline);
 
@@ -269,7 +269,7 @@ static void VM_CL_traceline (void)
 	trace = CL_TraceLine(v1, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
-	R_TimeReport("traceline");
+//	R_TimeReport("traceline");
 }
 
 /*
@@ -291,7 +291,7 @@ static void VM_CL_tracebox (void)
 	int		move, svent;
 	prvm_edict_t	*ent;
 
-	R_TimeReport("pretracebox");
+//	R_TimeReport("pretracebox");
 	VM_SAFEPARMCOUNTRANGE(6, 8, VM_CL_tracebox); // allow more parameters for future expansion
 
 	prog->xfunction->builtinsprofile += 30;
@@ -309,7 +309,7 @@ static void VM_CL_tracebox (void)
 	trace = CL_TraceBox(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
 
 	CL_VM_SetTraceGlobals(&trace, svent);
-	R_TimeReport("tracebox");
+//	R_TimeReport("tracebox");
 }
 
 trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore, int *svent)

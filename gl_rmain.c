@@ -8340,6 +8340,9 @@ void R_RenderScene(void)
 {
 	qboolean shadowmapping = false;
 
+	if (r_timereport_active)
+		R_TimeReport("beginscene");
+
 	r_refdef.stats.renders++;
 
 	R_UpdateFogColor();
@@ -8353,6 +8356,9 @@ void R_RenderScene(void)
 	R_SkyStartFrame();
 
 	Matrix4x4_CreateTranslate(&r_waterscrollmatrix, sin(r_refdef.scene.time) * 0.025 * r_waterscroll.value, sin(r_refdef.scene.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+
+	if (r_timereport_active)
+		R_TimeReport("skystartframe");
 
 	if (cl.csqc_vidvars.drawworld)
 	{
