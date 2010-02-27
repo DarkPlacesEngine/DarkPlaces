@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 ws2_32.lib sdl.lib sdlmain.lib user32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386 /libpath:"SDL/lib"
+# ADD LINK32 ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /machine:I386 /libpath:"SDL/lib"
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "darkplaces-sdl - Win32 Debug"
@@ -80,7 +80,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ws2_32.lib sdl.lib sdlmain.lib user32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /out:"Debug-SDL/darkplaces-sdl-debug.exe" /pdbtype:sept /libpath:"SDL/lib"
+# ADD LINK32 ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib /nologo /subsystem:console /LARGEADDRESSAWARE /debug /machine:I386 /nodefaultlib:"msvcrt.lib" /out:"Debug-SDL/darkplaces-sdl-debug.exe" /pdbtype:sept /libpath:"SDL/lib"
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 

@@ -74,7 +74,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
@@ -164,7 +164,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
@@ -253,7 +253,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl-debug.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
@@ -344,7 +344,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl-debug.exe"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
@@ -434,7 +434,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
@@ -526,7 +526,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="ws2_32.lib sdl.lib sdlmain.lib user32.lib"
+				AdditionalDependencies="ws2_32.lib winmm.lib sdl.lib sdlmain.lib user32.lib"
 				OutputFile="$(OutDir)\darkplaces-sdl.exe"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories=""
