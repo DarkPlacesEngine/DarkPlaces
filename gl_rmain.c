@@ -2774,7 +2774,7 @@ const char *builtincgshaderstring =
 "	EyeVectorModelSpaceFogPlaneVertexDist.w = dot(FogPlane, gl_Vertex);\n"
 "#endif\n"
 "\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(USEREFLECTCUBE)\n"
 "	VectorS = gl_MultiTexCoord1.xyz;\n"
 "	VectorT = gl_MultiTexCoord2.xyz;\n"
 "	VectorR = gl_MultiTexCoord3.xyz;\n"
