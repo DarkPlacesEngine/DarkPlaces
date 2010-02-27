@@ -1894,6 +1894,7 @@ static void S_PaintAndSubmit (void)
 	oldsoundtime = soundtime;
 
 	cls.soundstats.latency_milliseconds = (snd_renderbuffer->endframe - snd_renderbuffer->startframe) * 1000 / snd_renderbuffer->format.speed;
+	R_TimeReport("audiomix");
 }
 
 /*
@@ -1980,6 +1981,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	S_UpdateAmbientSounds ();
 
 	combine = NULL;
+	R_TimeReport("audioprep");
 
 	// update spatialization for static and dynamic sounds
 	cls.soundstats.totalsounds = 0;
@@ -2033,6 +2035,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		if (k < SND_LISTENERS)
 			cls.soundstats.mixedsounds++;
 	}
+	R_TimeReport("audiospatialize");
 
 	sound_spatialized = true;
 

@@ -769,7 +769,7 @@ unsigned int SndSys_GetSoundTime (void)
 		{
 			if (snd_completed == snd_sent)
 			{
-				Con_DPrint("Sound overrun\n");
+			//	Con_DPrint("Sound overrun\n");
 				break;
 			}
 

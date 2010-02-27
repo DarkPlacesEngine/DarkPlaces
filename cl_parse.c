@@ -3630,7 +3630,7 @@ void CL_ParseServerMessage(void)
 
 			if (cmd == -1)
 			{
-				R_TimeReport("END OF MESSAGE");
+//				R_TimeReport("END OF MESSAGE");
 				SHOWNET("END OF MESSAGE");
 				break;		// end of message
 			}
@@ -4075,19 +4075,19 @@ void CL_ParseServerMessage(void)
 				CL_ParsePointParticles1();
 				break;
 			}
-			R_TimeReport(svc_strings[cmd]);
+//			R_TimeReport(svc_strings[cmd]);
 		}
 	}
 
 	if (cls.signon == SIGNONS)
 		CL_UpdateItemsAndWeapon();
-	R_TimeReport("UpdateItems");
+//	R_TimeReport("UpdateItems");
 
 	EntityFrameQuake_ISeeDeadEntities();
-	R_TimeReport("ISeeDeadEntities");
+//	R_TimeReport("ISeeDeadEntities");
 
 	CL_UpdateMoveVars();
-	R_TimeReport("UpdateMoveVars");
+//	R_TimeReport("UpdateMoveVars");
 
 	parsingerror = false;
 
@@ -4096,7 +4096,7 @@ void CL_ParseServerMessage(void)
 	if (cls.demorecording)
 	{
 		CL_WriteDemoMessage (&net_message);
-		R_TimeReport("WriteDemo");
+//		R_TimeReport("WriteDemo");
 	}
 }
 
