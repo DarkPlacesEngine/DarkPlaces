@@ -3485,19 +3485,19 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	static entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
 	static entity_render_t *shadowentities[MAX_EDICTS];
 	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
+	qboolean nolight;
 
 	rtlight->draw = false;
 
 	// skip lights that don't light because of ambientscale+diffusescale+specularscale being 0 (corona only lights)
 	// skip lights that are basically invisible (color 0 0 0)
-	if (VectorLength2(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale) < (1.0f / 1048576.0f))
-		return;
+	nolight = VectorLength2(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale) < (1.0f / 1048576.0f);
 
 	// loading is done before visibility checks because loading should happen
 	// all at once at the start of a level, not when it stalls gameplay.
 	// (especially important to benchmarks)
 	// compile light
-	if (rtlight->isstatic && (!rtlight->compiled || (rtlight->shadow && rtlight->shadowmode != (int)r_shadow_shadowmode)) && r_shadow_realtime_world_compile.integer)
+	if (rtlight->isstatic && !nolight && (!rtlight->compiled || (rtlight->shadow && rtlight->shadowmode != (int)r_shadow_shadowmode)) && r_shadow_realtime_world_compile.integer)
 	{
 		if (rtlight->compiled)
 			R_RTLight_Uncompile(rtlight);
@@ -3520,6 +3520,10 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 
 	// if lightstyle is currently off, don't draw the light
 	if (VectorLength2(rtlight->currentcolor) < (1.0f / 1048576.0f))
+		return;
+
+	// skip processing on corona-only lights
+	if (nolight)
 		return;
 
 	// if the light box is offscreen, skip it
