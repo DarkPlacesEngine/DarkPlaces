@@ -7897,7 +7897,7 @@ static void R_BlendView(void)
 				cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
 				cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
 				// apply the blur
-				if (cl.motionbluralpha > 0)
+				if (cl.motionbluralpha > 0 && !r_refdef.envmap)
 				{
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					GL_Color(1, 1, 1, cl.motionbluralpha);
