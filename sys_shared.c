@@ -233,7 +233,7 @@ void Sys_Init_Commands (void)
 	}
 #endif
 #if HAVE_QUERYPERFORMANCECOUNTER
-	Cvar_RegisterVariable(&sys_usetimegettime);
+	Cvar_RegisterVariable(&sys_usequeryperformancecounter);
 #endif
 #if HAVE_CLOCKGETTIME
 	Cvar_RegisterVariable(&sys_useclockgettime);
@@ -273,7 +273,7 @@ double Sys_DoubleTime(void)
 		{
 			Con_Printf ("No hardware timer available\n");
 			// fall back to timeGetTime
-			Cvar_SetValueQuick(&sys_usetimegettime, true);
+			Cvar_SetValueQuick(&sys_usequeryperformancecounter, false);
 			return Sys_DoubleTime();
 		}
 		QueryPerformanceCounter (&PerformanceCount);
