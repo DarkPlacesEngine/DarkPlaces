@@ -232,6 +232,7 @@ typedef struct pk3_endOfCentralDir_s
 	unsigned int cdir_size;			///< size of the central directory
 	unsigned int cdir_offset;		///< with respect to the starting disk number
 	unsigned short comment_size;
+	fs_offset_t prepended_garbage;
 } pk3_endOfCentralDir_t;
 
 
@@ -327,6 +328,7 @@ const char *const fs_checkgamedir_missing = "missing";
 char fs_userdir[MAX_OSPATH];
 char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
+static pack_t *fs_selfpack = NULL;
 
 // list of active game directories (empty if not running a mod)
 int fs_numgamedirs = 0;
@@ -527,6 +529,8 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOf
 	eocd->cdir_size = LittleLong (eocd->cdir_size);
 	eocd->cdir_offset = LittleLong (eocd->cdir_offset);
 	eocd->comment_size = LittleShort (eocd->comment_size);
+	eocd->prepended_garbage = filesize - (ind + ZIP_END_CDIR_SIZE) - eocd->cdir_offset - eocd->cdir_size; // this detects "SFX" zip files
+	eocd->cdir_offset += eocd->prepended_garbage;
 
 	Mem_Free (buffer);
 
@@ -620,7 +624,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 					flags = PACKFILE_FLAG_DEFLATED;
 				else
 					flags = 0;
-				offset = BuffLittleLong (&ptr[42]);
+				offset = BuffLittleLong (&ptr[42]) + eocd->prepended_garbage;
 				packsize = BuffLittleLong (&ptr[20]);
 				realsize = BuffLittleLong (&ptr[24]);
 
@@ -661,20 +665,11 @@ FS_LoadPackPK3
 Create a package entry associated with a PK3 file
 ====================
 */
-pack_t *FS_LoadPackPK3 (const char *packfile)
+pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle)
 {
-	int packhandle;
 	pk3_endOfCentralDir_t eocd;
 	pack_t *pack;
 	int real_nb_files;
-
-#if _MSC_VER >= 1400
-	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
-#else
-	packhandle = open (packfile, O_RDONLY | O_BINARY);
-#endif
-	if (packhandle < 0)
-		return NULL;
 
 	if (! PK3_GetEndOfCentralDir (packfile, packhandle, &eocd))
 	{
@@ -721,6 +716,18 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 
 	Con_DPrintf("Added packfile %s (%i files)\n", packfile, real_nb_files);
 	return pack;
+}
+pack_t *FS_LoadPackPK3 (const char *packfile)
+{
+	int packhandle;
+#if _MSC_VER >= 1400
+	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+#else
+	packhandle = open (packfile, O_RDONLY | O_BINARY);
+#endif
+	if (packhandle < 0)
+		return NULL;
+	return FS_LoadPackPK3FromFD(packfile, packhandle);
 }
 
 
@@ -1251,7 +1258,7 @@ void FS_ClearSearchPath (void)
 	{
 		searchpath_t *search = fs_searchpaths;
 		fs_searchpaths = search->next;
-		if (search->pack)
+		if (search->pack && search->pack != fs_selfpack)
 		{
 			if(!search->pack->vpack)
 			{
@@ -1264,6 +1271,18 @@ void FS_ClearSearchPath (void)
 			Mem_Free(search->pack);
 		}
 		Mem_Free(search);
+	}
+}
+
+static void FS_AddSelfPack(void)
+{
+	if(fs_selfpack)
+	{
+		searchpath_t *search;
+		search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+		search->next = fs_searchpaths;
+		search->pack = fs_selfpack;
+		fs_searchpaths = search;
 	}
 }
 
@@ -1312,6 +1331,9 @@ void FS_Rescan (void)
 			strlcpy(gamedirbuf, fs_gamedirs[i], sizeof(gamedirbuf));
 	}
 	Cvar_SetQuick(&cvar_fs_gamedir, gamedirbuf); // so QC or console code can query it
+
+	// add back the selfpack as new first item
+	FS_AddSelfPack();
 
 	// set the default screenshot name to either the mod name or the
 	// gamemode screenshot name
@@ -1579,6 +1601,56 @@ static void FS_ListGameDirs(void)
 
 /*
 ================
+FS_Init_SelfPack
+================
+*/
+void FS_Init_SelfPack (void)
+{
+	PK3_OpenLibrary ();
+	fs_mempool = Mem_AllocPool("file management", 0, NULL);
+	if(com_selffd >= 0)
+	{
+		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd);
+		if(fs_selfpack)
+		{
+			char *buf, *q;
+			const char *p;
+			FS_AddSelfPack();
+			buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
+			if(buf)
+			{
+				const char **new_argv;
+				int i = 0;
+				int args_left = 256;
+				if(com_argc == 0)
+				{
+					com_argv[0] = "dummy";
+					com_argv[1] = NULL;
+					com_argc = 1;
+				}
+				new_argv = Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 1));
+				p = buf;
+				while(COM_ParseToken_Console(&p))
+				{
+					if(i >= args_left)
+						break;
+					q = Mem_Alloc(fs_mempool, strlen(com_token) + 1);
+					strlcpy(q, com_token, strlen(com_token) + 1);
+					new_argv[i+1] = q;
+					++i;
+				}
+				new_argv[0] = com_argv[0];
+				memcpy(&new_argv[i+2], &com_argv[1], sizeof(*com_argv) * com_argc);
+				com_argv = new_argv;
+				com_argc = com_argc + i;
+			}
+			Mem_Free(buf);
+		}
+	}
+}
+
+/*
+================
 FS_Init
 ================
 */
@@ -1603,8 +1675,6 @@ void FS_Init (void)
 	Sys_LoadLibrary(dllnames, &shfolder_dll, shfolderfuncs);
 	// don't care for the result; if it fails, %USERPROFILE% will be used instead
 #endif
-
-	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
 	// Add the personal game directory
 	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
@@ -1694,8 +1764,6 @@ void FS_Init (void)
 #endif
 #endif
 
-	PK3_OpenLibrary ();
-
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
 // COMMANDLINEOPTION: Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
@@ -1782,16 +1850,9 @@ void FS_Shutdown (void)
 #endif
 }
 
-/*
-====================
-FS_SysOpen
-
-Internal function used to create a qfile_t and open the relevant non-packed file on disk
-====================
-*/
-static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
+int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 {
-	qfile_t* file;
+	int handle;
 	int mod, opt;
 	unsigned int ind;
 
@@ -1812,7 +1873,7 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 			break;
 		default:
 			Con_Printf ("FS_SysOpen(%s, %s): invalid mode\n", filepath, mode);
-			return NULL;
+			return -1;
 	}
 	for (ind = 1; mode[ind] != '\0'; ind++)
 	{
@@ -1833,15 +1894,28 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
-	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
-	memset (file, 0, sizeof (*file));
-	file->ungetc = EOF;
-
 #if _MSC_VER >= 1400
-	_sopen_s(&file->handle, filepath, mod | opt, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+	_sopen_s(&handle, filepath, mod | opt, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 #else
-	file->handle = open (filepath, mod | opt, 0666);
+	handle = open (filepath, mod | opt, 0666);
 #endif
+	return handle;
+}
+
+/*
+====================
+FS_SysOpen
+
+Internal function used to create a qfile_t and open the relevant non-packed file on disk
+====================
+*/
+static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
+{
+	qfile_t* file;
+
+	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
+	file->ungetc = EOF;
+	file->handle = FS_SysOpenFD(filepath, mode, nonblocking);
 	if (file->handle < 0)
 	{
 		Mem_Free (file);
@@ -1851,7 +1925,7 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 	file->real_length = lseek (file->handle, 0, SEEK_END);
 
 	// For files opened in append mode, we start at the end of the file
-	if (mod & O_APPEND)
+	if (mode[0] == 'a')
 		file->position = file->real_length;
 	else
 		lseek (file->handle, 0, SEEK_SET);

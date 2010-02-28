@@ -168,6 +168,7 @@ int main (int argc, char *argv[])
 
 	com_argc = argc;
 	com_argv = (const char **)argv;
+	Sys_ProvideSelfFD();
 
 #ifndef WIN32
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
