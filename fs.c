@@ -1628,13 +1628,13 @@ void FS_Init_SelfPack (void)
 					com_argv[1] = NULL;
 					com_argc = 1;
 				}
-				new_argv = Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 1));
+				new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 1));
 				p = buf;
 				while(COM_ParseToken_Console(&p))
 				{
 					if(i >= args_left)
 						break;
-					q = Mem_Alloc(fs_mempool, strlen(com_token) + 1);
+					q = (char *)Mem_Alloc(fs_mempool, strlen(com_token) + 1);
 					strlcpy(q, com_token, strlen(com_token) + 1);
 					new_argv[i+1] = q;
 					++i;
