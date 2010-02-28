@@ -421,3 +421,57 @@ void Sys_Sleep(int microseconds)
 		printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
 	}
 }
+
+const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)
+{
+	const char *p = PATH;
+	const char *q;
+	if(p && name)
+	{
+		while((q = strchr(p, ':')))
+		{
+			dpsnprintf(buf, bufsize, "%.*s%c%s", (int)(q-p), p, namesep, name);
+			if(FS_SysFileExists(buf))
+				return buf;
+			p = q + 1;
+		}
+		if(!q) // none found - try the last item
+		{
+			dpsnprintf(buf, bufsize, "%s%c%s", p, namesep, name);
+			if(FS_SysFileExists(buf))
+				return buf;
+		}
+	}
+	return name;
+}
+
+const char *Sys_FindExecutableName(void)
+{
+#if defined(WIN32)
+	return com_argv[0];
+#else
+	static char exenamebuf[MAX_OSPATH+1];
+	ssize_t n = -1;
+#if defined(__FreeBSD__)
+	n = readlink("/proc/curproc/file", exenamebuf, sizeof(exenamebuf)-1);
+#elif defined(__linux__)
+	n = readlink("/proc/self/exe", exenamebuf, sizeof(exenamebuf)-1);
+#endif
+	if(n > 0 && (size_t)(n) < sizeof(exenamebuf))
+	{
+		exenamebuf[n] = 0;
+		return exenamebuf;
+	}
+	if(strchr(com_argv[0], '/'))
+		return com_argv[0]; // possibly a relative path
+	else
+		return Sys_FindInPATH(com_argv[0], '/', getenv("PATH"), ':', exenamebuf, sizeof(exenamebuf));
+#endif
+}
+
+void Sys_ProvideSelfFD(void)
+{
+	if(com_selffd != -1)
+		return;
+	com_selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
+}

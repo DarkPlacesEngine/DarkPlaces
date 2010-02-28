@@ -57,6 +57,7 @@ extern char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
 qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs); // already_loaded may be NULL if caller does not care
 const char *FS_WhichPack(const char *filename);
+int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking);
 qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet);
 qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet);
 qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qboolean quiet);

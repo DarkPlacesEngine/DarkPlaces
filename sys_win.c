@@ -355,6 +355,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	}
 
+	Sys_ProvideSelfFD();
+
 	Host_Main();
 
 	/* return success of application */

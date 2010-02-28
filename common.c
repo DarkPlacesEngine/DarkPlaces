@@ -33,6 +33,7 @@ cvar_t cmdline = {0, "cmdline","0", "contains commandline the engine was launche
 char com_token[MAX_INPUTLINE];
 int com_argc;
 const char **com_argv;
+int com_selffd = -1;
 
 gamemode_t gamemode;
 const char *gamename;
