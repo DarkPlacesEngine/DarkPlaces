@@ -1128,24 +1128,20 @@ qboolean SV_RunThink (prvm_edict_t *ent)
 SV_Impact
 
 Two entities have touched, so run their touch functions
-returns true if the impact kept the origin of the touching entity intact
 ==================
 */
 extern void VM_SetTraceGlobals(const trace_t *trace);
 extern sizebuf_t vm_tempstringsbuf;
-qboolean SV_Impact (prvm_edict_t *e1, trace_t *trace)
+void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
 	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
-	vec3_t org;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
 	prvm_eval_t *val;
 
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
-
-	VectorCopy(e1->fields.server->origin, org);
 
 	VM_SetTraceGlobals(trace);
 
@@ -1179,8 +1175,6 @@ qboolean SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	prog->globals.server->self = old_self;
 	prog->globals.server->other = old_other;
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-
-	return VectorCompare(e1->fields.server->origin, org);
 }
 
 
@@ -1468,7 +1462,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 {
 	int type;
 	int bump;
-	vec3_t original;
+	vec3_t original, original_velocity;
 	vec3_t end;
 
 	VectorCopy(ent->fields.server->origin, original);
@@ -1498,8 +1492,11 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	if (trace->bmodelstartsolid && failonbmodelstartsolid)
 		return true;
 
-
 	VectorCopy (trace->endpos, ent->fields.server->origin);
+
+	VectorCopy(ent->fields.server->origin, original);
+	VectorCopy(ent->fields.server->velocity, original_velocity);
+
 	SV_LinkEdict(ent);
 
 #if 0
@@ -1514,9 +1511,9 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 		SV_LinkEdict_TouchAreaGrid(ent);
 
 	if((ent->fields.server->solid >= SOLID_TRIGGER && trace->ent && (!((int)ent->fields.server->flags & FL_ONGROUND) || ent->fields.server->groundentity != PRVM_EDICT_TO_PROG(trace->ent))))
-		return SV_Impact (ent, trace);
+		SV_Impact (ent, trace);
 
-	return true;
+	return VectorCompare(ent->fields.server->origin, original) && VectorCompare(ent->fields.server->velocity, original_velocity);
 }
 
 

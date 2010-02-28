@@ -64,4 +64,6 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 
 qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
 
+qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin);
+
 #endif

@@ -1984,6 +1984,10 @@ void Mod_LoadQ3Shaders(void)
 					shader.reflectfactor = atof(parameter[1]);
 					Vector4Set(shader.reflectcolor4f, atof(parameter[2]), atof(parameter[3]), atof(parameter[4]), atof(parameter[5]));
 				}
+				else if (!strcasecmp(parameter[0], "dpcamera"))
+				{
+					shader.textureflags |= Q3TEXTUREFLAG_CAMERA;
+				}
 				else if (!strcasecmp(parameter[0], "dpwater") && numparameters >= 12)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_WATERSHADER;
@@ -2081,7 +2085,7 @@ void Mod_LoadQ3Shaders(void)
 			}
 			// fix up multiple reflection types
 			if(shader.textureflags & Q3TEXTUREFLAG_WATERSHADER)
-				shader.textureflags &= ~(Q3TEXTUREFLAG_REFRACTION | Q3TEXTUREFLAG_REFLECTION);
+				shader.textureflags &= ~(Q3TEXTUREFLAG_REFRACTION | Q3TEXTUREFLAG_REFLECTION | Q3TEXTUREFLAG_CAMERA);
 
 			Q3Shader_AddToHash (&shader);
 		}
@@ -2167,6 +2171,8 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags |= MATERIALFLAG_REFLECTION;
 		if (shader->textureflags & Q3TEXTUREFLAG_WATERSHADER)
 			texture->basematerialflags |= MATERIALFLAG_WATERSHADER;
+		if (shader->textureflags & Q3TEXTUREFLAG_CAMERA)
+			texture->basematerialflags |= MATERIALFLAG_CAMERA;
 		texture->customblendfunc[0] = GL_ONE;
 		texture->customblendfunc[1] = GL_ZERO;
 		if (shader->numlayers > 0)

@@ -174,7 +174,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 			return false;
 		entrender = cl.csqcrenderentities + edictnum;
 		r_refdef.scene.entities[r_refdef.scene.numentities++] = entrender;
-		entrender->entitynumber = edictnum;
+		entrender->entitynumber = edictnum + MAX_EDICTS;
 		//entrender->shadertime = 0; // shadertime was set by spawn()
 		entrender->flags = 0;
 		entrender->alpha = 1;
@@ -1044,4 +1044,55 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	CSQC_END;
 
 	return r;
+}
+
+qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin)
+{
+	qboolean ret = false;
+	prvm_edict_t *ed;
+	prvm_eval_t *val, *valforward, *valright, *valup, *valendpos;
+	vec3_t forward, left, up, origin, ang;
+	matrix4x4_t mat, matq;
+
+	CSQC_BEGIN
+		ed = PRVM_EDICT_NUM(entnum);
+		// camera:
+		//   camera_transform
+		if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.camera_transform)) && val->function)
+		{
+			ret = true;
+			if(viewmatrix || clipplane || visorigin)
+			{
+				valforward = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_forward);
+				valright = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_right);
+				valup = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_up);
+				valendpos = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_endpos);
+				if(valforward && valright && valup && valendpos)
+				{
+					Matrix4x4_ToVectors(viewmatrix, forward, left, up, origin);
+					AnglesFromVectors(ang, forward, up, false);
+					prog->globals.client->time = cl.time;
+					prog->globals.client->self = entnum;
+					VectorCopy(origin, PRVM_G_VECTOR(OFS_PARM0));
+					VectorCopy(ang, PRVM_G_VECTOR(OFS_PARM1));
+					VectorCopy(forward, valforward->vector);
+					VectorScale(left, -1, valright->vector);
+					VectorCopy(up, valup->vector);
+					VectorCopy(origin, valendpos->vector);
+					PRVM_ExecuteProgram(val->function, "QC function e.camera_transform is missing");
+					VectorCopy(PRVM_G_VECTOR(OFS_RETURN), origin);
+					VectorCopy(valforward->vector, forward);
+					VectorScale(valright->vector, -1, left);
+					VectorCopy(valup->vector, up);
+					VectorCopy(valendpos->vector, visorigin);
+					Matrix4x4_Invert_Full(&mat, viewmatrix);
+					Matrix4x4_FromVectors(viewmatrix, forward, left, up, origin);
+					Matrix4x4_Concat(&matq, viewmatrix, &mat);
+					Matrix4x4_TransformPositivePlane(&matq, clipplane->normal[0], clipplane->normal[1], clipplane->normal[2], clipplane->dist, &clipplane->normal[0]);
+				}
+			}
+		}
+	CSQC_END
+
+	return ret;
 }

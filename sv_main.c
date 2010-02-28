@@ -1584,6 +1584,85 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 	sv.sententities[s->number] = sv.sententitiesmark;
 }
 
+#if MAX_LEVELNETWORKEYES > 0
+#define MAX_EYE_RECURSION 1 // increase if recursion gets supported by portals
+void SV_AddCameraEyes(void)
+{
+	int e, i, j, k;
+	prvm_edict_t *ed;
+	int cameras[MAX_LEVELNETWORKEYES];
+	vec3_t camera_origins[MAX_LEVELNETWORKEYES];
+	int eye_levels[MAX_CLIENTNETWORKEYES];
+	int n_cameras = 0;
+	vec3_t mi, ma;
+	prvm_eval_t *valendpos, *val;
+
+	if(!prog->fieldoffsets.camera_transform)
+		return;
+	valendpos = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_endpos);
+	if(!valendpos)
+		return;
+
+	for(i = 0; i < sv.writeentitiestoclient_numeyes; ++i)
+		eye_levels[i] = 0;
+
+	// check line of sight to portal entities and add them to PVS
+	for (e = 1, ed = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ed = PRVM_NEXT_EDICT(ed))
+	{
+		if (!ed->priv.server->free)
+		{
+			if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.camera_transform)) && val->function)
+			{
+				prog->globals.server->self = e;
+				prog->globals.server->other = sv.writeentitiestoclient_cliententitynumber;
+				VectorCopy(sv.writeentitiestoclient_eyes[0], valendpos->vector);
+				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_G_VECTOR(OFS_PARM0));
+				VectorClear(PRVM_G_VECTOR(OFS_PARM1));
+				PRVM_ExecuteProgram(val->function, "QC function e.camera_transform is missing");
+				if(!VectorCompare(valendpos->vector, sv.writeentitiestoclient_eyes[0]))
+					VectorCopy(valendpos->vector, camera_origins[n_cameras]);
+				cameras[n_cameras] = e;
+				++n_cameras;
+				if(n_cameras >= MAX_LEVELNETWORKEYES)
+					break;
+			}
+		}
+	}
+
+	if(!n_cameras)
+		return;
+
+	// i is loop counter, is reset to 0 when an eye got added
+	// j is camera index to check
+	for(i = 0, j = 0; sv.writeentitiestoclient_numeyes < MAX_CLIENTNETWORKEYES && i < n_cameras; ++i, ++j, j %= n_cameras)
+	{
+		if(!cameras[j])
+			continue;
+		ed = PRVM_EDICT_NUM(cameras[j]);
+		VectorAdd(ed->fields.server->origin, ed->fields.server->mins, mi);
+		VectorAdd(ed->fields.server->origin, ed->fields.server->maxs, ma);
+		for(k = 0; k < sv.writeentitiestoclient_numeyes; ++k)
+		if(eye_levels[k] <= MAX_EYE_RECURSION)
+		{
+			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_enlarge.value, sv.writeentitiestoclient_eyes[k], mi, ma))
+			{
+				eye_levels[sv.writeentitiestoclient_numeyes] = eye_levels[k] + 1;
+				VectorCopy(camera_origins[j], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
+				// Con_Printf("added eye %d: %f %f %f because we can see %f %f %f .. %f %f %f from eye %d\n", j, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes][0], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes][1], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes][2], mi[0], mi[1], mi[2], ma[0], ma[1], ma[2], k);
+				sv.writeentitiestoclient_numeyes++;
+				cameras[j] = 0;
+				i = 0;
+				break;
+			}
+		}
+	}
+}
+#else
+void SV_AddCameraEyes(void)
+{
+}
+#endif
+
 void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
 	qboolean need_empty = false;
@@ -1634,7 +1713,12 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 		//	Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
 	}
 
-	// TODO: check line of sight to portal entities and add them to PVS
+	SV_AddCameraEyes();
+
+	// build PVS from the new eyes
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		for(i = 1; i < sv.writeentitiestoclient_numeyes; ++i)
+			sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_eyes[i], 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), sv.writeentitiestoclient_pvsbytes != 0);
 
 	sv.sententitiesmark++;
 

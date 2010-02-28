@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "r_shadow.h"
 #include "portals.h"
+#include "csprogs.h"
 
 cvar_t r_ambient = {0, "r_ambient", "0", "brightens map, value is 0-128"};
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
@@ -544,10 +545,10 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 		R_DrawModelSurfaces(ent, true, true, false, false, false);
 }
 
-extern void R_Water_AddWaterPlane(msurface_t *surface);
+extern void R_Water_AddWaterPlane(msurface_t *surface, int entno);
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 {
-	int i, j, flagsmask;
+	int i, j, n, flagsmask;
 	dp_model_t *model = ent->model;
 	msurface_t *surfaces;
 	if (model == NULL)
@@ -559,7 +560,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 		RSurf_ActiveModelEntity(ent, false, false, false);
 
 	surfaces = model->data_surfaces;
-	flagsmask = MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION;
+	flagsmask = MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA;
 
 	// add visible surfaces to draw list
 	if (ent == r_refdef.scene.worldentity)
@@ -569,16 +570,20 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 			j = model->sortedmodelsurfaces[i];
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				if (surfaces[j].texture->basematerialflags & flagsmask)
-					R_Water_AddWaterPlane(surfaces + j);
+					R_Water_AddWaterPlane(surfaces + j, 0);
 		}
 	}
 	else
 	{
+		if(ent->entitynumber >= MAX_EDICTS) // && CL_VM_TransformView(ent->entitynumber - MAX_EDICTS, NULL, NULL, NULL))
+			n = ent->entitynumber;
+		else
+			n = 0;
 		for (i = 0;i < model->nummodelsurfaces;i++)
 		{
 			j = model->sortedmodelsurfaces[i];
 			if (surfaces[j].texture->basematerialflags & flagsmask)
-				R_Water_AddWaterPlane(surfaces + j);
+				R_Water_AddWaterPlane(surfaces + j, n);
 		}
 	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
@@ -1233,7 +1238,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			// now figure out what to do with this particular range of surfaces
 			if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_WALL))
 				continue;
-			if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
+			if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 				continue;
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 			{
