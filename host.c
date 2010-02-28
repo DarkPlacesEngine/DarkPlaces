@@ -1006,6 +1006,7 @@ qboolean sys_nostdout = false;
 extern void u8_Init(void);
 extern void Render_Init(void);
 extern void Mathlib_Init(void);
+extern void FS_Init_SelfPack(void);
 extern void FS_Init(void);
 extern void FS_Shutdown(void);
 extern void PR_Cmd_Init(void);
@@ -1082,6 +1083,9 @@ static void Host_Init (void)
 
 	// initialize console window (only used by sys_win.c)
 	Sys_InitConsole();
+
+	// initialize the self-pack (must be before COM_InitGameType as it may add command line options)
+	FS_Init_SelfPack();
 
 	// detect gamemode from commandline options or executable name
 	COM_InitGameType();

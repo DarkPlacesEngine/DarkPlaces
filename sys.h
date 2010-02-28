@@ -86,6 +86,8 @@ void Sys_AllowProfiling (qboolean enable);
 
 double Sys_DoubleTime (void);
 
+void Sys_ProvideSelfFD (void);
+
 char *Sys_ConsoleInput (void);
 
 /// called to yield for a little bit so as not to hog cpu when paused or debugging
