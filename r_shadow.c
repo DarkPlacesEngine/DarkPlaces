@@ -4520,26 +4520,34 @@ void R_DrawModelShadows(void)
 			{
 				if(ent->entitynumber != 0)
 				{
-					// networked entity - might be attached in some way (then we should use the parent's light direction, to not tear apart attached entities)
-					int entnum, entnum2, recursion;
-					entnum = entnum2 = ent->entitynumber;
-					for(recursion = 32; recursion > 0; --recursion)
+					if(ent->entitynumber >= MAX_EDICTS) // csqc entity
 					{
-						entnum2 = cl.entities[entnum].state_current.tagentity;
-						if(entnum2 >= 1 && entnum2 < cl.num_entities && cl.entities_active[entnum2])
-							entnum = entnum2;
-						else
-							break;
-					}
-					if(recursion && recursion != 32) // if we followed a valid non-empty attachment chain
-					{
-						VectorNegate(cl.entities[entnum].render.modellight_lightdir, relativelightdirection);
-						// transform into modelspace of OUR entity
-						Matrix4x4_Transform3x3(&cl.entities[entnum].render.matrix, relativelightdirection, tmp);
-						Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
+						// FIXME handle this
+						VectorNegate(ent->modellight_lightdir, relativelightdirection);
 					}
 					else
-						VectorNegate(ent->modellight_lightdir, relativelightdirection);
+					{
+						// networked entity - might be attached in some way (then we should use the parent's light direction, to not tear apart attached entities)
+						int entnum, entnum2, recursion;
+						entnum = entnum2 = ent->entitynumber;
+						for(recursion = 32; recursion > 0; --recursion)
+						{
+							entnum2 = cl.entities[entnum].state_current.tagentity;
+							if(entnum2 >= 1 && entnum2 < cl.num_entities && cl.entities_active[entnum2])
+								entnum = entnum2;
+							else
+								break;
+						}
+						if(recursion && recursion != 32) // if we followed a valid non-empty attachment chain
+						{
+							VectorNegate(cl.entities[entnum].render.modellight_lightdir, relativelightdirection);
+							// transform into modelspace of OUR entity
+							Matrix4x4_Transform3x3(&cl.entities[entnum].render.matrix, relativelightdirection, tmp);
+							Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
+						}
+						else
+							VectorNegate(ent->modellight_lightdir, relativelightdirection);
+					}
 				}
 				else
 					VectorNegate(ent->modellight_lightdir, relativelightdirection);

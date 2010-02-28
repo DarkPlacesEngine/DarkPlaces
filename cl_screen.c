@@ -1353,8 +1353,8 @@ static void R_Envmap_f (void)
 	r_refdef.view.useperspective = true;
 	r_refdef.view.isoverlay = false;
 
-	r_refdef.view.frustum_x = tan(90 * M_PI / 360.0);
-	r_refdef.view.frustum_y = tan(90 * M_PI / 360.0);
+	r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
+	r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);

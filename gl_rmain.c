@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "polygon.h"
 #include "image.h"
 #include "ft2.h"
+#include "csprogs.h"
 
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
@@ -75,6 +76,7 @@ cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables dep
 cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
+cvar_t r_drawexteriormodel = {0, "r_drawexteriormodel","1", "draw your player model (e.g. in chase cam, reflections)"};
 cvar_t r_cullentities_trace = {0, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
 cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
 cvar_t r_cullentities_trace_tempentitysamples = {0, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
@@ -4481,8 +4483,13 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		// distorted background
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
 			mode = SHADERMODE_WATER;
-		else
+		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
 			mode = SHADERMODE_REFRACTION;
+		else
+		{
+			mode = SHADERMODE_GENERIC;
+			permutation |= SHADERPERMUTATION_DIFFUSE;
+		}
 		R_Mesh_TexCoordPointer(0, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 		R_Mesh_TexCoordPointer(1, 3, rsurface.svector3f, rsurface.svector3f_bufferobject, rsurface.svector3f_bufferoffset);
 		R_Mesh_TexCoordPointer(2, 3, rsurface.tvector3f, rsurface.tvector3f_bufferobject, rsurface.tvector3f_bufferoffset);
@@ -6336,6 +6343,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
 	Cvar_RegisterVariable(&r_cullentities_trace_delay);
 	Cvar_RegisterVariable(&r_drawviewmodel);
+	Cvar_RegisterVariable(&r_drawexteriormodel);
 	Cvar_RegisterVariable(&r_speeds);
 	Cvar_RegisterVariable(&r_fullbrights);
 	Cvar_RegisterVariable(&r_wateralpha);
@@ -6892,6 +6900,8 @@ static void R_View_UpdateEntityVisible (void)
 		:                                                          RENDER_EXTERIORMODEL;
 	if (!r_drawviewmodel.integer)
 		renderimask |= RENDER_VIEWMODEL;
+	if (!r_drawexteriormodel.integer)
+		renderimask |= RENDER_EXTERIORMODEL;
 	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
@@ -6904,7 +6914,8 @@ static void R_View_UpdateEntityVisible (void)
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
-		if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight)
+		if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane)
+			// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
 		{
 			for (i = 0;i < r_refdef.scene.numentities;i++)
 			{
@@ -7297,13 +7308,29 @@ void R_ResetViewRendering3D(void)
 	GL_CullFace(r_refdef.view.cullface_back);
 }
 
+/*
+================
+R_RenderView_UpdateViewVectors
+================
+*/
+static void R_RenderView_UpdateViewVectors(void)
+{
+	// break apart the view matrix into vectors for various purposes
+	// it is important that this occurs outside the RenderScene function because that can be called from reflection renders, where the vectors come out wrong
+	// however the r_refdef.view.origin IS updated in RenderScene intentionally - otherwise the sky renders at the wrong origin, etc
+	Matrix4x4_ToVectors(&r_refdef.view.matrix, r_refdef.view.forward, r_refdef.view.left, r_refdef.view.up, r_refdef.view.origin);
+	VectorNegate(r_refdef.view.left, r_refdef.view.right);
+	// make an inverted copy of the view matrix for tracking sprites
+	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
+}
+
 void R_RenderScene(void);
 void R_RenderWaterPlanes(void);
 
 static void R_Water_StartFrame(void)
 {
 	int i;
-	int waterwidth, waterheight, texturewidth, textureheight;
+	int waterwidth, waterheight, texturewidth, textureheight, camerawidth, cameraheight;
 	r_waterstate_waterplane_t *p;
 
 	if (vid.width > (int)vid.maxtexturesize_2d || vid.height > (int)vid.maxtexturesize_2d)
@@ -7327,20 +7354,24 @@ static void R_Water_StartFrame(void)
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
 	if (!r_water.integer || r_showsurfaces.integer)
-		texturewidth = textureheight = waterwidth = waterheight = 0;
+		texturewidth = textureheight = waterwidth = waterheight = camerawidth = cameraheight = 0;
 	else if (vid.support.arb_texture_non_power_of_two)
 	{
 		texturewidth = waterwidth;
 		textureheight = waterheight;
+		camerawidth = waterwidth;
+		cameraheight = waterheight;
 	}
 	else
 	{
 		for (texturewidth   = 1;texturewidth   < waterwidth ;texturewidth   *= 2);
 		for (textureheight  = 1;textureheight  < waterheight;textureheight  *= 2);
+		for (camerawidth    = 1;camerawidth   <= waterwidth; camerawidth    *= 2); camerawidth  /= 2;
+		for (cameraheight   = 1;cameraheight  <= waterheight;cameraheight   *= 2); cameraheight /= 2;
 	}
 
 	// allocate textures as needed
-	if (r_waterstate.texturewidth != texturewidth || r_waterstate.textureheight != textureheight)
+	if (r_waterstate.texturewidth != texturewidth || r_waterstate.textureheight != textureheight || r_waterstate.camerawidth != camerawidth || r_waterstate.cameraheight != cameraheight)
 	{
 		r_waterstate.maxwaterplanes = MAX_WATERPLANES;
 		for (i = 0, p = r_waterstate.waterplanes;i < r_waterstate.maxwaterplanes;i++, p++)
@@ -7351,10 +7382,15 @@ static void R_Water_StartFrame(void)
 			if (p->texture_reflection)
 				R_FreeTexture(p->texture_reflection);
 			p->texture_reflection = NULL;
+			if (p->texture_camera)
+				R_FreeTexture(p->texture_camera);
+			p->texture_camera = NULL;
 		}
 		memset(&r_waterstate, 0, sizeof(r_waterstate));
 		r_waterstate.texturewidth = texturewidth;
 		r_waterstate.textureheight = textureheight;
+		r_waterstate.camerawidth = camerawidth;
+		r_waterstate.cameraheight = cameraheight;
 	}
 
 	if (r_waterstate.texturewidth)
@@ -7384,8 +7420,13 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 	vec3_t normal;
 	vec3_t center;
 	mplane_t plane;
+	int cam_ent;
 	r_waterstate_waterplane_t *p;
 	texture_t *t = R_GetCurrentTexture(surface->texture);
+	cam_ent = t->camera_entity;
+	if(!(t->currentmaterialflags & MATERIALFLAG_CAMERA))
+		cam_ent = 0;
+
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
 	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
@@ -7415,8 +7456,9 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 
 	// find a matching plane if there is one
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
-		if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
-			break;
+		if(p->camera_entity == t->camera_entity)
+			if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
+				break;
 	if (planeindex >= r_waterstate.maxwaterplanes)
 		return; // nothing we can do, out of planes
 
@@ -7429,16 +7471,20 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 		// clear materialflags and pvs
 		p->materialflags = 0;
 		p->pvsvalid = false;
+		p->camera_entity = t->camera_entity;
 	}
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= t->currentmaterialflags;
-	// merge this surface's PVS into the waterplane
-	VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
-	if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
-	 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
+	if(!(p->materialflags & MATERIALFLAG_CAMERA))
 	{
-		r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
-		p->pvsvalid = true;
+		// merge this surface's PVS into the waterplane
+		VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
+		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
+		 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
+		{
+			r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+			p->pvsvalid = true;
+		}
 	}
 }
 
@@ -7448,6 +7494,7 @@ static void R_Water_ProcessPlanes(void)
 	r_refdef_view_t myview;
 	int planeindex;
 	r_waterstate_waterplane_t *p;
+	vec3_t visorigin;
 
 	originalview = r_refdef.view;
 
@@ -7459,6 +7506,13 @@ static void R_Water_ProcessPlanes(void)
 			if (!p->texture_refraction)
 				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_waterstate.texturewidth, r_waterstate.textureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCELINEAR | TEXF_CLAMP, NULL);
 			if (!p->texture_refraction)
+				goto error;
+		}
+		else if (p->materialflags & MATERIALFLAG_CAMERA)
+		{
+			if (!p->texture_camera)
+				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_waterstate.camerawidth, r_waterstate.cameraheight, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCELINEAR, NULL);
+			if (!p->texture_camera)
 				goto error;
 		}
 
@@ -7515,9 +7569,20 @@ static void R_Water_ProcessPlanes(void)
 		{
 			r_waterstate.renderingrefraction = true;
 			r_refdef.view = myview;
+
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
 			r_refdef.view.clipplane.dist = -r_refdef.view.clipplane.dist;
+
+			if((p->materialflags & MATERIALFLAG_CAMERA) && p->camera_entity)
+			{
+				// we need to perform a matrix transform to render the view... so let's get the transformation matrix
+				r_waterstate.renderingrefraction = false; // we don't want to hide the player model from these ones
+				CL_VM_TransformView(p->camera_entity - MAX_EDICTS, &r_refdef.view.matrix, &r_refdef.view.clipplane, visorigin);
+				R_RenderView_UpdateViewVectors();
+				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+			}
+
 			PlaneClassify(&r_refdef.view.clipplane);
 
 			R_ResetViewRendering3D();
@@ -7526,6 +7591,47 @@ static void R_Water_ProcessPlanes(void)
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			r_waterstate.renderingrefraction = false;
+		}
+		else if (p->materialflags & MATERIALFLAG_CAMERA)
+		{
+			r_refdef.view = myview;
+
+			r_refdef.view.clipplane = p->plane;
+			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
+			r_refdef.view.clipplane.dist = -r_refdef.view.clipplane.dist;
+
+			r_refdef.view.width = r_waterstate.camerawidth;
+			r_refdef.view.height = r_waterstate.cameraheight;
+			r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
+			r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
+
+			if(p->camera_entity)
+			{
+				// we need to perform a matrix transform to render the view... so let's get the transformation matrix
+				CL_VM_TransformView(p->camera_entity - MAX_EDICTS, &r_refdef.view.matrix, &r_refdef.view.clipplane, visorigin);
+			}
+
+			// reverse the cullface settings for this render
+			r_refdef.view.cullface_front = GL_FRONT;
+			r_refdef.view.cullface_back = GL_BACK;
+			// also reverse the view matrix
+			Matrix4x4_ConcatScale3(&r_refdef.view.matrix, 1, -1, 1);
+			R_RenderView_UpdateViewVectors();
+			if(p->camera_entity)
+				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+			
+			// camera needs no clipplane
+			r_refdef.view.useclipplane = false;
+
+			PlaneClassify(&r_refdef.view.clipplane);
+
+			R_ResetViewRendering3D();
+			R_ClearScreen(r_refdef.fogenabled);
+			R_View_Update();
+			R_RenderScene();
+
+			R_Mesh_CopyToTexture(p->texture_camera, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_waterstate.renderingrefraction = false;
 		}
 
@@ -8243,13 +8349,7 @@ void R_RenderView(void)
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value;
 
-	// break apart the view matrix into vectors for various purposes
-	// it is important that this occurs outside the RenderScene function because that can be called from reflection renders, where the vectors come out wrong
-	// however the r_refdef.view.origin IS updated in RenderScene intentionally - otherwise the sky renders at the wrong origin, etc
-	Matrix4x4_ToVectors(&r_refdef.view.matrix, r_refdef.view.forward, r_refdef.view.left, r_refdef.view.up, r_refdef.view.origin);
-	VectorNegate(r_refdef.view.left, r_refdef.view.right);
-	// make an inverted copy of the view matrix for tracking sprites
-	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
+	R_RenderView_UpdateViewVectors();
 
 	R_Shadow_UpdateWorldLightSelection();
 
@@ -9074,6 +9174,11 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->update_lastrenderframe = r_textureframe;
 	t->update_lastrenderentity = (void *)ent;
 
+	if(ent && ent->entitynumber >= MAX_EDICTS && ent->entitynumber < 2 * MAX_EDICTS)
+		t->camera_entity = ent->entitynumber;
+	else
+		t->camera_entity = 0;
+
 	// switch to an alternate material if this is a q1bsp animated material
 	{
 		texture_t *texture = t;
@@ -9130,7 +9235,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay)
 		t->currentalpha *= t->r_water_wateralpha;
 	if(!r_waterstate.enabled || r_refdef.view.isoverlay)
-		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION);
+		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA);
 	if (!(rsurface.ent_flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	else if (rsurface.modeltexcoordlightmap2f == NULL && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
@@ -9153,11 +9258,11 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 	if (t->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
-		if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER))
+		if (t->currentmaterialflags & (MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER | MATERIALFLAG_CAMERA))
 			t->currentmaterialflags &= ~MATERIALFLAG_BLENDED;
 	}
 	else
-		t->currentmaterialflags &= ~(MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER);
+		t->currentmaterialflags &= ~(MATERIALFLAG_REFRACTION | MATERIALFLAG_WATERSHADER | MATERIALFLAG_CAMERA);
 	if ((t->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)) == MATERIALFLAG_BLENDED && r_transparentdepthmasking.integer && !(t->basematerialflags & MATERIALFLAG_BLENDED))
 		t->currentmaterialflags |= MATERIALFLAG_TRANSDEPTH;
 
@@ -10259,6 +10364,8 @@ static void RSurf_BindReflectionForSurface(const msurface_t *surface)
 	bestp = NULL;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
+		if(p->camera_entity != rsurface.texture->camera_entity)
+			continue;
 		d = 0;
 		for (vertexindex = 0, v = rsurface.modelvertex3f + surface->num_firstvertex * 3;vertexindex < surface->num_vertices;vertexindex++, v += 3)
 		{
@@ -10276,11 +10383,13 @@ static void RSurf_BindReflectionForSurface(const msurface_t *surface)
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
 		if (r_cg_permutation->fp_Texture_Refraction) CG_BindTexture(r_cg_permutation->fp_Texture_Refraction, bestp ? bestp->texture_refraction : r_texture_black);CHECKCGERROR
+		else if (r_cg_permutation->fp_Texture_First) CG_BindTexture(r_cg_permutation->fp_Texture_First, bestp ? bestp->texture_camera : r_texture_black);CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Reflection) CG_BindTexture(r_cg_permutation->fp_Texture_Reflection, bestp ? bestp->texture_reflection : r_texture_black);CHECKCGERROR
 #endif
 		break;
 	case RENDERPATH_GL20:
 		if (r_glsl_permutation->loc_Texture_Refraction >= 0) R_Mesh_TexBind(GL20TU_REFRACTION, bestp ? bestp->texture_refraction : r_texture_black);
+		else if (r_glsl_permutation->loc_Texture_First >= 0) R_Mesh_TexBind(GL20TU_FIRST, bestp ? bestp->texture_camera : r_texture_black);
 		if (r_glsl_permutation->loc_Texture_Reflection >= 0) R_Mesh_TexBind(GL20TU_REFLECTION, bestp ? bestp->texture_reflection : r_texture_black);
 		break;
 	case RENDERPATH_GL13:
@@ -10788,7 +10897,7 @@ extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass)
 {
-	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION)))
+	if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 		return;
 	RSurf_PrepareVerticesForBatch(true, true, texturenumsurfaces, texturesurfacelist);
 	if (prepass)
@@ -10798,7 +10907,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY);
 		RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 	}
-	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION)) && !r_waterstate.renderingscene)
+	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_CAMERA)) && !r_waterstate.renderingscene)
 	{
 		// render water or distortion background, then blend surface on top
 		GL_DepthMask(true);
