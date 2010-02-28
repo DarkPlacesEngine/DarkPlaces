@@ -266,6 +266,8 @@ typedef struct prvm_prog_fieldoffsets_s
 	int enemy; // ssqc / csqc (physics)
 	int aiment; // ssqc / csqc (physics)
 	int movedir; // ssqc / csqc (physics)
+
+	int camera_transform; // csqc (warpzones)
 }
 prvm_prog_fieldoffsets_t;
 

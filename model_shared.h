@@ -207,6 +207,7 @@ shadowmesh_t;
 #define Q3TEXTUREFLAG_REFRACTION 256
 #define Q3TEXTUREFLAG_REFLECTION 512
 #define Q3TEXTUREFLAG_WATERSHADER 1024
+#define Q3TEXTUREFLAG_CAMERA 2048
 
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
@@ -551,6 +552,7 @@ typedef struct texture_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+	int camera_entity; // entity number for use by cameras
 
 	// offsetmapping
 	dpoffsetmapping_technique_t offsetmapping;
