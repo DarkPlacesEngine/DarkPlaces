@@ -1169,18 +1169,23 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 		// negative: only apply so much sideways friction to stay below the speed you could get by "braking"
 	{
 		vec_t f, fmin;
-		f = 1 - s->cmd.frametime * wishspeed * sidefric;
+		f = max(0, 1 + s->cmd.frametime * wishspeed * sidefric);
 		fmin = (vel_xy_backward*vel_xy_backward - vel_straight*vel_straight) / VectorLength2(vel_perpend);
+		// assume: fmin > 1
+		// vel_xy_backward*vel_xy_backward - vel_straight*vel_straight > vel_perpend*vel_perpend
+		// vel_xy_backward*vel_xy_backward > vel_straight*vel_straight + vel_perpend*vel_perpend
+		// vel_xy_backward*vel_xy_backward > vel_xy * vel_xy
+		// obviously, this cannot be
 		if(fmin <= 0)
 			VectorScale(vel_perpend, f, vel_perpend);
 		else
 		{
 			fmin = sqrt(fmin);
-			VectorScale(vel_perpend, bound(fmin, f, 1.0f), vel_perpend);
+			VectorScale(vel_perpend, max(fmin, f), vel_perpend);
 		}
 	}
 	else
-		VectorScale(vel_perpend, 1 - s->cmd.frametime * wishspeed * sidefric, vel_perpend);
+		VectorScale(vel_perpend, max(0, 1 - s->cmd.frametime * wishspeed * sidefric), vel_perpend);
 
 	VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 
