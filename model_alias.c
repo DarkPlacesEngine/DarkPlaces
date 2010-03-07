@@ -46,11 +46,27 @@ void Mod_AliasInit (void)
 		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
 }
 
-int Mod_Skeletal_AddBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
+int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
+{
+	int i;
+	blendweights_t *weights;
+	if(!newweights->influence[1])
+		return newweights->index[0];
+	weights = model->surfmesh.data_blendweights;
+	for (i = 0;i < model->surfmesh.num_blends;i++, weights++)
+	{
+		if (!memcmp(weights, newweights, sizeof(blendweights_t)))
+			return model->num_bones + i;
+	}
+	model->surfmesh.num_blends++;
+	memcpy(weights, newweights, sizeof(blendweights_t));
+	return model->num_bones + i;
+}
+
+int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
 {
 	int i, total;
 	float scale;
-	blendweights_t *weights;
 	blendweights_t newweights;
 	if(!newinfluence[1])
 		return newindex[0];
@@ -87,17 +103,9 @@ int Mod_Skeletal_AddBlend(dp_model_t *model, const int *newindex, const float *n
 			}
 		}
 	}
-	weights = model->surfmesh.data_blendweights;
-	for (i = 0;i < model->surfmesh.num_blends;i++, weights++)
-	{
-		if (!memcmp(weights, &newweights, sizeof(blendweights_t)))
-			return model->num_bones + i;
-	}
-	model->surfmesh.num_blends++;
-	memcpy(weights, &newweights, sizeof(blendweights_t));
-	return model->num_bones + i;
-} 
-		 
+	return Mod_Skeletal_AddBlend(model, &newweights);
+}
+
 static int maxbonepose = 0;
 static float (*bonepose)[12] = NULL;
 
@@ -2448,7 +2456,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				}
 				data += sizeof(dpmbonevert_t);
 			}
-			loadmodel->surfmesh.blends[j] = Mod_Skeletal_AddBlend(loadmodel, weightindex, weightinfluence);
+			loadmodel->surfmesh.blends[j] = Mod_Skeletal_CompressBlend(loadmodel, weightindex, weightinfluence);
 		}
 
 		// since dpm models do not have named sections, reuse their shader name as the section name
@@ -2988,7 +2996,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				}
 			}
 		}
-		loadmodel->surfmesh.blends[index] = Mod_Skeletal_AddBlend(loadmodel, weightindex, weightinfluence);
+		loadmodel->surfmesh.blends[index] = Mod_Skeletal_CompressBlend(loadmodel, weightindex, weightinfluence);
 	}
 	if (loadmodel->surfmesh.num_blends < loadmodel->surfmesh.num_vertices)
 		loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Realloc(loadmodel->mempool, loadmodel->surfmesh.data_blendweights, loadmodel->surfmesh.num_blends * sizeof(blendweights_t));
@@ -3062,3 +3070,394 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
 }
+
+void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	unsigned char *data;
+	const char *text;
+	unsigned char *pbase;
+	iqmheader_t *header;
+	skinfile_t *skinfiles;
+	int i, j, k, meshvertices, meshtriangles;
+	float *vposition = NULL, *vtexcoord = NULL, *vnormal = NULL, *vtangent = NULL;
+	unsigned char *vblendindexes = NULL, *vblendweights = NULL;
+	iqmjoint_t *joint;
+	iqmanim_t *anim;
+	iqmpose_t *pose;
+	iqmmesh_t *mesh;
+	unsigned short *framedata;
+	float biggestorigin;
+	const int *inelements;
+	int *outelements;
+	const float *inversebasepose;
+	float *outnormal, *outtexcoord, *outsvector, *outtvector;
+
+	pbase = (unsigned char *)buffer;
+	header = (iqmheader_t *)buffer;
+	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
+	if (LittleLong(header->version) != 0)
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 0 models are currently supported (name = %s)", loadmodel->name);
+
+	loadmodel->modeldatatypestring = "IQM";
+
+	loadmodel->type = mod_alias;
+	loadmodel->synctype = ST_RAND;
+
+	// byteswap header
+	header->version = LittleLong(header->version);
+	header->filesize = LittleLong(header->filesize);
+	header->flags = LittleLong(header->flags);
+	header->num_text = LittleLong(header->num_text);
+	header->ofs_text = LittleLong(header->ofs_text);
+	header->num_meshes = LittleLong(header->num_meshes);
+	header->ofs_meshes = LittleLong(header->ofs_meshes);
+	header->num_vertexarrays = LittleLong(header->num_vertexarrays);
+	header->num_vertexes = LittleLong(header->num_vertexes);
+	header->ofs_vertexarrays = LittleLong(header->ofs_vertexarrays);
+	header->num_triangles = LittleLong(header->num_triangles);
+	header->ofs_triangles = LittleLong(header->ofs_triangles);
+	header->ofs_neighbors = LittleLong(header->ofs_neighbors);
+	header->num_joints = LittleLong(header->num_joints);
+	header->ofs_joints = LittleLong(header->ofs_joints);
+	header->ofs_inversebasepose = LittleLong(header->ofs_inversebasepose);
+	header->num_poses = LittleLong(header->num_poses);
+	header->ofs_poses = LittleLong(header->ofs_poses);
+	header->num_anims = LittleLong(header->num_anims);
+	header->ofs_anims = LittleLong(header->ofs_anims);
+	header->num_frames = LittleLong(header->num_frames);
+	header->num_framechannels = LittleLong(header->num_framechannels);
+	header->ofs_frames = LittleLong(header->ofs_frames);
+	header->num_comment = LittleLong(header->num_comment);
+	header->ofs_comment = LittleLong(header->ofs_comment);
+	header->num_extensions = LittleLong(header->num_extensions);
+	header->ofs_extensions = LittleLong(header->ofs_extensions);
+
+	if (header->num_triangles < 1 || header->num_vertexes < 3 || header->num_vertexarrays < 1 || header->num_meshes < 1)
+	{
+		Con_Printf("%s has no geometry\n", loadmodel->name);
+		return;
+	}
+	if (header->num_frames < 1 || header->num_anims < 1)
+	{
+		Con_Printf("%s has no animations\n", loadmodel->name);
+		return;
+	}
+
+	for (i = 0;i < (int)header->num_vertexarrays;i++)
+	{
+		iqmvertexarray_t *va = (iqmvertexarray_t *)(pbase + header->ofs_vertexarrays);
+		va->type = LittleLong(va->type);
+		va->flags = LittleLong(va->flags);
+		va->format = LittleLong(va->format);
+		va->size = LittleLong(va->size);
+		va->offset = LittleLong(va->offset);
+		switch (va->type)
+		{
+		case IQM_POSITION:
+			if (va->format == IQM_FLOAT && va->size == 3)
+				vposition = (float *)(pbase + va->offset);
+			break;
+		case IQM_TEXCOORD:
+			if (va->format == IQM_FLOAT && va->size == 2)
+				vtexcoord = (float *)(pbase + va->offset);
+			break;
+		case IQM_NORMAL:
+			if (va->format == IQM_FLOAT && va->size == 3)
+				vnormal = (float *)(pbase + va->offset);
+			break;
+		case IQM_TANGENT:
+			if (va->format == IQM_FLOAT && va->size == 4)
+				vtangent = (float *)(pbase + va->offset);
+			break;
+		case IQM_BLENDINDEXES:
+			if (va->format == IQM_UBYTE && va->size == 4)
+				vblendindexes = (unsigned char *)(pbase + va->offset);
+			break;
+		case IQM_BLENDWEIGHTS:
+			if (va->format == IQM_UBYTE && va->size == 4)
+				vblendweights = (unsigned char *)(pbase + va->offset);
+			break;
+		}
+	}
+	if (!vposition || !vtexcoord || !vblendindexes || !vblendweights)
+	{
+		Con_Printf("%s is missing vertex array data\n", loadmodel->name);
+		return;
+	}
+
+	text = header->num_text && header->ofs_text ? (const char *)(pbase + header->ofs_text) : "";
+
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
+	loadmodel->DrawSky = NULL;
+	loadmodel->DrawAddWaterPlanes = NULL;
+	loadmodel->Draw = R_Q1BSP_Draw;
+	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
+	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
+	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
+	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
+	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
+	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
+	loadmodel->PointSuperContents = NULL;
+
+	// load external .skin files if present
+	skinfiles = Mod_LoadSkinFiles();
+	if (loadmodel->numskins < 1)
+		loadmodel->numskins = 1;
+
+	loadmodel->numframes = header->num_frames;
+	loadmodel->num_bones = header->num_joints;
+	loadmodel->num_poses = loadmodel->numframes;
+	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header->num_meshes;
+	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
+	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
+
+	meshvertices = header->num_vertexes;
+	meshtriangles = header->num_triangles;
+
+	// do most allocations as one merged chunk
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshtriangles * sizeof(int[3]) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short)) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
+	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
+	loadmodel->surfmesh.num_vertices = meshvertices;
+	loadmodel->surfmesh.num_triangles = meshtriangles;
+	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += meshtriangles * sizeof(int[3]);
+	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
+	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
+	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
+	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
+	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
+	loadmodel->surfmesh.num_blends = 0;
+	loadmodel->surfmesh.blends = (unsigned short *)data;data += meshvertices * sizeof(unsigned short);
+	if (meshvertices <= 65536)
+		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
+	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
+	loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Alloc(loadmodel->mempool, meshvertices * sizeof(blendweights_t));
+
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
+	}
+
+	// load the bone info
+	joint = (iqmjoint_t *) (pbase + header->ofs_joints);
+	for (i = 0;i < loadmodel->num_bones;i++)
+	{
+		joint[i].name = LittleLong(joint[i].name);
+		joint[i].parent = LittleLong(joint[i].parent);
+		for (j = 0;j < 3;j++)
+		{
+			joint[i].origin[j] = LittleFloat(joint[i].origin[j]);
+			joint[i].rotation[j] = LittleFloat(joint[i].rotation[j]);
+		}
+		strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
+		loadmodel->data_bones[i].parent = joint[i].parent;
+		if (loadmodel->data_bones[i].parent >= i)
+			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
+	}
+
+	// set up the animscenes based on the anims
+	anim = (iqmanim_t *) (pbase + header->ofs_anims);
+	for (i = 0;i < (int)header->num_anims;i++)
+	{
+		anim[i].name = LittleLong(anim[i].name);
+		anim[i].first_frame = LittleLong(anim[i].first_frame);
+		anim[i].num_frames = LittleLong(anim[i].num_frames);
+		anim[i].framerate = LittleLong(anim[i].framerate);
+		anim[i].flags = LittleLong(anim[i].flags);
+		for (j = anim[i].first_frame;j < (int)(anim[i].first_frame + anim[i].num_frames);j++)
+		{
+			dpsnprintf(loadmodel->animscenes[j].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", &text[anim[i].name], j - anim[i].first_frame);
+			loadmodel->animscenes[j].firstframe = j;
+			loadmodel->animscenes[j].framecount = 1;
+			loadmodel->animscenes[j].loop = true;
+			loadmodel->animscenes[j].framerate = 10;
+		}
+	}
+	
+	pose = (iqmpose_t *) (pbase + header->ofs_poses);
+	biggestorigin = 0;
+	for (i = 0;i < (int)header->num_poses;i++)
+	{
+		pose[i].parent = LittleLong(pose[i].parent);
+		pose[i].channelmask = LittleLong(pose[i].channelmask);
+		for (j = 0;j < 6;j++)
+		{
+			pose[i].channeloffset[j] = LittleFloat(pose[i].channeloffset[j]);
+			pose[i].channelscale[j] = LittleFloat(pose[i].channelscale[j]);
+		}
+		biggestorigin = max(biggestorigin, pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]);
+		biggestorigin = max(biggestorigin, pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]);
+		biggestorigin = max(biggestorigin, pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]);
+	}
+	loadmodel->num_posescale = biggestorigin / 32767.0f;
+	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+
+	// load the pose data
+	framedata = (unsigned short *) (pbase + header->ofs_frames);
+	for (i = 0, k = 0;i < (int)header->num_frames;i++)	
+	{
+		for (j = 0;j < (int)header->num_poses;j++, k++)
+		{
+			loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? *framedata++ * pose[j].channelscale[0] : 0));
+			loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? *framedata++ * pose[j].channelscale[1] : 0));
+			loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? *framedata++ * pose[j].channelscale[2] : 0));
+			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose[j].channeloffset[3] + (pose[j].channelmask&8 ? *framedata++ * pose[j].channelscale[3] : 0));
+			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose[j].channeloffset[4] + (pose[j].channelmask&16 ? *framedata++ * pose[j].channelscale[4] : 0));
+			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose[j].channeloffset[5] + (pose[j].channelmask&32 ? *framedata++ * pose[j].channelscale[5] : 0));
+		}
+	}
+
+	if (header->ofs_inversebasepose)
+	{
+		inversebasepose = (const float *) (pbase + header->ofs_inversebasepose);
+		for (i = 0;i < 12*(int)header->num_poses;j++)	
+			loadmodel->data_baseboneposeinverse[i] = LittleFloat(inversebasepose[i]);
+	}
+ 
+	// load triangle data
+	inelements = (const int *) (pbase + header->ofs_triangles);
+	outelements = loadmodel->surfmesh.data_element3i;
+	for (i = 0;i < (int)header->num_triangles;i++)
+	{
+		outelements[0] = LittleLong(inelements[0]);		
+		outelements[1] = LittleLong(inelements[1]);
+		outelements[2] = LittleLong(inelements[2]);
+		outelements += 3;
+		inelements += 3;
+	}
+	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, header->num_vertexes, __FILE__, __LINE__);
+
+	if (header->ofs_neighbors)
+	{
+		inelements = (const int *) (pbase + header->ofs_neighbors);
+		outelements = loadmodel->surfmesh.data_neighbor3i;
+		for (i = 0;i < (int)header->num_triangles;i++)
+		{
+			outelements[0] = LittleLong(inelements[0]);
+			outelements[1] = LittleLong(inelements[1]);
+			outelements[2] = LittleLong(inelements[2]);
+			outelements += 3;
+			inelements += 3;
+		}
+	}
+
+	// load vertex data
+	outtexcoord = loadmodel->surfmesh.data_texcoordtexture2f;
+	for (i = 0;i < (int)header->num_vertexes;i++)
+	{
+		outtexcoord[0] = LittleFloat(vtexcoord[0]);
+		outtexcoord[1] = LittleFloat(vtexcoord[1]);
+		vtexcoord += 2;
+		outtexcoord += 2;
+	}
+
+	if(vnormal)
+	{
+		outnormal = loadmodel->surfmesh.data_normal3f;
+		for (i = 0;i < (int)header->num_vertexes;i++)
+		{
+			outnormal[0] = LittleFloat(vnormal[0]);
+			outnormal[1] = LittleFloat(vnormal[1]);
+			outnormal[2] = LittleFloat(vnormal[2]);
+			vnormal += 3;
+			outnormal += 3;
+		}
+	}
+
+	if(vnormal && vtangent)
+	{
+		outnormal = loadmodel->surfmesh.data_normal3f;
+		outsvector = loadmodel->surfmesh.data_svector3f;
+		outtvector = loadmodel->surfmesh.data_tvector3f;
+		for (i = 0;i < (int)header->num_vertexes;i++)
+		{
+			outsvector[0] = LittleFloat(vtangent[0]);
+			outsvector[1] = LittleFloat(vtangent[1]);
+			outsvector[2] = LittleFloat(vtangent[2]);
+			if(LittleFloat(vtangent[3]) < 0)
+				CrossProduct(outsvector, outnormal, outtvector);
+			else
+				CrossProduct(outnormal, outsvector, outtvector);
+			vtangent += 4;
+			outnormal += 3;
+			outsvector += 3;
+			outtvector += 3;
+		}
+	}
+
+	for (i = 0; i < (int)header->num_vertexes;i++)
+	{
+		blendweights_t weights;
+		memcpy(weights.index, vblendindexes + i*4, 4);
+		memcpy(weights.influence, vblendweights + i*4, 4);
+		loadmodel->surfmesh.blends[j] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+	}
+
+	// load meshes
+	mesh = (iqmmesh_t *) (pbase + header->ofs_meshes);
+	for (i = 0;i < (int)header->num_meshes;i++)
+	{
+		msurface_t *surface;
+
+		mesh[i].name = LittleLong(mesh[i].name);
+		mesh[i].material = LittleLong(mesh[i].material);
+		mesh[i].first_vertex = LittleLong(mesh[i].first_vertex);
+		mesh[i].num_vertexes = LittleLong(mesh[i].num_vertexes);
+		mesh[i].first_triangle = LittleLong(mesh[i].first_triangle);
+		mesh[i].num_triangles = LittleLong(mesh[i].num_triangles);
+
+		loadmodel->sortedmodelsurfaces[i] = i;
+		surface = loadmodel->data_surfaces + i;
+		surface->texture = loadmodel->data_textures + i;
+		surface->num_firsttriangle = mesh[i].first_triangle;
+		surface->num_triangles = mesh[i].num_triangles;
+		surface->num_firstvertex = mesh[i].first_vertex;
+		surface->num_vertices = mesh[i].num_vertexes;
+
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + i, skinfiles, &text[mesh[i].name], &text[mesh[i].material]);
+	}
+
+	Mod_FreeSkinFiles(skinfiles);
+	Mod_MakeSortedSurfaces(loadmodel);
+
+	// compute all the mesh information that was not loaded from the file
+	if (loadmodel->surfmesh.data_element3s)
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
+	if (!header->ofs_inversebasepose)
+		Mod_BuildBaseBonePoses();
+	if (!vnormal)
+		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
+	if (!vnormal || !vtangent)
+		Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
+	if (!header->ofs_neighbors)
+		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	Mod_Alias_CalculateBoundingBox();
+
+	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
+
+	if (!loadmodel->surfmesh.isanimated)
+	{
+		Mod_MakeCollisionBIH(loadmodel, true);
+		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
+		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
+}
+
+			
