@@ -3267,6 +3267,13 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_bones[i].parent = joint[i].parent;
 		if (loadmodel->data_bones[i].parent >= i)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
+		if (!header->ofs_inversebasepose)
+		{
+			matrix4x4_t base, invbase;
+			Matrix4x4_FromDoom3Joint(&base, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
+			Matrix4x4_Invert_Simple(&invbase, &base);
+			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse[12*i]);
+		}
 	}
 
 	// set up the animscenes based on the anims
@@ -3438,8 +3445,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->surfmesh.data_element3s)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
-	if (!header->ofs_inversebasepose)
-		Mod_BuildBaseBonePoses();
 	if (!vnormal)
 		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, true);
 	if (!vnormal || !vtangent)
