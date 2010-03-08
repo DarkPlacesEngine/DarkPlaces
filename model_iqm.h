@@ -11,7 +11,7 @@ typedef struct iqmheader_s
 	unsigned int num_meshes, ofs_meshes;
 	unsigned int num_vertexarrays, num_vertexes, ofs_vertexarrays;
 	unsigned int num_triangles, ofs_triangles, ofs_neighbors;
-	unsigned int num_joints, ofs_joints, ofs_inversebasepose;
+	unsigned int num_joints, ofs_joints;
 	unsigned int num_poses, ofs_poses;
 	unsigned int num_anims, ofs_anims;
 	unsigned int num_frames, num_framechannels, ofs_frames, ofs_bounds;
