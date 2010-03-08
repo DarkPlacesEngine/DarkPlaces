@@ -3086,6 +3086,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	iqmpose_t *pose;
 	iqmmesh_t *mesh;
 	iqmbounds_t *bounds;
+	iqmvertexarray_t *va;
 	unsigned short *framedata;
 	float biggestorigin;
 	const int *inelements;
@@ -3145,39 +3146,39 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
+	va = (iqmvertexarray_t *)(pbase + header->ofs_vertexarrays);
 	for (i = 0;i < (int)header->num_vertexarrays;i++)
 	{
-		iqmvertexarray_t *va = (iqmvertexarray_t *)(pbase + header->ofs_vertexarrays);
-		va->type = LittleLong(va->type);
-		va->flags = LittleLong(va->flags);
-		va->format = LittleLong(va->format);
-		va->size = LittleLong(va->size);
-		va->offset = LittleLong(va->offset);
-		switch (va->type)
+		va[i].type = LittleLong(va[i].type);
+		va[i].flags = LittleLong(va[i].flags);
+		va[i].format = LittleLong(va[i].format);
+		va[i].size = LittleLong(va[i].size);
+		va[i].offset = LittleLong(va[i].offset);
+		switch (va[i].type)
 		{
 		case IQM_POSITION:
-			if (va->format == IQM_FLOAT && va->size == 3)
-				vposition = (float *)(pbase + va->offset);
+			if (va[i].format == IQM_FLOAT && va[i].size == 3)
+				vposition = (float *)(pbase + va[i].offset);
 			break;
 		case IQM_TEXCOORD:
-			if (va->format == IQM_FLOAT && va->size == 2)
-				vtexcoord = (float *)(pbase + va->offset);
+			if (va[i].format == IQM_FLOAT && va[i].size == 2)
+				vtexcoord = (float *)(pbase + va[i].offset);
 			break;
 		case IQM_NORMAL:
-			if (va->format == IQM_FLOAT && va->size == 3)
-				vnormal = (float *)(pbase + va->offset);
+			if (va[i].format == IQM_FLOAT && va[i].size == 3)
+				vnormal = (float *)(pbase + va[i].offset);
 			break;
 		case IQM_TANGENT:
-			if (va->format == IQM_FLOAT && va->size == 4)
-				vtangent = (float *)(pbase + va->offset);
+			if (va[i].format == IQM_FLOAT && va[i].size == 4)
+				vtangent = (float *)(pbase + va[i].offset);
 			break;
 		case IQM_BLENDINDEXES:
-			if (va->format == IQM_UBYTE && va->size == 4)
-				vblendindexes = (unsigned char *)(pbase + va->offset);
+			if (va[i].format == IQM_UBYTE && va[i].size == 4)
+				vblendindexes = (unsigned char *)(pbase + va[i].offset);
 			break;
 		case IQM_BLENDWEIGHTS:
-			if (va->format == IQM_UBYTE && va->size == 4)
-				vblendweights = (unsigned char *)(pbase + va->offset);
+			if (va[i].format == IQM_UBYTE && va[i].size == 4)
+				vblendweights = (unsigned char *)(pbase + va[i].offset);
 			break;
 		}
 	}
@@ -3332,7 +3333,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (header->ofs_inversebasepose)
 	{
 		inversebasepose = (const float *) (pbase + header->ofs_inversebasepose);
-		for (i = 0;i < 12*(int)header->num_poses;j++)	
+		for (i = 0;i < 12*(int)header->num_poses;i++)	
 			loadmodel->data_baseboneposeinverse[i] = LittleFloat(inversebasepose[i]);
 	}
  
