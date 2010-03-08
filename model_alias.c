@@ -3085,6 +3085,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	iqmanim_t *anim;
 	iqmpose_t *pose;
 	iqmmesh_t *mesh;
+	iqmbounds_t *bounds;
 	unsigned short *framedata;
 	float biggestorigin;
 	const int *inelements;
@@ -3272,7 +3273,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			matrix4x4_t base, invbase;
 			Matrix4x4_FromDoom3Joint(&base, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
 			Matrix4x4_Invert_Simple(&invbase, &base);
-			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse[12*i]);
+			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
 		}
 	}
 
@@ -3335,6 +3336,52 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->data_baseboneposeinverse[i] = LittleFloat(inversebasepose[i]);
 	}
  
+	// load bounding box data
+	if (header->ofs_bounds)
+	{
+		float xyradius = 0, radius = 0;
+		bounds = (iqmbounds_t *) (pbase + header->ofs_bounds);
+		VectorClear(loadmodel->normalmins);
+		VectorClear(loadmodel->normalmaxs);
+		for (i = 0; i < (int)header->num_frames;i++)
+		{
+			bounds[i].mins[0] = LittleFloat(bounds[i].mins[0]);
+			bounds[i].mins[1] = LittleFloat(bounds[i].mins[1]);
+			bounds[i].mins[2] = LittleFloat(bounds[i].mins[2]);
+			bounds[i].maxs[0] = LittleFloat(bounds[i].maxs[0]);			
+			bounds[i].maxs[1] = LittleFloat(bounds[i].maxs[1]);	
+			bounds[i].maxs[2] = LittleFloat(bounds[i].maxs[2]);	
+			bounds[i].xyradius = LittleFloat(bounds[i].xyradius);
+			bounds[i].radius = LittleFloat(bounds[i].radius);
+			if (!i)
+			{
+				VectorCopy(bounds[i].mins, loadmodel->normalmins);
+				VectorCopy(bounds[i].maxs, loadmodel->normalmaxs);
+			}
+			else
+			{
+				if (loadmodel->normalmins[0] > bounds[i].mins[0]) loadmodel->normalmins[0] = bounds[i].mins[0];
+				if (loadmodel->normalmins[1] > bounds[i].mins[1]) loadmodel->normalmins[1] = bounds[i].mins[1];
+				if (loadmodel->normalmins[2] > bounds[i].mins[2]) loadmodel->normalmins[2] = bounds[i].mins[2];
+				if (loadmodel->normalmaxs[0] < bounds[i].maxs[0]) loadmodel->normalmaxs[0] = bounds[i].maxs[0];
+				if (loadmodel->normalmaxs[1] < bounds[i].maxs[1]) loadmodel->normalmaxs[1] = bounds[i].maxs[1];
+				if (loadmodel->normalmaxs[2] < bounds[i].maxs[2]) loadmodel->normalmaxs[2] = bounds[i].maxs[2];
+			}
+			if (bounds[i].xyradius > xyradius)
+				xyradius = bounds[i].xyradius;
+			if (bounds[i].radius > radius)
+				radius = bounds[i].radius;
+		}
+		loadmodel->yawmins[0] = loadmodel->yawmins[1] = -xyradius;
+		loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = xyradius;
+		loadmodel->yawmins[2] = loadmodel->normalmins[2];
+		loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+		loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -radius;
+		loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] = radius;
+		loadmodel->radius = radius;
+		loadmodel->radius2 = radius * radius;
+	}
+
 	// load triangle data
 	inelements = (const int *) (pbase + header->ofs_triangles);
 	outelements = loadmodel->surfmesh.data_element3i;
@@ -3451,7 +3498,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	if (!header->ofs_neighbors)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_CalculateBoundingBox();
+	if (!header->ofs_bounds)
+		Mod_Alias_CalculateBoundingBox();
 
 	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
 
