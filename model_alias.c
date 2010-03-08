@@ -3091,7 +3091,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	float biggestorigin;
 	const int *inelements;
 	int *outelements;
-	const float *inversebasepose;
 	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
 
 	pbase = (unsigned char *)buffer;
@@ -3122,7 +3121,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header->ofs_neighbors = LittleLong(header->ofs_neighbors);
 	header->num_joints = LittleLong(header->num_joints);
 	header->ofs_joints = LittleLong(header->ofs_joints);
-	header->ofs_inversebasepose = LittleLong(header->ofs_inversebasepose);
 	header->num_poses = LittleLong(header->num_poses);
 	header->ofs_poses = LittleLong(header->ofs_poses);
 	header->num_anims = LittleLong(header->num_anims);
@@ -3258,6 +3256,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	joint = (iqmjoint_t *) (pbase + header->ofs_joints);
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
+		matrix4x4_t base, invbase;
 		joint[i].name = LittleLong(joint[i].name);
 		joint[i].parent = LittleLong(joint[i].parent);
 		for (j = 0;j < 3;j++)
@@ -3269,13 +3268,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_bones[i].parent = joint[i].parent;
 		if (loadmodel->data_bones[i].parent >= i)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
-		if (!header->ofs_inversebasepose)
-		{
-			matrix4x4_t base, invbase;
-			Matrix4x4_FromDoom3Joint(&base, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
-			Matrix4x4_Invert_Simple(&invbase, &base);
-			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
-		}
+		Matrix4x4_FromDoom3Joint(&base, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
+		Matrix4x4_Invert_Simple(&invbase, &base);
+		Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
 	}
 
 	// set up the animscenes based on the anims
@@ -3341,13 +3336,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
-	if (header->ofs_inversebasepose)
-	{
-		inversebasepose = (const float *) (pbase + header->ofs_inversebasepose);
-		for (i = 0;i < 12*(int)header->num_poses;i++)	
-			loadmodel->data_baseboneposeinverse[i] = LittleFloat(inversebasepose[i]);
-	}
- 
 	// load bounding box data
 	if (header->ofs_bounds)
 	{
