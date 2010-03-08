@@ -14,7 +14,7 @@ typedef struct iqmheader_s
 	unsigned int num_joints, ofs_joints, ofs_inversebasepose;
 	unsigned int num_poses, ofs_poses;
 	unsigned int num_anims, ofs_anims;
-	unsigned int num_frames, num_framechannels, ofs_frames;
+	unsigned int num_frames, num_framechannels, ofs_frames, ofs_bounds;
 	unsigned int num_comment, ofs_comment;
 	unsigned int num_extensions, ofs_extensions;
 } 
@@ -97,5 +97,12 @@ typedef struct iqmextension_s
 }
 iqmextension_t;
 
+typedef struct iqmbounds_s
+{
+	float mins[3], maxs[3];
+	float xyradius, radius;
+}
+iqmbounds_t;
+    
 #endif
 
