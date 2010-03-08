@@ -3092,7 +3092,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	const int *inelements;
 	int *outelements;
 	const float *inversebasepose;
-	float *outnormal, *outtexcoord, *outsvector, *outtvector;
+	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
 
 	pbase = (unsigned char *)buffer;
 	header = (iqmheader_t *)buffer;
@@ -3301,16 +3301,27 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	biggestorigin = 0;
 	for (i = 0;i < (int)header->num_poses;i++)
 	{
+		float f;
 		pose[i].parent = LittleLong(pose[i].parent);
 		pose[i].channelmask = LittleLong(pose[i].channelmask);
-		for (j = 0;j < 6;j++)
-		{
-			pose[i].channeloffset[j] = LittleFloat(pose[i].channeloffset[j]);
-			pose[i].channelscale[j] = LittleFloat(pose[i].channelscale[j]);
-		}
-		biggestorigin = max(biggestorigin, pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]);
-		biggestorigin = max(biggestorigin, pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]);
-		biggestorigin = max(biggestorigin, pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]);
+		pose[i].channeloffset[0] = LittleFloat(pose[i].channeloffset[0]);
+		pose[i].channeloffset[1] = LittleFloat(pose[i].channeloffset[1]);
+		pose[i].channeloffset[2] = LittleFloat(pose[i].channeloffset[2]);	
+		pose[i].channeloffset[3] = LittleFloat(pose[i].channeloffset[3]);
+		pose[i].channeloffset[4] = LittleFloat(pose[i].channeloffset[4]);
+		pose[i].channeloffset[5] = LittleFloat(pose[i].channeloffset[5]);
+		pose[i].channelscale[0] = LittleFloat(pose[i].channelscale[0]);
+		pose[i].channelscale[1] = LittleFloat(pose[i].channelscale[1]);
+		pose[i].channelscale[2] = LittleFloat(pose[i].channelscale[2]);
+		pose[i].channelscale[3] = LittleFloat(pose[i].channelscale[3]);
+		pose[i].channelscale[4] = LittleFloat(pose[i].channelscale[4]);
+		pose[i].channelscale[5] = LittleFloat(pose[i].channelscale[5]);
+		f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
+		f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
+		f = fabs(pose[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
+		f = fabs(pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]); biggestorigin = max(biggestorigin, f);
+		f = fabs(pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
+		f = fabs(pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
 	}
 	loadmodel->num_posescale = biggestorigin / 32767.0f;
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
@@ -3321,12 +3332,12 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		for (j = 0;j < (int)header->num_poses;j++, k++)
 		{
-			loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? *framedata++ * pose[j].channelscale[0] : 0));
-			loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? *framedata++ * pose[j].channelscale[1] : 0));
-			loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? *framedata++ * pose[j].channelscale[2] : 0));
-			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose[j].channeloffset[3] + (pose[j].channelmask&8 ? *framedata++ * pose[j].channelscale[3] : 0));
-			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose[j].channeloffset[4] + (pose[j].channelmask&16 ? *framedata++ * pose[j].channelscale[4] : 0));
-			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose[j].channeloffset[5] + (pose[j].channelmask&32 ? *framedata++ * pose[j].channelscale[5] : 0));
+			loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
+			loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
+			loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
+			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0));
+			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0));
+			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0));
 		}
 	}
 
@@ -3411,6 +3422,16 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load vertex data
+	outvertex = loadmodel->surfmesh.data_vertex3f;
+	for (i = 0;i < (int)header->num_vertexes;i++)
+	{
+		outvertex[0] = LittleFloat(vposition[0]);
+		outvertex[1] = LittleFloat(vposition[1]);
+		outvertex[2] = LittleFloat(vposition[2]);
+		vposition += 3;
+		outvertex += 3;
+	}
+
 	outtexcoord = loadmodel->surfmesh.data_texcoordtexture2f;
 	for (i = 0;i < (int)header->num_vertexes;i++)
 	{
@@ -3459,7 +3480,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		blendweights_t weights;
 		memcpy(weights.index, vblendindexes + i*4, 4);
 		memcpy(weights.influence, vblendweights + i*4, 4);
-		loadmodel->surfmesh.blends[j] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+		loadmodel->surfmesh.blends[i] = Mod_Skeletal_AddBlend(loadmodel, &weights);
 	}
 
 	// load meshes
