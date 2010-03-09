@@ -1730,6 +1730,15 @@ typedef struct r_refdef_s
 	qboolean fogenabled;
 	qboolean oldgl_fogenable;
 
+	// new flexible texture height fog (overrides normal fog)
+	char fog_height_texturename[64]; // note: must be 64 for the sscanf code
+	unsigned char *fog_height_table1d;
+	unsigned char *fog_height_table2d;
+	int fog_height_tablesize; // enable
+	float fog_height_tablescale;
+	float fog_height_texcoordscale;
+	char fogheighttexturename[64]; // detects changes to active fog height texture
+
 	qboolean draw2dstage;
 
 	// true during envmap command capture
