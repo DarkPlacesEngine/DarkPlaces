@@ -4258,7 +4258,9 @@ void R_Shadow_PrepareModelShadows(void)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		break;
+		if (r_shadows.integer >= 2) 
+			break;
+		// fall through
 	case R_SHADOW_SHADOWMODE_STENCIL:
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
@@ -4486,7 +4488,7 @@ void R_DrawModelShadows(void)
 	vec3_t relativeshadowmins, relativeshadowmaxs;
 	vec3_t tmp, shadowdir;
 
-	if (!r_refdef.scene.numentities || !vid.stencil || r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL)
+	if (!r_refdef.scene.numentities || !vid.stencil || (r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL && r_shadows.integer != 1))
 		return;
 
 	CHECKGLERROR
