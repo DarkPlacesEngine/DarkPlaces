@@ -8602,7 +8602,7 @@ void R_RenderScene(void)
 			R_TimeReport("modeldepth");
 	}
 
-	if (r_shadows.integer > 0 && shadowmapping && r_refdef.lightmapintensity > 0)
+	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadowMaps();
 		R_ResetViewRendering3D();
@@ -8630,7 +8630,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	if (r_shadows.integer > 0 && !shadowmapping && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
+	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadows();
 		R_ResetViewRendering3D();
@@ -8650,7 +8650,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	if (r_shadows.integer > 0 && !shadowmapping && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
+	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_DrawModelShadows();
 		R_ResetViewRendering3D();
