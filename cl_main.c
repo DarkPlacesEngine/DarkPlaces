@@ -1926,6 +1926,32 @@ static void CL_Fog_f (void)
 }
 
 /*
+======================
+CL_FogHeightTexture_f
+======================
+*/
+static void CL_Fog_HeightTexture_f (void)
+{
+	if (Cmd_Argc () < 11)
+	{
+		Con_Printf("\"fog_heighttexture\" is \"%f %f %f %f %f %f %f %f %f %s\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end, r_refdef.fog_height, r_refdef.fog_fadedepth, r_refdef.fog_height_texturename);
+		return;
+	}
+	FOG_clear(); // so missing values get good defaults
+	r_refdef.fog_density = atof(Cmd_Argv(1));
+	r_refdef.fog_red = atof(Cmd_Argv(2));
+	r_refdef.fog_green = atof(Cmd_Argv(3));
+	r_refdef.fog_blue = atof(Cmd_Argv(4));
+	r_refdef.fog_alpha = atof(Cmd_Argv(5));
+	r_refdef.fog_start = atof(Cmd_Argv(6));
+	r_refdef.fog_end = atof(Cmd_Argv(7));
+	r_refdef.fog_height = atof(Cmd_Argv(8));
+	r_refdef.fog_fadedepth = atof(Cmd_Argv(9));
+	strlcpy(r_refdef.fog_height_texturename, Cmd_Argv(10), sizeof(r_refdef.fog_height_texturename));
+}
+
+
+/*
 ====================
 CL_TimeRefresh_f
 
@@ -2355,7 +2381,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 
-	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist maxdist]])");
+	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+	Cmd_AddCommand ("fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");

@@ -211,7 +211,7 @@ extern rtexture_t *r_texture_notexture;
 extern rtexture_t *r_texture_whitecube;
 extern rtexture_t *r_texture_normalizationcube;
 extern rtexture_t *r_texture_fogattenuation;
-//extern rtexture_t *r_texture_fogintensity;
+extern rtexture_t *r_texture_fogheighttexture;
 
 extern unsigned int r_queries[MAX_OCCLUSION_QUERIES];
 extern unsigned int r_numqueries;
@@ -463,7 +463,8 @@ typedef enum gl20_texunit_e
 	GL20TU_SCREENSPECULAR = 12,
 	// fake reflections
 	GL20TU_REFLECTMASK = 5,
-	GL20TU_REFLECTCUBE = 6
+	GL20TU_REFLECTCUBE = 6,
+	GL20TU_FOGHEIGHTTEXTURE = 14
 }
 gl20_texunit;
 
