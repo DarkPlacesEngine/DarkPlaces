@@ -373,7 +373,7 @@ skinframe_t *r_editlights_sprselection;
 void R_Shadow_SetShadowMode(void)
 {
 	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4);
-	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer && !vid.cgcontext;
+	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
 	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
 	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
@@ -4075,7 +4075,7 @@ void R_Shadow_PrepareLights(void)
 
 	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4) ||
 		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
-		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer && !vid.cgcontext) || 
+		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
 		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
