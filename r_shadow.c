@@ -445,7 +445,7 @@ void R_Shadow_SetShadowMode(void)
 			// Cg has very little choice in depth texture sampling
 			if (vid.cgcontext)
 			{
-				r_shadow_shadowmapsampler = true;
+				r_shadow_shadowmapsampler = false;
 				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			}
 		}
