@@ -2303,7 +2303,7 @@ const char *builtincgshaderstring =
 "	float3 adir = abs(dir);\n"
 "	float2 aparams = ShadowMap_Parameters.xy / max(max(adir.x, adir.y), adir.z);\n"
 "	float4 proj = texCUBE(Texture_CubeProjection, dir);\n"
-"	return float3(lerp(dir.xy, proj.xy, dir.zz) * aparams.x + proj.zw * ShadowMap_Parameters.z, aparams.y + ShadowMap_Parameters.w);\n"
+"	return float3(lerp(dir.xy, dir.zz, proj.xy) * aparams.x + proj.zw * ShadowMap_Parameters.z, aparams.y + ShadowMap_Parameters.w);\n"
 "}\n"
 "#  else\n"
 "float3 GetShadowMapTC2D(float3 dir, float4 ShadowMap_Parameters)\n"
