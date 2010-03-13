@@ -74,7 +74,7 @@ typedef struct iqmanim_s
 {
 	unsigned int name;
 	unsigned int first_frame, num_frames;
-	unsigned int framerate;
+	float framerate;
 	unsigned int flags;
 }
 iqmanim_t;

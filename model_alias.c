@@ -3280,7 +3280,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		anim[i].name = LittleLong(anim[i].name);
 		anim[i].first_frame = LittleLong(anim[i].first_frame);
 		anim[i].num_frames = LittleLong(anim[i].num_frames);
-		anim[i].framerate = LittleLong(anim[i].framerate);
+		anim[i].framerate = LittleFloat(anim[i].framerate);
 		anim[i].flags = LittleLong(anim[i].flags);
 		for (j = anim[i].first_frame;j < (int)(anim[i].first_frame + anim[i].num_frames);j++)
 		{
