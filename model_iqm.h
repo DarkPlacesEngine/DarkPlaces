@@ -48,6 +48,9 @@ iqmmesh_t;
 #define IQM_FLOAT   7
 #define IQM_DOUBLE  8
 
+// animflags
+#define IQM_LOOP 1
+
 typedef struct iqmtriangle_s
 {
 	unsigned int vertex[3];
