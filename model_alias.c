@@ -3010,7 +3010,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->animscenes[i].firstframe = i;
 			loadmodel->animscenes[i].framecount = 1;
 			loadmodel->animscenes[i].loop = true;
-			loadmodel->animscenes[i].framerate = 10;
+			loadmodel->animscenes[i].framerate = anims[index].fps;
 		}
 	}
 
@@ -3287,8 +3287,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			dpsnprintf(loadmodel->animscenes[j].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", &text[anim[i].name], j - anim[i].first_frame);
 			loadmodel->animscenes[j].firstframe = j;
 			loadmodel->animscenes[j].framecount = 1;
-			loadmodel->animscenes[j].loop = true;
-			loadmodel->animscenes[j].framerate = 10;
+			loadmodel->animscenes[i].loop = ((anim[i].flags & IQM_LOOP) != 0);
+			loadmodel->animscenes[j].framerate = anim[i].framerate;
 		}
 	}
 	

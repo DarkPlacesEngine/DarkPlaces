@@ -2948,8 +2948,10 @@ static void Mod_Decompile_f(void)
 	char animname2[MAX_QPATH];
 	char zymtextbuffer[16384];
 	char dpmtextbuffer[16384];
+	char framegroupstextbuffer[16384];
 	int zymtextsize = 0;
 	int dpmtextsize = 0;
+	int framegroupstextsize = 0;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -3037,19 +3039,26 @@ static void Mod_Decompile_f(void)
 			Mod_Decompile_SMD(mod, outname, first, count, false);
 			if (zymtextsize < (int)sizeof(zymtextbuffer) - 100)
 			{
-				l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "scene %s.smd fps %g\n", animname, mod->animscenes[i].framerate);
+				l = dpsnprintf(zymtextbuffer + zymtextsize, sizeof(zymtextbuffer) - zymtextsize, "scene %s.smd fps %g %s\n", animname, mod->animscenes[i].framerate, mod->animscenes[i].loop ? "" : " noloop");
 				if (l > 0) zymtextsize += l;
 			}
 			if (dpmtextsize < (int)sizeof(dpmtextbuffer) - 100)
 			{
-				l = dpsnprintf(dpmtextbuffer + dpmtextsize, sizeof(dpmtextbuffer) - dpmtextsize, "scene %s.smd\n", animname);
+				l = dpsnprintf(dpmtextbuffer + dpmtextsize, sizeof(dpmtextbuffer) - dpmtextsize, "scene %s.smd fps %g %s\n", animname, mod->animscenes[i].framerate, mod->animscenes[i].loop ? "" : " noloop");
 				if (l > 0) dpmtextsize += l;
+			}
+			if (framegroupstextsize < (int)sizeof(framegroupstextbuffer) - 100)
+			{
+				l = dpsnprintf(framegroupstextbuffer + framegroupstextsize, sizeof(framegroupstextbuffer) - framegroupstextsize, "%d %d %f %d // %s\n", first, count, mod->animscenes[i].framerate, mod->animscenes[i].loop, animname);
+				if (l > 0) framegroupstextsize += l;
 			}
 		}
 		if (zymtextsize)
 			FS_WriteFile(va("%s_decompiled/out_zym.txt", basename), zymtextbuffer, (fs_offset_t)zymtextsize);
 		if (dpmtextsize)
 			FS_WriteFile(va("%s_decompiled/out_dpm.txt", basename), dpmtextbuffer, (fs_offset_t)dpmtextsize);
+		if (framegroupstextsize)
+			FS_WriteFile(va("%s_decompiled.framegroups", basename), framegroupstextbuffer, (fs_offset_t)framegroupstextsize);
 	}
 }
 
