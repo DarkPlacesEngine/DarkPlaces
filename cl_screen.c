@@ -26,6 +26,7 @@ cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game i
 cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
 cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
 cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
+cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
@@ -851,6 +852,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_loadingscreen_background);
+	Cvar_RegisterVariable (&scr_loadingscreen_count);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
@@ -1729,6 +1731,7 @@ static float loadingscreenheight = 0;
 rtexture_t *loadingscreentexture = NULL;
 static float loadingscreentexture_vertex3f[12];
 static float loadingscreentexture_texcoord2f[8];
+static int loadingscreenpic_number = 0;
 
 static void SCR_ClearLoadingScreenTexture(void)
 {
@@ -1928,7 +1931,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic ("gfx/loading");
+	loadingscreenpic = Draw_CachePic (loadingscreenpic_number ? va("gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading");
 	x = (vid_conwidth.integer - loadingscreenpic->width)/2;
 	y = (vid_conheight.integer - loadingscreenpic->height)/2;
 	loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
@@ -1990,6 +1993,9 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	
 	if(loadingscreentime == realtime)
 		clear |= loadingscreencleared;
+
+	if(loadingscreentime != realtime)
+		loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
 
 	if(clear)
 	        SCR_ClearLoadingScreenTexture();
