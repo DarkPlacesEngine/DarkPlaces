@@ -5573,7 +5573,7 @@ void VM_uri_get (void)
 	handle->prognr = PRVM_GetProgNr();
 	handle->starttime = prog->starttime;
 	handle->id = id;
-	ret = Curl_Begin_ToMemory(url, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+	ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	if(ret)
 	{
 		PRVM_G_INT(OFS_RETURN) = 1;
