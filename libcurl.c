@@ -3,9 +3,10 @@
 #include "libcurl.h"
 
 static cvar_t cl_curl_maxdownloads = {CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","100", "maximum download speed (KiB/s)"};
+static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
 static cvar_t sv_curl_defaulturl = {CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
 static cvar_t sv_curl_serverpackages = {CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
+static cvar_t sv_curl_maxspeed = {CVAR_SAVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
 static cvar_t cl_curl_enabled = {CVAR_SAVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
 
 /*
@@ -185,6 +186,7 @@ typedef struct downloadinfo_s
 	unsigned long bytes_received;
 	struct downloadinfo_s *next, *prev;
 	qboolean forthismap;
+	double maxspeed;
 
 	unsigned char *buffer;
 	size_t buffersize;
@@ -443,7 +445,7 @@ CURL_DOWNLOAD_FAILED or CURL_DOWNLOAD_ABORTED) and in the second case the error
 code from libcurl, or 0, if another error has occurred.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error)
 {
 	qboolean ok = false;
@@ -508,7 +510,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			{
 				// this was a resume?
 				// then try to redownload it without reporting the error
-				Curl_Begin(di->url, di->filename, di->ispak, di->forthismap, NULL, 0, NULL, NULL);
+				Curl_Begin(di->url, di->maxspeed, di->filename, di->ispak, di->forthismap, NULL, 0, NULL, NULL);
 				di->forthismap = false; // don't count the error
 			}
 		}
@@ -683,7 +685,7 @@ Starts a download of a given URL to the file name portion of this URL (or name
 if given) in the "dlcache/" folder.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	if(!curl_dll)
 	{
@@ -841,6 +843,7 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 		di->curle = NULL;
 		di->started = false;
 		di->ispak = (ispak && !buf);
+		di->maxspeed = maxspeed;
 		di->bytes_received = 0;
 		di->next = downloads;
 		di->prev = NULL;
@@ -865,13 +868,13 @@ static qboolean Curl_Begin(const char *URL, const char *name, qboolean ispak, qb
 	}
 }
 
-qboolean Curl_Begin_ToFile(const char *URL, const char *name, qboolean ispak, qboolean forthismap)
+qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap)
 {
-	return Curl_Begin(URL, name, ispak, forthismap, NULL, 0, NULL, NULL);
+	return Curl_Begin(URL, maxspeed, name, ispak, forthismap, NULL, 0, NULL, NULL);
 }
-qboolean Curl_Begin_ToMemory(const char *URL, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
-	return Curl_Begin(URL, NULL, false, false, buf, bufsize, callback, cbdata);
+	return Curl_Begin(URL, maxspeed, NULL, false, false, buf, bufsize, callback, cbdata);
 }
 
 /*
@@ -884,6 +887,9 @@ blocking.
 */
 void Curl_Run(void)
 {
+	double maxspeed;
+	downloadinfo *di;
+
 	noclear = FALSE;
 
 	if(!cl_curl_enabled.integer)
@@ -917,7 +923,6 @@ void Curl_Run(void)
 				break;
 			if(msg->msg == CURLMSG_DONE)
 			{
-				downloadinfo *di;
 				CurlStatus failed = CURL_DOWNLOAD_SUCCESS;
 				CURLcode result;
 				qcurl_easy_getinfo(msg->easy_handle, CURLINFO_PRIVATE, &di);
@@ -950,7 +955,16 @@ void Curl_Run(void)
 	// when will we curl the next time?
 	// we will wait a bit to ensure our download rate is kept.
 	// we now know that realtime >= curltime... so set up a new curltime
-	if(cl_curl_maxspeed.value > 0)
+
+	// use the slowest allowing download to derive the maxspeed... this CAN
+	// be done better, but maybe later
+	maxspeed = cl_curl_maxspeed.value;
+	for(di = downloads; di; di = di->next)
+		if(di->maxspeed > 0)
+			if(di->maxspeed < maxspeed || maxspeed <= 0)
+				maxspeed = di->maxspeed;
+
+	if(maxspeed > 0)
 	{
 		unsigned long bytes = bytes_received; // maybe smoothen a bit?
 		curltime = realtime + bytes / (cl_curl_maxspeed.value * 1024.0);
@@ -1102,6 +1116,7 @@ curl --finish_autodownload
 */
 void Curl_Curl_f(void)
 {
+	double maxspeed = 0;
 	int i;
 	int end;
 	qboolean pak = false;
@@ -1160,7 +1175,7 @@ void Curl_Curl_f(void)
 		{
 			pak = true;
 		}
-		else if(!strcmp(a, "--for"))
+		else if(!strcmp(a, "--for")) // must be last option
 		{
 			for(i = i + 1; i != end - 1; ++i)
 			{
@@ -1211,15 +1226,19 @@ void Curl_Curl_f(void)
 			}
 			return;
 		}
+		else if(!strncmp(a, "--maxspeed=", 11))
+		{
+			maxspeed = atof(a + 11);
+		}
 		else if(*a == '-')
 		{
-			Con_Printf("invalid option %s\n", a);
-			return;
+			Con_Printf("curl: invalid option %s\n", a);
+			// but we ignore the option
 		}
 	}
 
 needthefile:
-	Curl_Begin_ToFile(url, name, pak, forthismap);
+	Curl_Begin_ToFile(url, maxspeed, name, pak, forthismap);
 }
 
 /*
@@ -1252,6 +1271,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&cl_curl_maxspeed);
 	Cvar_RegisterVariable (&sv_curl_defaulturl);
 	Cvar_RegisterVariable (&sv_curl_serverpackages);
+	Cvar_RegisterVariable (&sv_curl_maxspeed);
 	Cmd_AddCommand ("curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand ("curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
@@ -1507,6 +1527,8 @@ void Curl_SendRequirements(void)
 
 			strlcat(sendbuffer, "curl --pak --forthismap --as ", sizeof(sendbuffer));
 			strlcat(sendbuffer, thispack, sizeof(sendbuffer));
+			if(sv_curl_maxspeed.value > 0)
+				dpsnprintf(sendbuffer + strlen(sendbuffer), sizeof(sendbuffer) - strlen(sendbuffer), " --maxspeed=%.1f", sv_curl_maxspeed.value);
 			strlcat(sendbuffer, " --for ", sizeof(sendbuffer));
 			strlcat(sendbuffer, req->filename, sizeof(sendbuffer));
 			strlcat(sendbuffer, " ", sizeof(sendbuffer));
