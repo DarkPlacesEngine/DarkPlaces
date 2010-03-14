@@ -2751,7 +2751,7 @@ void Con_CompleteCommandLine (void)
 	a = Cmd_CompleteAliasCountPossible(s);
 	if (a)
 	{
-		Con_Printf("\n%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
+		Con_Printf("\n%i possible alias%s\n", a, (a > 1) ? "es: " : ":");
 		Cmd_CompleteAliasPrint(s);
 	}
 	n = Nicks_CompleteCountPossible(key_line, key_linepos, s, true);
