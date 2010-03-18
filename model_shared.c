@@ -283,7 +283,7 @@ void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, fl
 {
 	dp_model_t *mod = (dp_model_t *) pass;
 	animscene_t *anim = &mod->animscenes[i];
-	dpsnprintf(anim->name, sizeof(anim[i].name), "groupified_%d", i);
+	dpsnprintf(anim->name, sizeof(anim[i].name), "groupified_%d_anim", i);
 	anim->firstframe = bound(0, start, mod->num_poses - 1);
 	anim->framecount = bound(1, len, mod->num_poses - anim->firstframe);
 	anim->framerate = max(1, fps);
@@ -3013,16 +3013,20 @@ static void Mod_Decompile_f(void)
 				// individual frame
 				// check for additional frames with same name
 				for (l = 0, k = strlen(animname);animname[l];l++)
-					if ((animname[l] < '0' || animname[l] > '9') && animname[l] != '_')
+					if(animname[l] < '0' || animname[l] > '9')
 						k = l + 1;
+				if(k > 0 && animname[k-1] == '_')
+					--k;
 				animname[k] = 0;
 				count = mod->num_poses - first;
 				for (j = i + 1;j < mod->numframes;j++)
 				{
 					strlcpy(animname2, mod->animscenes[j].name, sizeof(animname2));
 					for (l = 0, k = strlen(animname2);animname2[l];l++)
-						if ((animname2[l] < '0' || animname2[l] > '9') && animname2[l] != '_')
+						if(animname2[l] < '0' || animname2[l] > '9')
 							k = l + 1;
+					if(k > 0 && animname[k-1] == '_')
+						--k;
 					animname2[k] = 0;
 					if (strcmp(animname2, animname) || mod->animscenes[j].framecount > 1)
 					{
