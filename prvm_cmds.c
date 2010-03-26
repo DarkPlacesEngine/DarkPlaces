@@ -5723,6 +5723,9 @@ void VM_sprintf(void)
 	char formatbuf[16];
 	char *f;
 	qboolean isfloat;
+	static int dummyivec[3] = {0, 0, 0};
+	static float dummyvec[3] = {0, 0, 0};
+
 #define PRINTF_ALTERNATE 1
 #define PRINTF_ZEROPAD 2
 #define PRINTF_LEFT 4
@@ -5734,7 +5737,9 @@ void VM_sprintf(void)
 	s = PRVM_G_STRING(OFS_PARM0);
 
 #define GETARG_FLOAT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_FLOAT(OFS_PARM0 + 3 * (a))) : 0)
+#define GETARG_VECTOR(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_VECTOR(OFS_PARM0 + 3 * (a))) : dummyvec)
 #define GETARG_INT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_INT(OFS_PARM0 + 3 * (a))) : 0)
+#define GETARG_INTVECTOR(a) (((a)>=1 && (a)<prog->argc) ? ((int*) PRVM_G_VECTOR(OFS_PARM0 + 3 * (a))) : dummyivec)
 #define GETARG_STRING(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_STRING(OFS_PARM0 + 3 * (a))) : "")
 
 	for(;;)
@@ -5934,6 +5939,16 @@ nolength:
 							if(precision < 0) // not set
 								precision = 6;
 							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
+							break;
+						case 'v': case 'V':
+							f[-2] += 'g' - 'v';
+							if(precision < 0) // not set
+								precision = 6;
+							o += dpsnprintf(o, end - o, va("%s %s %s", /* NESTED SPRINTF IS NESTED */ formatbuf, formatbuf, formatbuf),
+								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[0] : (double) GETARG_INTVECTOR(thisarg)[0]),
+								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[1] : (double) GETARG_INTVECTOR(thisarg)[1]),
+								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[2] : (double) GETARG_INTVECTOR(thisarg)[2])
+							);
 							break;
 						case 'c':
 							if(precision < 0) // not set
