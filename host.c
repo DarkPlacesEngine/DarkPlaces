@@ -61,6 +61,7 @@ double host_starttime = 0;
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
+cvar_t host_maxwait = {0, "host_maxwait","1000", "maximum sleep time requested from the operating system in millisecond. Larger sleeps will be done using multiple host_maxwait length sleeps. Lowering this value will increase CPU load, but may help working around problems with accuracy of sleep times."};
 cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
 cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
@@ -216,6 +217,7 @@ static void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
+	Cvar_RegisterVariable (&host_maxwait);
 	Cvar_RegisterVariable (&cl_minfps);
 	Cvar_RegisterVariable (&cl_minfps_fade);
 	Cvar_RegisterVariable (&cl_minfps_qualitymax);
@@ -715,11 +717,19 @@ void Host_Main(void)
 			wait = cl_timer * -1000000.0;
 		else
 			wait = max(cl_timer, sv_timer) * -1000000.0;
-		wait = bound(0, wait, 100000);
 
 		if (!cls.timedemo && wait >= 1)
 		{
-			double time0 = Sys_DoubleTime();
+			double time0;
+
+			if(host_maxwait.value <= 0)
+				wait = min(wait, 1000000.0);
+			else
+				wait = min(wait, host_maxwait.value * 1000.0);
+			if(wait < 1)
+				wait = 1; // because we cast to int
+
+			time0 = Sys_DoubleTime();
 			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer)
 				NetConn_SleepMicroseconds((int)wait);
 			else
