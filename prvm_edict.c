@@ -548,10 +548,10 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		dpsnprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
-		dpsnprintf (line, sizeof (line), "%f", val->_float);
+		dpsnprintf (line, sizeof (line), "%.9g", val->_float);
 		break;
 	case ev_vector:
-		dpsnprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, sizeof (line), "%.9g %.9g %.9g", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
 		dpsnprintf (line, sizeof (line), "bad type %i", type);
@@ -2389,11 +2389,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 						if((float)((int)(val->_float)) == val->_float)
 							dpsnprintf(buf, sizeof(buf), "%i", (int)(val->_float));
 						else
-							dpsnprintf(buf, sizeof(buf), "%f", val->_float);
+							dpsnprintf(buf, sizeof(buf), "%.9g", val->_float);
 						value = buf;
 						break;
 					case ev_vector:
-						dpsnprintf(buf, sizeof(buf), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]); value = buf;
+						dpsnprintf(buf, sizeof(buf), "%.9g %.9g %.9g", val->vector[0], val->vector[1], val->vector[2]); value = buf;
 						break;
 					case ev_string:
 						value = PRVM_GetString(val->string);
