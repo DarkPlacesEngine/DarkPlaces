@@ -160,16 +160,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 
 	snd_renderbuffer = Snd_CreateRingBuffer(requested, 0, NULL);
 	if (snd_channellayout.integer == SND_CHANNELLAYOUT_AUTO)
-	{
-		int newlayout;
-
-#ifdef __linux__
-		newlayout = SND_CHANNELLAYOUT_ALSA;
-#else
-		newlayout = SND_CHANNELLAYOUT_STANDARD;
-#endif
-		Cvar_SetValueQuick (&snd_channellayout, newlayout);
-	}
+		Cvar_SetValueQuick (&snd_channellayout, SND_CHANNELLAYOUT_STANDARD);
 
 	sdlaudiotime = 0;
 	SDL_PauseAudio( false );
