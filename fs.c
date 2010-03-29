@@ -1622,13 +1622,16 @@ void FS_Init_SelfPack (void)
 				const char **new_argv;
 				int i = 0;
 				int args_left = 256;
+				new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 2));
 				if(com_argc == 0)
 				{
-					com_argv[0] = "dummy";
-					com_argv[1] = NULL;
+					new_argv[0] = "dummy";
 					com_argc = 1;
 				}
-				new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 1));
+				else
+				{
+					memcpy(&new_argv[0], &com_argv[0], sizeof(*com_argv) * com_argc);
+				}
 				p = buf;
 				while(COM_ParseToken_Console(&p))
 				{
@@ -1636,11 +1639,10 @@ void FS_Init_SelfPack (void)
 						break;
 					q = (char *)Mem_Alloc(fs_mempool, strlen(com_token) + 1);
 					strlcpy(q, com_token, strlen(com_token) + 1);
-					new_argv[i+1] = q;
+					new_argv[com_argc + i] = q;
 					++i;
 				}
-				new_argv[0] = com_argv[0];
-				memcpy(&new_argv[i+2], &com_argv[1], sizeof(*com_argv) * com_argc);
+				new_argv[i+com_argc] = NULL;
 				com_argv = new_argv;
 				com_argc = com_argc + i;
 			}
