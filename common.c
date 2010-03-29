@@ -1421,13 +1421,13 @@ int COM_CheckParm (const char *parm)
 
 typedef struct gamemode_info_s
 {
-	const char* prog_name;
-	const char* cmdline;
-	const char* gamename;
-	const char* gamedirname1;
-	const char* gamedirname2;
-	const char* gamescreenshotname;
-	const char* gameuserdirname;
+	const char* prog_name; // not null
+	const char* cmdline; // not null
+	const char* gamename; // not null
+	const char* gamedirname1; // not null
+	const char* gamedirname2; // null
+	const char* gamescreenshotname; // not nul
+	const char* gameuserdirname; // not null
 } gamemode_info_t;
 
 static const gamemode_info_t gamemode_info [GAME_COUNT] =
@@ -1514,6 +1514,7 @@ void COM_InitGameType (void)
 {
 	char name [MAX_OSPATH];
 	unsigned int i;
+	int t;
 
 	FS_StripExtension (com_argv[0], name, sizeof (name));
 	COM_ToLowerString (name, name, sizeof (name));
@@ -1540,6 +1541,17 @@ void COM_InitGameType (void)
 	gamedirname2 = gamemode_info[gamemode].gamedirname2;
 	gamescreenshotname = gamemode_info[gamemode].gamescreenshotname;
 	gameuserdirname = gamemode_info[gamemode].gameuserdirname;
+
+	if((t = COM_CheckParm("-customgamename")) && t + 1 < com_argc)
+		gamename = com_argv[t+1];
+	if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < com_argc)
+		gamedirname1 = com_argv[t+1];
+	if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < com_argc)
+		gamedirname2 = *com_argv[t+1] ? com_argv[t+1] : NULL;
+	if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < com_argc)
+		gamescreenshotname = com_argv[t+1];
+	if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < com_argc)
+		gameuserdirname = com_argv[t+1];
 }
 
 
