@@ -233,6 +233,7 @@ void VM_M_getserverliststat( void )
 		return;
 	case 1:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_cachecount;
+		return;
 	case 2:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
 		return;
