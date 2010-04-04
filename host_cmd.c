@@ -175,7 +175,7 @@ void Host_Status_f (void)
 		if (in == 0) // default layout
 		{
 			print ("#%-3u %-16.16s  %3i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
-			print ("  %s\n", ip);
+			print ("   %s\n", ip);
 		}
 		else if (in == 1) // extended layout
 		{
