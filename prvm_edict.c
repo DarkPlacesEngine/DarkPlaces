@@ -2786,52 +2786,38 @@ unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline)
 }
 
 sizebuf_t vm_tempstringsbuf;
+#define PRVM_KNOWNSTRINGBASE 0x40000000
 
 const char *PRVM_GetString(int num)
 {
-	if (num >= 0)
+	if (num < 0)
 	{
-		if (num < prog->stringssize)
-			return prog->strings + num;
+		// invalid
+		VM_Warning("PRVM_GetString: Invalid string offset (%i < 0)\n", num);
+		return "";
+	}
+	else if (num < prog->stringssize)
+	{
+		// constant string from progs.dat
+		return prog->strings + num;
+	}
+	else if (num <= prog->stringssize + vm_tempstringsbuf.maxsize)
+	{
+		// tempstring returned by engine to QC (becomes invalid after returning to engine)
+		num -= prog->stringssize;
+		if (num < vm_tempstringsbuf.cursize)
+			return (char *)vm_tempstringsbuf.data + num;
 		else
-#if 1
-		if (num <= prog->stringssize + vm_tempstringsbuf.maxsize)
 		{
-			num -= prog->stringssize;
-			if (num < vm_tempstringsbuf.cursize)
-				return (char *)vm_tempstringsbuf.data + num;
-			else
-			{
-				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)\n", num, vm_tempstringsbuf.cursize);
-				return "";
-			}
-		}
-		else
-#endif
-		{
-			VM_Warning("PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)\n", num, prog->stringssize);
+			VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)\n", num, vm_tempstringsbuf.cursize);
 			return "";
 		}
 	}
-	else
+	else if (num & PRVM_KNOWNSTRINGBASE)
 	{
-		num = -1 - num;
-#if 0
-		if (num >= (1<<30))
-		{
-			// special range reserved for tempstrings
-			num -= (1<<30);
-			if (num < vm_tempstringsbuf.cursize)
-				return (char *)vm_tempstringsbuf.data + num;
-			else
-			{
-				VM_Warning("PRVM_GetString: Invalid temp-string offset (%i >= %i vm_tempstringsbuf.cursize)\n", num, vm_tempstringsbuf.cursize);
-				return "";
-			}
-		}
-		else
-#endif
-		if (num < prog->numknownstrings)
+		// allocated string
+		num = num - PRVM_KNOWNSTRINGBASE;
+		if (num >= 0 && num < prog->numknownstrings)
 		{
 			if (!prog->knownstrings[num])
 			{
@@ -2846,12 +2832,18 @@ const char *PRVM_GetString(int num)
 			return "";
 		}
 	}
+	else
+	{
+		// invalid string offset
+		VM_Warning("PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)\n", num, prog->stringssize);
+		return "";
+	}
 }
 
 const char *PRVM_ChangeEngineString(int i, const char *s)
 {
 	const char *old;
-	i = -1 - i;
+	i = i - PRVM_KNOWNSTRINGBASE;
 	if(i < 0 || i >= prog->numknownstrings)
 		PRVM_ERROR("PRVM_ChangeEngineString: s is not an engine string");
 	old = prog->knownstrings[i];
@@ -2871,13 +2863,11 @@ int PRVM_SetEngineString(const char *s)
 	if (s >= (char *)vm_tempstringsbuf.data && s < (char *)vm_tempstringsbuf.data + vm_tempstringsbuf.maxsize)
 #if 1
 		return prog->stringssize + (s - (char *)vm_tempstringsbuf.data);
-#else
-		return -1 - ((1<<30) + (s - (char *)vm_tempstringsbuf.data));
 #endif
 	// see if it's a known string address
 	for (i = 0;i < prog->numknownstrings;i++)
 		if (prog->knownstrings[i] == s)
-			return -1 - i;
+			return PRVM_KNOWNSTRINGBASE + i;
 	// new unknown engine string
 	if (developer_insane.integer)
 		Con_DPrintf("new engine string %p = \"%s\"\n", s, s);
@@ -2911,7 +2901,7 @@ int PRVM_SetEngineString(const char *s)
 	prog->knownstrings_freeable[i] = false;
 	if(prog->leaktest_active)
 		prog->knownstrings_origin[i] = NULL;
-	return -1 - i;
+	return PRVM_KNOWNSTRINGBASE + i;
 }
 
 // temp string handling
@@ -2983,7 +2973,12 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 				if(prog->leaktest_active)
 					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
 			}
-			// TODO why not Mem_Free the old ones?
+			if (oldstrings)
+				Mem_Free(oldstrings);
+			if (oldstrings_freeable)
+				Mem_Free((unsigned char *)oldstrings_freeable);
+			if (oldstrings_origin)
+				Mem_Free(oldstrings_origin);
 		}
 		prog->numknownstrings++;
 	}
@@ -2994,7 +2989,7 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 		prog->knownstrings_origin[i] = PRVM_AllocationOrigin();
 	if (pointer)
 		*pointer = (char *)(prog->knownstrings[i]);
-	return -1 - i;
+	return PRVM_KNOWNSTRINGBASE + i;
 }
 
 void PRVM_FreeString(int num)
@@ -3003,9 +2998,9 @@ void PRVM_FreeString(int num)
 		PRVM_ERROR("PRVM_FreeString: attempt to free a NULL string");
 	else if (num >= 0 && num < prog->stringssize)
 		PRVM_ERROR("PRVM_FreeString: attempt to free a constant string");
-	else if (num < 0 && num >= -prog->numknownstrings)
+	else if (num >= PRVM_KNOWNSTRINGBASE && num < PRVM_KNOWNSTRINGBASE + prog->numknownstrings)
 	{
-		num = -1 - num;
+		num = num - PRVM_KNOWNSTRINGBASE;
 		if (!prog->knownstrings[num])
 			PRVM_ERROR("PRVM_FreeString: attempt to free a non-existent or already freed string");
 		if (!prog->knownstrings_freeable[num])
