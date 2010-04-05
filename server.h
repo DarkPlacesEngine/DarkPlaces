@@ -424,6 +424,7 @@ extern cvar_t sv_gameplayfix_droptofloorstartsolid_nudgetocorrect;
 extern cvar_t sv_gameplayfix_easierwaterjump;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_gravityunaffectedbyticrate;
+extern cvar_t sv_gameplayfix_nogravityonground;
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
 extern cvar_t sv_gameplayfix_multiplethinksperframe;
 extern cvar_t sv_gameplayfix_noairborncorpse;
