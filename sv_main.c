@@ -100,6 +100,7 @@ cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems = {0, "sv_gameplayfix_
 cvar_t sv_gameplayfix_nudgeoutofsolid = {0, "sv_gameplayfix_nudgeoutofsolid", "1", "attempts to fix physics errors (where an object ended up in solid for some reason)"};
 cvar_t sv_gameplayfix_nudgeoutofsolid_bias = {0, "sv_gameplayfix_nudgeoutofsolid_bias", "0", "over-correction on nudgeoutofsolid logic, to prevent constant contact"};
 cvar_t sv_gameplayfix_q2airaccelerate = {0, "sv_gameplayfix_q2airaccelerate", "0", "Quake2-style air acceleration"};
+cvar_t sv_gameplayfix_nogravityonground = {0, "sv_gameplayfix_nogravityonground", "0", "Quake2-style air acceleration"};
 cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1", "fixes a bug in Quake that made setmodel always set the entity box to ('-16 -16 -16', '16 16 16') rather than properly checking the model box, breaks some poorly coded mods"};
 cvar_t sv_gameplayfix_slidemoveprojectiles = {0, "sv_gameplayfix_slidemoveprojectiles", "1", "allows MOVETYPE_FLY/FLYMISSILE/TOSS/BOUNCE/BOUNCEMISSILE entities to finish their move in a frame even if they hit something, fixes 'gravity accumulation' bug for grenades on steep slopes"};
 cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "0", "attempts to step down stairs, not just up them (prevents the familiar thud..thud..thud.. when running down stairs and slopes)"};
@@ -412,6 +413,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_nudgeoutofsolid);
 	Cvar_RegisterVariable (&sv_gameplayfix_nudgeoutofsolid_bias);
 	Cvar_RegisterVariable (&sv_gameplayfix_q2airaccelerate);
+	Cvar_RegisterVariable (&sv_gameplayfix_nogravityonground);
 	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
 	Cvar_RegisterVariable (&sv_gameplayfix_slidemoveprojectiles);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepdown);
@@ -517,7 +519,6 @@ void SV_Init (void)
 	}
 	if (gamemode == GAME_NEXUIZ)
 	{
-		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
 		Cvar_SetValueQuick (&sv_gameplayfix_q2airaccelerate, 1);
 	}
 
@@ -1932,6 +1933,8 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	// note: these are not sent in protocols with lower MAX_CL_STATS limits
 	stats[STAT_MOVEFLAGS] = MOVEFLAG_VALID
 		| (sv_gameplayfix_q2airaccelerate.integer ? MOVEFLAG_Q2AIRACCELERATE : 0)
+		| (sv_gameplayfix_nogravityonground.integer ? MOVEFLAG_NOGRAVITYONGROUND : 0)
+		| (sv_gameplayfix_gravityunaffectedbyticrate.integer ? MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE : 0)
 	;
 	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
 	statsf[STAT_MOVEVARS_TIMESCALE] = slowmo.value;
