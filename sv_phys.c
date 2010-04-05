@@ -1230,6 +1230,11 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	if (time <= 0)
 		return 0;
 	gravity = 0;
+
+	if(sv_gameplayfix_nogravityonground.integer)
+		if((int)ent->fields.server->flags & FL_ONGROUND)
+			applygravity = false;
+
 	if (applygravity)
 	{
 		if (sv_gameplayfix_gravityunaffectedbyticrate.integer)

@@ -1260,6 +1260,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	vec_t addspeed;
 	vec_t accelspeed;
 	vec_t f;
+	vec_t gravity;
 	vec3_t forward;
 	vec3_t right;
 	vec3_t up;
@@ -1332,11 +1333,20 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			accelspeed = min(cl.movevars_accelerate * s->cmd.frametime * wishspeed, addspeed);
 			VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 		}
-		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		if(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND)
+			gravity = 0;
+		else
+			gravity = cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+			s->velocity[2] -= gravity * 0.5f;
+		else
+			s->velocity[2] -= gravity;
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 			s->velocity[2] = 0;
 		if (VectorLength2(s->velocity))
 			CL_ClientMovement_Move(s);
+		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+			s->velocity[2] -= gravity * 0.5f;
 	}
 	else
 	{
@@ -1395,8 +1405,14 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_aircontrol)
 				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
 		}
-		s->velocity[2] -= cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		gravity = cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+			s->velocity[2] -= gravity * 0.5f;
+		else
+			s->velocity[2] -= gravity;
 		CL_ClientMovement_Move(s);
+		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+			s->velocity[2] -= gravity * 0.5f;
 	}
 }
 
