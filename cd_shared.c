@@ -508,7 +508,7 @@ static void CD_f (void)
 	{
 		if (music_playlist_index.integer >= 0)
 			return;
-		CDAudio_Play_byName(Cmd_Argv (2), false, true, 0);
+		CDAudio_Play_byName(Cmd_Argv (2), false, true, (Cmd_Argc() > 3) ? atof( Cmd_Argv(3) ) : 0);
 		return;
 	}
 
@@ -516,7 +516,7 @@ static void CD_f (void)
 	{
 		if (music_playlist_index.integer >= 0)
 			return;
-		CDAudio_Play_byName(Cmd_Argv (2), true, true, 0);
+		CDAudio_Play_byName(Cmd_Argv (2), true, true, (Cmd_Argc() > 3) ? atof( Cmd_Argv(3) ) : 0);
 		return;
 	}
 
@@ -579,8 +579,8 @@ static void CD_f (void)
 	Con_Printf("cd remap <remap1> [remap2] [remap3] [...] - chooses (possibly emulated) CD tracks to play when a map asks for a particular track, this has many uses\n");
 	Con_Printf("cd close - closes CD tray\n");
 	Con_Printf("cd eject - stops playing music and opens CD tray to allow you to change disc\n");
-	Con_Printf("cd play <tracknumber> - plays selected track in remapping table\n");
-	Con_Printf("cd loop <tracknumber> - plays and repeats selected track in remapping table\n");
+	Con_Printf("cd play <tracknumber> <startposition> - plays selected track in remapping table\n");
+	Con_Printf("cd loop <tracknumber> <startposition> - plays and repeats selected track in remapping table\n");
 	Con_Printf("cd stop - stops playing current CD track\n");
 	Con_Printf("cd pause - pauses CD playback\n");
 	Con_Printf("cd resume - unpauses CD playback\n");
