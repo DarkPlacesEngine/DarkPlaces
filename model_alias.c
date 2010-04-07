@@ -3209,7 +3209,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->numskins < 1)
 		loadmodel->numskins = 1;
 
-	loadmodel->numframes = header->num_frames;
+	loadmodel->numframes = header->num_anims;
 	loadmodel->num_bones = header->num_joints;
 	loadmodel->num_poses = loadmodel->numframes;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header->num_meshes;
@@ -3282,14 +3282,11 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		anim[i].num_frames = LittleLong(anim[i].num_frames);
 		anim[i].framerate = LittleFloat(anim[i].framerate);
 		anim[i].flags = LittleLong(anim[i].flags);
-		for (j = anim[i].first_frame;j < (int)(anim[i].first_frame + anim[i].num_frames);j++)
-		{
-			dpsnprintf(loadmodel->animscenes[j].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", &text[anim[i].name], j - anim[i].first_frame);
-			loadmodel->animscenes[j].firstframe = j;
-			loadmodel->animscenes[j].framecount = 1;
-			loadmodel->animscenes[i].loop = ((anim[i].flags & IQM_LOOP) != 0);
-			loadmodel->animscenes[j].framerate = anim[i].framerate;
-		}
+		strlcpy(loadmodel->animscenes[i].name, &text[anim[i].name], sizeof(loadmodel->animscenes[i].name));
+		loadmodel->animscenes[i].firstframe = anim[i].first_frame;
+		loadmodel->animscenes[i].framecount = anim[i].num_frames;
+		loadmodel->animscenes[i].loop = ((anim[i].flags & IQM_LOOP) != 0);
+		loadmodel->animscenes[i].framerate = anim[i].framerate;
 	}
 	
 	pose = (iqmpose_t *) (pbase + header->ofs_poses);
