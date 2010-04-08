@@ -1309,23 +1309,6 @@ How to deal with a Linux Quake CD on Mac OS X:
 Unknown.  If you can get hold of rpm2cpio and cpio you should be able to follow the Linux method.
 
 
-
-Thanks to:
-Tomaz for adding features, fixing many bugs, and being generally helpful.
-Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
-Mathieu 'Elric' Olivier for much work on the sound engine (especially the Ogg vorbis support)
-MoALTz for some bugfixes and cleanups
-Joseph Caporale for adding 5 mouse button support.
-KGB|romi for his contributions to the Quake community, including his rtlights project and many suggestions, his id1 romi_rtlights.pk3 is included in darkplaces mod releases.
-Zombie for making great levels and general DarkPlaces publicity.
-FrikaC for FrikQCC and FrikBot and general community support.
-Transfusion Project for recreating Blood in the world of Quake.
-de-we for the great icons.
-|Rain| for running my favorite anynet IRC server and his bot feh (which although a bit antisocial never seems to grow tired of being my calculator).
-VorteX for the DP_QC_GETTAGINFO extension.
-Ludwig Nussel for the ~/.games/darkplaces/ user directory support on non-Windows platforms (allowing games to be installed in a non-writable system location as is the standard on UNIX but still save configs to the user's home directory).
-
-
 Shader parameters for DP's own features:
 - dp_reflect <distort> <r> <g> <b> <a>
   Makes surfaces of this shader reflective with r_water. The reflection is
@@ -1357,3 +1340,20 @@ Shader parameters for DP's own features:
   then align it in Radiant so only one of the animation frames can be seen on
   the surface, and specify "tcmod page 4 2 0.1". DP will then display the frames
   in order and the cycle will repeat every 0.8 seconds.
+
+
+
+Thanks to:
+Tomaz for adding features, fixing many bugs, and being generally helpful.
+Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
+Mathieu 'Elric' Olivier for much work on the sound engine (especially the Ogg vorbis support)
+MoALTz for some bugfixes and cleanups
+Joseph Caporale for adding 5 mouse button support.
+KGB|romi for his contributions to the Quake community, including his rtlights project and many suggestions, his id1 romi_rtlights.pk3 is included in darkplaces mod releases.
+Zombie for making great levels and general DarkPlaces publicity.
+FrikaC for FrikQCC and FrikBot and general community support.
+Transfusion Project for recreating Blood in the world of Quake.
+de-we for the great icons.
+|Rain| for running my favorite anynet IRC server and his bot feh (which although a bit antisocial never seems to grow tired of being my calculator).
+VorteX for the DP_QC_GETTAGINFO extension.
+Ludwig Nussel for the ~/.games/darkplaces/ user directory support on non-Windows platforms (allowing games to be installed in a non-writable system location as is the standard on UNIX but still save configs to the user's home directory).
