@@ -1630,7 +1630,7 @@ void FS_Init_SelfPack (void)
 				}
 				else
 				{
-					memcpy(&new_argv[0], &com_argv[0], sizeof(*com_argv) * com_argc);
+					memcpy((char *)(&new_argv[0]), &com_argv[0], sizeof(*com_argv) * com_argc);
 				}
 				p = buf;
 				while(COM_ParseToken_Console(&p))
