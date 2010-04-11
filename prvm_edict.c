@@ -2974,11 +2974,11 @@ int PRVM_AllocString(size_t bufferlength, char **pointer)
 					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
 			}
 			if (oldstrings)
-				Mem_Free(oldstrings);
+				Mem_Free((char **)oldstrings);
 			if (oldstrings_freeable)
 				Mem_Free((unsigned char *)oldstrings_freeable);
 			if (oldstrings_origin)
-				Mem_Free(oldstrings_origin);
+				Mem_Free((char **)oldstrings_origin);
 		}
 		prog->numknownstrings++;
 	}
