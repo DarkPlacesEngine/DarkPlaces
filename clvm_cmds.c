@@ -2725,7 +2725,88 @@ void VM_CL_SpawnParticleDelayed (void)
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 }
 
-//
+//====================
+//CSQC engine entities query
+//====================
+
+// float(float entitynum, float whatfld) getentity;
+// vector(float entitynum, float whatfld) getentityvec;
+// querying engine-drawn entity
+// VorteX: currently it's only tested with whatfld = 1..7
+void VM_CL_GetEntity (void)
+{
+	int entnum, fieldnum;
+	float org[3], v1[3], v2[3];
+	VM_SAFEPARMCOUNT(2, VM_CL_GetEntityVec);
+
+	entnum = PRVM_G_FLOAT(OFS_PARM0);
+	if (entnum < 0 || entnum >= cl.num_entities)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+	fieldnum = PRVM_G_FLOAT(OFS_PARM1);
+	switch(fieldnum)
+	{
+		case 0: // active state
+			PRVM_G_FLOAT(OFS_RETURN) = cl.entities_active[entnum];
+			break;
+		case 1: // origin
+			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, PRVM_G_VECTOR(OFS_RETURN));
+			break; 
+		case 2: // forward
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, PRVM_G_VECTOR(OFS_RETURN), v1, v2, org);	
+			break;
+		case 3: // right
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, v1, PRVM_G_VECTOR(OFS_RETURN), v2, org);	
+			break;
+		case 4: // up
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, v1, v2, PRVM_G_VECTOR(OFS_RETURN), org);	
+			break;
+		case 5: // scale
+			PRVM_G_FLOAT(OFS_RETURN) = Matrix4x4_ScaleFromMatrix(&cl.entities[entnum].render.matrix);
+			break;	
+		case 6: // origin + v_forward, v_right, v_up
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, prog->globals.client->v_forward, prog->globals.client->v_right, prog->globals.client->v_up, PRVM_G_VECTOR(OFS_RETURN));	
+			break;	
+		case 7: // alpha
+			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.alpha;
+			break;	
+		case 8: // colormor
+			VectorCopy(cl.entities[entnum].render.colormod, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		case 9: // pants colormod
+			VectorCopy(cl.entities[entnum].render.colormap_pantscolor, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		case 10: // shirt colormod
+			VectorCopy(cl.entities[entnum].render.colormap_shirtcolor, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		case 11: // skinnum
+			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.skinnum;
+			break;	
+		case 12: // mins
+			VectorCopy(cl.entities[entnum].render.mins, PRVM_G_VECTOR(OFS_RETURN));		
+			break;	
+		case 13: // maxs
+			VectorCopy(cl.entities[entnum].render.maxs, PRVM_G_VECTOR(OFS_RETURN));		
+			break;	
+		case 14: // absmin
+			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
+			VectorAdd(cl.entities[entnum].render.mins, org, PRVM_G_VECTOR(OFS_RETURN));		
+			break;	
+		case 15: // absmax
+			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
+			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));		
+			break;
+		case 16: // light
+			VectorMA(cl.entities[entnum].render.modellight_ambient, 0.5, cl.entities[entnum].render.modellight_diffuse, PRVM_G_VECTOR(OFS_RETURN));
+			break;	
+		default:
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
+			break;
+	}
+}
+
 //====================
 //QC POLYGON functions
 //====================
@@ -4272,7 +4353,7 @@ VM_putentityfieldstring,		// #500 float(float fieldnum, entity ent, string s) pu
 VM_CL_ReadPicture,				// #501 string() ReadPicture = #501;
 NULL,							// #502
 VM_whichpack,					// #503 string(string) whichpack = #503;
-NULL,							// #504
+VM_CL_GetEntity,				// #504 float(float entitynum, float fldnum) getentity = #504; vector(float entitynum, float fldnum) getentityvec = #504;
 NULL,							// #505
 NULL,							// #506
 NULL,							// #507
