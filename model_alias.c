@@ -3211,7 +3211,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->numframes = header->num_anims;
 	loadmodel->num_bones = header->num_joints;
-	loadmodel->num_poses = loadmodel->numframes;
+	loadmodel->num_poses = header->num_frames;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header->num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
