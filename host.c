@@ -809,7 +809,7 @@ void Host_Main(void)
 			sv.frametime = advancetime * slowmo.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
-			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
+			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
 				sv.frametime = 0;
 
 			// setup the VM frame
@@ -900,7 +900,7 @@ void Host_Main(void)
 			if (host_framerate.value)
 				clframetime = host_framerate.value;
 
-			if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
+			if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
 				clframetime = 0;
 
 			if (cls.timedemo)
