@@ -1147,6 +1147,16 @@ static void VM_CL_pointparticles (void)
 	CL_ParticleEffect(i, n, f, f, v, v, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
 }
 
+//#531 void(float pause) setpause
+static void VM_CL_setpause(void) 
+{
+	VM_SAFEPARMCOUNT(1, VM_CL_setpause);
+	if ((int)PRVM_G_FLOAT(OFS_PARM0) != 0)
+		cl.csqc_paused = true;
+	else
+		cl.csqc_paused = false;
+}
+
 //#342 string(float keynum) getkeybind (EXT_CSQC)
 static void VM_CL_getkeybind (void)
 {
@@ -4380,7 +4390,7 @@ VM_CL_SpawnParticle,			// #527 float(vector org, vector vel, [float theme]) part
 VM_CL_SpawnParticleDelayed,		// #528 float(vector org, vector vel, float delay, float collisiondelay, [float theme]) delayedparticle (DP_CSQC_SPAWNPARTICLE)
 VM_loadfromdata,				// #529
 VM_loadfromfile,				// #530
-NULL,							// #531
+VM_CL_setpause,					// #531 float(float ispaused) setpause = #531 (DP_CSQC_SETPAUSE)
 VM_log,							// #532
 NULL,							// #533
 NULL,							// #534

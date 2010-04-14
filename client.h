@@ -943,6 +943,7 @@ typedef struct client_state_s
 	float sensitivityscale;
 	csqc_vidvars_t csqc_vidvars;	//[515]: these parms must be set to true by default
 	qboolean csqc_wantsmousemove;
+	qboolean csqc_paused; // vortex: int because could be flags
 	struct model_s *csqc_model_precache[MAX_MODELS];
 
 	// local amount for smoothing stepups
