@@ -4392,8 +4392,8 @@ VM_loadfromdata,				// #529
 VM_loadfromfile,				// #530
 VM_CL_setpause,					// #531 float(float ispaused) setpause = #531 (DP_CSQC_SETPAUSE)
 VM_log,							// #532
-NULL,							// #533
-NULL,							// #534
+VM_getsoundtime,				// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
+VM_soundlength,					// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
 NULL,							// #535
 NULL,							// #536
 NULL,							// #537
