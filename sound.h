@@ -67,6 +67,7 @@ void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
 
 sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serversound);
+float S_SoundLength(const char *name);
 void S_ClearUsed (void);
 void S_PurgeUnused (void);
 qboolean S_IsSoundPrecached (const sfx_t *sfx);
@@ -85,6 +86,7 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 float S_GetChannelPosition (unsigned int ch_ind);
+float S_GetEntChallelPosition(int entnum, int entchannel);
 
 void S_BlockSound (void);
 void S_UnblockSound (void);
