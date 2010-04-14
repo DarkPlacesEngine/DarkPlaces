@@ -133,6 +133,7 @@ char *vm_sv_extensions =
 "DP_SND_OGGVORBIS "
 "DP_SND_SETPARAMS "
 "DP_SND_STEREOWAV "
+"DP_SND_GETSOUNDTIME "
 "DP_SOLIDCORPSE "
 "DP_SPRITE32 "
 "DP_SV_BOTCLIENT "
@@ -3659,8 +3660,8 @@ VM_loadfromdata,				// #529
 VM_loadfromfile,				// #530
 VM_SV_setpause,					// #531 void(float pause) setpause = #531;
 VM_log,							// #532
-NULL,							// #533
-NULL,							// #534
+VM_getsoundtime,				// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
+VM_soundlength,					// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
 NULL,							// #535
 NULL,							// #536
 NULL,							// #537

@@ -332,6 +332,8 @@ void VM_clientstate(void);
 void VM_getostype(void);
 void VM_getmousepos(void);
 void VM_gettime(void);
+void VM_getsoundtime(void);
+void VM_soundlength(void);
 void VM_loadfromdata(void);
 void VM_parseentitydata(void);
 void VM_loadfromfile(void);

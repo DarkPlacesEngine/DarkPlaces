@@ -2880,6 +2880,50 @@ void VM_gettime(void)
 
 /*
 =========
+VM_getsoundtime
+
+float	getsoundtime(void)
+=========
+*/
+
+void VM_getsoundtime (void)
+{
+	int entnum, entchannel, pnum;
+	VM_SAFEPARMCOUNT(2,VM_getsoundtime);
+
+	pnum = PRVM_GetProgNr();
+	if (pnum == PRVM_MENUPROG)
+	{
+		VM_Warning("VM_getsoundtime: %s: not supported on this progs\n", PRVM_NAME);
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return;
+	}
+	entnum = ((pnum == PRVM_CLIENTPROG) ? MAX_EDICTS : 0) + PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(OFS_PARM0));
+	entchannel = (int)PRVM_G_FLOAT(OFS_PARM1);
+	if (entchannel < 0 || entchannel > 8)
+		VM_Warning("VM_getsoundtime: %s: bad channel %i\n", PRVM_NAME, entchannel);
+	PRVM_G_FLOAT(OFS_RETURN) = (float)S_GetEntChallelPosition(entnum, entchannel);
+}
+
+/*
+=========
+VM_GetSoundLen
+
+string	soundlength (string sample)
+=========
+*/
+void VM_soundlength (void)
+{
+	const char *s;
+
+	VM_SAFEPARMCOUNT(1, VM_soundlength);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_FLOAT(OFS_RETURN) = S_SoundLength(s);
+}
+
+/*
+=========
 VM_loadfromdata
 
 loadfromdata(string data)

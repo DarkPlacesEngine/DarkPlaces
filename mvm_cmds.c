@@ -1314,8 +1314,8 @@ NULL,									// #529
 NULL,									// #530
 NULL,									// #531
 VM_log,									// #532
-NULL,									// #533
-NULL,									// #534
+VM_getsoundtime,						// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
+VM_soundlength,							// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
 NULL,									// #535
 NULL,									// #536
 NULL,									// #537

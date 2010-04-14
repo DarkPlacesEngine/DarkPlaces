@@ -1102,6 +1102,27 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean serversoun
 
 /*
 ==================
+S_SoundLength
+==================
+*/
+
+float S_SoundLength(const char *name)
+{
+	sfx_t *sfx;
+
+	if (!snd_initialized.integer)
+		return -1;
+	if (name == NULL || name[0] == 0)
+		return -1;
+
+	sfx = S_FindName(name);
+	if (sfx == NULL)
+		return -1;
+	return sfx->total_length / (float) S_GetSoundRate();
+}
+
+/*
+==================
 S_IsSoundPrecached
 ==================
 */
@@ -1671,7 +1692,19 @@ float S_GetChannelPosition (unsigned int ch_ind)
 	return (s % sfx->total_length) / (float) S_GetSoundRate();
 }
 
+float S_GetEntChallelPosition(int entnum, int entchannel)
+{
+	channel_t *ch;
+	unsigned int i;
 
+	for (i = 0; i < total_channels; i++)
+	{
+		ch = &channels[i];
+		if (ch->entnum == entnum && ch->entchannel == entchannel)
+			return S_GetChannelPosition(i);
+	}
+	return -1; // no playing sound in this channel
+}
 
 /*
 =================
