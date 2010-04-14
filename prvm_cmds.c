@@ -2900,7 +2900,7 @@ void VM_getsoundtime (void)
 	}
 	entnum = ((pnum == PRVM_CLIENTPROG) ? MAX_EDICTS : 0) + PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(OFS_PARM0));
 	entchannel = (int)PRVM_G_FLOAT(OFS_PARM1);
-	if (entchannel < 0 || entchannel > 8)
+	if (entchannel <= 0 || entchannel > 8)
 		VM_Warning("VM_getsoundtime: %s: bad channel %i\n", PRVM_NAME, entchannel);
 	PRVM_G_FLOAT(OFS_RETURN) = (float)S_GetEntChallelPosition(entnum, entchannel);
 }
