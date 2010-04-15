@@ -3097,8 +3097,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header = (iqmheader_t *)buffer;
 	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
-	if (LittleLong(header->version) != 0)
-		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 0 models are currently supported (name = %s)", loadmodel->name);
+	if (LittleLong(header->version) != 1)
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 1 models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->modeldatatypestring = "IQM";
 
@@ -3263,6 +3263,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 			joint[i].origin[j] = LittleFloat(joint[i].origin[j]);
 			joint[i].rotation[j] = LittleFloat(joint[i].rotation[j]);
+			joint[i].scale[j] = LittleFloat(joint[i].scale[j]);
 		}
 		strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
 		loadmodel->data_bones[i].parent = joint[i].parent;
@@ -3302,12 +3303,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		pose[i].channeloffset[3] = LittleFloat(pose[i].channeloffset[3]);
 		pose[i].channeloffset[4] = LittleFloat(pose[i].channeloffset[4]);
 		pose[i].channeloffset[5] = LittleFloat(pose[i].channeloffset[5]);
+		pose[i].channeloffset[6] = LittleFloat(pose[i].channeloffset[6]);
+		pose[i].channeloffset[7] = LittleFloat(pose[i].channeloffset[7]);
+		pose[i].channeloffset[8] = LittleFloat(pose[i].channeloffset[8]);
 		pose[i].channelscale[0] = LittleFloat(pose[i].channelscale[0]);
 		pose[i].channelscale[1] = LittleFloat(pose[i].channelscale[1]);
 		pose[i].channelscale[2] = LittleFloat(pose[i].channelscale[2]);
 		pose[i].channelscale[3] = LittleFloat(pose[i].channelscale[3]);
 		pose[i].channelscale[4] = LittleFloat(pose[i].channelscale[4]);
 		pose[i].channelscale[5] = LittleFloat(pose[i].channelscale[5]);
+		pose[i].channelscale[6] = LittleFloat(pose[i].channelscale[6]);
+		pose[i].channelscale[7] = LittleFloat(pose[i].channelscale[7]);
+		pose[i].channelscale[8] = LittleFloat(pose[i].channelscale[8]);
 		f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 		f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
 		f = fabs(pose[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
