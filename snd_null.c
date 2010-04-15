@@ -98,6 +98,11 @@ sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serverso
 	return NULL;
 }
 
+float S_SoundLength(const char *name)
+{
+	return -1;
+}
+
 qboolean S_IsSoundPrecached (const sfx_t *sfx)
 {
 	return false;
@@ -148,6 +153,11 @@ int S_GetSoundChannels(void)
 }
 
 float S_GetChannelPosition (unsigned int ch_ind)
+{
+	return -1;
+}
+
+float S_GetEntChallelPosition(int entnum, int entchannel)
 {
 	return -1;
 }
