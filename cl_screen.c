@@ -2029,7 +2029,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	old_key_consoleactive = key_consoleactive;
 	key_dest = key_void;
 	key_consoleactive = false;
-	Sys_SendKeyEvents();
+	Key_EventQueue_Block(); Sys_SendKeyEvents();
 	key_dest = old_key_dest;
 	key_consoleactive = old_key_consoleactive;
 }

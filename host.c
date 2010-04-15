@@ -679,6 +679,7 @@ void Host_Main(void)
 		cl.islocalgame = NetConn_IsLocalGame();
 
 		// get new key events
+		Key_EventQueue_Unblock();
 		SndSys_SendKeyEvents();
 		Sys_SendKeyEvents();
 
