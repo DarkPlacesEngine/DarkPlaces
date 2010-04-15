@@ -86,7 +86,7 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 float S_GetChannelPosition (unsigned int ch_ind);
-float S_GetEntChallelPosition(int entnum, int entchannel);
+float S_GetEntChannelPosition(int entnum, int entchannel);
 
 void S_BlockSound (void);
 void S_UnblockSound (void);
