@@ -1692,7 +1692,7 @@ float S_GetChannelPosition (unsigned int ch_ind)
 	return (s % sfx->total_length) / (float) S_GetSoundRate();
 }
 
-float S_GetEntChallelPosition(int entnum, int entchannel)
+float S_GetEntChannelPosition(int entnum, int entchannel)
 {
 	channel_t *ch;
 	unsigned int i;

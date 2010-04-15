@@ -157,7 +157,7 @@ float S_GetChannelPosition (unsigned int ch_ind)
 	return -1;
 }
 
-float S_GetEntChallelPosition(int entnum, int entchannel)
+float S_GetEntChannelPosition(int entnum, int entchannel)
 {
 	return -1;
 }
