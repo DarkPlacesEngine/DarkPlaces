@@ -2366,7 +2366,7 @@ static void SV_UpdateToReliableMessages (void)
 			}
 
 			if( oldclientcamera != host_client->clientcamera ) {
-				MSG_WriteByte (&sv.reliable_datagram, svc_setview );
+				MSG_WriteByte (&host_client->netconnection->message, svc_setview );
 				MSG_WriteShort (&host_client->netconnection->message, host_client->clientcamera);
 			}
 		}
