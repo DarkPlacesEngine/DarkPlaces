@@ -1,0 +1,25 @@
+BSDmakefile crlf=input
+*.c crlf=input
+COPYING crlf=input
+*.cvsignore crlf=input
+*.dev -crlf
+Doxyfile crlf=input
+*.dsp -crlf
+*.dsw -crlf
+*.gitattributes crlf=input
+*.h crlf=input
+*.icns -crlf -diff
+*.ico -crlf -diff
+*.inc crlf=input
+makefile crlf=input
+*.m crlf=input
+PkgInfo crlf=input
+*.plist crlf=input
+*.png -crlf -diff
+*.rc -crlf
+*.sln -crlf
+*.strings crlf=input
+todo crlf=input
+*.txt crlf=input
+*.vcproj -crlf
+*.xpm crlf=input
