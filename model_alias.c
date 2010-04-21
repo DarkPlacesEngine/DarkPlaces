@@ -3256,7 +3256,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	joint = (iqmjoint_t *) (pbase + header->ofs_joints);
 	for (i = 0;i < loadmodel->num_bones;i++)
 	{
-		matrix4x4_t base, invbase;
+		matrix4x4_t relbase, relinvbase, pinvbase, invbase;
 		joint[i].name = LittleLong(joint[i].name);
 		joint[i].parent = LittleLong(joint[i].parent);
 		for (j = 0;j < 3;j++)
@@ -3269,9 +3269,15 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->data_bones[i].parent = joint[i].parent;
 		if (loadmodel->data_bones[i].parent >= i)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
-		Matrix4x4_FromDoom3Joint(&base, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
-		Matrix4x4_Invert_Simple(&invbase, &base);
-		Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
+		Matrix4x4_FromDoom3Joint(&relbase, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
+		Matrix4x4_Invert_Simple(&relinvbase, &relbase);
+		if (loadmodel->data_bones[i].parent >= 0)
+		{
+			Matrix4x4_FromArray12FloatD3D(&pinvbase, loadmodel->data_baseboneposeinverse + 12*loadmodel->data_bones[i].parent);
+			Matrix4x4_Concat(&invbase, &relinvbase, &pinvbase);
+			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
+		}	
+		else Matrix4x4_ToArray12FloatD3D(&relinvbase, loadmodel->data_baseboneposeinverse + 12*i);
 	}
 
 	// set up the animscenes based on the anims
@@ -3337,6 +3343,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0));
 			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0));
 			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0));
+			// skip scale data for now
+			if(pose[j].channelmask&64) framedata++;
+			if(pose[j].channelmask&128) framedata++;
+			if(pose[j].channelmask&256) framedata++;
 		}
 	}
 
