@@ -151,7 +151,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		if (video->subtitle_end[numsubs-1] <= 0)
 			video->subtitle_end[numsubs-1] = 99999999; // fixme: make it end when video ends?
 		else
-			video->subtitle_end[numsubs-1] = min(video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1], video->subtitle_start[numsubs]);
+			video->subtitle_end[numsubs-1] = video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1];
 	}
 	Z_Free( subtitle_text );
 	video->subtitles = numsubs;
@@ -467,7 +467,7 @@ void CL_DrawVideo(void)
 			// found, draw it
 			si.font = FONT_NOTIFY;
 			si.x = vid_conwidth.integer * 0.1;
-			si.y = vid_conheight.integer - (max(1, cl_video_subtitles_lines.integer) * cl_video_subtitles_textsize.value);
+			si.y = vid_conheight.integer - (max(1, cl_video_subtitles_lines.value) * cl_video_subtitles_textsize.value);
 			si.width = vid_conwidth.integer * 0.8;
 			si.height = max(1, cl_video_subtitles_lines.integer) * cl_video_subtitles_textsize.value;
 			si.alignment = 0.5;
