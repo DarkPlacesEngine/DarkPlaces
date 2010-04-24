@@ -1284,13 +1284,6 @@ static void VM_CL_getplayerkey (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(t);
 }
 
-//#349 float() isdemo (EXT_CSQC)
-static void VM_CL_isdemo (void)
-{
-	VM_SAFEPARMCOUNT(0, VM_CL_isdemo);
-	PRVM_G_FLOAT(OFS_RETURN) = cls.demoplayback;
-}
-
 //#351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
 static void VM_CL_setlistener (void)
 {
@@ -4213,7 +4206,7 @@ VM_CL_setlistener,				// #351 void(vector origin, vector forward, vector right, 
 VM_CL_registercmd,				// #352 void(string cmdname) registercommand (EXT_CSQC)
 VM_wasfreed,					// #353 float(entity ent) wasfreed (EXT_CSQC) (should be availabe on server too)
 VM_CL_serverkey,				// #354 string(string key) serverkey (EXT_CSQC)
-NULL,							// #355
+VM_CL_videoplaying,				// #355
 NULL,							// #356
 NULL,							// #357
 NULL,							// #358

@@ -4,6 +4,13 @@
 #include "cl_video.h"
 #include "dpvsimpledecode.h"
 
+// cvars
+cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are presented)"};
+cvar_t cl_video_subtitles_lines = {CVAR_SAVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
+cvar_t cl_video_subtitles_textsize = {CVAR_SAVE, "cl_video_subtitles_textsize", "16", "textsize for subtitles"};
+cvar_t cl_video_scale = {CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = fullscreen, 0.75 - 3/4 of screen etc."};
+cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
+
 // constants (and semi-constants)
 static int  cl_videormask;
 static int  cl_videobmask;
@@ -87,7 +94,75 @@ static qboolean WakeVideo( clvideo_t * video )
 	return true;
 }
 
-static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner )
+static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
+{
+	char *subtitle_text, *data;
+	float subtime, sublen;
+	int numsubs = 0;
+
+	subtitle_text = (char *)FS_LoadFile(subtitlesfile, cls.permanentmempool, false, NULL);
+	if (!subtitle_text)
+	{
+		Con_DPrintf( "LoadSubtitles: can't open subtitle file '%s'!\n", subtitlesfile );
+		return;
+	}
+
+	// parse subtitle_text
+	// line is: x y "text" where
+	//    x - start time
+	//    y - seconds last (if 0 - last thru next sub, if negative - last to next sub - this amount of seconds)
+
+	data = subtitle_text;
+	for (;;)
+	{
+		if (!COM_ParseToken_QuakeC(&data, false))
+			break;
+		subtime = atof( com_token );
+		if (!COM_ParseToken_QuakeC(&data, false))
+			break;
+		sublen = atof( com_token );
+		if (!COM_ParseToken_QuakeC(&data, false))
+			break;
+		if (!com_token[0])
+			continue;
+		// check limits
+		if (video->subtitles == CLVIDEO_MAX_SUBTITLES)
+		{
+			Con_Printf("WARNING: CLVIDEO_MAX_SUBTITLES = %i reached when reading subtitles from '%s'\n", CLVIDEO_MAX_SUBTITLES, subtitlesfile);
+			break;	
+		}
+		// add a sub
+		video->subtitle_text[numsubs] = (char *) Mem_Alloc(cls.permanentmempool, strlen(com_token) + 1);
+		memcpy(video->subtitle_text[numsubs], com_token, strlen(com_token) + 1);
+		video->subtitle_start[numsubs] = subtime;
+		video->subtitle_end[numsubs] = sublen;
+		if (numsubs > 0) // make true len for prev sub, autofix overlapping subtitles
+		{
+			if (video->subtitle_end[numsubs-1] <= 0)
+				video->subtitle_end[numsubs-1] = max(video->subtitle_start[numsubs-1], video->subtitle_start[numsubs] - video->subtitle_end[numsubs-1]);
+			else
+				video->subtitle_end[numsubs-1] = min(video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1], video->subtitle_start[numsubs]);
+		}
+		numsubs++;
+		// todo: check timing for consistency?
+	}
+	if (numsubs > 0) // make true len for prev sub, autofix overlapping subtitles
+	{
+		if (video->subtitle_end[numsubs-1] <= 0)
+			video->subtitle_end[numsubs-1] = 99999999; // fixme: make it end when video ends?
+		else
+			video->subtitle_end[numsubs-1] = min(video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1], video->subtitle_start[numsubs]);
+	}
+	Z_Free( subtitle_text );
+	video->subtitles = numsubs;
+/*
+	Con_Printf( "video->subtitles: %i\n", video->subtitles );
+	for (numsubs = 0; numsubs < video->subtitles; numsubs++)
+		Con_Printf( "  %03.2f %03.2f : %s\n", video->subtitle_start[numsubs], video->subtitle_end[numsubs], video->subtitle_text[numsubs] );
+*/
+}
+
+static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner, const char *subtitlesfile )
 {
 	strlcpy( video->filename, filename, sizeof(video->filename) );
 	video->ownertag = owner;
@@ -102,16 +177,21 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->framenum = -1;
 	video->framerate = dpvsimpledecode_getframerate( video->stream );
 	video->lasttime = realtime;
+	video->subtitles = 0;
 
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
 	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 	LinkVideoTexture( video );
 
+	// VorteX: load simple subtitle_text file
+	if (subtitlesfile[0])
+		LoadSubtitles( video, subtitlesfile );
+
 	return video;
 }
 
-clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
+clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner, const char *subtitlesfile )
 {
 	clvideo_t *video;
 	// sanity check
@@ -125,7 +205,7 @@ clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner )
 		Con_Printf( "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
 		return NULL;
 	}
-	video = OpenVideo( video, filename, name, owner );
+	video = OpenVideo( video, filename, name, owner, subtitlesfile );
 	// expand the active range to include the new entry
 	if (video) {
 		cl_num_videos = max(cl_num_videos, (int)(video - cl_videos) + 1);
@@ -190,13 +270,20 @@ void CL_RestartVideo( clvideo_t *video )
 
 void CL_CloseVideo( clvideo_t * video )
 {
+	int i;
+
 	if( !video || video->state == CLVIDEO_UNUSED )
 		return;
 
 	if( !video->suspended || video->state != CLVIDEO_FIRSTFRAME )
 		dpvsimpledecode_close( video->stream );
-	if( !video->suspended ) {
+	if( !video->suspended )
 		UnlinkVideoTexture( video );
+	if (video->subtitles)
+	{
+		for (i = 0; i < video->subtitles; i++)
+			Z_Free( video->subtitle_text[i] );
+		video->subtitles = 0;
 	}
 
 	video->state = CLVIDEO_UNUSED;
@@ -271,22 +358,135 @@ void CL_PurgeOwner( int owner )
 			CL_CloseVideo( &cl_videos[ i ] );
 }
 
+typedef struct
+{
+	dp_font_t *font;
+	float x;
+	float y;
+	float width;
+	float height;
+	float alignment; // 0 = left, 0.5 = center, 1 = right
+	float fontsize;
+	float textalpha;
+}
+cl_video_subtitle_info_t;
+
+float CL_DrawVideo_WordWidthFunc(void *passthrough, const char *w, size_t *length, float maxWidth)
+{
+	cl_video_subtitle_info_t *si = (cl_video_subtitle_info_t *) passthrough;
+
+	if(w == NULL)
+		return si->fontsize * si->font->maxwidth;
+	if(maxWidth >= 0)
+		return DrawQ_TextWidth_UntilWidth(w, length, si->fontsize, si->fontsize, false, si->font, -maxWidth); // -maxWidth: we want at least one char
+	else if(maxWidth == -1)
+		return DrawQ_TextWidth(w, *length, si->fontsize, si->fontsize, false, si->font);
+	else
+		return 0;
+}
+
+int CL_DrawVideo_DisplaySubtitleLine(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+{
+	cl_video_subtitle_info_t *si = (cl_video_subtitle_info_t *) passthrough;
+
+	int x = (int) (si->x + (si->width - width) * si->alignment);
+	if (length > 0)
+		DrawQ_String(x, si->y, line, length, si->fontsize, si->fontsize, 1.0, 1.0, 1.0, si->textalpha, 0, NULL, false, si->font);
+	si->y += si->fontsize;
+	return 1;
+}
+
 int cl_videoplaying = false; // old, but still supported
 
 void CL_DrawVideo(void)
 {
-	if (cl_videoplaying)
-		DrawQ_Pic(0, 0, &CL_GetVideoBySlot( 0 )->cpif, vid_conwidth.integer, vid_conheight.integer, 1, 1, 1, 1, 0);
+	clvideo_t *video;
+	float videotime;
+	cl_video_subtitle_info_t si;
+	int i;
+
+	if (!cl_videoplaying)
+		return;
+
+	video = CL_GetVideoBySlot( 0 );
+
+	// fix cvars
+	if (cl_video_scale.value <= 0 || cl_video_scale.value > 1)
+		Cvar_SetValueQuick( &cl_video_scale, 1);
+	if (cl_video_brightness.value <= 0 || cl_video_brightness.value > 10)
+		Cvar_SetValueQuick( &cl_video_brightness, 1);
+
+#if 0
+	// enable video-only polygon stipple (of global stipple is not active)
+	if (qglPolygonStipple && !scr_stipple.integer)
+	{
+		GLubyte stipple[128];
+		int i, s, width, parts;
+	
+		s = 1;
+		parts = (s & 007);
+		width = (s & 070) >> 3;
+		qglEnable(GL_POLYGON_STIPPLE);CHECKGLERROR // 0x0B42
+		for(i = 0; i < 128; ++i)
+		{
+			int line = i/4;
+			stipple[i] = ((line >> width) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
+		}
+		qglPolygonStipple(stipple);CHECKGLERROR
+	}
+#endif
+
+	// draw video
+	if (cl_video_scale.value == 1)
+		DrawQ_Pic(0, 0, &video->cpif, vid_conwidth.integer, vid_conheight.integer, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
+	else
+	{
+		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
+		DrawQ_Pic((int)(vid_conwidth.integer * (1 - cl_video_scale.value) * 0.5), (int)(vid_conheight.integer * (1 - cl_video_scale.value) * 0.5), &video->cpif, (int)(vid_conwidth.integer * cl_video_scale.value), (int)(vid_conheight.integer * cl_video_scale.value), cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
+	}
+
+	
+#if 0
+	// disable video-only stipple
+	if (qglPolygonStipple && !scr_stipple.integer)
+	{
+		qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
+	}
+#endif
+
+	// VorteX: draw subtitle_text
+	if (!video->subtitles || !cl_video_subtitles.integer)
+		return;
+
+	// find current subtitle
+	videotime = realtime - video->starttime;
+	for (i = 0; i < video->subtitles; i++)
+	{
+		if (videotime >= video->subtitle_start[i] && videotime <= video->subtitle_end[i])
+		{
+			// found, draw it
+			si.font = FONT_NOTIFY;
+			si.x = vid_conwidth.integer * 0.1;
+			si.y = vid_conheight.integer - (max(1, cl_video_subtitles_lines.integer) * cl_video_subtitles_textsize.value);
+			si.width = vid_conwidth.integer * 0.8;
+			si.height = max(1, cl_video_subtitles_lines.integer) * cl_video_subtitles_textsize.value;
+			si.alignment = 0.5;
+			si.fontsize = cl_video_subtitles_textsize.value;
+			si.textalpha = min(1, (videotime - video->subtitle_start[i])/0.5) * min(1, ((video->subtitle_end[i] - videotime)/0.3)); // fade in and fade out
+			COM_Wordwrap(video->subtitle_text[i], strlen(video->subtitle_text[i]), 0, si.width, CL_DrawVideo_WordWidthFunc, &si, CL_DrawVideo_DisplaySubtitleLine, &si);
+			break;
+		}
+	}
 }
 
-void CL_VideoStart(char *filename)
+void CL_VideoStart(char *filename, const char *subtitlesfile)
 {
 	Host_StartVideo();
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
 	// already contains video/
-	if( !OpenVideo( cl_videos, filename, va( CLDYNTEXTUREPREFIX "%s", filename ), 0 ) )
+	if( !OpenVideo( cl_videos, filename, va( CLDYNTEXTUREPREFIX "%s", filename ), 0, subtitlesfile ) )
 		return;
 	// expand the active range to include the new entry
 	cl_num_videos = max(cl_num_videos, 1);
@@ -316,18 +516,24 @@ void CL_VideoStop(void)
 
 static void CL_PlayVideo_f(void)
 {
-	char name[MAX_QPATH];
+	char name[MAX_QPATH], subtitlesfile[MAX_QPATH];
 
 	Host_StartVideo();
 
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc() < 2)
 	{
-		Con_Print("usage: playvideo <videoname>\nplays video named video/<videoname>.dpv\n");
+		Con_Print("usage: playvideo <videoname> [custom_subtitles_file]\nplays video named video/<videoname>.dpv\nif custom subtitles file is not presented\nit tries video/<videoname>.sub");
 		return;
 	}
 
 	dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(1));
-	CL_VideoStart(name);
+	if ( Cmd_Argc() > 2)
+		CL_VideoStart(name, Cmd_Argv(2));
+	else
+	{
+		dpsnprintf(subtitlesfile, sizeof(subtitlesfile), "video/%s.dpsubs", Cmd_Argv(1));
+		CL_VideoStart(name, subtitlesfile);
+	}
 }
 
 static void CL_StopVideo_f(void)
@@ -376,6 +582,12 @@ void CL_Video_Init( void )
 
 	Cmd_AddCommand( "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
 	Cmd_AddCommand( "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
+
+	Cvar_RegisterVariable(&cl_video_subtitles);
+	Cvar_RegisterVariable(&cl_video_subtitles_lines);
+	Cvar_RegisterVariable(&cl_video_subtitles_textsize);
+	Cvar_RegisterVariable(&cl_video_scale);
+	Cvar_RegisterVariable(&cl_video_brightness);
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap );
 }

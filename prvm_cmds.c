@@ -3800,7 +3800,7 @@ void VM_cin_open( void )
 	VM_CheckEmptyString( file );
     VM_CheckEmptyString( name );
 
-	if( CL_OpenVideo( file, name, MENUOWNER ) )
+	if( CL_OpenVideo( file, name, MENUOWNER, "" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = 1;
 	else
 		PRVM_G_FLOAT( OFS_RETURN ) = 0;
@@ -5678,6 +5678,26 @@ void VM_SV_getextresponse (void)
 		first = (sv_net_extresponse_last + NET_EXTRESPONSE_MAX - sv_net_extresponse_count) % NET_EXTRESPONSE_MAX;
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(sv_net_extresponse[first]);
 	}
+}
+
+/*
+=========
+Common functions between menu.dat and clsprogs
+=========
+*/
+
+//#349 float() isdemo 
+void VM_CL_isdemo (void)
+{
+	VM_SAFEPARMCOUNT(0, VM_CL_isdemo);
+	PRVM_G_FLOAT(OFS_RETURN) = cls.demoplayback;
+}
+
+//#355 float() videoplaying 
+void VM_CL_videoplaying (void)
+{
+	VM_SAFEPARMCOUNT(0, VM_CL_videoplaying);
+	PRVM_G_FLOAT(OFS_RETURN) = cl_videoplaying;
 }
 
 /*
