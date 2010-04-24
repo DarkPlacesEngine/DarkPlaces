@@ -1311,7 +1311,7 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 	for(di = downloads; di; di = di->next)
 	{
 		// do not show infobars for background downloads
-		if(!developer.integer)
+		if(developer.integer <= 0)
 			if(di->buffer)
 				continue;
 		strlcpy(downinfo[i].filename, di->filename, sizeof(downinfo[i].filename));

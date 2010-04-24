@@ -973,12 +973,12 @@ void VM_remove (void)
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if( PRVM_NUM_FOR_EDICT(ed) <= prog->reserved_edicts )
 	{
-		if (developer.integer)
+		if (developer.integer > 0)
 			VM_Warning( "VM_remove: tried to remove the null entity or a reserved entity!\n" );
 	}
 	else if( ed->priv.required->free )
 	{
-		if (developer.integer)
+		if (developer.integer > 0)
 			VM_Warning( "VM_remove: tried to remove an already freed entity!\n" );
 	}
 	else

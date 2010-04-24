@@ -1486,7 +1486,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 				}
 				else
 				{
-					if (developer.integer) // don't confuse non-developers with errors
+					if (developer.integer > 0) // don't confuse non-developers with errors
 					{
 						Con_Print("No spawn function for:\n");
 						PRVM_ED_Print(ent, NULL);
