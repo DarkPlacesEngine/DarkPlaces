@@ -21,6 +21,14 @@ typedef enum clvideostate_e
 	CLVIDEO_STATECOUNT
 } clvideostate_t;
 
+#define CLVIDEO_MAX_SUBTITLES 512
+
+extern cvar_t cl_video_subtitles;
+extern cvar_t cl_video_subtitles_lines;
+extern cvar_t cl_video_subtitles_textsize;
+extern cvar_t cl_video_scale;
+extern cvar_t cl_video_brightness;
+
 typedef struct clvideo_s
 {
 	int		ownertag;
@@ -37,6 +45,12 @@ typedef struct clvideo_s
 
 	cachepic_t cpif;
 
+	// VorteX: subtitles array
+	int		subtitles;
+	char	*subtitle_text[CLVIDEO_MAX_SUBTITLES];
+	float	subtitle_start[CLVIDEO_MAX_SUBTITLES];
+	float	subtitle_end[CLVIDEO_MAX_SUBTITLES];
+
 	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)
 
 	// used to determine whether the video's resources should be freed or not
@@ -47,7 +61,7 @@ typedef struct clvideo_s
 	char	filename[MAX_QPATH];
 } clvideo_t;
 
-clvideo_t*	CL_OpenVideo( const char *filename, const char *name, int owner );
+clvideo_t*	CL_OpenVideo( const char *filename, const char *name, int owner, const char *subtitlesfile );
 clvideo_t*	CL_GetVideoByName( const char *name );
 void		CL_SetVideoState( clvideo_t *video, clvideostate_t state );
 void		CL_RestartVideo( clvideo_t *video );
@@ -63,7 +77,7 @@ void		CL_Video_Shutdown( void );
 extern int cl_videoplaying;
 
 void CL_DrawVideo( void );
-void CL_VideoStart( char *filename );
+void CL_VideoStart( char *filename, const char *subtitlesfile );
 void CL_VideoStop( void );
 
 // new function used for fullscreen videos

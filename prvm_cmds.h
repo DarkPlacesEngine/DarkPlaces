@@ -448,6 +448,10 @@ void VM_cvar_description(void);
 void VM_CL_getextresponse (void);
 void VM_SV_getextresponse (void);
 
+// Common functions between menu.dat and clsprogs
+void VM_CL_isdemo (void);
+void VM_CL_videoplaying (void);
+
 void VM_isfunction(void);
 void VM_callfunction(void);
 
