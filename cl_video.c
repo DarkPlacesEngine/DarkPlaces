@@ -139,7 +139,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		if (numsubs > 0) // make true len for prev sub, autofix overlapping subtitles
 		{
 			if (video->subtitle_end[numsubs-1] <= 0)
-				video->subtitle_end[numsubs-1] = max(video->subtitle_start[numsubs-1], video->subtitle_start[numsubs] - video->subtitle_end[numsubs-1]);
+				video->subtitle_end[numsubs-1] = max(video->subtitle_start[numsubs-1], video->subtitle_start[numsubs] + video->subtitle_end[numsubs-1]);
 			else
 				video->subtitle_end[numsubs-1] = min(video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1], video->subtitle_start[numsubs]);
 		}
