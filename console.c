@@ -1325,6 +1325,9 @@ Con_DPrint
 */
 void Con_DPrint(const char *msg)
 {
+	if(developer.integer < 0) // at 0, we still add to the buffer but hide
+		return;
+
 	Con_MaskPrint(CON_MASK_DEVELOPER, msg);
 }
 
@@ -1337,6 +1340,9 @@ void Con_DPrintf(const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
+
+	if(developer.integer < 0) // at 0, we still add to the buffer but hide
+		return;
 
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
@@ -1768,7 +1774,7 @@ The typing input line at the bottom should only be drawn if typing is allowed
 void Con_DrawConsole (int lines)
 {
 	int mask_must = 0;
-	int mask_mustnot = developer.integer ? 0 : CON_MASK_DEVELOPER;
+	int mask_mustnot = (developer.integer>0) ? 0 : CON_MASK_DEVELOPER;
 	cachepic_t *conbackpic;
 
 	if (lines <= 0)

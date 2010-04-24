@@ -329,7 +329,7 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	if (developer_memory.integer)
 		Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
-	//if (developer.integer && developer_memorydebug.integer)
+	//if (developer.integer > 0 && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
 	realsize = alignment + sizeof(memheader_t) + size + sizeof(sentinel2);
