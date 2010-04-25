@@ -3,7 +3,7 @@
 ifndef DP_MAKE_TARGET
 
 # Win32
-ifdef windir
+ifdef WINDIR
 	DP_MAKE_TARGET=mingw
 else
 
