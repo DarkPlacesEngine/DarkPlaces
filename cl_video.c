@@ -96,11 +96,30 @@ static qboolean WakeVideo( clvideo_t * video )
 
 static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 {
-	char *subtitle_text, *data;
+	char *subtitle_text;
+	const char *data;
 	float subtime, sublen;
 	int numsubs = 0;
 
-	subtitle_text = (char *)FS_LoadFile(subtitlesfile, cls.permanentmempool, false, NULL);
+	if (gamemode == GAME_BLOODOMNICIDE)
+	{
+		char overridename[MAX_QPATH];
+		cvar_t *langcvar;
+
+		langcvar = Cvar_FindVar("language");
+		subtitle_text = NULL;
+		if (langcvar)
+		{
+			dpsnprintf(overridename, sizeof(overridename), "script/locale/%s/%s", langcvar->string, subtitlesfile);
+			subtitle_text = (char *)FS_LoadFile(overridename, cls.permanentmempool, false, NULL);
+		}
+		if (!subtitle_text)
+			subtitle_text = (char *)FS_LoadFile(subtitlesfile, cls.permanentmempool, false, NULL);
+	}
+	else
+	{
+		subtitle_text = (char *)FS_LoadFile(subtitlesfile, cls.permanentmempool, false, NULL);
+	}
 	if (!subtitle_text)
 	{
 		Con_DPrintf( "LoadSubtitles: can't open subtitle file '%s'!\n", subtitlesfile );
