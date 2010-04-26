@@ -27,6 +27,8 @@ cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of 
 cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
 cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
 cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
+cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
+cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "a height loadingscreen progress bar"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
@@ -853,6 +855,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_loadingscreen_background);
 	Cvar_RegisterVariable (&scr_loadingscreen_count);
+	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
+	Cvar_RegisterVariable (&scr_loadingscreen_barheight);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
@@ -1832,9 +1836,8 @@ void SCR_ClearLoadingScreen (qboolean redraw)
 		SCR_PopLoadingScreen(redraw && !loadingscreenstack->prev);
 }
 
-static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
+static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y, float size)
 {
-	float size = 8;
 	float x;
 	size_t len;
 	float total;
@@ -1843,7 +1846,7 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y)
 #if 0
 	if(s)
 	{
-		total += SCR_DrawLoadingStack_r(s->prev, y);
+		total += SCR_DrawLoadingStack_r(s->prev, y, 8);
 		y -= total;
 		if(!s->prev || strcmp(s->msg, s->prev->msg))
 		{
@@ -1873,9 +1876,8 @@ static void SCR_DrawLoadingStack(void)
 {
 	float verts[12];
 	float colors[16];
-	int i;
 
-	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer);
+	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer, scr_loadingscreen_barheight.value);
 	if(loadingscreenstack)
 	{
 		// height = 32; // sorry, using the actual one is ugly
@@ -1889,15 +1891,21 @@ static void SCR_DrawLoadingStack(void)
 		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
 		verts[0] = verts[9] = 0;
-		verts[1] = verts[4] = vid_conheight.integer - 8;
+		verts[1] = verts[4] = vid_conheight.integer - scr_loadingscreen_barheight.value;
 		verts[3] = verts[6] = vid_conwidth.integer * loadingscreenstack->absolute_loading_amount_min;
 		verts[7] = verts[10] = vid_conheight.integer;
+		
+#if _MSC_VER >= 1400
+#define sscanf sscanf_s
+#endif
+		//                                        ^^^^^^^^^^ blue component
+		//                              ^^^^^^ bottom row
+		//          ^^^^^^^^^^^^ alpha is always on
+		colors[0] = 0; colors[1] = 0; colors[2] = 0; colors[3] = 1;
+		colors[4] = 0; colors[5] = 0; colors[6] = 0; colors[7] = 1;
+		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[8], &colors[9], &colors[10]); colors[11] = 1;
+		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[12], &colors[13], &colors[14]);  colors[15] = 1;
 
-		for(i = 0; i < 16; ++i)
-			colors[i] = (i % 4 == 3) ? 1 : (i >= 8 && i % 4 == 2) ? 1 : 0;
-			//                                        ^^^^^^^^^^ blue component
-			//                              ^^^^^^ bottom row
-			//          ^^^^^^^^^^^^ alpha is always on
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 
 		// make sure everything is cleared, including the progress indicator
