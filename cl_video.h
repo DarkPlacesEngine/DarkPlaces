@@ -27,6 +27,8 @@ extern cvar_t cl_video_subtitles;
 extern cvar_t cl_video_subtitles_lines;
 extern cvar_t cl_video_subtitles_textsize;
 extern cvar_t cl_video_scale;
+extern cvar_t cl_video_scale_vpos;
+extern cvar_t cl_video_stipple;
 extern cvar_t cl_video_brightness;
 
 typedef struct clvideo_s

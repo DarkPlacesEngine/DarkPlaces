@@ -9,6 +9,8 @@ cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitl
 cvar_t cl_video_subtitles_lines = {CVAR_SAVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
 cvar_t cl_video_subtitles_textsize = {CVAR_SAVE, "cl_video_subtitles_textsize", "16", "textsize for subtitles"};
 cvar_t cl_video_scale = {CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = fullscreen, 0.75 - 3/4 of screen etc."};
+cvar_t cl_video_scale_vpos = {CVAR_SAVE, "cl_video_scale_vpos", "0", "vertial align of scaled video, -1 is top, 1 is bottom"};
+cvar_t cl_video_stipple = {CVAR_SAVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
 cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
 
 // constants (and semi-constants)
@@ -435,14 +437,13 @@ void CL_DrawVideo(void)
 	if (cl_video_brightness.value <= 0 || cl_video_brightness.value > 10)
 		Cvar_SetValueQuick( &cl_video_brightness, 1);
 
-#if 0
 	// enable video-only polygon stipple (of global stipple is not active)
-	if (qglPolygonStipple && !scr_stipple.integer)
+	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
 	{
 		GLubyte stipple[128];
 		int i, s, width, parts;
 	
-		s = 1;
+		s = cl_video_stipple.integer;
 		parts = (s & 007);
 		width = (s & 070) >> 3;
 		qglEnable(GL_POLYGON_STIPPLE);CHECKGLERROR // 0x0B42
@@ -453,25 +454,23 @@ void CL_DrawVideo(void)
 		}
 		qglPolygonStipple(stipple);CHECKGLERROR
 	}
-#endif
 
 	// draw video
 	if (cl_video_scale.value == 1)
 		DrawQ_Pic(0, 0, &video->cpif, vid_conwidth.integer, vid_conheight.integer, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
 	else
 	{
+		int px = (int)(vid_conwidth.integer * (1 - cl_video_scale.value) * 0.5);
+		int py = (int)(vid_conheight.integer * (1 - cl_video_scale.value) * ((bound(-1, cl_video_scale_vpos.value, 1) + 1) / 2));
+		int sx = (int)(vid_conwidth.integer * cl_video_scale.value);
+		int sy = (int)(vid_conheight.integer * cl_video_scale.value);
 		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
-		DrawQ_Pic((int)(vid_conwidth.integer * (1 - cl_video_scale.value) * 0.5), (int)(vid_conheight.integer * (1 - cl_video_scale.value) * 0.5), &video->cpif, (int)(vid_conwidth.integer * cl_video_scale.value), (int)(vid_conheight.integer * cl_video_scale.value), cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
+		DrawQ_Pic(px, py, &video->cpif, sx , sy, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
 	}
 
-	
-#if 0
 	// disable video-only stipple
-	if (qglPolygonStipple && !scr_stipple.integer)
-	{
+	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
 		qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
-	}
-#endif
 
 	// VorteX: draw subtitle_text
 	if (!video->subtitles || !cl_video_subtitles.integer)
@@ -606,7 +605,9 @@ void CL_Video_Init( void )
 	Cvar_RegisterVariable(&cl_video_subtitles_lines);
 	Cvar_RegisterVariable(&cl_video_subtitles_textsize);
 	Cvar_RegisterVariable(&cl_video_scale);
+	Cvar_RegisterVariable(&cl_video_scale_vpos);
 	Cvar_RegisterVariable(&cl_video_brightness);
+	Cvar_RegisterVariable(&cl_video_stipple);
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap );
 }
