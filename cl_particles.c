@@ -628,7 +628,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	part->staincolor[0] = r;
 	part->staincolor[1] = g;
 	part->staincolor[2] = b;
-	part->stainalpha = palpha * stainalpha / 256;
+	part->stainalpha = palpha * stainalpha;
 	part->stainsize = psize * stainsize;
 	part->texnum = ptex;
 	part->size = psize;
