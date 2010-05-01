@@ -232,27 +232,19 @@ extern mempool_t *r_main_mempool;
 
 typedef struct rsurfacestate_s
 {
-	// software processing buffers
-	int                         array_size;
-	unsigned char              *array_base;
-	r_vertexmesh_t             *array_modelvertexmesh;
-	r_vertexmesh_t             *array_batchvertexmesh;
-	r_vertexposition_t         *array_modelvertexposition;
-	r_vertexposition_t         *array_batchvertexposition;
-	float                      *array_modelvertex3f;
-	float                      *array_modelsvector3f;
-	float                      *array_modeltvector3f;
-	float                      *array_modelnormal3f;
-	float                      *array_batchvertex3f;
-	float                      *array_batchsvector3f;
-	float                      *array_batchtvector3f;
-	float                      *array_batchnormal3f;
-	float                      *array_batchlightmapcolor4f;
-	float                      *array_batchtexcoordtexture2f;
-	float                      *array_batchtexcoordlightmap2f;
-	float                      *array_passcolor4f;
-	int                        *array_batchelement3i;
-	unsigned short             *array_batchelement3s;
+	// processing buffers
+	int array_size;
+	float *array_modelvertex3f;
+	float *array_modelsvector3f;
+	float *array_modeltvector3f;
+	float *array_modelnormal3f;
+	float *array_deformedvertex3f;
+	float *array_deformedsvector3f;
+	float *array_deformedtvector3f;
+	float *array_deformednormal3f;
+	float *array_generatedtexcoordtexture2f;
+	float *array_color4f;
+	float *array_texcoord3f;
 
 	// current model array pointers
 	// these may point to processing buffers if model is animated,
@@ -268,89 +260,67 @@ typedef struct rsurfacestate_s
 	//
 	// this indicates the model* arrays are pointed at array_model* buffers
 	// (in other words, the model has been animated in software)
-	qboolean                    modelgeneratedvertex;
-	const float                *modelvertex3f;
-	const r_meshbuffer_t       *modelvertex3f_vertexbuffer;
-	size_t                      modelvertex3f_bufferoffset;
-	const float                *modelsvector3f;
-	const r_meshbuffer_t       *modelsvector3f_vertexbuffer;
-	size_t                      modelsvector3f_bufferoffset;
-	const float                *modeltvector3f;
-	const r_meshbuffer_t       *modeltvector3f_vertexbuffer;
-	size_t                      modeltvector3f_bufferoffset;
-	const float                *modelnormal3f;
-	const r_meshbuffer_t       *modelnormal3f_vertexbuffer;
-	size_t                      modelnormal3f_bufferoffset;
-	const float                *modellightmapcolor4f;
-	const r_meshbuffer_t       *modellightmapcolor4f_vertexbuffer;
-	size_t                      modellightmapcolor4f_bufferoffset;
-	const float                *modeltexcoordtexture2f;
-	const r_meshbuffer_t       *modeltexcoordtexture2f_vertexbuffer;
-	size_t                      modeltexcoordtexture2f_bufferoffset;
-	const float                *modeltexcoordlightmap2f;
-	const r_meshbuffer_t       *modeltexcoordlightmap2f_vertexbuffer;
-	size_t                      modeltexcoordlightmap2f_bufferoffset;
-	const r_vertexmesh_t       *modelvertexmesh;
-	const r_meshbuffer_t       *modelvertexmeshbuffer;
-	const r_vertexposition_t   *modelvertexposition;
-	const r_meshbuffer_t       *modelvertexpositionbuffer;
-	const int                  *modelelement3i;
-	const r_meshbuffer_t       *modelelement3i_indexbuffer;
-	size_t                      modelelement3i_bufferoffset;
-	const unsigned short       *modelelement3s;
-	const r_meshbuffer_t       *modelelement3s_indexbuffer;
-	size_t                      modelelement3s_bufferoffset;
-	const int                  *modellightmapoffsets;
-	int                         modelnumvertices;
-	int                         modelnumtriangles;
-	const msurface_t           *modelsurfaces;
+	qboolean generatedvertex;
+	const float *modelvertex3f;
+	int modelvertex3f_bufferobject;
+	size_t modelvertex3f_bufferoffset;
+	const float *modelsvector3f;
+	int modelsvector3f_bufferobject;
+	size_t modelsvector3f_bufferoffset;
+	const float *modeltvector3f;
+	int modeltvector3f_bufferobject;
+	size_t modeltvector3f_bufferoffset;
+	const float *modelnormal3f;
+	int modelnormal3f_bufferobject;
+	size_t modelnormal3f_bufferoffset;
+	const float *modellightmapcolor4f;
+	int modellightmapcolor4f_bufferobject;
+	size_t modellightmapcolor4f_bufferoffset;
+	const float *modeltexcoordtexture2f;
+	int modeltexcoordtexture2f_bufferobject;
+	size_t modeltexcoordtexture2f_bufferoffset;
+	const float *modeltexcoordlightmap2f;
+	int modeltexcoordlightmap2f_bufferobject;
+	size_t modeltexcoordlightmap2f_bufferoffset;
+	const int *modelelement3i;
+	const unsigned short *modelelement3s;
+	int modelelement3i_bufferobject;
+	int modelelement3s_bufferobject;
+	const int *modellightmapoffsets;
+	int modelnum_vertices;
+	int modelnum_triangles;
+	const msurface_t *modelsurfaces;
 	// current rendering array pointers
 	// these may point to any of several different buffers depending on how
 	// much processing was needed to prepare this model for rendering
 	// these usually equal the model* pointers, they only differ if
 	// deformvertexes is used in a q3 shader, and consequently these can
 	// change on a per-surface basis (according to rsurface.texture)
-	qboolean                    batchgeneratedvertex;
-	int                         batchfirstvertex;
-	int                         batchnumvertices;
-	int                         batchfirsttriangle;
-	int                         batchnumtriangles;
-	const r_vertexmesh_t       *batchvertexmesh;
-	const r_meshbuffer_t       *batchvertexmeshbuffer;
-	const r_vertexposition_t   *batchvertexposition;
-	const r_meshbuffer_t       *batchvertexpositionbuffer;
-	const float                *batchvertex3f;
-	const r_meshbuffer_t       *batchvertex3f_vertexbuffer;
-	size_t                      batchvertex3f_bufferoffset;
-	const float                *batchsvector3f;
-	const r_meshbuffer_t       *batchsvector3f_vertexbuffer;
-	size_t                      batchsvector3f_bufferoffset;
-	const float                *batchtvector3f;
-	const r_meshbuffer_t       *batchtvector3f_vertexbuffer;
-	size_t                      batchtvector3f_bufferoffset;
-	const float                *batchnormal3f;
-	const r_meshbuffer_t       *batchnormal3f_vertexbuffer;
-	size_t                      batchnormal3f_bufferoffset;
-	const float                *batchlightmapcolor4f;
-	const r_meshbuffer_t       *batchlightmapcolor4f_vertexbuffer;
-	size_t                      batchlightmapcolor4f_bufferoffset;
-	const float                *batchtexcoordtexture2f;
-	const r_meshbuffer_t       *batchtexcoordtexture2f_vertexbuffer;
-	size_t                      batchtexcoordtexture2f_bufferoffset;
-	const float                *batchtexcoordlightmap2f;
-	const r_meshbuffer_t       *batchtexcoordlightmap2f_vertexbuffer;
-	size_t                      batchtexcoordlightmap2f_bufferoffset;
-	const int                  *batchelement3i;
-	const r_meshbuffer_t       *batchelement3i_indexbuffer;
-	size_t                      batchelement3i_bufferoffset;
-	const unsigned short       *batchelement3s;
-	const r_meshbuffer_t       *batchelement3s_indexbuffer;
-	size_t                      batchelement3s_bufferoffset;
-	// rendering pass processing arrays in GL11 and GL13 paths
-	const float                *passcolor4f;
-	const r_meshbuffer_t       *passcolor4f_vertexbuffer;
-	size_t                      passcolor4f_bufferoffset;
-
+	//
+	// the exception is the color array which is often generated based on
+	// colormod, alpha fading, and fogging, it may also come from q3bsp vertex
+	// lighting of certain surfaces
+	const float *vertex3f;
+	int vertex3f_bufferobject;
+	size_t vertex3f_bufferoffset;
+	const float *svector3f;
+	int svector3f_bufferobject;
+	size_t svector3f_bufferoffset;
+	const float *tvector3f;
+	int tvector3f_bufferobject;
+	size_t tvector3f_bufferoffset;
+	const float *normal3f;
+	int normal3f_bufferobject;
+	size_t normal3f_bufferoffset;
+	const float *lightmapcolor4f;
+	int lightmapcolor4f_bufferobject;
+	size_t lightmapcolor4f_bufferoffset;
+	const float *texcoordtexture2f;
+	int texcoordtexture2f_bufferobject;
+	size_t texcoordtexture2f_bufferoffset;
+	const float *texcoordlightmap2f;
+	int texcoordlightmap2f_bufferobject;
+	size_t texcoordlightmap2f_bufferoffset;
 	// some important fields from the entity
 	int ent_skinnum;
 	int ent_qwskin;
@@ -383,10 +353,8 @@ typedef struct rsurfacestate_s
 	// polygon offset data for submodels
 	float basepolygonfactor;
 	float basepolygonoffset;
-	// current textures in batching code
+	// current texture in batching code
 	texture_t *texture;
-	rtexture_t *lightmaptexture;
-	rtexture_t *deluxemaptexture;
 	// whether lightmapping is active on this batch
 	// (otherwise vertex colored)
 	qboolean uselightmaptexture;
@@ -438,22 +406,8 @@ void R_AddWaterPlanes(entity_render_t *ent);
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 
-#define BATCHNEED_VERTEXPOSITION         (1<< 0) // set up rsurface.batchvertexposition
-#define BATCHNEED_VERTEXMESH_VERTEX      (1<< 1) // set up rsurface.batchvertexmesh
-#define BATCHNEED_VERTEXMESH_NORMAL      (1<< 2) // set up normals in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchnormal3f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_VECTOR      (1<< 3) // set up vectors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchsvector3f and rsurface.batchtvector3f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_VERTEXCOLOR (1<< 4) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_TEXCOORD    (1<< 5) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_LIGHTMAP    (1<< 6) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_VERTEX           (1<< 7) // set up rsurface.batchvertex3f and optionally others
-#define BATCHNEED_ARRAY_NORMAL           (1<< 8) // set up normals in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchnormal3f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_VECTOR           (1<< 9) // set up vectors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchsvector3f and rsurface.batchtvector3f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_VERTEXCOLOR      (1<<10) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_TEXCOORD         (1<<11) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_LIGHTMAP         (1<<12) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_NOGAPS                 (1<<13) // force vertex copying (no gaps)
-void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist);
-void RSurf_DrawBatch(void);
+void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generatetangents, int texturenumsurfaces, const msurface_t **texturesurfacelist);
+void RSurf_DrawBatch_Simple(int texturenumsurfaces, const msurface_t **texturesurfacelist);
 
 void R_DecalSystem_SplatEntities(const vec3_t org, const vec3_t normal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float size);
 
@@ -523,7 +477,7 @@ gl20_texunit;
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale);
 void R_SetupShader_DepthOrShadow(void);
 void R_SetupShader_ShowDepth(void);
-void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist);
+void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s

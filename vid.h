@@ -100,7 +100,6 @@ typedef struct viddef_s
 	void *cgcontext;
 
 	renderpath_t renderpath;
-	qboolean forcevbo; // some renderpaths can not operate without it
 
 	unsigned int texunits;
 	unsigned int teximageunits;

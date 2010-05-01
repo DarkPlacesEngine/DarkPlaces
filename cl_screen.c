@@ -775,7 +775,6 @@ void R_TimeReport_EndFrame(void)
 "%7i lightmap updates (%7i pixels)\n"
 "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
 "rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n"
-"updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "%s"
 , loc ? "Location: " : "", loc ? loc->name : ""
 , r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]
@@ -785,7 +784,6 @@ void R_TimeReport_EndFrame(void)
 , r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
 , r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
-, r_refdef.stats.indexbufferuploadcount, r_refdef.stats.indexbufferuploadsize, r_refdef.stats.vertexbufferuploadcount, r_refdef.stats.vertexbufferuploadsize
 , r_speeds_timestring);
 
 		memset(&r_refdef.stats, 0, sizeof(r_refdef.stats));
@@ -1913,7 +1911,10 @@ static void SCR_DrawLoadingStack(void)
 		GL_DepthRange(0, 1);
 		GL_PolygonOffset(0, 0);
 		GL_DepthTest(false);
+		R_Mesh_VertexPointer(verts, 0, 0);
+		R_Mesh_ColorPointer(colors, 0, 0);
 		R_Mesh_ResetTextureState();
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
 		verts[0] = verts[9] = 0;
 		verts[1] = verts[4] = vid_conheight.integer - scr_loadingscreen_barheight.value;
@@ -1931,9 +1932,7 @@ static void SCR_DrawLoadingStack(void)
 		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[8], &colors[9], &colors[10]); colors[11] = 1;
 		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[12], &colors[13], &colors[14]);  colors[15] = 1;
 
-		R_Mesh_PrepareVertices_Generic_Arrays(4, verts, colors, NULL);
-		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 
 		// make sure everything is cleared, including the progress indicator
 		if(loadingscreenheight < 8)
@@ -1983,20 +1982,25 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 static void SCR_DrawLoadingScreen (qboolean clear)
 {
 	// we only need to draw the image if it isn't already there
+	GL_Color(1,1,1,1);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
-	R_Mesh_ResetTextureState();
-	GL_Color(1,1,1,1);
-	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	if(loadingscreentexture)
 	{
+		R_Mesh_VertexPointer(loadingscreentexture_vertex3f, 0, 0);
+		R_Mesh_ResetTextureState();
 		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+		R_Mesh_TexCoordPointer(0, 2, loadingscreentexture_texcoord2f, 0, 0);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	}
+	R_Mesh_VertexPointer(loadingscreenpic_vertex3f, 0, 0);
+	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(loadingscreenpic->tex, NULL, GL_MODULATE, 1);
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+	R_Mesh_TexCoordPointer(0, 2, loadingscreenpic_texcoord2f, 0, 0);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 	SCR_DrawLoadingStack();
 }
 

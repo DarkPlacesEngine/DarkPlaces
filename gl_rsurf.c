@@ -349,7 +349,10 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
 
+	R_Mesh_VertexPointer(vertex3f, 0, 0);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
 	isvis = (portal->here->clusterindex >= 0 && portal->past->clusterindex >= 0 && portal->here->clusterindex != portal->past->clusterindex);
 
@@ -360,9 +363,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 			 isvis ? 0.125f : 0.03125f);
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
-	R_Mesh_PrepareVertices_Generic_Arrays(numpoints, vertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
-	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, polygonelement3s, 0, 0);
 }
 
 // LordHavoc: this is just a nice debugging tool, very slow
@@ -610,6 +611,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_AlphaTest(false);
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_SetupShader_DepthOrShadow();
 	if (ent == r_refdef.scene.worldentity)
@@ -1084,10 +1086,10 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.batchvertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+			RSurf_PrepareVerticesForBatch(false, false, 1, &surface);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.vertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
-		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.batchvertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
+		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.vertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
 	}
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
@@ -1157,9 +1159,8 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		}
 		--modelsurfacelistindex;
 		GL_CullFace(rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE ? GL_NONE : r_refdef.view.cullface_back);
-		RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXPOSITION, batchnumsurfaces, batchsurfacelist);
-		R_Mesh_PrepareVertices_Position(rsurface.batchnumvertices, rsurface.batchvertexposition, rsurface.batchvertexpositionbuffer);
-		RSurf_DrawBatch();
+		RSurf_PrepareVerticesForBatch(false, false, batchnumsurfaces, batchsurfacelist);
+		RSurf_DrawBatch_Simple(batchnumsurfaces, batchsurfacelist);
 	}
 }
 
@@ -1170,7 +1171,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	int i, j, endsurface;
 	texture_t *t;
 	const msurface_t *surface;
-	// note: in practice this never actually receives batches
+	// note: in practice this never actually receives batches), oh well
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
 	R_Shadow_RenderMode_Lighting(false, true, false);
@@ -1187,7 +1188,8 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 			surface = rsurface.modelsurfaces + surfacelist[j];
 			if (t != surface->texture)
 				break;
-			R_Shadow_RenderLighting(1, &surface);
+			RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+			R_Shadow_RenderLighting(surface->num_firstvertex, surface->num_vertices, surface->num_firsttriangle, surface->num_triangles, ent->model->surfmesh.data_element3i, ent->model->surfmesh.data_element3s, ent->model->surfmesh.ebo3i, ent->model->surfmesh.ebo3s);
 		}
 	}
 	R_Shadow_RenderMode_End();
@@ -1198,9 +1200,9 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
-	int i, k, kend, l, endsurface, batchnumsurfaces, texturenumsurfaces;
-	const msurface_t **texturesurfacelist;
+	int i, k, kend, l, m, mend, endsurface, batchnumsurfaces, batchnumtriangles, batchfirstvertex, batchlastvertex, batchfirsttriangle;
 	const int *element3i;
+	static int batchelements[BATCHSIZE*3];
 	texture_t *tex;
 	CHECKGLERROR
 	element3i = rsurface.modelelement3i;
@@ -1254,9 +1256,45 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			}
 			if (r_shadow_usingdeferredprepass)
 				continue;
-			texturenumsurfaces = kend - k;
-			texturesurfacelist = batchsurfacelist + k;
-			R_Shadow_RenderLighting(texturenumsurfaces, texturesurfacelist);
+			batchnumtriangles = 0;
+			batchfirsttriangle = surface->num_firsttriangle;
+			m = 0; // hush warning
+			for (l = k;l < kend;l++)
+			{
+				surface = batchsurfacelist[l];
+				RSurf_PrepareVerticesForBatch(true, true, 1, &surface);
+				for (m = surface->num_firsttriangle, mend = m + surface->num_triangles;m < mend;m++)
+				{
+					if (lighttrispvs && r_test.integer && !CHECKPVSBIT(lighttrispvs, m))
+						continue;
+					if (batchnumtriangles >= BATCHSIZE)
+					{
+						r_refdef.stats.lights_lighttriangles += batchnumtriangles;
+						Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
+						// use the element buffer if all triangles are consecutive
+						if (m == batchfirsttriangle + batchnumtriangles)
+							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchfirsttriangle, batchnumtriangles, ent->model->surfmesh.data_element3i, ent->model->surfmesh.data_element3s, ent->model->surfmesh.ebo3i, ent->model->surfmesh.ebo3s);
+						else
+							R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, 0, batchnumtriangles, batchelements, NULL, 0, 0);
+						batchnumtriangles = 0;
+						batchfirsttriangle = m;
+					}
+					batchelements[batchnumtriangles*3+0] = element3i[m*3+0];
+					batchelements[batchnumtriangles*3+1] = element3i[m*3+1];
+					batchelements[batchnumtriangles*3+2] = element3i[m*3+2];
+					batchnumtriangles++;
+				}
+			}
+			if (batchnumtriangles > 0)
+			{
+				r_refdef.stats.lights_lighttriangles += batchnumtriangles;
+				Mod_VertexRangeFromElements(batchnumtriangles*3, batchelements, &batchfirstvertex, &batchlastvertex);
+				// use the element buffer if all triangles are consecutive
+				if (m == batchfirsttriangle + batchnumtriangles)
+					R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, batchfirsttriangle, batchnumtriangles, ent->model->surfmesh.data_element3i, ent->model->surfmesh.data_element3s, ent->model->surfmesh.ebo3i, ent->model->surfmesh.ebo3s);
+				else
+					R_Shadow_RenderLighting(batchfirstvertex, batchlastvertex + 1 - batchfirstvertex, 0, batchnumtriangles, batchelements, NULL, 0, 0);
+			}
 		}
 	}
 }

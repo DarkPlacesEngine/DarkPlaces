@@ -2309,11 +2309,15 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	particletexture_t *tex;
 	float right[3], up[3], size, ca;
 	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
+	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
 
 	r_refdef.stats.drawndecals += numsurfaces;
 	R_Mesh_ResetTextureState();
+	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
+	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2370,8 +2374,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1);
-	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
-	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, NULL, 0, particle_elements, NULL, 0);
+	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
 }
 
 void R_DrawDecals (void)
@@ -2474,6 +2477,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 	r_refdef.stats.particles += numsurfaces;
 	R_Mesh_ResetTextureState();
+	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
+	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2679,7 +2685,6 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	texture = NULL;
 	batchstart = 0;
 	batchcount = 0;
-	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
@@ -2717,7 +2722,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		}
 
 		batchcount = surfacelistindex - batchstart;
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, NULL, 0, particle_elements, NULL, 0);
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, particle_elements, 0, 0);
 	}
 }
 

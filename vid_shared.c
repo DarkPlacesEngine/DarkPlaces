@@ -147,14 +147,12 @@ void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, 
 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
 void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
@@ -162,7 +160,6 @@ void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
 void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 void (GLAPIENTRY *qglBegin)(GLenum mode);
 void (GLAPIENTRY *qglEnd)(void);
 
@@ -491,14 +488,12 @@ static dllfunction_t opengl110funcs[] =
 	{"glDepthMask", (void **) &qglDepthMask},
 	{"glDepthRange", (void **) &qglDepthRange},
 	{"glDrawElements", (void **) &qglDrawElements},
-	{"glDrawArrays", (void **) &qglDrawArrays},
 	{"glColorMask", (void **) &qglColorMask},
 	{"glVertexPointer", (void **) &qglVertexPointer},
 	{"glNormalPointer", (void **) &qglNormalPointer},
 	{"glColorPointer", (void **) &qglColorPointer},
 	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
 	{"glArrayElement", (void **) &qglArrayElement},
-	{"glColor4ub", (void **) &qglColor4ub},
 	{"glColor4f", (void **) &qglColor4f},
 	{"glTexCoord1f", (void **) &qglTexCoord1f},
 	{"glTexCoord2f", (void **) &qglTexCoord2f},
@@ -506,7 +501,6 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexCoord4f", (void **) &qglTexCoord4f},
 	{"glVertex2f", (void **) &qglVertex2f},
 	{"glVertex3f", (void **) &qglVertex3f},
-	{"glVertex4f", (void **) &qglVertex4f},
 	{"glBegin", (void **) &qglBegin},
 	{"glEnd", (void **) &qglEnd},
 //[515]: added on 29.07.2005
@@ -804,7 +798,6 @@ void VID_CheckExtensions(void)
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
-	vid.forcevbo = false;
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
 	vid.support.arb_depth_texture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
 	vid.support.arb_draw_buffers = GL_CheckExtension("GL_ARB_draw_buffers", drawbuffersfuncs, "-nodrawbuffers", false);

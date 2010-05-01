@@ -196,24 +196,12 @@ void Mod_UnloadModel (dp_model_t *mod)
 	strlcpy(name, mod->name, sizeof(name));
 	parentmodel = mod->brush.parentmodel;
 	used = mod->used;
-	if (mod->mempool)
-	{
-		if (mod->surfmesh.vertexpositionbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vertexpositionbuffer);
-		mod->surfmesh.vertexpositionbuffer = NULL;
-		if (mod->surfmesh.vertexmeshbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vertexmeshbuffer);
-		mod->surfmesh.vertexmeshbuffer = NULL;
-		if (mod->surfmesh.data_element3i_indexbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.data_element3i_indexbuffer);
-		mod->surfmesh.data_element3i_indexbuffer = NULL;
-		if (mod->surfmesh.data_element3s_indexbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.data_element3s_indexbuffer);
-		mod->surfmesh.data_element3s_indexbuffer = NULL;
-		if (mod->surfmesh.vbo_vertexbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vbo_vertexbuffer);
-		mod->surfmesh.vbo_vertexbuffer = NULL;
-	}
+	if (mod->surfmesh.ebo3i)
+		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo3i);
+	if (mod->surfmesh.ebo3s)
+		R_Mesh_DestroyBufferObject(mod->surfmesh.ebo3s);
+	if (mod->surfmesh.vbo)
+		R_Mesh_DestroyBufferObject(mod->surfmesh.vbo);
 	// free textures/memory attached to the model
 	R_FreeTexturePool(&mod->texturepool);
 	Mem_FreePool(&mod->mempool);
@@ -1189,60 +1177,26 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 
 static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 {
-	if (!mesh->numverts)
+	if (!vid.support.arb_vertex_buffer_object)
+		return;
+	if (mesh->vbo)
 		return;
 
-	// build r_vertexmesh_t array
-	// (compressed interleaved array for faster rendering)
-	if (!mesh->vertexmesh && mesh->texcoord2f)
+	// element buffer is easy because it's just one array
+	if (mesh->numtriangles)
 	{
-		int vertexindex;
-		int numvertices = mesh->numverts;
-		r_vertexmesh_t *vertexmesh;
-		mesh->vertexmesh = vertexmesh = (r_vertexmesh_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*mesh->vertexmesh));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexmesh++)
-		{
-			VectorCopy(mesh->vertex3f + 3*vertexindex, vertexmesh->vertex3f);
-			VectorScale(mesh->svector3f + 3*vertexindex, 1.0f, vertexmesh->svector3f);
-			VectorScale(mesh->tvector3f + 3*vertexindex, 1.0f, vertexmesh->tvector3f);
-			VectorScale(mesh->normal3f + 3*vertexindex, 1.0f, vertexmesh->normal3f);
-			Vector2Copy(mesh->texcoord2f + 2*vertexindex, vertexmesh->texcoordtexture2f);
-		}
+		if (mesh->element3s)
+			mesh->ebo3s = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3s, mesh->numtriangles * sizeof(unsigned short[3]), "shadowmesh");
+		else
+			mesh->ebo3i = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, mesh->element3i, mesh->numtriangles * sizeof(unsigned int[3]), "shadowmesh");
 	}
-
-	// build r_vertexposition_t array
-	if (!mesh->vertexposition)
-	{
-		int vertexindex;
-		int numvertices = mesh->numverts;
-		r_vertexposition_t *vertexposition;
-		mesh->vertexposition = vertexposition = (r_vertexposition_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*mesh->vertexposition));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexposition++)
-			VectorCopy(mesh->vertex3f + 3*vertexindex, vertexposition->vertex3f);
-	}
-
-	// upload r_vertexmesh_t array as a buffer
-	if (mesh->vertexmesh && !mesh->vertexmeshbuffer)
-		mesh->vertexmeshbuffer = R_Mesh_CreateMeshBuffer(mesh->vertexmesh, mesh->numverts * sizeof(*mesh->vertexmesh), loadmodel->name, false, false);
-
-	// upload r_vertexposition_t array as a buffer
-	if (mesh->vertexposition && !mesh->vertexpositionbuffer)
-		mesh->vertexpositionbuffer = R_Mesh_CreateMeshBuffer(mesh->vertexposition, mesh->numverts * sizeof(*mesh->vertexposition), loadmodel->name, false, false);
-
-	// upload short indices as a buffer
-	if (mesh->element3s && !mesh->element3s_indexbuffer)
-		mesh->element3s_indexbuffer = R_Mesh_CreateMeshBuffer(mesh->element3s, mesh->numtriangles * sizeof(short[3]), loadmodel->name, true, false);
-
-	// upload int indices as a buffer
-	if (mesh->element3i && !mesh->element3i_indexbuffer && !mesh->element3s)
-		mesh->element3i_indexbuffer = R_Mesh_CreateMeshBuffer(mesh->element3i, mesh->numtriangles * sizeof(int[3]), loadmodel->name, true, false);
 
 	// vertex buffer is several arrays and we put them in the same buffer
 	//
 	// is this wise?  the texcoordtexture2f array is used with dynamic
 	// vertex/svector/tvector/normal when rendering animated models, on the
 	// other hand animated models don't use a lot of vertices anyway...
-	if (!mesh->vbo_vertexbuffer)
+	if (mesh->numverts)
 	{
 		size_t size;
 		unsigned char *mem;
@@ -1258,7 +1212,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 		if (mesh->tvector3f         ) memcpy(mem + mesh->vbooffset_tvector3f         , mesh->tvector3f         , mesh->numverts * sizeof(float[3]));
 		if (mesh->normal3f          ) memcpy(mem + mesh->vbooffset_normal3f          , mesh->normal3f          , mesh->numverts * sizeof(float[3]));
 		if (mesh->texcoord2f        ) memcpy(mem + mesh->vbooffset_texcoord2f        , mesh->texcoord2f        , mesh->numverts * sizeof(float[2]));
-		mesh->vbo_vertexbuffer = R_Mesh_CreateMeshBuffer(mem, size, "shadowmesh", false, false);
+		mesh->vbo = R_Mesh_CreateStaticBufferObject(GL_ARRAY_BUFFER_ARB, mem, size, "shadowmesh");
 		Mem_Free(mem);
 	}
 }
@@ -1347,16 +1301,12 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	shadowmesh_t *nextmesh;
 	for (;mesh;mesh = nextmesh)
 	{
-		if (mesh->vertexpositionbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->vertexpositionbuffer);
-		if (mesh->vertexmeshbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->vertexmeshbuffer);
-		if (mesh->element3i_indexbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->element3i_indexbuffer);
-		if (mesh->element3s_indexbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->element3s_indexbuffer);
-		if (mesh->vbo_vertexbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->vbo_vertexbuffer);
+		if (mesh->ebo3i)
+			R_Mesh_DestroyBufferObject(mesh->ebo3i);
+		if (mesh->ebo3s)
+			R_Mesh_DestroyBufferObject(mesh->ebo3s);
+		if (mesh->vbo)
+			R_Mesh_DestroyBufferObject(mesh->vbo);
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
@@ -2738,9 +2688,6 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 
 void Mod_BuildVBOs(void)
 {
-	if (!loadmodel->surfmesh.num_vertices)
-		return;
-
 	if (gl_paranoid.integer && loadmodel->surfmesh.data_element3s && loadmodel->surfmesh.data_element3i)
 	{
 		int i;
@@ -2754,62 +2701,27 @@ void Mod_BuildVBOs(void)
 		}
 	}
 
-	// build r_vertexmesh_t array
-	// (compressed interleaved array for faster rendering)
-	if (!loadmodel->surfmesh.vertexmesh)
-	{
-		int vertexindex;
-		int numvertices = loadmodel->surfmesh.num_vertices;
-		r_vertexmesh_t *vertexmesh;
-		loadmodel->surfmesh.vertexmesh = vertexmesh = (r_vertexmesh_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*loadmodel->surfmesh.vertexmesh));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexmesh++)
-		{
-			VectorCopy(loadmodel->surfmesh.data_vertex3f + 3*vertexindex, vertexmesh->vertex3f);
-			VectorScale(loadmodel->surfmesh.data_svector3f + 3*vertexindex, 1.0f, vertexmesh->svector3f);
-			VectorScale(loadmodel->surfmesh.data_tvector3f + 3*vertexindex, 1.0f, vertexmesh->tvector3f);
-			VectorScale(loadmodel->surfmesh.data_normal3f + 3*vertexindex, 1.0f, vertexmesh->normal3f);
-			if (loadmodel->surfmesh.data_lightmapcolor4f)
-				Vector4Scale(loadmodel->surfmesh.data_lightmapcolor4f + 4*vertexindex, 255.0f, vertexmesh->color4ub);
-			Vector2Copy(loadmodel->surfmesh.data_texcoordtexture2f + 2*vertexindex, vertexmesh->texcoordtexture2f);
-			if (loadmodel->surfmesh.data_texcoordlightmap2f)
-				Vector2Scale(loadmodel->surfmesh.data_texcoordlightmap2f + 2*vertexindex, 1.0f, vertexmesh->texcoordlightmap2f);
-		}
-	}
-
-	// build r_vertexposition_t array
-	if (!loadmodel->surfmesh.vertexposition)
-	{
-		int vertexindex;
-		int numvertices = loadmodel->surfmesh.num_vertices;
-		r_vertexposition_t *vertexposition;
-		loadmodel->surfmesh.vertexposition = vertexposition = (r_vertexposition_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*loadmodel->surfmesh.vertexposition));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexposition++)
-			VectorCopy(loadmodel->surfmesh.data_vertex3f + 3*vertexindex, vertexposition->vertex3f);
-	}
-
-	// upload r_vertexmesh_t array as a buffer
-	if (loadmodel->surfmesh.vertexmesh && !loadmodel->surfmesh.vertexmeshbuffer)
-		loadmodel->surfmesh.vertexmeshbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.vertexmesh, loadmodel->surfmesh.num_vertices * sizeof(*loadmodel->surfmesh.vertexmesh), loadmodel->name, false, false);
-
-	// upload r_vertexposition_t array as a buffer
-	if (loadmodel->surfmesh.vertexposition && !loadmodel->surfmesh.vertexpositionbuffer)
-		loadmodel->surfmesh.vertexpositionbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.vertexposition, loadmodel->surfmesh.num_vertices * sizeof(*loadmodel->surfmesh.vertexposition), loadmodel->name, false, false);
-
-	// upload short indices as a buffer
-	if (loadmodel->surfmesh.data_element3s && !loadmodel->surfmesh.data_element3s_indexbuffer)
-		loadmodel->surfmesh.data_element3s_indexbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles * sizeof(short[3]), loadmodel->name, true, false);
-
-	// upload int indices as a buffer
-	if (loadmodel->surfmesh.data_element3i && !loadmodel->surfmesh.data_element3i_indexbuffer && !loadmodel->surfmesh.data_element3s)
-		loadmodel->surfmesh.data_element3i_indexbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]), loadmodel->name, true, false);
-
+	if (!vid.support.arb_vertex_buffer_object)
+		return;
 	// only build a vbo if one has not already been created (this is important for brush models which load specially)
+	if (loadmodel->surfmesh.vbo)
+		return;
+
+	// element buffer is easy because it's just one array
+	if (loadmodel->surfmesh.num_triangles)
+	{
+		if (loadmodel->surfmesh.data_element3s)
+			loadmodel->surfmesh.ebo3s = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]), loadmodel->name);
+		else
+			loadmodel->surfmesh.ebo3i = R_Mesh_CreateStaticBufferObject(GL_ELEMENT_ARRAY_BUFFER_ARB, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(unsigned int[3]), loadmodel->name);
+	}
+
 	// vertex buffer is several arrays and we put them in the same buffer
 	//
 	// is this wise?  the texcoordtexture2f array is used with dynamic
 	// vertex/svector/tvector/normal when rendering animated models, on the
 	// other hand animated models don't use a lot of vertices anyway...
-	if (!loadmodel->surfmesh.vbo_vertexbuffer)
+	if (loadmodel->surfmesh.num_vertices)
 	{
 		size_t size;
 		unsigned char *mem;
@@ -2829,7 +2741,7 @@ void Mod_BuildVBOs(void)
 		if (loadmodel->surfmesh.data_texcoordtexture2f ) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordtexture2f , loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));
 		if (loadmodel->surfmesh.data_texcoordlightmap2f) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordlightmap2f, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));
 		if (loadmodel->surfmesh.data_lightmapcolor4f   ) memcpy(mem + loadmodel->surfmesh.vbooffset_lightmapcolor4f   , loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));
-		loadmodel->surfmesh.vbo_vertexbuffer = R_Mesh_CreateMeshBuffer(mem, size, loadmodel->name, false, false);
+		loadmodel->surfmesh.vbo = R_Mesh_CreateStaticBufferObject(GL_ARRAY_BUFFER_ARB, mem, size, loadmodel->name);
 		Mem_Free(mem);
 	}
 }
@@ -3796,27 +3708,15 @@ static void Mod_GenerateLightmaps_UnweldTriangles(dp_model_t *model)
 	if (model->surfmesh.num_vertices > 65536)
 		model->surfmesh.data_element3s = NULL;
 
-	if (model->surfmesh.vertexposition)
-		Mem_Free(model->surfmesh.vertexposition);
-	model->surfmesh.vertexposition = NULL;
-	if (model->surfmesh.vertexmesh)
-		Mem_Free(model->surfmesh.vertexmesh);
-	model->surfmesh.vertexmesh = NULL;
-	if (model->surfmesh.vertexpositionbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.vertexpositionbuffer);
-	model->surfmesh.vertexpositionbuffer = NULL;
-	if (model->surfmesh.vertexmeshbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.vertexmeshbuffer);
-	model->surfmesh.vertexmeshbuffer = NULL;
-	if (model->surfmesh.data_element3i_indexbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.data_element3i_indexbuffer);
-	model->surfmesh.data_element3i_indexbuffer = NULL;
-	if (model->surfmesh.data_element3s_indexbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.data_element3s_indexbuffer);
-	model->surfmesh.data_element3s_indexbuffer = NULL;
-	if (model->surfmesh.vbo_vertexbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.vbo_vertexbuffer);
-	model->surfmesh.vbo_vertexbuffer = 0;
+	if (model->surfmesh.vbo)
+		R_Mesh_DestroyBufferObject(model->surfmesh.vbo);
+	model->surfmesh.vbo = 0;
+	if (model->surfmesh.ebo3i)
+		R_Mesh_DestroyBufferObject(model->surfmesh.ebo3i);
+	model->surfmesh.ebo3i = 0;
+	if (model->surfmesh.ebo3s)
+		R_Mesh_DestroyBufferObject(model->surfmesh.ebo3s);
+	model->surfmesh.ebo3s = 0;
 
 	// convert all triangles to unique vertex data
 	outvertexindex = 0;

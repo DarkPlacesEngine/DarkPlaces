@@ -636,14 +636,12 @@ extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean
 
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-extern void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
 extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 extern void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
@@ -651,7 +649,6 @@ extern void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
 extern void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-extern void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 extern void (GLAPIENTRY *qglBegin)(GLenum mode);
 extern void (GLAPIENTRY *qglEnd)(void);
 

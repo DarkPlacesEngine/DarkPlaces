@@ -212,15 +212,17 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_CullFace(r_refdef.view.cullface_back);
 	R_EntityMatrix(&identitymatrix);
 
+	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(explosiontexture, NULL, GL_MODULATE, 1);
+	R_Mesh_TexCoordPointer(0, 2, explosiontexcoord2f[0], 0, 0);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const explosion_t *e = explosion + surfacelist[surfacelistindex];
-		// FIXME: this can't properly handle r_refdef.view.colorscale > 1
+		R_Mesh_VertexPointer(e->vert[0], 0, 0);
+		// FIXME: fixed function path can't properly handle r_refdef.view.colorscale > 1
 		GL_Color(e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, e->alpha * r_refdef.view.colorscale, 1);
-		R_Mesh_PrepareVertices_Generic_Arrays(numverts, e->vert[0], NULL, explosiontexcoord2f[0]);
-		R_Mesh_Draw(0, numverts, 0, numtriangles, NULL, NULL, 0, explosiontris[0], NULL, 0);
+		R_Mesh_Draw(0, numverts, 0, numtriangles, NULL, explosiontris[0], 0, 0);
 	}
 }
 

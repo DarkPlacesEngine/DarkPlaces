@@ -3075,7 +3075,9 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 	R_Mesh_ResetTextureState();
 	R_EntityMatrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
-	R_Mesh_PrepareVertices_Generic_Arrays(polys->num_vertices, polys->data_vertex3f, polys->data_color4f, polys->data_texcoord2f);
+	R_Mesh_VertexPointer(polys->data_vertex3f, 0, 0);
+	R_Mesh_ColorPointer(polys->data_color4f, 0, 0);
+	R_Mesh_TexCoordPointer(0, 2, polys->data_texcoord2f, 0, 0);
 
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
@@ -3092,7 +3094,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 			VectorCopy(polys->data_triangles[surfacelist[surfacelistindex]].elements, polys->data_sortedelement3s + 3*numtriangles);
 			numtriangles++;
 		}
-		R_Mesh_Draw(0, polys->num_vertices, 0, numtriangles, NULL, NULL, 0, polys->data_sortedelement3s, NULL, 0);
+		R_Mesh_Draw(0, polys->num_vertices, 0, numtriangles, NULL, polys->data_sortedelement3s, 0, 0);
 	}
 }
 

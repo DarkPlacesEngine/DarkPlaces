@@ -3,9 +3,9 @@
 #include "cl_collision.h"
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
+cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0", "use glBegin(GL_TRIANGLES);glArrayElement();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
-cvar_t gl_mesh_prefer_short_elements = {CVAR_SAVE, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
-cvar_t gl_mesh_separatearrays = {0, "gl_mesh_separatearrays", "1", "use several separate vertex arrays rather than one combined stream"};
+cvar_t gl_mesh_prefer_short_elements = {0, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -15,8 +15,6 @@ cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
 cvar_t gl_vbo = {CVAR_SAVE, "gl_vbo", "3", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering, 0 disables VBO allocation or use, 1 enables VBOs for vertex and triangle data, 2 only for vertex data, 3 for vertex data and triangle data of simple meshes (ones with only one surface)"};
-cvar_t gl_vbo_dynamicvertex = {CVAR_SAVE, "gl_vbo_dynamicvertex", "0", "make use of GL_ARB_vertex_buffer_object extension when rendering dynamic (animated/procedural) geometry such as text and particles"};
-cvar_t gl_vbo_dynamicindex = {CVAR_SAVE, "gl_vbo_dynamicindex", "0", "make use of GL_ARB_vertex_buffer_object extension when rendering dynamic (animated/procedural) geometry such as text and particles"};
 cvar_t gl_fbo = {CVAR_SAVE, "gl_fbo", "1", "make use of GL_ARB_framebuffer_object extension to enable shadowmaps and other features using pixel formats different from the framebuffer"};
 
 cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
@@ -93,17 +91,23 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 void SCR_ScreenShot_f (void);
 
+typedef struct gl_bufferobjectinfo_s
+{
+	int target;
+	int object;
+	size_t size;
+	char name[MAX_QPATH];
+}
+gl_bufferobjectinfo_t;
+
 typedef struct gltextureunit_s
 {
-	int pointer_texcoord_components;
-	int pointer_texcoord_gltype;
-	size_t pointer_texcoord_stride;
-	const void *pointer_texcoord_pointer;
-	const r_meshbuffer_t *pointer_texcoord_vertexbuffer;
+	const void *pointer_texcoord;
 	size_t pointer_texcoord_offset;
-
+	int pointer_texcoord_buffer;
 	int t2d, t3d, tcubemap, trectangle;
 	int arrayenabled;
+	unsigned int arraycomponents;
 	int rgbscale, alphascale;
 	int combine;
 	int combinergb, combinealpha;
@@ -136,37 +140,14 @@ typedef struct gl_state_s
 	int vertexbufferobject;
 	int elementbufferobject;
 	qboolean pointer_color_enabled;
-
-	int pointer_vertex_components;
-	int pointer_vertex_gltype;
-	size_t pointer_vertex_stride;
-	const void *pointer_vertex_pointer;
-	const r_meshbuffer_t *pointer_vertex_vertexbuffer;
+	const void *pointer_vertex;
+	const void *pointer_color;
 	size_t pointer_vertex_offset;
-
-	int pointer_color_components;
-	int pointer_color_gltype;
-	size_t pointer_color_stride;
-	const void *pointer_color_pointer;
-	const r_meshbuffer_t *pointer_color_vertexbuffer;
 	size_t pointer_color_offset;
+	int pointer_vertex_buffer;
+	int pointer_color_buffer;
 
-	void *preparevertices_tempdata;
-	size_t preparevertices_tempdatamaxsize;
-	r_meshbuffer_t *preparevertices_dynamicvertexbuffer;
-	r_vertexposition_t *preparevertices_vertexposition;
-	r_vertexgeneric_t *preparevertices_vertexgeneric;
-	r_vertexmesh_t *preparevertices_vertexmesh;
-	int preparevertices_numvertices;
-
-	r_meshbuffer_t *draw_dynamicindexbuffer;
-
-	qboolean usevbo_staticvertex;
-	qboolean usevbo_staticindex;
-	qboolean usevbo_dynamicvertex;
-	qboolean usevbo_dynamicindex;
-
-	memexpandablearray_t meshbufferarray;
+	memexpandablearray_t bufferobjectinfoarray;
 
 	qboolean active;
 }
@@ -245,11 +226,7 @@ static void gl_backend_start(void)
 {
 	memset(&gl_state, 0, sizeof(gl_state));
 
-	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
-	gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
-	gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
-	Mem_ExpandableArray_NewArray(&gl_state.meshbufferarray, r_main_mempool, sizeof(r_meshbuffer_t), 128);
+	Mem_ExpandableArray_NewArray(&gl_state.bufferobjectinfoarray, r_main_mempool, sizeof(gl_bufferobjectinfo_t), 128);
 
 	Con_DPrintf("OpenGL backend started.\n");
 
@@ -262,12 +239,7 @@ static void gl_backend_shutdown(void)
 {
 	Con_DPrint("OpenGL Backend shutting down\n");
 
-	if (gl_state.preparevertices_tempdata)
-		Mem_Free(gl_state.preparevertices_tempdata);
-	if (gl_state.preparevertices_dynamicvertexbuffer)
-		R_Mesh_DestroyMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer);
-
-	Mem_ExpandableArray_FreeArray(&gl_state.meshbufferarray);
+	Mem_ExpandableArray_FreeArray(&gl_state.bufferobjectinfoarray);
 
 	memset(&gl_state, 0, sizeof(gl_state));
 }
@@ -309,15 +281,13 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&v_flipped);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_vbo);
-	Cvar_RegisterVariable(&gl_vbo_dynamicvertex);
-	Cvar_RegisterVariable(&gl_vbo_dynamicindex);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
+	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
 	Cvar_RegisterVariable(&gl_mesh_prefer_short_elements);
-	Cvar_RegisterVariable(&gl_mesh_separatearrays);
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -1064,10 +1034,6 @@ void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
 	CHECKGLERROR
-	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
-	gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
-	gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
 		Con_Printf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
@@ -1173,84 +1139,46 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 
 // renders triangles using vertices from the active arrays
 int paranoidblah = 0;
-void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, size_t element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, size_t element3s_bufferoffset)
+void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int bufferobject3i, int bufferobject3s)
 {
 	unsigned int numelements = numtriangles * 3;
-	int bufferobject3i;
-	size_t bufferoffset3i;
-	int bufferobject3s;
-	size_t bufferoffset3s;
 	if (numvertices < 3 || numtriangles < 1)
 	{
 		if (numvertices < 0 || numtriangles < 0 || developer_extra.integer)
-			Con_DPrintf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %8x, %8p, %8p, %8x);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3i_indexbuffer, (int)element3i_bufferoffset, (void *)element3s, (void *)element3s_indexbuffer, (int)element3s_bufferoffset);
-		return;
-	}
-	if (gl_state.pointer_vertex_pointer == NULL)
-	{
-		Con_DPrintf("R_Mesh_Draw with no vertex pointer!\n");
+			Con_DPrintf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %i, %i);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3s, bufferobject3i, bufferobject3s);
 		return;
 	}
 	if (!gl_mesh_prefer_short_elements.integer)
 	{
 		if (element3i)
 			element3s = NULL;
-		if (element3i_indexbuffer)
-			element3i_indexbuffer = NULL;
+		if (bufferobject3i)
+			bufferobject3s = 0;
 	}
-	// adjust the pointers for firsttriangle
 	if (element3i)
 		element3i += firsttriangle * 3;
-	if (element3i_indexbuffer)
-		element3i_bufferoffset += firsttriangle * 3 * sizeof(*element3i);
 	if (element3s)
 		element3s += firsttriangle * 3;
-	if (element3s_indexbuffer)
-		element3s_bufferoffset += firsttriangle * 3 * sizeof(*element3s);
-	// check if the user specified to ignore static index buffers
-	if (!gl_state.usevbo_staticindex || (gl_vbo.integer == 3 && !vid.forcevbo && (element3i_bufferoffset || element3s_bufferoffset)))
+	switch (gl_vbo.integer)
 	{
-		element3i_indexbuffer = NULL;
-		element3s_indexbuffer = NULL;
+	default:
+	case 0:
+	case 2:
+		bufferobject3i = bufferobject3s = 0;
+		break;
+	case 1:
+		break;
+	case 3:
+		if (firsttriangle)
+			bufferobject3i = bufferobject3s = 0;
+		break;
 	}
-	// upload a dynamic index buffer if needed
-	if (element3s)
-	{
-		if (!element3s_indexbuffer && gl_state.usevbo_dynamicindex)
-		{
-			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3s, numelements * sizeof(*element3s));
-			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, true);
-			element3s_indexbuffer = gl_state.draw_dynamicindexbuffer;
-			element3s_bufferoffset = 0;
-		}
-	}
-	else if (element3i)
-	{
-		if (!element3i_indexbuffer && gl_state.usevbo_dynamicindex)
-		{
-			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3i, numelements * sizeof(*element3i));
-			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, true);
-			element3i_indexbuffer = gl_state.draw_dynamicindexbuffer;
-			element3i_bufferoffset = 0;
-		}
-	}
-	bufferobject3i = element3i_indexbuffer ? element3i_indexbuffer->bufferobject : 0;
-	bufferoffset3i = element3i_bufferoffset;
-	bufferobject3s = element3s_indexbuffer ? element3s_indexbuffer->bufferobject : 0;
-	bufferoffset3s = element3s_bufferoffset;
 	CHECKGLERROR
 	r_refdef.stats.meshes++;
 	r_refdef.stats.meshes_elements += numelements;
 	if (gl_paranoid.integer)
 	{
-		unsigned int i;
-		// LordHavoc: disabled this - it needs to be updated to handle components and gltype and stride in each array
-#if 0
-		unsigned int j, size;
+		unsigned int i, j, size;
 		const int *p;
 		// note: there's no validation done here on buffer objects because it
 		// is somewhat difficult to get at the data, and gl_paranoid can be
@@ -1260,7 +1188,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
 		CHECKGLERROR
-		if (gl_state.pointer_vertex_pointer)
+		if (gl_state.pointer_vertex)
 			for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
 				paranoidblah += *p;
 		if (gl_state.pointer_color_enabled)
@@ -1285,7 +1213,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 						paranoidblah += *p;
 			}
 		}
-#endif
 		if (element3i)
 		{
 			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
@@ -1320,119 +1247,83 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			qglBegin(GL_TRIANGLES);
 			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 			{
-				if (element3i)
-					element = element3i[i];
-				else if (element3s)
-					element = element3s[i];
-				else
-					element = firstvertex + i;
+				element = element3i ? element3i[i] : element3s[i];
 				for (j = 0;j < vid.texarrayunits;j++)
 				{
-					if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
+					if (gl_state.units[j].pointer_texcoord && gl_state.units[j].arrayenabled)
 					{
-						if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
+						if (vid.texarrayunits > 1)
 						{
-							p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
+							if (gl_state.units[j].arraycomponents == 4)
 							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
-								else
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 4;
+								qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
+							}
+							else if (gl_state.units[j].arraycomponents == 3)
+							{
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 3;
+								qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
+							}
+							else if (gl_state.units[j].arraycomponents == 2)
+							{
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 2;
+								qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
 							}
 							else
 							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(p[0], p[1], p[2], p[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(p[0], p[1], p[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(p[0], p[1]);
-								else
-									qglTexCoord1f(p[0]);
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 1;
+								qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
 							}
 						}
-						else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
+						else
 						{
-							const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
+							if (gl_state.units[j].arraycomponents == 4)
 							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 4;
+								qglTexCoord4f(p[0], p[1], p[2], p[3]);
+							}
+							else if (gl_state.units[j].arraycomponents == 3)
+							{
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 3;
+								qglTexCoord3f(p[0], p[1], p[2]);
+							}
+							else if (gl_state.units[j].arraycomponents == 2)
+							{
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 2;
+								qglTexCoord2f(p[0], p[1]);
 							}
 							else
 							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(s[0], s[1], s[2], s[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(s[0], s[1], s[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(s[0], s[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglTexCoord1f(s[0]);
-							}
-						}
-						else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
-						{
-							const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
-							}
-							else
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(sb[0], sb[1], sb[2], sb[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(sb[0], sb[1], sb[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(sb[0], sb[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglTexCoord1f(sb[0]);
+								p = ((const GLfloat *)(gl_state.units[j].pointer_texcoord)) + element * 1;
+								qglTexCoord1f(p[0]);
 							}
 						}
 					}
 				}
-				if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
+				if (gl_state.pointer_color && gl_state.pointer_color_enabled)
 				{
-					if (gl_state.pointer_color_gltype == GL_FLOAT)
-					{
-						p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-						qglColor4f(p[0], p[1], p[2], p[3]);
-					}
-					else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
-					{
-						const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-						qglColor4ub(ub[0], ub[1], ub[2], ub[3]);
-					}
+					p = ((const GLfloat *)(gl_state.pointer_color)) + element * 4;
+					qglColor4f(p[0], p[1], p[2], p[3]);
 				}
-				if (gl_state.pointer_vertex_gltype == GL_FLOAT)
-				{
-					p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
-					if (gl_state.pointer_vertex_components == 4)
-						qglVertex4f(p[0], p[1], p[2], p[3]);
-					else if (gl_state.pointer_vertex_components == 3)
-						qglVertex3f(p[0], p[1], p[2]);
-					else
-						qglVertex2f(p[0], p[1]);
-				}
+				p = ((const GLfloat *)(gl_state.pointer_vertex)) + element * 3;
+				qglVertex3f(p[0], p[1], p[2]);
+			}
+			qglEnd();
+			CHECKGLERROR
+		}
+		else if (gl_mesh_testarrayelement.integer)
+		{
+			int i;
+			qglBegin(GL_TRIANGLES);
+			if (element3i)
+			{
+				for (i = 0;i < numtriangles * 3;i++)
+					qglArrayElement(element3i[i]);
+			}
+			else if (element3s)
+			{
+				for (i = 0;i < numtriangles * 3;i++)
+					qglArrayElement(element3s[i]);
 			}
 			qglEnd();
 			CHECKGLERROR
@@ -1442,7 +1333,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(bufferobject3s);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
 				CHECKGLERROR
 			}
 			else
@@ -1456,7 +1347,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			GL_BindEBO(bufferobject3i);
 			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
+				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
 				CHECKGLERROR
 			}
 			else
@@ -1493,11 +1384,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				CHECKGLERROR
 			}
 		}
-		else
-		{
-			qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
-			CHECKGLERROR
-		}
 	}
 }
 
@@ -1506,91 +1392,52 @@ void R_Mesh_Finish(void)
 {
 }
 
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic)
+int R_Mesh_CreateStaticBufferObject(unsigned int target, void *data, size_t size, const char *name)
 {
-	int bufferobject = 0;
-	void *devicebuffer = NULL;
-	r_meshbuffer_t *buffer;
-	if (!(isdynamic ? (isindexbuffer ? gl_state.usevbo_dynamicindex : gl_state.usevbo_dynamicvertex) : (isindexbuffer ? gl_state.usevbo_staticindex : gl_state.usevbo_staticvertex)))
-		return NULL;
-	if (isindexbuffer)
+	gl_bufferobjectinfo_t *info;
+	GLuint bufferobject;
+
+	if (!gl_vbo.integer)
+		return 0;
+
+	qglGenBuffersARB(1, &bufferobject);
+	switch(target)
 	{
-		r_refdef.stats.indexbufferuploadcount++;
-		r_refdef.stats.indexbufferuploadsize += size;
+	case GL_ELEMENT_ARRAY_BUFFER_ARB: GL_BindEBO(bufferobject);break;
+	case GL_ARRAY_BUFFER_ARB: GL_BindVBO(bufferobject);break;
+	default: Sys_Error("R_Mesh_CreateStaticBufferObject: unknown target type %i\n", target);return 0;
 	}
-	else
-	{
-		r_refdef.stats.vertexbufferuploadcount++;
-		r_refdef.stats.vertexbufferuploadsize += size;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		qglGenBuffersARB(1, (GLuint *)&bufferobject);
-		if (isindexbuffer)
-			GL_BindEBO(bufferobject);
-		else
-			GL_BindVBO(bufferobject);
-		qglBufferDataARB(isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB, size, data, isdynamic ? GL_STREAM_DRAW_ARB : GL_STATIC_DRAW_ARB);
-		break;
-	}
-	buffer = (r_meshbuffer_t *)Mem_ExpandableArray_AllocRecord(&gl_state.meshbufferarray);
-	memset(buffer, 0, sizeof(*buffer));
-	buffer->bufferobject = bufferobject;
-	buffer->devicebuffer = devicebuffer;
-	buffer->size = size;
-	buffer->isindexbuffer = isindexbuffer;
-	buffer->isdynamic = isdynamic;
-	strlcpy(buffer->name, name, sizeof(buffer->name));
-	return buffer;
+	qglBufferDataARB(target, size, data, GL_STATIC_DRAW_ARB);
+
+	info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_AllocRecord(&gl_state.bufferobjectinfoarray);
+	memset(info, 0, sizeof(*info));
+	info->target = target;
+	info->object = bufferobject;
+	info->size = size;
+	strlcpy(info->name, name, sizeof(info->name));
+
+	return (int)bufferobject;
 }
 
-void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size)
+void R_Mesh_DestroyBufferObject(int bufferobject)
 {
-	if (!buffer || (!buffer->bufferobject && !buffer->devicebuffer))
-		return;
-	if (buffer->isindexbuffer)
-	{
-		r_refdef.stats.indexbufferuploadcount++;
-		r_refdef.stats.indexbufferuploadsize += size;
-	}
-	else
-	{
-		r_refdef.stats.vertexbufferuploadcount++;
-		r_refdef.stats.vertexbufferuploadsize += size;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		if (buffer->isindexbuffer)
-			GL_BindEBO(buffer->bufferobject);
-		else
-			GL_BindVBO(buffer->bufferobject);
-		qglBufferDataARB(buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB, size, data, buffer->isdynamic ? GL_STREAM_DRAW_ARB : GL_STATIC_DRAW_ARB);
-		break;
-	}
-}
+	int i, endindex;
+	gl_bufferobjectinfo_t *info;
 
-void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
-{
-	if (!buffer)
-		return;
-	switch(vid.renderpath)
+	qglDeleteBuffersARB(1, (GLuint *)&bufferobject);
+
+	endindex = Mem_ExpandableArray_IndexRange(&gl_state.bufferobjectinfoarray);
+	for (i = 0;i < endindex;i++)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		qglDeleteBuffersARB(1, (GLuint *)&buffer->bufferobject);
-		break;
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.bufferobjectinfoarray, i);
+		if (!info)
+			continue;
+		if (info->object == bufferobject)
+		{
+			Mem_ExpandableArray_FreeRecord(&gl_state.bufferobjectinfoarray, (void *)info);
+			break;
+		}
 	}
-	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
 }
 
 void GL_Mesh_ListVBOs(qboolean printeach)
@@ -1598,45 +1445,47 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 	int i, endindex;
 	size_t ebocount = 0, ebomemory = 0;
 	size_t vbocount = 0, vbomemory = 0;
-	r_meshbuffer_t *buffer;
-	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
+	gl_bufferobjectinfo_t *info;
+	endindex = Mem_ExpandableArray_IndexRange(&gl_state.bufferobjectinfoarray);
 	for (i = 0;i < endindex;i++)
 	{
-		buffer = (r_meshbuffer_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.meshbufferarray, i);
-		if (!buffer)
+		info = (gl_bufferobjectinfo_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.bufferobjectinfoarray, i);
+		if (!info)
 			continue;
-		if (buffer->isindexbuffer) {ebocount++;ebomemory += buffer->size;if (printeach) Con_Printf("indexbuffer #%i %s = %i bytes%s\n", i, buffer->name, (int)buffer->size, buffer->isdynamic ? " (dynamic)" : " (static)");}
-		else                       {vbocount++;vbomemory += buffer->size;if (printeach) Con_Printf("vertexbuffer #%i %s = %i bytes%s\n", i, buffer->name, (int)buffer->size, buffer->isdynamic ? " (dynamic)" : " (static)");}
+		switch(info->target)
+		{
+		case GL_ELEMENT_ARRAY_BUFFER_ARB: ebocount++;ebomemory += info->size;if (printeach) Con_Printf("EBO #%i %s = %i bytes\n", info->object, info->name, (int)info->size);break;
+		case GL_ARRAY_BUFFER_ARB: vbocount++;vbomemory += info->size;if (printeach) Con_Printf("VBO #%i %s = %i bytes\n", info->object, info->name, (int)info->size);break;
+		default: Con_Printf("gl_vbostats: unknown target type %i\n", info->target);break;
+		}
 	}
-	Con_Printf("vertex buffers: %i indexbuffers totalling %i bytes (%.3f MB), %i vertexbuffers totalling %i bytes (%.3f MB), combined %i bytes (%.3fMB)\n", (int)ebocount, (int)ebomemory, ebomemory / 1048576.0, (int)vbocount, (int)vbomemory, vbomemory / 1048576.0, (int)(ebomemory + vbomemory), (ebomemory + vbomemory) / 1048576.0);
+	Con_Printf("vertex buffers: %i element buffers totalling %i bytes (%.3f MB), %i vertex buffers totalling %i bytes (%.3f MB), combined %i bytes (%.3fMB)\n", (int)ebocount, (int)ebomemory, ebomemory / 1048576.0, (int)vbocount, (int)vbomemory, vbomemory / 1048576.0, (int)(ebomemory + vbomemory), (ebomemory + vbomemory) / 1048576.0);
 }
 
-
-
-void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset)
+void R_Mesh_VertexPointer(const float *vertex3f, int bufferobject, size_t bufferoffset)
 {
-	int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
-	if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
+	if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
+		bufferobject = 0;
+	if (gl_state.pointer_vertex != vertex3f || gl_state.pointer_vertex_buffer != bufferobject || gl_state.pointer_vertex_offset != bufferoffset)
 	{
-		gl_state.pointer_vertex_components = components;
-		gl_state.pointer_vertex_gltype = gltype;
-		gl_state.pointer_vertex_stride = stride;
-		gl_state.pointer_vertex_pointer = pointer;
-		gl_state.pointer_vertex_vertexbuffer = vertexbuffer;
+		gl_state.pointer_vertex = vertex3f;
+		gl_state.pointer_vertex_buffer = bufferobject;
 		gl_state.pointer_vertex_offset = bufferoffset;
 		CHECKGLERROR
 		GL_BindVBO(bufferobject);
-		qglVertexPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), bufferobject ? (void *)bufferoffset : vertex3f);CHECKGLERROR
 	}
 }
 
-void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset)
+void R_Mesh_ColorPointer(const float *color4f, int bufferobject, size_t bufferoffset)
 {
-	// note: vertexbuffer may be non-NULL even if pointer is NULL, so check
-	// the pointer only.
-	if (pointer)
+	// note: this can not rely on bufferobject to decide whether a color array
+	// is supplied, because surfmesh_t shares one vbo for all arrays, which
+	// means that a valid vbo may be supplied even if there is no color array.
+	if (color4f)
 	{
-		int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+		if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
+			bufferobject = 0;
 		// caller wants color array enabled
 		if (!gl_state.pointer_color_enabled)
 		{
@@ -1644,17 +1493,14 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 			CHECKGLERROR
 			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 		}
-		if (gl_state.pointer_color_components != components || gl_state.pointer_color_gltype != gltype || gl_state.pointer_color_stride != stride || gl_state.pointer_color_pointer != pointer || gl_state.pointer_color_vertexbuffer != vertexbuffer || gl_state.pointer_color_offset != bufferoffset)
+		if (gl_state.pointer_color != color4f || gl_state.pointer_color_buffer != bufferobject || gl_state.pointer_color_offset != bufferoffset)
 		{
-			gl_state.pointer_color_components = components;
-			gl_state.pointer_color_gltype = gltype;
-			gl_state.pointer_color_stride = stride;
-			gl_state.pointer_color_pointer = pointer;
-			gl_state.pointer_color_vertexbuffer = vertexbuffer;
+			gl_state.pointer_color = color4f;
+			gl_state.pointer_color_buffer = bufferobject;
 			gl_state.pointer_color_offset = bufferoffset;
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
-			qglColorPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), bufferobject ? (void *)bufferoffset : color4f);CHECKGLERROR
 		}
 	}
 	else
@@ -1671,16 +1517,17 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 	}
 }
 
-void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset)
+void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord, int bufferobject, size_t bufferoffset)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
 	CHECKGLERROR
 	// note: there is no need to check bufferobject here because all cases
 	// that involve a valid bufferobject also supply a texcoord array
-	if (pointer)
+	if (texcoord)
 	{
-		int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+		if (!gl_vbo.integer || gl_mesh_testarrayelement.integer)
+			bufferobject = 0;
 		// texture array unit is enabled, enable the array
 		if (!unit->arrayenabled)
 		{
@@ -1689,17 +1536,15 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 		// texcoord array
-		if (unit->pointer_texcoord_components != components || unit->pointer_texcoord_gltype != gltype || unit->pointer_texcoord_stride != stride || unit->pointer_texcoord_pointer != pointer || unit->pointer_texcoord_vertexbuffer != vertexbuffer || unit->pointer_texcoord_offset != bufferoffset)
+		if (unit->pointer_texcoord != texcoord || unit->pointer_texcoord_buffer != bufferobject || unit->pointer_texcoord_offset != bufferoffset || unit->arraycomponents != numcomponents)
 		{
-			unit->pointer_texcoord_components = components;
-			unit->pointer_texcoord_gltype = gltype;
-			unit->pointer_texcoord_stride = stride;
-			unit->pointer_texcoord_pointer = pointer;
-			unit->pointer_texcoord_vertexbuffer = vertexbuffer;
+			unit->pointer_texcoord = texcoord;
+			unit->pointer_texcoord_buffer = bufferobject;
 			unit->pointer_texcoord_offset = bufferoffset;
+			unit->arraycomponents = numcomponents;
 			GL_ClientActiveTexture(unitnum);
 			GL_BindVBO(bufferobject);
-			qglTexCoordPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			qglTexCoordPointer(unit->arraycomponents, GL_FLOAT, sizeof(float) * unit->arraycomponents, bufferobject ? (void *)bufferoffset : texcoord);CHECKGLERROR
 		}
 	}
 	else
@@ -2081,470 +1926,6 @@ void R_Mesh_ResetTextureState(void)
 				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 			}
 		}
-		break;
-	}
-}
-
-
-
-r_vertexposition_t *R_Mesh_PrepareVertices_Position_Lock(int numvertices)
-{
-	size_t size;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		size = sizeof(r_vertexposition_t) * numvertices;
-		if (gl_state.preparevertices_tempdatamaxsize < size)
-		{
-			gl_state.preparevertices_tempdatamaxsize = size;
-			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-		}
-		gl_state.preparevertices_vertexposition = (r_vertexposition_t *)gl_state.preparevertices_tempdata;
-		gl_state.preparevertices_numvertices = numvertices;
-		return gl_state.preparevertices_vertexposition;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
-		return NULL;
-	}
-}
-
-qboolean R_Mesh_PrepareVertices_Position_Unlock(void)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		R_Mesh_PrepareVertices_Position(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexposition, NULL);
-		gl_state.preparevertices_vertexposition = NULL;
-		gl_state.preparevertices_numvertices = 0;
-		return true;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
-		return false;
-	}
-}
-
-void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex3f)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		if (vid.texunits >= 2)
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		if (vid.texunits >= 3)
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		break;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
-		return;
-	}
-}
-
-void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *vertex, const r_meshbuffer_t *vertexbuffer)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
-	if (vertexbuffer)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL11:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			break;
-		}
-		return;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		break;
-	}
-}
-
-
-
-r_vertexgeneric_t *R_Mesh_PrepareVertices_Generic_Lock(int numvertices)
-{
-	size_t size;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		size = sizeof(r_vertexgeneric_t) * numvertices;
-		if (gl_state.preparevertices_tempdatamaxsize < size)
-		{
-			gl_state.preparevertices_tempdatamaxsize = size;
-			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-		}
-		gl_state.preparevertices_vertexgeneric = (r_vertexgeneric_t *)gl_state.preparevertices_tempdata;
-		gl_state.preparevertices_numvertices = numvertices;
-		return gl_state.preparevertices_vertexgeneric;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Generic_Lock: unrecognized vid.renderpath\n");
-		return NULL;
-	}
-}
-
-qboolean R_Mesh_PrepareVertices_Generic_Unlock(void)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		R_Mesh_PrepareVertices_Generic(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexgeneric, NULL);
-		gl_state.preparevertices_vertexgeneric = NULL;
-		gl_state.preparevertices_numvertices = 0;
-		return true;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Generic_Lock: unrecognized vid.renderpath\n");
-		return false;
-	}
-}
-
-void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f)
-{
-	int i;
-	r_vertexgeneric_t *vertex;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		if (gl_mesh_separatearrays.integer)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoord2f, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		if (gl_mesh_separatearrays.integer)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoord2f, NULL, 0);
-			if (vid.texunits >= 2)
-				R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			if (vid.texunits >= 3)
-				R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
-		return;
-	}
-
-	// no quick path for this case, convert to vertex structs
-	vertex = R_Mesh_PrepareVertices_Generic_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	if (color4f)
-	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Scale(color4f + 4*i, 255.0f, vertex[i].color4ub);
-	}
-	else
-	{
-		float tempcolor4f[4];
-		unsigned char tempcolor4ub[4];
-		Vector4Scale(gl_state.color4f, 255.0f, tempcolor4f);
-		tempcolor4ub[0] = (unsigned char)bound(0.0f, tempcolor4f[0], 255.0f);
-		tempcolor4ub[1] = (unsigned char)bound(0.0f, tempcolor4f[1], 255.0f);
-		tempcolor4ub[2] = (unsigned char)bound(0.0f, tempcolor4f[2], 255.0f);
-		tempcolor4ub[3] = (unsigned char)bound(0.0f, tempcolor4f[3], 255.0f);
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(tempcolor4ub, vertex[i].color4ub);
-	}
-	if (texcoord2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoord2f + 2*i, vertex[i].texcoord2f);
-	R_Mesh_PrepareVertices_Generic_Unlock();
-	R_Mesh_PrepareVertices_Generic(numvertices, vertex, NULL);
-}
-
-void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *vertex, const r_meshbuffer_t *vertexbuffer)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
-	if (vertexbuffer)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL11:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
-			break;
-		}
-		return;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
-		break;
-	}
-}
-
-
-
-r_vertexmesh_t *R_Mesh_PrepareVertices_Mesh_Lock(int numvertices)
-{
-	size_t size;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		size = sizeof(r_vertexmesh_t) * numvertices;
-		if (gl_state.preparevertices_tempdatamaxsize < size)
-		{
-			gl_state.preparevertices_tempdatamaxsize = size;
-			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-		}
-		gl_state.preparevertices_vertexmesh = (r_vertexmesh_t *)gl_state.preparevertices_tempdata;
-		gl_state.preparevertices_numvertices = numvertices;
-		return gl_state.preparevertices_vertexmesh;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Mesh_Lock: unrecognized vid.renderpath\n");
-		return NULL;
-	}
-}
-
-qboolean R_Mesh_PrepareVertices_Mesh_Unlock(void)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		R_Mesh_PrepareVertices_Mesh(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexmesh, NULL);
-		gl_state.preparevertices_vertexmesh = NULL;
-		gl_state.preparevertices_numvertices = 0;
-		return true;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Mesh_Lock: unrecognized vid.renderpath\n");
-		return false;
-	}
-}
-
-void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f)
-{
-	int i;
-	r_vertexmesh_t *vertex;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		if (gl_mesh_separatearrays.integer)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoordtexture2f, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), svector3f, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), tvector3f, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), normal3f, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
-			return;
-		}
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		if (gl_mesh_separatearrays.integer)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoordtexture2f, NULL, 0);
-			if (vid.texunits >= 2)
-				R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
-			if (vid.texunits >= 3)
-				R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	default:
-		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
-		return;
-	}
-
-	vertex = R_Mesh_PrepareVertices_Mesh_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	if (svector3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(svector3f + 3*i, vertex[i].svector3f);
-	if (tvector3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(tvector3f + 3*i, vertex[i].tvector3f);
-	if (normal3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(normal3f + 3*i, vertex[i].normal3f);
-	if (color4f)
-	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Scale(color4f + 4*i, 255.0f, vertex[i].color4ub);
-	}
-	else
-	{
-		float tempcolor4f[4];
-		unsigned char tempcolor4ub[4];
-		Vector4Scale(gl_state.color4f, 255.0f, tempcolor4f);
-		tempcolor4ub[0] = (unsigned char)bound(0.0f, tempcolor4f[0], 255.0f);
-		tempcolor4ub[1] = (unsigned char)bound(0.0f, tempcolor4f[1], 255.0f);
-		tempcolor4ub[2] = (unsigned char)bound(0.0f, tempcolor4f[2], 255.0f);
-		tempcolor4ub[3] = (unsigned char)bound(0.0f, tempcolor4f[3], 255.0f);
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(tempcolor4ub, vertex[i].color4ub);
-	}
-	if (texcoordtexture2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoordtexture2f + 2*i, vertex[i].texcoordtexture2f);
-	if (texcoordlightmap2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoordlightmap2f + 2*i, vertex[i].texcoordlightmap2f);
-	R_Mesh_PrepareVertices_Mesh_Unlock();
-	R_Mesh_PrepareVertices_Mesh(numvertices, vertex, NULL);
-}
-
-void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, const r_meshbuffer_t *vertexbuffer)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
-	if (vertexbuffer)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , vertexbuffer, (int)((unsigned char *)vertex->svector3f          - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , vertexbuffer, (int)((unsigned char *)vertex->tvector3f          - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(3, 4, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , vertexbuffer, (int)((unsigned char *)vertex->normal3f           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
-			break;
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
-		case RENDERPATH_GL11:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
-			break;
-		}
-		return;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , NULL, 0);
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , NULL, 0);
-		R_Mesh_TexCoordPointer(3, 4, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
-		break;
-	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
-	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
 		break;
 	}
 }
