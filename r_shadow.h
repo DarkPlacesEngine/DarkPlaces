@@ -45,7 +45,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias);
 int R_Shadow_CalcSphereSideMask(const vec3_t p1, float radius, float bias);
 int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals);
-void R_Shadow_RenderLighting(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const unsigned short *element3s, int element3i_bufferobject, int element3s_bufferobject);
+void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
