@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces-dedicated.dev
 Name=DarkPlaces
-UnitCount=162
+UnitCount=165
 Type=1
 Ver=1
 ObjFiles=
@@ -1588,9 +1588,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit163]
-FileName=svbsp.c
+FileName=utf8lib.c
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1598,9 +1598,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit164]
-FileName=svbsp.h
+FileName=ft2.c
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
@@ -1608,9 +1608,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit165]
-FileName=timing.h
+FileName=bih.c
 CompileCpp=0
-Folder=DarkPlaces
+Folder=Source Files
 Compile=1
 Link=1
 Priority=1000
