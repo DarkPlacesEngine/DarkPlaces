@@ -655,19 +655,49 @@ void V_CalcRefdef (void)
 				// gun model following code
 
 				if(gunorg_follow[0] < vieworg[0])
-					gunorg_follow[0] += (vieworg[0] - gunorg_follow[0]) * 5 * ef_speed;
+				{
+					if(vieworg[0] - gunorg_follow[0] > 5)
+						gunorg_follow[0] = vieworg[0] - 5;
+					else
+						gunorg_follow[0] += (vieworg[0] - gunorg_follow[0]) * 5 * ef_speed;
+				}
 				if(gunorg_follow[0] > vieworg[0])
-					gunorg_follow[0] -= (gunorg_follow[0] - vieworg[0]) * 5 * ef_speed;
+				{
+					if(gunorg_follow[0] - vieworg[0] > 5)
+						gunorg_follow[0] = vieworg[0] + 5;
+					else
+						gunorg_follow[0] -= (gunorg_follow[0] - vieworg[0]) * 5 * ef_speed;
+				}
 
 				if(gunorg_follow[1] < vieworg[1])
-					gunorg_follow[1] += (vieworg[1] - gunorg_follow[1]) * 5 * ef_speed;
+				{
+					if(vieworg[1] - gunorg_follow[1] > 5)
+						gunorg_follow[1] = vieworg[1] - 5;
+					else
+						gunorg_follow[1] += (vieworg[1] - gunorg_follow[1]) * 5 * ef_speed;
+				}
 				if(gunorg_follow[1] > vieworg[1])
-					gunorg_follow[1] -= (gunorg_follow[1] - vieworg[1]) * 5 * ef_speed;
+				{
+					if(gunorg_follow[1] - vieworg[1] > 5)
+						gunorg_follow[1] = vieworg[1] + 5;
+					else
+						gunorg_follow[1] -= (gunorg_follow[1] - vieworg[1]) * 5 * ef_speed;
+				}
 
 				if(gunorg_follow[2] < vieworg[2])
-					gunorg_follow[2] += (vieworg[2] - gunorg_follow[2]) * 5 * ef_speed;
+				{
+					if(vieworg[2] - gunorg_follow[2] > 5)
+						gunorg_follow[2] = vieworg[2] - 5;
+					else
+						gunorg_follow[2] += (vieworg[2] - gunorg_follow[2]) * 5 * ef_speed;
+				}
 				if(gunorg_follow[2] > vieworg[2])
-					gunorg_follow[2] -= (gunorg_follow[2] - vieworg[2]) * 5 * ef_speed;
+				{
+					if(gunorg_follow[2] - vieworg[2] > 5)
+						gunorg_follow[2] = vieworg[2] + 5;
+					else
+						gunorg_follow[2] -= (gunorg_follow[2] - vieworg[2]) * 5 * ef_speed;
+				}
 
 				VectorCopy(gunorg_follow, gunorg);
 				}
