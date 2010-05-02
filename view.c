@@ -45,7 +45,7 @@ cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing s
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
-cvar_t cl_leanmodel = {CVAR_SAVE, "cl_leanmodel", "1", "enables gun leaning"};
+cvar_t cl_leanmodel = {CVAR_SAVE, "cl_leanmodel", "0", "enables gun leaning"};
 cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "1", "gun leaning sideways speed"};
 cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
 cvar_t cl_leanmodel_side_highpass1 = {CVAR_SAVE, "cl_leanmodel_side_highpass1", "5", "gun leaning sideways pre-highpass in 1/s"};
@@ -57,7 +57,7 @@ cvar_t cl_leanmodel_up_highpass1 = {CVAR_SAVE, "cl_leanmodel_up_highpass1", "5",
 cvar_t cl_leanmodel_up_highpass = {CVAR_SAVE, "cl_leanmodel_up_highpass", "15", "gun leaning upward highpass in 1/s"};
 cvar_t cl_leanmodel_up_lowpass = {CVAR_SAVE, "cl_leanmodel_up_lowpass", "30", "gun leaning upward lowpass in 1/s"};
 
-cvar_t cl_followmodel = {CVAR_SAVE, "cl_followmodel", "1", "enables gun following"};
+cvar_t cl_followmodel = {CVAR_SAVE, "cl_followmodel", "0", "enables gun following"};
 cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "1", "gun following sideways speed"};
 cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "4", "gun following sideways limit"};
 cvar_t cl_followmodel_side_highpass1 = {CVAR_SAVE, "cl_followmodel_side_highpass1", "5", "gun following sideways pre-highpass in 1/s"};
