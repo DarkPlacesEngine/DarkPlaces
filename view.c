@@ -536,8 +536,8 @@ void V_CalcRefdef (void)
 					vec_t d;
 
 					// gun model leaning code
-					vec_t ef_speed_up = cl_leanmodel_up_speed.value * cl.realframetime * cl.movevars_timescale;
-					if(cl_leanmodel_up.value && ef_speed_up >= 0 && ef_speed_up < 1) // bad things happen if this goes out of range, so prevent the effect
+					vec_t lean_speed_up = cl_leanmodel_up_speed.value * cl.realframetime * cl.movevars_timescale;
+					if(cl_leanmodel_up.value && lean_speed_up >= 0 && lean_speed_up < 1) // bad things happen if this goes out of range, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[PITCH] - gunangles[PITCH] >= 180)
@@ -546,13 +546,13 @@ void V_CalcRefdef (void)
 							gunangles[PITCH] -= 360;
 
 						d = cl.viewangles[PITCH] - gunangles[PITCH];
-						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - ef_speed_up) + cl.viewangles[PITCH] * ef_speed_up, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - lean_speed_up) + cl.viewangles[PITCH] * lean_speed_up, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
 						gunangles[PITCH] = cl.viewangles[PITCH];
 
-					vec_t ef_speed_side = cl_leanmodel_side_speed.value * cl.realframetime * cl.movevars_timescale;
-					if(cl_leanmodel_side.value && ef_speed_side >= 0 && ef_speed_side < 1) // bad things happen if this goes out of range, so prevent the effect
+					vec_t lean_speed_side = cl_leanmodel_side_speed.value * cl.realframetime * cl.movevars_timescale;
+					if(cl_leanmodel_side.value && lean_speed_side >= 0 && lean_speed_side < 1) // bad things happen if this goes out of range, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[YAW] - gunangles[YAW] >= 180)
@@ -561,7 +561,7 @@ void V_CalcRefdef (void)
 							gunangles[YAW] -= 360;
 
 						d = cl.viewangles[YAW] - gunangles[YAW];
-						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - ef_speed_side) + cl.viewangles[YAW] * ef_speed_side, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
+						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - lean_speed_side) + cl.viewangles[YAW] * lean_speed_side, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
 						gunangles[YAW] = cl.viewangles[YAW];
