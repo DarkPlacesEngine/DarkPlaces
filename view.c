@@ -536,11 +536,6 @@ void V_CalcRefdef (void)
 					float ef_speed = cl.realframetime * cl_leanmodel_up_speed.value;
 
 					// gun model leaning code
-					
-					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
-					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
-					// TODO 3 (done): Cvar everything once the first TODOs are ready
-
 					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
@@ -596,7 +591,7 @@ void V_CalcRefdef (void)
 					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
 
 					// gun model following code
-
+					// TODO: make the weapon model not shake when looking around horizontally (due to X axis vs. Y axis)
 					if(cl_followmodel_side.value && cl_followmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						if(gunorg_follow[0] < vieworg[0])
@@ -658,7 +653,6 @@ void V_CalcRefdef (void)
 					VectorCopy(gunorg_follow, gunorg);
 
 					// gun model bobbing code
-
 					double xyspeed, bob;
 
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
