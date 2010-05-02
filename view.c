@@ -52,6 +52,13 @@ cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leanin
 cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "2", "gun leaning upward speed"};
 cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "5", "gun leaning upward limit"};
 
+cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
+cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "4", "gun following sideways speed"};
+cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "2", "gun following sideways limit"};
+cvar_t cl_followmodel_up = {CVAR_SAVE, "cl_followmodel_up", "1", "enables gun following upward"};
+cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "3", "gun following upward speed"};
+cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "1", "gun following upward limit"};
+
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
 cvar_t v_kicktime = {0, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
@@ -526,6 +533,132 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
+					float ef_speed = cl.realframetime * cl_leanmodel_up_speed.value;
+
+					// gun model leaning code
+					
+					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
+					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
+					// TODO 3 (done): Cvar everything once the first TODOs are ready
+
+					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					{
+						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
+						if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
+							viewmodel_push_x += 360;
+						if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
+							viewmodel_push_x -= 360;
+
+						if(viewmodel_push_x < cl.viewangles[PITCH])
+						{
+							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
+								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
+							else
+								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * ef_speed;
+						}
+						if(viewmodel_push_x > cl.viewangles[PITCH])
+						{
+							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
+								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
+							else
+								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * ef_speed;
+						}
+					}
+					else
+						viewmodel_push_x = cl.viewangles[PITCH];
+
+					if(cl_leanmodel_side.value && cl_leanmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					{
+						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
+						if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
+							viewmodel_push_y += 360;
+						if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
+							viewmodel_push_y -= 360;
+
+						if(viewmodel_push_y < cl.viewangles[YAW])
+						{
+							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
+								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
+							else
+								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * ef_speed;
+						}
+						if(viewmodel_push_y > cl.viewangles[YAW])
+						{
+							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
+								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
+							else
+								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * ef_speed;
+						}
+					}
+					else
+						viewmodel_push_y = cl.viewangles[YAW];
+
+					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
+
+					// gun model following code
+
+					if(cl_followmodel_side.value && cl_followmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					{
+						if(gunorg_follow[0] < vieworg[0])
+						{
+							if(vieworg[0] - gunorg_follow[0] > cl_followmodel_side_limit.value)
+								gunorg_follow[0] = vieworg[0] - cl_followmodel_side_limit.value;
+							else
+								gunorg_follow[0] += (vieworg[0] - gunorg_follow[0]) * cl_followmodel_side_speed.value * ef_speed;
+						}
+						if(gunorg_follow[0] > vieworg[0])
+						{
+							if(gunorg_follow[0] - vieworg[0] > cl_followmodel_side_limit.value)
+								gunorg_follow[0] = vieworg[0] + cl_followmodel_side_limit.value;
+							else
+								gunorg_follow[0] -= (gunorg_follow[0] - vieworg[0]) * cl_followmodel_side_speed.value * ef_speed;
+						}
+
+						if(gunorg_follow[1] < vieworg[1])
+						{
+							if(vieworg[1] - gunorg_follow[1] > cl_followmodel_side_limit.value)
+								gunorg_follow[1] = vieworg[1] - cl_followmodel_side_limit.value;
+							else
+								gunorg_follow[1] += (vieworg[1] - gunorg_follow[1]) * cl_followmodel_side_speed.value * ef_speed;
+						}
+						if(gunorg_follow[1] > vieworg[1])
+						{
+							if(gunorg_follow[1] - vieworg[1] > cl_followmodel_side_limit.value)
+								gunorg_follow[1] = vieworg[1] + cl_followmodel_side_limit.value;
+							else
+								gunorg_follow[1] -= (gunorg_follow[1] - vieworg[1]) * cl_followmodel_side_speed.value * ef_speed;
+						}
+					}
+					else
+					{
+						gunorg_follow[0] = vieworg[0];
+						gunorg_follow[1] = vieworg[1];
+					}
+
+					if(cl_followmodel_up.value && cl_followmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					{
+						if(gunorg_follow[2] < vieworg[2])
+						{
+							if(vieworg[2] - gunorg_follow[2] > cl_followmodel_up_limit.value)
+								gunorg_follow[2] = vieworg[2] - cl_followmodel_up_limit.value;
+							else
+								gunorg_follow[2] += (vieworg[2] - gunorg_follow[2]) * cl_followmodel_up_speed.value * ef_speed;
+						}
+						if(gunorg_follow[2] > vieworg[2])
+						{
+							if(gunorg_follow[2] - vieworg[2] > cl_followmodel_up_limit.value)
+								gunorg_follow[2] = vieworg[2] + cl_followmodel_up_limit.value;
+							else
+								gunorg_follow[2] -= (gunorg_follow[2] - vieworg[2]) * cl_followmodel_up_speed.value * ef_speed;
+						}
+					}
+					else
+						gunorg_follow[2] = vieworg[2];
+
+					VectorCopy(gunorg_follow, gunorg);
+
+					// gun model bobbing code
+
 					double xyspeed, bob;
 
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
@@ -589,117 +722,6 @@ void V_CalcRefdef (void)
 						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 						VectorMA (gunorg, bob, up, gunorg);
 					}
-
-					float ef_speed = cl.realframetime * cl_leanmodel_up_speed.value;
-
-					// gun model leaning code
-					
-					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
-					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
-					// TODO 3 (done): Cvar everything once the first TODOs are ready
-
-					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
-					{
-						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
-							viewmodel_push_x += 360;
-						if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
-							viewmodel_push_x -= 360;
-
-						if(viewmodel_push_x < cl.viewangles[PITCH])
-						{
-							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
-								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
-							else
-								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * ef_speed;
-						}
-						if(viewmodel_push_x > cl.viewangles[PITCH])
-						{
-							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
-								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
-							else
-								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * ef_speed;
-						}
-					}
-					else
-						viewmodel_push_x = cl.viewangles[PITCH];
-
-					if(cl_leanmodel_side.value && cl_leanmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
-					{
-						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
-							viewmodel_push_y += 360;
-						if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
-							viewmodel_push_y -= 360;
-
-						if(viewmodel_push_y < cl.viewangles[YAW])
-						{
-							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
-								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
-							else
-								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * ef_speed;
-						}
-						if(viewmodel_push_y > cl.viewangles[YAW])
-						{
-							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
-								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
-							else
-								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * ef_speed;
-						}
-					}
-					else
-						viewmodel_push_y = cl.viewangles[YAW];
-
-					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
-
-				// gun model following code
-
-				if(gunorg_follow[0] < vieworg[0])
-				{
-					if(vieworg[0] - gunorg_follow[0] > 5)
-						gunorg_follow[0] = vieworg[0] - 5;
-					else
-						gunorg_follow[0] += (vieworg[0] - gunorg_follow[0]) * 5 * ef_speed;
-				}
-				if(gunorg_follow[0] > vieworg[0])
-				{
-					if(gunorg_follow[0] - vieworg[0] > 5)
-						gunorg_follow[0] = vieworg[0] + 5;
-					else
-						gunorg_follow[0] -= (gunorg_follow[0] - vieworg[0]) * 5 * ef_speed;
-				}
-
-				if(gunorg_follow[1] < vieworg[1])
-				{
-					if(vieworg[1] - gunorg_follow[1] > 5)
-						gunorg_follow[1] = vieworg[1] - 5;
-					else
-						gunorg_follow[1] += (vieworg[1] - gunorg_follow[1]) * 5 * ef_speed;
-				}
-				if(gunorg_follow[1] > vieworg[1])
-				{
-					if(gunorg_follow[1] - vieworg[1] > 5)
-						gunorg_follow[1] = vieworg[1] + 5;
-					else
-						gunorg_follow[1] -= (gunorg_follow[1] - vieworg[1]) * 5 * ef_speed;
-				}
-
-				if(gunorg_follow[2] < vieworg[2])
-				{
-					if(vieworg[2] - gunorg_follow[2] > 5)
-						gunorg_follow[2] = vieworg[2] - 5;
-					else
-						gunorg_follow[2] += (vieworg[2] - gunorg_follow[2]) * 5 * ef_speed;
-				}
-				if(gunorg_follow[2] > vieworg[2])
-				{
-					if(gunorg_follow[2] - vieworg[2] > 5)
-						gunorg_follow[2] = vieworg[2] + 5;
-					else
-						gunorg_follow[2] -= (gunorg_follow[2] - vieworg[2]) * 5 * ef_speed;
-				}
-
-				VectorCopy(gunorg_follow, gunorg);
 				}
 			}
 			// calculate a view matrix for rendering the scene
@@ -904,6 +926,13 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_leanmodel_up);
 	Cvar_RegisterVariable (&cl_leanmodel_up_speed);
 	Cvar_RegisterVariable (&cl_leanmodel_up_limit);
+
+	Cvar_RegisterVariable (&cl_followmodel_side);
+	Cvar_RegisterVariable (&cl_followmodel_side_speed);
+	Cvar_RegisterVariable (&cl_followmodel_side_limit);
+	Cvar_RegisterVariable (&cl_followmodel_up);
+	Cvar_RegisterVariable (&cl_followmodel_up_speed);
+	Cvar_RegisterVariable (&cl_followmodel_up_limit);
 
 	Cvar_RegisterVariable (&cl_viewmodel_scale);
 

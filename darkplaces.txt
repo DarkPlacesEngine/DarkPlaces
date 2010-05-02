@@ -406,6 +406,12 @@ cl_leanmodel_side_limit                           7.5                 gun leanin
 cl_leanmodel_up                                   1                   enables gun leaning upward
 cl_leanmodel_up_speed                             2                   gun leaning upward speed
 cl_leanmodel_up_limit                             5                   gun leaning upward limit
+cl_followmodel_side                               1                   enables gun following sideways
+cl_followmodel_side_speed                         4                   gun following sideways speed
+cl_followmodel_side_limit                         2                   gun following sideways limit
+cl_followmodel_up                                 1                   enables gun following upward
+cl_followmodel_up_speed                           3                   gun following upward speed
+cl_followmodel_up_limit                           1                   gun following upward limit
 cl_bobup                                          0.5                 view bobbing adjustment that makes the up or down swing of the bob last longer
 cl_capturevideo                                   0                   enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)
 cl_capturevideo_fps                               30                  how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)
