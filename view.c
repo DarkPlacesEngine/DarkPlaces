@@ -618,7 +618,7 @@ void V_CalcRefdef (void)
 
 					gunangles[PITCH] *= (cl_leanmodel.value ? -cl_leanmodel_up_speed.value : 0);
 					gunangles[YAW] *= (cl_leanmodel.value ? -cl_leanmodel_side_speed.value : 0);
-					gunangles[ROLL] = 0;
+					gunangles[ROLL] = cl.viewangles[ROLL];
 
 					// 4. perform highpass/lowpass on the adjustment vectors (turning velocity into acceleration!)
 					//    trick: we must do the lowpass LAST, so the lowpass vector IS the final vector!
