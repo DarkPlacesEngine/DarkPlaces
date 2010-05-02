@@ -136,7 +136,6 @@ cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", 
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4 = {CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
-//cvar_t r_glsl_postprocess_sobel = {CVAR_SAVE, "r_glsl_postprocess_sobel", "0", "1 = use the sobel operator on the final output (this causes grey-scaling), 2 = combine sobel and blur"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
@@ -676,7 +675,6 @@ static const char *builtinshaderstring =
 "#endif\n"
 "//uncomment these if you want to use them:\n"
 "uniform vec4 UserVec1;\n"
-"//uniform float UseSobel;\n"
 "uniform vec4 UserVec2;\n"
 "// uniform vec4 UserVec3;\n"
 "// uniform vec4 UserVec4;\n"
@@ -3551,7 +3549,6 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec2;
 	int loc_UserVec3;
 	int loc_UserVec4;
-//	int loc_UseSobel;
 	int loc_ViewTintColor;
 	int loc_ViewToLight;
 	int loc_ModelToLight;
@@ -3779,7 +3776,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_UserVec2                   = qglGetUniformLocationARB(p->program, "UserVec2");
 		p->loc_UserVec3                   = qglGetUniformLocationARB(p->program, "UserVec3");
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
-//		p->loc_UseSobel                   = qglGetUniformLocationARB(p->program, "UseSobel");
 		p->loc_ViewTintColor              = qglGetUniformLocationARB(p->program, "ViewTintColor");
 		p->loc_ViewToLight                = qglGetUniformLocationARB(p->program, "ViewToLight");
 		p->loc_ModelToLight               = qglGetUniformLocationARB(p->program, "ModelToLight");
@@ -4279,7 +4275,6 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
 		p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
 		p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
-//		p->fp_UseSobel                   = cgGetNamedParameter(p->fprogram, "UseSobel");
 		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
 		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
 		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
@@ -6423,7 +6418,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4);
-//	Cvar_RegisterVariable(&r_glsl_postprocess_sobel);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
@@ -8149,7 +8143,6 @@ static void R_BlendView(void)
 			if (r_glsl_permutation->loc_UserVec2           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
 			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
 			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
-//			if (r_glsl_permutation->loc_UseSobel           >= 0) qglUniform1fARB(r_glsl_permutation->loc_UseSobel       , r_glsl_postprocess_sobel.value);
 			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1fARB(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
 			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 			break;
@@ -8165,7 +8158,6 @@ static void R_BlendView(void)
 			if (r_cg_permutation->fp_UserVec2          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);CHECKCGERROR
-//			if (r_cg_permutation->fp_UseSobel          ) cgGLSetParameter1f(     r_cg_permutation->fp_UseSobel          , r_glsl_postprocess_sobel.value);CHECKCGERROR
 			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);CHECKCGERROR
 			if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
 #endif
