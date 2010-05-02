@@ -175,6 +175,7 @@ cvar_t cutscene = {0, "cutscene", "1", "enables cutscenes in nehahra, can be use
 
 cvar_t sv_autodemo_perclient = {CVAR_SAVE, "sv_autodemo_perclient", "0", "set to 1 to enable autorecorded per-client demos (they'll start to record at the beginning of a match); set it to 2 to also record client->server packets (for debugging)"};
 cvar_t sv_autodemo_perclient_nameformat = {CVAR_SAVE, "sv_autodemo_perclient_nameformat", "sv_autodemos/%Y-%m-%d_%H-%M", "The format of the sv_autodemo_perclient filename, followed by the map name, the client number and the IP address + port number, separated by underscores (the date is encoded using strftime escapes)" };
+cvar_t sv_autodemo_perclient_discardable = {CVAR_SAVE, "sv_autodemo_perclient_discardable", "0", "Allow game code to decide whether a demo should be kept or discarded."};
 
 cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 
@@ -492,6 +493,7 @@ void SV_Init (void)
 
 	Cvar_RegisterVariable (&sv_autodemo_perclient);
 	Cvar_RegisterVariable (&sv_autodemo_perclient_nameformat);
+	Cvar_RegisterVariable (&sv_autodemo_perclient_discardable);
 
 	Cvar_RegisterVariable (&halflifebsp);
 

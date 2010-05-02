@@ -62,6 +62,7 @@ qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet
 qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet);
 qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qboolean quiet);
 int FS_Close (qfile_t* file);
+void FS_RemoveOnClose(qfile_t* file);
 fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
 int FS_Print(qfile_t* file, const char *msg);
