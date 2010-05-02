@@ -136,6 +136,7 @@ cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", 
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4 = {CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
+//cvar_t r_glsl_postprocess_sobel = {CVAR_SAVE, "r_glsl_postprocess_sobel", "0", "1 = use the sobel operator on the final output (this causes grey-scaling), 2 = combine sobel and blur"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
@@ -676,7 +677,8 @@ static const char *builtinshaderstring =
 "#endif\n"
 "//uncomment these if you want to use them:\n"
 "uniform vec4 UserVec1;\n"
-"// uniform vec4 UserVec2;\n"
+"//uniform float UseSobel;\n"
+"uniform vec4 UserVec2;\n"
 "// uniform vec4 UserVec3;\n"
 "// uniform vec4 UserVec4;\n"
 "// uniform float ClientTime;\n"
@@ -694,44 +696,43 @@ static const char *builtinshaderstring =
 "#ifdef USEPOSTPROCESSING\n"
 "// do r_glsl_dumpshader, edit glsl/default.glsl, and replace this by your own postprocessing if you want\n"
 "// this code does a blur with the radius specified in the first component of r_glsl_postprocess_uservec1 and blends it using the second component\n"
-"	if (UserVec1.x > 100.0) {\n"
-"		// vec2 ts = textureSize(Texture_First, 0);\n"
-"		// vec2 px = vec2(1/ts.x, 1/ts.y);\n"
-"		vec2 px = PixelSize;\n"
-"		vec4 x1 = texture2D(Texture_First, TexCoord1 + vec2(-px.x, px.y));\n"
-"		vec4 x2 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,  0.0));\n"
-"		vec4 x3 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,-px.y));\n"
-"		vec4 x4 = texture2D(Texture_First, TexCoord1 + vec2( px.x, px.y));\n"
-"		vec4 x5 = texture2D(Texture_First, TexCoord1 + vec2( px.x,  0.0));\n"
-"		vec4 x6 = texture2D(Texture_First, TexCoord1 + vec2( px.x,-px.y));\n"
-"		vec4 y1 = texture2D(Texture_First, TexCoord1 + vec2( px.x,-px.y));\n"
-"		vec4 y2 = texture2D(Texture_First, TexCoord1 + vec2(  0.0,-px.y));\n"
-"		vec4 y3 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,-px.y));\n"
-"		vec4 y4 = texture2D(Texture_First, TexCoord1 + vec2( px.x, px.y));\n"
-"		vec4 y5 = texture2D(Texture_First, TexCoord1 + vec2(  0.0, px.y));\n"
-"		vec4 y6 = texture2D(Texture_First, TexCoord1 + vec2(-px.x, px.y));\n"
-""
-"		float px1 = -1.0 * (0.30*x1.r + 0.59*x1.g + 0.11*x1.b);\n"
-"		float px2 = -2.0 * (0.30*x2.r + 0.59*x2.g + 0.11*x2.b);\n"
-"		float px3 = -1.0 * (0.30*x3.r + 0.59*x3.g + 0.11*x3.b);\n"
-"		float px4 =  1.0 * (0.30*x4.r + 0.59*x4.g + 0.11*x4.b);\n"
-"		float px5 =  2.0 * (0.30*x5.r + 0.59*x5.g + 0.11*x5.b);\n"
-"		float px6 =  1.0 * (0.30*x6.r + 0.59*x6.g + 0.11*x6.b);\n"
-"		float py1 = -1.0 * (0.30*y1.r + 0.59*y1.g + 0.11*y1.b);\n"
-"		float py2 = -2.0 * (0.30*y2.r + 0.59*y2.g + 0.11*y2.b);\n"
-"		float py3 = -1.0 * (0.30*y3.r + 0.59*y3.g + 0.11*y3.b);\n"
-"		float py4 =  1.0 * (0.30*y4.r + 0.59*y4.g + 0.11*y4.b);\n"
-"		float py5 =  2.0 * (0.30*y5.r + 0.59*y5.g + 0.11*y5.b);\n"
-"		float py6 =  1.0 * (0.30*y6.r + 0.59*y6.g + 0.11*y6.b);\n"
-"		gl_FragColor = 0.25 * vec4(vec3(abs(px1 + px2 + px3 + px4 + px5 + px6)), 1) + 0.25 * vec4(vec3(abs(py1 + py2 + py3 + py4 + py5 + py6)), 1);\n"
-"	} else {\n"
+"	vec3 sobel = vec3(1.0);\n"
+"	// vec2 ts = textureSize(Texture_First, 0);\n"
+"	// vec2 px = vec2(1/ts.x, 1/ts.y);\n"
+"	vec2 px = PixelSize;\n"
+"	vec3 x1 = texture2D(Texture_First, TexCoord1 + vec2(-px.x, px.y)).rgb;\n"
+"	vec3 x2 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,  0.0)).rgb;\n"
+"	vec3 x3 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,-px.y)).rgb;\n"
+"	vec3 x4 = texture2D(Texture_First, TexCoord1 + vec2( px.x, px.y)).rgb;\n"
+"	vec3 x5 = texture2D(Texture_First, TexCoord1 + vec2( px.x,  0.0)).rgb;\n"
+"	vec3 x6 = texture2D(Texture_First, TexCoord1 + vec2( px.x,-px.y)).rgb;\n"
+"	vec3 y1 = texture2D(Texture_First, TexCoord1 + vec2( px.x,-px.y)).rgb;\n"
+"	vec3 y2 = texture2D(Texture_First, TexCoord1 + vec2(  0.0,-px.y)).rgb;\n"
+"	vec3 y3 = texture2D(Texture_First, TexCoord1 + vec2(-px.x,-px.y)).rgb;\n"
+"	vec3 y4 = texture2D(Texture_First, TexCoord1 + vec2( px.x, px.y)).rgb;\n"
+"	vec3 y5 = texture2D(Texture_First, TexCoord1 + vec2(  0.0, px.y)).rgb;\n"
+"	vec3 y6 = texture2D(Texture_First, TexCoord1 + vec2(-px.x, px.y)).rgb;\n"
+"	float px1 = -1.0 * (0.30*x1.r + 0.59*x1.g + 0.11*x1.b);\n"
+"	float px2 = -2.0 * (0.30*x2.r + 0.59*x2.g + 0.11*x2.b);\n"
+"	float px3 = -1.0 * (0.30*x3.r + 0.59*x3.g + 0.11*x3.b);\n"
+"	float px4 =  1.0 * (0.30*x4.r + 0.59*x4.g + 0.11*x4.b);\n"
+"	float px5 =  2.0 * (0.30*x5.r + 0.59*x5.g + 0.11*x5.b);\n"
+"	float px6 =  1.0 * (0.30*x6.r + 0.59*x6.g + 0.11*x6.b);\n"
+"	float py1 = -1.0 * (0.30*y1.r + 0.59*y1.g + 0.11*y1.b);\n"
+"	float py2 = -2.0 * (0.30*y2.r + 0.59*y2.g + 0.11*y2.b);\n"
+"	float py3 = -1.0 * (0.30*y3.r + 0.59*y3.g + 0.11*y3.b);\n"
+"	float py4 =  1.0 * (0.30*y4.r + 0.59*y4.g + 0.11*y4.b);\n"
+"	float py5 =  2.0 * (0.30*y5.r + 0.59*y5.g + 0.11*y5.b);\n"
+"	float py6 =  1.0 * (0.30*y6.r + 0.59*y6.g + 0.11*y6.b);\n"
+"	sobel = vec3(0.25 * abs(px1 + px2 + px3 + px4 + px5 + px6) + 0.25 * abs(py1 + py2 + py3 + py4 + py5 + py6));\n"
 "	gl_FragColor += texture2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*vec2(-0.987688, -0.156434)) * UserVec1.y;\n"
 "	gl_FragColor += texture2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*vec2(-0.156434, -0.891007)) * UserVec1.y;\n"
 "	gl_FragColor += texture2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*vec2( 0.891007, -0.453990)) * UserVec1.y;\n"
 "	gl_FragColor += texture2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*vec2( 0.707107,  0.707107)) * UserVec1.y;\n"
 "	gl_FragColor += texture2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*vec2(-0.453990,  0.891007)) * UserVec1.y;\n"
-"	gl_FragColor /= (1 + 5 * UserVec1.y);\n"
-"	}\n"
+"	gl_FragColor /= (1.0 + 5.0 * UserVec1.y);\n"
+"	//gl_FragColor = mix(gl_FragColor, vec4(vec3(sobel), 1), UseSobel);\n"
+"	gl_FragColor.rgb = gl_FragColor.rgb * UserVec2.y + vec3(sobel)*UserVec2.x;\n"
 "#endif\n"
 "\n"
 "#ifdef USESATURATION\n"
@@ -3552,6 +3553,7 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec2;
 	int loc_UserVec3;
 	int loc_UserVec4;
+//	int loc_UseSobel;
 	int loc_ViewTintColor;
 	int loc_ViewToLight;
 	int loc_ModelToLight;
@@ -3779,6 +3781,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_UserVec2                   = qglGetUniformLocationARB(p->program, "UserVec2");
 		p->loc_UserVec3                   = qglGetUniformLocationARB(p->program, "UserVec3");
 		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
+//		p->loc_UseSobel                   = qglGetUniformLocationARB(p->program, "UseSobel");
 		p->loc_ViewTintColor              = qglGetUniformLocationARB(p->program, "ViewTintColor");
 		p->loc_ViewToLight                = qglGetUniformLocationARB(p->program, "ViewToLight");
 		p->loc_ModelToLight               = qglGetUniformLocationARB(p->program, "ModelToLight");
@@ -4278,6 +4281,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
 		p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
 		p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
+//		p->fp_UseSobel                   = cgGetNamedParameter(p->fprogram, "UseSobel");
 		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
 		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
 		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
@@ -6499,6 +6503,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4);
+//	Cvar_RegisterVariable(&r_glsl_postprocess_sobel);
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
@@ -8189,6 +8194,7 @@ static void R_BlendView(void)
 			if (r_glsl_permutation->loc_UserVec2           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
 			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
 			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
+//			if (r_glsl_permutation->loc_UseSobel           >= 0) qglUniform1fARB(r_glsl_permutation->loc_UseSobel       , r_glsl_postprocess_sobel.value);
 			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1fARB(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
 			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 			break;
@@ -8204,6 +8210,7 @@ static void R_BlendView(void)
 			if (r_cg_permutation->fp_UserVec2          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);CHECKCGERROR
 			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);CHECKCGERROR
+//			if (r_cg_permutation->fp_UseSobel          ) cgGLSetParameter1f(     r_cg_permutation->fp_UseSobel          , r_glsl_postprocess_sobel.value);CHECKCGERROR
 			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);CHECKCGERROR
 			if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
 #endif
