@@ -595,7 +595,16 @@ void V_CalcRefdef (void)
 
 					// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
 					if(!ent->persistent.trail_allowed) // FIXME improve this check
+					{
+						// try to fix the first highpass; result is NOT
+						// perfect! TODO find a better fix
+						VectorCopy(cl.viewangles, cl.gunangles_highpass);
+						VectorCopy(cl.movement_origin, cl.gunorg_highpass);
+						// prevent further CHANGES caused by the high/lowpasses
+						// - a highpass will return the diff, a lowpass will
+						// return the saved value; note: the first diff will be 0!
 						frametime = 0;
+					}
 
 					// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
 					highpass3_limited(cl.movement_origin, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
