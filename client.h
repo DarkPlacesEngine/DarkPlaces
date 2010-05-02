@@ -959,6 +959,10 @@ typedef struct client_state_s
 	double lastongroundtime;
 	double hitgroundtime;
 
+	// used by lean/follow view models
+	vec_t viewmodel_push_x, viewmodel_push_y;
+	vec3_t gunorg_follow;
+
 	// don't change view angle, full screen, etc
 	int intermission;
 	// latched at intermission start
