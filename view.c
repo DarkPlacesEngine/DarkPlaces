@@ -60,13 +60,13 @@ cvar_t cl_leanmodel_up_lowpass = {CVAR_SAVE, "cl_leanmodel_up_lowpass", "30", "g
 
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
 cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "1", "gun following sideways speed"};
-cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "10", "gun following sideways limit"};
+cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "4", "gun following sideways limit"};
 cvar_t cl_followmodel_side_highpass1 = {CVAR_SAVE, "cl_followmodel_side_highpass1", "5", "gun following sideways pre-highpass in 1/s"};
 cvar_t cl_followmodel_side_highpass = {CVAR_SAVE, "cl_followmodel_side_highpass", "15", "gun following sideways highpass in 1/s"};
 cvar_t cl_followmodel_side_lowpass = {CVAR_SAVE, "cl_followmodel_side_lowpass", "30", "gun following sideways lowpass in 1/s"};
 cvar_t cl_followmodel_up = {CVAR_SAVE, "cl_followmodel_up", "1", "enables gun following upward"};
 cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "1", "gun following upward speed"};
-cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "10", "gun following upward limit"};
+cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "2", "gun following upward limit"};
 cvar_t cl_followmodel_up_highpass1 = {CVAR_SAVE, "cl_followmodel_up_highpass1", "5", "gun following upward pre-highpass in 1/s"};
 cvar_t cl_followmodel_up_highpass = {CVAR_SAVE, "cl_followmodel_up_highpass", "15", "gun following upward highpass in 1/s"};
 cvar_t cl_followmodel_up_lowpass = {CVAR_SAVE, "cl_followmodel_up_lowpass", "30", "gun following upward lowpass in 1/s"};
