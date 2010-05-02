@@ -933,9 +933,13 @@ typedef struct client_state_s
 	qboolean movement_replay_canjump;
 
 	// previous gun angles (for leaning effects)
-	vec3_t gunangles_lowpass;
-	// highpass store for highpassing the origin (for following effect)
-	vec3_t gunorg_minus_vieworg_diff_highpass;
+	vec3_t gunangles_highpass;
+	vec3_t gunangles_adjustment_lowpass;
+	vec3_t gunangles_adjustment_highpass;
+	// previous gun angles (for leaning effects)
+	vec3_t gunorg_highpass;
+	vec3_t gunorg_adjustment_lowpass;
+	vec3_t gunorg_adjustment_highpass;
 
 // pitch drifting vars
 	float idealpitch;
