@@ -187,6 +187,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int dimension_hit; // ssqc / csqc
 	int dimension_solid; // ssqc / csqc
 	int disableclientprediction; // ssqc
+	int discardabledemo; // ssqc
 	int dphitcontentsmask; // ssqc / csqc
 	int drawonlytoclient; // ssqc
 	int effects; // ssqc / csqc

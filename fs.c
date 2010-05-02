@@ -188,6 +188,8 @@ typedef struct
 #define QFILE_FLAG_DEFLATED (1 << 1)
 /// file is actually already loaded data
 #define QFILE_FLAG_DATA (1 << 2)
+/// real file will be removed on close
+#define QFILE_FLAG_REMOVE (1 << 3)
 
 #define FILE_BUFF_SIZE 2048
 typedef struct
@@ -215,6 +217,8 @@ struct qfile_s
 	ztoolkit_t*		ztk;	///< For zipped files.
 
 	const unsigned char *data;	///< For data files.
+
+	const char *filename; ///< Kept around for QFILE_FLAG_REMOVE, unused otherwise
 };
 
 
@@ -1924,6 +1928,8 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 		return NULL;
 	}
 
+	file->filename = Mem_strdup(fs_mempool, filepath);
+
 	file->real_length = lseek (file->handle, 0, SEEK_END);
 
 	// For files opened in append mode, we start at the end of the file
@@ -2389,6 +2395,14 @@ int FS_Close (qfile_t* file)
 	if (close (file->handle))
 		return EOF;
 
+	if (file->filename)
+	{
+		if (file->flags & QFILE_FLAG_REMOVE)
+			remove(file->filename);
+
+		Mem_Free((void *) file->filename);
+	}
+
 	if (file->ztk)
 	{
 		qz_inflateEnd (&file->ztk->zstream);
@@ -2399,6 +2413,10 @@ int FS_Close (qfile_t* file)
 	return 0;
 }
 
+void FS_RemoveOnClose(qfile_t* file)
+{
+	file->flags |= QFILE_FLAG_REMOVE;
+}
 
 /*
 ====================
