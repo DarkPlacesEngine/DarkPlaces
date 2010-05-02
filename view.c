@@ -46,10 +46,10 @@ cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upwar
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_leanmodel_side = {CVAR_SAVE, "cl_leanmodel_side", "1", "enables gun leaning sideways"};
-cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "20", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "0.4", "gun leaning sideways speed"};
 cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
 cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leaning upward"};
-cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "15", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "0.35", "gun leaning upward speed"};
 cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "25", "gun leaning upward limit"};
 
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
@@ -545,7 +545,8 @@ void V_CalcRefdef (void)
 							cl.viewmodel_push_x -= 360;
 
 						d = cl.viewangles[PITCH] - cl.viewmodel_push_x;
-						cl.viewmodel_push_x = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, cl.viewmodel_push_x + d * cl_leanmodel_up_speed.value * ef_speed, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+						cl_leanmodel_up_speed.value = bound(0, cl_leanmodel_up_speed.value, 1);
+						cl.viewmodel_push_x = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, cl.viewmodel_push_x * (1 - cl_leanmodel_up_speed.value) + cl.viewangles[PITCH] * cl_leanmodel_up_speed.value, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
 						cl.viewmodel_push_x = cl.viewangles[PITCH];
@@ -559,7 +560,8 @@ void V_CalcRefdef (void)
 							cl.viewmodel_push_y -= 360;
 
 						d = cl.viewangles[YAW] - cl.viewmodel_push_y;
-						cl.viewmodel_push_y = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, cl.viewmodel_push_y + d * cl_leanmodel_side_speed.value * ef_speed, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
+						cl_leanmodel_side_speed.value = bound(0, cl_leanmodel_side_speed.value, 1);
+						cl.viewmodel_push_y = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, cl.viewmodel_push_y * (1 - cl_leanmodel_side_speed.value) + cl.viewangles[YAW] * cl_leanmodel_side_speed.value, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
 						cl.viewmodel_push_y = cl.viewangles[YAW];
