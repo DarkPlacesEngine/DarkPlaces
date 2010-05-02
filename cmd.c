@@ -464,7 +464,11 @@ static void Cmd_Exec_f (void)
 
 	filename = Cmd_Argv(1);
 	if (!strcmp(filename, "config.cfg"))
+	{
 		filename = CONFIGFILENAME;
+		if (COM_CheckParm("-noconfig"))
+			return; // don't execute config.cfg
+	}
 
 	f = (char *)FS_LoadFile (filename, tempmempool, false, NULL);
 	if (!f)
