@@ -602,14 +602,34 @@ void V_CalcRefdef (void)
 						viewmodel_push_x -= 360;
 
 					if(viewmodel_push_x < cl.viewangles[PITCH])
-						viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * 0.01;
-					else if(viewmodel_push_x > cl.viewangles[PITCH])
-						viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * 0.01;
+					{
+						if(cl.viewangles[PITCH] - viewmodel_push_x > 15)
+							viewmodel_push_x = cl.viewangles[PITCH] - 15;
+						else
+							viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * 0.01;
+					}
+					if(viewmodel_push_x > cl.viewangles[PITCH])
+					{
+						if(viewmodel_push_x - cl.viewangles[PITCH] > 15)
+							viewmodel_push_x = cl.viewangles[PITCH] + 15;
+						else
+							viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * 0.01;
+					}
 
 					if(viewmodel_push_y < cl.viewangles[YAW])
-						viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * 0.01;
-					else if(viewmodel_push_y > cl.viewangles[YAW])
-						viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
+					{
+						if(cl.viewangles[YAW] - viewmodel_push_y > 15)
+							viewmodel_push_y = cl.viewangles[YAW] - 15;
+						else
+							viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * 0.01;
+					}
+					if(viewmodel_push_y > cl.viewangles[YAW])
+					{
+						if(viewmodel_push_y - cl.viewangles[YAW] > 15)
+							viewmodel_push_y = cl.viewangles[YAW] + 15;
+						else
+							viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
+					}
 
 					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
 				}
