@@ -353,10 +353,11 @@ V_CalcRefdef
 static vec3_t eyeboxmins = {-16, -16, -24};
 static vec3_t eyeboxmaxs = { 16,  16,  32};
 #endif
+float viewmodel_push_x, viewmodel_push_y;
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
-	float vieworg[3], gunorg[3], viewangles[3], smoothtime;
+	float vieworg[3], gunorg[3], viewangles[3], gunangles[3], smoothtime;
 #if 0
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
 	vec3_t camboxmins = {-3, -3, -3};
@@ -576,12 +577,34 @@ void V_CalcRefdef (void)
 						}
 
 						bspeed = bound (0, xyspeed, 400) * 0.01f;
-						AngleVectors (viewangles, forward, right, up);
+						AngleVectors (gunangles, forward, right, up);
 						bob = bspeed * cl_bobmodel_side.value * cl_viewmodel_scale.value * sin (s) * t;
 						VectorMA (gunorg, bob, right, gunorg);
 						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 						VectorMA (gunorg, bob, up, gunorg);
 					}
+
+					// gun model leaning code
+					
+					// TODO 1: Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border.
+					// [18:53:17] <@div0> search for AnglesFromVectors and AngleVectors
+					// [18:53:27] <@div0> I am quite sure interpolation (lerp) uses it
+					
+					// TODO 2: Implement limits (weapon model must not lean past a certain limit)
+
+					// TODO 3: Cvar everything once the first TODOs are ready.
+
+					if(viewmodel_push_x < cl.viewangles[PITCH])
+						viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * 0.01;
+					else if(viewmodel_push_x > cl.viewangles[PITCH])
+						viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * 0.01;
+
+					if(viewmodel_push_y < cl.viewangles[YAW])
+						viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * 0.01;
+					else if(viewmodel_push_y > cl.viewangles[YAW])
+						viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
+
+					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
 				}
 			}
 			// calculate a view matrix for rendering the scene
@@ -590,7 +613,7 @@ void V_CalcRefdef (void)
 			else
 				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
 			// calculate a viewmodel matrix for use in view-attached entities
-			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], viewangles[0], viewangles[1], viewangles[2], cl_viewmodel_scale.value);
+			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
 			VectorCopy(vieworg, cl.csqc_origin);
 			VectorCopy(viewangles, cl.csqc_angles);
 		}
