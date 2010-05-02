@@ -596,20 +596,24 @@ void V_CalcRefdef (void)
 					{
 						// try to fix the first highpass; result is NOT
 						// perfect! TODO find a better fix
-						VectorCopy(cl.viewangles, cl.gunangles_highpass);
-						VectorCopy(cl.movement_origin, cl.gunorg_highpass);
-						// prevent further CHANGES caused by the high/lowpasses
-						// - a highpass will return the diff, a lowpass will
-						// return the saved value; note: the first diff will be 0!
-						frametime = 0;
+						VectorCopy(cl.viewangles, cl.gunangles_prev);
+						VectorCopy(cl.movement_origin, cl.gunorg_prev);
 					}
 
 					// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
+					VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
 					highpass3_limited(cl.movement_origin, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
+					VectorCopy(cl.movement_origin, cl.gunorg_prev);
+					VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
+
+					// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
+					VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
 					cl.gunangles_highpass[PITCH] += 360 * floor((cl.viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
 					cl.gunangles_highpass[YAW] += 360 * floor((cl.viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
 					cl.gunangles_highpass[ROLL] += 360 * floor((cl.viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
 					highpass3_limited(cl.viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
+					VectorCopy(cl.viewangles, cl.gunangles_prev);
+					VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
 
 					// 3. calculate the RAW adjustment vectors
 					gunorg[0] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
