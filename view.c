@@ -367,8 +367,8 @@ V_CalcRefdef
 static vec3_t eyeboxmins = {-16, -16, -24};
 static vec3_t eyeboxmaxs = { 16,  16,  32};
 #endif
-float viewmodel_push_x, viewmodel_push_y;
-vec3_t gunorg_follow;
+float viewmodel_push_x, viewmodel_push_y; // TODO uninitialized
+vec3_t gunorg_follow; // TODO uninitialized
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
@@ -533,7 +533,11 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					float ef_speed = cl.realframetime * cl_leanmodel_up_speed.value;
+					// gun model bobbing code
+					double xyspeed, bob;
+					vec_t d;
+
+					float ef_speed = cl.realframetime;
 
 					// gun model leaning code
 					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
@@ -544,20 +548,8 @@ void V_CalcRefdef (void)
 						if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
 							viewmodel_push_x -= 360;
 
-						if(viewmodel_push_x < cl.viewangles[PITCH])
-						{
-							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
-								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
-							else
-								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * ef_speed;
-						}
-						if(viewmodel_push_x > cl.viewangles[PITCH])
-						{
-							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
-								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
-							else
-								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * ef_speed;
-						}
+						d = viewmodel_push_x - cl.viewangles[PITCH];
+						viewmodel_push_x = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, viewmodel_push_x + d * cl_leanmodel_up_speed.value * ef_speed, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
 						viewmodel_push_x = cl.viewangles[PITCH];
@@ -570,20 +562,8 @@ void V_CalcRefdef (void)
 						if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
 							viewmodel_push_y -= 360;
 
-						if(viewmodel_push_y < cl.viewangles[YAW])
-						{
-							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
-								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
-							else
-								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * ef_speed;
-						}
-						if(viewmodel_push_y > cl.viewangles[YAW])
-						{
-							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
-								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
-							else
-								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * ef_speed;
-						}
+						d = viewmodel_push_y - cl.viewangles[YAW];
+						viewmodel_push_y = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, viewmodel_push_y + d * cl_leanmodel_side_speed.value * ef_speed, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
 						viewmodel_push_y = cl.viewangles[YAW];
@@ -594,34 +574,19 @@ void V_CalcRefdef (void)
 					// TODO: make the weapon model not shake when looking around horizontally (due to X axis vs. Y axis)
 					if(cl_followmodel_side.value && cl_followmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
-						if(gunorg_follow[0] < vieworg[0])
+						vec_t d0 = vieworg[0] - gunorg_follow[0];
+						vec_t d1 = vieworg[1] - gunorg_follow[1];
+						d = sqrt(d0 * d0 + d1 * d1);
+						if(d > 0)
 						{
-							if(vieworg[0] - gunorg_follow[0] > cl_followmodel_side_limit.value)
-								gunorg_follow[0] = vieworg[0] - cl_followmodel_side_limit.value;
-							else
-								gunorg_follow[0] += (vieworg[0] - gunorg_follow[0]) * cl_followmodel_side_speed.value * ef_speed;
-						}
-						if(gunorg_follow[0] > vieworg[0])
-						{
-							if(gunorg_follow[0] - vieworg[0] > cl_followmodel_side_limit.value)
-								gunorg_follow[0] = vieworg[0] + cl_followmodel_side_limit.value;
-							else
-								gunorg_follow[0] -= (gunorg_follow[0] - vieworg[0]) * cl_followmodel_side_speed.value * ef_speed;
-						}
-
-						if(gunorg_follow[1] < vieworg[1])
-						{
-							if(vieworg[1] - gunorg_follow[1] > cl_followmodel_side_limit.value)
-								gunorg_follow[1] = vieworg[1] - cl_followmodel_side_limit.value;
-							else
-								gunorg_follow[1] += (vieworg[1] - gunorg_follow[1]) * cl_followmodel_side_speed.value * ef_speed;
-						}
-						if(gunorg_follow[1] > vieworg[1])
-						{
-							if(gunorg_follow[1] - vieworg[1] > cl_followmodel_side_limit.value)
-								gunorg_follow[1] = vieworg[1] + cl_followmodel_side_limit.value;
-							else
-								gunorg_follow[1] -= (gunorg_follow[1] - vieworg[1]) * cl_followmodel_side_speed.value * ef_speed;
+							gunorg_follow[0] = gunorg_follow[0] + d0 * cl_followmodel_side_speed.value * ef_speed;
+							gunorg_follow[1] = gunorg_follow[1] + d1 * cl_followmodel_side_speed.value * ef_speed;
+							d *= (1 - cl_followmodel_side_speed.value * ef_speed);
+							if(d > cl_followmodel_side_limit.value)
+							{
+								gunorg_follow[0] = vieworg[0] - (d0 / d) * cl_followmodel_side_limit.value;
+								gunorg_follow[1] = vieworg[1] - (d1 / d) * cl_followmodel_side_limit.value;
+							}
 						}
 					}
 					else
@@ -632,28 +597,13 @@ void V_CalcRefdef (void)
 
 					if(cl_followmodel_up.value && cl_followmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
-						if(gunorg_follow[2] < vieworg[2])
-						{
-							if(vieworg[2] - gunorg_follow[2] > cl_followmodel_up_limit.value)
-								gunorg_follow[2] = vieworg[2] - cl_followmodel_up_limit.value;
-							else
-								gunorg_follow[2] += (vieworg[2] - gunorg_follow[2]) * cl_followmodel_up_speed.value * ef_speed;
-						}
-						if(gunorg_follow[2] > vieworg[2])
-						{
-							if(gunorg_follow[2] - vieworg[2] > cl_followmodel_up_limit.value)
-								gunorg_follow[2] = vieworg[2] + cl_followmodel_up_limit.value;
-							else
-								gunorg_follow[2] -= (gunorg_follow[2] - vieworg[2]) * cl_followmodel_up_speed.value * ef_speed;
-						}
+						d = vieworg[2] - gunorg_follow[2];
+						gunorg_follow[2] = bound(vieworg[2] - cl_followmodel_up_limit.value, gunorg_follow[2] + d * cl_followmodel_up_speed.value * ef_speed, vieworg[2] + cl_followmodel_up_limit.value);
 					}
 					else
 						gunorg_follow[2] = vieworg[2];
 
 					VectorCopy(gunorg_follow, gunorg);
-
-					// gun model bobbing code
-					double xyspeed, bob;
 
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
