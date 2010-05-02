@@ -46,10 +46,10 @@ cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upwar
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_leanmodel_side = {CVAR_SAVE, "cl_leanmodel_side", "1", "enables gun leaning sideways"};
-cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "0.025", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "5", "gun leaning sideways speed"};
 cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "7.5", "gun leaning sideways limit"};
 cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leaning upward"};
-cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "0.015", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "2.5", "gun leaning upward speed"};
 cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "5", "gun leaning upward limit"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
@@ -547,7 +547,7 @@ void V_CalcRefdef (void)
 						bob = bob*0.3 + bob*0.7*cycle;
 						vieworg[2] += bound(-7, bob, 4);
 					}
-
+					
 					VectorCopy(vieworg, gunorg);
 
 					if (cl_bob.value && cl_bobmodel.value)
@@ -596,6 +596,12 @@ void V_CalcRefdef (void)
 					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
 					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
 					// TODO 3 (done): Cvar everything once the first TODOs are ready
+					
+					float speed; // limit to safe values, or bad things happen at low framerates
+					if(cl.realframetime < 0.1)
+						speed = cl.realframetime;
+					else
+						speed = 0.1;
 
 					if(cl_leanmodel_up.value)
 					{
@@ -610,14 +616,14 @@ void V_CalcRefdef (void)
 							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
 								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
 							else
-								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value;
+								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * speed;
 						}
 						if(viewmodel_push_x > cl.viewangles[PITCH])
 						{
 							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
 								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
 							else
-								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value;
+								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * speed;
 						}
 					}
 					else
@@ -636,14 +642,14 @@ void V_CalcRefdef (void)
 							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
 								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
 							else
-								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value;
+								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * speed;
 						}
 						if(viewmodel_push_y > cl.viewangles[YAW])
 						{
 							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
 								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
 							else
-								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value;
+								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * speed;
 						}
 					}
 					else
