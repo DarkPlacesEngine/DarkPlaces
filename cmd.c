@@ -1185,6 +1185,7 @@ void Cmd_Init_Commands (void)
 	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable");
 	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+	Cmd_AddCommand ("unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
 #ifdef FILLALLCVARSWITHRUBBISH
 	Cmd_AddCommand ("fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
 #endif /* FILLALLCVARSWITHRUBBISH */

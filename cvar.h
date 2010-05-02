@@ -205,6 +205,7 @@ void Cvar_List_f (void);
 
 void Cvar_Set_f (void);
 void Cvar_SetA_f (void);
+void Cvar_Del_f (void);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 
