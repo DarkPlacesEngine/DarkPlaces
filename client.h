@@ -933,10 +933,12 @@ typedef struct client_state_s
 	qboolean movement_replay_canjump;
 
 	// previous gun angles (for leaning effects)
+	vec3_t gunangles_prev;
 	vec3_t gunangles_highpass;
 	vec3_t gunangles_adjustment_lowpass;
 	vec3_t gunangles_adjustment_highpass;
 	// previous gun angles (for leaning effects)
+	vec3_t gunorg_prev;
 	vec3_t gunorg_highpass;
 	vec3_t gunorg_adjustment_lowpass;
 	vec3_t gunorg_adjustment_highpass;
