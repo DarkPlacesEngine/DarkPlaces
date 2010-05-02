@@ -596,14 +596,8 @@ void V_CalcRefdef (void)
 					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
 					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
 					// TODO 3 (done): Cvar everything once the first TODOs are ready
-					
-					float speed; // limit to safe values, or bad things happen at low framerates
-					if(cl.realframetime < 0.1)
-						speed = cl.realframetime;
-					else
-						speed = 0.1;
 
-					if(cl_leanmodel_up.value)
+					if(cl_leanmodel_up.value && cl.realframetime * cl_leanmodel_up_speed.value < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
@@ -616,20 +610,20 @@ void V_CalcRefdef (void)
 							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
 								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
 							else
-								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * speed;
+								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value * cl.realframetime;
 						}
 						if(viewmodel_push_x > cl.viewangles[PITCH])
 						{
 							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
 								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
 							else
-								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * speed;
+								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value * cl.realframetime;
 						}
 					}
 					else
 						viewmodel_push_x = cl.viewangles[PITCH];
 
-					if(cl_leanmodel_side.value)
+					if(cl_leanmodel_side.value && cl.realframetime * cl_leanmodel_side_speed.value < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
@@ -642,14 +636,14 @@ void V_CalcRefdef (void)
 							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
 								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
 							else
-								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * speed;
+								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value * cl.realframetime;
 						}
 						if(viewmodel_push_y > cl.viewangles[YAW])
 						{
 							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
 								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
 							else
-								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * speed;
+								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value * cl.realframetime;
 						}
 					}
 					else
