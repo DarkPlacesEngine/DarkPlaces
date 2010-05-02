@@ -533,7 +533,7 @@ void V_CalcRefdef (void)
 				{
 					double xyspeed, bob;
 					vec_t d;
-					vec_t ef_speed = cl.realframetime;
+					vec_t ef_speed = cl.realframetime * cl.movevars_timescale;
 
 					// gun model leaning code
 					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
