@@ -545,7 +545,7 @@ void V_CalcRefdef (void)
 						if(cl.viewmodel_push_x - cl.viewangles[PITCH] >= 180)
 							cl.viewmodel_push_x -= 360;
 
-						d = cl.viewmodel_push_x - cl.viewangles[PITCH];
+						d = cl.viewangles[PITCH] - cl.viewmodel_push_x;
 						cl.viewmodel_push_x = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, cl.viewmodel_push_x + d * cl_leanmodel_up_speed.value * ef_speed, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
@@ -559,7 +559,7 @@ void V_CalcRefdef (void)
 						if(cl.viewmodel_push_y - cl.viewangles[YAW] >= 180)
 							cl.viewmodel_push_y -= 360;
 
-						d = cl.viewmodel_push_y - cl.viewangles[YAW];
+						d = cl.viewangles[YAW] - cl.viewmodel_push_y;
 						cl.viewmodel_push_y = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, cl.viewmodel_push_y + d * cl_leanmodel_side_speed.value * ef_speed, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
