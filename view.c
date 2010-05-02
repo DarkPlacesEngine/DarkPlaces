@@ -53,11 +53,11 @@ cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "0.35", "gun
 cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "25", "gun leaning upward limit"};
 
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
-cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "15", "gun following sideways speed"};
-cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "1", "gun following sideways limit"};
+cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "0.015", "gun following sideways speed"};
+cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "2", "gun following sideways limit"};
 cvar_t cl_followmodel_up = {CVAR_SAVE, "cl_followmodel_up", "1", "enables gun following upward"};
-cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "10", "gun following upward speed"};
-cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "0.5", "gun following upward limit"};
+cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "0.01", "gun following upward speed"};
+cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "1.5", "gun following upward limit"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
@@ -569,22 +569,10 @@ void V_CalcRefdef (void)
 					VectorSet(gunangles, cl.viewmodel_push_x, cl.viewmodel_push_y, viewangles[2]);
 
 					// gun model following code
-					if(cl_followmodel_side.value && cl_followmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					if(cl_followmodel_side.value)
 					{
-						vec_t d0 = vieworg[0] - cl.gunorg_follow[0];
-						vec_t d1 = vieworg[1] - cl.gunorg_follow[1];
-						d = sqrt(d0 * d0 + d1 * d1);
-						if(d > 0)
-						{
-							cl.gunorg_follow[0] = cl.gunorg_follow[0] + d0 * cl_followmodel_side_speed.value * ef_speed;
-							cl.gunorg_follow[1] = cl.gunorg_follow[1] + d1 * cl_followmodel_side_speed.value * ef_speed;
-							d *= (1 - cl_followmodel_side_speed.value * ef_speed);
-							if(d > cl_followmodel_side_limit.value)
-							{
-								cl.gunorg_follow[0] = vieworg[0] - (d0 / d) * cl_followmodel_side_limit.value;
-								cl.gunorg_follow[1] = vieworg[1] - (d1 / d) * cl_followmodel_side_limit.value;
-							}
-						}
+						cl.gunorg_follow[0] = vieworg[0] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[0] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
+						cl.gunorg_follow[1] = vieworg[1] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[1] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
 					}
 					else
 					{
@@ -592,13 +580,14 @@ void V_CalcRefdef (void)
 						cl.gunorg_follow[1] = vieworg[1];
 					}
 
-					if(cl_followmodel_up.value && cl_followmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					if(cl_followmodel_up.value)
 					{
-						d = vieworg[2] - cl.gunorg_follow[2];
-						cl.gunorg_follow[2] = bound(vieworg[2] - cl_followmodel_up_limit.value, cl.gunorg_follow[2] + d * cl_followmodel_up_speed.value * ef_speed, vieworg[2] + cl_followmodel_up_limit.value);
+						cl.gunorg_follow[2] = vieworg[2] - bound(-cl_followmodel_up_limit.value, cl.movement_velocity[2] * cl_followmodel_up_speed.value, cl_followmodel_up_limit.value);
 					}
 					else
+					{
 						cl.gunorg_follow[2] = vieworg[2];
+					}
 
 					VectorCopy(cl.gunorg_follow, gunorg);
 
