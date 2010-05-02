@@ -46,18 +46,18 @@ cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upwar
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_leanmodel_side = {CVAR_SAVE, "cl_leanmodel_side", "1", "enables gun leaning sideways"};
-cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "2.5", "gun leaning sideways speed"};
-cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "7.5", "gun leaning sideways limit"};
+cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "15", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "5", "gun leaning sideways limit"};
 cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leaning upward"};
-cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "2", "gun leaning upward speed"};
-cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "5", "gun leaning upward limit"};
+cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "10", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "2.5", "gun leaning upward limit"};
 
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
-cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "4", "gun following sideways speed"};
-cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "2", "gun following sideways limit"};
+cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "15", "gun following sideways speed"};
+cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "1", "gun following sideways limit"};
 cvar_t cl_followmodel_up = {CVAR_SAVE, "cl_followmodel_up", "1", "enables gun following upward"};
-cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "3", "gun following upward speed"};
-cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "1", "gun following upward limit"};
+cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "10", "gun following upward speed"};
+cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "0.5", "gun following upward limit"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
