@@ -374,6 +374,8 @@ void Host_Map_f (void)
 	}
 
 	// remove menu
+	if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		MR_ToggleMenu(0);
 	key_dest = key_game;
 
 	svs.serverflags = 0;			// haven't completed an episode yet
@@ -407,6 +409,8 @@ void Host_Changelevel_f (void)
 	}
 
 	// remove menu
+	if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		MR_ToggleMenu(0);
 	key_dest = key_game;
 
 	SV_VM_Begin();
@@ -442,6 +446,8 @@ void Host_Restart_f (void)
 	}
 
 	// remove menu
+	if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		MR_ToggleMenu(0);
 	key_dest = key_game;
 
 	allowcheats = sv_cheats.integer != 0;
@@ -774,6 +780,8 @@ void Host_Loadgame_f (void)
 		CL_Disconnect ();
 
 	// remove menu
+	if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		MR_ToggleMenu(0);
 	key_dest = key_game;
 
 	cls.demonum = -1;		// stop demo loop in case this fails
