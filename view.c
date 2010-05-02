@@ -531,7 +531,6 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					// gun model bobbing code
 					double xyspeed, bob;
 					vec_t d;
 					vec_t ef_speed = cl.realframetime;
@@ -568,7 +567,6 @@ void V_CalcRefdef (void)
 					VectorSet(gunangles, cl.viewmodel_push_x, cl.viewmodel_push_y, viewangles[2]);
 
 					// gun model following code
-					// TODO: make the weapon model not shake when looking around horizontally (due to X axis vs. Y axis)
 					if(cl_followmodel_side.value && cl_followmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						vec_t d0 = vieworg[0] - cl.gunorg_follow[0];
@@ -602,6 +600,7 @@ void V_CalcRefdef (void)
 
 					VectorCopy(cl.gunorg_follow, gunorg);
 
+					// gun model bobbing code
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
