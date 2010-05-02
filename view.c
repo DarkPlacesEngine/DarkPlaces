@@ -55,9 +55,11 @@ cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "25", "gun l
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
 cvar_t cl_followmodel_side_speed = {CVAR_SAVE, "cl_followmodel_side_speed", "0.015", "gun following sideways speed"};
 cvar_t cl_followmodel_side_limit = {CVAR_SAVE, "cl_followmodel_side_limit", "2", "gun following sideways limit"};
+cvar_t cl_followmodel_side_highpass = {CVAR_SAVE, "cl_followmodel_side_highpass", "2", "gun following sideways highpass"};
 cvar_t cl_followmodel_up = {CVAR_SAVE, "cl_followmodel_up", "1", "enables gun following upward"};
 cvar_t cl_followmodel_up_speed = {CVAR_SAVE, "cl_followmodel_up_speed", "0.01", "gun following upward speed"};
 cvar_t cl_followmodel_up_limit = {CVAR_SAVE, "cl_followmodel_up_limit", "1.5", "gun following upward limit"};
+cvar_t cl_followmodel_up_highpass = {CVAR_SAVE, "cl_followmodel_up_highpass", "2", "gun following upward highpass"};
 
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
@@ -95,7 +97,6 @@ cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use 
 cvar_t chase_pitchangle = {CVAR_SAVE, "chase_pitchangle", "55", "chase cam pitch angle"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
-float	gunorg[3], gunangles[3];
 
 
 /*
@@ -368,10 +369,23 @@ V_CalcRefdef
 static vec3_t eyeboxmins = {-16, -16, -24};
 static vec3_t eyeboxmaxs = { 16,  16,  32};
 #endif
+
+static vec_t lowpass(vec_t value, vec_t frac, vec_t *store)
+{
+	frac = bound(0, frac, 1);
+	return (*store = *store * (1 - frac) + value * frac);
+}
+
+static vec_t highpass(vec_t value, vec_t frac, vec_t *store)
+{
+	return value - lowpass(value, frac, store);
+}
+
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
 	float vieworg[3], viewangles[3], smoothtime;
+	float gunorg[3], gunangles[3];
 #if 0
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
 	vec3_t camboxmins = {-3, -3, -3};
@@ -533,61 +547,39 @@ void V_CalcRefdef (void)
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
 					double xyspeed, bob;
-					vec_t d;
+					vec_t f;
 
-					// gun model leaning code
-					vec_t lean_speed_up = cl_leanmodel_up_speed.value * cl.realframetime * cl.movevars_timescale;
-					if(cl_leanmodel_up.value && lean_speed_up >= 0 && lean_speed_up < 1) // bad things happen if this goes out of range, so prevent the effect
+					// lowpass the view angles to the gun angles
+					if(cl.viewangles[PITCH] - cl.gunangles_lowpass[PITCH] >= 180)
+						cl.gunangles_lowpass[PITCH] += 360;
+					if(cl.gunangles_lowpass[PITCH] - cl.viewangles[PITCH] >= 180)
+						cl.gunangles_lowpass[PITCH] -= 360;
+					gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, lowpass(cl.viewangles[PITCH], cl_leanmodel_up_speed.value * cl.realframetime * cl.movevars_timescale, &cl.gunangles_lowpass[PITCH]), cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+
+					if(cl.viewangles[YAW] - cl.gunangles_lowpass[YAW] >= 180)
+						cl.gunangles_lowpass[YAW] += 360;
+					if(cl.gunangles_lowpass[YAW] - cl.viewangles[YAW] >= 180)
+						cl.gunangles_lowpass[YAW] -= 360;
+					gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, lowpass(cl.viewangles[YAW], cl_leanmodel_side_speed.value * cl.realframetime * cl.movevars_timescale, &cl.gunangles_lowpass[YAW]), cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
+
+					// no need to adjust these
+					gunangles[ROLL] = cl.viewangles[ROLL];
+
+					// the gun origin be the current origin minus highpass of the velocity
+					gunorg[0] = highpass(cl.movement_velocity[0] * cl_followmodel_side_speed.value, cl.realframetime * cl.movevars_timescale * cl_followmodel_side_highpass.value, &cl.gunorg_minus_vieworg_diff_highpass[0]);
+					gunorg[1] = highpass(cl.movement_velocity[1] * cl_followmodel_side_speed.value, cl.realframetime * cl.movevars_timescale * cl_followmodel_side_highpass.value, &cl.gunorg_minus_vieworg_diff_highpass[1]);
+					gunorg[2] = highpass(cl.movement_velocity[2] * cl_followmodel_up_speed.value, cl.realframetime * cl.movevars_timescale * cl_followmodel_up_highpass.value, &cl.gunorg_minus_vieworg_diff_highpass[2]);
+
+					// limit the gun origin
+					f = sqrt(gunorg[0]*gunorg[0] + gunorg[1]*gunorg[1]);
+					if(f > cl_followmodel_side_limit.value)
 					{
-						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[PITCH] - gunangles[PITCH] >= 180)
-							gunangles[PITCH] += 360;
-						if(gunangles[PITCH] - cl.viewangles[PITCH] >= 180)
-							gunangles[PITCH] -= 360;
-
-						d = cl.viewangles[PITCH] - gunangles[PITCH];
-						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - lean_speed_up) + cl.viewangles[PITCH] * lean_speed_up, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+						gunorg[0] = gunorg[0] * cl_followmodel_side_limit.value / f;
+						gunorg[1] = gunorg[1] * cl_followmodel_side_limit.value / f;
 					}
-					else
-						gunangles[PITCH] = cl.viewangles[PITCH];
+					gunorg[2] = bound(-cl_followmodel_up_limit.value, gunorg[2], cl_followmodel_up_limit.value);
 
-					vec_t lean_speed_side = cl_leanmodel_side_speed.value * cl.realframetime * cl.movevars_timescale;
-					if(cl_leanmodel_side.value && lean_speed_side >= 0 && lean_speed_side < 1) // bad things happen if this goes out of range, so prevent the effect
-					{
-						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[YAW] - gunangles[YAW] >= 180)
-							gunangles[YAW] += 360;
-						if(gunangles[YAW] - cl.viewangles[YAW] >= 180)
-							gunangles[YAW] -= 360;
-
-						d = cl.viewangles[YAW] - gunangles[YAW];
-						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - lean_speed_side) + cl.viewangles[YAW] * lean_speed_side, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
-					}
-					else
-						gunangles[YAW] = cl.viewangles[YAW];
-
-					gunangles[ROLL] = viewangles[2];
-
-					// gun model following code
-					if(cl_followmodel_side.value)
-					{
-						gunorg[0] = vieworg[0] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[0] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
-						gunorg[1] = vieworg[1] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[1] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
-					}
-					else
-					{
-						gunorg[0] = vieworg[0];
-						gunorg[1] = vieworg[1];
-					}
-
-					if(cl_followmodel_up.value)
-					{
-						gunorg[2] = vieworg[2] - bound(-cl_followmodel_up_limit.value, cl.movement_velocity[2] * cl_followmodel_up_speed.value, cl_followmodel_up_limit.value);
-					}
-					else
-					{
-						gunorg[2] = vieworg[2];
-					}
+					VectorSubtract(vieworg, gunorg, gunorg);
 
 					// view bobbing code
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
@@ -865,9 +857,11 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_followmodel_side);
 	Cvar_RegisterVariable (&cl_followmodel_side_speed);
 	Cvar_RegisterVariable (&cl_followmodel_side_limit);
+	Cvar_RegisterVariable (&cl_followmodel_side_highpass);
 	Cvar_RegisterVariable (&cl_followmodel_up);
 	Cvar_RegisterVariable (&cl_followmodel_up_speed);
 	Cvar_RegisterVariable (&cl_followmodel_up_limit);
+	Cvar_RegisterVariable (&cl_followmodel_up_highpass);
 
 	Cvar_RegisterVariable (&cl_viewmodel_scale);
 
