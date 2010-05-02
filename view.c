@@ -602,26 +602,6 @@ void V_CalcRefdef (void)
 
 					// gun model bobbing code
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
-					if (cl_bob.value && cl_bobcycle.value)
-					{
-						float cycle;
-						// LordHavoc: this code is *weird*, but not replacable (I think it
-						// should be done in QC on the server, but oh well, quake is quake)
-						// LordHavoc: figured out bobup: the time at which the sin is at 180
-						// degrees (which allows lengthening or squishing the peak or valley)
-						cycle = cl.time / cl_bobcycle.value;
-						cycle -= (int) cycle;
-						if (cycle < cl_bobup.value)
-							cycle = sin(M_PI * cycle / cl_bobup.value);
-						else
-							cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-						// bob is proportional to velocity in the xy plane
-						// (don't count Z, or jumping messes it up)
-						bob = xyspeed * cl_bob.value;
-						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[2] += bound(-7, bob, 4);
-					}
-
 					if (cl_bob.value && cl_bobmodel.value)
 					{
 						// calculate for swinging gun model
@@ -661,6 +641,27 @@ void V_CalcRefdef (void)
 						VectorMA (gunorg, bob, right, gunorg);
 						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 						VectorMA (gunorg, bob, up, gunorg);
+					}
+
+					// view bobbing code
+					if (cl_bob.value && cl_bobcycle.value)
+					{
+						float cycle;
+						// LordHavoc: this code is *weird*, but not replacable (I think it
+						// should be done in QC on the server, but oh well, quake is quake)
+						// LordHavoc: figured out bobup: the time at which the sin is at 180
+						// degrees (which allows lengthening or squishing the peak or valley)
+						cycle = cl.time / cl_bobcycle.value;
+						cycle -= (int) cycle;
+						if (cycle < cl_bobup.value)
+							cycle = sin(M_PI * cycle / cl_bobup.value);
+						else
+							cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+						// bob is proportional to velocity in the xy plane
+						// (don't count Z, or jumping messes it up)
+						bob = xyspeed * cl_bob.value;
+						bob = bob*0.3 + bob*0.7*cycle;
+						vieworg[2] += bound(-7, bob, 4);
 					}
 				}
 			}
