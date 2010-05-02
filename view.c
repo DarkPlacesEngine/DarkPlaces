@@ -95,6 +95,7 @@ cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use 
 cvar_t chase_pitchangle = {CVAR_SAVE, "chase_pitchangle", "55", "chase cam pitch angle"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
+float	gunorg[3], gunangles[3];
 
 
 /*
@@ -370,7 +371,7 @@ static vec3_t eyeboxmaxs = { 16,  16,  32};
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
-	float vieworg[3], gunorg[3], viewangles[3], gunangles[3], smoothtime;
+	float vieworg[3], viewangles[3], smoothtime;
 #if 0
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
 	vec3_t camboxmins = {-3, -3, -3};
@@ -539,57 +540,55 @@ void V_CalcRefdef (void)
 					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[PITCH] - cl.viewmodel_lean[PITCH] >= 180)
-							cl.viewmodel_lean[PITCH] += 360;
-						if(cl.viewmodel_lean[PITCH] - cl.viewangles[PITCH] >= 180)
-							cl.viewmodel_lean[PITCH] -= 360;
+						if(cl.viewangles[PITCH] - gunangles[PITCH] >= 180)
+							gunangles[PITCH] += 360;
+						if(gunangles[PITCH] - cl.viewangles[PITCH] >= 180)
+							gunangles[PITCH] -= 360;
 
-						d = cl.viewangles[PITCH] - cl.viewmodel_lean[PITCH];
+						d = cl.viewangles[PITCH] - gunangles[PITCH];
 						cl_leanmodel_up_speed.value = bound(0, cl_leanmodel_up_speed.value, 1);
-						cl.viewmodel_lean[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, cl.viewmodel_lean[PITCH] * (1 - cl_leanmodel_up_speed.value) + cl.viewangles[PITCH] * cl_leanmodel_up_speed.value, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - cl_leanmodel_up_speed.value) + cl.viewangles[PITCH] * cl_leanmodel_up_speed.value, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
-						cl.viewmodel_lean[PITCH] = cl.viewangles[PITCH];
+						gunangles[PITCH] = cl.viewangles[PITCH];
 
 					if(cl_leanmodel_side.value && cl_leanmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-						if(cl.viewangles[YAW] - cl.viewmodel_lean[YAW] >= 180)
-							cl.viewmodel_lean[YAW] += 360;
-						if(cl.viewmodel_lean[YAW] - cl.viewangles[YAW] >= 180)
-							cl.viewmodel_lean[YAW] -= 360;
+						if(cl.viewangles[YAW] - gunangles[YAW] >= 180)
+							gunangles[YAW] += 360;
+						if(gunangles[YAW] - cl.viewangles[YAW] >= 180)
+							gunangles[YAW] -= 360;
 
-						d = cl.viewangles[YAW] - cl.viewmodel_lean[YAW];
+						d = cl.viewangles[YAW] - gunangles[YAW];
 						cl_leanmodel_side_speed.value = bound(0, cl_leanmodel_side_speed.value, 1);
-						cl.viewmodel_lean[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, cl.viewmodel_lean[YAW] * (1 - cl_leanmodel_side_speed.value) + cl.viewangles[YAW] * cl_leanmodel_side_speed.value, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
+						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - cl_leanmodel_side_speed.value) + cl.viewangles[YAW] * cl_leanmodel_side_speed.value, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
-						cl.viewmodel_lean[YAW] = cl.viewangles[YAW];
+						gunangles[YAW] = cl.viewangles[YAW];
 
-					VectorSet(gunangles, cl.viewmodel_lean[PITCH], cl.viewmodel_lean[YAW], viewangles[2]);
+					gunangles[ROLL] = viewangles[2];
 
 					// gun model following code
 					if(cl_followmodel_side.value)
 					{
-						cl.viewmodel_drag[0] = vieworg[0] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[0] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
-						cl.viewmodel_drag[1] = vieworg[1] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[1] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
+						gunorg[0] = vieworg[0] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[0] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
+						gunorg[1] = vieworg[1] - bound(-cl_followmodel_side_limit.value, cl.movement_velocity[1] * cl_followmodel_side_speed.value, cl_followmodel_side_limit.value);
 					}
 					else
 					{
-						cl.viewmodel_drag[0] = vieworg[0];
-						cl.viewmodel_drag[1] = vieworg[1];
+						gunorg[0] = vieworg[0];
+						gunorg[1] = vieworg[1];
 					}
 
 					if(cl_followmodel_up.value)
 					{
-						cl.viewmodel_drag[2] = vieworg[2] - bound(-cl_followmodel_up_limit.value, cl.movement_velocity[2] * cl_followmodel_up_speed.value, cl_followmodel_up_limit.value);
+						gunorg[2] = vieworg[2] - bound(-cl_followmodel_up_limit.value, cl.movement_velocity[2] * cl_followmodel_up_speed.value, cl_followmodel_up_limit.value);
 					}
 					else
 					{
-						cl.viewmodel_drag[2] = vieworg[2];
+						gunorg[2] = vieworg[2];
 					}
-
-					VectorCopy(cl.viewmodel_drag, gunorg);
 
 					// view bobbing code
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
