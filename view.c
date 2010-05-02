@@ -586,13 +586,20 @@ void V_CalcRefdef (void)
 
 					// gun model leaning code
 					
-					// TODO 1: Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border.
-					// [18:53:17] <@div0> search for AnglesFromVectors and AngleVectors
-					// [18:53:27] <@div0> I am quite sure interpolation (lerp) uses it
-					
+					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
 					// TODO 2: Implement limits (weapon model must not lean past a certain limit)
+					// TODO 3: Cvar everything once the first TODOs are ready
 
-					// TODO 3: Cvar everything once the first TODOs are ready.
+					// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
+					if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
+						viewmodel_push_y += 360;
+					if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
+						viewmodel_push_y -= 360;
+
+					if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
+						viewmodel_push_x += 360;
+					if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
+						viewmodel_push_x -= 360;
 
 					if(viewmodel_push_x < cl.viewangles[PITCH])
 						viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * 0.01;
@@ -605,6 +612,8 @@ void V_CalcRefdef (void)
 						viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
 
 					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
+					
+					// void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
 				}
 			}
 			// calculate a view matrix for rendering the scene
