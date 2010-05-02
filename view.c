@@ -45,6 +45,13 @@ cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing s
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
+cvar_t cl_leanmodel_side = {CVAR_SAVE, "cl_leanmodel_side", "1", "enables gun leaning sideways"};
+cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "0.025", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "7.5", "gun leaning sideways limit"};
+cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leaning upward"};
+cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "0.015", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "5", "gun leaning upward limit"};
+
 cvar_t cl_viewmodel_scale = {0, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
 cvar_t v_kicktime = {0, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
@@ -587,49 +594,60 @@ void V_CalcRefdef (void)
 					// gun model leaning code
 					
 					// TODO 1 (done): Fix bug where model does a 360* turn when YAW jumps around the 0 - 360 rotation border
-					// TODO 2: Implement limits (weapon model must not lean past a certain limit)
-					// TODO 3: Cvar everything once the first TODOs are ready
+					// TODO 2 (done): Implement limits (weapon model must not lean past a certain limit)
+					// TODO 3 (done): Cvar everything once the first TODOs are ready
 
-					// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
-					if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
-						viewmodel_push_y += 360;
-					if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
-						viewmodel_push_y -= 360;
+					if(cl_leanmodel_up.value)
+					{
+						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
+						if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
+							viewmodel_push_x += 360;
+						if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
+							viewmodel_push_x -= 360;
 
-					if(cl.viewangles[PITCH] - viewmodel_push_x >= 180)
-						viewmodel_push_x += 360;
-					if(viewmodel_push_x - cl.viewangles[PITCH] >= 180)
-						viewmodel_push_x -= 360;
+						if(viewmodel_push_x < cl.viewangles[PITCH])
+						{
+							if(cl.viewangles[PITCH] - viewmodel_push_x > cl_leanmodel_up_limit.value)
+								viewmodel_push_x = cl.viewangles[PITCH] - cl_leanmodel_up_limit.value;
+							else
+								viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * cl_leanmodel_up_speed.value;
+						}
+						if(viewmodel_push_x > cl.viewangles[PITCH])
+						{
+							if(viewmodel_push_x - cl.viewangles[PITCH] > cl_leanmodel_up_limit.value)
+								viewmodel_push_x = cl.viewangles[PITCH] + cl_leanmodel_up_limit.value;
+							else
+								viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * cl_leanmodel_up_speed.value;
+						}
+					}
+					else
+						viewmodel_push_x = cl.viewangles[PITCH];
 
-					if(viewmodel_push_x < cl.viewangles[PITCH])
+					if(cl_leanmodel_side.value)
 					{
-						if(cl.viewangles[PITCH] - viewmodel_push_x > 15)
-							viewmodel_push_x = cl.viewangles[PITCH] - 15;
-						else
-							viewmodel_push_x += (cl.viewangles[PITCH] - viewmodel_push_x) * 0.01;
-					}
-					if(viewmodel_push_x > cl.viewangles[PITCH])
-					{
-						if(viewmodel_push_x - cl.viewangles[PITCH] > 15)
-							viewmodel_push_x = cl.viewangles[PITCH] + 15;
-						else
-							viewmodel_push_x -= (viewmodel_push_x - cl.viewangles[PITCH]) * 0.01;
-					}
+						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
+						if(cl.viewangles[YAW] - viewmodel_push_y >= 180)
+							viewmodel_push_y += 360;
+						if(viewmodel_push_y - cl.viewangles[YAW] >= 180)
+							viewmodel_push_y -= 360;
 
-					if(viewmodel_push_y < cl.viewangles[YAW])
-					{
-						if(cl.viewangles[YAW] - viewmodel_push_y > 15)
-							viewmodel_push_y = cl.viewangles[YAW] - 15;
-						else
-							viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * 0.01;
+						if(viewmodel_push_y < cl.viewangles[YAW])
+						{
+							if(cl.viewangles[YAW] - viewmodel_push_y > cl_leanmodel_side_limit.value)
+								viewmodel_push_y = cl.viewangles[YAW] - cl_leanmodel_side_limit.value;
+							else
+								viewmodel_push_y += (cl.viewangles[YAW] - viewmodel_push_y) * cl_leanmodel_side_speed.value;
+						}
+						if(viewmodel_push_y > cl.viewangles[YAW])
+						{
+							if(viewmodel_push_y - cl.viewangles[YAW] > cl_leanmodel_side_limit.value)
+								viewmodel_push_y = cl.viewangles[YAW] + cl_leanmodel_side_limit.value;
+							else
+								viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * cl_leanmodel_side_speed.value;
+						}
 					}
-					if(viewmodel_push_y > cl.viewangles[YAW])
-					{
-						if(viewmodel_push_y - cl.viewangles[YAW] > 15)
-							viewmodel_push_y = cl.viewangles[YAW] + 15;
-						else
-							viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
-					}
+					else
+						viewmodel_push_y = cl.viewangles[YAW];
 
 					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
 				}
@@ -829,6 +847,13 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
 	Cvar_RegisterVariable (&cl_bobmodel_speed);
+
+	Cvar_RegisterVariable (&cl_leanmodel_side);
+	Cvar_RegisterVariable (&cl_leanmodel_side_speed);
+	Cvar_RegisterVariable (&cl_leanmodel_side_limit);
+	Cvar_RegisterVariable (&cl_leanmodel_up);
+	Cvar_RegisterVariable (&cl_leanmodel_up_speed);
+	Cvar_RegisterVariable (&cl_leanmodel_up_limit);
 
 	Cvar_RegisterVariable (&cl_viewmodel_scale);
 
