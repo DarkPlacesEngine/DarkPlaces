@@ -401,10 +401,10 @@ cl_bobmodel_side                                  0.05                gun bobbin
 cl_bobmodel_speed                                 7                   gun bobbing speed
 cl_bobmodel_up                                    0.02                gun bobbing upward movement amount
 cl_leanmodel_side                                 1                   enables gun leaning sideways
-cl_leanmodel_side_speed                           5                   gun leaning sideways speed
+cl_leanmodel_side_speed                           2.5                 gun leaning sideways speed
 cl_leanmodel_side_limit                           7.5                 gun leaning sideways limit
 cl_leanmodel_up                                   1                   enables gun leaning upward
-cl_leanmodel_up_speed                             2.5                 gun leaning upward speed
+cl_leanmodel_up_speed                             2                   gun leaning upward speed
 cl_leanmodel_up_limit                             5                   gun leaning upward limit
 cl_bobup                                          0.5                 view bobbing adjustment that makes the up or down swing of the bob last longer
 cl_capturevideo                                   0                   enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)
