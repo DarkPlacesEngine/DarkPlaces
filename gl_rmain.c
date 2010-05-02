@@ -11048,39 +11048,32 @@ static void RSurf_BindLightmapForBatch(void)
 	}
 }
 
-static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
+static void RSurf_BindReflectionForBatch(void)
 {
-	// pick the closest matching water plane
-	int planeindex, vertexindex, bestplaneindex = -1;
+	// pick the closest matching water plane and bind textures
+	int planeindex, vertexindex;
 	float d, bestd;
 	vec3_t vert;
 	const float *v;
-	r_waterstate_waterplane_t *p;
+	r_waterstate_waterplane_t *p, *bestp;
 	bestd = 0;
+	bestp = NULL;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
 		if(p->camera_entity != rsurface.texture->camera_entity)
 			continue;
 		d = 0;
-		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
 		for (vertexindex = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3;vertexindex < rsurface.batchnumvertices;vertexindex++, v += 3)
 		{
 			Matrix4x4_Transform(&rsurface.matrix, v, vert);
 			d += fabs(PlaneDiff(vert, &p->plane));
 		}
-		if (bestd > d || bestplaneindex < 0)
+		if (bestd > d || !bestp)
 		{
 			bestd = d;
-			bestplaneindex = planeindex;
+			bestp = p;
 		}
 	}
-	return bestplaneindex;
-}
-
-static void RSurf_BindReflectionForBatch(int planeindex)
-{
-	// pick the closest matching water plane and bind textures
-	r_waterstate_waterplane_t *bestp = planeindex >= 0 ? r_waterstate.waterplanes + planeindex : NULL;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_CGGL:
@@ -11411,55 +11404,33 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist);
 		RSurf_DrawBatch();
-		return;
 	}
-
-	// bind lightmap texture
-
-	// water/refraction/reflection/camera surfaces have to be handled specially
-	if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_CAMERA | MATERIALFLAG_REFLECTION)) && !r_waterstate.renderingscene)
+	else if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_CAMERA)) && !r_waterstate.renderingscene)
 	{
-		int start, end, startplaneindex;
-		for (start = 0;start < texturenumsurfaces;start = end)
-		{
-			startplaneindex = RSurf_FindWaterPlaneForSurface(texturesurfacelist[start]);
-			for (end = start + 1;end < texturenumsurfaces && startplaneindex == RSurf_FindWaterPlaneForSurface(texturesurfacelist[end]);end++)
-				;
-			// now that we have a batch using the same planeindex, render it
-			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_CAMERA)) && !r_waterstate.renderingscene)
-			{
-				// render water or distortion background
-				GL_DepthMask(true);
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start);
-				RSurf_BindReflectionForBatch(startplaneindex);
-				if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
-					RSurf_BindLightmapForBatch();
-				RSurf_DrawBatch();
-				// blend surface on top
-				GL_DepthMask(false);
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start);
-				RSurf_DrawBatch();
-			}
-			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION) && !r_waterstate.renderingscene)
-			{
-				// render surface with reflection texture as input
-				GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start);
-				RSurf_BindReflectionForBatch(startplaneindex);
-				if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
-					RSurf_BindLightmapForBatch();
-				RSurf_DrawBatch();
-			}
-		}
-		return;
+		// render water or distortion background, then blend surface on top
+		GL_DepthMask(true);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND, texturenumsurfaces, texturesurfacelist);
+		RSurf_BindReflectionForBatch();
+		if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			RSurf_BindLightmapForBatch();
+		RSurf_DrawBatch();
+		GL_DepthMask(false);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist);
+		if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			RSurf_BindLightmapForBatch();
+		RSurf_DrawBatch();
 	}
-
-	// render surface batch normally
-	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist);
-	if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
-		RSurf_BindLightmapForBatch();
-	RSurf_DrawBatch();
+	else
+	{
+		// render surface normally
+		GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist);
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			RSurf_BindReflectionForBatch();
+		if (rsurface.uselightmaptexture && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			RSurf_BindLightmapForBatch();
+		RSurf_DrawBatch();
+	}
 }
 
 static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
