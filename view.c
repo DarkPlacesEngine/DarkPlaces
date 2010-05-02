@@ -620,6 +620,13 @@ void V_CalcRefdef (void)
 						bob = xyspeed * cl_bob.value;
 						bob = bob*0.3 + bob*0.7*cycle;
 						vieworg[2] += bound(-7, bob, 4);
+						// we also need to adjust gunorg, or this appears like
+						// pushing the gun! In the old code, this was applied
+						// to vieworg BEFORE copying to gunorg, but this is not
+						// viable with the new followmodel code as that would
+						// mean that followmodel would work on the
+						// munged-by-bob vieworg and do feedback
+						gunorg[2] += bound(-7, bob, 4);
 					}
 
 					if (cl_bob.value && cl_bobmodel.value)
