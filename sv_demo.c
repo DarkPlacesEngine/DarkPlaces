@@ -1,9 +1,12 @@
 #include "quakedef.h"
 #include "sv_demo.h"
 
+extern cvar_t sv_autodemo_perclient_discardable;
+
 void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrack)
 {
 	char name[MAX_QPATH];
+	prvm_eval_t *val;
 
 	if(client->sv_demo_file != NULL)
 		return; // we already have a demo
@@ -12,6 +15,10 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 	FS_DefaultExtension(name, ".dem", sizeof(name));
 
 	Con_Printf("Recording demo for # %d (%s) to %s\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress, name);
+
+	// Reset discardable flag for every new demo.
+	if ((val = PRVM_EDICTFIELDVALUE(client->edict, prog->fieldoffsets.discardabledemo)))
+		val->_float = 0;
 
 	client->sv_demo_file = FS_OpenRealFile(name, "wb", false);
 	if(!client->sv_demo_file)
@@ -49,6 +56,7 @@ void SV_StopDemoRecording(client_t *client)
 {
 	sizebuf_t buf;
 	unsigned char bufdata[64];
+	prvm_eval_t *val;
 
 	if(client->sv_demo_file == NULL)
 		return;
@@ -59,9 +67,16 @@ void SV_StopDemoRecording(client_t *client)
 	MSG_WriteByte(&buf, svc_disconnect);
 	SV_WriteDemoMessage(client, &buf, false);
 
+	if (sv_autodemo_perclient_discardable.integer && (val = PRVM_EDICTFIELDVALUE(client->edict, prog->fieldoffsets.discardabledemo)) && val->_float)
+	{
+		FS_RemoveOnClose(client->sv_demo_file);
+		Con_Printf("Stopped recording discardable demo for # %d (%s)\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress);
+	}
+	else
+		Con_Printf("Stopped recording demo for # %d (%s)\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress);
+
 	FS_Close(client->sv_demo_file);
 	client->sv_demo_file = NULL;
-	Con_Printf("Stopped recording demo for # %d (%s)\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress);
 }
 
 void SV_WriteNetnameIntoDemo(client_t *client)

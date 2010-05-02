@@ -57,6 +57,7 @@ cvar_t freelook = {CVAR_SAVE, "freelook", "1","mouse controls pitch instead of f
 
 cvar_t cl_autodemo = {CVAR_SAVE, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
 cvar_t cl_autodemo_nameformat = {CVAR_SAVE, "cl_autodemo_nameformat", "autodemos/%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name (the date is encoded using strftime escapes)" };
+cvar_t cl_autodemo_delete = {0, "cl_autodemo_delete", "0", "Delete demos after recording.  This is a bitmask, bit 1 gives the default, bit 0 inverts the meaning of bit 1 for the current demo.  Thus, the values are: 0 = disabled; 1 = delete current demo only; 2 = delete all demos from this point on; 3 = delete all demos except the current demo" };
 
 cvar_t r_draweffects = {0, "r_draweffects", "1","renders temporary sprite effects"};
 
@@ -2380,6 +2381,7 @@ void CL_Init (void)
 
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
+	Cvar_RegisterVariable (&cl_autodemo_delete);
 
 	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
 	Cmd_AddCommand ("fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
