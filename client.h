@@ -937,6 +937,11 @@ typedef struct client_state_s
 	// whether the replay should allow a jump at the first sequence
 	qboolean movement_replay_canjump;
 
+	// previous gun angles (for leaning effects)
+	vec3_t gunangles_lowpass;
+	// highpass store for highpassing the origin (for following effect)
+	vec3_t gunorg_minus_vieworg_diff_highpass;
+
 // pitch drifting vars
 	float idealpitch;
 	float pitchvel;
