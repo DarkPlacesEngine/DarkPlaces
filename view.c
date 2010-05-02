@@ -612,8 +612,6 @@ void V_CalcRefdef (void)
 						viewmodel_push_y -= (viewmodel_push_y - cl.viewangles[YAW]) * 0.01;
 
 					VectorSet(gunangles, viewmodel_push_x, viewmodel_push_y, viewangles[2]);
-					
-					// void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
 				}
 			}
 			// calculate a view matrix for rendering the scene
