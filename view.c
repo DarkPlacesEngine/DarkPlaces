@@ -46,10 +46,10 @@ cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upwar
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
 
 cvar_t cl_leanmodel_side = {CVAR_SAVE, "cl_leanmodel_side", "1", "enables gun leaning sideways"};
-cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "0.4", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "20", "gun leaning sideways speed"};
 cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
 cvar_t cl_leanmodel_up = {CVAR_SAVE, "cl_leanmodel_up", "1", "enables gun leaning upward"};
-cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "0.35", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_speed = {CVAR_SAVE, "cl_leanmodel_up_speed", "15", "gun leaning upward speed"};
 cvar_t cl_leanmodel_up_limit = {CVAR_SAVE, "cl_leanmodel_up_limit", "25", "gun leaning upward limit"};
 
 cvar_t cl_followmodel_side = {CVAR_SAVE, "cl_followmodel_side", "1", "enables gun following sideways"};
@@ -534,10 +534,10 @@ void V_CalcRefdef (void)
 				{
 					double xyspeed, bob;
 					vec_t d;
-					vec_t ef_speed = cl.realframetime * cl.movevars_timescale;
 
 					// gun model leaning code
-					if(cl_leanmodel_up.value && cl_leanmodel_up_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					vec_t ef_speed_up = cl_leanmodel_up_speed.value * cl.realframetime * cl.movevars_timescale;
+					if(cl_leanmodel_up.value && ef_speed_up >= 0 && ef_speed_up < 1) // bad things happen if this goes out of range, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[PITCH] - gunangles[PITCH] >= 180)
@@ -546,13 +546,13 @@ void V_CalcRefdef (void)
 							gunangles[PITCH] -= 360;
 
 						d = cl.viewangles[PITCH] - gunangles[PITCH];
-						cl_leanmodel_up_speed.value = bound(0, cl_leanmodel_up_speed.value, 1);
-						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - cl_leanmodel_up_speed.value) + cl.viewangles[PITCH] * cl_leanmodel_up_speed.value, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
+						gunangles[PITCH] = bound(cl.viewangles[PITCH] - cl_leanmodel_up_limit.value, gunangles[PITCH] * (1 - ef_speed_up) + cl.viewangles[PITCH] * ef_speed_up, cl.viewangles[PITCH] + cl_leanmodel_up_limit.value);
 					}
 					else
 						gunangles[PITCH] = cl.viewangles[PITCH];
 
-					if(cl_leanmodel_side.value && cl_leanmodel_side_speed.value * ef_speed < 1) // bad things happen if this goes over 1, so prevent the effect
+					vec_t ef_speed_side = cl_leanmodel_side_speed.value * cl.realframetime * cl.movevars_timescale;
+					if(cl_leanmodel_side.value && ef_speed_side >= 0 && ef_speed_side < 1) // bad things happen if this goes out of range, so prevent the effect
 					{
 						// prevent the gun from doing a 360* rotation when going around the 0 <-> 360 border
 						if(cl.viewangles[YAW] - gunangles[YAW] >= 180)
@@ -561,8 +561,7 @@ void V_CalcRefdef (void)
 							gunangles[YAW] -= 360;
 
 						d = cl.viewangles[YAW] - gunangles[YAW];
-						cl_leanmodel_side_speed.value = bound(0, cl_leanmodel_side_speed.value, 1);
-						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - cl_leanmodel_side_speed.value) + cl.viewangles[YAW] * cl_leanmodel_side_speed.value, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
+						gunangles[YAW] = bound(cl.viewangles[YAW] - cl_leanmodel_side_limit.value, gunangles[YAW] * (1 - ef_speed_side) + cl.viewangles[YAW] * ef_speed_side, cl.viewangles[YAW] + cl_leanmodel_side_limit.value);
 					}
 					else
 						gunangles[YAW] = cl.viewangles[YAW];
