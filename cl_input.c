@@ -1121,9 +1121,9 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	speed = VectorNormalizeLength(s->velocity);
 
 	dot = DotProduct(s->velocity, wishdir);
-	k *= cl.movevars_aircontrol*dot*dot*s->cmd.frametime;
 
 	if(dot > 0) { // we can't change direction while slowing down
+		k *= cl.movevars_aircontrol*pow(dot, cl.movevars_aircontrol_power)*s->cmd.frametime;
 		VectorMAM(speed, s->velocity, k, wishdir, s->velocity);
 		VectorNormalize(s->velocity);
 	}
@@ -1462,6 +1462,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE];
 		cl.movevars_maxairstrafespeed = cl.statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED];
 		cl.movevars_aircontrol = cl.statsf[STAT_MOVEVARS_AIRCONTROL];
+		cl.movevars_aircontrol_power = cl.statsf[STAT_MOVEVARS_AIRCONTROL_POWER];
 		cl.movevars_warsowbunny_airforwardaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL];
 		cl.movevars_warsowbunny_accel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL];
 		cl.movevars_warsowbunny_topspeed = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED];
@@ -1494,6 +1495,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccelerate = 0;
 		cl.movevars_maxairstrafespeed = 0;
 		cl.movevars_aircontrol = 0;
+		cl.movevars_aircontrol_power = 2;
 		cl.movevars_warsowbunny_airforwardaccel = 0;
 		cl.movevars_warsowbunny_accel = 0;
 		cl.movevars_warsowbunny_topspeed = 0;
@@ -1506,6 +1508,9 @@ void CL_UpdateMoveVars(void)
 		if(gamemode == GAME_NEXUIZ)
 			cl.moveflags = MOVEFLAG_Q2AIRACCELERATE;
 	}
+
+	if(cl.movevars_aircontrol_power <= 0)
+		cl.movevars_aircontrol = 2; // CPMA default
 }
 
 void CL_ClientMovement_Replay(void)
