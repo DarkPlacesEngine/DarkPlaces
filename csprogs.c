@@ -738,7 +738,7 @@ void CL_VM_CB_EndIncreaseEdicts(void)
 	prvm_edict_t *ent;
 
 	// link every entity except world
-	for (i = 1, ent = prog->edicts;i < prog->max_edicts;i++, ent++)
+	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
 		if (!ent->priv.server->free)
 			CL_LinkEdict(ent);
 }
