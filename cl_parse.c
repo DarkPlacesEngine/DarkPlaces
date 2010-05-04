@@ -1828,8 +1828,12 @@ void CL_ParseServerInfo (void)
 
 		Con_Printf ("Auto-recording to %s.\n", demofile);
 
-		// Clear the invert flag for every new demo
-		Cvar_SetValueQuick(&cl_autodemo_delete, cl_autodemo_delete.integer & ~0x1);
+		// Reset bit 0 for every new demo
+		Cvar_SetValueQuick(&cl_autodemo_delete,
+			(cl_autodemo_delete.integer & ~0x1)
+			|
+			((cl_autodemo_delete.integer & 0x2) ? 0x1 : 0)
+		);
 
 		cls.demofile = FS_OpenRealFile(demofile, "wb", false);
 		if (cls.demofile)
