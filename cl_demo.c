@@ -306,7 +306,7 @@ void CL_Stop_f (void)
 	CL_WriteDemoMessage(&buf);
 
 // finish up
-	if (cl_autodemo.integer && ((cl_autodemo_delete.integer & 1) ^ ((cl_autodemo_delete.integer >> 1) & 1))) // bit 0 XOR bit 1
+	if(cl_autodemo.integer && (cl_autodemo_delete.integer & 1))
 	{
 		FS_RemoveOnClose(cls.demofile);
 		Con_Print("Completed and deleted demo\n");
