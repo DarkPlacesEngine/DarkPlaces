@@ -349,6 +349,7 @@ static memexpandablearray_t r_shadow_worldlightsarray;
 dlight_t *r_shadow_selectedlight;
 dlight_t r_shadow_bufferlight;
 vec3_t r_editlights_cursorlocation;
+qboolean r_editlights_lockcursor;
 
 extern int con_vislines;
 
@@ -4934,7 +4935,8 @@ void R_Shadow_DrawLightSprites(void)
 		if (light)
 			R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 5, &light->rtlight);
 	}
-	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
+	if (!r_editlights_lockcursor)
+		R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
 int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color)
@@ -4966,6 +4968,9 @@ void R_Shadow_SelectLightInView(void)
 	size_t range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	best = NULL;
 	bestrating = 0;
+
+	if (r_editlights_lockcursor)
+		return;
 	for (lightindex = 0;lightindex < range;lightindex++)
 	{
 		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
@@ -5834,7 +5839,7 @@ void R_Shadow_EditLights_Edit_f(void)
 void R_Shadow_EditLights_EditAll_f(void)
 {
 	size_t lightindex;
-	dlight_t *light;
+	dlight_t *light, *oldselected;
 	size_t range;
 
 	if (!r_editlights.integer)
@@ -5843,6 +5848,7 @@ void R_Shadow_EditLights_EditAll_f(void)
 		return;
 	}
 
+	oldselected = r_shadow_selectedlight;
 	// EditLights doesn't seem to have a "remove" command or something so:
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	for (lightindex = 0;lightindex < range;lightindex++)
@@ -5853,6 +5859,8 @@ void R_Shadow_EditLights_EditAll_f(void)
 		R_Shadow_SelectLight(light);
 		R_Shadow_EditLights_Edit_f();
 	}
+	// return to old selected (to not mess editing once selection is locked)
+	R_Shadow_SelectLight(oldselected);
 }
 
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
@@ -5962,6 +5970,7 @@ void R_Shadow_EditLights_Help_f(void)
 "r_editlights_help : this help\n"
 "r_editlights_clear : remove all lights\n"
 "r_editlights_reload : reload .rtlights, .lights file, or entities\n"
+"r_editlights_lock : lock selection to current light, if already locked - unlock\n"
 "r_editlights_save : save to .rtlights file\n"
 "r_editlights_spawn : create a light with default settings\n"
 "r_editlights_edit command : edit selected light - more documentation below\n"
@@ -6046,6 +6055,26 @@ void R_Shadow_EditLights_PasteInfo_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname, r_shadow_bufferlight.coronasizescale, r_shadow_bufferlight.ambientscale, r_shadow_bufferlight.diffusescale, r_shadow_bufferlight.specularscale, r_shadow_bufferlight.flags);
 }
 
+void R_Shadow_EditLights_Lock_f(void)
+{
+	if (!r_editlights.integer)
+	{
+		Con_Print("Cannot lock on light when not in editing mode.  Set r_editlights to 1.\n");
+		return;
+	}
+	if (r_editlights_lockcursor)
+	{
+		r_editlights_lockcursor = false;
+		return;
+	}
+	if (!r_shadow_selectedlight)
+	{
+		Con_Print("No selected light to lock on.\n");
+		return;
+	}
+	r_editlights_lockcursor = true;
+}
+
 void R_Shadow_EditLights_Init(void)
 {
 	Cvar_RegisterVariable(&r_editlights);
@@ -6068,6 +6097,7 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
 	Cmd_AddCommand("r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
 	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
+	Cmd_AddCommand("r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
 }
 
 
