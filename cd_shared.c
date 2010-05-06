@@ -605,7 +605,7 @@ void CDAudio_SetVolume (float newvol)
 		if (faketrack != -1)
 			S_SetChannelVolume (faketrack, newvol);
 		else
-			CDAudio_SysSetVolume (newvol);
+			CDAudio_SysSetVolume (newvol * mastervolume.value);
 	}
 
 	cdvolume = newvol;

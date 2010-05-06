@@ -45,6 +45,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct sfx_s sfx_t;
 
+extern cvar_t mastervolume;
 extern cvar_t bgmvolume;
 extern cvar_t volume;
 extern cvar_t snd_initialized;
