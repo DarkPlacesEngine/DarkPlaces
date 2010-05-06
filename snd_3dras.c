@@ -5,6 +5,7 @@
 #include "snd_3dras.h"
 
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
+cvar_t mastervolume = {CVAR_SAVE, "mastervolume", "1", "master volume"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
@@ -367,6 +368,7 @@ void S_Init (void){
 			Con_Printf ("Version %i found\n",ras_version);
 			Cvar_RegisterVariable(&volume);
 			Cvar_RegisterVariable(&bgmvolume);
+			Cvar_RegisterVariable(&mastervolume);
 			Cvar_RegisterVariable(&snd_staticvolume);
 			Cvar_RegisterVariable(&snd_precache);
 
