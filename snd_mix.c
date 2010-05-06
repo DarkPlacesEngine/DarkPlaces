@@ -189,9 +189,9 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 
 	// If this channel manages its own volume
 	if (ch->flags & CHANNELFLAG_FULLVOLUME)
-		snd_vol = 256;
+		snd_vol = (int)(mastervolume.value * 256);
 	else
-		snd_vol = (int)(volume.value * 256);
+		snd_vol = (int)(mastervolume.value * volume.value * 256);
 
 	// calculate mixing volumes based on channel volumes and volume cvar
 	// also limit the volumes to values that won't clip
