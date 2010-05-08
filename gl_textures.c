@@ -528,8 +528,8 @@ static void r_textures_start(void)
 	// Disable JPEG screenshots if the DLL isn't loaded
 	if (! JPEG_OpenLibrary ())
 		Cvar_SetValueQuick (&scr_screenshot_jpeg, 0);
-	// TODO: support png screenshots?
-	PNG_OpenLibrary ();
+	if (! PNG_OpenLibrary ())
+		Cvar_SetValueQuick (&scr_screenshot_png, 0);
 }
 
 static void r_textures_shutdown(void)
