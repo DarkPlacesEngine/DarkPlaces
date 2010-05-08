@@ -209,7 +209,7 @@ OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $
 LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
-LDFLAGS_UNIXSV_PRELOAD=-lz -lcurl
+LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
