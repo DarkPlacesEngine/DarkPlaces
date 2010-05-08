@@ -1032,6 +1032,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	CompressedImageCacheItem *i;
 
 	JPEG_OpenLibrary (); // for now; LH had the idea of replacing this by a better format
+	PNG_OpenLibrary (); // for loading
 
 	// No DLL = no JPEGs
 	if (!jpeg_dll)
