@@ -25,6 +25,7 @@
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
+#include "image_png.h"
 
 cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
