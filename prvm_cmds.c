@@ -4463,8 +4463,8 @@ static int BufStr_SortStringsUP (const void *in1, const void *in2)
 	const char *a, *b;
 	a = *((const char **) in1);
 	b = *((const char **) in2);
-	if(!a[0])	return 1;
-	if(!b[0])	return -1;
+	if(!a || !a[0])	return 1;
+	if(!b || !b[0])	return -1;
 	return strncmp(a, b, stringbuffers_sortlength);
 }
 
@@ -4473,8 +4473,8 @@ static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
 	const char *a, *b;
 	a = *((const char **) in1);
 	b = *((const char **) in2);
-	if(!a[0])	return 1;
-	if(!b[0])	return -1;
+	if(!a || !a[0])	return 1;
+	if(!b || !b[0])	return -1;
 	return strncmp(b, a, stringbuffers_sortlength);
 }
 
