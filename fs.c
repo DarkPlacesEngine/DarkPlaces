@@ -2920,9 +2920,11 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len)
+qboolean FS_WriteFileInBlocks (const char *filename, const void *const *data, const fs_offset_t *len, size_t count)
 {
 	qfile_t *file;
+	size_t i;
+	fs_offset_t lentotal;
 
 	file = FS_OpenRealFile(filename, "wb", false);
 	if (!file)
@@ -2931,10 +2933,19 @@ qboolean FS_WriteFile (const char *filename, void *data, fs_offset_t len)
 		return false;
 	}
 
-	Con_DPrintf("FS_WriteFile: %s (%u bytes)\n", filename, (unsigned int)len);
-	FS_Write (file, data, len);
+	lentotal = 0;
+	for(i = 0; i < count; ++i)
+		lentotal += len[i];
+	Con_DPrintf("FS_WriteFile: %s (%u bytes)\n", filename, (unsigned int)lentotal);
+	for(i = 0; i < count; ++i)
+		FS_Write (file, data[i], len[i]);
 	FS_Close (file);
 	return true;
+}
+
+qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len)
+{
+	return FS_WriteFileInBlocks(filename, &data, &len, 1);
 }
 
 

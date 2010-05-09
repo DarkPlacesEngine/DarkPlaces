@@ -724,7 +724,7 @@ void VM_CL_R_ClearScene (void)
 	r_refdef.view.isoverlay = false;
 	// FIXME: restore cl.csqc_origin
 	// FIXME: restore cl.csqc_angles
-	cl.csqc_vidvars.drawworld = true;
+	cl.csqc_vidvars.drawworld = r_drawworld.integer;
 	cl.csqc_vidvars.drawenginesbar = false;
 	cl.csqc_vidvars.drawcrosshair = false;
 }
@@ -858,7 +858,7 @@ void VM_CL_R_SetView (void)
 		CSQC_R_RecalcView();
 		break;
 	case VF_DRAWWORLD:
-		cl.csqc_vidvars.drawworld = k != 0;
+		cl.csqc_vidvars.drawworld = ((k != 0) && r_drawworld.integer);
 		break;
 	case VF_DRAWENGINESBAR:
 		cl.csqc_vidvars.drawenginesbar = k != 0;
