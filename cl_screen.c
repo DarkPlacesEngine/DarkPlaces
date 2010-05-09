@@ -37,6 +37,7 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
+cvar_t scr_screenshot_alpha = {CVAR_SAVE, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
@@ -872,6 +873,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
 	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
+	Cvar_RegisterVariable (&scr_screenshot_alpha);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
 	Cvar_RegisterVariable (&cl_capturevideo_width);
@@ -924,7 +926,6 @@ void SCR_ScreenShot_f (void)
 	char mapname[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
-	unsigned char *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 	qboolean png = (scr_screenshot_png.integer != 0) && !jpeg;
 
@@ -986,18 +987,17 @@ void SCR_ScreenShot_f (void)
 		dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : png ? "png" : "tga");
 	}
 
-	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-	buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
+	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
+	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (scr_screenshot_alpha.integer ? 4 : 3));
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, jpeg, png, true))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, jpeg, png, true, scr_screenshot_alpha.integer))
 		Con_Printf("Wrote %s\n", filename);
 	else
 	{
 		Con_Printf("Unable to write %s\n", filename);
 		if(jpeg || png)
 		{
-			if(SCR_ScreenShot (filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, false, true))
+			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer))
 			{
 				strlcpy(filename + strlen(filename) - 3, "tga", 4);
 				Con_Printf("Wrote %s\n", filename);
@@ -1007,7 +1007,6 @@ void SCR_ScreenShot_f (void)
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
-	Mem_Free (buffer3);
 
 	shotnumber++;
 }
@@ -1214,7 +1213,6 @@ void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 		return;
 
 	CHECKGLERROR
-	//return SCR_ScreenShot(filename, cls.capturevideo.buffer, cls.capturevideo.buffer + vid.width * vid.height * 3, cls.capturevideo.buffer + vid.width * vid.height * 6, 0, 0, vid.width, vid.height, false, false, false, jpeg, true);
 	// speed is critical here, so do saving as directly as possible
 
 	qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
@@ -1325,7 +1323,6 @@ static void R_Envmap_f (void)
 	char filename[MAX_QPATH], basename[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
-	unsigned char *buffer3;
 
 	if (Cmd_Argc() != 3)
 	{
@@ -1362,9 +1359,8 @@ static void R_Envmap_f (void)
 	r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
 	r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
 
-	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
+	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 4);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
-	buffer3 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3 + 18);
 
 	for (j = 0;j < 12;j++)
 	{
@@ -1375,12 +1371,11 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false, false, false);
 	}
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
-	Mem_Free (buffer3);
 
 	r_refdef.envmap = false;
 }
@@ -1458,13 +1453,15 @@ void SHOWLMP_drawall(void)
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, unsigned char *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean png, qboolean gammacorrect)
+// buffer1: 4*w*h
+// buffer2: 3*w*h (or 4*w*h if screenshotting alpha too)
+qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean png, qboolean gammacorrect, qboolean keep_alpha)
 {
-	int	indices[3] = {0,1,2};
+	int	indices[4] = {0,1,2,3}; // BGRA
 	qboolean ret;
 
 	CHECKGLERROR
-	qglReadPixels (x, y, width, height, jpeg ? GL_RGB : GL_BGR, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
+	qglReadPixels (x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
 	if(gammacorrect && (scr_screenshot_gammaboost.value != 1 || WANT_SCREENSHOT_HWGAMMA))
 	{
@@ -1487,22 +1484,40 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 			for (i = 0;i < 256 * 3;i++)
 				vidramp[i] = (unsigned short) (0.5 + pow(vidramp[i] * (1.0 / 65535.0), igamma) * 65535.0);
 		}
-		for (i = 0;i < width*height*3;i += 3)
+		for (i = 0;i < width*height*4;i += 4)
 		{
-			buffer1[i] = (unsigned char) (vidramp[buffer1[i]] * 255.0 / 65535.0 + 0.5);
-			buffer1[i+1] = (unsigned char) (vidramp[buffer1[i+1] + 256] * 255.0 / 65535.0 + 0.5);
-			buffer1[i+2] = (unsigned char) (vidramp[buffer1[i+2] + 512] * 255.0 / 65535.0 + 0.5);
+			buffer1[i] = (unsigned char) (vidramp[buffer1[i] + 512] * 255.0 / 65535.0 + 0.5); // B
+			buffer1[i+1] = (unsigned char) (vidramp[buffer1[i+1] + 256] * 255.0 / 65535.0 + 0.5); // G
+			buffer1[i+2] = (unsigned char) (vidramp[buffer1[i+2]] * 255.0 / 65535.0 + 0.5); // R
+			// A
 		}
 	}
 
-	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
-
-	if (jpeg)
-		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
-	else if (png)
-		ret = PNG_SaveImage_preflipped (filename, width, height, buffer2);
+	if(keep_alpha && !jpeg)
+	{
+		if(!png)
+			flipy = !flipy; // TGA: not preflipped
+		Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 4, 4, indices);
+		if (png)
+			ret = PNG_SaveImage_preflipped (filename, width, height, true, buffer2);
+		else
+			ret = Image_WriteTGABGRA(filename, width, height, buffer2);
+	}
 	else
-		ret = Image_WriteTGABGR_preflipped (filename, width, height, buffer2, buffer3);
+	{
+		if(jpeg)
+		{
+			indices[0] = 2;
+			indices[2] = 0; // RGB
+		}
+		Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 4, indices);
+		if (jpeg)
+			ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
+		else if (png)
+			ret = PNG_SaveImage_preflipped (filename, width, height, false, buffer2);
+		else
+			ret = Image_WriteTGABGR_preflipped (filename, width, height, buffer2);
+	}
 
 	return ret;
 }
@@ -1664,15 +1679,12 @@ void SCR_DrawScreen (void)
 			char filename[MAX_QPATH];
 			unsigned char *buffer1;
 			unsigned char *buffer2;
-			unsigned char *buffer3;
 			dpsnprintf(filename, sizeof(filename), "timedemoscreenshots/%s%06d.tga", cls.demoname, cls.td_frames);
-			buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
+			buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
 			buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3);
-			buffer3 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 3 + 18);
-			SCR_ScreenShot(filename, buffer1, buffer2, buffer3, 0, 0, vid.width, vid.height, false, false, false, false, false, true);
+			SCR_ScreenShot(filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, false);
 			Mem_Free(buffer1);
 			Mem_Free(buffer2);
-			Mem_Free(buffer3);
 		}
 	}
 

@@ -443,7 +443,7 @@ PNG_SaveImage_preflipped
 Save a preflipped PNG image to a file
 ====================
 */
-qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data)
+qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, qboolean has_alpha, unsigned char *data)
 {
 	unsigned int offset, linesize;
 	qfile_t* file = NULL;
@@ -497,8 +497,7 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 
 	//qpng_set_compression_level(png, Z_BEST_COMPRESSION);
 	qpng_set_compression_level(png, Z_BEST_SPEED);
-	qpng_set_IHDR(png, pnginfo, width, height, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_ADAM7, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-	//qpng_set_IHDR(png, pnginfo, width, height, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	qpng_set_IHDR(png, pnginfo, width, height, 8, has_alpha ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB, PNG_INTERLACE_ADAM7, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	qpng_set_filter(png, 0, PNG_NO_FILTERS);
 	qpng_write_info(png, pnginfo);
 	qpng_set_packing(png);
@@ -506,7 +505,7 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 
 	passes = qpng_set_interlace_handling(png);
 
-	linesize = width * 3;
+	linesize = width * (has_alpha ? 4 : 3);
 	offset = linesize * (height - 1);
 	for(i = 0; i < passes; ++i)
 		for(j = 0; j < height; ++j)

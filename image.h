@@ -32,10 +32,10 @@ qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pix
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean convertsRGB);
 
 // writes an upside down BGR image into a TGA
-qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer);
+qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data);
 
 // writes a BGRA image into a TGA file
-void Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data);
+qboolean Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data);
 
 // resizes the image (in can not be the same as out)
 void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int quality);

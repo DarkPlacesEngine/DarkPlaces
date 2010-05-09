@@ -1142,9 +1142,12 @@ void Image_FixTransparentPixels_f(void)
 	FS_FreeSearch(search);
 }
 
-qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data, unsigned char *buffer)
+qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data)
 {
 	qboolean ret;
+	unsigned char buffer[18];
+	const void *buffers[2];
+	fs_offset_t sizes[2];
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -1154,18 +1157,21 @@ qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int heig
 	buffer[15] = (height >> 8) & 0xFF;
 	buffer[16] = 24;	// pixel size
 
-	// swap rgb to bgr
-	memcpy(buffer + 18, data, width*height*3);
-	ret = FS_WriteFile (filename, buffer, width*height*3 + 18 );
+	buffers[0] = buffer;
+	sizes[0] = 18;
+	buffers[1] = data;
+	sizes[1] = width*height*3;
+	ret = FS_WriteFileInBlocks(filename, buffers, sizes, 2);
 
 	return ret;
 }
 
-void Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data)
+qboolean Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
 	unsigned char *buffer, *out;
 	const unsigned char *in, *end;
+	qboolean ret;
 
 	buffer = (unsigned char *)Mem_Alloc(tempmempool, width*height*4 + 18);
 
@@ -1214,9 +1220,11 @@ void Image_WriteTGABGRA (const char *filename, int width, int height, const unsi
 			}
 		}
 	}
-	FS_WriteFile (filename, buffer, out - buffer);
+	ret = FS_WriteFile (filename, buffer, out - buffer);
 
 	Mem_Free(buffer);
+
+	return ret;
 }
 
 static void Image_Resample32LerpLine (const unsigned char *in, unsigned char *out, int inwidth, int outwidth)
