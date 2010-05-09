@@ -122,7 +122,7 @@ void CL_ClearState(void)
 	cl.sensitivityscale = 1.0f;
 
 	// enable rendering of the world and such
-	cl.csqc_vidvars.drawworld = true;
+	cl.csqc_vidvars.drawworld = r_drawworld.integer;
 	cl.csqc_vidvars.drawenginesbar = true;
 	cl.csqc_vidvars.drawcrosshair = true;
 

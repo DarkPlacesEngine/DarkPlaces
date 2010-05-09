@@ -76,6 +76,7 @@ cvar_t r_showcollisionbrushes_polygonoffset = {0, "r_showcollisionbrushes_polygo
 cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing"};
 cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
+cvar_t r_drawworld = {0, "r_drawworld","1", "draw world (most static stuff)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
 cvar_t r_drawexteriormodel = {0, "r_drawexteriormodel","1", "draw your player model (e.g. in chase cam, reflections)"};
 cvar_t r_cullentities_trace = {0, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
@@ -6371,6 +6372,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_showdisabledepthtest);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_drawentities);
+	Cvar_RegisterVariable(&r_drawworld);
 	Cvar_RegisterVariable(&r_cullentities_trace);
 	Cvar_RegisterVariable(&r_cullentities_trace_samples);
 	Cvar_RegisterVariable(&r_cullentities_trace_tempentitysamples);
