@@ -12314,7 +12314,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
 			continue;
 		numtriangles = surface->num_triangles;
-		for (triangleindex = 0, e = model->surfmesh.data_element3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
+		for (triangleindex = 0, e = rsurface.modelelement3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
 		{
 			for (cornerindex = 0;cornerindex < 3;cornerindex++)
 			{
