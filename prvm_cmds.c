@@ -4734,6 +4734,7 @@ void bufstr_set(float bufhandle, float string_index, string str) = #466;
 */
 void VM_bufstr_set (void)
 {
+	size_t alloclen;
 	int				strindex;
 	prvm_stringbuffer_t *stringbuffer;
 	const char		*news;
@@ -4760,10 +4761,11 @@ void VM_bufstr_set (void)
 		Mem_Free(stringbuffer->strings[strindex]);
 	stringbuffer->strings[strindex] = NULL;
 
-	news = PRVM_G_STRING(OFS_PARM2);
-	if (news && news[0])
+	if(PRVM_G_INT(OFS_PARM2))
 	{
-		size_t alloclen = strlen(news) + 1;
+		// not the NULL string!
+		news = PRVM_G_STRING(OFS_PARM2);
+		alloclen = strlen(news) + 1;
 		stringbuffer->strings[strindex] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
 		memcpy(stringbuffer->strings[strindex], news, alloclen);
 	}
@@ -4795,12 +4797,12 @@ void VM_bufstr_add (void)
 		VM_Warning("VM_bufstr_add: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
-	string = PRVM_G_STRING(OFS_PARM1);
-	if(!string || !string[0])
+	if(!PRVM_G_INT(OFS_PARM1)) // NULL string
 	{
 		VM_Warning("VM_bufstr_add: can not add an empty string to buffer %i in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
 		return;
 	}
+	string = PRVM_G_STRING(OFS_PARM1);
 	order = (int)PRVM_G_FLOAT(OFS_PARM2);
 	if(order)
 		strindex = stringbuffer->num_strings;
