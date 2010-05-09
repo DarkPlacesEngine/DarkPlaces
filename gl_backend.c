@@ -2090,29 +2090,47 @@ void R_Mesh_ResetTextureState(void)
 r_vertexposition_t *R_Mesh_PrepareVertices_Position_Lock(int numvertices)
 {
 	size_t size;
-	size = sizeof(r_vertexposition_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
+	switch(vid.renderpath)
 	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		size = sizeof(r_vertexposition_t) * numvertices;
+		if (gl_state.preparevertices_tempdatamaxsize < size)
+		{
+			gl_state.preparevertices_tempdatamaxsize = size;
+			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+		}
+		gl_state.preparevertices_vertexposition = (r_vertexposition_t *)gl_state.preparevertices_tempdata;
+		gl_state.preparevertices_numvertices = numvertices;
+		return gl_state.preparevertices_vertexposition;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
+		return NULL;
 	}
-	gl_state.preparevertices_vertexposition = (r_vertexposition_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexposition;
 }
 
 qboolean R_Mesh_PrepareVertices_Position_Unlock(void)
 {
-	R_Mesh_PrepareVertices_Position(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexposition, NULL);
-	gl_state.preparevertices_vertexposition = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		R_Mesh_PrepareVertices_Position(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexposition, NULL);
+		gl_state.preparevertices_vertexposition = NULL;
+		gl_state.preparevertices_numvertices = 0;
+		return true;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
+		return false;
+	}
 }
 
 void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex3f)
 {
-	int i;
-	r_vertexposition_t *vertex;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -2135,14 +2153,10 @@ void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex
 		if (vid.texunits >= 3)
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		break;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
+		return;
 	}
-
-	// no quick path for this case, convert to vertex structs
-	vertex = R_Mesh_PrepareVertices_Position_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	R_Mesh_PrepareVertices_Position_Unlock();
-	R_Mesh_PrepareVertices_Position(numvertices, vertex, NULL);
 }
 
 void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *vertex, const r_meshbuffer_t *vertexbuffer)
@@ -2199,23 +2213,43 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 r_vertexgeneric_t *R_Mesh_PrepareVertices_Generic_Lock(int numvertices)
 {
 	size_t size;
-	size = sizeof(r_vertexgeneric_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
+	switch(vid.renderpath)
 	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		size = sizeof(r_vertexgeneric_t) * numvertices;
+		if (gl_state.preparevertices_tempdatamaxsize < size)
+		{
+			gl_state.preparevertices_tempdatamaxsize = size;
+			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+		}
+		gl_state.preparevertices_vertexgeneric = (r_vertexgeneric_t *)gl_state.preparevertices_tempdata;
+		gl_state.preparevertices_numvertices = numvertices;
+		return gl_state.preparevertices_vertexgeneric;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Generic_Lock: unrecognized vid.renderpath\n");
+		return NULL;
 	}
-	gl_state.preparevertices_vertexgeneric = (r_vertexgeneric_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexgeneric;
 }
 
 qboolean R_Mesh_PrepareVertices_Generic_Unlock(void)
 {
-	R_Mesh_PrepareVertices_Generic(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexgeneric, NULL);
-	gl_state.preparevertices_vertexgeneric = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		R_Mesh_PrepareVertices_Generic(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexgeneric, NULL);
+		gl_state.preparevertices_vertexgeneric = NULL;
+		gl_state.preparevertices_numvertices = 0;
+		return true;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Generic_Lock: unrecognized vid.renderpath\n");
+		return false;
+	}
 }
 
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f)
@@ -2252,6 +2286,9 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 			return;
 		}
 		break;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
+		return;
 	}
 
 	// no quick path for this case, convert to vertex structs
@@ -2336,23 +2373,43 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 r_vertexmesh_t *R_Mesh_PrepareVertices_Mesh_Lock(int numvertices)
 {
 	size_t size;
-	size = sizeof(r_vertexmesh_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
+	switch(vid.renderpath)
 	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		size = sizeof(r_vertexmesh_t) * numvertices;
+		if (gl_state.preparevertices_tempdatamaxsize < size)
+		{
+			gl_state.preparevertices_tempdatamaxsize = size;
+			gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+		}
+		gl_state.preparevertices_vertexmesh = (r_vertexmesh_t *)gl_state.preparevertices_tempdata;
+		gl_state.preparevertices_numvertices = numvertices;
+		return gl_state.preparevertices_vertexmesh;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Mesh_Lock: unrecognized vid.renderpath\n");
+		return NULL;
 	}
-	gl_state.preparevertices_vertexmesh = (r_vertexmesh_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexmesh;
 }
 
 qboolean R_Mesh_PrepareVertices_Mesh_Unlock(void)
 {
-	R_Mesh_PrepareVertices_Mesh(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexmesh, NULL);
-	gl_state.preparevertices_vertexmesh = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		R_Mesh_PrepareVertices_Mesh(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexmesh, NULL);
+		gl_state.preparevertices_vertexmesh = NULL;
+		gl_state.preparevertices_numvertices = 0;
+		return true;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Mesh_Lock: unrecognized vid.renderpath\n");
+		return false;
+	}
 }
 
 void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f)
@@ -2389,6 +2446,9 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 			return;
 		}
 		break;
+	default:
+		Sys_Error("R_Mesh_PrepareVertices_Position_Lock: unrecognized vid.renderpath\n");
+		return;
 	}
 
 	vertex = R_Mesh_PrepareVertices_Mesh_Lock(numvertices);
