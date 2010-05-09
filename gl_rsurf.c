@@ -1084,9 +1084,10 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
 				continue;
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.modelvertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
+			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.batchvertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
-		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.modelvertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
+		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.batchvertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
 	}
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
