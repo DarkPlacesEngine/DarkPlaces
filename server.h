@@ -98,9 +98,12 @@ typedef struct server_s
 	world_t world;
 
 	/// map name
-	char name[64];
-	/// maps/<name>.bsp, for model_precache[0]
-	char modelname[64];
+	char name[64]; // %s followed by entrance name
+	// variants of map name
+	char worldmessage[40]; // map title (not related to filename)
+	char worldbasename[MAX_QPATH]; // %s
+	char worldname[MAX_QPATH]; // maps/%s.bsp
+	char worldnamenoextension[MAX_QPATH]; // maps/%s
 	struct model_s *worldmodel;
 	// NULL terminated
 	// LordHavoc: precaches are now MAX_QPATH rather than a pointer

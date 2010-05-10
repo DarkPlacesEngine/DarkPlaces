@@ -684,14 +684,8 @@ void Sbar_SoloScoreboard (void)
 	else if (cl.stats[STAT_SECRETS]) // LA: And similarly for secrets
 		Sbar_DrawString(8+22*8, 4, va("Secrets:%3i", cl.stats[STAT_SECRETS]));
 
-	// figure out the map's filename without path or extension
-	strlcpy(str, FS_FileWithoutPath(cl.worldmodel ? cl.worldmodel->name : ""), sizeof(str));
-	if (strrchr(str, '.'))
-		*(strrchr(str, '.')) = 0;
-
-	// append a : separator and then the full title
-	strlcat(str, ":", sizeof(str));
-	strlcat(str, cl.levelname, sizeof(str));
+	// format is like this: e1m1:The Sligpate Complex
+	dpsnprintf(str, sizeof(str), "%s:%s", cl.worldbasename, cl.worldmessage);
 
 	// if there's a newline character, terminate the string there
 	if (strchr(str, '\n'))
@@ -734,11 +728,11 @@ void Sbar_SoloScoreboard (void)
 
 // draw level name
 	if (gamemode == GAME_NEXUIZ) {
-		l = (int) strlen (cl.worldmodel->name);
-		Sbar_DrawString (232 - l*4, 12, cl.worldmodel->name);
+		l = (int) strlen (cl.worldname);
+		Sbar_DrawString (232 - l*4, 12, cl.worldname);
 	} else {
-		l = (int) strlen (cl.levelname);
-		Sbar_DrawString (232 - l*4, 12, cl.levelname);
+		l = (int) strlen (cl.worldmessage);
+		Sbar_DrawString (232 - l*4, 12, cl.worldmessage);
 	}
 #endif
 }
