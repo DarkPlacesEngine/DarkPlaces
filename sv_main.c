@@ -3172,7 +3172,7 @@ void SV_SpawnServer (const char *server)
 	strlcpy (sv.name, server, sizeof (sv.name));
 	strlcpy(sv.worldname, modelname, sizeof(sv.worldname));
 	FS_StripExtension(sv.worldname, sv.worldnamenoextension, sizeof(sv.worldnamenoextension));
-	strlcpy(sv.worldbasename, !strncmp(sv.worldnamenoextension, "maps/") ? sv.worldnamenoextension + 4 : sv.worldnamenoextension, sizeof(sv.worldbasename));
+	strlcpy(sv.worldbasename, !strncmp(sv.worldnamenoextension, "maps/", 5) ? sv.worldnamenoextension + 4 : sv.worldnamenoextension, sizeof(sv.worldbasename));
 	//Cvar_SetQuick(&sv_worldmessage, sv.worldmessage); // set later after QC is spawned
 	Cvar_SetQuick(&sv_worldname, sv.worldname);
 	Cvar_SetQuick(&sv_worldnamenoextension, sv.worldnamenoextension);
