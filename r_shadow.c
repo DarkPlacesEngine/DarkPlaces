@@ -666,7 +666,7 @@ void r_shadow_newmap(void)
 	if (r_editlights_sprcubemaplight)         R_SkinFrame_MarkUsed(r_editlights_sprcubemaplight);
 	if (r_editlights_sprcubemapnoshadowlight) R_SkinFrame_MarkUsed(r_editlights_sprcubemapnoshadowlight);
 	if (r_editlights_sprselection)            R_SkinFrame_MarkUsed(r_editlights_sprselection);
-	if (cl.worldmodel && strncmp(cl.worldmodel->name, r_shadow_mapname, sizeof(r_shadow_mapname)))
+	if (strncmp(cl.worldname, r_shadow_mapname, sizeof(r_shadow_mapname)))
 		R_Shadow_EditLights_Reload_f();
 }
 
@@ -5001,8 +5001,7 @@ void R_Shadow_LoadWorldLights(void)
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
-	strlcat (name, ".rtlights", sizeof (name));
+	dpsnprintf(name, sizeof(name), "%s.rtlights", cl.worldnamenoextension);
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
 	{
@@ -5112,8 +5111,7 @@ void R_Shadow_SaveWorldLights(void)
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
-	strlcat (name, ".rtlights", sizeof (name));
+	dpsnprintf(name, sizeof(name), "%s.rtlights", cl.worldnamenoextension);
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
 	for (lightindex = 0;lightindex < range;lightindex++)
@@ -5161,8 +5159,7 @@ void R_Shadow_LoadLightsFile(void)
 		Con_Print("No map loaded.\n");
 		return;
 	}
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
-	strlcat (name, ".lights", sizeof (name));
+	dpsnprintf(name, sizeof(name), "%s.lights", cl.worldnamenoextension);
 	lightsstring = (char *)FS_LoadFile(name, tempmempool, false, NULL);
 	if (lightsstring)
 	{
@@ -5224,8 +5221,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		return;
 	}
 	// try to load a .ent file first
-	FS_StripExtension (cl.worldmodel->name, key, sizeof (key));
-	strlcat (key, ".ent", sizeof (key));
+	dpsnprintf(key, sizeof(key), "%s.ent", cl.worldnamenoextension);
 	data = entfiledata = (char *)FS_LoadFile(key, tempmempool, true, NULL);
 	// and if that is not found, fall back to the bsp file entity string
 	if (!data)
@@ -5474,7 +5470,7 @@ void R_Shadow_EditLights_Reload_f(void)
 {
 	if (!cl.worldmodel)
 		return;
-	strlcpy(r_shadow_mapname, cl.worldmodel->name, sizeof(r_shadow_mapname));
+	strlcpy(r_shadow_mapname, cl.worldname, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLights();
 	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))

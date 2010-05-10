@@ -976,13 +976,13 @@ void CL_VM_Init (void)
 	prog->globals.client->time = cl.time;
 	prog->globals.client->self = 0;
 
-	prog->globals.client->mapname = cl.worldmodel ? PRVM_SetEngineString(cl.worldmodel->name) : PRVM_SetEngineString("");
+	prog->globals.client->mapname = PRVM_SetEngineString(cl.worldname);
 	prog->globals.client->player_localentnum = cl.playerentity;
 
 	// set map description (use world entity 0)
 	val = PRVM_EDICTFIELDVALUE(prog->edicts, prog->fieldoffsets.message);
 	if(val)
-		val->string = PRVM_SetEngineString(cl.levelname);
+		val->string = PRVM_SetEngineString(cl.worldmessage);
 	VectorCopy(cl.world.mins, prog->edicts->fields.client->mins);
 	VectorCopy(cl.world.maxs, prog->edicts->fields.client->maxs);
 

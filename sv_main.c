@@ -33,6 +33,11 @@ extern cvar_t net_connecttimeout;
 void VM_CustomStats_Clear (void);
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
+cvar_t sv_worldmessage = {CVAR_READONLY, "sv_worldmessage", "", "title of current level"};
+cvar_t sv_worldname = {CVAR_READONLY, "sv_worldname", "", "name of current worldmodel"};
+cvar_t sv_worldnamenoextension = {CVAR_READONLY, "sv_worldnamenoextension", "", "name of current worldmodel without extension"};
+cvar_t sv_worldbasename = {CVAR_READONLY, "sv_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
+
 cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
 cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
 cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags is reached by any player"};
@@ -340,6 +345,12 @@ void SV_Init (void)
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	extern cvar_t csqc_progcrc;
 	extern cvar_t csqc_progsize;
+
+	Cvar_RegisterVariable(&sv_worldmessage);
+	Cvar_RegisterVariable(&sv_worldname);
+	Cvar_RegisterVariable(&sv_worldnamenoextension);
+	Cvar_RegisterVariable(&sv_worldbasename);
+
 	Cvar_RegisterVariable (&csqc_progname);
 	Cvar_RegisterVariable (&csqc_progcrc);
 	Cvar_RegisterVariable (&csqc_progsize);
@@ -531,14 +542,12 @@ void SV_Init (void)
 
 static void SV_SaveEntFile_f(void)
 {
-	char basename[MAX_QPATH];
 	if (!sv.active || !sv.worldmodel)
 	{
 		Con_Print("Not running a server\n");
 		return;
 	}
-	FS_StripExtension(sv.worldmodel->name, basename, sizeof(basename));
-	FS_WriteFile(va("%s.ent", basename), sv.worldmodel->brush.entities, (fs_offset_t)strlen(sv.worldmodel->brush.entities));
+	FS_WriteFile(va("%s.ent", sv.worldnamenoextension), sv.worldmodel->brush.entities, (fs_offset_t)strlen(sv.worldmodel->brush.entities));
 }
 
 
@@ -835,20 +844,15 @@ void SV_SendServerinfo (client_t *client)
 	if(sv_autodemo_perclient.integer && client->netconnection)
 	{
 		char demofile[MAX_OSPATH];
-		char levelname[MAX_QPATH];
 		char ipaddress[MAX_QPATH];
 		size_t i;
 
 		// start a new demo file
-		strlcpy(levelname, FS_FileWithoutPath(sv.worldmodel->name), sizeof(levelname));
-		if (strrchr(levelname, '.'))
-			*(strrchr(levelname, '.')) = 0;
-
 		LHNETADDRESS_ToString(&(client->netconnection->peeraddress), ipaddress, sizeof(ipaddress), true);
 		for(i = 0; ipaddress[i]; ++i)
 			if(!isalnum(ipaddress[i]))
 				ipaddress[i] = '-';
-		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), levelname, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
+		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), sv.worldbasename, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
 
 		SV_StartDemoRecording(client, demofile, -1);
 	}
@@ -2718,7 +2722,7 @@ int SV_ModelIndex(const char *s, int precachemode)
 				if (precachemode == 1)
 					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
-				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.modelname : NULL);
+				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
 				if (sv.state != ss_loading)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
@@ -2813,7 +2817,7 @@ int SV_ParticleEffectIndex(const char *name)
 			if (filepass == 0)
 				dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
 			else if (filepass == 1)
-				dpsnprintf(filename, sizeof(filename), "maps/%s_effectinfo.txt", sv.name);
+				dpsnprintf(filename, sizeof(filename), "%s_effectinfo.txt", sv.worldnamenoextension);
 			else
 				break;
 			filedata = FS_LoadFile(filename, tempmempool, true, &filesize);
@@ -3061,7 +3065,7 @@ void SV_SpawnServer (const char *server)
 	int i;
 	char *entities;
 	dp_model_t *worldmodel;
-	char modelname[sizeof(sv.modelname)];
+	char modelname[sizeof(sv.worldname)];
 
 	Con_DPrintf("SpawnServer: %s\n", server);
 
@@ -3164,7 +3168,15 @@ void SV_SpawnServer (const char *server)
 
 	sv.active = true;
 
+	// set level base name variables for later use
 	strlcpy (sv.name, server, sizeof (sv.name));
+	strlcpy(sv.worldname, modelname, sizeof(sv.worldname));
+	FS_StripExtension(sv.worldname, sv.worldnamenoextension, sizeof(sv.worldnamenoextension));
+	strlcpy(sv.worldbasename, !strncmp(sv.worldnamenoextension, "maps/") ? sv.worldnamenoextension + 4 : sv.worldnamenoextension, sizeof(sv.worldbasename));
+	//Cvar_SetQuick(&sv_worldmessage, sv.worldmessage); // set later after QC is spawned
+	Cvar_SetQuick(&sv_worldname, sv.worldname);
+	Cvar_SetQuick(&sv_worldnamenoextension, sv.worldnamenoextension);
+	Cvar_SetQuick(&sv_worldbasename, sv.worldbasename);
 
 	sv.protocol = Protocol_EnumForName(sv_protocolname.string);
 	if (sv.protocol == PROTOCOL_UNKNOWN)
@@ -3204,25 +3216,23 @@ void SV_SpawnServer (const char *server)
 	Mod_ClearUsed();
 	worldmodel->used = true;
 
-	strlcpy (sv.name, server, sizeof (sv.name));
-	strlcpy(sv.modelname, modelname, sizeof(sv.modelname));
 	sv.worldmodel = worldmodel;
 	sv.models[1] = sv.worldmodel;
 
 //
 // clear world interaction links
 //
-	World_SetSize(&sv.world, sv.worldmodel->name, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
+	World_SetSize(&sv.world, sv.worldname, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
 	World_Start(&sv.world);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
 	strlcpy(sv.model_precache[0], "", sizeof(sv.model_precache[0]));
-	strlcpy(sv.model_precache[1], sv.modelname, sizeof(sv.model_precache[1]));
+	strlcpy(sv.model_precache[1], sv.worldname, sizeof(sv.model_precache[1]));
 	for (i = 1;i < sv.worldmodel->brush.numsubmodels && i+1 < MAX_MODELS;i++)
 	{
 		dpsnprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
-		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, sv.modelname);
+		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, sv.worldname);
 	}
 	if(i < sv.worldmodel->brush.numsubmodels)
 		Con_Printf("Too many submodels (MAX_MODELS is %i)\n", MAX_MODELS);
@@ -3234,7 +3244,7 @@ void SV_SpawnServer (const char *server)
 	ent = PRVM_EDICT_NUM(0);
 	memset (ent->fields.server, 0, prog->progs->entityfields * 4);
 	ent->priv.server->free = false;
-	ent->fields.server->model = PRVM_SetEngineString(sv.modelname);
+	ent->fields.server->model = PRVM_SetEngineString(sv.worldname);
 	ent->fields.server->modelindex = 1;		// world model
 	ent->fields.server->solid = SOLID_BSP;
 	ent->fields.server->movetype = MOVETYPE_PUSH;
@@ -3265,9 +3275,9 @@ void SV_SpawnServer (const char *server)
 	}
 
 	// load replacement entity file if found
-	if (sv_entpatch.integer && (entities = (char *)FS_LoadFile(va("maps/%s.ent", sv.name), tempmempool, true, NULL)))
+	if (sv_entpatch.integer && (entities = (char *)FS_LoadFile(va("%s.ent", sv.worldnamenoextension), tempmempool, true, NULL)))
 	{
-		Con_Printf("Loaded maps/%s.ent\n", sv.name);
+		Con_Printf("Loaded %s.ent\n", sv.worldnamenoextension);
 		PRVM_ED_LoadFromFile (entities);
 		Mem_Free(entities);
 	}
@@ -3329,6 +3339,10 @@ void SV_SpawnServer (const char *server)
 			host_client->spawned = true;
 		}
 	}
+
+	// update the map title cvar
+	strlcpy(sv.worldmessage, PRVM_GetString(prog->edicts->fields.server->message), sizeof(sv.worldmessage)); // map title (not related to filename)
+	Cvar_SetQuick(&sv_worldmessage, sv.worldmessage);
 
 	Con_DPrint("Server spawned.\n");
 	NetConn_Heartbeat (2);

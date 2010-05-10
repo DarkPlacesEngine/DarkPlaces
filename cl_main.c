@@ -2106,8 +2106,7 @@ void CL_Locs_Save_f(void)
 		Con_Printf("No level loaded!\n");
 		return;
 	}
-	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
-	strlcat(locfilename, ".loc", sizeof(locfilename));
+	dpsnprintf(locfilename, sizeof(locfilename), "%s.loc", cl.worldnamenoextension);
 
 	outfile = FS_OpenRealFile(locfilename, "w", false);
 	if (!outfile)
@@ -2184,14 +2183,12 @@ void CL_Locs_Reload_f(void)
 	CL_Locs_Clear_f();
 
 	// try maps/something.loc first (LordHavoc: where I think they should be)
-	FS_StripExtension(cl.worldmodel->name, locfilename, sizeof(locfilename));
-	strlcat(locfilename, ".loc", sizeof(locfilename));
+	dpsnprintf(locfilename, sizeof(locfilename), "%s.loc", cl.worldnamenoextension);
 	filedata = (char *)FS_LoadFile(locfilename, cls.levelmempool, false, &filesize);
 	if (!filedata)
 	{
 		// try proquake name as well (LordHavoc: I hate path mangling)
-		FS_StripExtension(va("locs/%s", FS_FileWithoutPath(cl.worldmodel->name)), locfilename, sizeof(locfilename));
-		strlcat(locfilename, ".loc", sizeof(locfilename));
+		dpsnprintf(locfilename, sizeof(locfilename), "locs/%s.loc", cl.worldbasename);
 		filedata = (char *)FS_LoadFile(locfilename, cls.levelmempool, false, &filesize);
 		if (!filedata)
 			return;

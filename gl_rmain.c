@@ -6297,7 +6297,6 @@ extern void CL_ParseEntityLump(char *entitystring);
 void gl_main_newmap(void)
 {
 	// FIXME: move this code to client
-	int l;
 	char *entities, entname[MAX_QPATH];
 	if (r_qwskincache)
 		Mem_Free(r_qwskincache);
@@ -6305,17 +6304,12 @@ void gl_main_newmap(void)
 	r_qwskincache_size = 0;
 	if (cl.worldmodel)
 	{
-		strlcpy(entname, cl.worldmodel->name, sizeof(entname));
-		l = (int)strlen(entname) - 4;
-		if (l >= 0 && !strcmp(entname + l, ".bsp"))
+		dpsnprintf(entname, sizeof(entname), "%s.ent", cl.worldnamenoextension);
+		if ((entities = (char *)FS_LoadFile(entname, tempmempool, true, NULL)))
 		{
-			memcpy(entname + l, ".ent", 5);
-			if ((entities = (char *)FS_LoadFile(entname, tempmempool, true, NULL)))
-			{
-				CL_ParseEntityLump(entities);
-				Mem_Free(entities);
-				return;
-			}
+			CL_ParseEntityLump(entities);
+			Mem_Free(entities);
+			return;
 		}
 		if (cl.worldmodel->brush.entities)
 			CL_ParseEntityLump(cl.worldmodel->brush.entities);

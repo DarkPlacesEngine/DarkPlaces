@@ -999,7 +999,7 @@ void Host_Loadgame_f (void)
 					if (i >= 0 && i < MAX_MODELS)
 					{
 						strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
-						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, sv.model_precache[i][0] == '*' ? sv.modelname : NULL);
+						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, sv.model_precache[i][0] == '*' ? sv.worldname : NULL);
 					}
 					else
 						Con_Printf("unsupported model %i \"%s\"\n", i, com_token);
