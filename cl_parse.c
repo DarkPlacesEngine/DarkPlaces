@@ -160,6 +160,11 @@ char *qw_svc_strings[128] =
 
 //=============================================================================
 
+cvar_t cl_worldmessage = {CVAR_READONLY, "cl_worldmessage", "", "title of current level"};
+cvar_t cl_worldname = {CVAR_READONLY, "cl_worldname", "", "name of current worldmodel"};
+cvar_t cl_worldnamenoextension = {CVAR_READONLY, "cl_worldnamenoextension", "", "name of current worldmodel without extension"};
+cvar_t cl_worldbasename = {CVAR_READONLY, "cl_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
+
 cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
 cvar_t developer_networkentities = {0, "developer_networkentities", "0", "prints received entities, value is 0-4 (higher for more info)"};
 cvar_t cl_gameplayfix_soundsmovewithentities = {0, "cl_gameplayfix_soundsmovewithentities", "1", "causes sounds made by lifts, players, projectiles, and any other entities, to move with the entity, so for example a rocket noise follows the rocket rather than staying at the starting position"};
@@ -441,11 +446,26 @@ static void CL_SetupWorldModel(void)
 	cl.entities[0].render.model = cl.worldmodel = CL_GetModelByIndex(1);
 	CL_UpdateRenderEntity(&cl.entities[0].render);
 
+	// make sure the cl.worldname and related cvars are set up now that we know the world model name
 	// set up csqc world for collision culling
 	if (cl.worldmodel)
-		World_SetSize(&cl.world, cl.worldmodel->name, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+	{
+		strlcpy(cl.worldname, cl.worldmodel->name, sizeof(cl.worldname));
+		FS_StripExtension(cl.worldname, cl.worldnamenoextension, sizeof(cl.worldnamenoextension));
+		strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/") ? cl.worldnamenoextension + 4 : cl.worldnamenoextension, sizeof(cl.worldbasename));
+		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
+		Cvar_SetQuick(&cl_worldname, cl.worldname);
+		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
+		Cvar_SetQuick(&cl_worldbasename, cl.worldbasename);
+		World_SetSize(&cl.world, cl.worldname, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+	}
 	else
+	{
+		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
+		Cvar_SetQuick(&cl_worldnamenoextension, "");
+		Cvar_SetQuick(&cl_worldbasename, "");
 		World_SetSize(&cl.world, "", defaultmins, defaultmaxs);
+	}
 	World_Start(&cl.world);
 
 	// load or reload .loc file for team chat messages
@@ -1660,7 +1680,7 @@ void CL_ParseServerInfo (void)
 
 		// get the full level name
 		str = MSG_ReadString ();
-		strlcpy (cl.levelname, str, sizeof(cl.levelname));
+		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 		// get the movevars that are defined in the qw protocol
 		cl.movevars_gravity            = MSG_ReadFloat();
@@ -1705,6 +1725,17 @@ void CL_ParseServerInfo (void)
 		// note: on QW protocol we can't set up the gameworld until after
 		// downloads finish...
 		// (we don't even know the name of the map yet)
+		// this also means cl_autodemo does not work on QW protocol...
+
+		strlcpy(cl.worldname, "", sizeof(cl.worldname));
+		strlcpy(cl.worldnamenoextension, "", sizeof(cl.worldnamenoextension));
+		strlcpy(cl.worldbasename, "qw", sizeof(cl.worldbasename));
+		Cvar_SetQuick(&cl_worldname, cl.worldname);
+		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
+		Cvar_SetQuick(&cl_worldbasename, cl.worldbasename);
+
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
 	}
 	else
 	{
@@ -1726,7 +1757,7 @@ void CL_ParseServerInfo (void)
 
 	// parse signon message
 		str = MSG_ReadString ();
-		strlcpy (cl.levelname, str, sizeof(cl.levelname));
+		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 	// seperate the printfs so the server message can have a color
 		if (cls.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
@@ -1759,6 +1790,15 @@ void CL_ParseServerInfo (void)
 				Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
 			strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 		}
+
+		// set the base name for level-specific things...  this gets updated again by CL_SetupWorldModel later
+		strlcpy(cl.worldname, cl.model_name[1], sizeof(cl.worldname));
+		FS_StripExtension(cl.worldname, cl.worldnamenoextension, sizeof(cl.worldnamenoextension));
+		strlcpy(cl.worldbasename, FS_FileWithoutPath(cl.worldnamenoextension), sizeof(cl.worldbasename));
+		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
+		Cvar_SetQuick(&cl_worldname, cl.worldname);
+		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
+		Cvar_SetQuick(&cl_worldbasename, cl.worldbasename);
 
 		// touch all of the precached models that are still loaded so we can free
 		// anything that isn't needed
@@ -1803,50 +1843,46 @@ void CL_ParseServerInfo (void)
 		cl.loadbegun = false;
 		cl.loadfinished = false;
 		cl.loadcsqc = true;
-	}
 
-	// check memory integrity
-	Mem_CheckSentinelsGlobal();
+		// check memory integrity
+		Mem_CheckSentinelsGlobal();
 
-// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
-	if (cl_autodemo.integer && cls.netcon && cls.protocol != PROTOCOL_QUAKEWORLD)
-	{
-		char demofile[MAX_OSPATH];
-		char levelname[MAX_QPATH];
-
-		if (cls.demorecording)
+	// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
+		if (cl_autodemo.integer && cls.netcon && cls.protocol != PROTOCOL_QUAKEWORLD)
 		{
-			// finish the previous level's demo file
-			CL_Stop_f();
+			char demofile[MAX_OSPATH];
+
+			if (cls.demorecording)
+			{
+				// finish the previous level's demo file
+				CL_Stop_f();
+			}
+
+			// start a new demo file
+			dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), cl.worldbasename);
+
+			Con_Printf ("Auto-recording to %s.\n", demofile);
+
+			// Reset bit 0 for every new demo
+			Cvar_SetValueQuick(&cl_autodemo_delete,
+				(cl_autodemo_delete.integer & ~0x1)
+				|
+				((cl_autodemo_delete.integer & 0x2) ? 0x1 : 0)
+			);
+
+			cls.demofile = FS_OpenRealFile(demofile, "wb", false);
+			if (cls.demofile)
+			{
+				cls.forcetrack = -1;
+				FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
+				cls.demorecording = true;
+				strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
+				cls.demo_lastcsprogssize = -1;
+				cls.demo_lastcsprogscrc = -1;
+			}
+			else
+				Con_Print ("ERROR: couldn't open.\n");
 		}
-
-		// start a new demo file
-		strlcpy(levelname, FS_FileWithoutPath(cl.model_name[1]), sizeof(levelname));
-		if (strrchr(levelname, '.'))
-			*(strrchr(levelname, '.')) = 0;
-		dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), levelname);
-
-		Con_Printf ("Auto-recording to %s.\n", demofile);
-
-		// Reset bit 0 for every new demo
-		Cvar_SetValueQuick(&cl_autodemo_delete,
-			(cl_autodemo_delete.integer & ~0x1)
-			|
-			((cl_autodemo_delete.integer & 0x2) ? 0x1 : 0)
-		);
-
-		cls.demofile = FS_OpenRealFile(demofile, "wb", false);
-		if (cls.demofile)
-		{
-			cls.forcetrack = -1;
-			FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
-			cls.demorecording = true;
-			strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
-			cls.demo_lastcsprogssize = -1;
-			cls.demo_lastcsprogscrc = -1;
-		}
-		else
-			Con_Print ("ERROR: couldn't open.\n");
 	}
 }
 
@@ -4135,6 +4171,11 @@ void CL_Parse_ErrorCleanUp(void)
 
 void CL_Parse_Init(void)
 {
+	Cvar_RegisterVariable(&cl_worldmessage);
+	Cvar_RegisterVariable(&cl_worldname);
+	Cvar_RegisterVariable(&cl_worldnamenoextension);
+	Cvar_RegisterVariable(&cl_worldbasename);
+
 	// LordHavoc: added demo_nehahra cvar
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (gamemode == GAME_NEHAHRA)

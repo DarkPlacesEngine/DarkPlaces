@@ -923,7 +923,6 @@ void SCR_ScreenShot_f (void)
 	static char old_prefix_name[MAX_QPATH];
 	char prefix_name[MAX_QPATH];
 	char filename[MAX_QPATH];
-	char mapname[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
@@ -958,15 +957,10 @@ void SCR_ScreenShot_f (void)
 	else
 	{
 		// TODO maybe make capturevideo and screenshot use similar name patterns?
-		if (scr_screenshot_name_in_mapdir.integer && cl.worldmodel && *cl.worldmodel->name) {
-			// figure out the map's filename without path or extension
-			strlcpy(mapname, FS_FileWithoutPath(cl.worldmodel->name), sizeof(mapname));
-			if (strrchr(mapname, '.'))
-				*(strrchr(mapname, '.')) = 0;
-			dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", mapname, Sys_TimeString(scr_screenshot_name.string));
-		} else {
+		if (scr_screenshot_name_in_mapdir.integer && cl.worldbasename[0])
+			dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", cl.worldbasename, Sys_TimeString(scr_screenshot_name.string));
+		else
 			dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
-		}
 
 		if (strcmp(old_prefix_name, prefix_name))
 		{

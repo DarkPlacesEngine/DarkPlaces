@@ -480,7 +480,11 @@ void CL_Particles_LoadEffectInfo(void)
 		if (filepass == 0)
 			dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
 		else if (filepass == 1)
-			dpsnprintf(filename, sizeof(filename), "maps/%s_effectinfo.txt", cl.levelname);
+		{
+			if (!cl.worldbasename[0])
+				continue;
+			dpsnprintf(filename, sizeof(filename), "%s_effectinfo.txt", cl.worldnamenoextension);
+		}
 		else
 			break;
 		filedata = FS_LoadFile(filename, tempmempool, true, &filesize);
@@ -1520,13 +1524,12 @@ void CL_ReadPointFile_f (void)
 	vec3_t org, leakorg;
 	int r, c, s;
 	char *pointfile = NULL, *pointfilepos, *t, tchar;
-	char name[MAX_OSPATH];
+	char name[MAX_QPATH];
 
 	if (!cl.worldmodel)
 		return;
 
-	FS_StripExtension (cl.worldmodel->name, name, sizeof (name));
-	strlcat (name, ".pts", sizeof (name));
+	dpsnprintf(name, sizeof(name), "%s.pts", cl.worldnamenoextension);
 	pointfile = (char *)FS_LoadFile(name, tempmempool, true, NULL);
 	if (!pointfile)
 	{

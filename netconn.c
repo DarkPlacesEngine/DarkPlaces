@@ -2213,7 +2213,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 						"%s",
 						fullstatus ? "statusResponse" : "infoResponse",
 						gamename, com_modname, gameversion.integer, svs.maxclients,
-						nb_clients, nb_bots, sv.name, hostname.string, NET_PROTOCOL_VERSION,
+						nb_clients, nb_bots, sv.worldbasename, hostname.string, NET_PROTOCOL_VERSION,
 						*qcstatus ? "\\qcstatus\\" : "", qcstatus,
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
 						fullstatus ? "\n" : "");
