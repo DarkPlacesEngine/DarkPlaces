@@ -234,7 +234,6 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 	particleeffectinfo_t *info = NULL;
 	const char *text = textstart;
 	char argv[16][1024];
-	numparticleeffectinfo = 0;
 	for (linenumber = 1;;linenumber++)
 	{
 		argc = 0;
