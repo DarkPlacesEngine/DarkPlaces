@@ -123,7 +123,7 @@ particleeffectinfo_t;
 
 char particleeffectname[MAX_PARTICLEEFFECTNAME][64];
 
-
+int numparticleeffectinfo;
 particleeffectinfo_t particleeffectinfo[MAX_PARTICLEEFFECTINFO];
 
 static int particlepalette[256];
@@ -230,12 +230,11 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 {
 	int arrayindex;
 	int argc;
-	int effectinfoindex;
 	int linenumber;
 	particleeffectinfo_t *info = NULL;
 	const char *text = textstart;
 	char argv[16][1024];
-	effectinfoindex = -1;
+	numparticleeffectinfo = 0;
 	for (linenumber = 1;;linenumber++)
 	{
 		argc = 0;
@@ -265,8 +264,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 		{
 			int effectnameindex;
 			checkparms(2);
-			effectinfoindex++;
-			if (effectinfoindex >= MAX_PARTICLEEFFECTINFO)
+			if (numparticleeffectinfo >= MAX_PARTICLEEFFECTINFO)
 			{
 				Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 				break;
@@ -290,7 +288,7 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 				Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 				break;
 			}
-			info = particleeffectinfo + effectinfoindex;
+			info = particleeffectinfo + numparticleeffectinfo++;
 			info->effectnameindex = effectnameindex;
 			info->particletype = pt_alphastatic;
 			info->blendmode = particletype[info->particletype].blendmode;
@@ -471,6 +469,7 @@ void CL_Particles_LoadEffectInfo(void)
 	unsigned char *filedata;
 	fs_offset_t filesize;
 	char filename[MAX_QPATH];
+	numparticleeffectinfo = 0;
 	memset(particleeffectinfo, 0, sizeof(particleeffectinfo));
 	memset(particleeffectname, 0, sizeof(particleeffectname));
 	for (i = 0;i < EFFECT_TOTAL;i++)
