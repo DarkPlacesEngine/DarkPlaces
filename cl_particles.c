@@ -653,6 +653,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	part->airfriction = pairfriction;
 	part->liquidfriction = pliquidfriction;
 	part->die = cl.time + lifetime;
+	part->delayedspawn = cl.time;
 //	part->delayedcollisions = 0;
 	part->qualityreduction = pqualityreduction;
 	part->angle = angle;
@@ -2527,7 +2528,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		case PARTICLE_BILLBOARD:
 			if (p->angle + p->spin)
 			{
-				spinrad = (p->angle + p->spin * spintime) * (float)(M_PI / 180.0f);
+				spinrad = (p->angle + p->spin * (spintime - p->delayedspawn)) * (float)(M_PI / 180.0f);
 				spinsin = sin(spinrad) * size;
 				spincos = cos(spinrad) * size;
 				spinm1 = -p->stretch * spincos;
@@ -2564,7 +2565,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			VectorVectors(p->vel, baseright, baseup);
 			if (p->angle + p->spin)
 			{
-				spinrad = (p->angle + p->spin * spintime) * (float)(M_PI / 180.0f);
+				spinrad = (p->angle + p->spin * (spintime - p->delayedspawn)) * (float)(M_PI / 180.0f);
 				spinsin = sin(spinrad) * size;
 				spincos = cos(spinrad) * size;
 				spinm1 = p->stretch * spincos;
@@ -2719,7 +2720,6 @@ void R_DrawParticles (void)
 		{
 			if (p->delayedspawn > cl.time)
 				continue;
-			p->delayedspawn = 0;
 
 			p->size += p->sizeincrease * frametime;
 			p->alpha -= p->alphafade * frametime;
@@ -2858,7 +2858,7 @@ void R_DrawParticles (void)
 				}
 			}
 		}
-		else if (p->delayedspawn)
+		else if (p->delayedspawn > cl.time)
 			continue;
 		if (!drawparticles)
 			continue;
