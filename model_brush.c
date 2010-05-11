@@ -1578,7 +1578,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(tx->name, false, false, r_texture_convertsRGB_skin.integer);
+				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer);
+				if (!data)
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
