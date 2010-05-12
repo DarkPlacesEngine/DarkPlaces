@@ -2864,7 +2864,7 @@ void CL_ParseTrailParticles(void)
 	effectindex = (unsigned short)MSG_ReadShort();
 	MSG_ReadVector(start, cls.protocol);
 	MSG_ReadVector(end, cls.protocol);
-	CL_ParticleEffect(effectindex, VectorDistance(start, end), start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0);
+	CL_ParticleEffect(effectindex, 1, start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0);
 }
 
 void CL_ParsePointParticles(void)
