@@ -318,6 +318,11 @@ typedef struct prvm_prog_globaloffsets_s
 	int gettaginfo_right; // ssqc / csqc
 	int gettaginfo_up; // ssqc / csqc
 	int transparent_offset; // csqc
+
+	int particles_alphamin; // csqc
+	int particles_alphamax; // csqc
+	int particles_colormin; // csqc
+	int particles_colormax; // csqc
 }
 prvm_prog_globaloffsets_t;
 

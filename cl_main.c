@@ -1165,9 +1165,9 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 				CL_EntityParticles(e);
 		}
 		if (e->render.effects & EF_FLAME)
-			CL_ParticleTrail(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
+			CL_ParticleTrail(EFFECT_EF_FLAME, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true, NULL, NULL);
 		if (e->render.effects & EF_STARDUST)
-			CL_ParticleTrail(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true);
+			CL_ParticleTrail(EFFECT_EF_STARDUST, bound(0, cl.time - cl.oldtime, 0.1), origin, origin, vec3_origin, vec3_origin, NULL, 0, false, true, NULL, NULL);
 	}
 	if (e->render.internaleffects & (INTEF_FLAG1QW | INTEF_FLAG2QW))
 	{
@@ -1211,7 +1211,7 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 		if (len > 0)
 			len = 1.0f / len;
 		VectorScale(vel, len, vel);
-		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true);
+		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true, NULL, NULL);
 	}
 	// now that the entity has survived one trail update it is allowed to
 	// leave a real trail on later frames
@@ -1411,9 +1411,9 @@ void CL_LinkNetworkEntity(entity_t *e)
 			dlightcolor[2] += 1.50f;
 		}
 		if (e->render.effects & EF_FLAME)
-			CL_ParticleTrail(EFFECT_EF_FLAME, 0, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false);
+			CL_ParticleTrail(EFFECT_EF_FLAME, 1, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false, NULL, NULL);
 		if (e->render.effects & EF_STARDUST)
-			CL_ParticleTrail(EFFECT_EF_STARDUST, 0, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false);
+			CL_ParticleTrail(EFFECT_EF_STARDUST, 1, origin, origin, vec3_origin, vec3_origin, NULL, 0, true, false, NULL, NULL);
 	}
 	// muzzleflash fades over time, and is offset a bit
 	if (e->persistent.muzzleflash > 0 && r_refdef.scene.numlights < MAX_DLIGHTS)
@@ -1493,7 +1493,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
 	if (trailtype)
-		CL_ParticleTrail(trailtype, 0, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false);
+		CL_ParticleTrail(trailtype, 1, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false, NULL, NULL);
 
 	// don't show entities with no modelindex (note: this still shows
 	// entities which have a modelindex that resolved to a NULL model)

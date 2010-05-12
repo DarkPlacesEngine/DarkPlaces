@@ -1129,22 +1129,67 @@ static void VM_CL_trailparticles (void)
 
 	if (i < 0)
 		return;
-	CL_ParticleEffect(i, VectorDistance(start, end), start, end, t->fields.client->velocity, t->fields.client->velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
+	CL_ParticleEffect(i, 1, start, end, t->fields.client->velocity, t->fields.client->velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count[, float color]) pointparticles (EXT_CSQC)
 static void VM_CL_pointparticles (void)
 {
-	int			i, n;
+	int			i;
+	float n;
 	float		*f, *v;
 	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_pointparticles);
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	v = PRVM_G_VECTOR(OFS_PARM2);
-	n = (int)PRVM_G_FLOAT(OFS_PARM3);
+	n = PRVM_G_FLOAT(OFS_PARM3);
 	if (i < 0)
 		return;
 	CL_ParticleEffect(i, n, f, f, v, v, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
+}
+
+//#502 void(float effectnum, entity own, vector origin_from, vector origin_to, vector dir_from, vector dir_to, float count, float extflags) boxparticles (DP_CSQC_BOXPARTICLES)
+static void VM_CL_boxparticles (void)
+{
+	int effectnum;
+	prvm_edict_t *own;
+	float *origin_from, *origin_to, *dir_from, *dir_to;
+	float count;
+	int flags;
+	float tintmins[4], tintmaxs[4];
+	prvm_eval_t *val;
+	VM_SAFEPARMCOUNTRANGE(7, 8, VM_CL_boxparticles);
+
+	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	own = PRVM_G_EDICT(OFS_PARM1); // TODO find use for this
+	origin_from = PRVM_G_VECTOR(OFS_PARM2);
+	origin_to = PRVM_G_VECTOR(OFS_PARM3);
+	dir_from = PRVM_G_VECTOR(OFS_PARM4);
+	dir_to = PRVM_G_VECTOR(OFS_PARM5);
+	count = PRVM_G_FLOAT(OFS_PARM6);
+	if(prog->argc >= 8)
+		flags = PRVM_G_FLOAT(OFS_PARM7);
+	else
+		flags = 0;
+	Vector4Set(tintmins, 1, 1, 1, 1);
+	Vector4Set(tintmaxs, 1, 1, 1, 1);
+	if(flags & 1) // read alpha
+	{
+		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_alphamin)))
+			tintmins[3] = val->_float;
+		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_alphamax)))
+			tintmaxs[3] = val->_float;
+	}
+	if(flags & 2) // read color
+	{
+		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_colormin)))
+			VectorCopy(val->vector, tintmins);
+		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_colormax)))
+			VectorCopy(val->vector, tintmaxs);
+	}
+	if (effectnum < 0)
+		return;
+	CL_ParticleTrail(effectnum, count, origin_from, origin_to, dir_from, dir_to, NULL, 0, true, true, tintmins, tintmaxs);
 }
 
 //#531 void(float pause) setpause
@@ -2651,7 +2696,7 @@ void VM_CL_SpawnParticle (void)
 	
 	if (prog->argc < 3) // global-set particle
 	{
-		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)(vmpartspawner.particle_color1[0]) << 16) + ((int)(vmpartspawner.particle_color1[1]) << 8) + ((int)(vmpartspawner.particle_color1[2])), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, (int)(vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]), (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin);
+		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)(vmpartspawner.particle_color1[0]) << 16) + ((int)(vmpartspawner.particle_color1[1]) << 8) + ((int)(vmpartspawner.particle_color1[2])), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, (int)(vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]), (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin, NULL);
 		if (!part)
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = 0; 
@@ -2672,7 +2717,7 @@ void VM_CL_SpawnParticle (void)
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
-		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin);
+		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin, NULL);
 		if (!part)
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = 0; 
@@ -2705,7 +2750,7 @@ void VM_CL_SpawnParticleDelayed (void)
 	org = PRVM_G_VECTOR(OFS_PARM0);
 	dir = PRVM_G_VECTOR(OFS_PARM1);
 	if (prog->argc < 5) // global-set particle
-		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin);
+		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)*vmpartspawner.particle_blendmode, (porientation_t)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin, NULL);
 	else // themed particle
 	{
 		themenum = (int)PRVM_G_FLOAT(OFS_PARM4);
@@ -2716,7 +2761,7 @@ void VM_CL_SpawnParticleDelayed (void)
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
-		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin);
+		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin, NULL);
 	}
 	if (!part) 
 	{ 
@@ -4352,7 +4397,7 @@ VM_entityfieldtype,				// #498 float(float fieldnum) entityfieldtype = #498; (DP
 VM_getentityfieldstring,		// #499 string(float fieldnum, entity ent) getentityfieldstring = #499; (DP_QC_ENTITYDATA)
 VM_putentityfieldstring,		// #500 float(float fieldnum, entity ent, string s) putentityfieldstring = #500; (DP_QC_ENTITYDATA)
 VM_CL_ReadPicture,				// #501 string() ReadPicture = #501;
-NULL,							// #502
+VM_CL_boxparticles,				// #502 void(float effectnum, entity own, vector origin_from, vector origin_to, vector dir_from, vector dir_to, float count) boxparticles (DP_CSQC_BOXPARTICLES)
 VM_whichpack,					// #503 string(string) whichpack = #503;
 VM_CL_GetEntity,				// #504 float(float entitynum, float fldnum) getentity = #504; vector(float entitynum, float fldnum) getentityvec = #504;
 NULL,							// #505
