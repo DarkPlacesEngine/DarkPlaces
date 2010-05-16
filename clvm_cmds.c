@@ -774,18 +774,115 @@ void VM_CL_R_AddEntity (void)
 }
 
 //#303 float(float property, ...) setproperty (EXT_CSQC)
+//#303 float(float property) getproperty
+//#303 vector(float property) getpropertyvec
+// VorteX: make this function be able to return previously set property if new value is not given
 void VM_CL_R_SetView (void)
 {
 	int		c;
 	float	*f;
 	float	k;
 
-	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_R_SetView);
+	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_R_SetView);
 
 	c = (int)PRVM_G_FLOAT(OFS_PARM0);
+
+	// return value?
+	if (prog->argc < 2)
+	{
+		switch(c)
+		{
+		case VF_MIN:
+			VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.x, r_refdef.view.y, 0);
+			break;
+		case VF_MIN_X:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.x;
+			break;
+		case VF_MIN_Y:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.y;
+			break;
+		case VF_SIZE:
+			VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.width, r_refdef.view.height, 0);
+			break;
+		case VF_SIZE_X:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.width;
+			break;
+		case VF_SIZE_Y:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.height;
+			break;
+		case VF_VIEWPORT:
+			VM_Warning("VM_CL_R_GetView : VF_VIEWPORT can't be retrieved, use VF_MIN/VF_SIZE instead\n", c);
+			break;
+		case VF_FOV:
+			VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.ortho_x, r_refdef.view.ortho_y, 0);
+			break;
+		case VF_FOVX:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.ortho_x;
+			break;
+		case VF_FOVY:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.ortho_y;
+			break;
+		case VF_ORIGIN:
+			VectorCopy(cl.csqc_origin, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		case VF_ORIGIN_X:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[0];
+			break;
+		case VF_ORIGIN_Y:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[1];
+			break;
+		case VF_ORIGIN_Z:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[2];
+			break;
+		case VF_ANGLES:
+			VectorCopy(cl.csqc_angles, PRVM_G_VECTOR(OFS_RETURN));
+			break;
+		case VF_ANGLES_X:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[0];
+			break;
+		case VF_ANGLES_Y:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[1];
+			break;
+		case VF_ANGLES_Z:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[2];
+			break;
+		case VF_DRAWWORLD:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vidvars.drawworld;
+			break;
+		case VF_DRAWENGINESBAR:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vidvars.drawenginesbar;
+			break;
+		case VF_DRAWCROSSHAIR:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vidvars.drawcrosshair;
+			break;
+		case VF_CL_VIEWANGLES:
+			VectorCopy(cl.viewangles, PRVM_G_VECTOR(OFS_RETURN));;
+			break;
+		case VF_CL_VIEWANGLES_X:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.viewangles[0];
+			break;
+		case VF_CL_VIEWANGLES_Y:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.viewangles[1];
+			break;
+		case VF_CL_VIEWANGLES_Z:
+			PRVM_G_FLOAT(OFS_RETURN) = cl.viewangles[2];
+			break;
+		case VF_PERSPECTIVE:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.useperspective;
+			break;
+		case VF_CLEARSCREEN:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.isoverlay;
+			break;
+		default:
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
+			VM_Warning("VM_CL_R_GetView : unknown parm %i\n", c);
+			return;
+		}
+		return;
+	}
+
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	k = PRVM_G_FLOAT(OFS_PARM1);
-
 	switch(c)
 	{
 	case VF_MIN:
