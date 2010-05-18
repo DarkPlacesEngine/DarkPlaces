@@ -924,6 +924,9 @@ void Host_Loadgame_f (void)
 
 			// parse the global vars
 			PRVM_ED_ParseGlobals (start);
+
+			// restore the autocvar globals
+			Cvar_UpdateAllAutoCvars();
 		}
 		else
 		{

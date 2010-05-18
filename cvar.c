@@ -253,6 +253,55 @@ void Cvar_CompleteCvarPrint (const char *partial)
 			Con_Printf ("^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 }
 
+// we assume that prog is already set to the target progs
+static void Cvar_UpdateAutoCvar(cvar_t *var)
+{
+	int i;
+	if(!prog)
+		Host_Error("Cvar_UpdateAutoCvar: no prog set");
+	i = PRVM_GetProgNr();
+	if(var->globaldefindex_progid[i] == prog->id)
+	{
+		// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
+		int j;
+		const char *s;
+		prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[var->globaldefindex[i]].ofs);
+		switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
+		{
+			case ev_float:
+				val->_float = var->value;
+				break;
+			case ev_vector:
+				s = var->string;
+				VectorClear(val->vector);
+				for (j = 0;j < 3;j++)
+				{
+					while (*s && ISWHITESPACE(*s))
+						s++;
+					if (!*s)
+						break;
+					val->vector[j] = atof(s);
+					while (!ISWHITESPACE(*s))
+						s++;
+					if (!*s)
+						break;
+				}
+				break;
+			case ev_string:
+				PRVM_ChangeEngineString(var->globaldefindex_stringno[i], var->string);
+				val->string = var->globaldefindex_stringno[i];
+				break;
+		}
+	}
+}
+
+// called after loading a savegame
+void Cvar_UpdateAllAutoCvars(void)
+{
+	cvar_t *var;
+	for (var = cvar_vars ; var ; var = var->next)
+		Cvar_UpdateAutoCvar(var);
+}
 
 /*
 ============
@@ -344,39 +393,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		if(PRVM_ProgLoaded(i))
 		{
 			PRVM_SetProg(i);
-			if(var->globaldefindex_progid[i] == prog->id)
-			{
-				// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
-				int j;
-				const char *s;
-				prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[var->globaldefindex[i]].ofs);
-				switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
-				{
-					case ev_float:
-						val->_float = var->value;
-						break;
-					case ev_vector:
-						s = var->string;
-						VectorClear(val->vector);
-						for (j = 0;j < 3;j++)
-						{
-							while (*s && ISWHITESPACE(*s))
-								s++;
-							if (!*s)
-								break;
-							val->vector[j] = atof(s);
-							while (!ISWHITESPACE(*s))
-								s++;
-							if (!*s)
-								break;
-						}
-						break;
-					case ev_string:
-						PRVM_ChangeEngineString(var->globaldefindex_stringno[i], var->string);
-						val->string = var->globaldefindex_stringno[i];
-						break;
-				}
-			}
+			Cvar_UpdateAutoCvar(var);
 		}
 	}
 	prog = tmpprog;
