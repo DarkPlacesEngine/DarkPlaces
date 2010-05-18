@@ -437,6 +437,10 @@ void CL_DrawVideo(void)
 	if (cl_video_brightness.value <= 0 || cl_video_brightness.value > 10)
 		Cvar_SetValueQuick( &cl_video_brightness, 1);
 
+	// draw black bg in case stipple is active or video is scaled
+	if (cl_video_stipple.integer || cl_video_scale.value != 1)
+		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
+
 	// enable video-only polygon stipple (of global stipple is not active)
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
 	{
@@ -464,7 +468,6 @@ void CL_DrawVideo(void)
 		int py = (int)(vid_conheight.integer * (1 - cl_video_scale.value) * ((bound(-1, cl_video_scale_vpos.value, 1) + 1) / 2));
 		int sx = (int)(vid_conwidth.integer * cl_video_scale.value);
 		int sy = (int)(vid_conheight.integer * cl_video_scale.value);
-		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
 		DrawQ_Pic(px, py, &video->cpif, sx , sy, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
 	}
 
