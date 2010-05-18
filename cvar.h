@@ -216,6 +216,8 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 extern char *cvar_dummy_description; // ALWAYS the same pointer
 extern cvar_t *cvar_vars; // used to list all cvars
 
+void Cvar_UpdateAllAutoCvars(void); // updates ALL autocvars of the active prog to the cvar values (savegame loading)
+
 #ifdef FILLALLCVARSWITHRUBBISH
 void Cvar_FillAll_f();
 #endif /* FILLALLCVARSWITHRUBBISH */
