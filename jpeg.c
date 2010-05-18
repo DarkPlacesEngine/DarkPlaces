@@ -679,7 +679,7 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 
 		line++;
 	}
-	Mem_Free (scanline);
+	Mem_Free (scanline); scanline = NULL;
 
 	qjpeg_finish_decompress (&cinfo);
 	qjpeg_destroy_decompress (&cinfo);
