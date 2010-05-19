@@ -468,7 +468,7 @@ void V_CalcRefdef (void)
 		else
 		{
 			// smooth stair stepping, but only if onground and enabled
-			if (!cl.onground || cl_stairsmoothspeed.value <= 0)
+			if (!cl.onground || cl_stairsmoothspeed.value <= 0 || !ent->persistent.trail_allowed) // FIXME use a better way to detect teleport/warp
 				cl.stairsmoothz = vieworg[2];
 			else
 			{
