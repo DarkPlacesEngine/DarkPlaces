@@ -811,7 +811,7 @@ void VM_CL_R_SetView (void)
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.height;
 			break;
 		case VF_VIEWPORT:
-			VM_Warning("VM_CL_R_GetView : VF_VIEWPORT can't be retrieved, use VF_MIN/VF_SIZE instead\n", c);
+			VM_Warning("VM_CL_R_GetView : VF_VIEWPORT can't be retrieved, use VF_MIN/VF_SIZE instead\n");
 			break;
 		case VF_FOV:
 			VectorSet(PRVM_G_VECTOR(OFS_RETURN), r_refdef.view.ortho_x, r_refdef.view.ortho_y, 0);
