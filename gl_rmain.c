@@ -5049,7 +5049,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_Texture_FogHeightTexture>= 0) R_Mesh_TexBind(GL20TU_FOGHEIGHTTEXTURE  , r_texture_fogheighttexture                          );
 		if (r_glsl_permutation->loc_Texture_FogMask         >= 0) R_Mesh_TexBind(GL20TU_FOGMASK           , r_texture_fogattenuation                            );
 		if (r_glsl_permutation->loc_Texture_Lightmap        >= 0) R_Mesh_TexBind(GL20TU_LIGHTMAP          , r_texture_white                                     );
-		if (r_glsl_permutation->loc_Texture_Deluxemap       >= 0) R_Mesh_TexBind(GL20TU_LIGHTMAP          , r_texture_blanknormalmap                            );
+		if (r_glsl_permutation->loc_Texture_Deluxemap       >= 0) R_Mesh_TexBind(GL20TU_DELUXEMAP         , r_texture_blanknormalmap                            );
 		if (r_glsl_permutation->loc_Texture_Attenuation     >= 0) R_Mesh_TexBind(GL20TU_ATTENUATION       , r_shadow_attenuationgradienttexture                 );
 		if (r_glsl_permutation->loc_Texture_Refraction      >= 0) R_Mesh_TexBind(GL20TU_REFRACTION        , r_texture_white                                     );
 		if (r_glsl_permutation->loc_Texture_Reflection      >= 0) R_Mesh_TexBind(GL20TU_REFLECTION        , r_texture_white                                     );
