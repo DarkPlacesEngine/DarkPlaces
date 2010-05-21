@@ -576,7 +576,7 @@ void V_CalcRefdef (void)
 				if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
 					viewangles[ROLL] = v_deathtiltangle.value;
 				VectorAdd(viewangles, cl.punchangle, viewangles);
-				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.movement_velocity);
+				viewangles[ROLL] += V_CalcRoll(viewangles, cl.movement_velocity);
 				if (v_dmg_time > 0)
 				{
 					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
