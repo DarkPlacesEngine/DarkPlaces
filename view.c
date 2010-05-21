@@ -576,7 +576,7 @@ void V_CalcRefdef (void)
 				if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
 					viewangles[ROLL] = v_deathtiltangle.value;
 				VectorAdd(viewangles, cl.punchangle, viewangles);
-				viewangles[ROLL] += V_CalcRoll(viewangles, cl.movement_velocity);
+				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
 				if (v_dmg_time > 0)
 				{
 					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
@@ -637,7 +637,7 @@ void V_CalcRefdef (void)
 					VectorAdd(viewangles, gunangles, gunangles);
 
 					// view bobbing code
-					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
+					xyspeed = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
 						float cycle;
