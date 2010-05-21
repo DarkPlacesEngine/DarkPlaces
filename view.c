@@ -596,23 +596,23 @@ void V_CalcRefdef (void)
 					{
 						// try to fix the first highpass; result is NOT
 						// perfect! TODO find a better fix
-						VectorCopy(cl.viewangles, cl.gunangles_prev);
-						VectorCopy(cl.movement_origin, cl.gunorg_prev);
+						VectorCopy(viewangles, cl.gunangles_prev);
+						VectorCopy(vieworg, cl.gunorg_prev);
 					}
 
 					// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
 					VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
-					highpass3_limited(cl.movement_origin, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
-					VectorCopy(cl.movement_origin, cl.gunorg_prev);
+					highpass3_limited(vieworg, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
+					VectorCopy(vieworg, cl.gunorg_prev);
 					VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
 
 					// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
 					VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
-					cl.gunangles_highpass[PITCH] += 360 * floor((cl.viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
-					cl.gunangles_highpass[YAW] += 360 * floor((cl.viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
-					cl.gunangles_highpass[ROLL] += 360 * floor((cl.viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
-					highpass3_limited(cl.viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
-					VectorCopy(cl.viewangles, cl.gunangles_prev);
+					cl.gunangles_highpass[PITCH] += 360 * floor((viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
+					cl.gunangles_highpass[YAW] += 360 * floor((viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
+					cl.gunangles_highpass[ROLL] += 360 * floor((viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
+					highpass3_limited(viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
+					VectorCopy(viewangles, cl.gunangles_prev);
 					VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
 
 					// 3. calculate the RAW adjustment vectors
@@ -634,7 +634,7 @@ void V_CalcRefdef (void)
 
 					// 5. use the adjusted vectors
 					VectorAdd(vieworg, gunorg, gunorg);
-					VectorAdd(cl.viewangles, gunangles, gunangles);
+					VectorAdd(viewangles, gunangles, gunangles);
 
 					// view bobbing code
 					xyspeed = sqrt(cl.movement_velocity[0]*cl.movement_velocity[0] + cl.movement_velocity[1]*cl.movement_velocity[1]);
