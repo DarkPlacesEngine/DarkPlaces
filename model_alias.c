@@ -129,9 +129,9 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 	if (maxbonepose < model->num_bones*2 + model->surfmesh.num_blends)
 	{
 		if (bonepose)
-			Mem_Free(bonepose);
+			Z_Free(bonepose);
 		maxbonepose = model->num_bones*2 + model->surfmesh.num_blends;
-		bonepose = (float (*)[12])Mem_Alloc(r_main_mempool, maxbonepose * sizeof(float[12]));
+		bonepose = (float (*)[12])Z_Malloc(maxbonepose * sizeof(float[12]));
 	}
 
 	boneposerelative = bonepose + model->num_bones;
