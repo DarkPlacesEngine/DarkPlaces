@@ -1099,6 +1099,25 @@ static vec_t CL_IsMoveInDirection(vec_t forward, vec_t side, vec_t angle)
 	return 1 - fabs(angle);
 }
 
+static vec_t CL_GeomLerp(vec_t a, vec_t lerp, vec_t b)
+{
+	if(a == 0)
+	{
+		if(lerp < 1)
+			return 0;
+		else
+			return b;
+	}
+	if(b == 0)
+	{
+		if(lerp > 0)
+			return 0;
+		else
+			return a;
+	}
+	return a * pow(fabs(b / a), lerp);
+}
+
 void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
 {
 	vec_t zspeed, speed, dot, k;
@@ -1353,7 +1372,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		if (s->waterjumptime <= 0)
 		{
 			// apply air speed limit
-			vec_t accel, wishspeed0, wishspeed2, accelqw;
+			vec_t accel, wishspeed0, wishspeed2, accelqw, strafity;
 			qboolean accelerating;
 
 			accelqw = cl.movevars_airaccel_qw;
@@ -1370,9 +1389,17 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_airstopaccelerate != 0)
 				if(DotProduct(s->velocity, wishdir) < 0)
 					accel = cl.movevars_airstopaccelerate;
-			// this doesn't play well with analog input, but can't really be
-			// fixed like the AirControl can. So, don't set the maxairstrafe*
-			// cvars when you want to support analog input.
+			strafity = CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, -90) + CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, +90); // if one is nonzero, other is always zero
+			if(cl.movevars_maxairstrafespeed)
+				wishspeed = min(wishspeed, CL_GeomLerp(cl.movevars_maxairspeed, strafity, cl.movevars_maxairstrafespeed));
+			if(cl.movevars_airstrafeaccelerate)
+				accel = CL_GeomLerp(cl.movevars_airaccelerate, strafity, cl.movevars_airstrafeaccelerate);
+			if(cl.movevars_airstrafeaccel_qw)
+				accelqw =
+					(((strafity > 0.5 ? cl.movevars_airstrafeaccel_qw : cl.movevars_airaccel_qw) >= 0) ? +1 : -1)
+					*
+					(1 - CL_GeomLerp(1 - fabs(cl.movevars_airaccel_qw), strafity, 1 - fabs(cl.movevars_airstrafeaccel_qw)));
+
 			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
 			{
 				if(cl.movevars_maxairstrafespeed)
@@ -1461,6 +1488,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstopaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTOPACCELERATE];
 		cl.movevars_airstrafeaccelerate = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE];
 		cl.movevars_maxairstrafespeed = cl.statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED];
+		cl.movevars_airstrafeaccel_qw = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW];
 		cl.movevars_aircontrol = cl.statsf[STAT_MOVEVARS_AIRCONTROL];
 		cl.movevars_aircontrol_power = cl.statsf[STAT_MOVEVARS_AIRCONTROL_POWER];
 		cl.movevars_warsowbunny_airforwardaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL];
@@ -1494,6 +1522,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstopaccelerate = 0;
 		cl.movevars_airstrafeaccelerate = 0;
 		cl.movevars_maxairstrafespeed = 0;
+		cl.movevars_airstrafeaccel_qw = 0;
 		cl.movevars_aircontrol = 0;
 		cl.movevars_aircontrol_power = 2;
 		cl.movevars_warsowbunny_airforwardaccel = 0;
