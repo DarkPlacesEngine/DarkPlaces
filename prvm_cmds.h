@@ -359,6 +359,9 @@ void VM_drawsetcliparea(void);
 void VM_drawresetcliparea(void);
 void VM_getimagesize(void);
 
+void VM_findfont(void);
+void VM_loadfont(void);
+
 void VM_makevectors (void);
 void VM_vectorvectors (void);
 

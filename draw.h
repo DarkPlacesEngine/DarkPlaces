@@ -118,18 +118,26 @@ typedef struct dp_font_s
 }
 dp_font_t;
 
-#define MAX_FONTS 16
-extern dp_font_t dp_fonts[MAX_FONTS];
-#define FONT_DEFAULT     (&dp_fonts[0]) // should be fixed width
-#define FONT_CONSOLE     (&dp_fonts[1]) // REALLY should be fixed width (ls!)
-#define FONT_SBAR        (&dp_fonts[2]) // must be fixed width
-#define FONT_NOTIFY      (&dp_fonts[3]) // free
-#define FONT_CHAT        (&dp_fonts[4]) // free
-#define FONT_CENTERPRINT (&dp_fonts[5]) // free
-#define FONT_INFOBAR     (&dp_fonts[6]) // free
-#define FONT_MENU        (&dp_fonts[7]) // should be fixed width
-#define FONT_USER        (&dp_fonts[8]) // userdefined fonts
-#define MAX_USERFONTS (MAX_FONTS - (FONT_USER - dp_fonts))
+typedef struct dp_fonts_s
+{
+	dp_font_t *f;
+	int maxsize;
+}
+dp_fonts_t;
+extern dp_fonts_t dp_fonts;
+
+#define MAX_FONTS         16 // fonts at the start
+#define FONTS_EXPAND       8  // fonts grow when no free slots
+#define FONT_DEFAULT     (&dp_fonts.f[0]) // should be fixed width
+#define FONT_CONSOLE     (&dp_fonts.f[1]) // REALLY should be fixed width (ls!)
+#define FONT_SBAR        (&dp_fonts.f[2]) // must be fixed width
+#define FONT_NOTIFY      (&dp_fonts.f[3]) // free
+#define FONT_CHAT        (&dp_fonts.f[4]) // free
+#define FONT_CENTERPRINT (&dp_fonts.f[5]) // free
+#define FONT_INFOBAR     (&dp_fonts.f[6]) // free
+#define FONT_MENU        (&dp_fonts.f[7]) // should be fixed width
+#define FONT_USER(i)     (&dp_fonts.f[8+i]) // userdefined fonts
+#define MAX_USERFONTS    (dp_fonts.maxsize - 8)
 
 // shared color tag printing constants
 #define STRING_COLOR_TAG			'^'
