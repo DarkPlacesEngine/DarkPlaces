@@ -436,6 +436,16 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 //description:
 //global skybox for the map, can not be changed by QC
 
+//DP_UTF8
+//idea: Blub\0, divVerent
+//darkplaces implementation: Blub\0
+//cvar definitions:
+//   utf8_enable: enable utf8 encoding
+//description: utf8 characters are allowed inside cvars, protocol strings, files, progs strings, etc., 
+//and count as 1 char for string functions like strlen, substring, etc.
+// note: utf8_enable is run-time cvar, could be changed during execution
+// note: beware that str2chr() could return value bigger than 255 once utf8 is enabled
+
 //DP_HALFLIFE_MAP
 //idea: LordHavoc
 //darkplaces implementation: LordHavoc
