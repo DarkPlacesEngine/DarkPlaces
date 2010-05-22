@@ -465,7 +465,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 	namelen = strlen(name);
 
 	// try load direct file
-	memcpy(filename, name, namelen);
+	memcpy(filename, name, namelen+1);
 	data = FS_LoadFile(filename, font_mempool, false, &datasize);
 	// try load .ttf
 	if (!data)
