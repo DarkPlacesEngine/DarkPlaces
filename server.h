@@ -390,6 +390,7 @@ extern cvar_t sv_airaccelerate;
 extern cvar_t sv_airstopaccelerate;
 extern cvar_t sv_airstrafeaccelerate;
 extern cvar_t sv_maxairstrafespeed;
+extern cvar_t sv_airstrafeaccel_qw;
 extern cvar_t sv_aircontrol;
 extern cvar_t sv_aircontrol_power;
 extern cvar_t sv_allowdownloads;
