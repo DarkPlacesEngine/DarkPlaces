@@ -541,10 +541,10 @@ void Draw_FreePic(const char *picname)
 
 static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
-void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
+void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset)
 {
 	int i;
-	float maxwidth, scale;
+	float maxwidth;
 	char widthfile[MAX_QPATH];
 	char *widthbuf;
 	fs_offset_t widthbufsize;
@@ -605,7 +605,6 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	// unspecified width == 1 (base width)
 	for(i = 1; i < 256; ++i)
 		fnt->width_of[i] = 1;
-	scale = 1;
 
 	// FIXME load "name.width", if it fails, fill all with 1
 	if((widthbuf = (char *) FS_LoadFile(widthfile, tempmempool, true, &widthbufsize)))
@@ -682,6 +681,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 	// fix up maxwidth for overlap
 	fnt->maxwidth *= scale;
 	fnt->scale = scale;
+	fnt->voffset = voffset;
 
 	if(fnt == FONT_CONSOLE)
 		con_linewidth = -1; // rewrap console in next frame
@@ -849,7 +849,7 @@ static void LoadFont_f(void)
 		}
 	}
 
-	LoadFont(true, mainfont, f);
+	LoadFont(true, mainfont, f, 1, 0);
 }
 
 /*
@@ -870,7 +870,7 @@ static void gl_draw_start(void)
 	// load default font textures
 	for(i = 0; i < dp_fonts.maxsize; ++i)
 		if (dp_fonts.f[i].title[0])
-			LoadFont(false, va("gfx/font_%s", &dp_fonts.f[i].title), &dp_fonts.f[i]);
+			LoadFont(false, va("gfx/font_%s", &dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
 
 	// draw the loading screen so people have something to see in the newly opened window
 	SCR_UpdateLoadingScreen(true);
@@ -1378,7 +1378,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		snap = false;
 	}
 
-	starty -= (fnt->scale - 1) * h * 0.5; // center
+	starty -= (fnt->scale - 1) * h * 0.5 - fnt->voffset*h; // center & offset
 	w *= fnt->scale;
 	h *= fnt->scale;
 

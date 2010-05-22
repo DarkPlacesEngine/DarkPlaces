@@ -3513,16 +3513,16 @@ float loadfont(string fontname, string fontmaps, string sizes, float slot)
 */
 
 dp_font_t *FindFont(const char *title, qboolean allocate_new);
-void LoadFont(qboolean override, const char *name, dp_font_t *fnt);
+void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset);
 void VM_loadfont(void)
 {
 	const char *fontname, *filelist, *sizes, *c, *cm;
 	char mainfont[MAX_QPATH];
 	int i, numsizes;
-	float sz;
+	float sz, scale, voffset;
 	dp_font_t *f;
 
-	VM_SAFEPARMCOUNTRANGE(3,4,VM_loadfont);
+	VM_SAFEPARMCOUNTRANGE(3,6,VM_loadfont);
 
 	fontname = PRVM_G_STRING(OFS_PARM0);
 	if (!fontname[0])
@@ -3629,8 +3629,20 @@ void VM_loadfont(void)
 		numsizes++;
 	}
 
+	// additional scale/hoffset parms
+	scale = 1;
+	voffset = 0;
+	if (prog->argc >= 5)
+	{
+		scale = PRVM_G_FLOAT(OFS_PARM4);
+		if (scale <= 0)
+			scale = 1;
+	}
+	if (prog->argc >= 6)
+		voffset = PRVM_G_FLOAT(OFS_PARM5);
+
 	// load
-	LoadFont(true, mainfont, f);
+	LoadFont(true, mainfont, f, scale, voffset);
 
 	// return index of loaded font
 	PRVM_G_FLOAT(OFS_RETURN) = (f - dp_fonts.f);
