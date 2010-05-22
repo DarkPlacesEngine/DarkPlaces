@@ -3277,9 +3277,9 @@ dp_font_t *getdrawfont(void)
 	if(prog->globaloffsets.drawfont >= 0)
 	{
 		int f = (int) PRVM_G_FLOAT(prog->globaloffsets.drawfont);
-		if(f < 0 || f >= MAX_FONTS)
+		if(f < 0 || f >= dp_fonts.maxsize)
 			return FONT_DEFAULT;
-		return &dp_fonts[f];
+		return &dp_fonts.f[f];
 	}
 	else
 		return FONT_DEFAULT;
@@ -3478,8 +3478,164 @@ void VM_stringwidth(void)
 
 	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
 */
-
 }
+
+/*
+=========
+VM_findfont
+
+float findfont(string s)
+=========
+*/
+
+float getdrawfontnum(const char *fontname)
+{
+	int i;
+
+	for(i = 0; i < dp_fonts.maxsize; ++i)
+		if(!strcmp(dp_fonts.f[i].title, fontname))
+			return i;
+	return -1;
+}
+
+void VM_findfont(void)
+{
+	VM_SAFEPARMCOUNT(1,VM_findfont);
+	PRVM_G_FLOAT(OFS_RETURN) = getdrawfontnum(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=========
+VM_loadfont
+
+float loadfont(string fontname, string fontmaps, string sizes, float slot)
+=========
+*/
+
+dp_font_t *FindFont(const char *title, qboolean allocate_new);
+void LoadFont(qboolean override, const char *name, dp_font_t *fnt);
+void VM_loadfont(void)
+{
+	const char *fontname, *filelist, *sizes, *c, *cm;
+	char mainfont[MAX_QPATH];
+	int i, numsizes;
+	float sz;
+	dp_font_t *f;
+
+	VM_SAFEPARMCOUNTRANGE(3,4,VM_loadfont);
+
+	fontname = PRVM_G_STRING(OFS_PARM0);
+	if (!fontname[0])
+		fontname = "default";
+
+	filelist = PRVM_G_STRING(OFS_PARM1);
+	if (!filelist[0])
+		filelist = "gfx/conchars";
+
+	sizes = PRVM_G_STRING(OFS_PARM2);
+	if (!sizes[0])
+		sizes = "10";
+
+	// find a font
+	f = NULL;
+	if (prog->argc >= 4)
+	{
+		i = PRVM_G_FLOAT(OFS_PARM3);
+		if (i >= 0 && i < dp_fonts.maxsize)
+		{
+			f = &dp_fonts.f[i];
+			strlcpy(f->title, fontname, sizeof(f->title)); // replace name
+		}
+	}
+	if (!f)
+		f = FindFont(fontname, true);
+	if (!f)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return; // something go wrong
+	}
+
+	memset(f->fallbacks, 0, sizeof(f->fallbacks));
+	memset(f->fallback_faces, 0, sizeof(f->fallback_faces));
+
+	// first font is handled "normally"
+	c = strchr(filelist, ':');
+	cm = strchr(filelist, ',');
+	if(c && (!cm || c < cm))
+		f->req_face = atoi(c+1);
+	else
+	{
+		f->req_face = 0;
+		c = cm;
+	}
+	if(!c || (c - filelist) > MAX_QPATH)
+		strlcpy(mainfont, filelist, sizeof(mainfont));
+	else
+	{
+		memcpy(mainfont, filelist, c - filelist);
+		mainfont[c - filelist] = 0;
+	}
+
+	// handle fallbacks
+	for(i = 0; i < MAX_FONT_FALLBACKS; ++i)
+	{
+		c = strchr(filelist, ',');
+		if(!c)
+			break;
+		filelist = c + 1;
+		if(!*filelist)
+			break;
+		c = strchr(filelist, ':');
+		cm = strchr(filelist, ',');
+		if(c && (!cm || c < cm))
+			f->fallback_faces[i] = atoi(c+1);
+		else
+		{
+			f->fallback_faces[i] = 0; // f->req_face; could make it stick to the default-font's face index
+			c = cm;
+		}
+		if(!c || (c-filelist) > MAX_QPATH)
+		{
+			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
+		}
+		else
+		{
+			memcpy(f->fallbacks[i], filelist, c - filelist);
+			f->fallbacks[i][c - filelist] = 0;
+		}
+	}
+
+	// handle sizes
+	for(i = 0; i < MAX_FONT_SIZES; ++i)
+		f->req_sizes[i] = -1;
+	for (numsizes = 0,c = sizes;;)
+	{
+		if (!COM_ParseToken_VM_Tokenize(&c, 0))
+			break;
+		sz = atof(com_token);
+		// detect crap size
+		if (sz < 0.001f || sz > 1000.0f)
+		{
+			VM_Warning("VM_loadfont: crap size %s", com_token);
+			continue;
+		}
+		// check overflow
+		if (numsizes == MAX_FONT_SIZES)
+		{
+			VM_Warning("VM_loadfont: MAX_FONT_SIZES = %i exceeded", MAX_FONT_SIZES);
+			break;
+		}
+		f->req_sizes[numsizes] = sz;
+		numsizes++;
+	}
+
+	// load
+	LoadFont(true, mainfont, f);
+
+	// return index of loaded font
+	PRVM_G_FLOAT(OFS_RETURN) = (f - dp_fonts.f);
+}
+
 /*
 =========
 VM_drawpic

@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ft2.h"
 #include "ft2_fontdefs.h"
 
-dp_font_t dp_fonts[MAX_FONTS] = {{0}};
+dp_fonts_t dp_fonts;
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
@@ -540,7 +540,7 @@ void Draw_FreePic(const char *picname)
 
 static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
-static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
+void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 {
 	int i;
 	float maxwidth, scale;
@@ -686,12 +686,37 @@ static void LoadFont(qboolean override, const char *name, dp_font_t *fnt)
 		con_linewidth = -1; // rewrap console in next frame
 }
 
-static dp_font_t *FindFont(const char *title)
+extern cvar_t developer_font;
+dp_font_t *FindFont(const char *title, qboolean allocate_new)
 {
 	int i;
-	for(i = 0; i < MAX_FONTS; ++i)
-		if(!strcmp(dp_fonts[i].title, title))
-			return &dp_fonts[i];
+
+	// find font
+	for(i = 0; i < dp_fonts.maxsize; ++i)
+		if(!strcmp(dp_fonts.f[i].title, title))
+			return &dp_fonts.f[i];
+	// if not found - try allocate
+	if (allocate_new)
+	{
+		// find any font with empty title
+		for(i = 0; i < dp_fonts.maxsize; ++i)
+		{
+			if(!strcmp(dp_fonts.f[i].title, ""))
+			{
+				strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
+				return &dp_fonts.f[i];
+			}
+		}
+		// if no any 'free' fonts - expand buffer
+		i = dp_fonts.maxsize;
+		dp_fonts.maxsize = dp_fonts.maxsize + FONTS_EXPAND;
+		if (developer_font.integer)
+			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", i, dp_fonts.maxsize);
+		dp_fonts.f = Mem_Realloc(tempmempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+		// register a font in first expanded slot
+		strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
+		return &dp_fonts.f[i];
+	}
 	return NULL;
 }
 
@@ -732,8 +757,9 @@ static void LoadFont_f(void)
 	if(Cmd_Argc() < 2)
 	{
 		Con_Printf("Available font commands:\n");
-		for(i = 0; i < MAX_FONTS; ++i)
-			Con_Printf("  loadfont %s gfx/tgafile[...] [sizes...]\n", dp_fonts[i].title);
+		for(i = 0; i < dp_fonts.maxsize; ++i)
+			if (dp_fonts.f[i].title[0])
+				Con_Printf("  loadfont %s gfx/tgafile[...] [sizes...]\n", dp_fonts.f[i].title);
 		Con_Printf("A font can simply be gfx/tgafile, or alternatively you\n"
 			   "can specify multiple fonts and faces\n"
 			   "Like this: gfx/vera-sans:2,gfx/fallback:1\n"
@@ -745,7 +771,7 @@ static void LoadFont_f(void)
 			);
 		return;
 	}
-	f = FindFont(Cmd_Argv(1));
+	f = FindFont(Cmd_Argv(1), true);
 	if(f == NULL)
 	{
 		Con_Printf("font function not found\n");
@@ -840,8 +866,10 @@ static void gl_draw_start(void)
 
 	font_start();
 
-	for(i = 0; i < MAX_FONTS; ++i)
-		LoadFont(false, va("gfx/font_%s", dp_fonts[i].title), &dp_fonts[i]);
+	// load default font textures
+	for(i = 0; i < dp_fonts.maxsize; ++i)
+		if (dp_fonts.f[i].title[0])
+			LoadFont(false, va("gfx/font_%s", &dp_fonts.f[i].title), &dp_fonts.f[i]);
 
 	// draw the loading screen so people have something to see in the newly opened window
 	SCR_UpdateLoadingScreen(true);
@@ -865,6 +893,7 @@ static void gl_draw_newmap(void)
 void GL_Draw_Init (void)
 {
 	int i, j;
+
 	Cvar_RegisterVariable(&r_font_postprocess_blur);
 	Cvar_RegisterVariable(&r_font_postprocess_outline);
 	Cvar_RegisterVariable(&r_font_postprocess_shadow_x);
@@ -875,11 +904,15 @@ void GL_Draw_Init (void)
 	Cvar_RegisterVariable(&r_textshadow);
 	Cvar_RegisterVariable(&r_textbrightness);
 	Cvar_RegisterVariable(&r_textcontrast);
-	Cmd_AddCommand ("loadfont",LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
-	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 
+	// allocate fonts storage
+	dp_fonts.maxsize = MAX_FONTS;
+	dp_fonts.f = Mem_Alloc(tempmempool, sizeof(dp_font_t) * dp_fonts.maxsize);
+	memset(dp_fonts.f, 0, sizeof(dp_font_t) * dp_fonts.maxsize);
+
+	// assign starting font names
 	strlcpy(FONT_DEFAULT->title, "default", sizeof(FONT_DEFAULT->title));
-		strlcpy(FONT_DEFAULT->texpath, "gfx/conchars", sizeof(FONT_DEFAULT->texpath));
+	strlcpy(FONT_DEFAULT->texpath, "gfx/conchars", sizeof(FONT_DEFAULT->texpath));
 	strlcpy(FONT_CONSOLE->title, "console", sizeof(FONT_CONSOLE->title));
 	strlcpy(FONT_SBAR->title, "sbar", sizeof(FONT_SBAR->title));
 	strlcpy(FONT_NOTIFY->title, "notify", sizeof(FONT_NOTIFY->title));
@@ -888,8 +921,11 @@ void GL_Draw_Init (void)
 	strlcpy(FONT_INFOBAR->title, "infobar", sizeof(FONT_INFOBAR->title));
 	strlcpy(FONT_MENU->title, "menu", sizeof(FONT_MENU->title));
 	for(i = 0, j = 0; i < MAX_USERFONTS; ++i)
-		if(!FONT_USER[i].title[0])
-			dpsnprintf(FONT_USER[i].title, sizeof(FONT_USER[i].title), "user%d", j++);
+		if(!FONT_USER(i)->title[0])
+			dpsnprintf(FONT_USER(i)->title, sizeof(FONT_USER(i)->title), "user%d", j++);
+
+	Cmd_AddCommand ("loadfont",LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
+	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
 void _DrawQ_Setup(void)

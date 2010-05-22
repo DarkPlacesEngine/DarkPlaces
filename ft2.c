@@ -251,12 +251,12 @@ void font_start(void)
 void font_shutdown(void)
 {
 	int i;
-	for (i = 0; i < MAX_FONTS; ++i)
+	for (i = 0; i < dp_fonts.maxsize; ++i)
 	{
-		if (dp_fonts[i].ft2)
+		if (dp_fonts.f[i].ft2)
 		{
-			Font_UnloadFont(dp_fonts[i].ft2);
-			dp_fonts[i].ft2 = NULL;
+			Font_UnloadFont(dp_fonts.f[i].ft2);
+			dp_fonts.f[i].ft2 = NULL;
 		}
 	}
 	Font_CloseLibrary();
@@ -273,6 +273,7 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_size_snapping);
 	Cvar_RegisterVariable(&r_font_kerning);
 	Cvar_RegisterVariable(&developer_font);
+
 	// let's open it at startup already
 	Font_OpenLibrary();
 }
@@ -463,14 +464,22 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 
 	namelen = strlen(name);
 
+	// try load direct file
 	memcpy(filename, name, namelen);
-	memcpy(filename + namelen, ".ttf", 5);
 	data = FS_LoadFile(filename, font_mempool, false, &datasize);
+	// try load .ttf
+	if (!data)
+	{
+		memcpy(filename + namelen, ".ttf", 5);
+		data = FS_LoadFile(filename, font_mempool, false, &datasize);
+	}
+	// try load .otf
 	if (!data)
 	{
 		memcpy(filename + namelen, ".otf", 5);
 		data = FS_LoadFile(filename, font_mempool, false, &datasize);
 	}
+	// try load .pfb/afm
 	if (!data)
 	{
 		ft2_attachment_t afm;
@@ -487,13 +496,12 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 				Font_Attach(font, &afm);
 		}
 	}
-
 	if (!data)
 	{
 		// FS_LoadFile being not-quiet should print an error :)
 		return false;
 	}
-	Con_Printf("Loading font %s face %i...\n", filename, _face);
+	Con_DPrintf("Loading font %s face %i...\n", filename, _face);
 
 	status = qFT_New_Memory_Face(font_ft2lib, (FT_Bytes)data, datasize, _face, (FT_Face*)&font->face);
 	if (status && _face != 0)
