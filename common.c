@@ -1508,6 +1508,9 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 // GAME_STEELSTORM
 // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
 { "steelstorm",				"-steelstorm",		"Steel-Storm",		"gamedata",		NULL,			"ss",			"steelstorm" },
+// GAME_STRAPBOMB
+// COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
+{ "strapbomb",				"-strapbomb",		"Strap-on-bomb Car",		"id1",		NULL,			"strap",			"strapbomb" },
 };
 
 void COM_InitGameType (void)
