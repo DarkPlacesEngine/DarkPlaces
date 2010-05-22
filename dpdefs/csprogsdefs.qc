@@ -766,3 +766,68 @@ vector(float entitynum, float fldnum) getentityvec = #504;
 // server entities networked and interpolated by engine (monsters, players), number of entity is it's SVQC number
 // you can send it via tempentity/CSQC entity message. Note that this builtin doesnt know about entity removing/reallocating
 // so it's meaning to work for short period of time, dont use it on missiles/grenades whatever will be removed next five seconds
+
+//DP_GFX_FONTS
+//idea: Blub\0, divVerent
+//darkplaces implementation: Blub\0
+//console commands:
+//  loadfont fontname fontmaps size1 size2 ...
+//   A font can simply be gfx/tgafile (freetype fonts doent need extension), 
+//   or alternatively you can specify multiple fonts and faces
+//   Like this: gfx/vera-sans:2,gfx/fallback:1
+//   to load face 2 of the font gfx/vera-sans and use face 1
+//   of gfx/fallback as fallback font
+//   You can also specify a list of font sizes to load, like this:
+//   loadfont console gfx/conchars,gfx/fallback 8 12 16 24 32
+//   In many cases, 8 12 16 24 32 should be a good choice.
+//   for slots see:
+//constant definitions:
+float drawfont;            // set it before drawstring()/drawchar() calls
+float FONT_DEFAULT = 0;    // 'default'
+float FONT_CONSOLE = 1;    // 'console', REALLY should be fixed width (ls!)
+float FONT_SBAR = 2;       // 'sbar', used on hud, must be fixed width
+float FONT_NOTIFY = 3;     // 'notify', used on sprint/bprint
+float FONT_CHAT = 4;       // 'chat'
+float FONT_CENTERPRINT = 5;// 'centerprint'
+float FONT_INFOBAR = 6;    // 'infobar'
+float FONT_MENU = 7;       // 'menu', should be fixed width
+float FONT_USER0 = 8;      // 'user0', userdefined fonts
+float FONT_USER1 = 9;      // 'user1', userdefined fonts
+float FONT_USER2 = 10;     // 'user2', userdefined fonts
+float FONT_USER3 = 11;     // 'user3', userdefined fonts
+float FONT_USER4 = 12;     // 'user4', userdefined fonts
+float FONT_USER5 = 13;     // 'user5', userdefined fonts
+float FONT_USER6 = 14;     // 'user6', userdefined fonts
+float FONT_USER7 = 15;     // 'user7' slot, userdefined fonts
+//builtin definitions:
+float findfont(string s) = #356; // find font by fontname and return it's index
+float loadfont(string fontname, string fontmaps, string sizes, float slot) = #357; 
+// loads font immediately so stringwidth() function can be used just after builtin call
+// returns a font slotnum (which is used to set drawfont to)
+// first 3 parms are identical to "loadfont" console command ones
+// slot could be one of FONT_ constants or result of findfont() or -1 to not use it
+// if slot is given, font will be loaded to this slotnum and fontname become new title for it
+// this way you can rename user* fonts to something more usable
+float stringwidth(string text, float allowColorCodes, vector size) = #327; // get a width of string with given font and char size
+float stringwidth_menu(string text, float allowColorCodes, vector size) = #468; // in menu.dat it has different builtin #
+//description: engine support for custom fonts in console, hud, qc etc.
+// limits:
+//  max 128 chars for font name
+//  max 3 font fallbacks
+//  max 8 sizes per font
+
+//DP_GFX_FONTS_FREETYPE
+//idea: Blub\0, divVerent
+//darkplaces implementation: Blub\0
+//cvar definitions:
+//   r_font_disable_freetype 0/1 : disable freetype fonts loading (uttetly disables freetype library initialization)
+//   r_font_antialias 0/1 : antialiasing when loading font
+//   r_font_hint 0/1/2/3  : hinting when loading font, 0 is no hinting, 1 light autohinting , 2 full autohinting, 3 full hinting
+//   r_font_postprocess_blur X      : font outline blur amount
+//   r_font_postprocess_outline X   : font outline width
+//   r_font_postprocess_shadow_x X  : font outline shadow x shift amount, applied during outlining
+//   r_font_postprocess_shadow_y X  : font outline shadow y shift amount, applied during outlining
+//   r_font_postprocess_shadow_z X  : font outline shadow z shift amount, applied during blurring
+//description: engine support for truetype/freetype fonts
+//so .AFM+.PFB/.OTF/.TTF files could be stuffed as fontmaps in loadfont() 
+//(console command version will support them as well)
