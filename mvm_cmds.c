@@ -12,6 +12,9 @@
 char *vm_m_extensions =
 "BX_WAL_SUPPORT "
 "DP_CINEMATIC_DPV "
+"DP_GFX_FONTS "
+"DP_GFX_FONTS_FREETYPE "
+"DP_UTF8 "
 "DP_FONT_VARIABLEWIDTH "
 "DP_GECKO_SUPPORT "
 "DP_MENU_EXTRESPONSEPACKET "
@@ -1130,8 +1133,8 @@ NULL,									// #352
 NULL,									// #353
 NULL,									// #354
 VM_CL_videoplaying,						// #355
-NULL,									// #356
-NULL,									// #357
+VM_findfont,							// #356 float(string fontname) loadfont (DP_GFX_FONTS)
+VM_loadfont,							// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
 NULL,									// #358
 NULL,									// #359
 NULL,									// #360
