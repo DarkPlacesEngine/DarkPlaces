@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ft2_fontdefs.h"
 
 dp_fonts_t dp_fonts;
+static mempool_t *fonts_mempool = NULL;
 
 cvar_t r_textshadow = {CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
 cvar_t r_textbrightness = {CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
@@ -712,7 +713,7 @@ dp_font_t *FindFont(const char *title, qboolean allocate_new)
 		dp_fonts.maxsize = dp_fonts.maxsize + FONTS_EXPAND;
 		if (developer_font.integer)
 			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", i, dp_fonts.maxsize);
-		dp_fonts.f = Mem_Realloc(tempmempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+		dp_fonts.f = Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
 		// register a font in first expanded slot
 		strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
 		return &dp_fonts.f[i];
@@ -906,8 +907,9 @@ void GL_Draw_Init (void)
 	Cvar_RegisterVariable(&r_textcontrast);
 
 	// allocate fonts storage
+	fonts_mempool = Mem_AllocPool("FONTS", 0, NULL);
 	dp_fonts.maxsize = MAX_FONTS;
-	dp_fonts.f = Mem_Alloc(tempmempool, sizeof(dp_font_t) * dp_fonts.maxsize);
+	dp_fonts.f = Mem_Alloc(fonts_mempool, sizeof(dp_font_t) * dp_fonts.maxsize);
 	memset(dp_fonts.f, 0, sizeof(dp_font_t) * dp_fonts.maxsize);
 
 	// assign starting font names
