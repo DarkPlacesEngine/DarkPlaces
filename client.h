@@ -1186,6 +1186,7 @@ typedef struct client_state_s
 	float movevars_airstopaccelerate;
 	float movevars_airstrafeaccelerate;
 	float movevars_maxairstrafespeed;
+	float movevars_airstrafeaccel_qw;
 	float movevars_aircontrol;
 	float movevars_aircontrol_power;
 	float movevars_warsowbunny_airforwardaccel;

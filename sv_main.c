@@ -58,6 +58,7 @@ cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player 
 cvar_t sv_airstopaccelerate = {0, "sv_airstopaccelerate", "0", "when set, replacement for sv_airaccelerate when moving backwards"};
 cvar_t sv_airstrafeaccelerate = {0, "sv_airstrafeaccelerate", "0", "when set, replacement for sv_airaccelerate when just strafing"};
 cvar_t sv_maxairstrafespeed = {0, "sv_maxairstrafespeed", "0", "when set, replacement for sv_maxairspeed when just strafing"};
+cvar_t sv_airstrafeaccel_qw = {0, "sv_airstrafeaccel_qw", "0", "when set, replacement for sv_airaccel_qw when just strafing"};
 cvar_t sv_aircontrol = {0, "sv_aircontrol", "0", "CPMA-style air control"};
 cvar_t sv_aircontrol_power = {0, "sv_aircontrol_power", "2", "CPMA-style air control exponent"};
 cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
@@ -379,6 +380,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_airstopaccelerate);
 	Cvar_RegisterVariable (&sv_airstrafeaccelerate);
 	Cvar_RegisterVariable (&sv_maxairstrafespeed);
+	Cvar_RegisterVariable (&sv_airstrafeaccel_qw);
 	Cvar_RegisterVariable (&sv_aircontrol);
 	Cvar_RegisterVariable (&sv_aircontrol_power);
 	Cvar_RegisterVariable (&sv_allowdownloads);
@@ -1966,6 +1968,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	statsf[STAT_MOVEVARS_AIRSTOPACCELERATE] = sv_airstopaccelerate.value;
 	statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE] = sv_airstrafeaccelerate.value;
 	statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED] = sv_maxairstrafespeed.value;
+	statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW] = sv_airstrafeaccel_qw.value;
 	statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
 	statsf[STAT_MOVEVARS_AIRCONTROL_POWER] = sv_aircontrol_power.value;
 	statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL] = sv_warsowbunny_airforwardaccel.value;
