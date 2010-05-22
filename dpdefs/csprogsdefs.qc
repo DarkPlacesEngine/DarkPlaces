@@ -801,13 +801,16 @@ float FONT_USER6 = 14;     // 'user6', userdefined fonts
 float FONT_USER7 = 15;     // 'user7' slot, userdefined fonts
 //builtin definitions:
 float findfont(string s) = #356; // find font by fontname and return it's index
-float loadfont(string fontname, string fontmaps, string sizes, float slot) = #357; 
+float loadfont(string fontname, string fontmaps, string sizes, float slot, float fix_scale, float fix_voffset) = #357; 
 // loads font immediately so stringwidth() function can be used just after builtin call
 // returns a font slotnum (which is used to set drawfont to)
 // first 3 parms are identical to "loadfont" console command ones
 // slot could be one of FONT_ constants or result of findfont() or -1 to not use it
 // if slot is given, font will be loaded to this slotnum and fontname become new title for it
 // this way you can rename user* fonts to something more usable
+// fix_* parms let you fix badly made fonts by applying some transformations to them
+// fix_scale : per-character center-oriented scale (doesn't change line height at all)
+// fix_voffset : vertical offset for each character, it's a multiplier to character height
 float stringwidth(string text, float allowColorCodes, vector size) = #327; // get a width of string with given font and char size
 float stringwidth_menu(string text, float allowColorCodes, vector size) = #468; // in menu.dat it has different builtin #
 //description: engine support for custom fonts in console, hud, qc etc.
