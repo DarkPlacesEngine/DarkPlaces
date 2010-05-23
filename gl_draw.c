@@ -870,7 +870,7 @@ static void gl_draw_start(void)
 	// load default font textures
 	for(i = 0; i < dp_fonts.maxsize; ++i)
 		if (dp_fonts.f[i].title[0])
-			LoadFont(false, va("gfx/font_%s", &dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
+			LoadFont(false, va("gfx/font_%s", dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
 
 	// draw the loading screen so people have something to see in the newly opened window
 	SCR_UpdateLoadingScreen(true);
