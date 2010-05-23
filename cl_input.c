@@ -1399,29 +1399,6 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 					(((strafity > 0.5 ? cl.movevars_airstrafeaccel_qw : cl.movevars_airaccel_qw) >= 0) ? +1 : -1)
 					*
 					(1 - CL_GeomLerp(1 - fabs(cl.movevars_airaccel_qw), strafity, 1 - fabs(cl.movevars_airstrafeaccel_qw)));
-
-			if(s->cmd.forwardmove == 0 && s->cmd.sidemove != 0)
-			{
-				if(cl.movevars_maxairstrafespeed)
-				{
-					if(wishspeed > cl.movevars_maxairstrafespeed)
-						wishspeed = cl.movevars_maxairstrafespeed;
-					if(cl.movevars_maxairstrafespeed < cl.movevars_maxairspeed)
-						accelqw = 1;
-						// otherwise, CPMA-style air acceleration misbehaves a lot
-						// if partially non-QW acceleration is used (as in, strafing
-						// would get faster than moving forward straight)
-				}
-				if(cl.movevars_airstrafeaccelerate)
-				{
-					accel = cl.movevars_airstrafeaccelerate;
-					if(cl.movevars_airstrafeaccelerate > cl.movevars_airaccelerate)
-						accelqw = 1;
-						// otherwise, CPMA-style air acceleration misbehaves a lot
-						// if partially non-QW acceleration is used (as in, strafing
-						// would get faster than moving forward straight)
-				}
-			}
 			// !CPM
 
 			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
