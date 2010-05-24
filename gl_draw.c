@@ -552,8 +552,9 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 	if(override || !fnt->texpath[0])
 	{
 		strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
-
-		// load the cvars when the font is FIRST loaded
+		// load the cvars when the font is FIRST loader
+		fnt->settings.scale = scale;
+		fnt->settings.voffset = voffset;
 		fnt->settings.antialias = r_font_antialias.integer;
 		fnt->settings.hinting = r_font_hinting.integer;
 		fnt->settings.outline = r_font_postprocess_outline.value;
@@ -658,7 +659,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 					{
 						if(!COM_ParseToken_Simple(&p, false, false))
 							return;
-						scale = atof(com_token);
+						fnt->settings.scale = atof(com_token);
 					}
 					else
 					{
@@ -679,9 +680,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 	fnt->maxwidth = maxwidth;
 
 	// fix up maxwidth for overlap
-	fnt->maxwidth *= scale;
-	fnt->scale = scale;
-	fnt->voffset = voffset;
+	fnt->maxwidth *= fnt->settings.scale;
 
 	if(fnt == FONT_CONSOLE)
 		con_linewidth = -1; // rewrap console in next frame
@@ -750,9 +749,9 @@ static float snap_to_pixel_y(float y, float roundUpAt)
 static void LoadFont_f(void)
 {
 	dp_font_t *f;
-	int i;
+	int i, sizes;
 	const char *filelist, *c, *cm;
-	float sz;
+	float sz, scale, voffset;
 	char mainfont[MAX_QPATH];
 
 	if(Cmd_Argc() < 2)
@@ -760,7 +759,7 @@ static void LoadFont_f(void)
 		Con_Printf("Available font commands:\n");
 		for(i = 0; i < dp_fonts.maxsize; ++i)
 			if (dp_fonts.f[i].title[0])
-				Con_Printf("  loadfont %s gfx/tgafile[...] [sizes...]\n", dp_fonts.f[i].title);
+				Con_Printf("  loadfont %s gfx/tgafile[...] [custom switches] [sizes...]\n", dp_fonts.f[i].title);
 		Con_Printf("A font can simply be gfx/tgafile, or alternatively you\n"
 			   "can specify multiple fonts and faces\n"
 			   "Like this: gfx/vera-sans:2,gfx/fallback:1\n"
@@ -769,6 +768,9 @@ static void LoadFont_f(void)
 			   "You can also specify a list of font sizes to load, like this:\n"
 			   "loadfont console gfx/conchars,gfx/fallback 8 12 16 24 32\n"
 			   "In many cases, 8 12 16 24 32 should be a good choice.\n"
+			   "custom switches:\n"
+			   " scale x : scale all characters by this amount when rendering (doesnt change line height)\n"
+			   " voffset x : offset all chars vertical when rendering, this is multiplied to character height\n"
 			);
 		return;
 	}
@@ -839,17 +841,38 @@ static void LoadFont_f(void)
 	for(i = 1; i < MAX_FONT_SIZES; ++i)
 		f->req_sizes[i] = -1;
 
-	if(Cmd_Argc() >= 3)
+	scale = 1;
+	voffset = 0;
+	if(Cmd_Argc() >= 4)
 	{
-		for(i = 0; i < Cmd_Argc()-3; ++i)
+		for(sizes = 0, i = 3; i < Cmd_Argc(); ++i)
 		{
-			sz = atof(Cmd_Argv(i+3));
+			// special switches
+			if (!strcmp(Cmd_Argv(i), "scale"))
+			{
+				i++;
+				if (i < Cmd_Argc())
+					scale = atof(Cmd_Argv(i));
+				continue;
+			}
+			if (!strcmp(Cmd_Argv(i), "voffset"))
+			{
+				i++;
+				if (i < Cmd_Argc())
+					voffset = atof(Cmd_Argv(i));
+				continue;
+			}
+			// parse one of sizes
+			sz = atof(Cmd_Argv(i));
 			if (sz > 0.001f && sz < 1000.0f) // do not use crap sizes
-				f->req_sizes[i] = sz;
+			{
+				f->req_sizes[sizes] = sz;
+				sizes++;
+			}
 		}
 	}
 
-	LoadFont(true, mainfont, f, 1, 0);
+	LoadFont(true, mainfont, f, scale, voffset);
 }
 
 /*
@@ -1182,8 +1205,8 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 		snap = false;
 	}
 	// do this in the end
-	w *= fnt->scale;
-	h *= fnt->scale;
+	w *= fnt->settings.scale;
+	h *= fnt->settings.scale;
 
 	// find the most fitting size:
 	if (ft2 != NULL)
@@ -1378,9 +1401,9 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		snap = false;
 	}
 
-	starty -= (fnt->scale - 1) * h * 0.5 - fnt->voffset*h; // center & offset
-	w *= fnt->scale;
-	h *= fnt->scale;
+	starty -= (fnt->settings.scale - 1) * h * 0.5 - fnt->settings.voffset*h; // center & offset
+	w *= fnt->settings.scale;
+	h *= fnt->settings.scale;
 
 	if (ft2 != NULL)
 	{
