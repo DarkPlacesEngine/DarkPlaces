@@ -392,9 +392,9 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	sentinel1 = MEMHEADER_SENTINEL_FOR_ADDRESS(&mem->sentinel);
 	sentinel2 = MEMHEADER_SENTINEL_FOR_ADDRESS((unsigned char *) mem + sizeof(memheader_t) + mem->size);
 	if (mem->sentinel != sentinel1)
-		Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_Free: trashed head sentinel (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	if (memcmp((unsigned char *) mem + sizeof(memheader_t) + mem->size, &sentinel2, sizeof(sentinel2)))
-		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_Free: trashed tail sentinel (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 
 	pool = mem->pool;
 	if (developer_memory.integer)
@@ -516,9 +516,9 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
 	if (pool->sentinel1 != MEMHEADER_SENTINEL_FOR_ADDRESS(&pool->sentinel1))
-		Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
-	if (pool->sentinel2 != MEMHEADER_SENTINEL_FOR_ADDRESS(&pool->sentinel2))
 		Sys_Error("Mem_EmptyPool: trashed pool sentinel 1 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+	if (pool->sentinel2 != MEMHEADER_SENTINEL_FOR_ADDRESS(&pool->sentinel2))
+		Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
 
 	// free memory owned by the pool
 	while (pool->chain)
@@ -544,9 +544,9 @@ void _Mem_CheckSentinels(void *data, const char *filename, int fileline)
 	sentinel1 = MEMHEADER_SENTINEL_FOR_ADDRESS(&mem->sentinel);
 	sentinel2 = MEMHEADER_SENTINEL_FOR_ADDRESS((unsigned char *) mem + sizeof(memheader_t) + mem->size);
 	if (mem->sentinel != sentinel1)
-		Sys_Error("Mem_Free: trashed header sentinel 1 (alloc at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_Free: trashed head sentinel (alloc at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	if (memcmp((unsigned char *) mem + sizeof(memheader_t) + mem->size, &sentinel2, sizeof(sentinel2)))
-		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
+		Sys_Error("Mem_Free: trashed tail sentinel (alloc at %s:%i, sentinel check at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 }
 
 #if MEMCLUMPING
