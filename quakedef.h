@@ -182,7 +182,7 @@ extern char engineversion[128];
 #define	MAX_DECALS_INITIAL		8192 ///< initial allocation for cl.decals
 #define	MAX_DECALS				1048576 ///< upper limit on cl.decals size
 #define	MAX_ENITIES_INITIAL		256 ///< initial size of cl.entities
-#define	MAX_STATICENTITIES		256 ///< limit on size of cl.static_entities
+#define	MAX_STATICENTITIES		1024 ///< limit on size of cl.static_entities
 #define	MAX_EFFECTS				256 ///< limit on size of cl.effects
 #define	MAX_BEAMS				256 ///< limit on size of cl.beams
 #define	MAX_TEMPENTITIES		4096 ///< max number of temporary models visible per frame (certain sprite effects, certain types of CSQC entities also use this)
