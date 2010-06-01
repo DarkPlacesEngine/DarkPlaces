@@ -3075,7 +3075,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	unsigned char *data;
 	const char *text;
-	unsigned char *pbase;
+	unsigned char *pbase, *pend;
 	iqmheader_t *header;
 	skinfile_t *skinfiles;
 	int i, j, k, meshvertices, meshtriangles;
@@ -3094,6 +3094,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
 
 	pbase = (unsigned char *)buffer;
+	pend = (unsigned char *)bufferend;
 	header = (iqmheader_t *)buffer;
 	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
@@ -3144,14 +3145,39 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
+	if (pbase + header->ofs_text + header->num_text > pend ||
+		pbase + header->ofs_meshes + header->num_meshes*sizeof(iqmmesh_t) > pend ||
+		pbase + header->ofs_vertexarrays + header->num_vertexarrays*sizeof(iqmvertexarray_t) > pend ||
+		pbase + header->ofs_triangles + header->num_triangles*sizeof(int[3]) > pend ||
+		(header->ofs_neighbors && pbase + header->ofs_neighbors + header->num_triangles*sizeof(int[3]) > pend) ||
+		pbase + header->ofs_joints + header->num_joints*sizeof(iqmjoint_t) > pend ||
+		pbase + header->ofs_poses + header->num_poses*sizeof(iqmpose_t) > pend ||
+		pbase + header->ofs_anims + header->num_anims*sizeof(iqmanim_t) > pend ||
+		pbase + header->ofs_frames + header->num_frames*header->num_framechannels*sizeof(unsigned short) > pend ||
+		pbase + header->ofs_comment + header->num_comment > pend)
+	{
+		Con_Printf("%s has invalid size or offset information\n", loadmodel->name);
+		return;
+	}
+
 	va = (iqmvertexarray_t *)(pbase + header->ofs_vertexarrays);
 	for (i = 0;i < (int)header->num_vertexarrays;i++)
 	{
+		size_t vsize;
 		va[i].type = LittleLong(va[i].type);
 		va[i].flags = LittleLong(va[i].flags);
 		va[i].format = LittleLong(va[i].format);
 		va[i].size = LittleLong(va[i].size);
 		va[i].offset = LittleLong(va[i].offset);
+		vsize = header->num_vertexes*va[i].size;
+		switch (va[i].format)
+		{ 
+		case IQM_FLOAT: vsize *= sizeof(float); break;
+		case IQM_UBYTE: vsize *= sizeof(unsigned char); break;
+		default: continue;
+		}
+		if (pbase + va[i].offset + vsize > pend)
+		  continue;
 		switch (va[i].type)
 		{
 		case IQM_POSITION:
