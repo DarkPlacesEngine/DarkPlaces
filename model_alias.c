@@ -3129,6 +3129,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header->num_frames = LittleLong(header->num_frames);
 	header->num_framechannels = LittleLong(header->num_framechannels);
 	header->ofs_frames = LittleLong(header->ofs_frames);
+	header->ofs_bounds = LittleLong(header->ofs_bounds);
 	header->num_comment = LittleLong(header->num_comment);
 	header->ofs_comment = LittleLong(header->ofs_comment);
 	header->num_extensions = LittleLong(header->num_extensions);
@@ -3154,6 +3155,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		pbase + header->ofs_poses + header->num_poses*sizeof(iqmpose_t) > pend ||
 		pbase + header->ofs_anims + header->num_anims*sizeof(iqmanim_t) > pend ||
 		pbase + header->ofs_frames + header->num_frames*header->num_framechannels*sizeof(unsigned short) > pend ||
+		(header->ofs_bounds && pbase + header->ofs_bounds + header->num_frames*sizeof(iqmbounds_t) > pend) ||
 		pbase + header->ofs_comment + header->num_comment > pend)
 	{
 		Con_Printf("%s has invalid size or offset information\n", loadmodel->name);
