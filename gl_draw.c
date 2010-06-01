@@ -563,6 +563,9 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 		fnt->settings.shadowy = r_font_postprocess_shadow_y.value;
 		fnt->settings.shadowz = r_font_postprocess_shadow_z.value;
 	}
+	// fix bad scale
+	if (fnt->settings.scale <= 0)
+		fnt->settings.scale = 1;
 
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
