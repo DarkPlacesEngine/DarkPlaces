@@ -1151,7 +1151,15 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	s->velocity[2] = zspeed;
 }
 
-void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t sidefric)
+float CL_ClientMovement_Physics_AdjustAirAccelQW(float accelqw, float factor)
+{
+	return
+		(accelqw < 0 ? -1 : +1)
+		*
+		bound(0.000001, 1 - (1 - fabs(accelqw)) * factor, 1);
+}
+
+void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t sidefric, vec_t speedlimit)
 {
 	vec_t vel_straight;
 	vec_t vel_z;
@@ -1177,6 +1185,8 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	step = accel * s->cmd.frametime * wishspeed0;
 
 	vel_xy_current  = VectorLength(vel_xy);
+	if(speedlimit > 0)
+		accelqw = CL_ClientMovement_Physics_AdjustAirAccelQW(accelqw, (speedlimit - bound(wishspeed, vel_xy_current, speedlimit)) / max(1, speedlimit - wishspeed));
 	vel_xy_forward  = vel_xy_current + bound(0, wishspeed - vel_xy_current, step) * accelqw + step * (1 - accelqw);
 	vel_xy_backward = vel_xy_current - bound(0, wishspeed + vel_xy_current, step) * accelqw - step * (1 - accelqw);
 	if(vel_xy_backward < 0)
@@ -1404,7 +1414,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
 				CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
 			else
-				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, wishspeed0, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed);
+				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, wishspeed0, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed, cl.movevars_airspeedlimit_nonqw);
 
 			if(cl.movevars_aircontrol)
 				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
@@ -1473,6 +1483,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_warsowbunny_topspeed = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED];
 		cl.movevars_warsowbunny_turnaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL];
 		cl.movevars_warsowbunny_backtosideratio = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO];
+		cl.movevars_airspeedlimit_nonqw = cl.statsf[STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW];
 	}
 	else
 	{
@@ -1507,6 +1518,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_warsowbunny_topspeed = 0;
 		cl.movevars_warsowbunny_turnaccel = 0;
 		cl.movevars_warsowbunny_backtosideratio = 0;
+		cl.movevars_airspeedlimit_nonqw = 0;
 	}
 
 	if(!(cl.moveflags & MOVEFLAG_VALID))
