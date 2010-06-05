@@ -2318,6 +2318,20 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	// later idea: include a list of authorized .po file checksums with the csprogs
 	{
 		qboolean deftrans = !!strcmp(PRVM_NAME, "client");
+		if(deftrans) // once we have dotranslate_ strings, ALWAYS use the opt-in method!
+		{
+			for (i=0 ; i<prog->progs->numglobaldefs ; i++)
+			{
+				const char *name;
+				name = PRVM_GetString(prog->globaldefs[i].s_name);
+				if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
+				if(name && !strncmp(name, "dotranslate_", 12))
+				{
+					deftrans = false;
+					break;
+				}
+			}
+		}
 		if(!strcmp(prvm_language.string, "dump"))
 		{
 			qfile_t *f = FS_OpenRealFile(va("%s.%s.po", filename, prvm_language.string), "w", false);
@@ -2328,8 +2342,8 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_", 12)))
 					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
+					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_", 12)))
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
 						const char *value = PRVM_GetString(val->string);
