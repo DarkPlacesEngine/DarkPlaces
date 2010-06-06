@@ -59,7 +59,7 @@ static unsigned int		(*qpng_get_rowbytes)		(void*, void*);
 static unsigned char	(*qpng_get_channels)		(void*, void*);
 static unsigned char	(*qpng_get_bit_depth)		(void*, void*);
 static unsigned int		(*qpng_get_IHDR)			(void*, void*, unsigned long*, unsigned long*, int *, int *, int *, int *, int *);
-static char*			(*qpng_get_libpng_ver)		(void*);
+static unsigned int			(*qpng_access_version_number)		(void); // FIXME is this return type right? It is a png_uint_32 in libpng
 static void				(*qpng_write_info)			(void*, void*);
 static void				(*qpng_write_row)			(void*, unsigned char*);
 static void				(*qpng_write_end)			(void*, void*);
@@ -95,7 +95,7 @@ static dllfunction_t pngfuncs[] =
 	{"png_get_channels",		(void **) &qpng_get_channels},
 	{"png_get_bit_depth",		(void **) &qpng_get_bit_depth},
 	{"png_get_IHDR",			(void **) &qpng_get_IHDR},
-	{"png_get_libpng_ver",		(void **) &qpng_get_libpng_ver},
+	{"png_access_version_number",		(void **) &qpng_access_version_number},
 	{"png_write_info",			(void **) &qpng_write_info},
 	{"png_write_row",			(void **) &qpng_write_row},
 	{"png_write_end",			(void **) &qpng_write_end},
@@ -126,10 +126,13 @@ qboolean PNG_OpenLibrary (void)
 	const char* dllnames [] =
 	{
 #if WIN32
+		"libpng14.dll",
 		"libpng12.dll",
 #elif defined(MACOSX)
+		"libpng14.0.dylib",
 		"libpng12.0.dylib",
 #else
+		"libpng14.so.0",
 		"libpng12.so.0",
 		"libpng.so", // FreeBSD
 #endif
@@ -165,7 +168,8 @@ void PNG_CloseLibrary (void)
 =================================================================
 */
 
-#define PNG_LIBPNG_VER_STRING "1.2.4"
+#define PNG_LIBPNG_VER_STRING_12 "1.2.4"
+#define PNG_LIBPNG_VER_STRING_14 "1.4.1"
 
 #define PNG_COLOR_MASK_PALETTE    1
 #define PNG_COLOR_MASK_COLOR      2
@@ -267,7 +271,10 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 
 	if(qpng_sig_cmp(raw, 0, filesize))
 		return NULL;
-	png = (void *)qpng_create_read_struct(PNG_LIBPNG_VER_STRING, 0, PNG_error_fn, PNG_warning_fn);
+	png = (void *)qpng_create_read_struct(
+		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 : PNG_LIBPNG_VER_STRING_14, // nasty hack to support both libpng12 and libpng14
+		0, PNG_error_fn, PNG_warning_fn
+	);
 	if(!png)
 		return NULL;
 
@@ -451,7 +458,10 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 		return false;
 	}
 
-	png = (void *)qpng_create_write_struct(PNG_LIBPNG_VER_STRING, 0, PNG_error_fn, PNG_warning_fn);
+	png = (void *)qpng_create_write_struct( 
+		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 : PNG_LIBPNG_VER_STRING_14, // nasty hack to support both libpng12 and libpng14
+		0, PNG_error_fn, PNG_warning_fn
+	);
 	if(!png)
 		return false;
 	pnginfo = (void *)qpng_create_info_struct(png);
