@@ -132,7 +132,7 @@ qboolean PNG_OpenLibrary (void)
 		"libpng14.0.dylib",
 		"libpng12.0.dylib",
 #else
-		"libpng14.so.0",
+		"libpng14.so.14", // WTF libtool guidelines anyone?
 		"libpng12.so.0",
 		"libpng.so", // FreeBSD
 #endif
