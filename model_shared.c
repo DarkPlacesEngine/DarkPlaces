@@ -1553,6 +1553,9 @@ void Mod_LoadQ3Shaders(void)
 	q3shaderinfo_layer_t *layer;
 	int numparameters;
 	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
+	char *custsurfaceparmnames[256]; // VorteX: q3map2 has 64 but well, someone will need more
+	unsigned long custsurfaceparms[256]; 
+	int numcustsurfaceparms;
 
 	Mod_FreeQ3Shaders();
 
@@ -1564,6 +1567,49 @@ void Mod_LoadQ3Shaders(void)
 	Mem_ExpandableArray_NewArray (&q3shader_data->char_ptrs,
 		q3shaders_mem, sizeof (char**), 256);
 
+	// parse custinfoparms.txt
+	numcustsurfaceparms = 0;
+	if (text = f = (char *)FS_LoadFile("scripts/custinfoparms.txt", tempmempool, false, NULL))
+	{
+		if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
+			Con_DPrintf("scripts/custinfoparms.txt: contentflags section parsing error - expected \"{\", found \"%s\"\n", com_token);
+		else
+		{
+			while (COM_ParseToken_QuakeC(&text, false))
+				if (!strcasecmp(com_token, "}"))
+					break;
+			// custom surfaceflags section
+			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
+				Con_DPrintf("scripts/custinfoparms.txt: surfaceflags section parsing error - expected \"{\", found \"%s\"\n", com_token);
+			else
+			{
+				while(COM_ParseToken_QuakeC(&text, false))
+				{
+					if (!strcasecmp(com_token, "}"))
+						break;	
+					// register surfaceflag
+					if (numcustsurfaceparms >= 256)
+					{
+						Con_Printf("scripts/custinfoparms.txt: surfaceflags section parsing error - max 256 surfaceflags exceeded\n");
+						break;
+					}
+					// name
+					j = strlen(com_token)+1;
+					custsurfaceparmnames[numcustsurfaceparms] = (char *)Mem_Alloc(tempmempool, j);
+					strlcpy(custsurfaceparmnames[numcustsurfaceparms], com_token, j+1);
+					// value
+					if (COM_ParseToken_QuakeC(&text, false))
+						custsurfaceparms[numcustsurfaceparms] = strtol(com_token, NULL, 0);
+					else
+						custsurfaceparms[numcustsurfaceparms] = 0;
+					numcustsurfaceparms++;
+				}
+			}
+		}
+		Mem_Free(f);
+	}
+
+	// parse shaders
 	search = FS_Search("scripts/*.shader", true, false);
 	if (!search)
 		return;
@@ -1939,7 +1985,20 @@ void Mod_LoadQ3Shaders(void)
 					else if (!strcasecmp(parameter[1], "antiportal"))
 						shader.surfaceparms |= Q3SURFACEPARM_ANTIPORTAL;
 					else
-						Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
+					{
+						// try custom surfaceparms
+						for (j = 0; j < numcustsurfaceparms; j++)
+						{
+							if (!strcasecmp(custsurfaceparmnames[j], parameter[1]))
+							{
+								shader.surfaceparms |= custsurfaceparms[j];
+								break;
+							}
+						}
+						// failed all
+						if (j == numcustsurfaceparms)
+							Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
+					}
 				}
 				else if (!strcasecmp(parameter[0], "dpshadow"))
 					shader.dpshadow = true;
@@ -2093,6 +2152,9 @@ void Mod_LoadQ3Shaders(void)
 		Mem_Free(f);
 	}
 	FS_FreeSearch(search);
+	// free custinfoparm values
+	for (j = 0; j < numcustsurfaceparms; j++)
+		Mem_Free(custsurfaceparmnames[j]);
 }
 
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
