@@ -39,7 +39,6 @@ static void				(*qpng_read_info)			(void*, void*);
 static void				(*qpng_set_compression_level)	(void*, int);
 static void				(*qpng_set_filter)			(void*, int, int);
 static void				(*qpng_set_expand)			(void*);
-static void				(*qpng_set_gray_1_2_4_to_8)	(void*);
 static void				(*qpng_set_palette_to_rgb)	(void*);
 static void				(*qpng_set_tRNS_to_alpha)	(void*);
 static void				(*qpng_set_gray_to_rgb)		(void*);
@@ -76,7 +75,6 @@ static dllfunction_t pngfuncs[] =
 	{"png_set_compression_level",	(void **) &qpng_set_compression_level},
 	{"png_set_filter",			(void **) &qpng_set_filter},
 	{"png_set_expand",			(void **) &qpng_set_expand},
-	{"png_set_gray_1_2_4_to_8",	(void **) &qpng_set_gray_1_2_4_to_8},
 	{"png_set_palette_to_rgb",	(void **) &qpng_set_palette_to_rgb},
 	{"png_set_tRNS_to_alpha",	(void **) &qpng_set_tRNS_to_alpha},
 	{"png_set_gray_to_rgb",		(void **) &qpng_set_gray_to_rgb},
@@ -339,12 +337,7 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
 	if (my_png.ColorType == PNG_COLOR_TYPE_PALETTE)
 		qpng_set_palette_to_rgb(png);
 	if (my_png.ColorType == PNG_COLOR_TYPE_GRAY || my_png.ColorType == PNG_COLOR_TYPE_GRAY_ALPHA)
-	{
 		qpng_set_gray_to_rgb(png);
-		if (my_png.BitDepth < 8)
-			qpng_set_gray_1_2_4_to_8(png);
-	}
-
 	if (qpng_get_valid(png, pnginfo, PNG_INFO_tRNS))
 		qpng_set_tRNS_to_alpha(png);
 	if (my_png.BitDepth == 8 && !(my_png.ColorType  & PNG_COLOR_MASK_ALPHA))
