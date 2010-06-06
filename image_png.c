@@ -169,7 +169,7 @@ void PNG_CloseLibrary (void)
 */
 
 #define PNG_LIBPNG_VER_STRING_12 "1.2.4"
-#define PNG_LIBPNG_VER_STRING_14 "1.4.1"
+#define PNG_LIBPNG_VER_STRING_14 "1.4.0"
 
 #define PNG_COLOR_MASK_PALETTE    1
 #define PNG_COLOR_MASK_COLOR      2
