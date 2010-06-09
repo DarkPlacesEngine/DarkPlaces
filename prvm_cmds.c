@@ -5956,7 +5956,7 @@ void VM_sprintf(void)
 	int width, precision, thisarg, flags;
 	char formatbuf[16];
 	char *f;
-	qboolean isfloat;
+	int isfloat;
 	static int dummyivec[3] = {0, 0, 0};
 	static float dummyvec[3] = {0, 0, 0};
 
@@ -5996,6 +5996,7 @@ void VM_sprintf(void)
 				precision = -1;
 				thisarg = -1;
 				flags = 0;
+				isfloat = -1;
 
 				// is number following?
 				if(*s >= '0' && *s <= '9')
@@ -6118,14 +6119,13 @@ noflags:
 					}
 				}
 
-				isfloat = true;
 				for(;;)
 				{
 					switch(*s)
 					{
-						case 'h': isfloat = true; break;
-						case 'l': isfloat = false; break;
-						case 'L': isfloat = false; break;
+						case 'h': isfloat = 1; break;
+						case 'l': isfloat = 0; break;
+						case 'L': isfloat = 0; break;
 						case 'j': break;
 						case 'z': break;
 						case 't': break;
@@ -6135,6 +6135,15 @@ noflags:
 					++s;
 				}
 nolength:
+
+				// now s points to the final directive char and is no longer changed
+				if(isfloat < 0)
+				{
+					if(*s == 'i')
+						isfloat = 0;
+					else
+						isfloat = 1;
+				}
 
 				if(thisarg < 0)
 					thisarg = argpos++;
