@@ -129,7 +129,7 @@ qboolean PNG_OpenLibrary (void)
 		"libpng14.dll",
 		"libpng12.dll",
 #elif defined(MACOSX)
-		"libpng14.0.dylib",
+		"libpng14.14.dylib",
 		"libpng12.0.dylib",
 #else
 		"libpng14.so.14", // WTF libtool guidelines anyone?
