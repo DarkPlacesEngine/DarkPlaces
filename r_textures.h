@@ -24,6 +24,10 @@
 #define TEXF_LOWPRECISION 0x00001000
 // indicates texture should support R_UpdateTexture, actual uploads may be delayed until R_Mesh_TexBind if gl_nopartialtextureupdates is on
 #define TEXF_ALLOWUPDATES 0x00002000
+// indicates texture should be affected by gl_picmip_world and r_picmipworld (maybe others in the future) instead of gl_picmip_other
+#define TEXF_ISWORLD 0x00004000
+// indicates texture should be affected by gl_picmip_sprites and r_picmipsprites (maybe others in the future) instead of gl_picmip_other
+#define TEXF_ISSPRITE 0x00008000
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION)
 

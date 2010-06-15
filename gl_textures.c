@@ -8,6 +8,11 @@
 cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
 cvar_t gl_max_lightmapsize = {CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
 cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
+cvar_t gl_picmip_world = {CVAR_SAVE, "gl_picmip_world", "0", "extra picmip level for world textures (may be negative, which will then reduce gl_picmip for these)"};
+cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too (setting this to 0 is a shorthand for gl_picmip_world -9999999)"};
+cvar_t gl_picmip_sprites = {CVAR_SAVE, "gl_picmip_sprites", "0", "extra picmip level for sprite textures (may be negative, which will then reduce gl_picmip for these)"};
+cvar_t r_picmipsprites = {CVAR_SAVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games) (setting this to 0 is a shorthand for gl_picmip_sprites -9999999)"};
+cvar_t gl_picmip_other = {CVAR_SAVE, "gl_picmip_other", "0", "extra picmip level for other textures (may be negative, which will then reduce gl_picmip for these)"};
 cvar_t r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
 cvar_t gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1", "anisotropic filtering quality (if supported by hardware), 1 sample (no anisotropy) and 8 sample (8 tap anisotropy) are recommended values"};
 cvar_t gl_texturecompression = {CVAR_SAVE, "gl_texturecompression", "0", "whether to compress textures, a value of 0 disables compression (even if the individual cvars are 1), 1 enables fast (low quality) compression at startup, 2 enables slow (high quality) compression at startup"};
@@ -392,6 +397,16 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 		{
 			maxsize = bound(1, gl_max_size.integer, maxsize);
 			picmip = gl_picmip.integer;
+			if (flags & TEXF_ISWORLD)
+			{
+				if (r_picmipworld.integer)
+					picmip += gl_picmip_world.integer;
+				else
+					picmip = 0;
+			}
+			else
+				picmip += gl_picmip_other.integer;
+			picmip = bound(0, picmip, 31); // can't do more than 31 or >> operator gets funny
 		}
 		break;
 	case GLTEXTURETYPE_3D:
@@ -562,6 +577,11 @@ void R_Textures_Init (void)
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
+	Cvar_RegisterVariable (&gl_picmip_world);
+	Cvar_RegisterVariable (&r_picmipworld);
+	Cvar_RegisterVariable (&gl_picmip_sprites);
+	Cvar_RegisterVariable (&r_picmipsprites);
+	Cvar_RegisterVariable (&gl_picmip_other);
 	Cvar_RegisterVariable (&gl_max_lightmapsize);
 	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&gl_texture_anisotropy);

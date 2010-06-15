@@ -1540,7 +1540,6 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
 }
 
-extern cvar_t r_picmipworld;
 extern cvar_t mod_q3shader_default_offsetmapping;
 void Mod_LoadQ3Shaders(void)
 {
