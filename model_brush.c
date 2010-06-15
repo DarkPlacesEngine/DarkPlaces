@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
-cvar_t r_picmipworld = {CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
 cvar_t r_subdivisions_mintess = {0, "r_subdivisions_mintess", "0", "minimum number of subdivisions (values above 0 will smooth curves that don't need it)"};
@@ -62,7 +61,6 @@ void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
 	Cvar_RegisterVariable(&r_novis);
-	Cvar_RegisterVariable(&r_picmipworld);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
 	Cvar_RegisterVariable(&r_subdivisions_mintess);
@@ -1591,9 +1589,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
+				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
-					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS, false);
+					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
 				{
 					// did not find external texture, load it from the bsp or wad3
@@ -1610,13 +1608,13 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), pixels, image_width, image_height);
+							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
 					}
 					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0), false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
 				// if skinframe is still NULL the "missing" texture will be used
 				if (skinframe)
@@ -4283,7 +4281,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		strlcpy (out[i].name, in[i].name, sizeof (out[i].name));
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
-		Mod_LoadTextureFromQ3Shader(out + i, out[i].name, true, true, TEXF_MIPMAP | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(out + i, out[i].name, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
 		// restore the surfaceflags and supercontents
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
@@ -8163,7 +8161,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_textures = numtextures;
 	loadmodel->data_textures = Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 	for (i = 0;i < numtextures;i++)
-		Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, texturenames[i], true, true, TEXF_MIPMAP | TEXF_ALPHA | (r_picmipworld.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, texturenames[i], true, true, TEXF_MIPMAP | TEXF_ALPHA | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
 
 	// free the texturenames array since we are now done with it
 	for (i = 0;i < numtextures;i++)

@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 
 cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1", "mipmaps sprites so they render faster in the distance and do not display noise artifacts"};
-cvar_t r_picmipsprites = {CVAR_SAVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games)"};
 cvar_t r_labelsprites_scale = {CVAR_SAVE, "r_labelsprites_scale", "1", "global scale to apply to label sprites before conversion to HUD coordinates"};
 cvar_t r_labelsprites_roundtopixels = {CVAR_SAVE, "r_labelsprites_roundtopixels", "1", "try to make label sprites sharper by rounding their size to 0.5x or 1x and by rounding their position to whole pixels if possible"};
 
@@ -38,7 +37,6 @@ Mod_SpriteInit
 void Mod_SpriteInit (void)
 {
 	Cvar_RegisterVariable(&r_mipsprites);
-	Cvar_RegisterVariable(&r_picmipsprites);
 	Cvar_RegisterVariable(&r_labelsprites_scale);
 	Cvar_RegisterVariable(&r_labelsprites_roundtopixels);
 }
@@ -79,7 +77,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
-	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_ALPHA | TEXF_CLAMP;
+	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_ALPHA | TEXF_CLAMP;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
@@ -361,7 +359,7 @@ void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	const dsprite2_t *pinqsprite;
 	skinframe_t *skinframe;
 	float modelradius;
-	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (r_picmipsprites.integer ? TEXF_PICMIP : 0) | TEXF_COMPRESS | TEXF_ALPHA | TEXF_CLAMP;
+	int texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_COMPRESS | TEXF_ALPHA | TEXF_CLAMP;
 
 	loadmodel->modeldatatypestring = "SPR2";
 
