@@ -9156,12 +9156,22 @@ static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1,
 	layer->color[3] = a;
 }
 
+static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
+{
+	if(parms[0] == 0 && parms[1] == 0)
+		return false;
+	if(func >> Q3WAVEFUNC_USER_SHIFT) // assumes rsurface to be set!
+		if(rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT)] == 0);
+			return false;
+	return true;
+}
+
 static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	double index, f;
 	index = parms[2] + r_refdef.scene.time * parms[3];
 	index -= floor(index);
-	switch (func)
+	switch (func & ((1 << Q3WAVEFUNC_USER_SHIFT) - 1))
 	{
 	default:
 	case Q3WAVEFUNC_NONE:
@@ -9186,7 +9196,10 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 			f = -(1 - f);
 		break;
 	}
-	return (float)(parms[0] + parms[1] * f);
+	f = parms[0] + parms[1] * f;
+	if(func >> Q3WAVEFUNC_USER_SHIFT) // assumes rsurface to be set!
+		f *= rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT)];
+	return (float) f;
 }
 
 void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
@@ -9596,6 +9609,7 @@ void RSurf_ActiveWorldEntity(void)
 	//	return;
 	rsurface.entity = r_refdef.scene.worldentity;
 	rsurface.skeleton = NULL;
+	memset(rsurface.userwavefunc_param, 0, sizeof(rsurface.userwavefunc_param));
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
 	rsurface.ent_shadertime = 0;
@@ -9678,6 +9692,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	//	return;
 	rsurface.entity = (entity_render_t *)ent;
 	rsurface.skeleton = ent->skeleton;
+	memcpy(rsurface.userwavefunc_param, ent->userwavefunc_param, sizeof(rsurface.userwavefunc_param));
 	rsurface.ent_skinnum = ent->skinnum;
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
 	rsurface.ent_shadertime = ent->shadertime;
@@ -10226,6 +10241,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			waveparms[1] = deform->waveparms[1];
 			waveparms[2] = deform->waveparms[2];
 			waveparms[3] = deform->waveparms[3];
+			if(!R_TestQ3WaveFunc(deform->wavefunc, waveparms))
+				break; // if wavefunc is a nop, don't make a dynamic vertex array
 			// this is how a divisor of vertex influence on deformation
 			animpos = deform->parms[0] ? 1.0f / deform->parms[0] : 100.0f;
 			scale = R_EvaluateQ3WaveFunc(deform->wavefunc, waveparms);
@@ -10266,6 +10283,8 @@ void RSurf_PrepareVerticesForBatch(qboolean generatenormals, qboolean generateta
 			break;
 		case Q3DEFORM_MOVE:
 			// deform vertex array
+			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
+				break; // if wavefunc is a nop, don't make a dynamic vertex array
 			scale = R_EvaluateQ3WaveFunc(deform->wavefunc, deform->waveparms);
 			VectorScale(deform->parms, scale, waveparms);
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)

@@ -378,6 +378,9 @@ typedef struct rsurfacestate_s
 	// this transforms only the Z to S, and T is always 0.5
 	matrix4x4_t entitytoattenuationz;
 
+	// user wavefunc parameters (from csqc)
+	float userwavefunc_param[Q3WAVEFUNC_USER_COUNT];
+
 	// pointer to an entity_render_t used only by R_GetCurrentTexture and
 	// RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity as a unique id within
 	// each frame (see r_frame also)

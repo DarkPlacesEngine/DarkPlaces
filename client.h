@@ -382,6 +382,9 @@ typedef struct entity_render_s
 	// FIELDS UPDATED BY RENDERER:
 	// last time visible during trace culling
 	double last_trace_visibility;
+
+	// user wavefunc parameters (from csqc)
+	float userwavefunc_param[Q3WAVEFUNC_USER_COUNT];
 }
 entity_render_t;
 
