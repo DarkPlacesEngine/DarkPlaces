@@ -269,6 +269,11 @@ typedef struct prvm_prog_fieldoffsets_s
 	int movedir; // ssqc / csqc (physics)
 
 	int camera_transform; // csqc (warpzones)
+
+	int userwavefunc_param0; // csqc (userwavefunc)
+	int userwavefunc_param1; // csqc (userwavefunc)
+	int userwavefunc_param2; // csqc (userwavefunc)
+	int userwavefunc_param3; // csqc (userwavefunc)
 }
 prvm_prog_fieldoffsets_t;
 

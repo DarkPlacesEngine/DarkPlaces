@@ -1532,16 +1532,26 @@ void Mod_Terrain_UpdateSurfacesForViewOrigin(dp_model_t *model)
 }
 #endif
 
-q3wavefunc_t Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
+int Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
 {
-	if (!strcasecmp(s, "sin"))             return Q3WAVEFUNC_SIN;
-	if (!strcasecmp(s, "square"))          return Q3WAVEFUNC_SQUARE;
-	if (!strcasecmp(s, "triangle"))        return Q3WAVEFUNC_TRIANGLE;
-	if (!strcasecmp(s, "sawtooth"))        return Q3WAVEFUNC_SAWTOOTH;
-	if (!strcasecmp(s, "inversesawtooth")) return Q3WAVEFUNC_INVERSESAWTOOTH;
-	if (!strcasecmp(s, "noise"))           return Q3WAVEFUNC_NOISE;
+	int offset = 0;
+	if (!strncasecmp(s, "user", 4)) // parse stuff like "user1sin", always user<n>func
+	{
+		offset = bound(0, s[4] - '0', 9);
+		offset = (offset + 1) << Q3WAVEFUNC_USER_SHIFT;
+		s += 4;
+		if(*s)
+			++s;
+	}
+	if (!strcasecmp(s, "sin"))             return offset | Q3WAVEFUNC_SIN;
+	if (!strcasecmp(s, "square"))          return offset | Q3WAVEFUNC_SQUARE;
+	if (!strcasecmp(s, "triangle"))        return offset | Q3WAVEFUNC_TRIANGLE;
+	if (!strcasecmp(s, "sawtooth"))        return offset | Q3WAVEFUNC_SAWTOOTH;
+	if (!strcasecmp(s, "inversesawtooth")) return offset | Q3WAVEFUNC_INVERSESAWTOOTH;
+	if (!strcasecmp(s, "noise"))           return offset | Q3WAVEFUNC_NOISE;
+	if (!strcasecmp(s, "none"))            return offset | Q3WAVEFUNC_NONE;
 	Con_DPrintf("Mod_LoadQ3Shaders: unknown wavefunc %s\n", s);
-	return Q3WAVEFUNC_NONE;
+	return offset | Q3WAVEFUNC_NONE;
 }
 
 void Mod_FreeQ3Shaders(void)

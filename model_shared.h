@@ -283,7 +283,10 @@ typedef enum q3wavefunc_e
 	Q3WAVEFUNC_TRIANGLE,
 	Q3WAVEFUNC_COUNT
 }
-q3wavefunc_t;
+q3wavefunc_e;
+typedef int q3wavefunc_t;
+#define Q3WAVEFUNC_USER_COUNT 4
+#define Q3WAVEFUNC_USER_SHIFT 8 // use 8 bits for wave func type
 
 typedef enum q3deform_e
 {

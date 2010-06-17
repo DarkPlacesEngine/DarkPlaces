@@ -190,6 +190,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 			return false;
 	}
 
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param0)))	entrender->userwavefunc_param[0] = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param1)))	entrender->userwavefunc_param[1] = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param2)))	entrender->userwavefunc_param[2] = val->_float;
+	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param3)))	entrender->userwavefunc_param[3] = val->_float;
+
 	entrender->model = model;
 	entrender->skinnum = (int)ed->fields.client->skin;
 	entrender->effects |= entrender->model->effects;
