@@ -38,9 +38,9 @@ SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
 SDLCONFIG_UNIXLIBS?=`$(SDL_CONFIG) --libs`
 SDLCONFIG_UNIXSTATICLIBS?=`$(SDL_CONFIG) --static-libs`
-SDLCONFIG_MACOSXCFLAGS=-I/Library/Frameworks/SDL.framework/Headers
-SDLCONFIG_MACOSXLIBS=-framework SDL -framework Cocoa $(SDLCONFIG_MACOSXCFLAGS)
-SDLCONFIG_MACOSXSTATICLIBS=-framework SDL -framework Cocoa $(SDLCONFIG_MACOSXCFLAGS)
+SDLCONFIG_MACOSXCFLAGS=-I/Library/Frameworks/SDL.framework/Headers -I$(HOME)/Library/Frameworks/SDL.framework/Headers
+SDLCONFIG_MACOSXLIBS=-F$(HOME)/Library/Frameworks/ -framework SDL -framework Cocoa $(SDLCONFIG_MACOSXCFLAGS)
+SDLCONFIG_MACOSXSTATICLIBS=-F$(HOME)/Library/Frameworks/ -framework SDL -framework Cocoa $(SDLCONFIG_MACOSXCFLAGS)
 STRIP?=strip
 
 
