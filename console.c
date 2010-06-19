@@ -47,6 +47,9 @@ cvar_t con_notifyalign = {CVAR_SAVE, "con_notifyalign", "", "how to align notify
 cvar_t con_chattime = {CVAR_SAVE, "con_chattime","30", "how long chat lines last, in seconds"};
 cvar_t con_chat = {CVAR_SAVE, "con_chat","0", "how many chat lines to show in a dedicated chat area"};
 cvar_t con_chatpos = {CVAR_SAVE, "con_chatpos","0", "where to put chat (negative: lines from bottom of screen, positive: lines below notify, 0: at top)"};
+cvar_t con_chatrect = {CVAR_SAVE, "con_chatrect","0", "use con_chatrect_x and _y to position con_notify and con_chat freely instead of con_chatpos"};
+cvar_t con_chatrect_x = {CVAR_SAVE, "con_chatrect_x","", "where to put chat, relative x coordinate of left edge on screen (use con_chatwidth for width)"};
+cvar_t con_chatrect_y = {CVAR_SAVE, "con_chatrect_y","", "where to put chat, relative y coordinate of top edge on screen (use con_chat for line count)"};
 cvar_t con_chatwidth = {CVAR_SAVE, "con_chatwidth","1.0", "relative chat window width"};
 cvar_t con_textsize = {CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};
 cvar_t con_notifysize = {CVAR_SAVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
@@ -752,6 +755,9 @@ void Con_Init (void)
 	// register our cvars
 	Cvar_RegisterVariable (&con_chat);
 	Cvar_RegisterVariable (&con_chatpos);
+	Cvar_RegisterVariable (&con_chatrect_x);
+	Cvar_RegisterVariable (&con_chatrect_y);
+	Cvar_RegisterVariable (&con_chatrect);
 	Cvar_RegisterVariable (&con_chatsize);
 	Cvar_RegisterVariable (&con_chattime);
 	Cvar_RegisterVariable (&con_chatwidth);
@@ -1485,7 +1491,7 @@ int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, floa
 	{
 		int x = (int) (ti->x + (ti->width - width) * ti->alignment);
 		if(isContinuation && *ti->continuationString)
-			x += (int) DrawQ_String(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
+			x = (int) DrawQ_String(x, ti->y, ti->continuationString, strlen(ti->continuationString), ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, ti->font);
 		if(length > 0)
 			DrawQ_String(x, ti->y, line, length, ti->fontsize, ti->fontsize, 1.0, 1.0, 1.0, 1.0, 0, &(ti->colorindex), false, ti->font);
 	}
@@ -1578,8 +1584,8 @@ Draws the last few lines of output transparently over the game top
 */
 void Con_DrawNotify (void)
 {
-	float	x, v;
-	float chatstart, notifystart, inputsize;
+	float	x, v, xr;
+	float chatstart, notifystart, inputsize, height;
 	float align;
 	char	temptext[MAX_INPUTLINE];
 	int numChatlines;
@@ -1588,6 +1594,7 @@ void Con_DrawNotify (void)
 	ConBuffer_FixTimes(&con);
 
 	numChatlines = con_chat.integer;
+
 	chatpos = con_chatpos.integer;
 
 	if (con_notify.integer < 0)
@@ -1605,7 +1612,7 @@ void Con_DrawNotify (void)
 			align = 0.5;
 	}
 
-	if(numChatlines)
+	if(numChatlines || !con_chatrect.integer)
 	{
 		if(chatpos == 0)
 		{
@@ -1635,13 +1642,24 @@ void Con_DrawNotify (void)
 
 	v = notifystart + con_notifysize.value * Con_DrawNotifyRect(0, CON_MASK_INPUT | CON_MASK_HIDENOTIFY | (numChatlines ? CON_MASK_CHAT : 0) | CON_MASK_DEVELOPER, con_notifytime.value, 0, notifystart, vid_conwidth.value, con_notify.value * con_notifysize.value, con_notifysize.value, align, 0.0, "");
 
-	// chat?
+	if(con_chatrect.integer)
+	{
+		x = con_chatrect_x.value * vid_conwidth.value;
+		v = con_chatrect_y.value * vid_conheight.value;
+	}
+	else
+	{
+		x = 0;
+		if(numChatlines) // only do this if chat area is enabled, or this would move the input line wrong
+			v = chatstart;
+	}
+	height = numChatlines * con_chatsize.value;
+
 	if(numChatlines)
 	{
-		v = chatstart + numChatlines * con_chatsize.value;
-		Con_DrawNotifyRect(CON_MASK_CHAT, CON_MASK_INPUT, con_chattime.value, 0, chatstart, vid_conwidth.value * con_chatwidth.value, v - chatstart, con_chatsize.value, 0.0, 1.0, (utf8_enable.integer ? "^3\xee\x80\x8c\xee\x80\x8c\xee\x80\x8c " : "^3\014\014\014 ")); // 015 is ·> character in conchars.tga
+		Con_DrawNotifyRect(CON_MASK_CHAT, CON_MASK_INPUT, con_chattime.value, x, v, vid_conwidth.value * con_chatwidth.value, height, con_chatsize.value, 0.0, 1.0, (utf8_enable.integer ? "^3\xee\x80\x8c\xee\x80\x8c\xee\x80\x8c " : "^3\014\014\014 ")); // 015 is ·> character in conchars.tga
+		v += height;
 	}
-
 	if (key_dest == key_message)
 	{
 		//static char *cursor[2] = { "\xee\x80\x8a", "\xee\x80\x8b" }; // { off, on }
@@ -1659,9 +1677,8 @@ void Con_DrawNotify (void)
 
 		// FIXME word wrap
 		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
-		x = vid_conwidth.value - DrawQ_TextWidth(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
-		if(x > 0)
-			x = 0;
+		xr = vid_conwidth.value - DrawQ_TextWidth(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
+		x = min(xr, x);
 		DrawQ_String(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
 	}
 }
