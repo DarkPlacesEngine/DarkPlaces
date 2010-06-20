@@ -609,6 +609,13 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
 						*pixbufi++ = palettei[*fin++];
 				}
 			}
+
+			if (x != image_width)
+			{
+				// pixbufi is useless now
+				Con_Printf("LoadTGA: corrupt file\n");
+				break;
+			}
 		}
 		break;
 	case 10:
@@ -657,6 +664,13 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
 						}
 					}
 				}
+
+				if (x != image_width)
+				{
+					// pixbufi is useless now
+					Con_Printf("LoadTGA: corrupt file\n");
+					break;
+				}
 			}
 		}
 		else
@@ -702,6 +716,13 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
 							*pixbufi++ = bgra.i;
 						}
 					}
+				}
+
+				if (x != image_width)
+				{
+					// pixbufi is useless now
+					Con_Printf("LoadTGA: corrupt file\n");
+					break;
 				}
 			}
 		}
