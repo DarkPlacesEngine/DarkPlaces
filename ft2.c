@@ -1399,12 +1399,12 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		map->texture = R_LoadTexture2D(font_texturepool, map_identifier,
 					       map->glyphSize * FONT_CHARS_PER_LINE,
 					       map->glyphSize * FONT_CHAR_LINES,
-					       data, TEXTYPE_ALPHA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, NULL);
+					       data, TEXTYPE_ALPHA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, -1, NULL);
 	} else {
 		map->texture = R_LoadTexture2D(font_texturepool, map_identifier,
 					       map->glyphSize * FONT_CHARS_PER_LINE,
 					       map->glyphSize * FONT_CHAR_LINES,
-					       data, TEXTYPE_RGBA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, NULL);
+					       data, TEXTYPE_RGBA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, -1, NULL);
 	}
 
 	Mem_Free(data);

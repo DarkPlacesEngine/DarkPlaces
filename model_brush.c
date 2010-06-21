@@ -1576,9 +1576,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer);
+				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer, NULL);
 				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer, NULL);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
@@ -2456,9 +2456,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				loadmodel->brushq3.num_mergedlightmaps = lightmapnumber + 1;
 				loadmodel->brushq3.data_lightmaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_lightmaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_lightmaps[0]));
 				loadmodel->brushq3.data_deluxemaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_deluxemaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_deluxemaps[0]));
-				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
 				if (loadmodel->brushq1.nmaplightdata)
-					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
 				lightmapnumber++;
 				Mod_AllocLightmap_Reset(&allocState);
 				Mod_AllocLightmap_Block(&allocState, ssize, tsize, &lightmapx, &lightmapy);
@@ -4573,7 +4573,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		if (developer_loading.integer)
 			Con_Printf("Using external lightmaps\n");
 		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
-		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false, false);
+		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false, false, NULL);
 		if(!inpixels[0])
 			return;
 
@@ -4593,7 +4593,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 		for(count = 1; ; ++count)
 		{
-			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false, false);
+			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false, false, NULL);
 			if(!inpixels[count])
 				break; // we got all of them
 			if(image_width != size || image_height != size)
@@ -4727,9 +4727,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 					;
 				if (developer_loading.integer)
 					Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*size, mergeheight*size, min(j, mergewidth*mergeheight), mergewidth*mergeheight);
-				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES), NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES), -1, NULL);
 				if (loadmodel->brushq3.data_deluxemaps)
-					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES), NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergewidth * size, mergeheight * size, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : TEXF_ALLOWUPDATES), -1, NULL);
 			}
 			mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
 			mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
@@ -4743,9 +4743,9 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		{
 			// figure out which merged lightmap texture this fits into
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size, size, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 		}
 	}
 

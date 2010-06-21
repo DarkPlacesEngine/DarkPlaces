@@ -28,6 +28,7 @@
 #include "image_png.h"
 
 cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
+cvar_t r_texture_jpeg_fastpicmip = {CVAR_SAVE, "r_texture_jpeg_fastpicmip", "1", "perform gl_picmip during decompression for JPEG files (faster)"};
 
 // jboolean is unsigned char instead of int on Win32
 #ifdef WIN32
@@ -595,16 +596,20 @@ JPEG_LoadImage
 Load a JPEG image into a BGRA buffer
 ====================
 */
-unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
+unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize, int *miplevel)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	unsigned char *image_buffer = NULL, *scanline = NULL;
 	unsigned int line;
+	int submip = 0;
 
 	// No DLL = no JPEGs
 	if (!jpeg_dll)
 		return NULL;
+
+	if(miplevel && r_texture_jpeg_fastpicmip.integer)
+		submip = bound(0, *miplevel, 3);
 
 	cinfo.err = qjpeg_std_error (&jerr);
 	qjpeg_create_decompress (&cinfo);
@@ -614,10 +619,12 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 	cinfo.err->error_exit = JPEG_ErrorExit;
 	JPEG_MemSrc (&cinfo, f, filesize);
 	qjpeg_read_header (&cinfo, TRUE);
+	cinfo.scale_num = 1;
+	cinfo.scale_denom = (1 << submip);
 	qjpeg_start_decompress (&cinfo);
 
-	image_width = cinfo.image_width;
-	image_height = cinfo.image_height;
+	image_width = cinfo.output_width;
+	image_height = cinfo.output_height;
 
 	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
@@ -683,6 +690,9 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize)
 
 	qjpeg_finish_decompress (&cinfo);
 	qjpeg_destroy_decompress (&cinfo);
+
+	if(miplevel)
+		*miplevel -= submip;
 
 	return image_buffer;
 
@@ -1050,7 +1060,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	}
 
 	// load the image
-	imagedata = loadimagepixelsbgra(imagename, true, false, false);
+	imagedata = loadimagepixelsbgra(imagename, true, false, false, NULL);
 	if(!imagedata)
 		return false;
 
