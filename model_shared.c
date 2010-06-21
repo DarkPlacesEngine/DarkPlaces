@@ -4121,8 +4121,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 
 	for (lightmapindex = 0;lightmapindex < model->brushq3.num_mergedlightmaps;lightmapindex++)
 	{
-		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, NULL);
-		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, NULL);
+		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
+		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
 	}
 
 	if (lightmappixels)

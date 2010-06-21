@@ -255,7 +255,7 @@ void PNG_warning_fn(void *png, const char *message)
 extern int	image_width;
 extern int	image_height;
 
-unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize)
+unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *miplevel)
 {
 	unsigned int c;
 	unsigned int	y;
