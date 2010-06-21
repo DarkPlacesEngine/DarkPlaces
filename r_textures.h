@@ -103,7 +103,7 @@ rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *ide
 rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter);
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter);
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, int precision, qboolean filter);
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor);
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel);
 
 // saves a texture to a DDS file
 int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed);

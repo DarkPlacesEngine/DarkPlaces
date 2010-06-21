@@ -1208,7 +1208,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	return ret ? ddssize : -5;
 }
 
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor)
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
 {
 	int i, size, dds_format_flags, dds_miplevels, dds_width, dds_height;
 	//int dds_flags;
@@ -1371,6 +1371,24 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		}
 	}
 
+	// this is where we apply gl_picmip
+	mippixels = ddspixels;
+	mipwidth = dds_width;
+	mipheight = dds_height;
+	while(miplevel >= 1 && dds_miplevels >= 1)
+	{
+		if (mipwidth <= 1 && mipheight <= 1)
+			break;
+		mipsize = bytesperblock ? ((mipwidth+3)/4)*((mipheight+3)/4)*bytesperblock : mipwidth*mipheight*bytesperpixel;
+		mippixels += mipsize; // just skip
+		--dds_miplevels;
+		--miplevel;
+		if (mipwidth > 1)
+			mipwidth >>= 1;
+		if (mipheight > 1)
+			mipheight >>= 1;
+	}
+
 	if (dds_miplevels > 1)
 		flags |= TEXF_MIPMAP;
 	else
@@ -1391,8 +1409,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;
-	glt->inputwidth = dds_width;
-	glt->inputheight = dds_height;
+	glt->inputwidth = mipwidth;
+	glt->inputheight = mipheight;
 	glt->inputdepth = 1;
 	glt->flags = flags;
 	glt->textype = texinfo;
@@ -1404,8 +1422,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	glt->bytesperpixel = texinfo->internalbytesperpixel;
 	glt->sides = 1;
 	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
-	glt->tilewidth = dds_width;
-	glt->tileheight = dds_height;
+	glt->tilewidth = mipwidth;
+	glt->tileheight = mipheight;
 	glt->tiledepth = 1;
 
 	// texture uploading can take a while, so make sure we're sending keepalives
@@ -1418,11 +1436,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
 	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
-	mippixels = ddspixels;
-	mipwidth = dds_width;
-	mipheight = dds_height;
 	mipcomplete = false;
-	for (mip = 0;mip < dds_miplevels+1;mip++)
+
+	for (mip = 0;mip <= dds_miplevels;mip++) // <= to include the not-counted "largest" miplevel
 	{
 		mipsize = bytesperblock ? ((mipwidth+3)/4)*((mipheight+3)/4)*bytesperblock : mipwidth*mipheight*bytesperpixel;
 		if (mippixels + mipsize > dds + ddssize)
@@ -1446,7 +1462,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		if (mipheight > 1)
 			mipheight >>= 1;
 	}
-	if (dds_miplevels > 1 && !mipcomplete)
+	if (dds_miplevels >= 1 && !mipcomplete)
 	{
 		// need to set GL_TEXTURE_MAX_LEVEL
 		qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_LEVEL, dds_miplevels - 1);CHECKGLERROR
