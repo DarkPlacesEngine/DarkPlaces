@@ -86,7 +86,7 @@ static void r_explosion_start(void)
 			data[y][x][3] = bound(0, a, 255);
 		}
 	}
-	explosiontexture = R_LoadTexture2D(explosiontexturepool, "explosiontexture", 128, 128, &data[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
+	explosiontexture = R_LoadTexture2D(explosiontexturepool, "explosiontexture", 128, 128, &data[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
 //	if (r_loadfog)
 //	{
 //		for (y = 0;y < 128;y++)

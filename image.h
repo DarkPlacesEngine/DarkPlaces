@@ -20,10 +20,10 @@ void Image_Copy8bitBGRA(const unsigned char *in, unsigned char *out, int pixels,
 void Image_StripImageExtension (const char *in, char *out, size_t size_out);
 
 // called by conchars.tga loader in gl_draw.c, otherwise private
-unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize);
+unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel);
 
 // loads a texture, as pixel data
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB);
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB, int *miplevel);
 
 // loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
 qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);

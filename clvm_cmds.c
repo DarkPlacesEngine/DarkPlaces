@@ -1548,7 +1548,7 @@ static void VM_CL_ReadPicture (void)
 			// use the attached jpeg as texture
 			buf = (unsigned char *) Mem_Alloc(tempmempool, size);
 			MSG_ReadBytes(size, buf);
-			data = JPEG_LoadImage_BGRA(buf, size);
+			data = JPEG_LoadImage_BGRA(buf, size, NULL);
 			Mem_Free(buf);
 			Draw_NewPic(name, image_width, image_height, false, data);
 			Mem_Free(data);

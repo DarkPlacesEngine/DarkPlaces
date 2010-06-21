@@ -2175,7 +2175,7 @@ static void R_InitParticleTexture (void)
 #ifdef DUMPPARTICLEFONT
 		Image_WriteTGABGRA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
 #endif
-		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_FORCELINEAR, NULL);
+		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
 	}
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;

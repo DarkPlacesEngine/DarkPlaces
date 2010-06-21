@@ -189,7 +189,7 @@ typedef struct pcx_s
 LoadPCX
 ============
 */
-unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize)
+unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize, int *miplevel)
 {
 	pcx_t pcx;
 	unsigned char *a, *b, *image_buffer, *pbuf;
@@ -382,7 +382,7 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize)
+unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel)
 {
 	int x, y, pix_inc, row_inci, runlen, alphabits;
 	unsigned char *image_buffer;
@@ -746,7 +746,7 @@ typedef struct q2wal_s
 	int			value;
 } q2wal_t;
 
-unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize)
+unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize, int *miplevel)
 {
 	unsigned char *image_buffer;
 	const q2wal_t *inwal = (const q2wal_t *)f;
@@ -817,7 +817,7 @@ void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pi
 typedef struct imageformat_s
 {
 	const char *formatstring;
-	unsigned char *(*loadfunc)(const unsigned char *f, int filesize);
+	unsigned char *(*loadfunc)(const unsigned char *f, int filesize, int *miplevel);
 }
 imageformat_t;
 
@@ -893,7 +893,7 @@ imageformat_t imageformats_other[] =
 };
 
 int fixtransparentpixels(unsigned char *data, int w, int h);
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB)
+unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB, int *miplevel)
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
@@ -935,24 +935,30 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			data = format->loadfunc(f, (int)filesize);
+			int mymiplevel = miplevel ? *miplevel : 0;
+			data = format->loadfunc(f, (int)filesize, &mymiplevel);
 			Mem_Free(f);
-			if(format->loadfunc == JPEG_LoadImage_BGRA) // jpeg can't do alpha, so let's simulate it by loading another jpeg
-			{
-				dpsnprintf (name2, sizeof(name2), format->formatstring, va("%s_alpha", basename));
-				f = FS_LoadFile(name2, tempmempool, true, &filesize);
-				if(f)
-				{
-					data2 = format->loadfunc(f, (int)filesize);
-					Mem_Free(f);
-					Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
-					Mem_Free(data2);
-				}
-			}
 			if (data)
 			{
+				if(format->loadfunc == JPEG_LoadImage_BGRA) // jpeg can't do alpha, so let's simulate it by loading another jpeg
+				{
+					dpsnprintf (name2, sizeof(name2), format->formatstring, va("%s_alpha", basename));
+					f = FS_LoadFile(name2, tempmempool, true, &filesize);
+					if(f)
+					{
+						int mymiplevel2 = miplevel ? *miplevel : 0;
+						data2 = format->loadfunc(f, (int)filesize, &mymiplevel2);
+						if(mymiplevel != mymiplevel2)
+							Host_Error("loadimagepixelsbgra: miplevels differ");
+						Mem_Free(f);
+						Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
+						Mem_Free(data2);
+					}
+				}
 				if (developer_loading.integer)
 					Con_DPrintf("loaded image %s (%dx%d)\n", name, image_width, image_height);
+				if(miplevel)
+					*miplevel = mymiplevel;
 				//if (developer_memorydebug.integer)
 				//	Mem_CheckSentinelsGlobal();
 				if(allowFixtrans && r_fixtrans_auto.integer)
@@ -997,13 +1003,15 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	return NULL;
 }
 
+extern cvar_t gl_picmip;
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean convertsRGB)
 {
 	unsigned char *data;
 	rtexture_t *rt;
-	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans, convertsRGB)))
+	int miplevel = R_PicmipForFlags(flags);
+	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans, convertsRGB, &miplevel)))
 		return 0;
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_BGRA, flags, NULL);
+	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_BGRA, flags, miplevel, NULL);
 	Mem_Free(data);
 	return rt;
 }
@@ -1149,7 +1157,7 @@ void Image_FixTransparentPixels_f(void)
 		Con_Printf("Processing %s... ", filename);
 		Image_StripImageExtension(filename, buf, sizeof(buf));
 		dpsnprintf(outfilename, sizeof(outfilename), "fixtrans/%s.tga", buf);
-		if(!(data = loadimagepixelsbgra(filename, true, false, false)))
+		if(!(data = loadimagepixelsbgra(filename, true, false, false, NULL)))
 			return;
 		if((n = fixtransparentpixels(data, image_width, image_height)))
 		{

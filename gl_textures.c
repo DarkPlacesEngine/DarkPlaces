@@ -130,6 +130,8 @@ typedef struct gltexture_s
 	// flags supplied to the LoadTexture function
 	// (might be altered to remove TEXF_ALPHA), and GLTEXF_ private flags
 	int flags;
+	// picmip level
+	int miplevel;
 	// pointer to one of the textype_ structs
 	textypeinfo_t *textype;
 	// one of the GLTEXTURETYPE_ values
@@ -384,7 +386,7 @@ static void GL_TextureMode_f (void)
 	}
 }
 
-static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, int inheight, int indepth, int *outwidth, int *outheight, int *outdepth)
+static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, int inwidth, int inheight, int indepth, int *outwidth, int *outheight, int *outdepth)
 {
 	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1;
 
@@ -396,17 +398,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int inwidth, in
 		if (flags & TEXF_PICMIP)
 		{
 			maxsize = bound(1, gl_max_size.integer, maxsize);
-			picmip = gl_picmip.integer;
-			if (flags & TEXF_ISWORLD)
-			{
-				if (r_picmipworld.integer)
-					picmip += gl_picmip_world.integer;
-				else
-					picmip = 0;
-			}
-			else
-				picmip += gl_picmip_other.integer;
-			picmip = bound(0, picmip, 31); // can't do more than 31 or >> operator gets funny
+			picmip = miplevel;
 		}
 		break;
 	case GLTEXTURETYPE_3D:
@@ -457,7 +449,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 {
 	int width2, height2, depth2, size;
 
-	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &width2, &height2, &depth2);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &width2, &height2, &depth2);
 
 	size = width2 * height2 * depth2;
 
@@ -911,7 +903,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
 
-static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
+static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int miplevel, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
 {
 	int i, size;
 	gltexture_t *glt;
@@ -1018,6 +1010,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->inputheight = height;
 	glt->inputdepth = depth;
 	glt->flags = flags;
+	glt->miplevel = (miplevel < 0) ? R_PicmipForFlags(flags) : miplevel; // note: if miplevel is -1, we know the texture is in original size and we can picmip it normally
 	glt->textype = texinfo;
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
@@ -1034,7 +1027,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->updatecallback = NULL;
 	glt->updatacallback_data = NULL;
 
-	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
 
 	// upload the texture
 	// data may be NULL (blank texture for dynamic rendering)
@@ -1050,24 +1043,24 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	return (rtexture_t *)glt;
 }
 
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data, palette);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, miplevel, textype, GLTEXTURETYPE_2D, data, palette);
 }
 
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, textype, GLTEXTURETYPE_3D, data, palette);
+	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, miplevel, textype, GLTEXTURETYPE_3D, data, palette);
 }
 
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
+	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, miplevel, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, const unsigned int *palette)
+rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_RECTANGLE, data, palette);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, miplevel, textype, GLTEXTURETYPE_RECTANGLE, data, palette);
 }
 
 static int R_ShadowMapTextureFlags(int precision, qboolean filter)
@@ -1084,17 +1077,17 @@ static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 
 rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
 }
 
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
 }
 
 rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, int precision, qboolean filter)
 {
-    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
+    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed)
@@ -1546,4 +1539,30 @@ void R_ClearTexture (rtexture_t *rt)
 	gltexture_t *glt = (gltexture_t *)rt;
 
 	R_Upload( glt, NULL, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth );
+}
+
+int R_PicmipForFlags(int flags)
+{
+	int miplevel = 0;
+	if(flags & TEXF_PICMIP)
+	{
+		miplevel += gl_picmip.integer;
+		if (flags & TEXF_ISWORLD)
+		{
+			if (r_picmipworld.integer)
+				miplevel += gl_picmip_world.integer;
+			else
+				miplevel = 0;
+		}
+		else if (flags & TEXF_ISSPRITE)
+		{
+			if (r_picmipsprites.integer)
+				miplevel += gl_picmip_sprites.integer;
+			else
+				miplevel = 0;
+		}
+		else
+			miplevel += gl_picmip_other.integer;
+	}
+	return miplevel;
 }
