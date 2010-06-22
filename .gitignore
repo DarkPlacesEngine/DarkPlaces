@@ -15,3 +15,6 @@ gmon.out
 darkplaces_private.h
 darkplaces_private.rc
 Makefile.win
+*.dll
+*.dylib
+*.dSYM
