@@ -1375,12 +1375,15 @@ The input line scrolls horizontally if typing goes beyond the right edge
 Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 ================
 */
+extern cvar_t r_font_disable_freetype;
 void Con_DrawInput (void)
 {
 	int		y;
 	int		i;
 	char editlinecopy[MAX_INPUTLINE+1], *text;
-	float x;
+	float x, xo;
+	size_t len_out;
+	int col_out;
 
 	if (!key_consoleactive)
 		return;		// don't draw anything
@@ -1400,34 +1403,63 @@ void Con_DrawInput (void)
 		text[i] = 0;
 
 	// add the cursor frame
-	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
+	if (r_font_disable_freetype.integer)
 	{
-		if (!utf8_enable.integer)
-			text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
-		else if (y + 3 < (int)sizeof(editlinecopy)-1)
+		// this code is freetype incompatible!
+		if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
 		{
-			int ofs = u8_bytelen(text + key_linepos, 1);
-			size_t len;
-			const char *curbuf;
-			curbuf = u8_encodech(0xE000 + 11 + 130 * key_insert, &len);
-
-			if (curbuf)
+			if (!utf8_enable.integer)
+				text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
+			else if (y + 3 < (int)sizeof(editlinecopy)-1)
 			{
-				memmove(text + key_linepos + len, text + key_linepos + ofs, sizeof(editlinecopy) - key_linepos - len);
-				memcpy(text + key_linepos, curbuf, len);
-			}
-		} else
-			text[key_linepos] = '-' + ('+' - '-') * key_insert;
+				int ofs = u8_bytelen(text + key_linepos, 1);
+				size_t len;
+				const char *curbuf;
+				curbuf = u8_encodech(0xE000 + 11 + 130 * key_insert, &len);
+
+				if (curbuf)
+				{
+					memmove(text + key_linepos + len, text + key_linepos + ofs, sizeof(editlinecopy) - key_linepos - len);
+					memcpy(text + key_linepos, curbuf, len);
+				}
+			} else
+				text[key_linepos] = '-' + ('+' - '-') * key_insert;
+		}
 	}
 
 //	text[key_linepos + 1] = 0;
 
-	x = vid_conwidth.value * 0.95 - DrawQ_TextWidth(text, key_linepos, con_textsize.value, con_textsize.value, false, FONT_CONSOLE);
+	len_out = key_linepos;
+	col_out = -1;
+	xo = DrawQ_TextWidth_UntilWidth_TrackColors(text, &len_out, con_textsize.value, con_textsize.value, &col_out, false, FONT_CONSOLE, 1000000000);
+	x = vid_conwidth.value * 0.95 - xo; // scroll
 	if(x >= 0)
 		x = 0;
 
 	// draw it
 	DrawQ_String(x, con_vislines - con_textsize.value*2, text, y + 3, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
+
+	// add a cursor on top of this (when using freetype)
+	if (!r_font_disable_freetype.integer)
+	{
+		if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
+		{
+			if (!utf8_enable.integer)
+			{
+				text[0] = 11 + 130 * key_insert;	// either solid or triangle facing right
+				text[1] = 0;
+			}
+			else
+			{
+				size_t len;
+				const char *curbuf;
+				curbuf = u8_encodech(0xE000 + 11 + 130 * key_insert, &len);
+				memcpy(text, curbuf, len);
+				text[len] = 0;
+			}
+			DrawQ_String(x + xo, con_vislines - con_textsize.value*2, text, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &col_out, false, FONT_CONSOLE);
+		}
+	}
 
 	// remove cursor
 //	key_line[key_linepos] = 0;
