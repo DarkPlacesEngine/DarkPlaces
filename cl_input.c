@@ -1528,7 +1528,7 @@ void CL_UpdateMoveVars(void)
 	}
 
 	if(cl.movevars_aircontrol_power <= 0)
-		cl.movevars_aircontrol = 2; // CPMA default
+		cl.movevars_aircontrol_power = 2; // CPMA default
 }
 
 void CL_ClientMovement_Replay(void)
