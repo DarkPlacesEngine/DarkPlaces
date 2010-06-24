@@ -221,6 +221,7 @@ cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before dec
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
 cvar_t cl_decals_newsystem = {CVAR_SAVE, "cl_decals_newsystem", "0", "enables new advanced decal system"};
 cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
+cvar_t cl_decals_newsystem_immediatebloodstain = {CVAR_SAVE, "cl_decals_newsystem_immediatebloodstain", "2", "0: no on-spawn blood stains; 1: on-spawn blood stains for pt_blood; 2: always use on-spawn blood stains"};
 cvar_t cl_decals_models = {CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
 cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
 cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
@@ -533,6 +534,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_decals_fadetime);
 	Cvar_RegisterVariable (&cl_decals_newsystem);
 	Cvar_RegisterVariable (&cl_decals_newsystem_intensitymultiplier);
+	Cvar_RegisterVariable (&cl_decals_newsystem_immediatebloodstain);
 	Cvar_RegisterVariable (&cl_decals_models);
 	Cvar_RegisterVariable (&cl_decals_bias);
 	Cvar_RegisterVariable (&cl_decals_max);
@@ -949,7 +951,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		else
 		{
 			static double bloodaccumulator = 0;
-			qboolean immediatebloodstain = true;
+			qboolean immediatebloodstain = (cl_decals_newsystem_immediatebloodstain.integer >= 1);
 			//CL_NewParticle(center, pt_alphastatic, 0x4f0000,0x7f0000, tex_particle, 2.5, 0, 256, 256, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 1, 4, 0, 0, true, 0, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, NULL);
 			bloodaccumulator += count * 0.333 * cl_particles_quality.value;
 			for (;bloodaccumulator > 0;bloodaccumulator--)
@@ -1472,7 +1474,10 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					{
 						info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
 						trailstep = 0;
-						immediatebloodstain = info->particletype == pt_blood || staintex;
+						immediatebloodstain =
+							((cl_decals_newsystem_immediatebloodstain.integer >= 1) && (info->particletype == pt_blood))
+							||
+							((cl_decals_newsystem_immediatebloodstain.integer >= 2) && staintex);
 					}
 					info->particleaccumulator = bound(0, info->particleaccumulator, 16384);
 					for (;info->particleaccumulator >= 1;info->particleaccumulator--)
