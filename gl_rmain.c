@@ -7738,7 +7738,7 @@ static void R_Water_ProcessPlanes(void)
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
 			// also reverse the view matrix
-			Matrix4x4_ConcatScale3(&r_refdef.view.matrix, 1, -1, 1);
+			Matrix4x4_ConcatScale3(&r_refdef.view.matrix, 1, 1, -1); // this serves to invert texcoords in the result, as the copied texture is mapped the wrong way round
 			R_RenderView_UpdateViewVectors();
 			if(p->camera_entity)
 				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
