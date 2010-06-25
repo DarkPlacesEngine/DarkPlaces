@@ -141,3 +141,51 @@ int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_nod
 	bih->rootnode = BIH_BuildNode(bih, bih->numleafs, bih->leafsort, bih->mins, bih->maxs);
 	return bih->error;
 }
+
+static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int maxtriangles, int *trianglelist, int *numtrianglespointer, const float *mins, const float *maxs)
+{
+	int axis;
+	bih_node_t *node;
+	bih_leaf_t *leaf;
+	while (nodenum >= 0)
+	{
+		node = bih->nodes + nodenum;
+		axis = node->type - BIH_SPLITX;
+		if (mins[axis] < node->backmax)
+		{
+			if (maxs[axis] > node->frontmin)
+				BIH_GetTriangleListForBox_Node(bih, node->front, maxtriangles, trianglelist, numtrianglespointer, mins, maxs);
+			nodenum = node->back;
+			continue;
+		}
+		if (maxs[axis] > node->frontmin)
+		{
+			nodenum = node->front;
+			continue;
+		}
+		// fell between the child groups, nothing here
+		return;
+	}
+	leaf = bih->leafs + (-1-nodenum);
+	if (mins[0] > leaf->maxs[0] || maxs[0] < leaf->mins[0]
+	 || mins[1] > leaf->maxs[1] || maxs[1] < leaf->mins[1]
+	 || mins[2] > leaf->maxs[2] || maxs[2] < leaf->mins[2])
+		return;
+	switch(leaf->type)
+	{
+	case BIH_RENDERTRIANGLE:
+		if (*numtrianglespointer >= maxtriangles)
+			return;
+		trianglelist[(*numtrianglespointer)++] = leaf->itemindex;
+		break;
+	default:
+		break;
+	}
+}
+
+int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist, const float *mins, const float *maxs)
+{
+	int numtriangles = 0;
+	BIH_GetTriangleListForBox_Node(bih, 0, maxtriangles, trianglelist, &numtriangles, mins, maxs);
+	return numtriangles;
+}
