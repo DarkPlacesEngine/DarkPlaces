@@ -52,6 +52,7 @@ typedef struct bih_leaf_s
 	float maxs[3];
 	// data past this point is generic and entirely up to the caller...
 	int textureindex;
+	int surfaceindex;
 	int itemindex; // triangle or brush index
 }
 bih_leaf_t;

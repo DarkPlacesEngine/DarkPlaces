@@ -6652,6 +6652,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 				continue;
 			bihleafs[bihleafindex].type = BIH_RENDERTRIANGLE;
 			bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
+			bihleafs[bihleafindex].surfaceindex = surface - model->data_surfaces;
 			bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firsttriangle;
 			bihleafs[bihleafindex].mins[0] = min(rendervertex3f[3*e[0]+0], min(rendervertex3f[3*e[1]+0], rendervertex3f[3*e[2]+0])) - 1;
 			bihleafs[bihleafindex].mins[1] = min(rendervertex3f[3*e[0]+1], min(rendervertex3f[3*e[1]+1], rendervertex3f[3*e[2]+1])) - 1;
@@ -6672,6 +6673,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 				continue;
 			bihleafs[bihleafindex].type = BIH_BRUSH;
 			bihleafs[bihleafindex].textureindex = brush->texture - model->data_textures;
+			bihleafs[bihleafindex].surfaceindex = -1;
 			bihleafs[bihleafindex].itemindex = brushindex+model->firstmodelbrush;
 			VectorCopy(brush->colbrushf->mins, bihleafs[bihleafindex].mins);
 			VectorCopy(brush->colbrushf->maxs, bihleafs[bihleafindex].maxs);
@@ -6687,6 +6689,7 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 			{
 				bihleafs[bihleafindex].type = BIH_COLLISIONTRIANGLE;
 				bihleafs[bihleafindex].textureindex = surface->texture - model->data_textures;
+				bihleafs[bihleafindex].surfaceindex = surface - model->data_surfaces;
 				bihleafs[bihleafindex].itemindex = triangleindex+surface->num_firstcollisiontriangle;
 				bihleafs[bihleafindex].mins[0] = min(collisionvertex3f[3*e[0]+0], min(collisionvertex3f[3*e[1]+0], collisionvertex3f[3*e[2]+0])) - 1;
 				bihleafs[bihleafindex].mins[1] = min(collisionvertex3f[3*e[0]+1], min(collisionvertex3f[3*e[1]+1], collisionvertex3f[3*e[2]+1])) - 1;
