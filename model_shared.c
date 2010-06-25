@@ -1628,7 +1628,7 @@ void Mod_LoadQ3Shaders(void)
 
 	// parse custinfoparms.txt
 	numcustsurfaceparms = 0;
-	if (text = f = (char *)FS_LoadFile("scripts/custinfoparms.txt", tempmempool, false, NULL))
+	if ((text = f = (char *)FS_LoadFile("scripts/custinfoparms.txt", tempmempool, false, NULL)) != NULL)
 	{
 		if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
 			Con_DPrintf("scripts/custinfoparms.txt: contentflags section parsing error - expected \"{\", found \"%s\"\n", com_token);
