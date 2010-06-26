@@ -10157,6 +10157,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// may require regenerating vertexmesh or vertexposition arrays...
 	needsupdate = 0;
 
+	// check if any dynamic vertex processing must occur
+	dynamicvertex = false;
+
 	if ((batchneed & (BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_ARRAY_VERTEXCOLOR)) && texturesurfacelist[0]->lightmapinfo)
 		needsupdate |= BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_NOGAPS;
 	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform;deformindex++, deform++)
@@ -10176,30 +10179,36 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		case Q3DEFORM_NONE:
 			break;
 		case Q3DEFORM_AUTOSPRITE:
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXPOSITION | BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_AUTOSPRITE2:
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXPOSITION | BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_NORMAL:
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_WAVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXPOSITION | BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_BULGE:
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXPOSITION | BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_MOVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
+			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS;
 			needsupdate |= BATCHNEED_VERTEXPOSITION | BATCHNEED_VERTEXMESH_VERTEX;
 			break;
@@ -10211,26 +10220,27 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	case Q3TCGEN_TEXTURE:
 		break;
 	case Q3TCGEN_LIGHTMAP:
+		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_LIGHTMAP | BATCHNEED_NOGAPS;
 		needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
 		break;
 	case Q3TCGEN_VECTOR:
+		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		break;
 	case Q3TCGEN_ENVIRONMENT:
+		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_NOGAPS;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		break;
 	}
 	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
+		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 	}
-
-	// check if any dynamic vertex processing must occur
-	dynamicvertex = false;
 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
 	{
