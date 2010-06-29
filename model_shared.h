@@ -960,6 +960,7 @@ typedef struct model_s
 	int				nummodelbrushes;
 	// BIH (Bounding Interval Hierarchy) for this (sub)model
 	bih_t			collision_bih;
+	bih_t			render_bih; // if not set, use collision_bih instead for rendering purposes too
 	// for md3 models
 	int				num_tags;
 	int				num_tagframes;
@@ -1169,7 +1170,7 @@ void Mod_CollisionBIH_TraceLine(dp_model_t *model, const struct frameblend_s *fr
 void Mod_CollisionBIH_TraceBox(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
 void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask);
 int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, const vec3_t point);
-void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces);
+bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t *out);
 
 // alias models
 struct frameblend_s;

@@ -81,6 +81,6 @@ bih_t;
 
 int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch);
 
-int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist, const float *mins, const float *maxs);
+int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, const float *mins, const float *maxs);
 
 #endif
