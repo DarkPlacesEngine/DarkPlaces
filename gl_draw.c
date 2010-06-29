@@ -317,13 +317,21 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	fs_offset_t lmpsize;
 	unsigned char *lmpdata;
 	char lmpname[MAX_QPATH];
+	int texflags;
+
+	texflags = TEXF_ALPHA;
+	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
+		texflags |= TEXF_CLAMP;
+	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
+		texflags |= TEXF_COMPRESS;
 
 	// check whether the picture has already been cached
 	crc = CRC_Block((unsigned char *)path, strlen(path));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
-			return pic;
+			if(pic->texflags == texflags)
+				return pic;
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
@@ -347,12 +355,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		return pic;
 	}
 
-	pic->texflags = TEXF_ALPHA;
-	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
-		pic->texflags |= TEXF_CLAMP;
-	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
-		pic->texflags |= TEXF_COMPRESS;
-
+	pic->texflags = texflags;
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
