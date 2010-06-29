@@ -1822,6 +1822,8 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
+	float alpha;
+	double sx, sy;
 	int mask_must = 0;
 	int mask_mustnot = (developer.integer>0) ? 0 : CON_MASK_DEVELOPER;
 	cachepic_t *conbackpic;
@@ -1835,11 +1837,40 @@ void Con_DrawConsole (int lines)
 	con_vislines = lines;
 
 // draw the background
-	conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic("gfx/conback") : NULL;
-	if (conbackpic && conbackpic->tex != r_texture_notexture)
-		DrawQ_Pic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, cls.signon == SIGNONS ? scr_conalpha.value : 1.0f, 0); // always full alpha when not in game
-	else
-		DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0.0f, 0.0f, 0.0f, cls.signon == SIGNONS ? scr_conalpha.value : 1.0f, 0); // always full alpha when not in game
+	alpha = cls.signon == SIGNONS ? scr_conalpha.value : 1.0f; // always full alpha when not in game
+	if(alpha > 0)
+	{
+		sx = scr_conscroll_x.value;
+		sy = scr_conscroll_y.value;
+		conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic_Flags("gfx/conback", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0) : NULL;
+		sx *= realtime; sy *= realtime;
+		sx -= floor(sx); sy -= floor(sy);
+		if (conbackpic && conbackpic->tex != r_texture_notexture)
+			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
+					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0);
+		else
+			DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0.0f, 0.0f, 0.0f, alpha, 0);
+		alpha *= scr_conalpha2factor.value;
+	}
+	if(alpha > 0)
+	{
+		sx = scr_conscroll2_x.value;
+		sy = scr_conscroll2_y.value;
+		conbackpic = Draw_CachePic_Flags("gfx/conback2", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
+		sx *= realtime; sy *= realtime;
+		sx -= floor(sx); sy -= floor(sy);
+		if(conbackpic && conbackpic->tex != r_texture_notexture)
+			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
+					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0);
+	}
 	DrawQ_String(vid_conwidth.integer - DrawQ_TextWidth(engineversion, 0, con_textsize.value, con_textsize.value, false, FONT_CONSOLE), lines - con_textsize.value, engineversion, 0, con_textsize.value, con_textsize.value, 1, 0, 0, 1, 0, NULL, true, FONT_CONSOLE);
 
 // draw the text
