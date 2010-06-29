@@ -6358,7 +6358,7 @@ static void applytransform_inverted(const vec3_t in, prvm_edict_t *ed, vec3_t ou
 {
 	matrix4x4_t m, n;
 	getmatrix(ed, &m);
-	Matrix4x4_Invert_Full(&m, &n);
+	Matrix4x4_Invert_Full(&n, &m);
 	Matrix4x4_Transform3x3(&n, in, out);
 }
 
