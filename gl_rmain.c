@@ -11955,13 +11955,92 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
+// baseparms, parms, temps
+static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, int decalsequence, qboolean dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
+{
+	int cornerindex;
+	int index;
+	float v[9][3];
+	const float *vertex3f;
+	int numpoints;
+	float points[2][9][3];
+	float temp[3];
+	float tc[9][2];
+	float f;
+	float c[9][4];
+	const int *e;
+
+	e = rsurface.modelelement3i + 3*triangleindex;
+
+	vertex3f = rsurface.modelvertex3f;
+
+	for (cornerindex = 0;cornerindex < 3;cornerindex++)
+	{
+		index = 3*e[cornerindex];
+		VectorCopy(vertex3f + index, v[cornerindex]);
+	}
+	// cull backfaces
+	//TriangleNormal(v[0], v[1], v[2], normal);
+	//if (DotProduct(normal, localnormal) < 0.0f)
+	//	continue;
+	// clip by each of the box planes formed from the projection matrix
+	// if anything survives, we emit the decal
+	numpoints = PolygonF_Clip(3        , v[0]        , planes[0][0], planes[0][1], planes[0][2], planes[0][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+	if (numpoints < 3)
+		return;
+	numpoints = PolygonF_Clip(numpoints, points[1][0], planes[1][0], planes[1][1], planes[1][2], planes[1][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+	if (numpoints < 3)
+		return;
+	numpoints = PolygonF_Clip(numpoints, points[0][0], planes[2][0], planes[2][1], planes[2][2], planes[2][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+	if (numpoints < 3)
+		return;
+	numpoints = PolygonF_Clip(numpoints, points[1][0], planes[3][0], planes[3][1], planes[3][2], planes[3][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
+	if (numpoints < 3)
+		return;
+	numpoints = PolygonF_Clip(numpoints, points[0][0], planes[4][0], planes[4][1], planes[4][2], planes[4][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
+	if (numpoints < 3)
+		return;
+	numpoints = PolygonF_Clip(numpoints, points[1][0], planes[5][0], planes[5][1], planes[5][2], planes[5][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), v[0]);
+	if (numpoints < 3)
+		return;
+	// some part of the triangle survived, so we have to accept it...
+	if (dynamic)
+	{
+		// dynamic always uses the original triangle
+		numpoints = 3;
+		for (cornerindex = 0;cornerindex < 3;cornerindex++)
+		{
+			index = 3*e[cornerindex];
+			VectorCopy(vertex3f + index, v[cornerindex]);
+		}
+	}
+	for (cornerindex = 0;cornerindex < numpoints;cornerindex++)
+	{
+		// convert vertex positions to texcoords
+		Matrix4x4_Transform(projection, v[cornerindex], temp);
+		tc[cornerindex][0] = (temp[1]+1.0f)*0.5f * (s2-s1) + s1;
+		tc[cornerindex][1] = (temp[2]+1.0f)*0.5f * (t2-t1) + t1;
+		// calculate distance fade from the projection origin
+		f = a * (1.0f-fabs(temp[0])) * cl_decals_newsystem_intensitymultiplier.value;
+		f = bound(0.0f, f, 1.0f);
+		c[cornerindex][0] = r * f;
+		c[cornerindex][1] = g * f;
+		c[cornerindex][2] = b * f;
+		c[cornerindex][3] = 1.0f;
+		//VectorMA(v[cornerindex], cl_decals_bias.value, localnormal, v[cornerindex]);
+	}
+	if (dynamic)
+		R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex, surfaceindex, decalsequence);
+	else
+		for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
+			R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, surfaceindex, decalsequence);
+}
 static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, int decalsequence)
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
 	qboolean dynamic;
 	dp_model_t *model;
-	const float *vertex3f;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
 	const int *surfacelist;
@@ -11971,24 +12050,18 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	int surfacelistindex;
 	int surfaceindex;
 	int triangleindex;
-	int cornerindex;
-	int index;
-	int numpoints;
-	const int *e;
 	float localorigin[3];
 	float localnormal[3];
 	float localmins[3];
 	float localmaxs[3];
 	float localsize;
-	float v[9][3];
-	float tc[9][2];
-	float c[9][4];
 	//float normal[3];
 	float planes[6][4];
-	float f;
-	float points[2][9][3];
 	float angles[3];
-	float temp[3];
+	bih_t *bih;
+	int bih_triangles_count;
+	int bih_triangles[256];
+	int bih_surfaces[256];
 
 	decalsystem = &ent->decalsystem;
 	model = ent->model;
@@ -12067,86 +12140,57 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 #endif
 
 	dynamic = model->surfmesh.isanimated;
-	vertex3f = rsurface.modelvertex3f;
 	numsurfacelist = model->nummodelsurfaces;
 	surfacelist = model->sortedmodelsurfaces;
 	surfaces = model->data_surfaces;
-	for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
+
+	bih = NULL;
+	bih_triangles_count = -1;
+	if(!dynamic)
 	{
-		surfaceindex = surfacelist[surfacelistindex];
-		surface = surfaces + surfaceindex;
-		// check cull box first because it rejects more than any other check
-		if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
-			continue;
-		// skip transparent surfaces
-		texture = surface->texture;
-		if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
-			continue;
-		if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
-			continue;
-		numtriangles = surface->num_triangles;
-		for (triangleindex = 0, e = model->surfmesh.data_element3i + 3*surface->num_firsttriangle;triangleindex < numtriangles;triangleindex++, e += 3)
+		if(model->render_bih.numleafs)
+			bih = &model->render_bih;
+		else if(model->collision_bih.numleafs)
+			bih = &model->collision_bih;
+	}
+	if(bih)
+		bih_triangles_count = BIH_GetTriangleListForBox(bih, sizeof(bih_triangles) / sizeof(*bih_triangles), bih_triangles, bih_surfaces, localmins, localmaxs);
+	if(bih_triangles_count == 0)
+		return;
+	if(bih_triangles_count > (int) (sizeof(bih_triangles) / sizeof(*bih_triangles))) // hit too many, likely bad anyway
+		return;
+	if(bih_triangles_count > 0)
+	{
+		for (triangleindex = 0; triangleindex < bih_triangles_count; ++triangleindex)
 		{
-			for (cornerindex = 0;cornerindex < 3;cornerindex++)
-			{
-				index = 3*e[cornerindex];
-				VectorCopy(vertex3f + index, v[cornerindex]);
-			}
-			// cull backfaces
-			//TriangleNormal(v[0], v[1], v[2], normal);
-			//if (DotProduct(normal, localnormal) < 0.0f)
-			//	continue;
-			// clip by each of the box planes formed from the projection matrix
-			// if anything survives, we emit the decal
-			numpoints = PolygonF_Clip(3        , v[0]        , planes[0][0], planes[0][1], planes[0][2], planes[0][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			if (numpoints < 3)
+			surfaceindex = bih_surfaces[triangleindex];
+			surface = surfaces + surfaceindex;
+			texture = surface->texture;
+			if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 				continue;
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[1][0], planes[1][1], planes[1][2], planes[1][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
-			if (numpoints < 3)
+			if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
 				continue;
-			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[2][0], planes[2][1], planes[2][2], planes[2][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			if (numpoints < 3)
+			R_DecalSystem_SplatTriangle(decalsystem, r, g, b, a, s1, t1, s2, t2, decalsequence, dynamic, planes, &projection, bih_triangles[triangleindex], surfaceindex);
+		}
+	}
+	else
+	{
+		for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
+		{
+			surfaceindex = surfacelist[surfacelistindex];
+			surface = surfaces + surfaceindex;
+			// check cull box first because it rejects more than any other check
+			if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
 				continue;
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[3][0], planes[3][1], planes[3][2], planes[3][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[0][0]);
-			if (numpoints < 3)
+			// skip transparent surfaces
+			texture = surface->texture;
+			if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 				continue;
-			numpoints = PolygonF_Clip(numpoints, points[0][0], planes[4][0], planes[4][1], planes[4][2], planes[4][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), points[1][0]);
-			if (numpoints < 3)
+			if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
 				continue;
-			numpoints = PolygonF_Clip(numpoints, points[1][0], planes[5][0], planes[5][1], planes[5][2], planes[5][3], 1.0f/64.0f, sizeof(points[0])/sizeof(points[0][0]), v[0]);
-			if (numpoints < 3)
-				continue;
-			// some part of the triangle survived, so we have to accept it...
-			if (dynamic)
-			{
-				// dynamic always uses the original triangle
-				numpoints = 3;
-				for (cornerindex = 0;cornerindex < 3;cornerindex++)
-				{
-					index = 3*e[cornerindex];
-					VectorCopy(vertex3f + index, v[cornerindex]);
-				}
-			}
-			for (cornerindex = 0;cornerindex < numpoints;cornerindex++)
-			{
-				// convert vertex positions to texcoords
-				Matrix4x4_Transform(&projection, v[cornerindex], temp);
-				tc[cornerindex][0] = (temp[1]+1.0f)*0.5f * (s2-s1) + s1;
-				tc[cornerindex][1] = (temp[2]+1.0f)*0.5f * (t2-t1) + t1;
-				// calculate distance fade from the projection origin
-				f = a * (1.0f-fabs(temp[0])) * cl_decals_newsystem_intensitymultiplier.value;
-				f = bound(0.0f, f, 1.0f);
-				c[cornerindex][0] = r * f;
-				c[cornerindex][1] = g * f;
-				c[cornerindex][2] = b * f;
-				c[cornerindex][3] = 1.0f;
-				//VectorMA(v[cornerindex], cl_decals_bias.value, localnormal, v[cornerindex]);
-			}
-			if (dynamic)
-				R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[1], v[2], tc[0], tc[1], tc[2], c[0], c[1], c[2], triangleindex+surface->num_firsttriangle, surfaceindex, decalsequence);
-			else
-				for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
-					R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, surfaceindex, decalsequence);
+			numtriangles = surface->num_triangles;
+			for (triangleindex = 0; triangleindex < numtriangles; triangleindex++)
+				R_DecalSystem_SplatTriangle(decalsystem, r, g, b, a, s1, t1, s2, t2, decalsequence, dynamic, planes, &projection, triangleindex + surface->num_firsttriangle, surfaceindex);
 		}
 	}
 }

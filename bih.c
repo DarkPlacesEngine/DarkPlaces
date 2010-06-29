@@ -142,7 +142,7 @@ int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_nod
 	return bih->error;
 }
 
-static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int maxtriangles, int *trianglelist, int *numtrianglespointer, const float *mins, const float *maxs)
+static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, int *numtrianglespointer, const float *mins, const float *maxs)
 {
 	int axis;
 	bih_node_t *node;
@@ -154,7 +154,7 @@ static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int ma
 		if (mins[axis] < node->backmax)
 		{
 			if (maxs[axis] > node->frontmin)
-				BIH_GetTriangleListForBox_Node(bih, node->front, maxtriangles, trianglelist, numtrianglespointer, mins, maxs);
+				BIH_GetTriangleListForBox_Node(bih, node->front, maxtriangles, trianglelist_idx, trianglelist_surf, numtrianglespointer, mins, maxs);
 			nodenum = node->back;
 			continue;
 		}
@@ -175,17 +175,23 @@ static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int ma
 	{
 	case BIH_RENDERTRIANGLE:
 		if (*numtrianglespointer >= maxtriangles)
+		{
+			++*numtrianglespointer; // so the caller can detect overflow
 			return;
-		trianglelist[(*numtrianglespointer)++] = leaf->itemindex;
+		}
+		if(trianglelist_surf)
+			trianglelist_surf[*numtrianglespointer] = leaf->surfaceindex;
+		trianglelist_idx[*numtrianglespointer] = leaf->itemindex;
+		++*numtrianglespointer;
 		break;
 	default:
 		break;
 	}
 }
 
-int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist, const float *mins, const float *maxs)
+int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, const float *mins, const float *maxs)
 {
 	int numtriangles = 0;
-	BIH_GetTriangleListForBox_Node(bih, 0, maxtriangles, trianglelist, &numtriangles, mins, maxs);
+	BIH_GetTriangleListForBox_Node(bih, 0, maxtriangles, trianglelist_idx, trianglelist_surf, &numtriangles, mins, maxs);
 	return numtriangles;
 }

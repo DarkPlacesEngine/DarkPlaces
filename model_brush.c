@@ -3738,11 +3738,13 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 		if (mod_q1bsp_polygoncollisions.integer)
 		{
-			Mod_MakeCollisionBIH(mod, true);
+			Mod_MakeCollisionBIH(mod, true, &mod->collision_bih);
 			// point traces and contents checks still use the bsp tree
 			mod->TraceLine = Mod_CollisionBIH_TraceLine;
 			mod->TraceBox = Mod_CollisionBIH_TraceBox;
 		}
+		else
+			Mod_MakeCollisionBIH(mod, true, &mod->render_bih);
 
 		// generate VBOs and other shared data before cloning submodels
 		if (i == 0)
@@ -6589,7 +6591,7 @@ static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const 
 	return supercontents;
 }
 
-void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
+bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t *out)
 {
 	int j;
 	int bihnumleafs;
@@ -6626,14 +6628,14 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 		for (j = 0, surface = model->data_surfaces + model->firstmodelsurface;j < nummodelsurfaces;j++, surface++)
 		{
 			if (surface->texture->basematerialflags & MATERIALFLAG_MESHCOLLISIONS)
-				bihnumleafs += surface->num_triangles;
+				bihnumleafs += surface->num_triangles + surface->num_collisiontriangles;
 			else
 				bihnumleafs += surface->num_collisiontriangles;
 		}
 	}
 
 	if (!bihnumleafs)
-		return;
+		return NULL;
 
 	// allocate the memory for the BIH leaf nodes
 	bihleafs = Mem_Alloc(loadmodel->mempool, sizeof(bih_leaf_t) * bihnumleafs);
@@ -6709,17 +6711,19 @@ void Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces)
 	temp_leafsortscratch = temp_leafsort + bihnumleafs;
 
 	// now build it
-	BIH_Build(&model->collision_bih, bihnumleafs, bihleafs, bihmaxnodes, bihnodes, temp_leafsort, temp_leafsortscratch);
+	BIH_Build(out, bihnumleafs, bihleafs, bihmaxnodes, bihnodes, temp_leafsort, temp_leafsortscratch);
 
 	// we're done with the temporary data
 	Mem_Free(temp_leafsort);
 
 	// resize the BIH nodes array if it over-allocated
-	if (model->collision_bih.maxnodes > model->collision_bih.numnodes)
+	if (out->maxnodes > out->numnodes)
 	{
-		model->collision_bih.maxnodes = model->collision_bih.numnodes;
-		model->collision_bih.nodes = Mem_Realloc(loadmodel->mempool, model->collision_bih.nodes, model->collision_bih.numnodes * sizeof(bih_node_t));
+		out->maxnodes = out->numnodes;
+		out->nodes = Mem_Realloc(loadmodel->mempool, out->nodes, out->numnodes * sizeof(bih_node_t));
 	}
+
+	return out;
 }
 
 static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents)
@@ -7035,7 +7039,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		if (j < mod->nummodelsurfaces)
 			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 
-		Mod_MakeCollisionBIH(mod, false);
+		Mod_MakeCollisionBIH(mod, false, &mod->collision_bih);
+		Mod_MakeCollisionBIH(mod, true, &mod->render_bih);
 
 		// generate VBOs and other shared data before cloning submodels
 		if (i == 0)
@@ -7472,7 +7477,8 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, true);
 	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
-	Mod_MakeCollisionBIH(loadmodel, true);
+	Mod_MakeCollisionBIH(loadmodel, true, &mod->collision_bih);
+	mod->render_bih = mod->collision_bih;
 }
 
 
