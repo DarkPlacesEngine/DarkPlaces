@@ -3946,6 +3946,20 @@ void VM_stringtokeynum (void)
 	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum(PRVM_G_STRING(OFS_PARM0));
 }
 
+/*
+=========
+VM_getkeybind
+
+string getkeybind(float key)
+=========
+*/
+const char *Key_GetBind (int key);
+void VM_getkeybind (void)
+{
+	VM_SAFEPARMCOUNT(1, VM_CL_getkeybind);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0)));
+}
+
 // CL_Video interface functions
 
 /*
