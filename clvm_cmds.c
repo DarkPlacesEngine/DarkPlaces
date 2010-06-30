@@ -29,7 +29,6 @@ void Sbar_SortFrags (void);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 void CSQC_RelinkAllEntities (int drawmask);
 void CSQC_RelinkCSQCEntities (void);
-const char *Key_GetBind (int key);
 
 // #1 void(vector ang) makevectors
 static void VM_CL_makevectors (void)
@@ -1297,13 +1296,6 @@ static void VM_CL_setpause(void)
 		cl.csqc_paused = true;
 	else
 		cl.csqc_paused = false;
-}
-
-//#342 string(float keynum) getkeybind (EXT_CSQC)
-static void VM_CL_getkeybind (void)
-{
-	VM_SAFEPARMCOUNT(1, VM_CL_getkeybind);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0)));
 }
 
 //#343 void(float usecursor) setcursormode (EXT_CSQC)
@@ -4335,7 +4327,7 @@ VM_centerprint,					// #338 void(string s, ...) centerprint (EXT_CSQC)
 VM_print,						// #339 void(string s, ...) print (EXT_CSQC, DP_SV_PRINT)
 VM_keynumtostring,				// #340 string(float keynum) keynumtostring (EXT_CSQC)
 VM_stringtokeynum,				// #341 float(string keyname) stringtokeynum (EXT_CSQC)
-VM_CL_getkeybind,				// #342 string(float keynum) getkeybind (EXT_CSQC)
+VM_getkeybind,					// #342 string(float keynum) getkeybind (EXT_CSQC)
 VM_CL_setcursormode,			// #343 void(float usecursor) setcursormode (EXT_CSQC)
 VM_CL_getmousepos,				// #344 vector() getmousepos (EXT_CSQC)
 VM_CL_getinputstate,			// #345 float(float framenum) getinputstate (EXT_CSQC)

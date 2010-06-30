@@ -366,6 +366,7 @@ void VM_makevectors (void);
 void VM_vectorvectors (void);
 
 void VM_keynumtostring (void);
+void VM_getkeybind (void);
 void VM_findkeysforcommand (void);
 void VM_stringtokeynum (void);
 

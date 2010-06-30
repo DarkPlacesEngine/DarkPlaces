@@ -1119,7 +1119,7 @@ NULL,									// #338
 NULL,									// #339
 NULL,									// #340
 NULL,									// #341
-NULL,									// #342
+VM_getkeybind,							// #342 string(float keynum) getkeybind (EXT_CSQC)
 NULL,									// #343
 NULL,									// #344
 NULL,									// #345
