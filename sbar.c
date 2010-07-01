@@ -1203,6 +1203,7 @@ void Sbar_ShowFPS(void)
 		}
 		if (fpsstring[0])
 		{
+			r_draw2d_force = true;
 			fps_x = vid_conwidth.integer - DrawQ_TextWidth(fpsstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			if (red)
@@ -1210,6 +1211,7 @@ void Sbar_ShowFPS(void)
 			else
 				DrawQ_String(fps_x, fps_y, fpsstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
+			r_draw2d_force = false;
 		}
 		if (timedemostring1[0])
 		{
