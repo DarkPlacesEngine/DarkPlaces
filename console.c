@@ -1836,6 +1836,8 @@ void Con_DrawConsole (int lines)
 
 	con_vislines = lines;
 
+	r_draw2d_force = true;
+
 // draw the background
 	alpha0 = cls.signon == SIGNONS ? scr_conalpha.value : 1.0f; // always full alpha when not in game
 	if((alpha = alpha0 * scr_conalphafactor.value) > 0)
@@ -1933,6 +1935,8 @@ void Con_DrawConsole (int lines)
 
 // draw the input prompt, user text, and cursor if desired
 	Con_DrawInput ();
+
+	r_draw2d_force = false;
 }
 
 /*

@@ -983,10 +983,13 @@ void _DrawQ_Setup(void)
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+qboolean r_draw2d_force = false;
 static void _DrawQ_ProcessDrawFlag(int flags)
 {
 	_DrawQ_Setup();
 	CHECKGLERROR
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
 	if(flags == DRAWFLAG_ADDITIVE)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	else if(flags == DRAWFLAG_MODULATE)
@@ -1004,6 +1007,9 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	float floats[20];
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
+
 	GL_Color(red, green, blue, alpha);
 
 	R_Mesh_VertexPointer(floats, 0, 0);
@@ -1059,6 +1065,9 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	float cosar = cos(ar);
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
+
 	GL_Color(red, green, blue, alpha);
 
 	R_Mesh_VertexPointer(floats, 0, 0);
@@ -1107,6 +1116,9 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	float floats[12];
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
+
 	GL_Color(red, green, blue, alpha);
 
 	R_Mesh_VertexPointer(floats, 0, 0);
@@ -1424,6 +1436,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		maxlen = 1<<30;
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return startx + DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, &maxlen, w, h, sw, sh, NULL, ignorecolorcodes, fnt, 1000000000);
 
 	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
@@ -1762,6 +1776,8 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	float floats[36];
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
 
 	R_Mesh_VertexPointer(floats, 0, 0);
 	R_Mesh_ColorPointer(floats + 20, 0, 0);
@@ -1798,6 +1814,8 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 {
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
 
 	R_Mesh_VertexPointer(mesh->data_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(mesh->data_color4f, 0, 0);
@@ -1813,6 +1831,8 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	int num;
 
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
 
 	GL_Color(1,1,1,1);
 	CHECKGLERROR
@@ -1831,6 +1851,8 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
 {
 	_DrawQ_ProcessDrawFlag(flags);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
 
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 

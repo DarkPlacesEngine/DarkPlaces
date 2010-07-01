@@ -114,6 +114,8 @@ extern cvar_t r_showdisabledepthtest;
 // view origin
 //
 extern cvar_t r_drawentities;
+extern cvar_t r_draw2d;
+extern qboolean r_draw2d_force;
 extern cvar_t r_drawviewmodel;
 extern cvar_t r_drawworld;
 extern cvar_t r_speeds;
