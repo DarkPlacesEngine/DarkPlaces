@@ -1822,7 +1822,7 @@ The typing input line at the bottom should only be drawn if typing is allowed
 */
 void Con_DrawConsole (int lines)
 {
-	float alpha;
+	float alpha, alpha0;
 	double sx, sy;
 	int mask_must = 0;
 	int mask_mustnot = (developer.integer>0) ? 0 : CON_MASK_DEVELOPER;
@@ -1837,8 +1837,8 @@ void Con_DrawConsole (int lines)
 	con_vislines = lines;
 
 // draw the background
-	alpha = cls.signon == SIGNONS ? scr_conalpha.value : 1.0f; // always full alpha when not in game
-	if(alpha > 0)
+	alpha0 = cls.signon == SIGNONS ? scr_conalpha.value : 1.0f; // always full alpha when not in game
+	if((alpha = alpha0 * scr_conalphafactor.value) > 0)
 	{
 		sx = scr_conscroll_x.value;
 		sy = scr_conscroll_y.value;
@@ -1854,13 +1854,27 @@ void Con_DrawConsole (int lines)
 					0);
 		else
 			DrawQ_Fill(0, lines - vid_conheight.integer, vid_conwidth.integer, vid_conheight.integer, 0.0f, 0.0f, 0.0f, alpha, 0);
-		alpha *= scr_conalpha2factor.value;
 	}
-	if(alpha > 0)
+	if((alpha = alpha0 * scr_conalpha2factor.value) > 0)
 	{
 		sx = scr_conscroll2_x.value;
 		sy = scr_conscroll2_y.value;
 		conbackpic = Draw_CachePic_Flags("gfx/conback2", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
+		sx *= realtime; sy *= realtime;
+		sx -= floor(sx); sy -= floor(sy);
+		if(conbackpic && conbackpic->tex != r_texture_notexture)
+			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
+					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					1 + sx, 1 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
+					0);
+	}
+	if((alpha = alpha0 * scr_conalpha3factor.value) > 0)
+	{
+		sx = scr_conscroll3_x.value;
+		sy = scr_conscroll3_y.value;
+		conbackpic = Draw_CachePic_Flags("gfx/conback3", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
 		sx *= realtime; sy *= realtime;
 		sx -= floor(sx); sy -= floor(sy);
 		if(conbackpic && conbackpic->tex != r_texture_notexture)
