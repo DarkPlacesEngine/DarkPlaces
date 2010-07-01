@@ -51,11 +51,15 @@ extern cvar_t crosshair;
 extern cvar_t crosshair_size;
 
 extern cvar_t scr_conalpha;
+extern cvar_t scr_conalphafactor;
 extern cvar_t scr_conalpha2factor;
+extern cvar_t scr_conalpha3factor;
 extern cvar_t scr_conscroll_x;
 extern cvar_t scr_conscroll_y;
 extern cvar_t scr_conscroll2_x;
 extern cvar_t scr_conscroll2_y;
+extern cvar_t scr_conscroll3_x;
+extern cvar_t scr_conscroll3_y;
 extern cvar_t scr_conbrightness;
 extern cvar_t r_letterbox;
 
