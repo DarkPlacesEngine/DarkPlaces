@@ -153,7 +153,7 @@ void R_Explosion_Init(void)
 #ifdef MAX_EXPLOSIONS
 	Cvar_RegisterVariable(&r_drawexplosions);
 
-	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown, r_explosion_newmap);
+	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown, r_explosion_newmap, NULL, NULL);
 #endif
 }
 

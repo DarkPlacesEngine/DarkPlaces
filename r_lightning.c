@@ -174,7 +174,7 @@ void R_LightningBeams_Init(void)
 	Cvar_RegisterVariable(&r_lightningbeam_color_green);
 	Cvar_RegisterVariable(&r_lightningbeam_color_blue);
 	Cvar_RegisterVariable(&r_lightningbeam_qmbtexture);
-	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap);
+	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap, NULL, NULL);
 }
 
 void R_CalcLightningBeamPolygonVertex3f(float *v, const float *start, const float *end, const float *offset)

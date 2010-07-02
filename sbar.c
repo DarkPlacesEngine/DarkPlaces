@@ -407,7 +407,7 @@ void Sbar_Init (void)
 		Cvar_RegisterVariable(&sbar_flagstatus_pos); // this cvar makes no sense in other games
 	}
 
-	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
+	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap, NULL, NULL);
 }
 
 

@@ -179,7 +179,7 @@ void Mod_Init (void)
 
 void Mod_RenderInit(void)
 {
-	R_RegisterModule("Models", mod_start, mod_shutdown, mod_newmap);
+	R_RegisterModule("Models", mod_start, mod_shutdown, mod_newmap, NULL, NULL);
 }
 
 void Mod_UnloadModel (dp_model_t *mod)

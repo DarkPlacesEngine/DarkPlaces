@@ -590,7 +590,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 
-	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
+	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, NULL, NULL);
 }
 
 void R_Textures_Frame (void)
