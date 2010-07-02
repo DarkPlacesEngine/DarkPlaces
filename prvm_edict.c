@@ -1182,7 +1182,7 @@ void PRVM_ED_EdictGet_f(void)
 	}
 
 	v = (prvm_eval_t *)(ed->fields.vp + key->ofs);
-	s = PRVM_UglyValueString((etype_t)key->type, v);
+	s = PRVM_UglyValueString(key->type, v);
 	if(Cmd_Argc() == 5)
 	{
 		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(4));
@@ -1227,7 +1227,7 @@ void PRVM_ED_GlobalGet_f(void)
 	}
 
 	v = (prvm_eval_t *) &prog->globals.generic[key->ofs];
-	s = PRVM_UglyValueString((etype_t)key->type, v);
+	s = PRVM_UglyValueString(key->type, v);
 	if(Cmd_Argc() == 4)
 	{
 		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(3));
@@ -1896,7 +1896,7 @@ po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
 	if(!buf)
 		return NULL;
 
-	po = (po_t *)Mem_Alloc(pool, sizeof(*po));
+	po = Mem_Alloc(pool, sizeof(*po));
 	memset(po, 0, sizeof(*po));
 
 	p = buf;
@@ -1960,16 +1960,16 @@ po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
 		{
 			if(thisstr.key)
 				Mem_Free(thisstr.key);
-			thisstr.key = (char *)Mem_Alloc(pool, decodedpos + 1);
+			thisstr.key = Mem_Alloc(pool, decodedpos + 1);
 			memcpy(thisstr.key, decodedbuf, decodedpos + 1);
 		}
 		else if(decodedpos > 0 && thisstr.key) // skip empty translation results
 		{
-			thisstr.value = (char *)Mem_Alloc(pool, decodedpos + 1);
+			thisstr.value = Mem_Alloc(pool, decodedpos + 1);
 			memcpy(thisstr.value, decodedbuf, decodedpos + 1);
 			hashindex = CRC_Block((const unsigned char *) thisstr.key, strlen(thisstr.key)) % PO_HASHSIZE;
 			thisstr.nextonhashchain = po->hashtable[hashindex];
-			po->hashtable[hashindex] = (po_string_t *)Mem_Alloc(pool, sizeof(thisstr));
+			po->hashtable[hashindex] = Mem_Alloc(pool, sizeof(thisstr));
 			memcpy(po->hashtable[hashindex], &thisstr, sizeof(thisstr));
 			memset(&thisstr, 0, sizeof(thisstr));
 		}

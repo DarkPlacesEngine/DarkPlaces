@@ -10,7 +10,6 @@
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
-#pragma comment(lib, "winmm.lib")
 #else
 # include <unistd.h>
 # include <fcntl.h>

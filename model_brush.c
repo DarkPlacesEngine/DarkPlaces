@@ -1333,8 +1333,8 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 	int x, y;
 	int w = width/2;
 	int h = height;
-	unsigned int *solidpixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
-	unsigned int *alphapixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
+	unsigned *solidpixels = Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
+	unsigned *alphapixels = Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
 
 	// allocate a texture pool if we need it
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
@@ -1576,9 +1576,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer != 0, NULL);
+				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer, NULL);
 				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer != 0, NULL);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer, NULL);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
@@ -2454,8 +2454,8 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 					loadmodel->texturepool = R_AllocTexturePool();
 				// could not find room, make a new lightmap
 				loadmodel->brushq3.num_mergedlightmaps = lightmapnumber + 1;
-				loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_lightmaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_lightmaps[0]));
-				loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_deluxemaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_deluxemaps[0]));
+				loadmodel->brushq3.data_lightmaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_lightmaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_lightmaps[0]));
+				loadmodel->brushq3.data_deluxemaps = Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_deluxemaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_deluxemaps[0]));
 				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
 				if (loadmodel->brushq1.nmaplightdata)
 					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
@@ -3182,7 +3182,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	if (portalpointsbuffersize < portalpointsbufferoffset + 6*MAX_PORTALPOINTS)
 	{
 		portalpointsbuffersize = portalpointsbufferoffset * 2;
-		portalpointsbuffer = (double *)Mem_Realloc(loadmodel->mempool, portalpointsbuffer, portalpointsbuffersize * sizeof(*portalpointsbuffer));
+		portalpointsbuffer = Mem_Realloc(loadmodel->mempool, portalpointsbuffer, portalpointsbuffersize * sizeof(*portalpointsbuffer));
 	}
 	frontpoints = portalpointsbuffer + portalpointsbufferoffset;
 	portalpointsbufferoffset += 3*MAX_PORTALPOINTS;
@@ -3315,7 +3315,7 @@ static void Mod_Q1BSP_MakePortals(void)
 	Mem_ExpandableArray_NewArray(&portalarray, loadmodel->mempool, sizeof(portal_t), 1020*1024/sizeof(portal_t));
 	portalpointsbufferoffset = 0;
 	portalpointsbuffersize = 6*MAX_PORTALPOINTS*128;
-	portalpointsbuffer = (double *)Mem_Alloc(loadmodel->mempool, portalpointsbuffersize * sizeof(*portalpointsbuffer));
+	portalpointsbuffer = Mem_Alloc(loadmodel->mempool, portalpointsbuffersize * sizeof(*portalpointsbuffer));
 	Mod_Q1BSP_RecursiveNodePortals(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
 	Mem_Free(portalpointsbuffer);
 	portalpointsbuffer = NULL;
@@ -5096,8 +5096,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
 	if (collisiontriangles)
 	{
-		loadmodel->brush.data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, collisionvertices * sizeof(float[3]));
-		loadmodel->brush.data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, collisiontriangles * sizeof(int[3]));
+		loadmodel->brush.data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, collisionvertices * sizeof(float[3]));
+		loadmodel->brush.data_collisionelement3i = Mem_Alloc(loadmodel->mempool, collisiontriangles * sizeof(int[3]));
 	}
 	meshvertices = 0;
 	meshtriangles = 0;
@@ -6743,7 +6743,7 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 		return NULL;
 
 	// allocate the memory for the BIH leaf nodes
-	bihleafs = (bih_leaf_t *)Mem_Alloc(loadmodel->mempool, sizeof(bih_leaf_t) * bihnumleafs);
+	bihleafs = Mem_Alloc(loadmodel->mempool, sizeof(bih_leaf_t) * bihnumleafs);
 
 	// now populate the BIH leaf nodes
 	bihleafindex = 0;
@@ -6811,8 +6811,8 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 
 	// allocate buffers for the produced and temporary data
 	bihmaxnodes = bihnumleafs - 1;
-	bihnodes = (bih_node_t *)Mem_Alloc(loadmodel->mempool, sizeof(bih_node_t) * bihmaxnodes);
-	temp_leafsort = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int) * bihnumleafs * 2);
+	bihnodes = Mem_Alloc(loadmodel->mempool, sizeof(bih_node_t) * bihmaxnodes);
+	temp_leafsort = Mem_Alloc(loadmodel->mempool, sizeof(int) * bihnumleafs * 2);
 	temp_leafsortscratch = temp_leafsort + bihnumleafs;
 
 	// now build it
@@ -6825,7 +6825,7 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 	if (out->maxnodes > out->numnodes)
 	{
 		out->maxnodes = out->numnodes;
-		out->nodes = (bih_node_t *)Mem_Realloc(loadmodel->mempool, out->nodes, out->numnodes * sizeof(bih_node_t));
+		out->nodes = Mem_Realloc(loadmodel->mempool, out->nodes, out->numnodes * sizeof(bih_node_t));
 	}
 
 	return out;
@@ -7459,12 +7459,12 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->radius2 = modelradius * modelradius;
 
 	// allocate storage for triangles
-	loadmodel->surfmesh.data_element3i = (int *)Mem_Alloc(loadmodel->mempool, numtriangles * sizeof(int[3]));
+	loadmodel->surfmesh.data_element3i = Mem_Alloc(loadmodel->mempool, numtriangles * sizeof(int[3]));
 	// allocate vertex hash structures to build an optimal vertex subset
 	vertexhashsize = numtriangles*2;
-	vertexhashtable = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int) * vertexhashsize);
+	vertexhashtable = Mem_Alloc(loadmodel->mempool, sizeof(int) * vertexhashsize);
 	memset(vertexhashtable, 0xFF, sizeof(int) * vertexhashsize);
-	vertexhashdata = (objvertex_t *)Mem_Alloc(loadmodel->mempool, sizeof(*vertexhashdata) * numtriangles*3);
+	vertexhashdata = Mem_Alloc(loadmodel->mempool, sizeof(*vertexhashdata) * numtriangles*3);
 	vertexhashcount = 0;
 
 	// gather surface stats for assigning vertex/triangle ranges

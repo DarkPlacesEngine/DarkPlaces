@@ -252,7 +252,6 @@ static r_qwskincache_t *r_qwskincache;
 static int r_qwskincache_size;
 
 /// vertex coordinates for a quad that covers the screen exactly
-extern const float r_screenvertex3f[12];
 const float r_screenvertex3f[12] =
 {
 	0, 0, 0,
@@ -378,7 +377,7 @@ static void R_BuildNormalizationCube(void)
 	vec_t s, t, intensity;
 #define NORMSIZE 64
 	unsigned char *data;
-	data = (unsigned char *)Mem_Alloc(tempmempool, 6*NORMSIZE*NORMSIZE*4);
+	data = Mem_Alloc(tempmempool, 6*NORMSIZE*NORMSIZE*4);
 	for (side = 0;side < 6;side++)
 	{
 		for (y = 0;y < NORMSIZE;y++)
@@ -518,8 +517,8 @@ static void R_BuildFogHeightTexture(void)
 	}
 	size = image_width;
 	r_refdef.fog_height_tablesize = size;
-	r_refdef.fog_height_table1d = (unsigned char *)Mem_Alloc(r_main_mempool, size * 4);
-	r_refdef.fog_height_table2d = (unsigned char *)Mem_Alloc(r_main_mempool, size * size * 4);
+	r_refdef.fog_height_table1d = Mem_Alloc(r_main_mempool, size * 4);
+	r_refdef.fog_height_table2d = Mem_Alloc(r_main_mempool, size * size * 4);
 	memcpy(r_refdef.fog_height_table1d, inpixels, size * 4);
 	Mem_Free(inpixels);
 	// LordHavoc: now the magic - what is that table2d for?  it is a cooked
@@ -4430,8 +4429,8 @@ void R_GLSL_Restart_f(void)
 			}
 			memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 		}
-#endif
 		break;
+#endif
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 		break;
@@ -5649,7 +5648,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	// check for DDS texture file first
 	if (!r_loaddds || !(ddsbase = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s.dds", basename), textureflags, &ddshasalpha, ddsavgcolor, miplevel)))
 	{
-		basepixels = loadimagepixelsbgra(name, complain, true, r_texture_convertsRGB_skin.integer != 0, &miplevel);
+		basepixels = loadimagepixelsbgra(name, complain, true, r_texture_convertsRGB_skin.integer, &miplevel);
 		if (basepixels == NULL)
 			return NULL;
 	}
@@ -5766,7 +5765,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	// _luma is supported only for tenebrae compatibility
 	// _glow is the preferred name
 	mymiplevel = savemiplevel;
-	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel))))
+	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel))))
 	{
 		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->glow)
@@ -5775,7 +5774,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel)))
+	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel)))
 	{
 		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_gloss.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->gloss)
@@ -5785,7 +5784,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel)))
+	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel)))
 	{
 		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->pants)
@@ -5795,7 +5794,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel)))
+	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel)))
 	{
 		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->shirt)
@@ -5805,7 +5804,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va("%s_reflect", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer != 0, &mymiplevel)))
+	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va("%s_reflect", skinframe->basename), false, false, r_texture_convertsRGB_skin.integer, &mymiplevel)))
 	{
 		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va("%s_reflect", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_reflectmask.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->reflect)
@@ -5924,7 +5923,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		Con_Printf("loading quake skin \"%s\"\n", name);
 
 	// we actually don't upload anything until the first use, because mdl skins frequently go unused, and are almost never used in both modes (colormapped and non-colormapped)
-	skinframe->qpixels = (unsigned char *)Mem_Alloc(r_main_mempool, width*height);
+	skinframe->qpixels = Mem_Alloc(r_main_mempool, width*height);
 	memcpy(skinframe->qpixels, skindata, width*height);
 	skinframe->qwidth = width;
 	skinframe->qheight = height;
@@ -6149,7 +6148,7 @@ rtexture_t *R_LoadCubemap(const char *basename)
 			// generate an image name based on the base and and suffix
 			dpsnprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
 			// load it
-			if ((image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_cubemap.integer != 0, NULL)))
+			if ((image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_cubemap.integer, NULL)))
 			{
 				// an image loaded, make sure width and height are equal
 				if (image_width == image_height && (!cubemappixels || image_width == cubemapsize))
@@ -6248,7 +6247,7 @@ void R_Main_ResizeViewCache(void)
 		r_refdef.viewcache.maxentities = numentities;
 		if (r_refdef.viewcache.entityvisible)
 			Mem_Free(r_refdef.viewcache.entityvisible);
-		r_refdef.viewcache.entityvisible = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
+		r_refdef.viewcache.entityvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
 	}
 	if (r_refdef.viewcache.world_numclusters != numclusters)
 	{
@@ -6256,21 +6255,21 @@ void R_Main_ResizeViewCache(void)
 		r_refdef.viewcache.world_numclusterbytes = numclusterbytes;
 		if (r_refdef.viewcache.world_pvsbits)
 			Mem_Free(r_refdef.viewcache.world_pvsbits);
-		r_refdef.viewcache.world_pvsbits = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numclusterbytes);
+		r_refdef.viewcache.world_pvsbits = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numclusterbytes);
 	}
 	if (r_refdef.viewcache.world_numleafs != numleafs)
 	{
 		r_refdef.viewcache.world_numleafs = numleafs;
 		if (r_refdef.viewcache.world_leafvisible)
 			Mem_Free(r_refdef.viewcache.world_leafvisible);
-		r_refdef.viewcache.world_leafvisible = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numleafs);
+		r_refdef.viewcache.world_leafvisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numleafs);
 	}
 	if (r_refdef.viewcache.world_numsurfaces != numsurfaces)
 	{
 		r_refdef.viewcache.world_numsurfaces = numsurfaces;
 		if (r_refdef.viewcache.world_surfacevisible)
 			Mem_Free(r_refdef.viewcache.world_surfacevisible);
-		r_refdef.viewcache.world_surfacevisible = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numsurfaces);
+		r_refdef.viewcache.world_surfacevisible = Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numsurfaces);
 	}
 }
 
@@ -6839,9 +6838,9 @@ void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
 {
 	int i;
 	if (!ent->animcache_vertexmesh && ent->animcache_normal3f)
-		ent->animcache_vertexmesh = (r_vertexmesh_t *)R_FrameData_Alloc(sizeof(r_vertexmesh_t)*numvertices);
+		ent->animcache_vertexmesh = R_FrameData_Alloc(sizeof(r_vertexmesh_t)*numvertices);
 	if (!ent->animcache_vertexposition)
-		ent->animcache_vertexposition = (r_vertexposition_t *)R_FrameData_Alloc(sizeof(r_vertexposition_t)*numvertices);
+		ent->animcache_vertexposition = R_FrameData_Alloc(sizeof(r_vertexposition_t)*numvertices);
 	if (ent->animcache_vertexposition)
 	{
 		for (i = 0;i < numvertices;i++)
@@ -6884,11 +6883,11 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 			{
 				numvertices = model->surfmesh.num_vertices;
 				if (wantnormals)
-					ent->animcache_normal3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
+					ent->animcache_normal3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
 				if (wanttangents)
 				{
-					ent->animcache_svector3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
-					ent->animcache_tvector3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
+					ent->animcache_svector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+					ent->animcache_tvector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
 				}
 				if (!r_framedata_failed)
 				{
@@ -6905,13 +6904,13 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 			return false;
 		// get some memory for this entity and generate mesh data
 		numvertices = model->surfmesh.num_vertices;
-		ent->animcache_vertex3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
+		ent->animcache_vertex3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
 		if (wantnormals)
-			ent->animcache_normal3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
+			ent->animcache_normal3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
 		if (wanttangents)
 		{
-			ent->animcache_svector3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
-			ent->animcache_tvector3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
+			ent->animcache_svector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
+			ent->animcache_tvector3f = R_FrameData_Alloc(sizeof(float[3])*numvertices);
 		}
 		if (!r_framedata_failed)
 		{
@@ -7608,7 +7607,7 @@ static void R_Water_StartFrame(void)
 	r_waterstate.numwaterplanes = 0;
 }
 
-void R_Water_AddWaterPlane(msurface_t *surface, int entno)
+void R_Water_AddWaterPlane(msurface_t *surface)
 {
 	int triangleindex, planeindex;
 	const int *e;
@@ -9424,7 +9423,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			r_qwskincache_size = cl.maxclients;
 			if (r_qwskincache)
 				Mem_Free(r_qwskincache);
-			r_qwskincache = (r_qwskincache_t *)Mem_Alloc(r_main_mempool, sizeof(*r_qwskincache) * r_qwskincache_size);
+			r_qwskincache = Mem_Alloc(r_main_mempool, sizeof(*r_qwskincache) * r_qwskincache_size);
 		}
 		if (strcmp(r_qwskincache[i].name, cl.scores[i].qw_skin))
 			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
@@ -12283,7 +12282,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 		qboolean useshortelements;
 		decalsystem->maxdecals = max(16, decalsystem->maxdecals * 2);
 		useshortelements = decalsystem->maxdecals * 3 <= 65536;
-		decalsystem->decals = (tridecal_t *)Mem_Alloc(cls.levelmempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + (useshortelements ? sizeof(unsigned short[3]) : 0)));
+		decalsystem->decals = Mem_Alloc(cls.levelmempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + (useshortelements ? sizeof(unsigned short[3]) : 0)));
 		decalsystem->color4f = (float *)(decalsystem->decals + decalsystem->maxdecals);
 		decalsystem->texcoord2f = (float *)(decalsystem->color4f + decalsystem->maxdecals*12);
 		decalsystem->vertex3f = (float *)(decalsystem->texcoord2f + decalsystem->maxdecals*6);

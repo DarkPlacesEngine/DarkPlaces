@@ -1943,7 +1943,7 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 {
 	int i, j, k, m;
 	size_t datasize = PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4;
-	unsigned char *data = (unsigned char *)Mem_Alloc(tempmempool, datasize);
+	unsigned char *data = Mem_Alloc(tempmempool, datasize);
 
 	// blood particles
 	for (i = 0;i < 8;i++)
@@ -2159,7 +2159,7 @@ static void R_InitParticleTexture (void)
 	}
 
 #ifndef DUMPPARTICLEFONT
-	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true, r_texture_convertsRGB_particles.integer != 0);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true, r_texture_convertsRGB_particles.integer);
 	if (!particletexture[tex_beam].texture)
 #endif
 	{

@@ -389,7 +389,7 @@ void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *par
 #define sscanf sscanf_s
 #endif
 
-qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
+int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
 	const dllfunction_t *func;
@@ -1227,13 +1227,13 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 {
 	viddef_mode_t mode;
 	memset(&mode, 0, sizeof(mode));
-	mode.fullscreen = fullscreen != 0;
+	mode.fullscreen = fullscreen;
 	mode.width = width;
 	mode.height = height;
 	mode.bitsperpixel = bpp;
 	mode.refreshrate = vid_userefreshrate.integer ? max(1, refreshrate) : 0;
-	mode.userefreshrate = vid_userefreshrate.integer != 0;
-	mode.stereobuffer = stereobuffer != 0;
+	mode.userefreshrate = vid_userefreshrate.integer;
+	mode.stereobuffer = stereobuffer;
 	mode.samples = samples;
 	cl_ignoremousemoves = 2;
 	if (VID_InitMode(&mode))

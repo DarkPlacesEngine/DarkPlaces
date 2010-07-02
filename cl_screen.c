@@ -1006,14 +1006,14 @@ void SCR_ScreenShot_f (void)
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * (scr_screenshot_alpha.integer ? 4 : 3));
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, jpeg, png, true, scr_screenshot_alpha.integer != 0))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, jpeg, png, true, scr_screenshot_alpha.integer))
 		Con_Printf("Wrote %s\n", filename);
 	else
 	{
 		Con_Printf("Unable to write %s\n", filename);
 		if(jpeg || png)
 		{
-			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer != 0))
+			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer))
 			{
 				strlcpy(filename + strlen(filename) - 3, "tga", 4);
 				Con_Printf("Wrote %s\n", filename);
