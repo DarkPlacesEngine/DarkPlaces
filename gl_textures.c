@@ -1035,7 +1035,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 	R_Upload(glt, data, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
 	if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
-		glt->bufferpixels = Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 
 	// texture converting and uploading can take a while, so make sure we're sending keepalives
 	CL_KeepaliveMessage(false);
@@ -1152,7 +1152,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 		mipinfo[mip][3] = ddssize;
 		ddssize += mipinfo[mip][2];
 	}
-	dds = Mem_Alloc(tempmempool, ddssize);
+	dds = (unsigned char *)Mem_Alloc(tempmempool, ddssize);
 	if (!dds)
 		return -4;
 	dds_caps1 = 0x1000; // DDSCAPS_TEXTURE

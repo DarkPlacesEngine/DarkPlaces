@@ -359,9 +359,9 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
-	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer, NULL);
+	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
 	if (pixels == NULL && !strncmp(path, "gfx/", 4))
-		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer, NULL);
+		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
 	if (pixels)
 	{
 		pic->width = image_width;
@@ -447,9 +447,9 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
 	if (pic->autoload && !pic->tex)
 	{
-		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
+		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
 	}
@@ -718,7 +718,7 @@ dp_font_t *FindFont(const char *title, qboolean allocate_new)
 		dp_fonts.maxsize = dp_fonts.maxsize + FONTS_EXPAND;
 		if (developer_font.integer)
 			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", i, dp_fonts.maxsize);
-		dp_fonts.f = Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+		dp_fonts.f = (dp_font_t *)Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
 		// register a font in first expanded slot
 		strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
 		return &dp_fonts.f[i];
@@ -938,7 +938,7 @@ void GL_Draw_Init (void)
 	// allocate fonts storage
 	fonts_mempool = Mem_AllocPool("FONTS", 0, NULL);
 	dp_fonts.maxsize = MAX_FONTS;
-	dp_fonts.f = Mem_Alloc(fonts_mempool, sizeof(dp_font_t) * dp_fonts.maxsize);
+	dp_fonts.f = (dp_font_t *)Mem_Alloc(fonts_mempool, sizeof(dp_font_t) * dp_fonts.maxsize);
 	memset(dp_fonts.f, 0, sizeof(dp_font_t) * dp_fonts.maxsize);
 
 	// assign starting font names

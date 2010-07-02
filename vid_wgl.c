@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vid_wgl.c -- NT GL vid component
 
+#pragma comment(lib, "comctl32.lib")
+
 #ifdef SUPPORTDIRECTX
 // Include DX libs
 #pragma comment(lib, "dinput8.lib")

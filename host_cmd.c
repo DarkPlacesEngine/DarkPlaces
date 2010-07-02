@@ -2491,7 +2491,7 @@ void Host_PQRcon_f (void)
 		SZ_Clear(&net_message);
 		MSG_WriteLong (&net_message, 0);
 		MSG_WriteByte (&net_message, CCREQ_RCON);
-		SZ_Write(&net_message, (void*)rcon_password.string, n);
+		SZ_Write(&net_message, (const unsigned char*)rcon_password.string, n);
 		MSG_WriteByte (&net_message, 0); // terminate the (possibly partial) string
 		MSG_WriteString (&net_message, Cmd_Args());
 		StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));

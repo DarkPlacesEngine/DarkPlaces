@@ -699,7 +699,7 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 	edgehashentry_t *edgehashentries, *hash;
 	if (!numtriangles)
 		return;
-	edgehash = Mem_Alloc(tempmempool, TRIANGLEEDGEHASH * sizeof(*edgehash));
+	edgehash = (edgehashentry_t **)Mem_Alloc(tempmempool, TRIANGLEEDGEHASH * sizeof(*edgehash));
 	// if there are too many triangles for the stack array, allocate larger buffer
 	edgehashentries = (edgehashentry_t *)Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
 	// find neighboring triangles
@@ -3232,7 +3232,7 @@ void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, int width, int hei
 	state->width = width;
 	state->height = height;
 	state->currentY = 0;
-	state->rows = Mem_Alloc(loadmodel->mempool, state->height * sizeof(*state->rows));
+	state->rows = (mod_alloclightmap_row_t *)Mem_Alloc(loadmodel->mempool, state->height * sizeof(*state->rows));
 	for (y = 0;y < state->height;y++)
 	{
 		state->rows[y].currentX = 0;
@@ -3464,7 +3464,7 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(dp_model_t *model, l
 	VectorSet(mins, lightinfo->origin[0] - lightinfo->radius, lightinfo->origin[1] - lightinfo->radius, lightinfo->origin[2] - lightinfo->radius);
 	VectorSet(maxs, lightinfo->origin[0] + lightinfo->radius, lightinfo->origin[1] + lightinfo->radius, lightinfo->origin[2] + lightinfo->radius);
 	VectorCopy(lightinfo->origin, origin);
-	nodes = Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
+	nodes = (svbsp_node_t *)Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
 	for (;;)
 	{
 		SVBSP_Init(&svbsp, origin, maxnodes, nodes);
@@ -3478,14 +3478,14 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(dp_model_t *model, l
 				return;
 			}
 			Mem_Free(nodes);
-			nodes = Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
+			nodes = (svbsp_node_t *)Mem_Alloc(tempmempool, maxnodes * sizeof(*nodes));
 		}
 		else
 			break;
 	}
 	if (svbsp.numnodes > 0)
 	{
-		svbsp.nodes = Mem_Alloc(tempmempool, svbsp.numnodes * sizeof(*nodes));
+		svbsp.nodes = (svbsp_node_t *)Mem_Alloc(tempmempool, svbsp.numnodes * sizeof(*nodes));
 		memcpy(svbsp.nodes, nodes, svbsp.numnodes * sizeof(*nodes));
 		lightinfo->svbsp = svbsp;
 	}
@@ -3511,7 +3511,7 @@ static void Mod_GenerateLightmaps_CreateLights(dp_model_t *model)
 	}
 	if (mod_generatelightmaps_numlights > 0)
 	{
-		mod_generatelightmaps_lightinfo = Mem_Alloc(tempmempool, mod_generatelightmaps_numlights * sizeof(*mod_generatelightmaps_lightinfo));
+		mod_generatelightmaps_lightinfo = (lightmaplight_t *)Mem_Alloc(tempmempool, mod_generatelightmaps_numlights * sizeof(*mod_generatelightmaps_lightinfo));
 		lightinfo = mod_generatelightmaps_lightinfo;
 		for (index = 0;;index++)
 		{
@@ -3862,7 +3862,7 @@ static void Mod_GenerateLightmaps_CreateTriangleInformation(dp_model_t *model)
 	const int *e;
 	lightmaptriangle_t *triangle;
 	// generate lightmap triangle structs
-	mod_generatelightmaps_lightmaptriangles = Mem_Alloc(model->mempool, model->surfmesh.num_triangles * sizeof(lightmaptriangle_t));
+	mod_generatelightmaps_lightmaptriangles = (lightmaptriangle_t *)Mem_Alloc(model->mempool, model->surfmesh.num_triangles * sizeof(lightmaptriangle_t));
 	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
 	{
 		surface = model->data_surfaces + surfaceindex;
@@ -4017,10 +4017,10 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	model->brushq3.deluxemapping_modelspace = true;
 	model->brushq3.deluxemapping = true;
 	model->brushq3.num_mergedlightmaps = lightmapnumber;
-	model->brushq3.data_lightmaps = Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
-	model->brushq3.data_deluxemaps = Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
-	lightmappixels = Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
-	deluxemappixels = Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
+	model->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
+	model->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(model->mempool, model->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
+	lightmappixels = (unsigned char *)Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
+	deluxemappixels = (unsigned char *)Mem_Alloc(tempmempool, model->brushq3.num_mergedlightmaps * lm_texturesize * lm_texturesize * 4);
 	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
 	{
 		surface = model->data_surfaces + surfaceindex;

@@ -2135,7 +2135,7 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 		Cvar_SetValueQuick(&r_shadow_deferred, 0);
 	}
 }
-	
+
 void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 {
 	float nearclip, farclip, bias;
