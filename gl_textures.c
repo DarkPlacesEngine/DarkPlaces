@@ -751,7 +751,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
 {
 	int i, mip, width, height, depth;
-	GLint oldbindtexnum = 0;
+	GLint oldbindtexnum;
 	const unsigned char *prevbuffer;
 	prevbuffer = data;
 
@@ -1224,7 +1224,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	textypeinfo_t *texinfo;
 	int mip, mipwidth, mipheight, mipsize;
 	unsigned int c;
-	GLint oldbindtexnum = 0;
+	GLint oldbindtexnum;
 	const unsigned char *mippixels, *ddspixels;
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;

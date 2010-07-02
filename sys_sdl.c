@@ -1,8 +1,6 @@
 #include "quakedef.h"
 
 #ifdef WIN32
-#pragma comment(lib, "sdl.lib")
-#pragma comment(lib, "sdlmain.lib")
 #include <io.h>
 #include "conio.h"
 #else

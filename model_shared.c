@@ -363,7 +363,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	int num;
 	unsigned int crc;
 	void *buf;
-	fs_offset_t filesize = 0;
+	fs_offset_t filesize;
 
 	mod->used = true;
 

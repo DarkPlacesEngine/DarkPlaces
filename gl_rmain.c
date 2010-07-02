@@ -7472,8 +7472,8 @@ void R_ResetViewRendering2D(void)
 	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilMask(255);CHECKGLERROR
-	qglStencilFunc(GL_ALWAYS, 128, 255);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 }
@@ -7498,8 +7498,8 @@ void R_ResetViewRendering3D(void)
 	qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
 	qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-	qglStencilMask(255);CHECKGLERROR
-	qglStencilFunc(GL_ALWAYS, 128, 255);CHECKGLERROR
+	qglStencilMask(~0);CHECKGLERROR
+	qglStencilFunc(GL_ALWAYS, 128, ~0);CHECKGLERROR
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);CHECKGLERROR
 	GL_CullFace(r_refdef.view.cullface_back);
 }

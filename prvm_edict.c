@@ -1896,8 +1896,6 @@ po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
 	if(!buf)
 		return NULL;
 
-	memset(&thisstr, 0, sizeof(thisstr)); // hush compiler warning
-
 	po = (po_t *)Mem_Alloc(pool, sizeof(*po));
 	memset(po, 0, sizeof(*po));
 
