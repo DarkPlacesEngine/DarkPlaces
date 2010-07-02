@@ -2209,9 +2209,11 @@ static void R_InitParticleTexture (void)
 
 			if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
 			{
+				strlcpy(texturename, com_token, sizeof(texturename));
 				s1 = atof(com_token);
 				if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
 				{
+					texturename[0] = 0;
 					t1 = atof(com_token);
 					if (COM_ParseToken_Simple(&bufptr, true, false) && strcmp(com_token, "\n"))
 					{
@@ -2226,10 +2228,7 @@ static void R_InitParticleTexture (void)
 					}
 				}
 				else
-				{
 					s1 = 0;
-					strlcpy(texturename, com_token, sizeof(texturename));
-				}
 			}
 			if (!texturename[0])
 			{
