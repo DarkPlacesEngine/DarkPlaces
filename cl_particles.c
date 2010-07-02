@@ -1687,16 +1687,15 @@ void CL_ParticleExplosion (const vec3_t org)
 			{
 				for (i = 0;i < 512 * cl_particles_quality.value;i++)
 				{
-					int k;
+					int k = 0;
 					vec3_t v, v2;
-					for (k = 0;k < 16;k++)
+					do
 					{
 						VectorRandom(v2);
 						VectorMA(org, 128, v2, v);
 						trace = CL_TraceLine(org, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
-						if (trace.fraction >= 0.1)
-							break;
 					}
+					while (k < 16 && trace.fraction < 0.1f);
 					VectorSubtract(trace.endpos, org, v2);
 					VectorScale(v2, 2.0f, v2);
 					CL_NewParticle(org, pt_spark, 0x903010, 0xFFD030, tex_particle, 1.0f, 0, lhrandom(0, 255), 512, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, true, 0, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
