@@ -761,7 +761,7 @@ void R_Shadow_Init(void)
 	r_shadow_buffer_surfacesides = NULL;
 	r_shadow_buffer_shadowtrispvs = NULL;
 	r_shadow_buffer_lighttrispvs = NULL;
-	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
+	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap, NULL, NULL);
 }
 
 matrix4x4_t matrix_attenuationxyz =

@@ -612,6 +612,6 @@ void CL_Video_Init( void )
 	Cvar_RegisterVariable(&cl_video_brightness);
 	Cvar_RegisterVariable(&cl_video_stipple);
 
-	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap );
+	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap, NULL, NULL );
 }
 

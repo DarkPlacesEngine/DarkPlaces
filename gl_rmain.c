@@ -6458,7 +6458,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_framedatasize);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
-	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
+	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
 
 	Cvar_RegisterVariable(&r_track_sprites);
 	Cvar_RegisterVariable(&r_track_sprites_flags);

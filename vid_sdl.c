@@ -488,7 +488,7 @@ void VID_Init (void)
 	//Cvar_RegisterVariable(&joy_sensitivityroll);
 	
 #ifdef SDL_R_RESTART
-	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap);
+	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
 #endif
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)

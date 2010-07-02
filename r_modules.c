@@ -10,6 +10,8 @@ typedef struct rendermodule_s
 	void(*start)(void);
 	void(*shutdown)(void);
 	void(*newmap)(void);
+	void(*devicelost)(void);
+	void(*devicerestored)(void);
 }
 rendermodule_t;
 
@@ -20,7 +22,7 @@ void R_Modules_Init(void)
 	Cmd_AddCommand("r_restart", R_Modules_Restart, "restarts renderer");
 }
 
-void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void))
+void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void), void(*devicelost)(void), void(*devicerestored)(void))
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)
@@ -40,6 +42,8 @@ void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), voi
 	rendermodule[i].start = start;
 	rendermodule[i].shutdown = shutdown;
 	rendermodule[i].newmap = newmap;
+	rendermodule[i].devicelost = devicelost;
+	rendermodule[i].devicerestored = devicerestored;
 }
 
 void R_Modules_Start(void)
@@ -95,5 +99,36 @@ void R_Modules_NewMap(void)
 		rendermodule[i].newmap();
 	}
 	R_SkinFrame_Purge();
+}
+
+void R_Modules_DeviceLost(void)
+{
+	int i;
+	for (i = 0;i < MAXRENDERMODULES;i++)
+	{
+		if (rendermodule[i].name == NULL)
+			continue;
+		if (!rendermodule[i].active)
+			continue;
+		if (!rendermodule[i].devicelost)
+			continue;
+		rendermodule[i].devicelost();
+	}
+}
+
+
+void R_Modules_DeviceRestored(void)
+{
+	int i;
+	for (i = 0;i < MAXRENDERMODULES;i++)
+	{
+		if (rendermodule[i].name == NULL)
+			continue;
+		if (!rendermodule[i].active)
+			continue;
+		if (!rendermodule[i].devicerestored)
+			continue;
+		rendermodule[i].devicerestored();
+	}
 }
 

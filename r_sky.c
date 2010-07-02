@@ -454,6 +454,6 @@ void R_Sky_Init(void)
 	Cvar_RegisterVariable (&r_skyscroll2);
 	memset(&skyboxskinframe, 0, sizeof(skyboxskinframe));
 	skyname[0] = 0;
-	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
+	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap, NULL, NULL);
 }
 
