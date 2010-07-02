@@ -3383,8 +3383,8 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP(dp_model_t *model, l
 		Mod_GenerateLightmaps_CreateLights_ComputeSVBSP_InsertSurfaces(model, &svbsp, mins, maxs);
 		if (svbsp.ranoutofnodes)
 		{
-			maxnodes *= 2;
-			if (maxnodes >= 1<<22)
+			maxnodes *= 16;
+			if (maxnodes > 1<<22)
 			{
 				Mem_Free(nodes);
 				return;
