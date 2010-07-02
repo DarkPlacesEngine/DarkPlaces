@@ -24,8 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // disable data conversion warnings
 
 #ifdef _MSC_VER
-#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
-#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
+//#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
+//#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
+//#pragma warning(disable : 4706)		// LordHavoc: MSVC++ 2008 x86, assignment within conditional expression
+//#pragma warning(disable : 4127)		// LordHavoc: MSVC++ 2008 x86, conditional expression is constant
+//#pragma warning(disable : 4100)		// LordHavoc: MSVC++ 2008 x86, unreferenced formal parameter
+//#pragma warning(disable : 4055)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from data pointer   to function pointer
+//#pragma warning(disable : 4054)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from function pointer   to data pointer
 #endif
 
 

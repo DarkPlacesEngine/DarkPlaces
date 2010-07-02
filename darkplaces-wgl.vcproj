@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="darkplaces-dedicated"
-	ProjectGUID="{389AE334-D907-4069-90B3-F0551B3EFDE9}"
-	RootNamespace="darkplacesdedicated"
+	Name="darkplaces-wgl"
+	ProjectGUID="{6E3D4311-BB84-4EB7-8C6C-10AA3D249C28}"
+	RootNamespace="darkplaceswgl"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -46,7 +46,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
-				WarningLevel="3"
+				WarningLevel="4"
 				DebugInformationFormat="4"
 				DisableSpecificWarnings="4706;4127;4100;4055;4054;4244;4305;4702"
 			/>
@@ -61,10 +61,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(SolutionDir)darkplaces-dedicated-debug.exe"
+				OutputFile="$(SolutionDir)darkplaces-debug.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
-				SubSystem="1"
+				SubSystem="2"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -135,10 +135,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(SolutionDir)darkplaces-dedicated.exe"
+				OutputFile="$(SolutionDir)darkplaces.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
-				SubSystem="1"
+				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
@@ -191,11 +191,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\cd_null.c"
+				RelativePath=".\cd_shared.c"
 				>
 			</File>
 			<File
-				RelativePath=".\cd_shared.c"
+				RelativePath=".\cd_win.c"
 				>
 			</File>
 			<File
@@ -447,7 +447,31 @@
 				>
 			</File>
 			<File
-				RelativePath=".\snd_null.c"
+				RelativePath=".\snd_main.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_mem.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_mix.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_modplug.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_ogg.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_wav.c"
+				>
+			</File>
+			<File
+				RelativePath=".\snd_win.c"
 				>
 			</File>
 			<File
@@ -479,11 +503,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\sys_linux.c"
+				RelativePath=".\sys_shared.c"
 				>
 			</File>
 			<File
-				RelativePath=".\sys_shared.c"
+				RelativePath=".\sys_win.c"
 				>
 			</File>
 			<File
@@ -491,11 +515,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\vid_null.c"
+				RelativePath=".\vid_shared.c"
 				>
 			</File>
 			<File
-				RelativePath=".\vid_shared.c"
+				RelativePath=".\vid_wgl.c"
 				>
 			</File>
 			<File
@@ -582,6 +606,10 @@
 			</File>
 			<File
 				RelativePath=".\common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\conproc.h"
 				>
 			</File>
 			<File
@@ -886,6 +914,10 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\darkplaces.rc"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

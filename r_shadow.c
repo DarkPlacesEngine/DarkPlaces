@@ -1896,7 +1896,7 @@ void R_Shadow_ValidateCvars(void)
 		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 }
 
-static const r_vertexposition_t resetvertexposition[3];
+static const r_vertexposition_t resetvertexposition[3] = {{0, 0, 0}};
 
 void R_Shadow_RenderMode_Begin(void)
 {
