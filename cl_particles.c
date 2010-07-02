@@ -2295,7 +2295,7 @@ void R_Particles_Init (void)
 	Cvar_RegisterVariable(&r_drawparticles_drawdistance);
 	Cvar_RegisterVariable(&r_drawdecals);
 	Cvar_RegisterVariable(&r_drawdecals_drawdistance);
-	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
+	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap, NULL, NULL);
 }
 
 void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)

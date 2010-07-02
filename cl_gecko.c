@@ -869,7 +869,7 @@ void CL_Gecko_Init( void )
 	Cmd_AddCommand( "gecko_injecttext", cl_gecko_injecttext_f, "Injects text into a browser" );
 	Cmd_AddCommand( "gecko_movecursor", gl_gecko_movecursor_f, "Move the cursor to a certain position" );
 
-	R_RegisterModule( "CL_Gecko", cl_gecko_start, cl_gecko_shutdown, cl_gecko_newmap );
+	R_RegisterModule( "CL_Gecko", cl_gecko_start, cl_gecko_shutdown, cl_gecko_newmap, NULL, NULL );
 }
 
 void CL_Gecko_NavigateToURI( clgecko_t *instance, const char *URI ) {
