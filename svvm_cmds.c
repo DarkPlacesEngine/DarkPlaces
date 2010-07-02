@@ -2837,7 +2837,7 @@ static void VM_SV_skel_create(void)
 			break;
 	if (i == MAX_EDICTS)
 		return;
-	prog->skeletons[i] = skeleton = Mem_Alloc(cls.levelmempool, sizeof(skeleton_t) + model->num_bones * sizeof(matrix4x4_t));
+	prog->skeletons[i] = skeleton = (skeleton_t *)Mem_Alloc(cls.levelmempool, sizeof(skeleton_t) + model->num_bones * sizeof(matrix4x4_t));
 	PRVM_G_FLOAT(OFS_RETURN) = i + 1;
 	skeleton->model = model;
 	skeleton->relativetransforms = (matrix4x4_t *)(skeleton+1);

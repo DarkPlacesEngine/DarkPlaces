@@ -182,7 +182,7 @@ extern qboolean isG200;
 extern qboolean isRagePro;
 
 void *GL_GetProcAddress(const char *name);
-int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
+qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
 
 void VID_Shared_Init(void);
 
