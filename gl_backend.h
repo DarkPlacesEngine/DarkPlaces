@@ -31,26 +31,17 @@ void R_GetViewport(r_viewport_t *v);
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
-void GL_DepthFunc(int state);
 void GL_DepthRange(float nearfrac, float farfrac);
-void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int frontzfail, int frontzpass, int backfail, int backzfail, int backzpass, int frontcompare, int backcompare, int comparereference, int comparemask);
-void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask);
 void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
 void GL_AlphaTest(int state);
-void GL_AlphaFunc(int state, float value);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ActiveTexture(unsigned int num);
 void GL_ClientActiveTexture(unsigned int num);
 void GL_Scissor(int x, int y, int width, int height);
 void GL_ScissorTest(int state);
-void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilvalue);
-void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpixels);
-int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4);
-void R_Mesh_DestroyFramebufferObject(int fbo);
-void R_Mesh_ResetRenderTargets(void);
-void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4);
+void GL_Clear(int mask);
 
 unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
 void GL_Backend_FreeProgram(unsigned int prog);
@@ -70,7 +61,7 @@ void R_Mesh_Finish(void);
 
 
 // vertex buffer and index buffer creation/updating/freeing
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16);
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic);
 void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size);
 void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer);
 void GL_Mesh_ListVBOs(qboolean printeach);

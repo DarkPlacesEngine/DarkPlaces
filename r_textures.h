@@ -28,10 +28,8 @@
 #define TEXF_ISWORLD 0x00004000
 // indicates texture should be affected by gl_picmip_sprites and r_picmipsprites (maybe others in the future) instead of gl_picmip_other
 #define TEXF_ISSPRITE 0x00008000
-// indicates the texture will be used as a render target (D3D hint)
-#define TEXF_RENDERTARGET 0x0010000
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION | TEXF_RENDERTARGET)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION)
 
 typedef enum textype_e
 {
@@ -58,16 +56,6 @@ typedef enum textype_e
 }
 textype_t;
 
-/*
-#ifdef WIN32
-#define SUPPORTD3D
-#define SUPPORTDIRECTX
-#ifdef SUPPORTD3D
-#include <d3d9.h>
-#endif
-#endif
-*/
-
 // contents of this structure are mostly private to gl_textures.c
 typedef struct rtexture_s
 {
@@ -75,22 +63,6 @@ typedef struct rtexture_s
 	int texnum;
 	qboolean dirty;
 	int gltexturetypeenum; // exposed for use in R_Mesh_TexBind
-	// d3d stuff the backend needs
-	void *d3dtexture;
-#ifdef SUPPORTD3D
-	int d3dformat;
-	int d3dusage;
-	int d3dpool;
-	int d3daddressu;
-	int d3daddressv;
-	int d3daddressw;
-	int d3dmagfilter;
-	int d3dminfilter;
-	int d3dmipfilter;
-	int d3dmaxmiplevelfilter;
-	int d3dmipmaplodbias;
-	int d3dmaxmiplevel;
-#endif
 }
 rtexture_t;
 

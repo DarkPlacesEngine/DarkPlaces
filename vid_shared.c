@@ -790,37 +790,13 @@ static dllfunction_t drawbuffersfuncs[] =
 	{NULL, NULL}
 };
 
-void VID_ClearExtensions(void)
-{
-	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
-	Cvar_SetQuick(&gl_info_extensions, "");
-
-	// clear the extension flags
-	memset(&vid.support, 0, sizeof(vid.support));
-	vid.renderpath = RENDERPATH_GL11;
-	vid.forcevbo = false;
-	vid.maxtexturesize_2d = 0;
-	vid.maxtexturesize_3d = 0;
-	vid.maxtexturesize_cubemap = 0;
-	vid.texunits = 1;
-	vid.teximageunits = 1;
-	vid.texarrayunits = 1;
-	vid.max_anisotropy = 1;
-	vid.maxdrawbuffers = 1;
-
-	// this is a complete list of all functions that are directly checked in the renderer
-	qglDrawRangeElements = NULL;
-	qglDrawBuffer = NULL;
-	qglPolygonStipple = NULL;
-	qglFlush = NULL;
-	qglActiveTexture = NULL;
-	qglGetCompressedTexImageARB = NULL;
-	qglFramebufferTexture2DEXT = NULL;
-	qglDrawBuffersARB = NULL;
-}
-
 void VID_CheckExtensions(void)
 {
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+
+	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
+	Cvar_SetQuick(&gl_info_extensions, "");
 	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 
@@ -828,6 +804,7 @@ void VID_CheckExtensions(void)
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
+	vid.forcevbo = false;
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
 	vid.support.arb_depth_texture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
 	vid.support.arb_draw_buffers = GL_CheckExtension("GL_ARB_draw_buffers", drawbuffersfuncs, "-nodrawbuffers", false);
@@ -882,6 +859,15 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
 // COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
 // COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (allows vertex shader effects)
+
+	vid.maxtexturesize_2d = 0;
+	vid.maxtexturesize_3d = 0;
+	vid.maxtexturesize_cubemap = 0;
+	vid.texunits = 1;
+	vid.teximageunits = 1;
+	vid.texarrayunits = 1;
+	vid.max_anisotropy = 1;
+	vid.maxdrawbuffers = 1;
 
 	if (vid.support.arb_draw_buffers)
 		qglGetIntegerv(GL_MAX_DRAW_BUFFERS_ARB, (GLint*)&vid.maxdrawbuffers);
@@ -1050,9 +1036,6 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
 		if (v_glslgamma.integer)
 			wantgamma = 0;
 		break;
@@ -1253,7 +1236,6 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 	mode.stereobuffer = stereobuffer != 0;
 	mode.samples = samples;
 	cl_ignoremousemoves = 2;
-	VID_ClearExtensions();
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode

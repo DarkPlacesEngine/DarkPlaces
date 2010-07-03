@@ -989,9 +989,9 @@ static void _DrawQ_Setup(void)
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_SetViewport(&viewport);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	GL_DepthFunc(GL_LEQUAL);
-	GL_PolygonOffset(0,0);
-	GL_CullFace(GL_NONE);
+	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
+	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	R_EntityMatrix(&identitymatrix);
 
 	GL_DepthRange(0, 1);
@@ -1883,33 +1883,16 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		return;
 
 	GL_Color(1,1,1,1);
-	switch(vid.renderpath)
+	CHECKGLERROR
+	qglBegin(GL_LINE_LOOP);
+	for (num = 0;num < mesh->num_vertices;num++)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		CHECKGLERROR
-		qglBegin(GL_LINE_LOOP);
-		for (num = 0;num < mesh->num_vertices;num++)
-		{
-			if (mesh->data_color4f)
-				GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
-			qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
-		}
-		qglEnd();
-		CHECKGLERROR
-		break;
-	case RENDERPATH_D3D9:
-		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
+		if (mesh->data_color4f)
+			GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
+		qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
 	}
+	qglEnd();
+	CHECKGLERROR
 }
 
 //[515]: this is old, delete
@@ -1921,34 +1904,16 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		CHECKGLERROR
+	CHECKGLERROR
+	//qglLineWidth(width);CHECKGLERROR
 
-		//qglLineWidth(width);CHECKGLERROR
-
-		GL_Color(r,g,b,alpha);
-		CHECKGLERROR
-		qglBegin(GL_LINES);
-		qglVertex2f(x1, y1);
-		qglVertex2f(x2, y2);
-		qglEnd();
-		CHECKGLERROR
-		break;
-	case RENDERPATH_D3D9:
-		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	}
+	GL_Color(r,g,b,alpha);
+	CHECKGLERROR
+	qglBegin(GL_LINES);
+	qglVertex2f(x1, y1);
+	qglVertex2f(x2, y2);
+	qglEnd();
+	CHECKGLERROR
 }
 
 void DrawQ_SetClipArea(float x, float y, float width, float height)
@@ -1992,9 +1957,6 @@ void R_DrawGamma(void)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
 		if (vid_usinghwgamma || v_glslgamma.integer)
 			return;
 		break;

@@ -706,7 +706,7 @@ void R_TimeReport(char *desc)
 		return;
 
 	CHECKGLERROR
-	if (r_speeds.integer == 2 && qglFinish)
+	if (r_speeds.integer == 2)
 		qglFinish();
 	CHECKGLERROR
 	r_timereport_temp = r_timereport_current;
@@ -1231,8 +1231,7 @@ void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	CHECKGLERROR
 	// speed is critical here, so do saving as directly as possible
 
-	GL_ReadPixelsBGRA(x, y, vid.width, vid.height, cls.capturevideo.screenbuffer);
-
+	qglReadPixels (x, y, vid.width, vid.height, GL_BGRA, GL_UNSIGNED_BYTE, cls.capturevideo.screenbuffer);CHECKGLERROR
 	SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.width, vid.height, cls.capturevideo.outbuffer, width, height);
 
 	cls.capturevideo.videoframes(newframestepframenum - cls.capturevideo.framestepframe);
@@ -1477,7 +1476,8 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 	int	indices[4] = {0,1,2,3}; // BGRA
 	qboolean ret;
 
-	GL_ReadPixelsBGRA(x, y, width, height, buffer1);
+	CHECKGLERROR
+	qglReadPixels (x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, buffer1);CHECKGLERROR
 
 	if(gammacorrect && (scr_screenshot_gammaboost.value != 1 || WANT_SCREENSHOT_HWGAMMA))
 	{
@@ -1543,20 +1543,36 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 extern void R_UpdateFogColor(void);
 void R_ClearScreen(qboolean fogcolor)
 {
-	float clearcolor[4];
 	// clear to black
-	Vector4Clear(clearcolor);
+	CHECKGLERROR
 	if (fogcolor)
 	{
 		R_UpdateFogColor();
-		VectorCopy(r_refdef.fogcolor, clearcolor);
+		qglClearColor(r_refdef.fogcolor[0],r_refdef.fogcolor[1],r_refdef.fogcolor[2],0);CHECKGLERROR
 	}
-	// clear depth is 1.0
-	// LordHavoc: we use a stencil centered around 128 instead of 0,
-	// to avoid clamping interfering with strange shadow volume
-	// drawing orders
+	else
+	{
+		qglClearColor(0,0,0,0);CHECKGLERROR
+	}
+	qglClearDepth(1);CHECKGLERROR
+	if (vid.stencil)
+	{
+		// LordHavoc: we use a stencil centered around 128 instead of 0,
+		// to avoid clamping interfering with strange shadow volume
+		// drawing orders
+		qglClearStencil(128);CHECKGLERROR
+	}
 	// clear the screen
-	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0), clearcolor, 1.0f, 128);
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0));
+	// set dithering mode
+	if (gl_dither.integer)
+	{
+		qglEnable(GL_DITHER);CHECKGLERROR
+	}
+	else
+	{
+		qglDisable(GL_DITHER);CHECKGLERROR
+	}
 }
 
 qboolean CL_VM_UpdateView (void);
@@ -1777,7 +1793,7 @@ static void SCR_SetLoadingScreenTexture(void)
 		loadingscreentexture_h = vid.height / (float) h;
 	}
 
-	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_COLORBUFFER, TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
 	R_Mesh_CopyToTexture(loadingscreentexture, 0, 0, 0, 0, vid.width, vid.height);
 
 	loadingscreentexture_vertex3f[2] = loadingscreentexture_vertex3f[5] = loadingscreentexture_vertex3f[8] = loadingscreentexture_vertex3f[11] = 0;
@@ -1936,14 +1952,16 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	// release mouse grab while loading
 	if (!vid.fullscreen)
 		VID_SetMouse(false, false, false);
-//	CHECKGLERROR
-	r_refdef.draw2dstage = true;
+	CHECKGLERROR
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_SetViewport(&viewport);
-	GL_ColorMask(1,1,1,1);
+	//qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
+	//qglDepthMask(1);CHECKGLERROR
+	qglColorMask(1,1,1,1);CHECKGLERROR
+	qglClearColor(0,0,0,0);CHECKGLERROR
 	// when starting up a new video mode, make sure the screen is cleared to black
 	if (clear)
-		GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
+		qglClear(GL_COLOR_BUFFER_BIT);CHECKGLERROR
 	R_Textures_Frame();
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
@@ -1988,6 +2006,8 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 	R_Mesh_Finish();
 	// refresh
 	VID_Finish();
+	// however this IS necessary on Windows Vista
+	qglFinish();
 }
 
 void SCR_UpdateLoadingScreen (qboolean clear)
@@ -2030,8 +2050,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	}
 	else
 	{
-		if (qglDrawBuffer)
-			qglDrawBuffer(GL_BACK);
+		qglDrawBuffer(GL_BACK);
 		SCR_DrawLoadingScreen(clear);
 	}
 	SCR_DrawLoadingScreen_SharedFinish(clear);
@@ -2070,7 +2089,6 @@ void CL_UpdateScreen(void)
 	double rendertime1;
 	float conwidth, conheight;
 	float f;
-	r_viewport_t viewport;
 
 	Sbar_ShowFPS_Update();
 
@@ -2091,10 +2109,7 @@ void CL_UpdateScreen(void)
 	}
 
 	if (vid_hidden)
-	{
-		VID_Finish();
 		return;
-	}
 
 	rendertime1 = Sys_DoubleTime();
 
@@ -2136,27 +2151,13 @@ void CL_UpdateScreen(void)
 
 	SCR_SetUpToDrawConsole();
 
-	if (qglDrawBuffer)
-	{
-		CHECKGLERROR
-		qglDrawBuffer(GL_BACK);CHECKGLERROR
-		// set dithering mode
-		if (gl_dither.integer)
-		{
-			qglEnable(GL_DITHER);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_DITHER);CHECKGLERROR
-		}
-	}
-
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
-	R_SetViewport(&viewport);
-	GL_ScissorTest(false);
-	GL_ColorMask(1,1,1,1);
-	GL_DepthMask(true);
-
+	CHECKGLERROR
+	qglDrawBuffer(GL_BACK);CHECKGLERROR
+	qglViewport(0, 0, vid.width, vid.height);CHECKGLERROR
+	qglDisable(GL_SCISSOR_TEST);CHECKGLERROR
+	qglDepthMask(1);CHECKGLERROR
+	qglColorMask(1,1,1,1);CHECKGLERROR
+	qglClearColor(0,0,0,0);CHECKGLERROR
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
 	r_refdef.view.isoverlay = false;
@@ -2190,6 +2191,7 @@ void CL_UpdateScreen(void)
 		}
 	}
 
+	CHECKGLERROR
 	if (R_Stereo_Active())
 	{
 		matrix4x4_t originalmatrix = r_refdef.view.matrix;
@@ -2234,13 +2236,13 @@ void CL_UpdateScreen(void)
 	}
 	else
 		SCR_DrawScreen();
+	CHECKGLERROR
 
 	SCR_CaptureVideo();
 
-	if (qglFlush)
-		qglFlush(); // FIXME: should we really be using qglFlush here?
-
 	// quality adjustment according to render time
+	CHECKGLERROR
+	qglFlush(); // FIXME: should we really be using qglFlush here?
 	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
 	if (cl_minfps.value > 0 && cl_updatescreen_rendertime > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
 		cl_updatescreen_quality = 1 / (cl_updatescreen_rendertime * cl_minfps.value);
