@@ -42,8 +42,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <dinput.h>
 #endif
 
+#ifdef SUPPORTD3D
+#include <d3d9.h>
+#pragma comment(lib, "d3d9.lib")
+
+cvar_t vid_dx9 = {CVAR_SAVE, "vid_dx9", "0", "use Microsoft Direct3D9(r) for rendering"};
+cvar_t vid_dx9_hal = {CVAR_SAVE, "vid_dx9_hal", "1", "enables hardware rendering (1), otherwise software reference rasterizer (0 - very slow), note that 0 is necessary when using NVPerfHUD (which renders in hardware but requires this option to enable it)"};
+cvar_t vid_dx9_softvertex = {CVAR_SAVE, "vid_dx9_softvertex", "0", "enables software vertex processing (for compatibility testing?  or if you have a very fast CPU), usually you want this off"};
+cvar_t vid_dx9_triplebuffer = {CVAR_SAVE, "vid_dx9_triplebuffer", "0", "enables triple buffering when using vid_vsync in fullscreen, this options adds some latency and only helps when framerate is below 60 so you usually don't want it"};
+//cvar_t vid_dx10 = {CVAR_SAVE, "vid_dx10", "1", "use Microsoft Direct3D10(r) for rendering"};
+//cvar_t vid_dx11 = {CVAR_SAVE, "vid_dx11", "1", "use Microsoft Direct3D11(r) for rendering"};
+
+D3DPRESENT_PARAMETERS vid_d3dpresentparameters;
+#endif
+
 extern HINSTANCE global_hInstance;
 
+static HINSTANCE gldll;
+
+#ifdef SUPPORTD3D
+LPDIRECT3D9 vid_d3d9;
+LPDIRECT3DDEVICE9 vid_d3d9dev;
+D3DCAPS9 vid_d3d9caps;
+qboolean vid_d3ddevicelost;
+#endif
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL                   0x020A
@@ -250,8 +272,54 @@ static void IN_StartupMouse (void);
 
 //====================================
 
+qboolean vid_reallyhidden = true;
+#ifdef SUPPORTD3D
+qboolean vid_begunscene = false;
+#endif
 void VID_Finish (void)
 {
+#ifdef SUPPORTD3D
+	if (vid_d3d9dev)
+	{
+		DWORD d;
+		if (vid_begunscene)
+		{
+			IDirect3DDevice9_EndScene(vid_d3d9dev);
+			vid_begunscene = false;
+		}
+		if (vid_reallyhidden)
+			return;
+		d = IDirect3DDevice9_TestCooperativeLevel(vid_d3d9dev);
+		switch(d)
+		{
+		case D3DERR_DEVICELOST:
+			vid_d3ddevicelost = true;
+			vid_hidden = true;
+			Sleep(100);
+			break;
+		case D3DERR_DEVICENOTRESET:
+			vid_d3ddevicelost = false;
+			vid_hidden = vid_reallyhidden;
+			R_Modules_DeviceLost();
+			IDirect3DDevice9_Reset(vid_d3d9dev, &vid_d3dpresentparameters);
+			R_Modules_DeviceRestored();
+			break;
+		case D3D_OK:
+			vid_hidden = vid_reallyhidden;
+			IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
+			break;
+		}
+		if (!vid_begunscene && !vid_hidden)
+		{
+			IDirect3DDevice9_BeginScene(vid_d3d9dev);
+			vid_begunscene = true;
+		}
+		return;
+	}
+#endif
+
+	vid_hidden = vid_reallyhidden;
+
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && qwglSwapIntervalEXT;
 	if (vid_usingvsync != vid_usevsync)
 	{
@@ -398,10 +466,10 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	static qboolean sound_active = false;  // initially blocked by Sys_InitConsole()
 
 	vid_activewindow = fActive != FALSE;
-	vid_hidden = minimize != FALSE;
+	vid_reallyhidden = minimize != FALSE;
 
 	// enable/disable sound on focus gain/loss
-	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
+	if ((!vid_reallyhidden && vid_activewindow) || !snd_mutewhenidle.integer)
 	{
 		if (!sound_active)
 		{
@@ -425,12 +493,16 @@ void AppActivate(BOOL fActive, BOOL minimize)
 			if (vid_wassuspended)
 			{
 				vid_wassuspended = false;
-				ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN);
-				ShowWindow(mainwindow, SW_SHOWNORMAL);
+				if (gldll)
+				{
+					ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN);
+					ShowWindow(mainwindow, SW_SHOWNORMAL);
+				}
 			}
 
 			// LordHavoc: from dabb, fix for alt-tab bug in NVidia drivers
-			MoveWindow(mainwindow,0,0,gdevmode.dmPelsWidth,gdevmode.dmPelsHeight,false);
+			if (gldll)
+				MoveWindow(mainwindow,0,0,gdevmode.dmPelsWidth,gdevmode.dmPelsHeight,false);
 		}
 	}
 
@@ -439,7 +511,8 @@ void AppActivate(BOOL fActive, BOOL minimize)
 		VID_SetMouse(false, false, false);
 		if (vid_isfullscreen)
 		{
-			ChangeDisplaySettings (NULL, 0);
+			if (gldll)
+				ChangeDisplaySettings (NULL, 0);
 			vid_wassuspended = true;
 		}
 		VID_RestoreSystemGamma();
@@ -652,31 +725,42 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 int VID_SetGamma(unsigned short *ramps, int rampsize)
 {
-	HDC hdc = GetDC (NULL);
-	int i = SetDeviceGammaRamp(hdc, ramps);
-	ReleaseDC (NULL, hdc);
-	return i; // return success or failure
+	if (qwglMakeCurrent)
+	{
+		HDC hdc = GetDC (NULL);
+		int i = SetDeviceGammaRamp(hdc, ramps);
+		ReleaseDC (NULL, hdc);
+		return i; // return success or failure
+	}
+	else
+		return 0;
 }
 
 int VID_GetGamma(unsigned short *ramps, int rampsize)
 {
-	HDC hdc = GetDC (NULL);
-	int i = GetDeviceGammaRamp(hdc, ramps);
-	ReleaseDC (NULL, hdc);
-	return i; // return success or failure
+	if (qwglMakeCurrent)
+	{
+		HDC hdc = GetDC (NULL);
+		int i = GetDeviceGammaRamp(hdc, ramps);
+		ReleaseDC (NULL, hdc);
+		return i; // return success or failure
+	}
+	else
+		return 0;
 }
-
-static HINSTANCE gldll;
 
 static void GL_CloseLibrary(void)
 {
-	FreeLibrary(gldll);
-	gldll = 0;
-	gl_driver[0] = 0;
-	qwglGetProcAddress = NULL;
-	gl_extensions = "";
-	gl_platform = "";
-	gl_platformextensions = "";
+	if (gldll)
+	{
+		FreeLibrary(gldll);
+		gldll = 0;
+		gl_driver[0] = 0;
+		qwglGetProcAddress = NULL;
+		gl_extensions = "";
+		gl_platform = "";
+		gl_platformextensions = "";
+	}
 }
 
 static int GL_OpenLibrary(const char *name)
@@ -694,12 +778,17 @@ static int GL_OpenLibrary(const char *name)
 
 void *GL_GetProcAddress(const char *name)
 {
-	void *p = NULL;
-	if (qwglGetProcAddress != NULL)
-		p = (void *) qwglGetProcAddress(name);
-	if (p == NULL)
-		p = (void *) GetProcAddress(gldll, name);
-	return p;
+	if (gldll)
+	{
+		void *p = NULL;
+		if (qwglGetProcAddress != NULL)
+			p = (void *) qwglGetProcAddress(name);
+		if (p == NULL)
+			p = (void *) GetProcAddress(gldll, name);
+		return p;
+	}
+	else
+		return NULL;
 }
 
 #ifndef WGL_ARB_pixel_format
@@ -765,6 +854,15 @@ void VID_Init(void)
 {
 	WNDCLASS wc;
 
+#ifdef SUPPORTD3D
+	Cvar_RegisterVariable(&vid_dx9);
+	Cvar_RegisterVariable(&vid_dx9_hal);
+	Cvar_RegisterVariable(&vid_dx9_softvertex);
+	Cvar_RegisterVariable(&vid_dx9_triplebuffer);
+//	Cvar_RegisterVariable(&vid_dx10);
+//	Cvar_RegisterVariable(&vid_dx11);
+#endif
+
 	InitCommonControls();
 	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON1));
 
@@ -789,7 +887,7 @@ void VID_Init(void)
 	IN_Init();
 }
 
-qboolean VID_InitMode(viddef_mode_t *mode)
+qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
 	HDC hdc;
@@ -1234,7 +1332,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 	vid_usingvsync = false;
-	vid_hidden = false;
+	vid_reallyhidden = vid_hidden = false;
 	vid_initialized = true;
 
 	IN_StartupMouse ();
@@ -1250,9 +1348,261 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	return true;
 }
 
+#ifdef SUPPORTD3D
+static D3DADAPTER_IDENTIFIER9 d3d9adapteridentifier;
+
+extern cvar_t gl_info_extensions;
+extern cvar_t gl_info_vendor;
+extern cvar_t gl_info_renderer;
+extern cvar_t gl_info_version;
+extern cvar_t gl_info_platform;
+extern cvar_t gl_info_driver;
+qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
+{
+	int deviceindex;
+	RECT rect;
+	MSG msg;
+	int pixelformat, newpixelformat;
+	DWORD WindowStyle, ExWindowStyle;
+	int CenterX, CenterY;
+	int bpp = mode->bitsperpixel;
+	int width = mode->width;
+	int height = mode->height;
+	int refreshrate = (int)floor(mode->refreshrate+0.5);
+//	int stereobuffer = mode->stereobuffer;
+	int samples = mode->samples;
+	int fullscreen = mode->fullscreen;
+	int numdevices;
+
+	if (vid_initialized)
+		Sys_Error("VID_InitMode called when video is already initialised");
+
+	vid_isfullscreen = fullscreen != 0;
+	if (fullscreen)
+	{
+		WindowStyle = WS_POPUP;
+		ExWindowStyle = WS_EX_TOPMOST;
+	}
+	else
+	{
+		WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		ExWindowStyle = 0;
+	}
+
+	rect.top = 0;
+	rect.left = 0;
+	rect.right = width;
+	rect.bottom = height;
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
+
+	if (fullscreen)
+	{
+		CenterX = 0;
+		CenterY = 0;
+	}
+	else
+	{
+		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
+		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
+	}
+	CenterX = max(0, CenterX);
+	CenterY = max(0, CenterY);
+
+	// x and y may be changed by WM_MOVE messages
+	window_x = CenterX;
+	window_y = CenterY;
+	rect.left += CenterX;
+	rect.right += CenterX;
+	rect.top += CenterY;
+	rect.bottom += CenterY;
+
+	pixelformat = 0;
+	newpixelformat = 0;
+	gl_extensions = "";
+	gl_platformextensions = "";
+
+	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
+	if (!mainwindow)
+	{
+		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, global_hInstance, NULL);
+		VID_Shutdown();
+		return false;
+	}
+
+	baseDC = GetDC(mainwindow);
+
+	vid_d3d9 = Direct3DCreate9(D3D_SDK_VERSION);
+	if (!vid_d3d9)
+		Sys_Error("VID_InitMode: Direct3DCreate9 failed");
+
+	numdevices = IDirect3D9_GetAdapterCount(vid_d3d9);
+	vid_d3d9dev = NULL;
+	memset(&d3d9adapteridentifier, 0, sizeof(d3d9adapteridentifier));
+	for (deviceindex = 0;deviceindex < numdevices && !vid_d3d9dev;deviceindex++)
+	{
+		memset(&vid_d3dpresentparameters, 0, sizeof(vid_d3dpresentparameters));
+		vid_d3dpresentparameters.Flags = D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL;
+		vid_d3dpresentparameters.SwapEffect = D3DSWAPEFFECT_DISCARD;
+		vid_d3dpresentparameters.hDeviceWindow = mainwindow;
+		vid_d3dpresentparameters.BackBufferWidth = width;
+		vid_d3dpresentparameters.BackBufferHeight = height;
+		vid_d3dpresentparameters.MultiSampleType = samples > 1 ? (D3DMULTISAMPLE_TYPE)samples : D3DMULTISAMPLE_NONE;
+		vid_d3dpresentparameters.BackBufferCount = fullscreen ? (vid_dx9_triplebuffer.integer ? 3 : 2) : 1;
+		vid_d3dpresentparameters.FullScreen_RefreshRateInHz = fullscreen ? refreshrate : 0;
+		vid_d3dpresentparameters.Windowed = !fullscreen;
+		vid_d3dpresentparameters.EnableAutoDepthStencil = true;
+		vid_d3dpresentparameters.AutoDepthStencilFormat = bpp > 16 ? D3DFMT_D24S8 : D3DFMT_D16;
+		vid_d3dpresentparameters.BackBufferFormat = fullscreen?D3DFMT_X8R8G8B8:D3DFMT_UNKNOWN;
+		vid_d3dpresentparameters.PresentationInterval = vid_vsync.integer ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
+
+		memset(&d3d9adapteridentifier, 0, sizeof(d3d9adapteridentifier));
+		IDirect3D9_GetAdapterIdentifier(vid_d3d9, deviceindex, 0, &d3d9adapteridentifier);
+
+		IDirect3D9_CreateDevice(vid_d3d9, deviceindex, vid_dx9_hal.integer ? D3DDEVTYPE_HAL : D3DDEVTYPE_REF, mainwindow, vid_dx9_softvertex.integer ? D3DCREATE_SOFTWARE_VERTEXPROCESSING : D3DCREATE_HARDWARE_VERTEXPROCESSING, &vid_d3dpresentparameters, &vid_d3d9dev);
+	}
+
+	if (!vid_d3d9dev)
+	{
+		VID_Shutdown();
+		return false;
+	}
+
+	IDirect3DDevice9_GetDeviceCaps(vid_d3d9dev, &vid_d3d9caps);
+
+	Con_Printf("Using D3D9 device: %s\n", d3d9adapteridentifier.Description);
+	gl_extensions = "";
+	gl_platform = "D3D9";
+	gl_platformextensions = "";
+
+	ShowWindow (mainwindow, SW_SHOWDEFAULT);
+	UpdateWindow (mainwindow);
+
+	// now we try to make sure we get the focus on the mode switch, because
+	// sometimes in some systems we don't.  We grab the foreground, then
+	// finish setting up, pump all our messages, and sleep for a little while
+	// to let messages finish bouncing around the system, then we put
+	// ourselves at the top of the z order, then grab the foreground again,
+	// Who knows if it helps, but it probably doesn't hurt
+	SetForegroundWindow (mainwindow);
+
+	while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		TranslateMessage (&msg);
+		DispatchMessage (&msg);
+	}
+
+	Sleep (100);
+
+	SetWindowPos (mainwindow, HWND_TOP, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
+
+	SetForegroundWindow (mainwindow);
+
+	// fix the leftover Alt from any Alt-Tab or the like that switched us away
+	ClearAllStates ();
+
+	gl_renderer = d3d9adapteridentifier.Description;
+	gl_vendor = d3d9adapteridentifier.Driver;
+	gl_version = "";
+	gl_extensions = "";
+
+	Con_Printf("D3D9 adapter info:\n");
+	Con_Printf("Description: %s\n", d3d9adapteridentifier.Description);
+	Con_Printf("DeviceId: %x\n", d3d9adapteridentifier.DeviceId);
+	Con_Printf("DeviceName: %x\n", d3d9adapteridentifier.DeviceName);
+	Con_Printf("Driver: %s\n", d3d9adapteridentifier.Driver);
+	Con_Printf("DriverVersion: %x\n", d3d9adapteridentifier.DriverVersion);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+	Cvar_SetQuick(&gl_info_extensions, "");
+
+	CHECKGLERROR
+
+	vid.forcevbo = true;
+	vid.support.arb_depth_texture = true;
+	vid.support.arb_draw_buffers = vid_d3d9caps.NumSimultaneousRTs > 1;
+	vid.support.arb_occlusion_query = true; // can't find a cap for this
+	vid.support.arb_shadow = true;
+	vid.support.arb_texture_compression = true;
+	vid.support.arb_texture_cube_map = true;
+	vid.support.arb_texture_non_power_of_two = (vid_d3d9caps.TextureCaps & D3DPTEXTURECAPS_POW2) == 0;
+	vid.support.arb_vertex_buffer_object = true;
+	vid.support.ext_blend_subtract = true;
+	vid.support.ext_draw_range_elements = true;
+	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_texture_3d = true;
+	vid.support.ext_texture_compression_s3tc = true;
+	vid.support.ext_texture_filter_anisotropic = true;
+	vid.support.ati_separate_stencil = (vid_d3d9caps.StencilCaps & D3DSTENCILCAPS_TWOSIDED) != 0;
+
+	vid.maxtexturesize_2d = min(vid_d3d9caps.MaxTextureWidth, vid_d3d9caps.MaxTextureHeight);
+	vid.maxtexturesize_3d = vid_d3d9caps.MaxVolumeExtent;
+	vid.maxtexturesize_cubemap = vid.maxtexturesize_2d;
+	vid.texunits = 4;
+	vid.teximageunits = vid_d3d9caps.MaxSimultaneousTextures;
+	vid.texarrayunits = 8; // can't find a caps field for this?
+	vid.max_anisotropy = vid_d3d9caps.MaxAnisotropy;
+	vid.maxdrawbuffers = vid_d3d9caps.NumSimultaneousRTs;
+
+	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
+	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
+	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
+	Con_DPrintf("Using D3D9.0 rendering path - %i texture matrix, %i texture images, %i texcoords, shadowmapping supported%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.maxdrawbuffers > 1 ? ", MRT detected (allows prepass deferred lighting)" : "");
+	vid.renderpath = RENDERPATH_D3D9;
+
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
+
+	// LordHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+
+	// clear to black (loading plaque will be seen over this)
+	IDirect3DDevice9_Clear(vid_d3d9dev, 0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+	IDirect3DDevice9_BeginScene(vid_d3d9dev);
+	IDirect3DDevice9_EndScene(vid_d3d9dev);
+	IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
+	// because the only time we end/begin scene is in VID_Finish, we'd better start a scene now...
+	IDirect3DDevice9_BeginScene(vid_d3d9dev);
+	vid_begunscene = true;
+
+	//vid_menudrawfn = VID_MenuDraw;
+	//vid_menukeyfn = VID_MenuKey;
+	vid_usingmouse = false;
+	vid_usinghidecursor = false;
+	vid_usingvsync = false;
+	vid_hidden = vid_reallyhidden = false;
+	vid_initialized = true;
+
+	IN_StartupMouse ();
+	IN_StartupJoystick ();
+
+	return true;
+}
+#endif
+
+qboolean VID_InitMode(viddef_mode_t *mode)
+{
+#ifdef SUPPORTD3D
+//	if (vid_dx11.integer)
+//		return VID_InitModeDX(mode, 11);
+//	if (vid_dx10.integer)
+//		return VID_InitModeDX(mode, 10);
+	if (vid_dx9.integer)
+		return VID_InitModeDX(mode, 9);
+#endif
+	return VID_InitModeGL(mode);
+}
+
+
 static void IN_Shutdown(void);
 void VID_Shutdown (void)
 {
+	qboolean isgl;
 	if(vid_initialized == false)
 		return;
 
@@ -1260,11 +1610,33 @@ void VID_Shutdown (void)
 	VID_RestoreSystemGamma();
 
 	vid_initialized = false;
+	isgl = gldll != NULL;
 	IN_Shutdown();
+	gl_driver[0] = 0;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
+#ifdef SUPPORTD3D
+	if (vid_d3d9dev)
+	{
+		if (vid_begunscene)
+			IDirect3DDevice9_EndScene(vid_d3d9dev);
+		vid_begunscene = false;
+//		Cmd_ExecuteString("r_texturestats", src_command);
+//		Cmd_ExecuteString("memlist", src_command);
+		IDirect3DDevice9_Release(vid_d3d9dev);
+	}
+	vid_d3d9dev = NULL;
+	if (vid_d3d9)
+		IDirect3D9_Release(vid_d3d9);
+	vid_d3d9 = NULL;
+#endif
 	if (qwglMakeCurrent)
 		qwglMakeCurrent(NULL, NULL);
+	qwglMakeCurrent = NULL;
 	if (baseRC && qwglDeleteContext)
 		qwglDeleteContext(baseRC);
+	qwglDeleteContext = NULL;
 	// close the library before we get rid of the window
 	GL_CloseLibrary();
 	if (baseDC && mainwindow)
@@ -1273,7 +1645,7 @@ void VID_Shutdown (void)
 	if (mainwindow)
 		DestroyWindow(mainwindow);
 	mainwindow = 0;
-	if (vid_isfullscreen)
+	if (vid_isfullscreen && isgl)
 		ChangeDisplaySettings (NULL, 0);
 	vid_isfullscreen = false;
 }
@@ -1605,7 +1977,7 @@ IN_Move
 */
 void IN_Move (void)
 {
-	if (vid_activewindow && !vid_hidden)
+	if (vid_activewindow && !vid_reallyhidden)
 	{
 		IN_MouseMove ();
 		IN_JoyMove ();

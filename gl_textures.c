@@ -1,5 +1,9 @@
 
 #include "quakedef.h"
+#ifdef SUPPORTD3D
+#include <d3d9.h>
+extern LPDIRECT3DDEVICE9 vid_d3d9dev;
+#endif
 #include "image.h"
 #include "jpeg.h"
 #include "image_png.h"
@@ -31,6 +35,16 @@ cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
+
+#ifdef SUPPORTD3D
+int d3d_filter_flatmin = D3DTEXF_LINEAR;
+int d3d_filter_flatmag = D3DTEXF_LINEAR;
+int d3d_filter_flatmix = D3DTEXF_POINT;
+int d3d_filter_mipmin = D3DTEXF_LINEAR;
+int d3d_filter_mipmag = D3DTEXF_LINEAR;
+int d3d_filter_mipmix = D3DTEXF_LINEAR;
+int d3d_filter_nomip = false;
+#endif
 
 
 static mempool_t *texturemempool;
@@ -104,6 +118,22 @@ typedef struct gltexture_s
 	int texnum; // GL texture slot number
 	qboolean dirty; // indicates that R_RealGetTexture should be called
 	int gltexturetypeenum; // used by R_Mesh_TexBind
+	// d3d stuff the backend needs
+	void *d3dtexture;
+#ifdef SUPPORTD3D
+	int d3dformat;
+	int d3dusage;
+	int d3dpool;
+	int d3daddressu;
+	int d3daddressv;
+	int d3daddressw;
+	int d3dmagfilter;
+	int d3dminfilter;
+	int d3dmipfilter;
+	int d3dmaxmiplevelfilter;
+	int d3dmipmaplodbias;
+	int d3dmaxmiplevel;
+#endif
 
 	// dynamic texture stuff [11/22/2007 Black]
 	updatecallback_t updatecallback;
@@ -143,6 +173,8 @@ typedef struct gltexture_s
 	int tilewidth, tileheight, tiledepth;
 	// 1 or 6 depending on texturetype
 	int sides;
+	// how many mipmap levels in this texture
+	int miplevels;
 	// bytes per pixel
 	int bytesperpixel;
 	// GL_RGB or GL_RGBA or GL_DEPTH_COMPONENT
@@ -323,6 +355,25 @@ static glmode_t modes[6] =
 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
 };
 
+#ifdef SUPPORTD3D
+typedef struct d3dmode_s
+{
+	char *name;
+	int m1, m2;
+}
+d3dmode_t;
+
+static d3dmode_t d3dmodes[6] =
+{
+	{"GL_NEAREST", D3DTEXF_POINT, D3DTEXF_POINT},
+	{"GL_LINEAR", D3DTEXF_LINEAR, D3DTEXF_POINT},
+	{"GL_NEAREST_MIPMAP_NEAREST", D3DTEXF_POINT, D3DTEXF_POINT},
+	{"GL_LINEAR_MIPMAP_NEAREST", D3DTEXF_LINEAR, D3DTEXF_POINT},
+	{"GL_NEAREST_MIPMAP_LINEAR", D3DTEXF_POINT, D3DTEXF_LINEAR},
+	{"GL_LINEAR_MIPMAP_LINEAR", D3DTEXF_LINEAR, D3DTEXF_LINEAR}
+};
+#endif
+
 static void GL_TextureMode_f (void)
 {
 	int i;
@@ -358,37 +409,82 @@ static void GL_TextureMode_f (void)
 	gl_filter_mag = modes[i].magnification;
 	gl_filter_force = ((Cmd_Argc() > 2) && !strcasecmp(Cmd_Argv(2), "force"));
 
-	// change all the existing mipmap texture objects
-	// FIXME: force renderer(/client/something?) restart instead?
-	CHECKGLERROR
-	GL_ActiveTexture(0);
-	for (pool = gltexturepoolchain;pool;pool = pool->next)
+	switch(vid.renderpath)
 	{
-		for (glt = pool->gltchain;glt;glt = glt->chain)
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		// change all the existing mipmap texture objects
+		// FIXME: force renderer(/client/something?) restart instead?
+		CHECKGLERROR
+		GL_ActiveTexture(0);
+		for (pool = gltexturepoolchain;pool;pool = pool->next)
 		{
-			// only update already uploaded images
-			if (glt->texnum && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
+			for (glt = pool->gltchain;glt;glt = glt->chain)
 			{
-				oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
-				qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
-				if (glt->flags & TEXF_MIPMAP)
+				// only update already uploaded images
+				if (glt->texnum && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
 				{
-					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);CHECKGLERROR
+					oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
+					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+					if (glt->flags & TEXF_MIPMAP)
+					{
+						qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_min);CHECKGLERROR
+					}
+					else
+					{
+						qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);CHECKGLERROR
+					}
+					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
+					qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 				}
-				else
-				{
-					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MIN_FILTER, gl_filter_mag);CHECKGLERROR
-				}
-				qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
-				qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 			}
 		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		d3d_filter_flatmin = d3dmodes[i].m1;
+		d3d_filter_flatmag = d3dmodes[i].m1;
+		d3d_filter_flatmix = D3DTEXF_POINT;
+		d3d_filter_mipmin = d3dmodes[i].m1;
+		d3d_filter_mipmag = d3dmodes[i].m1;
+		d3d_filter_mipmix = d3dmodes[i].m2;
+		d3d_filter_nomip = i < 2;
+		if (gl_texture_anisotropy.integer > 1 && i == 5)
+			d3d_filter_mipmin = d3d_filter_mipmag = D3DTEXF_ANISOTROPIC;
+		for (pool = gltexturepoolchain;pool;pool = pool->next)
+		{
+			for (glt = pool->gltchain;glt;glt = glt->chain)
+			{
+				// only update already uploaded images
+				if (glt->d3dtexture && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
+				{
+					if (glt->flags & TEXF_MIPMAP)
+					{
+						glt->d3dminfilter = d3d_filter_mipmin;
+						glt->d3dmagfilter = d3d_filter_mipmag;
+						glt->d3dmipfilter = d3d_filter_mipmix;
+						glt->d3dmaxmiplevelfilter = 0;
+					}
+					else
+					{
+						glt->d3dminfilter = d3d_filter_flatmin;
+						glt->d3dmagfilter = d3d_filter_flatmag;
+						glt->d3dmipfilter = d3d_filter_flatmix;
+						glt->d3dmaxmiplevelfilter = 0;
+					}
+				}
+			}
+		}
+#endif
+		break;
 	}
 }
 
-static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, int inwidth, int inheight, int indepth, int *outwidth, int *outheight, int *outdepth)
+static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, int inwidth, int inheight, int indepth, int *outwidth, int *outheight, int *outdepth, int *outmiplevels)
 {
-	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1;
+	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1, miplevels = 1;
 
 	switch (texturetype)
 	{
@@ -442,6 +538,16 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 		}
 		*outdepth = max(1, depth2);
 	}
+
+	miplevels = 1;
+	if (flags & TEXF_MIPMAP)
+	{
+		int extent = max(width2, max(height2, depth2));
+		while(extent >>= 1)
+			miplevels++;
+	}
+	if (outmiplevels)
+		*outmiplevels = miplevels;
 }
 
 
@@ -449,7 +555,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 {
 	int width2, height2, depth2, size;
 
-	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &width2, &height2, &depth2);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &width2, &height2, &depth2, NULL);
 
 	size = width2 * height2 * depth2;
 
@@ -524,10 +630,26 @@ static void R_TextureStats_f(void)
 
 static void r_textures_start(void)
 {
-	// LordHavoc: allow any alignment
-	CHECKGLERROR
-	qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
-	qglPixelStorei(GL_PACK_ALIGNMENT, 1);CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		// LordHavoc: allow any alignment
+		CHECKGLERROR
+		qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
+		qglPixelStorei(GL_PACK_ALIGNMENT, 1);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 
 	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 	Mem_ExpandableArray_NewArray(&texturearray, texturemempool, sizeof(gltexture_t), 512);
@@ -563,6 +685,94 @@ static void r_textures_newmap(void)
 {
 }
 
+static void r_textures_devicelost(void)
+{
+	int i, endindex;
+	gltexture_t *glt;
+	endindex = Mem_ExpandableArray_IndexRange(&texturearray);
+	for (i = 0;i < endindex;i++)
+	{
+		glt = (gltexture_t *) Mem_ExpandableArray_RecordAtIndex(&texturearray, i);
+		if (!glt || !(glt->flags & TEXF_RENDERTARGET))
+			continue;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			if (glt->tiledepth > 1)
+				IDirect3DVolumeTexture9_Release((IDirect3DVolumeTexture9 *)glt->d3dtexture);
+			else if (glt->sides == 6)
+				IDirect3DCubeTexture9_Release((IDirect3DCubeTexture9 *)glt->d3dtexture);
+			else
+				IDirect3DTexture9_Release((IDirect3DTexture9 *)glt->d3dtexture);
+			glt->d3dtexture = NULL;
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
+	}
+}
+
+static void r_textures_devicerestored(void)
+{
+	int i, endindex;
+	gltexture_t *glt;
+	endindex = Mem_ExpandableArray_IndexRange(&texturearray);
+	for (i = 0;i < endindex;i++)
+	{
+		glt = (gltexture_t *) Mem_ExpandableArray_RecordAtIndex(&texturearray, i);
+		if (!glt || !(glt->flags & TEXF_RENDERTARGET))
+			continue;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			{
+				HRESULT d3dresult;
+				if (glt->tiledepth > 1)
+				{
+					if (FAILED(d3dresult = IDirect3DDevice9_CreateVolumeTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DVolumeTexture9 **)&glt->d3dtexture, NULL)))
+						Sys_Error("IDirect3DDevice9_CreateVolumeTexture failed!");
+				}
+				else if (glt->sides == 6)
+				{
+					if (FAILED(d3dresult = IDirect3DDevice9_CreateCubeTexture(vid_d3d9dev, glt->tilewidth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DCubeTexture9 **)&glt->d3dtexture, NULL)))
+						Sys_Error("IDirect3DDevice9_CreateCubeTexture failed!");
+				}
+				else
+				{
+					if (FAILED(d3dresult = IDirect3DDevice9_CreateTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DTexture9 **)&glt->d3dtexture, NULL)))
+						Sys_Error("IDirect3DDevice9_CreateTexture failed!");
+				}
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
+	}
+}
+
+
 void R_Textures_Init (void)
 {
 	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
@@ -590,7 +800,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 
-	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, NULL, NULL);
+	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, r_textures_devicelost, r_textures_devicerestored);
 }
 
 void R_Textures_Frame (void)
@@ -623,23 +833,35 @@ void R_Textures_Frame (void)
 
 		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
 
-		CHECKGLERROR
-		GL_ActiveTexture(0);
-		for (pool = gltexturepoolchain;pool;pool = pool->next)
+		switch(vid.renderpath)
 		{
-			for (glt = pool->gltchain;glt;glt = glt->chain)
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			GL_ActiveTexture(0);
+			for (pool = gltexturepoolchain;pool;pool = pool->next)
 			{
-				// only update already uploaded images
-				if (glt->texnum && (glt->flags & TEXF_MIPMAP) == TEXF_MIPMAP)
+				for (glt = pool->gltchain;glt;glt = glt->chain)
 				{
-					oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
+					// only update already uploaded images
+					if (glt->texnum && (glt->flags & TEXF_MIPMAP) == TEXF_MIPMAP)
+					{
+						oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
 
-					qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
-					qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
+						qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+						qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
 
-					qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
+						qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
+					}
 				}
 			}
+			break;
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			break;
 		}
 	}
 }
@@ -753,12 +975,24 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	const unsigned char *prevbuffer;
 	prevbuffer = data;
 
-	CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
 
-	// we need to restore the texture binding after finishing the upload
-	GL_ActiveTexture(0);
-	oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
-	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+		// we need to restore the texture binding after finishing the upload
+		GL_ActiveTexture(0);
+		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
+		qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
+	}
 
 	// these are rounded up versions of the size to do better resampling
 	if (vid.support.arb_texture_non_power_of_two || glt->texturetype == GLTEXTURETYPE_RECTANGLE)
@@ -794,16 +1028,42 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth && (fragx != 0 || fragy != 0 || fragwidth != glt->tilewidth || fragheight != glt->tileheight))
 	{
 		// update a portion of the image
-		switch(glt->texturetype)
+		if (glt->texturetype != GLTEXTURETYPE_2D)
+			Sys_Error("R_Upload: partial update of type other than 2D");
+		switch(vid.renderpath)
 		{
-		case GLTEXTURETYPE_2D:
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
 			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+			qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 			break;
-		case GLTEXTURETYPE_3D:
-			qglTexSubImage3D(GL_TEXTURE_3D, 0, fragx, fragy, fragz, fragwidth, fragheight, fragdepth, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			{
+				RECT d3drect;
+				D3DLOCKED_RECT d3dlockedrect;
+				int y;
+				memset(&d3drect, 0, sizeof(d3drect));
+				d3drect.left = fragx;
+				d3drect.top = fragy;
+				d3drect.right = fragx+fragwidth;
+				d3drect.bottom = fragy+fragheight;
+				if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, 0, &d3dlockedrect, &d3drect, 0) == D3D_OK && d3dlockedrect.pBits)
+				{
+					for (y = 0;y < fragheight;y++)
+						memcpy((unsigned char *)d3dlockedrect.pBits + d3dlockedrect.Pitch * y, (unsigned char *)prevbuffer + fragwidth*glt->bytesperpixel * y, fragwidth*glt->bytesperpixel);
+					IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, 0);
+				}
+			}
+#endif
 			break;
-		default:
-			Host_Error("R_Upload: partial update of type other than 2D");
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 	}
@@ -828,79 +1088,241 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 			}
 		}
 		mip = 0;
-		if (qglGetCompressedTexImageARB)
+		switch(vid.renderpath)
 		{
-			if (gl_texturecompression.integer >= 2)
-				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
-			else
-				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
-			CHECKGLERROR
-		}
-		switch(glt->texturetype)
-		{
-		case GLTEXTURETYPE_2D:
-			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-			if (glt->flags & TEXF_MIPMAP)
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			if (qglGetCompressedTexImageARB)
 			{
-				while (width > 1 || height > 1 || depth > 1)
-				{
-					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-					prevbuffer = resizebuffer;
-					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-				}
+				if (gl_texturecompression.integer >= 2)
+					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
+				else
+					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
+				CHECKGLERROR
 			}
-			break;
-		case GLTEXTURETYPE_3D:
-			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-			if (glt->flags & TEXF_MIPMAP)
+			switch(glt->texturetype)
 			{
-				while (width > 1 || height > 1 || depth > 1)
-				{
-					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-					prevbuffer = resizebuffer;
-					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-				}
-			}
-			break;
-		case GLTEXTURETYPE_CUBEMAP:
-			// convert and upload each side in turn,
-			// from a continuous block of input texels
-			texturebuffer = (unsigned char *)prevbuffer;
-			for (i = 0;i < 6;i++)
-			{
-				prevbuffer = texturebuffer;
-				texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
-				if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
-				{
-					Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
-					prevbuffer = resizebuffer;
-				}
-				// picmip/max_size
-				while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
-				{
-					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
-					prevbuffer = resizebuffer;
-				}
-				mip = 0;
-				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+			case GLTEXTURETYPE_2D:
+				qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
-						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+						qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 					}
 				}
+				break;
+			case GLTEXTURETYPE_3D:
+				qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+				if (glt->flags & TEXF_MIPMAP)
+				{
+					while (width > 1 || height > 1 || depth > 1)
+					{
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+						prevbuffer = resizebuffer;
+						qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+					}
+				}
+				break;
+			case GLTEXTURETYPE_CUBEMAP:
+				// convert and upload each side in turn,
+				// from a continuous block of input texels
+				texturebuffer = (unsigned char *)prevbuffer;
+				for (i = 0;i < 6;i++)
+				{
+					prevbuffer = texturebuffer;
+					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+					{
+						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+						prevbuffer = resizebuffer;
+					}
+					// picmip/max_size
+					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+					{
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+						prevbuffer = resizebuffer;
+					}
+					mip = 0;
+					qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+					if (glt->flags & TEXF_MIPMAP)
+					{
+						while (width > 1 || height > 1 || depth > 1)
+						{
+							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+							prevbuffer = resizebuffer;
+							qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+						}
+					}
+				}
+				break;
+			case GLTEXTURETYPE_RECTANGLE:
+				qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
+				break;
 			}
+			GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
+			qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 			break;
-		case GLTEXTURETYPE_RECTANGLE:
-			qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			if (!(glt->flags & TEXF_RENDERTARGET))
+			{
+				D3DLOCKED_RECT d3dlockedrect;
+				D3DLOCKED_BOX d3dlockedbox;
+				switch(glt->texturetype)
+				{
+				case GLTEXTURETYPE_2D:
+					if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+					{
+						if (prevbuffer)
+							memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+						else
+							memset(d3dlockedrect.pBits, 255, width*height*glt->bytesperpixel);
+						IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
+					}
+					mip++;
+					if ((glt->flags & TEXF_MIPMAP) && prevbuffer)
+					{
+						while (width > 1 || height > 1 || depth > 1)
+						{
+							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+							prevbuffer = resizebuffer;
+							if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+							{
+								memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+								IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
+							}
+							mip++;
+						}
+					}
+					break;
+				case GLTEXTURETYPE_3D:
+					if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
+					{
+						// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
+						memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
+						IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
+					}
+					mip++;
+					if (glt->flags & TEXF_MIPMAP)
+					{
+						while (width > 1 || height > 1 || depth > 1)
+						{
+							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+							prevbuffer = resizebuffer;
+							if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
+							{
+								// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
+								memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
+								IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
+							}
+							mip++;
+						}
+					}
+					break;
+				case GLTEXTURETYPE_CUBEMAP:
+					// convert and upload each side in turn,
+					// from a continuous block of input texels
+					texturebuffer = (unsigned char *)prevbuffer;
+					for (i = 0;i < 6;i++)
+					{
+						prevbuffer = texturebuffer;
+						texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+						if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+						{
+							Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+							prevbuffer = resizebuffer;
+						}
+						// picmip/max_size
+						while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+						{
+							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+							prevbuffer = resizebuffer;
+						}
+						mip = 0;
+						if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+						{
+							memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+							IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
+						}
+						mip++;
+						if (glt->flags & TEXF_MIPMAP)
+						{
+							while (width > 1 || height > 1 || depth > 1)
+							{
+								Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+								prevbuffer = resizebuffer;
+								if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+								{
+									memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+									IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
+								}
+								mip++;
+							}
+						}
+					}
+					break;
+				case GLTEXTURETYPE_RECTANGLE:
+					Sys_Error("Direct3D does not have RECTANGLE textures\n");
+					break;
+				}
+			}
+			glt->d3daddressw = 0;
+			if (glt->flags & TEXF_CLAMP)
+			{
+				glt->d3daddressu = D3DTADDRESS_CLAMP;
+				glt->d3daddressv = D3DTADDRESS_CLAMP;
+				if (glt->tiledepth > 1)
+					glt->d3daddressw = D3DTADDRESS_CLAMP;
+			}
+			else
+			{
+				glt->d3daddressu = D3DTADDRESS_WRAP;
+				glt->d3daddressv = D3DTADDRESS_WRAP;
+				if (glt->tiledepth > 1)
+					glt->d3daddressw = D3DTADDRESS_WRAP;
+			}
+			glt->d3dmipmaplodbias = 0;
+			glt->d3dmaxmiplevel = 0;
+			glt->d3dmaxmiplevelfilter = d3d_filter_nomip ? 0 : glt->d3dmaxmiplevel;
+			if (glt->flags & TEXF_FORCELINEAR)
+			{
+				glt->d3dminfilter = D3DTEXF_LINEAR;
+				glt->d3dmagfilter = D3DTEXF_LINEAR;
+				glt->d3dmipfilter = D3DTEXF_POINT;
+			}
+			else if (glt->flags & TEXF_FORCENEAREST)
+			{
+				glt->d3dminfilter = D3DTEXF_POINT;
+				glt->d3dmagfilter = D3DTEXF_POINT;
+				glt->d3dmipfilter = D3DTEXF_POINT;
+			}
+			else if (glt->flags & TEXF_MIPMAP)
+			{
+				glt->d3dminfilter = d3d_filter_mipmin;
+				glt->d3dmagfilter = d3d_filter_mipmag;
+				glt->d3dmipfilter = d3d_filter_mipmix;
+			}
+			else
+			{
+				glt->d3dminfilter = d3d_filter_flatmin;
+				glt->d3dmagfilter = d3d_filter_flatmag;
+				glt->d3dmipfilter = d3d_filter_flatmix;
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
-		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
 	}
-	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 }
 
 static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int miplevel, textype_t textype, int texturetype, const unsigned char *data, const unsigned int *palette)
@@ -909,6 +1331,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	gltexture_t *glt;
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
 	textypeinfo_t *texinfo, *texinfo2;
+	unsigned char *temppixels = NULL;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -935,6 +1358,17 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	{
 		Con_Printf ("R_LoadTexture: bogus texture size (%dx%dx%dx%dbppx%dsides = %d bytes)\n", width, height, depth, texinfo->inputbytesperpixel * 8, sides, size);
 		return NULL;
+	}
+
+	if (textype == TEXTYPE_RGBA)
+	{
+		// swap bytes
+		static int rgbaswapindices[4] = {2, 1, 0, 3};
+		textype = TEXTYPE_BGRA;
+		texinfo = R_GetTexTypeInfo(textype, flags);
+		temppixels = (unsigned char *)Mem_Alloc(tempmempool, width * height * depth * sides * 4);
+		Image_CopyMux(temppixels, data, width, height*depth*sides, false, false, false, 4, 4, rgbaswapindices);
+		data = temppixels;
 	}
 
 	// clear the alpha flag if the texture has no transparent pixels
@@ -991,7 +1425,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		flags |= TEXF_ALPHA;
 		break;
 	default:
-		Host_Error("R_LoadTexture: unknown texture type");
+		Sys_Error("R_LoadTexture: unknown texture type");
 	}
 
 	texinfo2 = R_GetTexTypeInfo(textype, flags);
@@ -1027,18 +1461,83 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->updatecallback = NULL;
 	glt->updatacallback_data = NULL;
 
-	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth);
+	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth, &glt->miplevels);
 
 	// upload the texture
 	// data may be NULL (blank texture for dynamic rendering)
-	CHECKGLERROR
-	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			D3DFORMAT d3dformat;
+			D3DPOOL d3dpool;
+			DWORD d3dusage;
+			HRESULT d3dresult;
+			d3dusage = 0;
+			d3dpool = D3DPOOL_MANAGED;
+			if (flags & TEXF_RENDERTARGET)
+			{
+				d3dusage |= D3DUSAGE_RENDERTARGET;
+				d3dpool = D3DPOOL_DEFAULT;
+			}
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
+			case TEXTYPE_RGBA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8B8G8R8 : D3DFMT_X8B8G8R8;break;
+			case TEXTYPE_BGRA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
+			case TEXTYPE_COLORBUFFER: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
+			case TEXTYPE_SHADOWMAP: d3dformat = D3DFMT_D16;d3dusage = D3DUSAGE_DEPTHSTENCIL;break; // note: can not use D3DUSAGE_RENDERTARGET here
+			case TEXTYPE_ALPHA: d3dformat = D3DFMT_A8;break;
+			default: d3dformat = D3DFMT_A8R8G8B8;Sys_Error("R_LoadTexture: unsupported texture type %i when picking D3DFMT", (int)textype);break;
+			}
+			glt->d3dformat = d3dformat;
+			glt->d3dusage = d3dusage;
+			glt->d3dpool = d3dpool;
+			if (glt->tiledepth > 1)
+			{
+				if (FAILED(d3dresult = IDirect3DDevice9_CreateVolumeTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DVolumeTexture9 **)&glt->d3dtexture, NULL)))
+					Sys_Error("IDirect3DDevice9_CreateVolumeTexture failed!");
+			}
+			else if (glt->sides == 6)
+			{
+				if (FAILED(d3dresult = IDirect3DDevice9_CreateCubeTexture(vid_d3d9dev, glt->tilewidth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DCubeTexture9 **)&glt->d3dtexture, NULL)))
+					Sys_Error("IDirect3DDevice9_CreateCubeTexture failed!");
+			}
+			else
+			{
+				if (FAILED(d3dresult = IDirect3DDevice9_CreateTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DTexture9 **)&glt->d3dtexture, NULL)))
+					Sys_Error("IDirect3DDevice9_CreateTexture failed!");
+			}
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+
 	R_Upload(glt, data, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
 	if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
 		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 
+	// free any temporary processing buffer we allocated...
+	if (temppixels)
+		Mem_Free(temppixels);
+
 	// texture converting and uploading can take a while, so make sure we're sending keepalives
-	CL_KeepaliveMessage(false);
+	// FIXME: this causes rendering during R_Shadow_DrawLights
+//	CL_KeepaliveMessage(false);
 
 	return (rtexture_t *)glt;
 }
@@ -1065,7 +1564,7 @@ rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *ide
 
 static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 {
-	int flags = TEXF_CLAMP;
+	int flags = TEXF_RENDERTARGET | TEXF_CLAMP;
 	if (filter)
 		flags |= TEXF_FORCELINEAR | TEXF_COMPARE;
 	else
@@ -1425,17 +1924,54 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	glt->tilewidth = mipwidth;
 	glt->tileheight = mipheight;
 	glt->tiledepth = 1;
+	glt->miplevels = dds_miplevels;
 
 	// texture uploading can take a while, so make sure we're sending keepalives
 	CL_KeepaliveMessage(false);
 
+	// create the texture object
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		GL_ActiveTexture(0);
+		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
+		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
+		qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			D3DFORMAT d3dformat;
+			D3DPOOL d3dpool;
+			DWORD d3dusage;
+			switch(textype)
+			{
+			case TEXTYPE_BGRA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
+			case TEXTYPE_DXT1: case TEXTYPE_DXT1A: d3dformat = D3DFMT_DXT1;break;
+			case TEXTYPE_DXT3: d3dformat = D3DFMT_DXT3;break;
+			case TEXTYPE_DXT5: d3dformat = D3DFMT_DXT5;break;
+			default: d3dformat = D3DFMT_A8R8G8B8;Host_Error("R_LoadTextureDDSFile: unsupported texture type %i when picking D3DFMT", (int)textype);break;
+			}
+			d3dusage = 0;
+			d3dpool = D3DPOOL_MANAGED;
+			IDirect3DDevice9_CreateTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->miplevels, d3dusage, d3dformat, d3dpool, (IDirect3DTexture9 **)&glt->d3dtexture, NULL);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+
 	// upload the texture
 	// we need to restore the texture binding after finishing the upload
-	CHECKGLERROR
-	GL_ActiveTexture(0);
-	oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
-	qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
-	qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 	mipcomplete = false;
 
 	for (mip = 0;mip <= dds_miplevels;mip++) // <= to include the not-counted "largest" miplevel
@@ -1443,13 +1979,40 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		mipsize = bytesperblock ? ((mipwidth+3)/4)*((mipheight+3)/4)*bytesperblock : mipwidth*mipheight*bytesperpixel;
 		if (mippixels + mipsize > dds + ddssize)
 			break;
-		if (bytesperblock)
+		switch(vid.renderpath)
 		{
-			qglCompressedTexImage2DARB(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, mipsize, mippixels);CHECKGLERROR
-		}
-		else
-		{
-			qglTexImage2D(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, glt->glformat, glt->gltype, mippixels);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			if (bytesperblock)
+			{
+				qglCompressedTexImage2DARB(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, mipsize, mippixels);CHECKGLERROR
+			}
+			else
+			{
+				qglTexImage2D(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, glt->glformat, glt->gltype, mippixels);CHECKGLERROR
+			}
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			{
+				D3DLOCKED_RECT d3dlockedrect;
+				if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+				{
+					memcpy(d3dlockedrect.pBits, mippixels, mipsize);
+					IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
+				}
+				break;
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 		mippixels += mipsize;
 		if (mipwidth <= 1 && mipheight <= 1)
@@ -1462,13 +2025,63 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		if (mipheight > 1)
 			mipheight >>= 1;
 	}
-	if (dds_miplevels >= 1 && !mipcomplete)
+
+	// after upload we have to set some parameters...
+	switch(vid.renderpath)
 	{
-		// need to set GL_TEXTURE_MAX_LEVEL
-		qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_LEVEL, dds_miplevels - 1);CHECKGLERROR
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (dds_miplevels >= 1 && !mipcomplete)
+		{
+			// need to set GL_TEXTURE_MAX_LEVEL
+			qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_LEVEL, dds_miplevels - 1);CHECKGLERROR
+		}
+		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
+		qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		glt->d3daddressw = 0;
+		if (glt->flags & TEXF_CLAMP)
+		{
+			glt->d3daddressu = D3DTADDRESS_CLAMP;
+			glt->d3daddressv = D3DTADDRESS_CLAMP;
+			if (glt->tiledepth > 1)
+				glt->d3daddressw = D3DTADDRESS_CLAMP;
+		}
+		else
+		{
+			glt->d3daddressu = D3DTADDRESS_WRAP;
+			glt->d3daddressv = D3DTADDRESS_WRAP;
+			if (glt->tiledepth > 1)
+				glt->d3daddressw = D3DTADDRESS_WRAP;
+		}
+		glt->d3dmipmaplodbias = 0;
+		glt->d3dmaxmiplevel = 0;
+		glt->d3dmaxmiplevelfilter = 0;
+		if (glt->flags & TEXF_MIPMAP)
+		{
+			glt->d3dminfilter = d3d_filter_mipmin;
+			glt->d3dmagfilter = d3d_filter_mipmag;
+			glt->d3dmipfilter = d3d_filter_mipmix;
+		}
+		else
+		{
+			glt->d3dminfilter = d3d_filter_flatmin;
+			glt->d3dmagfilter = d3d_filter_flatmag;
+			glt->d3dmipfilter = d3d_filter_flatmix;
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
-	GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
-	qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 
 	Mem_Free(dds);
 	return (rtexture_t *)glt;
@@ -1491,8 +2104,11 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		Host_Error("R_UpdateTexture: no data supplied");
 	if (glt == NULL)
 		Host_Error("R_UpdateTexture: no texture supplied");
-	if (!glt->texnum)
-		Host_Error("R_UpdateTexture: texture has not been uploaded yet");
+	if (!glt->texnum && !glt->d3dtexture)
+	{
+		Con_Printf("R_UpdateTexture: texture %p \"%s\" in pool %p has not been uploaded yet", glt, glt->identifier, glt->pool);
+		return;
+	}
 	// update part of the texture
 	if (glt->bufferpixels)
 	{

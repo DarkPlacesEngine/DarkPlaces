@@ -1,6 +1,13 @@
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#ifdef SUPPORTD3D
+#include <d3d9.h>
+extern LPDIRECT3DDEVICE9 vid_d3d9dev;
+extern D3DCAPS9 vid_d3d9caps;
+#endif
+
+#define MAX_RENDERTARGETS 4
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
@@ -102,6 +109,7 @@ typedef struct gltextureunit_s
 	const r_meshbuffer_t *pointer_texcoord_vertexbuffer;
 	size_t pointer_texcoord_offset;
 
+	rtexture_t *texture;
 	int t2d, t3d, tcubemap, trectangle;
 	int arrayenabled;
 	int rgbscale, alphascale;
@@ -119,13 +127,16 @@ typedef struct gl_state_s
 	int cullfaceenable;
 	int blendfunc1;
 	int blendfunc2;
-	int blend;
+	qboolean blend;
 	GLboolean depthmask;
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
+	int depthfunc;
 	float depthrange[2];
 	float polygonoffset[2];
 	int alphatest;
+	int alphafunc;
+	float alphafuncvalue;
 	int scissortest;
 	unsigned int unit;
 	unsigned int clientunit;
@@ -135,6 +146,7 @@ typedef struct gl_state_s
 	int lockrange_count;
 	int vertexbufferobject;
 	int elementbufferobject;
+	int framebufferobject;
 	qboolean pointer_color_enabled;
 
 	int pointer_vertex_components;
@@ -169,6 +181,15 @@ typedef struct gl_state_s
 	memexpandablearray_t meshbufferarray;
 
 	qboolean active;
+
+#ifdef SUPPORTD3D
+	rtexture_t *d3drt_depthtexture;
+	rtexture_t *d3drt_colortextures[MAX_RENDERTARGETS];
+	IDirect3DSurface9 *d3drt_depthsurface;
+	IDirect3DSurface9 *d3drt_colorsurfaces[MAX_RENDERTARGETS];
+	IDirect3DSurface9 *d3drt_backbufferdepthsurface;
+	IDirect3DSurface9 *d3drt_backbuffercolorsurface;
+#endif
 }
 gl_state_t;
 
@@ -241,9 +262,14 @@ void GL_VBOStats_f(void)
 
 static void GL_Backend_ResetState(void);
 
+static void R_Mesh_InitVertexDeclarations(void);
+static void R_Mesh_DestroyVertexDeclarations(void);
+
 static void gl_backend_start(void)
 {
 	memset(&gl_state, 0, sizeof(gl_state));
+
+	R_Mesh_InitVertexDeclarations();
 
 	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
 	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
@@ -256,11 +282,53 @@ static void gl_backend_start(void)
 	CHECKGLERROR
 
 	GL_Backend_ResetState();
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_GetDepthStencilSurface(vid_d3d9dev, &gl_state.d3drt_backbufferdepthsurface);
+		IDirect3DDevice9_GetRenderTarget(vid_d3d9dev, 0, &gl_state.d3drt_backbuffercolorsurface);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
 
 static void gl_backend_shutdown(void)
 {
 	Con_DPrint("OpenGL Backend shutting down\n");
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DSurface9_Release(gl_state.d3drt_backbufferdepthsurface);
+		IDirect3DSurface9_Release(gl_state.d3drt_backbuffercolorsurface);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 
 	if (gl_state.preparevertices_tempdata)
 		Mem_Free(gl_state.preparevertices_tempdata);
@@ -269,10 +337,55 @@ static void gl_backend_shutdown(void)
 
 	Mem_ExpandableArray_FreeArray(&gl_state.meshbufferarray);
 
+	R_Mesh_DestroyVertexDeclarations();
+
 	memset(&gl_state, 0, sizeof(gl_state));
 }
 
 static void gl_backend_newmap(void)
+{
+}
+
+static void gl_backend_devicelost(void)
+{
+	int i, endindex;
+	r_meshbuffer_t *buffer;
+	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
+	for (i = 0;i < endindex;i++)
+	{
+		buffer = (r_meshbuffer_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.meshbufferarray, i);
+		if (!buffer || !buffer->isdynamic)
+			continue;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			if (buffer->devicebuffer)
+			{
+				if (buffer->isindexbuffer)
+					IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9*)buffer->devicebuffer);
+				else
+					IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9*)buffer->devicebuffer);
+				buffer->devicebuffer = NULL;
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
+	}
+}
+
+static void gl_backend_devicerestored(void)
 {
 }
 
@@ -321,7 +434,7 @@ void gl_backend_init(void)
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
-	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, NULL, NULL);
+	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, gl_backend_devicelost, gl_backend_devicerestored);
 }
 
 void GL_SetMirrorState(qboolean state);
@@ -402,10 +515,12 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	memset(m, 0, sizeof(m));
 	m[0]  = 2/(right - left);
 	m[5]  = 2/(top - bottom);
-	m[10] = -2/(zFar - zNear);
+//	m[10] = -2/(zFar - zNear);
+	m[10] = -1/(zFar - zNear);
 	m[12] = - (right + left)/(right - left);
 	m[13] = - (top + bottom)/(top - bottom);
-	m[14] = - (zFar + zNear)/(zFar - zNear);
+//	m[14] = - (zFar + zNear)/(zFar - zNear);
+	m[14] = -zNear/(zFar-zNear);
 	m[15] = 1;
 	v->screentodepth[0] = -farclip / (farclip - nearclip);
 	v->screentodepth[1] = farclip * nearclip / (farclip - nearclip);
@@ -632,6 +747,24 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
+	case RENDERPATH_D3D9:
+		m[5] *= -1;
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlaneFloatGL(v, m, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
 
@@ -642,9 +775,6 @@ void R_SetViewport(const r_viewport_t *v)
 {
 	float m[16];
 	gl_viewport = *v;
-
-	CHECKGLERROR
-	qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 
 	// FIXME: v_flipped_state is evil, this probably breaks somewhere
 	GL_SetMirrorState(v_flipped.integer && (v->type == R_VIEWPORTTYPE_PERSPECTIVE || v->type == R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP));
@@ -657,14 +787,38 @@ void R_SetViewport(const r_viewport_t *v)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+//		CHECKGLERROR
+//		qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 //		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+		CHECKGLERROR
+		qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 		// Load the projection matrix into OpenGL
 		qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 		Matrix4x4_ToArrayFloatGL(&gl_projectionmatrix, m);
 		qglLoadMatrixf(m);CHECKGLERROR
 		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			D3DVIEWPORT9 d3dviewport;
+			d3dviewport.X = gl_viewport.x;
+			d3dviewport.Y = gl_viewport.y;
+			d3dviewport.Width = gl_viewport.width;
+			d3dviewport.Height = gl_viewport.height;
+			d3dviewport.MinZ = gl_state.depthrange[0];
+			d3dviewport.MaxZ = gl_state.depthrange[1];
+			IDirect3DDevice9_SetViewport(vid_d3d9dev, &d3dviewport);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 
@@ -684,8 +838,7 @@ static void GL_BindVBO(int bufferobject)
 	{
 		gl_state.vertexbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, bufferobject);
-		CHECKGLERROR
+		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -695,10 +848,195 @@ static void GL_BindEBO(int bufferobject)
 	{
 		gl_state.elementbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, bufferobject);
-		CHECKGLERROR
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, bufferobject);CHECKGLERROR
 	}
 }
+
+int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
+{
+	int temp;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (!vid.support.ext_framebuffer_object)
+			return 0;
+		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
+		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
+		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
+		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
+		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR
+		if (colortexture4) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT3_EXT, colortexture4->gltexturetypeenum, R_GetTexture(colortexture4), 0);CHECKGLERROR
+		return temp;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		return 1;
+	}
+	return 0;
+}
+
+void R_Mesh_DestroyFramebufferObject(int fbo)
+{
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (fbo)
+			qglDeleteFramebuffersEXT(1, (GLuint*)&fbo);
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
+	}
+}
+
+void R_Mesh_ResetRenderTargets(void)
+{
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (gl_state.framebufferobject)
+		{
+			gl_state.framebufferobject = 0;
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		if (gl_state.framebufferobject)
+		{
+			unsigned int i;
+			gl_state.framebufferobject = 0;
+			IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_backbufferdepthsurface);
+			IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 0, gl_state.d3drt_backbuffercolorsurface);
+			gl_state.d3drt_depthsurface = NULL;
+			for (i = 1;i < vid.maxdrawbuffers;i++)
+			{
+				if (gl_state.d3drt_colorsurfaces[i])
+				{
+					gl_state.d3drt_colorsurfaces[i] = NULL;
+					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, NULL);
+				}
+			}
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
+void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
+{
+	unsigned int i;
+	unsigned int j;
+	rtexture_t *textures[5];
+	Vector4Set(textures, colortexture, colortexture2, colortexture3, colortexture4);
+	textures[4] = depthtexture;
+	// unbind any matching textures immediately, otherwise D3D will complain about a bound texture being used as a render target
+	for (j = 0;j < 5;j++)
+		if (textures[j])
+			for (i = 0;i < vid.teximageunits;i++)
+				if (gl_state.units[i].texture == textures[j])
+					R_Mesh_TexBind(i, NULL);
+	// set up framebuffer object or render targets for the active rendering API
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (gl_state.framebufferobject != fbo)
+		{
+			gl_state.framebufferobject = fbo;
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		// set up the new render targets, a NULL depthtexture intentionally binds nothing
+		// TODO: optimize: keep surface pointer around in rtexture_t until texture is freed or lost
+		if (fbo)
+		{
+			gl_state.framebufferobject = 1;
+			gl_state.d3drt_depthtexture = depthtexture;
+			if (gl_state.d3drt_depthtexture)
+			{
+				IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)gl_state.d3drt_depthtexture->d3dtexture, 0, &gl_state.d3drt_depthsurface);
+				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_depthsurface);
+				IDirect3DSurface9_Release(gl_state.d3drt_depthsurface);
+			}
+			else
+				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, NULL);
+			for (i = 0;i < vid.maxdrawbuffers;i++)
+			{
+				gl_state.d3drt_colortextures[i] = textures[i];
+				if (gl_state.d3drt_colortextures[i])
+				{
+					IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)gl_state.d3drt_colortextures[i]->d3dtexture, 0, &gl_state.d3drt_colorsurfaces[i]);
+					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, gl_state.d3drt_colorsurfaces[i]);
+					IDirect3DSurface9_Release(gl_state.d3drt_colorsurfaces[i]);
+				}
+				else
+					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, NULL);
+			}
+		}
+		else
+			R_Mesh_ResetRenderTargets();
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
+#ifdef SUPPORTD3D
+static int d3dcmpforglfunc(int f)
+{
+	switch(f)
+	{
+	case GL_NEVER: return D3DCMP_NEVER;
+	case GL_LESS: return D3DCMP_LESS;
+	case GL_EQUAL: return D3DCMP_EQUAL;
+	case GL_LEQUAL: return D3DCMP_LESSEQUAL;
+	case GL_GREATER: return D3DCMP_GREATER;
+	case GL_NOTEQUAL: return D3DCMP_NOTEQUAL;
+	case GL_GEQUAL: return D3DCMP_GREATEREQUAL;
+	case GL_ALWAYS: return D3DCMP_ALWAYS;
+	default: Con_DPrintf("Unknown GL_DepthFunc\n");return D3DCMP_ALWAYS;
+	}
+}
+
+static int d3dstencilopforglfunc(int f)
+{
+	switch(f)
+	{
+	case GL_KEEP: return D3DSTENCILOP_KEEP;
+	case GL_INCR: return D3DSTENCILOP_INCR; // note: GL_INCR is clamped, D3DSTENCILOP_INCR wraps
+	case GL_DECR: return D3DSTENCILOP_DECR; // note: GL_DECR is clamped, D3DSTENCILOP_DECR wraps
+	default: Con_DPrintf("Unknown GL_StencilFunc\n");return D3DSTENCILOP_KEEP;
+	}
+}
+#endif
+
 
 static void GL_Backend_ResetState(void)
 {
@@ -706,6 +1044,8 @@ static void GL_Backend_ResetState(void)
 	gl_state.active = true;
 	gl_state.depthtest = true;
 	gl_state.alphatest = false;
+	gl_state.alphafunc = GL_GEQUAL;
+	gl_state.alphafuncvalue = 0.5f;
 	gl_state.blendfunc1 = GL_ONE;
 	gl_state.blendfunc2 = GL_ZERO;
 	gl_state.blend = false;
@@ -714,52 +1054,71 @@ static void GL_Backend_ResetState(void)
 	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
 	gl_state.lockrange_first = 0;
 	gl_state.lockrange_count = 0;
-	gl_state.cullface = v_flipped_state ? GL_BACK : GL_FRONT; // quake is backwards, this culls back faces
-	gl_state.cullfaceenable = true;
+	gl_state.cullface = GL_NONE;
+	gl_state.cullfaceenable = false;
 	gl_state.polygonoffset[0] = 0;
 	gl_state.polygonoffset[1] = 0;
+	gl_state.framebufferobject = 0;
+	gl_state.depthfunc = GL_LEQUAL;
 
-	CHECKGLERROR
-
-	qglColorMask(1, 1, 1, 1);
-	qglAlphaFunc(GL_GEQUAL, 0.5);CHECKGLERROR
-	qglDisable(GL_ALPHA_TEST);CHECKGLERROR
-	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
-	qglDisable(GL_BLEND);CHECKGLERROR
-	qglCullFace(gl_state.cullface);CHECKGLERROR
-	qglEnable(GL_CULL_FACE);CHECKGLERROR
-	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
-	qglDepthMask(gl_state.depthmask);CHECKGLERROR
-	qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
-
-	if (vid.support.arb_vertex_buffer_object)
-	{
-		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-	}
-
-	if (vid.support.ext_framebuffer_object)
-	{
-		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	}
-
-	qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
-	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-
-	qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
-	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-
-	GL_Color(0, 0, 0, 0);
-	GL_Color(1, 1, 1, 1);
-
-	gl_state.unit = MAX_TEXTUREUNITS;
-	gl_state.clientunit = MAX_TEXTUREUNITS;
 	switch(vid.renderpath)
 	{
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_COLORWRITEENABLE, gl_state.colormask);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHATESTENABLE, gl_state.alphatest);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAFUNC, d3dcmpforglfunc(gl_state.alphafunc));
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAREF, (int)bound(0, gl_state.alphafuncvalue * 256.0f, 255));
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, D3DCULL_NONE);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZFUNC, d3dcmpforglfunc(gl_state.depthfunc));
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZENABLE, gl_state.depthtest);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZWRITEENABLE, gl_state.depthmask);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_SLOPESCALEDEPTHBIAS, gl_state.polygonoffset[0]);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_DEPTHBIAS, gl_state.polygonoffset[1] * (1.0f / 16777216.0f));
+		}
+#endif
+		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+		CHECKGLERROR
+
+		qglColorMask(1, 1, 1, 1);CHECKGLERROR
+		qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
+		qglDisable(GL_ALPHA_TEST);CHECKGLERROR
+		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+		qglDisable(GL_BLEND);CHECKGLERROR
+		qglCullFace(gl_state.cullface);CHECKGLERROR
+		qglDisable(GL_CULL_FACE);CHECKGLERROR
+		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+		qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+		qglDepthMask(gl_state.depthmask);CHECKGLERROR
+		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+
+		if (vid.support.arb_vertex_buffer_object)
+		{
+			qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+		}
+
+		if (vid.support.ext_framebuffer_object)
+		{
+			qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		}
+
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
+		qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
+		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+		qglColor4f(1, 1, 1, 1);CHECKGLERROR
+
+		if (vid.support.ext_framebuffer_object)
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+
+		gl_state.unit = MAX_TEXTUREUNITS;
+		gl_state.clientunit = MAX_TEXTUREUNITS;
 		for (i = 0;i < vid.teximageunits;i++)
 		{
 			GL_ActiveTexture(i);
@@ -789,6 +1148,44 @@ static void GL_Backend_ResetState(void)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+		CHECKGLERROR
+
+		qglColorMask(1, 1, 1, 1);CHECKGLERROR
+		qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
+		qglDisable(GL_ALPHA_TEST);CHECKGLERROR
+		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+		qglDisable(GL_BLEND);CHECKGLERROR
+		qglCullFace(gl_state.cullface);CHECKGLERROR
+		qglDisable(GL_CULL_FACE);CHECKGLERROR
+		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+		qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+		qglDepthMask(gl_state.depthmask);CHECKGLERROR
+		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+
+		if (vid.support.arb_vertex_buffer_object)
+		{
+			qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+		}
+
+		if (vid.support.ext_framebuffer_object)
+		{
+			qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		}
+
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
+		qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
+		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+		qglColor4f(1, 1, 1, 1);CHECKGLERROR
+
+		if (vid.support.ext_framebuffer_object)
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+
+		gl_state.unit = MAX_TEXTUREUNITS;
+		gl_state.clientunit = MAX_TEXTUREUNITS;
 		for (i = 0;i < vid.texunits;i++)
 		{
 			GL_ActiveTexture(i);
@@ -828,11 +1225,23 @@ void GL_ActiveTexture(unsigned int num)
 	if (gl_state.unit != num)
 	{
 		gl_state.unit = num;
-		if (qglActiveTexture)
+		switch(vid.renderpath)
 		{
-			CHECKGLERROR
-			qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
-			CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			if (qglActiveTexture)
+			{
+				CHECKGLERROR
+				qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
+				CHECKGLERROR
+			}
+			break;
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			break;
 		}
 	}
 }
@@ -842,11 +1251,23 @@ void GL_ClientActiveTexture(unsigned int num)
 	if (gl_state.clientunit != num)
 	{
 		gl_state.clientunit = num;
-		if (qglActiveTexture)
+		switch(vid.renderpath)
 		{
-			CHECKGLERROR
-			qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.clientunit);
-			CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			if (qglActiveTexture)
+			{
+				CHECKGLERROR
+				qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.clientunit);
+				CHECKGLERROR
+			}
+			break;
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			break;
 		}
 	}
 }
@@ -855,34 +1276,71 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 {
 	if (gl_state.blendfunc1 != blendfunc1 || gl_state.blendfunc2 != blendfunc2)
 	{
-		CHECKGLERROR
-		qglBlendFunc(gl_state.blendfunc1 = blendfunc1, gl_state.blendfunc2 = blendfunc2);CHECKGLERROR
-		if (gl_state.blendfunc2 == GL_ZERO)
+		qboolean blendenable;
+		gl_state.blendfunc1 = blendfunc1;
+		gl_state.blendfunc2 = blendfunc2;
+		blendenable = (gl_state.blendfunc1 != GL_ONE || gl_state.blendfunc2 != GL_ZERO);
+		switch(vid.renderpath)
 		{
-			if (gl_state.blendfunc1 == GL_ONE)
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+			if (gl_state.blend != blendenable)
 			{
-				if (gl_state.blend)
-				{
-					gl_state.blend = 0;
-					qglDisable(GL_BLEND);CHECKGLERROR
-				}
-			}
-			else
-			{
+				gl_state.blend = blendenable;
 				if (!gl_state.blend)
 				{
-					gl_state.blend = 1;
+					qglDisable(GL_BLEND);CHECKGLERROR
+				}
+				else
+				{
 					qglEnable(GL_BLEND);CHECKGLERROR
 				}
 			}
-		}
-		else
-		{
-			if (!gl_state.blend)
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
 			{
-				gl_state.blend = 1;
-				qglEnable(GL_BLEND);CHECKGLERROR
+				int i;
+				int glblendfunc[2];
+				D3DBLEND d3dblendfunc[2];
+				glblendfunc[0] = gl_state.blendfunc1;
+				glblendfunc[1] = gl_state.blendfunc2;
+				for (i = 0;i < 2;i++)
+				{
+					switch(glblendfunc[i])
+					{
+					case GL_ZERO: d3dblendfunc[i] = D3DBLEND_ZERO;break;
+					case GL_ONE: d3dblendfunc[i] = D3DBLEND_ONE;break;
+					case GL_SRC_COLOR: d3dblendfunc[i] = D3DBLEND_SRCCOLOR;break;
+					case GL_ONE_MINUS_SRC_COLOR: d3dblendfunc[i] = D3DBLEND_INVSRCCOLOR;break;
+					case GL_SRC_ALPHA: d3dblendfunc[i] = D3DBLEND_SRCALPHA;break;
+					case GL_ONE_MINUS_SRC_ALPHA: d3dblendfunc[i] = D3DBLEND_INVSRCALPHA;break;
+					case GL_DST_ALPHA: d3dblendfunc[i] = D3DBLEND_DESTALPHA;break;
+					case GL_ONE_MINUS_DST_ALPHA: d3dblendfunc[i] = D3DBLEND_INVDESTALPHA;break;
+					case GL_DST_COLOR: d3dblendfunc[i] = D3DBLEND_DESTCOLOR;break;
+					case GL_ONE_MINUS_DST_COLOR: d3dblendfunc[i] = D3DBLEND_INVDESTCOLOR;break;
+					}
+				}
+				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_SRCBLEND, d3dblendfunc[0]);
+				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_DESTBLEND, d3dblendfunc[1]);
+				if (gl_state.blend != blendenable)
+				{
+					gl_state.blend = blendenable;
+					IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHABLENDENABLE, gl_state.blend);
+				}
 			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 }
@@ -891,8 +1349,28 @@ void GL_DepthMask(int state)
 {
 	if (gl_state.depthmask != state)
 	{
-		CHECKGLERROR
-		qglDepthMask(gl_state.depthmask = state);CHECKGLERROR
+		gl_state.depthmask = state;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglDepthMask(gl_state.depthmask);CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZWRITEENABLE, gl_state.depthmask);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
 	}
 }
 
@@ -901,14 +1379,62 @@ void GL_DepthTest(int state)
 	if (gl_state.depthtest != state)
 	{
 		gl_state.depthtest = state;
-		CHECKGLERROR
-		if (gl_state.depthtest)
+		switch(vid.renderpath)
 		{
-			qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			if (gl_state.depthtest)
+			{
+				qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+			}
+			else
+			{
+				qglDisable(GL_DEPTH_TEST);CHECKGLERROR
+			}
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZENABLE, gl_state.depthtest);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
-		else
+	}
+}
+
+void GL_DepthFunc(int state)
+{
+	if (gl_state.depthfunc != state)
+	{
+		gl_state.depthfunc = state;
+		switch(vid.renderpath)
 		{
-			qglDisable(GL_DEPTH_TEST);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglDepthFunc(gl_state.depthfunc);CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZFUNC, d3dcmpforglfunc(gl_state.depthfunc));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 }
@@ -919,7 +1445,147 @@ void GL_DepthRange(float nearfrac, float farfrac)
 	{
 		gl_state.depthrange[0] = nearfrac;
 		gl_state.depthrange[1] = farfrac;
-		qglDepthRange(nearfrac, farfrac);
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			qglDepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			{
+				D3DVIEWPORT9 d3dviewport;
+				d3dviewport.X = gl_viewport.x;
+				d3dviewport.Y = gl_viewport.y;
+				d3dviewport.Width = gl_viewport.width;
+				d3dviewport.Height = gl_viewport.height;
+				d3dviewport.MinZ = gl_state.depthrange[0];
+				d3dviewport.MaxZ = gl_state.depthrange[1];
+				IDirect3DDevice9_SetViewport(vid_d3d9dev, &d3dviewport);
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
+	}
+}
+
+void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int frontzfail, int frontzpass, int backfail, int backzfail, int backzpass, int frontcompare, int backcompare, int comparereference, int comparemask)
+{
+	switch (vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		if (enable)
+		{
+			qglEnable(GL_STENCIL_TEST);CHECKGLERROR
+		}
+		else
+		{
+			qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+		}
+		if (vid.support.ati_separate_stencil)
+		{
+			qglStencilMask(writemask);CHECKGLERROR
+			qglStencilOpSeparate(GL_FRONT, frontfail, frontzfail, frontzpass);CHECKGLERROR
+			qglStencilOpSeparate(GL_BACK, backfail, backzfail, backzpass);CHECKGLERROR
+			qglStencilFuncSeparate(frontcompare, backcompare, comparereference, comparereference);CHECKGLERROR
+		}
+		else if (vid.support.ext_stencil_two_side)
+		{
+			qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
+			qglActiveStencilFaceEXT(GL_FRONT);CHECKGLERROR
+			qglStencilMask(writemask);CHECKGLERROR
+			qglStencilOp(frontfail, frontzfail, frontzpass);CHECKGLERROR
+			qglStencilFunc(frontcompare, comparereference, comparemask);CHECKGLERROR
+			qglActiveStencilFaceEXT(GL_BACK);CHECKGLERROR
+			qglStencilMask(writemask);CHECKGLERROR
+			qglStencilOp(backfail, backzfail, backzpass);CHECKGLERROR
+			qglStencilFunc(backcompare, comparereference, comparemask);CHECKGLERROR
+		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_TWOSIDEDSTENCILMODE, true);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILENABLE, enable);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILWRITEMASK, writemask);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFAIL, d3dstencilopforglfunc(frontfail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILZFAIL, d3dstencilopforglfunc(frontzfail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILPASS, d3dstencilopforglfunc(frontzpass));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, frontcompare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILFAIL, d3dstencilopforglfunc(backfail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILZFAIL, d3dstencilopforglfunc(backzfail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILPASS, d3dstencilopforglfunc(backzpass));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILFUNC, backcompare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILREF, comparereference);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILMASK, comparemask);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
+void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask)
+{
+	switch (vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		if (enable)
+		{
+			qglEnable(GL_STENCIL_TEST);CHECKGLERROR
+		}
+		else
+		{
+			qglDisable(GL_STENCIL_TEST);CHECKGLERROR
+		}
+		if (vid.support.ext_stencil_two_side)
+		{
+			qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
+		}
+		qglStencilMask(writemask);CHECKGLERROR
+		qglStencilOp(fail, zfail, zpass);CHECKGLERROR
+		qglStencilFunc(compare, comparereference, comparemask);CHECKGLERROR
+		CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		if (vid.support.ati_separate_stencil)
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_TWOSIDEDSTENCILMODE, true);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILENABLE, enable);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILWRITEMASK, writemask);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFAIL, d3dstencilopforglfunc(fail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILZFAIL, d3dstencilopforglfunc(zfail));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILPASS, d3dstencilopforglfunc(zpass));
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, compare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILREF, comparereference);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILMASK, comparemask);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -929,27 +1595,66 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 	{
 		gl_state.polygonoffset[0] = planeoffset;
 		gl_state.polygonoffset[1] = depthoffset;
-		qglPolygonOffset(planeoffset, depthoffset);
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_SLOPESCALEDEPTHBIAS, gl_state.polygonoffset[0]);
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_DEPTHBIAS, gl_state.polygonoffset[1] * (1.0f / 16777216.0f));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
 	}
 }
 
 void GL_SetMirrorState(qboolean state)
 {
-	if(!state != !v_flipped_state)
+	if (v_flipped_state != state)
 	{
-		// change cull face mode!
-		if(gl_state.cullface == GL_BACK)
-			qglCullFace((gl_state.cullface = GL_FRONT));
-		else if(gl_state.cullface == GL_FRONT)
-			qglCullFace((gl_state.cullface = GL_BACK));
+		v_flipped_state = state;
+		if (gl_state.cullface == GL_BACK)
+			gl_state.cullface = GL_FRONT;
+		else if (gl_state.cullface == GL_FRONT)
+			gl_state.cullface = GL_BACK;
+		else
+			return;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			qglCullFace(gl_state.cullface);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, gl_state.cullface == GL_FRONT ? D3DCULL_CCW : D3DCULL_CW);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
 	}
-	v_flipped_state = state;
 }
 
 void GL_CullFace(int state)
 {
-	CHECKGLERROR
-
 	if(v_flipped_state)
 	{
 		if(state == GL_FRONT)
@@ -958,26 +1663,65 @@ void GL_CullFace(int state)
 			state = GL_FRONT;
 	}
 
-	if (state != GL_NONE)
+	switch(vid.renderpath)
 	{
-		if (!gl_state.cullfaceenable)
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+
+		if (state != GL_NONE)
 		{
-			gl_state.cullfaceenable = true;
-			qglEnable(GL_CULL_FACE);CHECKGLERROR
+			if (!gl_state.cullfaceenable)
+			{
+				gl_state.cullfaceenable = true;
+				qglEnable(GL_CULL_FACE);CHECKGLERROR
+			}
+			if (gl_state.cullface != state)
+			{
+				gl_state.cullface = state;
+				qglCullFace(gl_state.cullface);CHECKGLERROR
+			}
 		}
+		else
+		{
+			if (gl_state.cullfaceenable)
+			{
+				gl_state.cullfaceenable = false;
+				qglDisable(GL_CULL_FACE);CHECKGLERROR
+			}
+		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
 		if (gl_state.cullface != state)
 		{
 			gl_state.cullface = state;
-			qglCullFace(gl_state.cullface);CHECKGLERROR
+			switch(gl_state.cullface)
+			{
+			case GL_NONE:
+				gl_state.cullfaceenable = false;
+				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, D3DCULL_NONE);
+				break;
+			case GL_FRONT:
+				gl_state.cullfaceenable = true;
+				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, D3DCULL_CCW);
+				break;
+			case GL_BACK:
+				gl_state.cullfaceenable = true;
+				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, D3DCULL_CW);
+				break;
+			}
 		}
-	}
-	else
-	{
-		if (gl_state.cullfaceenable)
-		{
-			gl_state.cullfaceenable = false;
-			qglDisable(GL_CULL_FACE);CHECKGLERROR
-		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -986,26 +1730,96 @@ void GL_AlphaTest(int state)
 	if (gl_state.alphatest != state)
 	{
 		gl_state.alphatest = state;
-		CHECKGLERROR
-		if (gl_state.alphatest)
+		switch(vid.renderpath)
 		{
-			qglEnable(GL_ALPHA_TEST);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			if (gl_state.alphatest)
+			{
+				qglEnable(GL_ALPHA_TEST);CHECKGLERROR
+			}
+			else
+			{
+				qglDisable(GL_ALPHA_TEST);CHECKGLERROR
+			}
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHATESTENABLE, gl_state.alphatest);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
-		else
+	}
+}
+
+void GL_AlphaFunc(int state, float value)
+{
+	if (gl_state.alphafunc != state || gl_state.alphafuncvalue != value)
+	{
+		gl_state.alphafunc = state;
+		gl_state.alphafuncvalue = value;
+		switch(vid.renderpath)
 		{
-			qglDisable(GL_ALPHA_TEST);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAFUNC, d3dcmpforglfunc(gl_state.alphafunc));
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAREF, (int)bound(0, value * 256.0f, 255));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 }
 
 void GL_ColorMask(int r, int g, int b, int a)
 {
-	int state = r*8 + g*4 + b*2 + a*1;
+	// NOTE: this matches D3DCOLORWRITEENABLE_RED, GREEN, BLUE, ALPHA
+	int state = (r ? 1 : 0) | (g ? 2 : 0) | (b ? 4 : 0) | (a ? 8 : 0);
 	if (gl_state.colormask != state)
 	{
 		gl_state.colormask = state;
-		CHECKGLERROR
-		qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_COLORWRITEENABLE, state);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
 	}
 }
 
@@ -1017,43 +1831,197 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		gl_state.color4f[1] = cg;
 		gl_state.color4f[2] = cb;
 		gl_state.color4f[3] = ca;
-		CHECKGLERROR
-		qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
-		CHECKGLERROR
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
+			CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			// no equivalent in D3D
+			break;
+		}
 	}
 }
 
 void GL_Scissor (int x, int y, int width, int height)
 {
-	CHECKGLERROR
-	qglScissor(x, y,width,height);
-	CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		qglScissor(x, y,width,height);
+		CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			RECT d3drect;
+			d3drect.left = x;
+			d3drect.top = y;
+			d3drect.right = x + width;
+			d3drect.bottom = y + height;
+			IDirect3DDevice9_SetScissorRect(vid_d3d9dev, &d3drect);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
 
 void GL_ScissorTest(int state)
 {
-	if(gl_state.scissortest == state)
-		return;
-
-	CHECKGLERROR
-	if((gl_state.scissortest = state))
-		qglEnable(GL_SCISSOR_TEST);
-	else
-		qglDisable(GL_SCISSOR_TEST);
-	CHECKGLERROR
+	if (gl_state.scissortest != state)
+	{
+		gl_state.scissortest = state;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			if(gl_state.scissortest)
+				qglEnable(GL_SCISSOR_TEST);
+			else
+				qglDisable(GL_SCISSOR_TEST);
+			CHECKGLERROR
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_SCISSORTESTENABLE, gl_state.scissortest);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		}
+	}
 }
 
-void GL_Clear(int mask)
+void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilvalue)
 {
-	CHECKGLERROR
-	qglClear(mask);CHECKGLERROR
+	static const float blackcolor[4] = {0, 0, 0, 0};
+	// prevent warnings when trying to clear a buffer that does not exist
+	if (!colorvalue)
+		colorvalue = blackcolor;
+	if (!vid.stencil)
+	{
+		mask &= ~GL_STENCIL_BUFFER_BIT;
+		stencilvalue = 0;
+	}
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		if (mask & GL_COLOR_BUFFER_BIT)
+		{
+			qglClearColor(colorvalue[0], colorvalue[1], colorvalue[2], colorvalue[3]);CHECKGLERROR
+		}
+		if (mask & GL_DEPTH_BUFFER_BIT)
+		{
+			qglClearDepth(depthvalue);CHECKGLERROR
+		}
+		if (mask & GL_STENCIL_BUFFER_BIT)
+		{
+			qglClearStencil(stencilvalue);CHECKGLERROR
+		}
+		qglClear(mask);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_Clear(vid_d3d9dev, 0, NULL, ((mask & GL_COLOR_BUFFER_BIT) ? D3DCLEAR_TARGET : 0) | ((mask & GL_STENCIL_BUFFER_BIT) ? D3DCLEAR_STENCIL : 0) | ((mask & GL_DEPTH_BUFFER_BIT) ? D3DCLEAR_ZBUFFER : 0), D3DCOLOR_COLORVALUE(colorvalue[0], colorvalue[1], colorvalue[2], colorvalue[3]), depthvalue, stencilvalue);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
+void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpixels)
+{
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		qglReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, outpixels);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			// LordHavoc: we can't directly download the backbuffer because it may be
+			// multisampled, and it may not be lockable, so we blit it to a lockable
+			// surface of the same dimensions (but without multisample) to resolve the
+			// multisample buffer to a normal image, and then lock that...
+			IDirect3DSurface9 *stretchsurface = NULL;
+			if (!FAILED(IDirect3DDevice9_CreateRenderTarget(vid_d3d9dev, vid.width, vid.height, D3DFMT_A8R8G8B8, D3DMULTISAMPLE_NONE, 0, TRUE, &stretchsurface, NULL)))
+			{
+				D3DLOCKED_RECT lockedrect;
+				if (!FAILED(IDirect3DDevice9_StretchRect(vid_d3d9dev, gl_state.d3drt_backbuffercolorsurface, NULL, stretchsurface, NULL, D3DTEXF_POINT)))
+				{
+					if (!FAILED(IDirect3DSurface9_LockRect(stretchsurface, &lockedrect, NULL, D3DLOCK_READONLY)))
+					{
+						int line;
+						unsigned char *row = (unsigned char *)lockedrect.pBits + x * 4 + lockedrect.Pitch * (vid.height - 1 - y);
+						for (line = 0;line < height;line++, row -= lockedrect.Pitch)
+							memcpy(outpixels + line * width * 4, row, width * 4);
+						IDirect3DSurface9_UnlockRect(stretchsurface);
+					}
+				}
+				IDirect3DSurface9_Release(stretchsurface);
+			}
+			// code scraps
+			//IDirect3DSurface9 *syssurface = NULL;
+			//if (!FAILED(IDirect3DDevice9_CreateRenderTarget(vid_d3d9dev, vid.width, vid.height, D3DFMT_A8R8G8B8, D3DMULTISAMPLE_NONE, 0, FALSE, &stretchsurface, NULL)))
+			//if (!FAILED(IDirect3DDevice9_CreateOffscreenPlainSurface(vid_d3d9dev, vid.width, vid.height, D3DFMT_A8R8G8B8, D3DPOOL_SCRATCH, &syssurface, NULL)))
+			//IDirect3DDevice9_GetRenderTargetData(vid_d3d9dev, gl_state.d3drt_backbuffercolorsurface, syssurface);
+			//if (!FAILED(IDirect3DDevice9_GetFrontBufferData(vid_d3d9dev, 0, syssurface)))
+			//if (!FAILED(IDirect3DSurface9_LockRect(syssurface, &lockedrect, NULL, D3DLOCK_READONLY)))
+			//IDirect3DSurface9_UnlockRect(syssurface);
+			//IDirect3DSurface9_Release(syssurface);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
 
 // called at beginning of frame
 void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
-	CHECKGLERROR
 	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
 	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
 	gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
@@ -1176,11 +2144,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			Con_DPrintf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %8x, %8p, %8p, %8x);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3i_indexbuffer, (int)element3i_bufferoffset, (void *)element3s, (void *)element3s_indexbuffer, (int)element3s_bufferoffset);
 		return;
 	}
-	if (gl_state.pointer_vertex_pointer == NULL)
-	{
-		Con_DPrintf("R_Mesh_Draw with no vertex pointer!\n");
-		return;
-	}
 	if (!gl_mesh_prefer_short_elements.integer)
 	{
 		if (element3i)
@@ -1211,7 +2174,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			if (gl_state.draw_dynamicindexbuffer)
 				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3s, numelements * sizeof(*element3s));
 			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, true);
+				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, true, true);
 			element3s_indexbuffer = gl_state.draw_dynamicindexbuffer;
 			element3s_bufferoffset = 0;
 		}
@@ -1223,7 +2186,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			if (gl_state.draw_dynamicindexbuffer)
 				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3i, numelements * sizeof(*element3i));
 			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, true);
+				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, true, false);
 			element3i_indexbuffer = gl_state.draw_dynamicindexbuffer;
 			element3i_bufferoffset = 0;
 		}
@@ -1232,7 +2195,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	bufferoffset3i = element3i_bufferoffset;
 	bufferobject3s = element3s_indexbuffer ? element3s_indexbuffer->bufferobject : 0;
 	bufferoffset3s = element3s_bufferoffset;
-	CHECKGLERROR
 	r_refdef.stats.meshes++;
 	r_refdef.stats.meshes_elements += numelements;
 	if (gl_paranoid.integer)
@@ -1298,195 +2260,226 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				}
 			}
 		}
-		CHECKGLERROR
 	}
 	if (r_render.integer || r_refdef.draw2dstage)
 	{
-		CHECKGLERROR
-		if (gl_mesh_testmanualfeeding.integer)
+		switch(vid.renderpath)
 		{
-			unsigned int i, j, element;
-			const GLfloat *p;
-			qglBegin(GL_TRIANGLES);
-			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			if (gl_mesh_testmanualfeeding.integer)
 			{
-				if (element3i)
-					element = element3i[i];
-				else if (element3s)
-					element = element3s[i];
-				else
-					element = firstvertex + i;
-				for (j = 0;j < vid.texarrayunits;j++)
+				unsigned int i, j, element;
+				const GLfloat *p;
+				qglBegin(GL_TRIANGLES);
+				for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 				{
-					if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
-					{
-						if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
-						{
-							p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
-								else
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
-							}
-							else
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(p[0], p[1], p[2], p[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(p[0], p[1], p[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(p[0], p[1]);
-								else
-									qglTexCoord1f(p[0]);
-							}
-						}
-						else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
-						{
-							const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
-							}
-							else
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(s[0], s[1], s[2], s[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(s[0], s[1], s[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(s[0], s[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglTexCoord1f(s[0]);
-							}
-						}
-						else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
-						{
-							const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-							if (vid.texarrayunits > 1)
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
-							}
-							else
-							{
-								if (gl_state.units[j].pointer_texcoord_components == 4)
-									qglTexCoord4f(sb[0], sb[1], sb[2], sb[3]);
-								else if (gl_state.units[j].pointer_texcoord_components == 3)
-									qglTexCoord3f(sb[0], sb[1], sb[2]);
-								else if (gl_state.units[j].pointer_texcoord_components == 2)
-									qglTexCoord2f(sb[0], sb[1]);
-								else if (gl_state.units[j].pointer_texcoord_components == 1)
-									qglTexCoord1f(sb[0]);
-							}
-						}
-					}
-				}
-				if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
-				{
-					if (gl_state.pointer_color_gltype == GL_FLOAT)
-					{
-						p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-						qglColor4f(p[0], p[1], p[2], p[3]);
-					}
-					else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
-					{
-						const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-						qglColor4ub(ub[0], ub[1], ub[2], ub[3]);
-					}
-				}
-				if (gl_state.pointer_vertex_gltype == GL_FLOAT)
-				{
-					p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
-					if (gl_state.pointer_vertex_components == 4)
-						qglVertex4f(p[0], p[1], p[2], p[3]);
-					else if (gl_state.pointer_vertex_components == 3)
-						qglVertex3f(p[0], p[1], p[2]);
+					if (element3i)
+						element = element3i[i];
+					else if (element3s)
+						element = element3s[i];
 					else
-						qglVertex2f(p[0], p[1]);
+						element = firstvertex + i;
+					for (j = 0;j < vid.texarrayunits;j++)
+					{
+						if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
+						{
+							if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
+							{
+								p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+								if (vid.texarrayunits > 1)
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
+									else
+										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
+								}
+								else
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglTexCoord4f(p[0], p[1], p[2], p[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglTexCoord3f(p[0], p[1], p[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglTexCoord2f(p[0], p[1]);
+									else
+										qglTexCoord1f(p[0]);
+								}
+							}
+							else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
+							{
+								const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+								if (vid.texarrayunits > 1)
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
+								}
+								else
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglTexCoord4f(s[0], s[1], s[2], s[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglTexCoord3f(s[0], s[1], s[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglTexCoord2f(s[0], s[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglTexCoord1f(s[0]);
+								}
+							}
+							else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
+							{
+								const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+								if (vid.texarrayunits > 1)
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
+								}
+								else
+								{
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglTexCoord4f(sb[0], sb[1], sb[2], sb[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglTexCoord3f(sb[0], sb[1], sb[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglTexCoord2f(sb[0], sb[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglTexCoord1f(sb[0]);
+								}
+							}
+						}
+					}
+					if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
+					{
+						if (gl_state.pointer_color_gltype == GL_FLOAT)
+						{
+							p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+							qglColor4f(p[0], p[1], p[2], p[3]);
+						}
+						else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
+						{
+							const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+							qglColor4ub(ub[0], ub[1], ub[2], ub[3]);
+						}
+					}
+					if (gl_state.pointer_vertex_gltype == GL_FLOAT)
+					{
+						p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
+						if (gl_state.pointer_vertex_components == 4)
+							qglVertex4f(p[0], p[1], p[2], p[3]);
+						else if (gl_state.pointer_vertex_components == 3)
+							qglVertex3f(p[0], p[1], p[2]);
+						else
+							qglVertex2f(p[0], p[1]);
+					}
+				}
+				qglEnd();
+				CHECKGLERROR
+			}
+			else if (bufferobject3s)
+			{
+				GL_BindEBO(bufferobject3s);
+				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+				{
+					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
+					CHECKGLERROR
+				}
+				else
+				{
+					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
+					CHECKGLERROR
 				}
 			}
-			qglEnd();
-			CHECKGLERROR
-		}
-		else if (bufferobject3s)
-		{
-			GL_BindEBO(bufferobject3s);
-			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			else if (bufferobject3i)
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
-				CHECKGLERROR
+				GL_BindEBO(bufferobject3i);
+				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+				{
+					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
+					CHECKGLERROR
+				}
+				else
+				{
+					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
+					CHECKGLERROR
+				}
+			}
+			else if (element3s)
+			{
+				GL_BindEBO(0);
+				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+				{
+					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, element3s);
+					CHECKGLERROR
+				}
+				else
+				{
+					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
+					CHECKGLERROR
+				}
+			}
+			else if (element3i)
+			{
+				GL_BindEBO(0);
+				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+				{
+					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, element3i);
+					CHECKGLERROR
+				}
+				else
+				{
+					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
+					CHECKGLERROR
+				}
 			}
 			else
 			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
+				qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
 				CHECKGLERROR
 			}
-		}
-		else if (bufferobject3i)
-		{
-			GL_BindEBO(bufferobject3i);
-			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
 			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
-				CHECKGLERROR
+				if (element3s_indexbuffer)
+				{
+					IDirect3DDevice9_SetIndices(vid_d3d9dev, (IDirect3DIndexBuffer9 *)element3s_indexbuffer->devicebuffer);
+					IDirect3DDevice9_DrawIndexedPrimitive(vid_d3d9dev, D3DPT_TRIANGLELIST, 0, firstvertex, numvertices, element3s_bufferoffset>>1, numtriangles);
+				}
+				else if (element3i_indexbuffer)
+				{
+					IDirect3DDevice9_SetIndices(vid_d3d9dev, (IDirect3DIndexBuffer9 *)element3i_indexbuffer->devicebuffer);
+					IDirect3DDevice9_DrawIndexedPrimitive(vid_d3d9dev, D3DPT_TRIANGLELIST, 0, firstvertex, numvertices, element3i_bufferoffset>>2, numtriangles);
+				}
+				else
+					IDirect3DDevice9_DrawPrimitive(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices);
 			}
-			else
-			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
-				CHECKGLERROR
-			}
-		}
-		else if (element3s)
-		{
-			GL_BindEBO(0);
-			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, element3s);
-				CHECKGLERROR
-			}
-			else
-			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
-				CHECKGLERROR
-			}
-		}
-		else if (element3i)
-		{
-			GL_BindEBO(0);
-			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-			{
-				qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, element3i);
-				CHECKGLERROR
-			}
-			else
-			{
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
-				CHECKGLERROR
-			}
-		}
-		else
-		{
-			qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
-			CHECKGLERROR
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 }
@@ -1496,51 +2489,27 @@ void R_Mesh_Finish(void)
 {
 }
 
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic)
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16)
 {
-	int bufferobject = 0;
-	void *devicebuffer = NULL;
 	r_meshbuffer_t *buffer;
 	if (!(isdynamic ? (isindexbuffer ? gl_state.usevbo_dynamicindex : gl_state.usevbo_dynamicvertex) : (isindexbuffer ? gl_state.usevbo_staticindex : gl_state.usevbo_staticvertex)))
 		return NULL;
-	if (isindexbuffer)
-	{
-		r_refdef.stats.indexbufferuploadcount++;
-		r_refdef.stats.indexbufferuploadsize += size;
-	}
-	else
-	{
-		r_refdef.stats.vertexbufferuploadcount++;
-		r_refdef.stats.vertexbufferuploadsize += size;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		qglGenBuffersARB(1, (GLuint *)&bufferobject);
-		if (isindexbuffer)
-			GL_BindEBO(bufferobject);
-		else
-			GL_BindVBO(bufferobject);
-		qglBufferDataARB(isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB, size, data, isdynamic ? GL_STREAM_DRAW_ARB : GL_STATIC_DRAW_ARB);
-		break;
-	}
 	buffer = (r_meshbuffer_t *)Mem_ExpandableArray_AllocRecord(&gl_state.meshbufferarray);
 	memset(buffer, 0, sizeof(*buffer));
-	buffer->bufferobject = bufferobject;
-	buffer->devicebuffer = devicebuffer;
-	buffer->size = size;
+	buffer->bufferobject = 0;
+	buffer->devicebuffer = NULL;
+	buffer->size = 0;
 	buffer->isindexbuffer = isindexbuffer;
 	buffer->isdynamic = isdynamic;
+	buffer->isindex16 = isindex16;
 	strlcpy(buffer->name, name, sizeof(buffer->name));
+	R_Mesh_UpdateMeshBuffer(buffer, data, size);
 	return buffer;
 }
 
 void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size)
 {
-	if (!buffer || (!buffer->bufferobject && !buffer->devicebuffer))
+	if (!buffer)
 		return;
 	if (buffer->isindexbuffer)
 	{
@@ -1558,11 +2527,71 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+		if (!buffer->bufferobject)
+			qglGenBuffersARB(1, (GLuint *)&buffer->bufferobject);
 		if (buffer->isindexbuffer)
 			GL_BindEBO(buffer->bufferobject);
 		else
 			GL_BindVBO(buffer->bufferobject);
 		qglBufferDataARB(buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB, size, data, buffer->isdynamic ? GL_STREAM_DRAW_ARB : GL_STATIC_DRAW_ARB);
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			int result;
+			void *datapointer = NULL;
+			if (buffer->isindexbuffer)
+			{
+				IDirect3DIndexBuffer9 *d3d9indexbuffer = (IDirect3DIndexBuffer9 *)buffer->devicebuffer;
+				if (size != buffer->size || !buffer->devicebuffer)
+				{
+					if (buffer->devicebuffer)
+						IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9*)buffer->devicebuffer);
+					buffer->devicebuffer = NULL;
+					if (FAILED(result = IDirect3DDevice9_CreateIndexBuffer(vid_d3d9dev, size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, NULL)))
+						Sys_Error("IDirect3DDevice9_CreateIndexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, result);
+					buffer->devicebuffer = (void *)d3d9indexbuffer;
+					buffer->size = size;
+				}
+				if (!FAILED(IDirect3DIndexBuffer9_Lock(d3d9indexbuffer, 0, 0, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
+				{
+					if (data)
+						memcpy(datapointer, data, size);
+					else
+						memset(datapointer, 0, size);
+					IDirect3DIndexBuffer9_Unlock(d3d9indexbuffer);
+				}
+			}
+			else
+			{
+				IDirect3DVertexBuffer9 *d3d9vertexbuffer = (IDirect3DVertexBuffer9 *)buffer->devicebuffer;
+				if (size != buffer->size || !buffer->devicebuffer)
+				{
+					if (buffer->devicebuffer)
+						IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9*)buffer->devicebuffer);
+					buffer->devicebuffer = NULL;
+					if (FAILED(result = IDirect3DDevice9_CreateVertexBuffer(vid_d3d9dev, size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, NULL)))
+						Sys_Error("IDirect3DDevice9_CreateVertexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, result);
+					buffer->devicebuffer = (void *)d3d9vertexbuffer;
+					buffer->size = size;
+				}
+				if (!FAILED(IDirect3DVertexBuffer9_Lock(d3d9vertexbuffer, 0, 0, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
+				{
+					if (data)
+						memcpy(datapointer, data, size);
+					else
+						memset(datapointer, 0, size);
+					IDirect3DVertexBuffer9_Unlock(d3d9vertexbuffer);
+				}
+			}
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
@@ -1578,6 +2607,23 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 		qglDeleteBuffersARB(1, (GLuint *)&buffer->bufferobject);
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		if (buffer->devicebuffer)
+		{
+			if (buffer->isindexbuffer)
+				IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9 *)buffer->devicebuffer);
+			else
+				IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9 *)buffer->devicebuffer);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
@@ -1722,10 +2768,55 @@ int R_Mesh_TexBound(unsigned int unitnum, int id)
 
 void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int width, int height)
 {
-	R_Mesh_TexBind(0, tex);
-	GL_ActiveTexture(0);CHECKGLERROR
-	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, tx, ty, sx, sy, width, height);CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		R_Mesh_TexBind(0, tex);
+		GL_ActiveTexture(0);CHECKGLERROR
+		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, tx, ty, sx, sy, width, height);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			IDirect3DSurface9 *currentsurface = NULL;
+			IDirect3DSurface9 *texturesurface = NULL;
+			RECT sourcerect;
+			RECT destrect;
+			sourcerect.left = sx;
+			sourcerect.top = sy;
+			sourcerect.right = sx + width;
+			sourcerect.bottom = sy + height;
+			destrect.left = tx;
+			destrect.top = ty;
+			destrect.right = tx + width;
+			destrect.bottom = ty + height;
+			if (!FAILED(IDirect3DTexture9_GetSurfaceLevel(((IDirect3DTexture9 *)tex->d3dtexture), 0, &texturesurface)))
+			{
+				if (!FAILED(IDirect3DDevice9_GetRenderTarget(vid_d3d9dev, 0, &currentsurface)))
+				{
+					IDirect3DDevice9_StretchRect(vid_d3d9dev, currentsurface, &sourcerect, texturesurface, &destrect, D3DTEXF_NONE);
+					IDirect3DSurface9_Release(currentsurface);
+				}
+				IDirect3DSurface9_Release(texturesurface);
+			}
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
+
+#ifdef SUPPORTD3D
+int d3drswrap[16] = {D3DRS_WRAP0, D3DRS_WRAP1, D3DRS_WRAP2, D3DRS_WRAP3, D3DRS_WRAP4, D3DRS_WRAP5, D3DRS_WRAP6, D3DRS_WRAP7, D3DRS_WRAP8, D3DRS_WRAP9, D3DRS_WRAP10, D3DRS_WRAP11, D3DRS_WRAP12, D3DRS_WRAP13, D3DRS_WRAP14, D3DRS_WRAP15};
+#endif
 
 void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 {
@@ -1733,12 +2824,20 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	int tex2d, tex3d, texcubemap, texnum;
 	if (unitnum >= vid.teximageunits)
 		return;
+//	if (unit->texture == tex)
+//		return;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 		if (!tex)
+		{
 			tex = r_texture_white;
+			// not initialized enough yet...
+			if (!tex)
+				return;
+		}
+		unit->texture = tex;
 		texnum = R_GetTexture(tex);
 		switch(tex->gltexturetypeenum)
 		{
@@ -1750,6 +2849,7 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+		unit->texture = tex;
 		tex2d = 0;
 		tex3d = 0;
 		texcubemap = 0;
@@ -1833,41 +2933,91 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 		}
 		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			extern cvar_t gl_texture_anisotropy;
+			if (!tex)
+			{
+				tex = r_texture_white;
+				// not initialized enough yet...
+				if (!tex)
+					return;
+			}
+			if (unit->texture == tex)
+				return;
+			unit->texture = tex;
+			// upload texture if needed
+			if (tex->dirty)
+				R_RealGetTexture(tex);
+			IDirect3DDevice9_SetTexture(vid_d3d9dev, unitnum, (IDirect3DBaseTexture9*)tex->d3dtexture);
+			//IDirect3DDevice9_SetRenderState(vid_d3d9dev, d3drswrap[unitnum], (tex->flags & TEXF_CLAMP) ? (D3DWRAPCOORD_0 | D3DWRAPCOORD_1 | D3DWRAPCOORD_2) : 0);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_ADDRESSU, tex->d3daddressu);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_ADDRESSV, tex->d3daddressv);
+			if (tex->d3daddressw)
+				IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_ADDRESSW,  tex->d3daddressw);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MAGFILTER, tex->d3dmagfilter);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MINFILTER, tex->d3dminfilter);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MIPFILTER, tex->d3dmipfilter);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MIPMAPLODBIAS, tex->d3dmipmaplodbias);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MAXMIPLEVEL, tex->d3dmaxmiplevelfilter);
+			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_MAXANISOTROPY, gl_texture_anisotropy.integer);
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
 void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (matrix && matrix->m[3][3])
+	switch(vid.renderpath)
 	{
-		// texmatrix specified, check if it is different
-		if (!unit->texmatrixenabled || memcmp(&unit->matrix, matrix, sizeof(matrix4x4_t)))
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (matrix && matrix->m[3][3])
 		{
-			float glmatrix[16];
-			unit->texmatrixenabled = true;
-			unit->matrix = *matrix;
-			CHECKGLERROR
-			Matrix4x4_ToArrayFloatGL(&unit->matrix, glmatrix);
-			GL_ActiveTexture(unitnum);
-			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			qglLoadMatrixf(glmatrix);CHECKGLERROR
-			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			// texmatrix specified, check if it is different
+			if (!unit->texmatrixenabled || memcmp(&unit->matrix, matrix, sizeof(matrix4x4_t)))
+			{
+				float glmatrix[16];
+				unit->texmatrixenabled = true;
+				unit->matrix = *matrix;
+				CHECKGLERROR
+				Matrix4x4_ToArrayFloatGL(&unit->matrix, glmatrix);
+				GL_ActiveTexture(unitnum);
+				qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+				qglLoadMatrixf(glmatrix);CHECKGLERROR
+				qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			}
 		}
-	}
-	else
-	{
-		// no texmatrix specified, revert to identity
-		if (unit->texmatrixenabled)
+		else
 		{
-			unit->texmatrixenabled = false;
-			unit->matrix = identitymatrix;
-			CHECKGLERROR
-			GL_ActiveTexture(unitnum);
-			qglMatrixMode(GL_TEXTURE);CHECKGLERROR
-			qglLoadIdentity();CHECKGLERROR
-			qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			// no texmatrix specified, revert to identity
+			if (unit->texmatrixenabled)
+			{
+				unit->texmatrixenabled = false;
+				unit->matrix = identitymatrix;
+				CHECKGLERROR
+				GL_ActiveTexture(unitnum);
+				qglMatrixMode(GL_TEXTURE);CHECKGLERROR
+				qglLoadIdentity();CHECKGLERROR
+				qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+			}
 		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
 	}
 }
 
@@ -1947,6 +3097,10 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 			GL_ActiveTexture(unitnum);
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
 		break;
 	}
 }
@@ -2072,10 +3226,88 @@ void R_Mesh_ResetTextureState(void)
 			}
 		}
 		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
 	}
 }
 
 
+
+#ifdef SUPPORTD3D
+//#define r_vertexposition_d3d9fvf (D3DFVF_XYZ)
+//#define r_vertexgeneric_d3d9fvf (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1)
+//#define r_vertexmesh_d3d9fvf (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX5 | D3DFVF_TEXCOORDSIZE1(3) | D3DFVF_TEXCOORDSIZE2(3) | D3DFVF_TEXCOORDSIZE3(3))
+
+D3DVERTEXELEMENT9 r_vertexposition_d3d9elements[] =
+{
+	{0, (int)((size_t)&((r_vertexposition_t *)0)->vertex3f), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+	D3DDECL_END()
+};
+
+D3DVERTEXELEMENT9 r_vertexgeneric_d3d9elements[] =
+{
+	{0, (int)((size_t)&((r_vertexgeneric_t *)0)->vertex3f  ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+	{0, (int)((size_t)&((r_vertexgeneric_t *)0)->color4ub  ), D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
+	{0, (int)((size_t)&((r_vertexgeneric_t *)0)->texcoord2f), D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+	D3DDECL_END()
+};
+
+D3DVERTEXELEMENT9 r_vertexmesh_d3d9elements[] =
+{
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->vertex3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->color4ub          ), D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->texcoordtexture2f ), D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->svector3f         ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->tvector3f         ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->normal3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->texcoordlightmap2f), D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 4},
+	D3DDECL_END()
+};
+
+IDirect3DVertexDeclaration9 *r_vertexposition_d3d9decl;
+IDirect3DVertexDeclaration9 *r_vertexgeneric_d3d9decl;
+IDirect3DVertexDeclaration9 *r_vertexmesh_d3d9decl;
+#endif
+
+static void R_Mesh_InitVertexDeclarations(void)
+{
+#ifdef SUPPORTD3D
+	r_vertexposition_d3d9decl = NULL;
+	r_vertexgeneric_d3d9decl = NULL;
+	r_vertexmesh_d3d9decl = NULL;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_D3D9:
+		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9elements, &r_vertexposition_d3d9decl);
+		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9elements, &r_vertexgeneric_d3d9decl);
+		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9elements, &r_vertexmesh_d3d9decl);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+#endif
+}
+
+static void R_Mesh_DestroyVertexDeclarations(void)
+{
+#ifdef SUPPORTD3D
+	if (r_vertexposition_d3d9decl)
+		IDirect3DVertexDeclaration9_Release(r_vertexposition_d3d9decl);
+	r_vertexposition_d3d9decl = NULL;
+	if (r_vertexgeneric_d3d9decl)
+		IDirect3DVertexDeclaration9_Release(r_vertexgeneric_d3d9decl);
+	r_vertexgeneric_d3d9decl = NULL;
+	if (r_vertexmesh_d3d9decl)
+		IDirect3DVertexDeclaration9_Release(r_vertexmesh_d3d9decl);
+	r_vertexmesh_d3d9decl = NULL;
+#endif
+}
 
 r_vertexposition_t *R_Mesh_PrepareVertices_Position_Lock(int numvertices)
 {
@@ -2114,7 +3346,7 @@ void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex
 		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		break;
+		return;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
@@ -2124,7 +3356,7 @@ void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex
 			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		if (vid.texunits >= 3)
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		break;
+		return;
 	}
 
 	// no quick path for this case, convert to vertex structs
@@ -2145,7 +3377,7 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 		if (gl_state.preparevertices_dynamicvertexbuffer)
 			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	if (vertexbuffer)
@@ -2163,6 +3395,18 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9decl);
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 		return;
@@ -2282,7 +3526,7 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 		if (gl_state.preparevertices_dynamicvertexbuffer)
 			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	if (vertexbuffer)
@@ -2300,6 +3544,18 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
 			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9decl);
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 		return;
@@ -2430,7 +3686,7 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 		if (gl_state.preparevertices_dynamicvertexbuffer)
 			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	if (vertexbuffer)
@@ -2453,6 +3709,18 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
 			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9decl);
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 		return;
