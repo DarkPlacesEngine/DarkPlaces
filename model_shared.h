@@ -137,6 +137,7 @@ typedef struct r_meshbuffer_s
 	size_t size;
 	qboolean isindexbuffer;
 	qboolean isdynamic;
+	qboolean isindex16;
 	char name[MAX_QPATH];
 }
 r_meshbuffer_t;
