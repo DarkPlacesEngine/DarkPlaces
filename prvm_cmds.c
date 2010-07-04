@@ -3923,7 +3923,7 @@ void VM_findkeysforcommand(void)
 	if(prog->argc == 2)
 		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
-		bindmap = -1;
+		bindmap = 0; // consistent to "bind"
 
 	VM_CheckEmptyString(cmd);
 
@@ -3964,7 +3964,7 @@ void VM_getkeybind (void)
 	if(prog->argc == 2)
 		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
-		bindmap = -1;
+		bindmap = 0; // consistent to "bind"
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap));
 }
