@@ -1085,14 +1085,16 @@ Key_KeynumToString (int keynum)
 }
 
 
-void
+qboolean
 Key_SetBinding (int keynum, int bindmap, const char *binding)
 {
 	char *newbinding;
 	size_t l;
 
 	if (keynum == -1 || keynum >= MAX_KEYS)
-		return;
+		return false;
+	if ((bindmap < 0) || (bindmap >= MAX_BINDMAPS))
+		return false;
 
 // free old bindings
 	if (keybindings[bindmap][keynum]) {
@@ -1100,13 +1102,35 @@ Key_SetBinding (int keynum, int bindmap, const char *binding)
 		keybindings[bindmap][keynum] = NULL;
 	}
 	if(!binding[0]) // make "" binds be removed --blub
-		return;
+		return true;
 // allocate memory for new binding
 	l = strlen (binding);
 	newbinding = (char *)Z_Malloc (l + 1);
 	memcpy (newbinding, binding, l + 1);
 	newbinding[l] = 0;
 	keybindings[bindmap][keynum] = newbinding;
+	return true;
+}
+
+void Key_GetBindMap(int *fg, int *bg)
+{
+	if(fg)
+		*fg = key_bmap;
+	if(bg)
+		*bg = key_bmap2;
+}
+
+qboolean Key_SetBindMap(int fg, int bg)
+{
+	if(fg >= MAX_BINDMAPS)
+		return false;
+	if(bg >= MAX_BINDMAPS)
+		return false;
+	if(fg >= 0)
+		key_bmap = fg;
+	if(bg >= 0)
+		key_bmap2 = bg;
+	return true;
 }
 
 static void
@@ -1121,7 +1145,7 @@ Key_In_Unbind_f (void)
 	}
 
 	m = strtol(Cmd_Argv (1), &errchar, 0);
-	if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+	if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
 		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
@@ -1132,7 +1156,8 @@ Key_In_Unbind_f (void)
 		return;
 	}
 
-	Key_SetBinding (b, m, "");
+	if(!Key_SetBinding (b, m, ""))
+		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
 static void
@@ -1150,7 +1175,7 @@ Key_In_Bind_f (void)
 	}
 
 	m = strtol(Cmd_Argv (1), &errchar, 0);
-	if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+	if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
 		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
@@ -1176,7 +1201,8 @@ Key_In_Bind_f (void)
 			strlcat (cmd, " ", sizeof (cmd));
 	}
 
-	Key_SetBinding (b, m, cmd);
+	if(!Key_SetBinding (b, m, cmd))
+		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
 static void
@@ -1193,13 +1219,13 @@ Key_In_Bindmap_f (void)
 	}
 
 	m1 = strtol(Cmd_Argv (1), &errchar, 0);
-	if ((m1 < 0) || (m1 >= 8) || (errchar && *errchar)) {
+	if ((m1 < 0) || (m1 >= MAX_BINDMAPS) || (errchar && *errchar)) {
 		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 		return;
 	}
 
 	m2 = strtol(Cmd_Argv (2), &errchar, 0);
-	if ((m2 < 0) || (m2 >= 8) || (errchar && *errchar)) {
+	if ((m2 < 0) || (m2 >= MAX_BINDMAPS) || (errchar && *errchar)) {
 		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(2));
 		return;
 	}
@@ -1224,7 +1250,8 @@ Key_Unbind_f (void)
 		return;
 	}
 
-	Key_SetBinding (b, 0, "");
+	if(!Key_SetBinding (b, 0, ""))
+		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
 static void
@@ -1232,7 +1259,7 @@ Key_Unbindall_f (void)
 {
 	int         i, j;
 
-	for (j = 0; j < 8; j++)
+	for (j = 0; j < MAX_BINDMAPS; j++)
 		for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 			if (keybindings[j][i])
 				Key_SetBinding (i, j, "");
@@ -1268,7 +1295,7 @@ Key_In_BindList_f (void)
 	if(Cmd_Argc() >= 2)
 	{
 		m = strtol(Cmd_Argv(1), &errchar, 0);
-		if ((m < 0) || (m >= 8) || (errchar && *errchar)) {
+		if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
 			Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
 			return;
 		}
@@ -1320,7 +1347,8 @@ Key_Bind_f (void)
 			strlcat (cmd, " ", sizeof (cmd));
 	}
 
-	Key_SetBinding (b, 0, cmd);
+	if(!Key_SetBinding (b, 0, cmd))
+		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
 /*
@@ -1388,6 +1416,8 @@ const char *Key_GetBind (int key, int bindmap)
 	const char *bind;
 	if (key < 0 || key >= MAX_KEYS)
 		return NULL;
+	if(bindmap >= MAX_BINDMAPS)
+		return NULL;
 	if(bindmap >= 0)
 	{
 		bind = keybindings[bindmap][key];
@@ -1409,6 +1439,9 @@ void Key_FindKeysForCommand (const char *command, int *keys, int numkeys, int bi
 
 	for (j = 0;j < numkeys;j++)
 		keys[j] = -1;
+
+	if(bindmap >= MAX_BINDMAPS)
+		return;
 
 	count = 0;
 

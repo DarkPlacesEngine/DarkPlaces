@@ -3902,7 +3902,7 @@ void VM_keynumtostring (void)
 =========
 VM_findkeysforcommand
 
-string	findkeysforcommand(string command)
+string	findkeysforcommand(string command, float bindmap)
 
 the returned string is an altstring
 =========
@@ -3954,7 +3954,7 @@ void VM_stringtokeynum (void)
 =========
 VM_getkeybind
 
-string getkeybind(float key)
+string getkeybind(float key, float bindmap)
 =========
 */
 void VM_getkeybind (void)
@@ -3967,6 +3967,60 @@ void VM_getkeybind (void)
 		bindmap = 0; // consistent to "bind"
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap));
+}
+
+/*
+=========
+VM_setkeybind
+
+float setkeybind(float key, string cmd, float bindmap)
+=========
+*/
+void VM_setkeybind (void)
+{
+	int bindmap;
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_setkeybind);
+	if(prog->argc == 3)
+		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM2), MAX_BINDMAPS-1);
+	else
+		bindmap = 0; // consistent to "bind"
+
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+	if(Key_SetBinding((int)PRVM_G_FLOAT(OFS_PARM0), bindmap, PRVM_G_STRING(OFS_PARM1)))
+		PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_getbindmap
+
+vector getbindmaps()
+=========
+*/
+void VM_getbindmaps (void)
+{
+	int fg, bg;
+	VM_SAFEPARMCOUNT(0, VM_CL_getbindmap);
+	Key_GetBindMap(&fg, &bg);
+	PRVM_G_VECTOR(OFS_RETURN)[0] = fg;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = bg;
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+}
+
+/*
+=========
+VM_setbindmap
+
+float setbindmaps(vector bindmap)
+=========
+*/
+void VM_setbindmaps (void)
+{
+	VM_SAFEPARMCOUNT(1, VM_CL_setbindmap);
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+	if(PRVM_G_VECTOR(OFS_PARM0)[2] == 0)
+		if(Key_SetBindMap((int)PRVM_G_VECTOR(OFS_PARM0)[0], (int)PRVM_G_VECTOR(OFS_PARM0)[1]))
+			PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
 // CL_Video interface functions

@@ -4596,7 +4596,7 @@ VM_writetofile,					// #606
 VM_isfunction,					// #607
 NULL,							// #608
 NULL,							// #609
-NULL,							// #610
+VM_findkeysforcommand,			// #610 string findkeysforcommand(string command[, float bindmap])
 NULL,							// #611
 NULL,							// #612
 VM_parseentitydata,				// #613
@@ -4616,7 +4616,10 @@ NULL,							// #626
 VM_sprintf,                     // #627 string sprintf(string format, ...)
 VM_getsurfacenumtriangles,		// #628 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACETRIANGLE)
 VM_getsurfacetriangle,			// #629 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACETRIANGLE)
-NULL,							// #630
+VM_setkeybind,						// #630 float(float key, string bind[, float bindmap]) setkeybind
+VM_getbindmaps,						// #631 vector(void) getbindmap
+VM_setbindmaps,						// #632 float(vector bm) setbindmap
+NULL,							// #633
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
