@@ -3907,26 +3907,30 @@ string	findkeysforcommand(string command)
 the returned string is an altstring
 =========
 */
-#define NUMKEYS 5 // TODO: merge the constant in keys.c with this one somewhen
-
+#define FKFC_NUMKEYS 5
 void M_FindKeysForCommand(const char *command, int *keys);
 void VM_findkeysforcommand(void)
 {
 	const char *cmd;
 	char ret[VM_STRINGTEMP_LENGTH];
-	int keys[NUMKEYS];
+	int keys[FKFC_NUMKEYS];
 	int i;
+	int bindmap;
 
-	VM_SAFEPARMCOUNT(1, VM_findkeysforcommand);
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_findkeysforcommand);
 
 	cmd = PRVM_G_STRING(OFS_PARM0);
+	if(prog->argc == 2)
+		bindmap = bound(0, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
+	else
+		bindmap = -1;
 
 	VM_CheckEmptyString(cmd);
 
-	M_FindKeysForCommand(cmd, keys);
+	Key_FindKeysForCommand(cmd, keys, FKFC_NUMKEYS, bindmap);
 
 	ret[0] = 0;
-	for(i = 0; i < NUMKEYS; i++)
+	for(i = 0; i < FKFC_NUMKEYS; i++)
 		strlcat(ret, va(" \'%i\'", keys[i]), sizeof(ret));
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(ret);
@@ -3953,11 +3957,16 @@ VM_getkeybind
 string getkeybind(float key)
 =========
 */
-const char *Key_GetBind (int key);
 void VM_getkeybind (void)
 {
-	VM_SAFEPARMCOUNT(1, VM_CL_getkeybind);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0)));
+	int bindmap;
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_CL_getkeybind);
+	if(prog->argc == 2)
+		bindmap = bound(0, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
+	else
+		bindmap = -1;
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap));
 }
 
 // CL_Video interface functions

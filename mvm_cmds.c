@@ -1119,7 +1119,7 @@ NULL,									// #338
 NULL,									// #339
 NULL,									// #340
 NULL,									// #341
-VM_getkeybind,							// #342 string(float keynum) getkeybind (EXT_CSQC)
+VM_getkeybind,							// #342 string(float keynum[, float bindmap]) getkeybind (EXT_CSQC)
 NULL,									// #343
 NULL,									// #344
 NULL,									// #345
@@ -1387,7 +1387,7 @@ VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
 VM_isfunction,					// #607 float isfunction(string function_name)
 VM_M_getresolution,				// #608 vector getresolution(float number, [float forfullscreen])
 VM_keynumtostring,				// #609 string keynumtostring(float keynum)
-VM_findkeysforcommand,		// #610 string findkeysforcommand(string command)
+VM_findkeysforcommand,		// #610 string findkeysforcommand(string command[, float bindmap])
 VM_M_getserverliststat,			// #611 float gethostcachevalue(float type)
 VM_M_getserverliststring,		// #612 string gethostcachestring(float type, float hostnr)
 VM_parseentitydata,				// #613 void parseentitydata(entity ent, string data)

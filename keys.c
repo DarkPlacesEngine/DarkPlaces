@@ -1383,15 +1383,47 @@ Key_Shutdown (void)
 	Key_History_Shutdown();
 }
 
-const char *Key_GetBind (int key)
+const char *Key_GetBind (int key, int bindmap)
 {
 	const char *bind;
 	if (key < 0 || key >= MAX_KEYS)
 		return NULL;
-	bind = keybindings[key_bmap][key];
-	if (!bind)
-		bind = keybindings[key_bmap2][key];
+	if(bindmap >= 0)
+	{
+		bind = keybindings[bindmap][key];
+	}
+	else
+	{
+		bind = keybindings[key_bmap][key];
+		if (!bind)
+			bind = keybindings[key_bmap2][key];
+	}
 	return bind;
+}
+
+void Key_FindKeysForCommand (const char *command, int *keys, int numkeys, int bindmap)
+{
+	int		count;
+	int		j;
+	char	*b;
+
+	for (j = 0;j < numkeys;j++)
+		keys[j] = -1;
+
+	count = 0;
+
+	for (j = 0; j < MAX_KEYS; ++j)
+	{
+		b = Key_GetBind(j, bindmap);
+		if (!b)
+			continue;
+		if (!strcmp (b, command) )
+		{
+			keys[count++] = j;
+			if (count == numkeys)
+				break;
+		}
+	}
 }
 
 qboolean CL_VM_InputEvent (qboolean down, int key, int ascii);

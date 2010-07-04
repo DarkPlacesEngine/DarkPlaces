@@ -349,5 +349,8 @@ void Key_SetBinding (int keynum, int bindmap, const char *binding);
 void Key_EventQueue_Block(void);
 void Key_EventQueue_Unblock(void);
 
+const char *Key_GetBind (int key, int bindmap);
+void Key_FindKeysForCommand (const char *command, int *keys, int numkeys, int bindmap);
+
 #endif // __KEYS_H
 
