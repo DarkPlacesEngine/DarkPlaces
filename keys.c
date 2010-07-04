@@ -1405,7 +1405,7 @@ void Key_FindKeysForCommand (const char *command, int *keys, int numkeys, int bi
 {
 	int		count;
 	int		j;
-	char	*b;
+	const char	*b;
 
 	for (j = 0;j < numkeys;j++)
 		keys[j] = -1;
