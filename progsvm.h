@@ -44,6 +44,7 @@ typedef struct prvm_stack_s
 {
 	int				s;
 	mfunction_t		*f;
+	double			tprofile_acc;
 	double			profile_acc;
 	double			builtinsprofile_acc;
 } prvm_stack_t;
@@ -591,7 +592,7 @@ void *_PRVM_Alloc (size_t buffersize, const char *filename, int fileline);
 void _PRVM_Free (void *buffer, const char *filename, int fileline);
 void _PRVM_FreeAll (const char *filename, int fileline);
 
-void PRVM_Profile (int maxfunctions, int mininstructions, int sortby);
+void PRVM_Profile (int maxfunctions, double mintime, int sortby);
 void PRVM_Profile_f (void);
 void PRVM_ChildProfile_f (void);
 void PRVM_CallProfile_f (void);

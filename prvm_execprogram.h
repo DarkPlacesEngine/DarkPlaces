@@ -1,3 +1,12 @@
+#ifdef PRVMTIMEPROFILING 
+#define PreError() \
+	tm = Sys_DoubleTime(); \
+	prog->xfunction->profile += (st - startst); \
+	prog->xfunction->tprofile += (tm - starttm);
+#else
+#define PreError() \
+	prog->xfunction->profile += (st - startst);
+#endif
 
 // This code isn't #ifdef/#define protectable, don't try.
 
@@ -153,8 +162,7 @@
 			case OP_STOREP_FNC:		// pointers
 				if (OPB->_int < 0 || OPB->_int + 1 > prog->entityfieldsarea)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
@@ -166,8 +174,7 @@
 			case OP_STOREP_V:
 				if (OPB->_int < 0 || OPB->_int + 3 > prog->entityfieldsarea)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
@@ -182,23 +189,20 @@
 			case OP_ADDRESS:
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to address an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->progs->entityfields))
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("%s attempted to address an invalid field (%i) in an edict", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
 #if 0
 				if (OPA->edict == 0 && !prog->allowworldwrites)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("forbidden assignment to null/world entity in %s", PRVM_NAME);
 					goto cleanup;
 				}
@@ -214,15 +218,13 @@
 			case OP_LOAD_FNC:
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->progs->entityfields))
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
@@ -233,15 +235,13 @@
 			case OP_LOAD_V:
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
 				if (OPB->_int < 0 || OPB->_int + 2 >= prog->progs->entityfields)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
@@ -285,7 +285,7 @@
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
 					{
 						prog->xstatement = st - prog->statements;
-						PRVM_Profile(1<<30, 1000000, 0);
+						PRVM_Profile(1<<30, 0.01, 0);
 						PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 					}
 				}
@@ -299,7 +299,7 @@
 				if (++jumpcount == 10000000 && prvm_runawaycheck)
 				{
 					prog->xstatement = st - prog->statements;
-					PRVM_Profile(1<<30, 1000000, 0);
+					PRVM_Profile(1<<30, 0.01, 0);
 					PRVM_ERROR("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", PRVM_NAME, jumpcount);
 				}
 				break;
@@ -313,6 +313,11 @@
 			case OP_CALL6:
 			case OP_CALL7:
 			case OP_CALL8:
+#ifdef PRVMTIMEPROFILING 
+				tm = Sys_DoubleTime();
+				prog->xfunction->tprofile += (tm - starttm);
+				starttm = tm;
+#endif
 				prog->xfunction->profile += (st - startst);
 				startst = st;
 				prog->xstatement = st - prog->statements;
@@ -322,8 +327,7 @@
 
 				if(!OPA->function || OPA->function >= (unsigned int)prog->progs->numfunctions)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements; // we better stay on the previously executed statement
+					PreError();
 					PRVM_ERROR("%s CALL outside the program", PRVM_NAME);
 					goto cleanup;
 				}
@@ -337,7 +341,15 @@
 					int builtinnumber = -newf->first_statement;
 					prog->xfunction->builtinsprofile++;
 					if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
+					{
 						prog->builtins[builtinnumber]();
+#ifdef PRVMTIMEPROFILING 
+						tm = Sys_DoubleTime();
+						newf->tprofile += (tm - starttm);
+						prog->xfunction->tbprofile += (tm - starttm);
+						starttm = tm;
+#endif
+					}
 					else
 						PRVM_ERROR("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, PRVM_NAME);
 				}
@@ -348,6 +360,11 @@
 
 			case OP_DONE:
 			case OP_RETURN:
+#ifdef PRVMTIMEPROFILING 
+				tm = Sys_DoubleTime();
+				prog->xfunction->tprofile += (tm - starttm);
+				starttm = tm;
+#endif
 				prog->xfunction->profile += (st - startst);
 				prog->xstatement = st - prog->statements;
 
@@ -373,7 +390,7 @@
 				}
 				else
 				{
-					prog->xfunction->profile += (st - startst);
+					PreError();
 					prog->xstatement = st - prog->statements;
 					PRVM_ERROR("OP_STATE not supported by %s", PRVM_NAME);
 				}
@@ -536,8 +553,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to write to an out of bounds edict", PRVM_NAME);
 					goto cleanup;
 				}
@@ -549,15 +565,13 @@
 #if PRBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an invalid field in an edict", PRVM_NAME);
 					goto cleanup;
 				}
@@ -575,8 +589,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int >= pr_globaldefs)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to write to an invalid indexed global", PRVM_NAME);
 					goto cleanup;
 				}
@@ -587,8 +600,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 2 >= pr_globaldefs)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to write to an invalid indexed global", PRVM_NAME);
 					goto cleanup;
 				}
@@ -603,8 +615,7 @@
 #if PRBOUNDSCHECK
 				if (i < 0 || i >= pr_globaldefs)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to address an out of bounds global", PRVM_NAME);
 					goto cleanup;
 				}
@@ -621,8 +632,7 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int >= pr_globaldefs)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an invalid indexed global", PRVM_NAME);
 					goto cleanup;
 				}
@@ -634,8 +644,7 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int + 2 >= pr_globaldefs)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs attempted to read an invalid indexed global", PRVM_NAME);
 					goto cleanup;
 				}
@@ -648,8 +657,7 @@
 			case OP_BOUNDCHECK:
 				if (OPA->_int < 0 || OPA->_int >= st->b)
 				{
-					prog->xfunction->profile += (st - startst);
-					prog->xstatement = st - prog->statements;
+					PreError();
 					PRVM_ERROR ("%s Progs boundcheck failed at line number %d, value is < 0 or >= %d", PRVM_NAME, st->b, st->c);
 					goto cleanup;
 				}
@@ -658,10 +666,10 @@
 */
 
 			default:
-				prog->xfunction->profile += (st - startst);
-				prog->xstatement = st - prog->statements;
+				PreError();
 				PRVM_ERROR ("Bad opcode %i in %s", st->op, PRVM_NAME);
 				goto cleanup;
 			}
 		}
 
+#undef PreError

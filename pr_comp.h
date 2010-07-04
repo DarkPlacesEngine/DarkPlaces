@@ -164,10 +164,13 @@ typedef struct mfunction_s
 	int		locals;				// total ints of parms + locals
 
 	// these are doubles so that they can count up to 54bits or so rather than 32bit
+	double  tprofile;           // realtime in this function
+	double  tbprofile;          // realtime in builtins called by this function (NOTE: builtins also have a tprofile!)
 	double	profile;		// runtime
 	double	builtinsprofile; // cost of builtin functions called by this function
 	double	callcount; // times the functions has been called since the last profile call
 	double  totaltime; // total execution time of this function DIRECTLY FROM THE ENGINE
+	double	tprofile_total;		// runtime (NOTE: tbprofile_total makes no real sense, so not accumulating that)
 	double	profile_total;		// runtime
 	double	builtinsprofile_total; // cost of builtin functions called by this function
 	int     recursion;

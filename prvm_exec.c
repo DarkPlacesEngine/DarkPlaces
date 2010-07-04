@@ -123,6 +123,7 @@ PRVM_PrintStatement
 =================
 */
 extern cvar_t prvm_statementprofiling;
+extern cvar_t prvm_timeprofiling;
 void PRVM_PrintStatement (dstatement_t *s)
 {
 	size_t i;
@@ -335,14 +336,21 @@ void PRVM_CallProfile (void)
 	prog->starttime = Sys_DoubleTime();
 }
 
-void PRVM_Profile (int maxfunctions, int mininstructions, int sortby)
+void PRVM_Profile (int maxfunctions, double mintime, int sortby)
 {
 	mfunction_t *f, *best;
 	int i, num;
 	double max;
 
-	Con_Printf( "%s Profile:\n[CallCount] [Statement] [BuiltinCt] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
-	//                        12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
+	if(!prvm_timeprofiling.integer)
+		mintime *= 10000000; // count each statement as about 0.1µs
+
+	if(prvm_timeprofiling.integer)
+		Con_Printf( "%s Profile:\n[CallCount]      [Time] [BuiltinTm] [Statement] [BuiltinCt] [TimeTotal] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
+		//                        12345678901 12345678901 12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
+	else
+		Con_Printf( "%s Profile:\n[CallCount] [Statement] [BuiltinCt] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
+		//                        12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
 
 	num = 0;
 	do
@@ -352,37 +360,84 @@ void PRVM_Profile (int maxfunctions, int mininstructions, int sortby)
 		for (i=0 ; i<prog->progs->numfunctions ; i++)
 		{
 			f = &prog->functions[i];
-			if(sortby)
+			if(prvm_timeprofiling.integer)
 			{
-				if (max < f->profile_total + f->builtinsprofile_total + f->callcount)
+				if(sortby)
 				{
-					max = f->profile_total + f->builtinsprofile_total + f->callcount;
-					best = f;
+					if(f->first_statement < 0)
+					{
+						if (max < f->tprofile)
+						{
+							max = f->tprofile;
+							best = f;
+						}
+					}
+					else
+					{
+						if (max < f->tprofile_total)
+						{
+							max = f->tprofile_total;
+							best = f;
+						}
+					}
+				}
+				else
+				{
+					if (max < f->tprofile + f->tbprofile)
+					{
+						max = f->tprofile + f->tbprofile;
+						best = f;
+					}
 				}
 			}
 			else
 			{
-				if (max < f->profile + f->builtinsprofile + f->callcount)
+				if(sortby)
 				{
-					max = f->profile + f->builtinsprofile + f->callcount;
-					best = f;
+					if (max < f->profile_total + f->builtinsprofile_total + f->callcount)
+					{
+						max = f->profile_total + f->builtinsprofile_total + f->callcount;
+						best = f;
+					}
+				}
+				else
+				{
+					if (max < f->profile + f->builtinsprofile + f->callcount)
+					{
+						max = f->profile + f->builtinsprofile + f->callcount;
+						best = f;
+					}
 				}
 			}
 		}
 		if (best)
 		{
-			if (num < maxfunctions && max >= mininstructions)
+			if (num < maxfunctions && max > mintime)
 			{
-				if (best->first_statement < 0)
-					Con_Printf("%11.0f ----------------------- builtin ----------------------- %s\n", best->callcount, PRVM_GetString(best->s_name));
-					//                 12345678901 12345678901 12345678901 12345678901 123.45%
+				if(prvm_timeprofiling.integer)
+				{
+					if (best->first_statement < 0)
+						Con_Printf("%11.0f %11.6f ------------- builtin ------------- %11.6f ----------- builtin ----------- %s\n", best->callcount, best->tprofile, best->tprofile, PRVM_GetString(best->s_name));
+					//                 %11.6f 12345678901 12345678901 12345678901 %11.6f 12345678901 12345678901 123.45%
+					else
+						Con_Printf("%11.0f %11.6f %11.6f %11.0f %11.0f %11.6f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->tprofile, best->tbprofile, best->profile, best->builtinsprofile, best->tprofile_total, best->profile_total, best->builtinsprofile_total, (best->tprofile_total > 0) ? ((best->tprofile) * 100.0 / (best->tprofile_total)) : -99.99, PRVM_GetString(best->s_name));
+				}
 				else
-					Con_Printf("%11.0f %11.0f %11.0f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->profile, best->builtinsprofile, best->profile_total, best->builtinsprofile_total, (best->profile + best->builtinsprofile) * 100.0 / (best->profile_total + best->builtinsprofile_total), PRVM_GetString(best->s_name));
+				{
+					if (best->first_statement < 0)
+						Con_Printf("%11.0f ----------------------- builtin ----------------------- %s\n", best->callcount, PRVM_GetString(best->s_name));
+					//                 12345678901 12345678901 12345678901 12345678901 123.45%
+					else
+						Con_Printf("%11.0f %11.0f %11.0f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->profile, best->builtinsprofile, best->profile_total, best->builtinsprofile_total, (best->profile + best->builtinsprofile) * 100.0 / (best->profile_total + best->builtinsprofile_total), PRVM_GetString(best->s_name));
+				}
 			}
 			num++;
 			best->profile = 0;
+			best->tprofile = 0;
+			best->tbprofile = 0;
 			best->builtinsprofile = 0;
 			best->profile_total = 0;
+			best->tprofile_total = 0;
 			best->builtinsprofile_total = 0;
 			best->callcount = 0;
 		}
@@ -435,7 +490,7 @@ void PRVM_Profile_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	PRVM_Profile(howmany, 1, 0);
+	PRVM_Profile(howmany, 0, 0);
 
 	PRVM_End;
 }
@@ -457,7 +512,7 @@ void PRVM_ChildProfile_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	PRVM_Profile(howmany, 1, 1);
+	PRVM_Profile(howmany, 0, 1);
 
 	PRVM_End;
 }
@@ -554,6 +609,7 @@ int PRVM_EnterFunction (mfunction_t *f)
 	prog->stack[prog->depth].s = prog->xstatement;
 	prog->stack[prog->depth].f = prog->xfunction;
 	prog->stack[prog->depth].profile_acc = -f->profile;
+	prog->stack[prog->depth].tprofile_acc = -f->tprofile + -f->tbprofile;
 	prog->stack[prog->depth].builtinsprofile_acc = -f->builtinsprofile;
 	prog->depth++;
 	if (prog->depth >=PRVM_MAX_STACK_DEPTH)
@@ -614,10 +670,12 @@ int PRVM_LeaveFunction (void)
 	--f->recursion;
 	prog->xfunction = prog->stack[prog->depth].f;
 	prog->stack[prog->depth].profile_acc += f->profile;
+	prog->stack[prog->depth].tprofile_acc += f->tprofile + f->tbprofile;
 	prog->stack[prog->depth].builtinsprofile_acc += f->builtinsprofile;
 	if(prog->depth > 0)
 	{
 		prog->stack[prog->depth-1].profile_acc += prog->stack[prog->depth].profile_acc;
+		prog->stack[prog->depth-1].tprofile_acc += prog->stack[prog->depth].tprofile_acc;
 		prog->stack[prog->depth-1].builtinsprofile_acc += prog->stack[prog->depth].builtinsprofile_acc;
 	}
 	if(!f->recursion)
@@ -627,6 +685,7 @@ int PRVM_LeaveFunction (void)
 		// or we would add it more than once
 		// so, let's only add to the function's profile if it is the outermost call
 		f->profile_total += prog->stack[prog->depth].profile_acc;
+		f->tprofile_total += prog->stack[prog->depth].tprofile_acc;
 		f->builtinsprofile_total += prog->stack[prog->depth].builtinsprofile_acc;
 	}
 	
@@ -665,6 +724,7 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	int		jumpcount, cachedpr_trace, exitdepth;
 	int		restorevm_tempstringsbuf_cursize;
 	double  calltime;
+	double tm, starttm;
 
 	calltime = Sys_DoubleTime();
 
@@ -691,6 +751,7 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
 	startst = st;
+	starttm = calltime;
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
@@ -701,12 +762,30 @@ chooseexecprogram:
 	if (prvm_statementprofiling.integer || prog->trace)
 	{
 #define PRVMSLOWINTERPRETER 1
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 #undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 	}
 
 cleanup:
@@ -734,6 +813,7 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	int		jumpcount, cachedpr_trace, exitdepth;
 	int		restorevm_tempstringsbuf_cursize;
 	double  calltime;
+	double tm, starttm;
 
 	calltime = Sys_DoubleTime();
 
@@ -760,6 +840,7 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
 	startst = st;
+	starttm = calltime;
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
@@ -770,12 +851,30 @@ chooseexecprogram:
 	if (prvm_statementprofiling.integer || prog->trace)
 	{
 #define PRVMSLOWINTERPRETER 1
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 #undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 	}
 
 cleanup:
@@ -804,6 +903,7 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	int		jumpcount, cachedpr_trace, exitdepth;
 	int		restorevm_tempstringsbuf_cursize;
 	double  calltime;
+	double tm, starttm;
 
 	calltime = Sys_DoubleTime();
 
@@ -830,6 +930,7 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
 	startst = st;
+	starttm = calltime;
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
@@ -840,12 +941,30 @@ chooseexecprogram:
 	if (prvm_statementprofiling.integer || prog->trace)
 	{
 #define PRVMSLOWINTERPRETER 1
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 #undef PRVMSLOWINTERPRETER
 	}
 	else
 	{
+		if (prvm_timeprofiling.integer)
+		{
+#define PRVMTIMEPROFILING 1
 #include "prvm_execprogram.h"
+#undef PRVMTIMEPROFILING
+		}
+		else
+		{
+#include "prvm_execprogram.h"
+		}
 	}
 
 cleanup:
