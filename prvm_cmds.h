@@ -369,6 +369,9 @@ void VM_keynumtostring (void);
 void VM_getkeybind (void);
 void VM_findkeysforcommand (void);
 void VM_stringtokeynum (void);
+void VM_setkeybind (void);
+void VM_getbindmaps (void);
+void VM_setbindmaps (void);
 
 void VM_cin_open( void );
 void VM_cin_close( void );

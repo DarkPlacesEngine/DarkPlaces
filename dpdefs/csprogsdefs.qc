@@ -834,3 +834,17 @@ float stringwidth_menu(string text, float allowColorCodes, vector size) = #468; 
 //description: engine support for truetype/freetype fonts
 //so .AFM+.PFB/.OTF/.TTF files could be stuffed as fontmaps in loadfont() 
 //(console command version will support them as well)
+
+//DP_CSQC_BINDMAPS
+//idea: daemon, motorsep
+//darkplaces implementation: divVerent
+//builtin definitions:
+string(float key, float bindmap) getkeybind_bindmap = #342;
+float(float key, string bind, float bindmap) setkeybind_bindmap = #630;
+vector(void) getbindmaps = #631;
+float(vector bm) setbindmaps = #632;
+string(string command, float bindmap) findkeysforcommand = #610;
+//<already in EXT_CSQC> float(string key) stringtokeynum = #341;
+//<already in EXT_CSQC> string(float keynum) keynumtostring = #340;
+//description: key bind setting/getting including support for switchable
+//bindmaps.

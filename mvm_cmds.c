@@ -12,6 +12,7 @@
 char *vm_m_extensions =
 "BX_WAL_SUPPORT "
 "DP_CINEMATIC_DPV "
+"DP_CSQC_BINDMAPS "
 "DP_GFX_FONTS "
 "DP_GFX_FONTS_FREETYPE "
 "DP_UTF8 "
@@ -1117,8 +1118,8 @@ NULL,									// #336
 NULL,									// #337
 NULL,									// #338
 NULL,									// #339
-NULL,									// #340
-NULL,									// #341
+VM_keynumtostring,				// #340 string keynumtostring(float keynum)
+VM_stringtokeynum,				// #341 float stringtokeynum(string key)
 VM_getkeybind,							// #342 string(float keynum[, float bindmap]) getkeybind (EXT_CSQC)
 NULL,									// #343
 NULL,									// #344
@@ -1405,6 +1406,11 @@ VM_CL_getextresponse,			// #624 string getextresponse(void)
 VM_netaddress_resolve,          // #625 string netaddress_resolve(string, float)
 VM_M_getgamedirinfo,            // #626 string getgamedirinfo(float n, float prop)
 VM_sprintf,                     // #627 string sprintf(string format, ...)
+NULL, // #628
+NULL, // #629
+VM_setkeybind,						// #630 float(float key, string bind[, float bindmap]) setkeybind
+VM_getbindmaps,						// #631 vector(void) getbindmap
+VM_setbindmaps,						// #632 float(vector bm) setbindmap
 NULL
 };
 

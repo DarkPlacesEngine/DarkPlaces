@@ -431,8 +431,20 @@ void	callfunction(...) = #605;
 void	writetofile(float fhandle, entity ent) = #606;
 vector	getresolution(float number) = #608;
 string	keynumtostring(float keynum) = #609;
-string	findkeysforcommand(string command) = #610;
 
 float	gethostcachevalue(float type) = #611;
 string	gethostcachestring(float type, float hostnr) = #612;
 
+//DP_CSQC_BINDMAPS
+//idea: daemon, motorsep
+//darkplaces implementation: divVerent
+//builtin definitions:
+string(float key, float bindmap) getkeybind_bindmap = #342;
+float(float key, string bind, float bindmap) setkeybind_bindmap = #630;
+vector(void) getbindmaps = #631;
+float(vector bm) setbindmaps = #632;
+string(string command, float bindmap) findkeysforcommand = #610;
+float(string key) stringtokeynum = #341;
+//<also allowed builtin number to match EXT_CSQC> string(float keynum) keynumtostring = #340;
+//description: key bind setting/getting including support for switchable
+//bindmaps.
