@@ -36,6 +36,7 @@ cvar_t prvm_language = {0, "prvm_language", "", "when set, loads progs.dat.LANGU
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
+cvar_t prvm_timeprofiling = {0, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
 cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
@@ -2742,6 +2743,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_language);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
+	Cvar_RegisterVariable (&prvm_timeprofiling);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
