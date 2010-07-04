@@ -3921,7 +3921,7 @@ void VM_findkeysforcommand(void)
 
 	cmd = PRVM_G_STRING(OFS_PARM0);
 	if(prog->argc == 2)
-		bindmap = bound(0, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
+		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
 		bindmap = -1;
 
@@ -3962,7 +3962,7 @@ void VM_getkeybind (void)
 	int bindmap;
 	VM_SAFEPARMCOUNTRANGE(1, 2, VM_CL_getkeybind);
 	if(prog->argc == 2)
-		bindmap = bound(0, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
+		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
 		bindmap = -1;
 
