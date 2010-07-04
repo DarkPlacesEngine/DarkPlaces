@@ -2525,31 +2525,6 @@ void M_Menu_Keys_f (void)
 
 #define NUMKEYS 5
 
-void M_FindKeysForCommand (const char *command, int *keys)
-{
-	int		count;
-	int		j;
-	char	*b;
-
-	for (j = 0;j < NUMKEYS;j++)
-		keys[j] = -1;
-
-	count = 0;
-
-	for (j = 0; j < (int)sizeof (keybindings[0]) / (int)sizeof (keybindings[0][0]); j++)
-	{
-		b = keybindings[0][j];
-		if (!b)
-			continue;
-		if (!strcmp (b, command) )
-		{
-			keys[count++] = j;
-			if (count == NUMKEYS)
-				break;
-		}
-	}
-}
-
 static void M_UnbindCommand (char *command)
 {
 	int		j;
@@ -2599,7 +2574,7 @@ static void M_Keys_Draw (void)
 		else
 			M_Print(16, y, bindnames[i][1]);
 
-		M_FindKeysForCommand (bindnames[i][0], keys);
+		Key_FindKeysForCommand (bindnames[i][0], keys, NUMKEYS, 0);
 
 		// LordHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
 		if (keys[0] == -1)
@@ -2680,7 +2655,7 @@ static void M_Keys_Key (int k, int ascii)
 		break;
 
 	case K_ENTER:		// go into bind mode
-		M_FindKeysForCommand (bindnames[keys_cursor][0], keys);
+		Key_FindKeysForCommand (bindnames[keys_cursor][0], keys, NUMKEYS, 0);
 		S_LocalSound ("sound/misc/menu2.wav");
 		if (keys[NUMKEYS - 1] != -1)
 			M_UnbindCommand (bindnames[keys_cursor][0]);
