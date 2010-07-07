@@ -546,7 +546,7 @@ static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
 void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset)
 {
-	int i;
+	int i, ch;
 	float maxwidth;
 	char widthfile[MAX_QPATH];
 	char *widthbuf;
@@ -610,16 +610,16 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 		dpsnprintf(widthfile, sizeof(widthfile), "%s.width", fnt->texpath);
 
 	// unspecified width == 1 (base width)
-	for(i = 1; i < 256; ++i)
-		fnt->width_of[i] = 1;
+	for(ch = 0; ch < 256; ++ch)
+		fnt->width_of[ch] = 1;
 
 	// FIXME load "name.width", if it fails, fill all with 1
 	if((widthbuf = (char *) FS_LoadFile(widthfile, tempmempool, true, &widthbufsize)))
 	{
 		float extraspacing = 0;
 		const char *p = widthbuf;
-		int ch = 0;
 
+		ch = 0;
 		while(ch < 256)
 		{
 			if(!COM_ParseToken_Simple(&p, false, false))
@@ -641,17 +641,6 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 				case '-':
 				case '.':
 					fnt->width_of[ch] = atof(com_token) + extraspacing;
-					if (fnt->ft2)
-					{
-						for (i = 0; i < MAX_FONT_SIZES; ++i)
-						{
-							//Font_MapForIndex(fnt->ft2, i)->width_of[ch] = snap_to_pixel_x(fnt->width_of[ch] * fnt->req_sizes[i], 0.4);
-							ft2_font_map_t *map = Font_MapForIndex(fnt->ft2, i);
-							if (!map)
-								break;
-							map->width_of[ch] = Font_SnapTo(fnt->width_of[ch], 1/map->size);
-						}
-					}
 					ch++;
 					break;
 				default:
@@ -680,8 +669,20 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 		Mem_Free(widthbuf);
 	}
 
-	maxwidth = fnt->width_of[1];
-	for(i = 2; i < 256; ++i)
+	if(fnt->ft2)
+	{
+		for (i = 0; i < MAX_FONT_SIZES; ++i)
+		{
+			ft2_font_map_t *map = Font_MapForIndex(fnt->ft2, i);
+			if (!map)
+				break;
+			for(ch = 0; ch < 256; ++ch)
+				map->width_of[ch] = Font_SnapTo(fnt->width_of[ch], 1/map->size);
+		}
+	}
+
+	maxwidth = fnt->width_of[0];
+	for(i = 1; i < 256; ++i)
 		maxwidth = max(maxwidth, fnt->width_of[i]);
 	fnt->maxwidth = maxwidth;
 
