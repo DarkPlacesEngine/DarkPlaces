@@ -1187,7 +1187,7 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtria
 	return Mod_ShadowMesh_Alloc(mempool, maxverts, maxtriangles, map_diffuse, map_specular, map_normal, light, neighbors, expandable);
 }
 
-static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
+static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 {
 	if (!mesh->numverts)
 		return;
@@ -1199,7 +1199,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 		int vertexindex;
 		int numvertices = mesh->numverts;
 		r_vertexmesh_t *vertexmesh;
-		mesh->vertexmesh = vertexmesh = (r_vertexmesh_t*)Mem_Alloc(mempool, numvertices * sizeof(*mesh->vertexmesh));
+		mesh->vertexmesh = vertexmesh = (r_vertexmesh_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*mesh->vertexmesh));
 		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexmesh++)
 		{
 			VectorCopy(mesh->vertex3f + 3*vertexindex, vertexmesh->vertex3f);
@@ -1282,7 +1282,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 					newmesh->element3s[i] = newmesh->element3i[i];
 			}
 			if (createvbo)
-				Mod_ShadowMesh_CreateVBOs(newmesh, mempool);
+				Mod_ShadowMesh_CreateVBOs(newmesh);
 		}
 		Mem_Free(mesh);
 	}
