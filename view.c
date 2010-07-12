@@ -660,12 +660,12 @@ void V_CalcRefdef (void)
 						// (don't count Z, or jumping messes it up)
 						bob = xyspeed * cl_bob.value;
 						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[2] += bound(-7, bob, 7);
+						vieworg[2] += bound(-8, bob, 5);
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[2] += bound(-7, bob, 7);
+						gunorg[2] += bound(-8, bob, 5);
 					}
 
 					// horizontal bobbing code
