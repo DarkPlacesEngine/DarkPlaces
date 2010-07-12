@@ -978,6 +978,9 @@ typedef struct client_state_s
 	double lastongroundtime;
 	double hitgroundtime;
 
+	// used by bobroll
+	float bobroll_airtime;
+
 	// don't change view angle, full screen, etc
 	int intermission;
 	// latched at intermission start

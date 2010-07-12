@@ -42,6 +42,7 @@ cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that ma
 cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","1", "view rolling amount"};
 cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.5", "view rolling speed"};
 cvar_t cl_bobrollup = {CVAR_SAVE, "cl_bobrollup","0.01", "view bobbing adjustment that makes the up or down swing of the roll last longer"};
+cvar_t cl_bobrollairtime = {CVAR_SAVE, "cl_bobrollairtime","0.05", "how fast the view rolls back when you stop touching the ground"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -667,10 +668,9 @@ void V_CalcRefdef (void)
 
 					// view rolling code
 					// TODO 1 (DONE): Make it work around the center rather than the left side
-					// TODO 2: Make the roll smoothly return to 0 when you stop touching the ground, rather than instantly
+					// TODO 2 (DONE): Make the roll smoothly return to 0 when you stop touching the ground, rather than instantly
 					// TODO 3: Write cvars to darkplaces.txt, set better defaults and possibly disable by default once the first TODOs are ready
 					if (cl_bobroll.value && cl_bobrollcycle.value)
-					if (cl.onground)
 					{
 						cycle2 = cl.time / cl_bobrollcycle.value;
 						cycle2 -= (int) cycle2;
@@ -678,7 +678,18 @@ void V_CalcRefdef (void)
 							cycle2 = sin(M_PI * cycle2 / 0.5);
 						else
 							cycle2 = sin(M_PI + M_PI * (cycle2-0.5)/0.5);
-						cycle2 *= cl_bobrollup.value;
+
+						if (cl.onground)
+							cl.bobroll_airtime = 1;
+						else
+						{
+							if(cl.bobroll_airtime > 0)
+								cl.bobroll_airtime -= bound(0, cl_bobrollairtime.value, 1);
+							else
+								cl.bobroll_airtime = 0;
+						}
+
+						cycle2 *= cl_bobrollup.value * cl.bobroll_airtime;
 						bobroll = xyspeed * cycle2;
 						viewangles[2] = bound(-45, bobroll, 45);
 					}
@@ -920,6 +931,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobroll);
 	Cvar_RegisterVariable (&cl_bobrollcycle);
 	Cvar_RegisterVariable (&cl_bobrollup);
+	Cvar_RegisterVariable (&cl_bobrollairtime);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
