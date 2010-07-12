@@ -589,7 +589,7 @@ void V_CalcRefdef (void)
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
 					double xyspeed, bob, bobroll;
-					float cycle;
+					float cycle, cycle2;
 					vec_t frametime;
 
 					frametime = cl.realframetime * cl.movevars_timescale;
@@ -672,15 +672,15 @@ void V_CalcRefdef (void)
 					if (cl_bobroll.value && cl_bobrollcycle.value)
 					if (cl.onground)
 					{
-						cycle = cl.time / cl_bobrollcycle.value;
-						cycle -= (int) cycle;
-						if (cycle < cl_bobrollup.value)
-							cycle = sin(M_PI * cycle / cl_bobrollup.value);
+						cycle2 = cl.time / cl_bobrollcycle.value;
+						cycle2 -= (int) cycle2;
+						if (cycle2 < cl_bobrollup.value)
+							cycle2 = sin(M_PI * cycle2 / cl_bobrollup.value);
 						else
-							cycle = sin(M_PI + M_PI * (cycle-cl_bobrollup.value)/(1.0 - cl_bobrollup.value));
+							cycle2 = sin(M_PI + M_PI * (cycle2-cl_bobrollup.value)/(1.0 - cl_bobrollup.value));
 
 						bobroll = xyspeed * cl_bobroll.value;
-						bobroll = bobroll*0.3 + bobroll*0.7*cycle;
+						bobroll = bobroll*0.3 + bobroll*0.7*cycle2;
 						viewangles[2] = bound(-5, bobroll, 5);
 					}
 
