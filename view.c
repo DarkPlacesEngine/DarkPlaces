@@ -668,7 +668,7 @@ void V_CalcRefdef (void)
 						gunorg[2] += bound(-8, bob, 10);
 					}
 
-					// horizontal bobbing code
+					// horizontal view bobbing code
 					if (cl_bobside.value && cl_bobsidecycle.value)
 					{
 						vec3_t bobvel;
@@ -744,7 +744,7 @@ void V_CalcRefdef (void)
 
 						cycle2 *= cl_bobroll.value * cl.bobroll_airtime;
 						bobroll = bound(0, xyspeed, sv_maxspeed.value) * cycle2;
-						viewangles[2] += bound(-45, bobroll, 45);
+						viewangles[2] += bound(-15, bobroll, 15);
 					}
 
 					// gun model bobbing code
