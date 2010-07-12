@@ -638,7 +638,7 @@ void V_CalcRefdef (void)
 					VectorAdd(vieworg, gunorg, gunorg);
 					VectorAdd(viewangles, gunangles, gunangles);
 
-					// bounded XY speed calculation, used by several effects below
+					// bounded XY speed, used by several effects below
 					xyspeed = bound (0, sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]), 400);
 
 					// vertical view bobbing code
@@ -683,7 +683,7 @@ void V_CalcRefdef (void)
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
-						if (cl.onground && !cl.cmd.jump) // also block while the jump button is pressed, to avoid twitches when bunny-hopping
+						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
 							cl.bob2_smooth = 1;
 						else
 						{
@@ -693,9 +693,9 @@ void V_CalcRefdef (void)
 								cl.bob2_smooth = 0;
 						}
 
-						// calculate the side and front of the player between the X and Y axes
+						// calculate the front and side of the player between the X and Y axes
 						AngleVectors(viewangles, forward, right, up);
-						// now get the speed based on those angles. The division is for mathing vertical bobbing intensity
+						// now get the speed based on those angles. The division is for mathing vertical bob intensity
 						side = DotProduct (cl.velocity, right) / 1000 * cl.bob2_smooth;
 						front = DotProduct (cl.velocity, forward) / 1000 * cl.bob2_smooth;
 						VectorScale(forward, bob, forward);
