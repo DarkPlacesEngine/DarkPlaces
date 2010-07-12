@@ -39,12 +39,10 @@ cvar_t cl_rollangle = {0, "cl_rollangle", "2.0", "how much to tilt the view when
 cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
-
-cvar_t cl_bobside = {CVAR_SAVE, "cl_bobside","0.02", "view bobbing amount"};
-cvar_t cl_bobsidecycle = {CVAR_SAVE, "cl_bobsidecycle","0.6", "view bobbing speed"};
-cvar_t cl_bobsideup = {CVAR_SAVE, "cl_bobsideup","0.5", "view bobbing adjustment that makes the sideways swing of the bob last longer"};
+cvar_t cl_bobside = {CVAR_SAVE, "cl_bobside","0", "sideway view bobbing amount"};
+cvar_t cl_bobsidecycle = {CVAR_SAVE, "cl_bobsidecycle","0.6", "sideway view bobbing speed"};
+cvar_t cl_bobsideup = {CVAR_SAVE, "cl_bobsideup","0.5", "view bobbing adjustment that makes the side swing of the bob last longer"};
 cvar_t cl_bobsideairtime = {CVAR_SAVE, "cl_bobsideairtime","0.05", "how fast the view goes back when you stop touching the ground"};
-
 cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","0", "view rolling amount"};
 cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.8", "view rolling speed"};
 cvar_t cl_bobrollairtime = {CVAR_SAVE, "cl_bobrollairtime","0.05", "how fast the view rolls back when you stop touching the ground"};
@@ -52,7 +50,6 @@ cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
 cvar_t cl_bobmodel_speed = {CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
-
 cvar_t cl_leanmodel = {CVAR_SAVE, "cl_leanmodel", "0", "enables gun leaning"};
 cvar_t cl_leanmodel_side_speed = {CVAR_SAVE, "cl_leanmodel_side_speed", "0.7", "gun leaning sideways speed"};
 cvar_t cl_leanmodel_side_limit = {CVAR_SAVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
@@ -677,10 +674,7 @@ void V_CalcRefdef (void)
 						vec3_t bobvel;
 						vec3_t forward, right, up;
 						float side, front;
-						// LordHavoc: this code is *weird*, but not replacable (I think it
-						// should be done in QC on the server, but oh well, quake is quake)
-						// LordHavoc: figured out bobup: the time at which the sin is at 180
-						// degrees (which allows lengthening or squishing the peak or valley)
+
 						cycle = cl.time / cl_bobsidecycle.value;
 						cycle -= (int) cycle;
 						if (cycle < cl_bobsideup.value)
@@ -707,8 +701,8 @@ void V_CalcRefdef (void)
 						// now we calculate the side and front of the player, between the X and Y axis
 						AngleVectors(viewangles, forward, right, up);
 						// now the speed based on these angles. The division is for mathing vertical bobbing intensity
-						side = DotProduct (cl.velocity, right) / 100 * cl.bobside_airtime;
-						front = DotProduct (cl.velocity, forward) / 100 * cl.bobside_airtime;
+						side = DotProduct (cl.velocity, right) / 1000 * cl.bobside_airtime;
+						front = DotProduct (cl.velocity, forward) / 1000 * cl.bobside_airtime;
 						forward[0] *= bob;
 						forward[1] *= bob;
 						right[0] *= bob;
@@ -987,12 +981,10 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bob);
 	Cvar_RegisterVariable (&cl_bobcycle);
 	Cvar_RegisterVariable (&cl_bobup);
-
 	Cvar_RegisterVariable (&cl_bobside);
 	Cvar_RegisterVariable (&cl_bobsidecycle);
 	Cvar_RegisterVariable (&cl_bobsideup);
 	Cvar_RegisterVariable (&cl_bobsideairtime);
-
 	Cvar_RegisterVariable (&cl_bobroll);
 	Cvar_RegisterVariable (&cl_bobrollcycle);
 	Cvar_RegisterVariable (&cl_bobrollairtime);
