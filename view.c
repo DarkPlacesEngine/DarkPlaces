@@ -667,9 +667,10 @@ void V_CalcRefdef (void)
 
 					// view rolling code
 					// TODO 1: Make it work around the center rather than the left side
-					// TODO 2: Don't bob roll when not touching the ground
-					// TODO 3: Write cvars in darkplaces.txt, set better defaults and possibly disable by default once the first TODOs are ready.
+					// TODO 2: Make the roll smoothly return to 0 when you stop touching the ground, rather than instantly
+					// TODO 3: Write cvars to darkplaces.txt, set better defaults and possibly disable by default once the first TODOs are ready
 					if (cl_bobroll.value && cl_bobrollcycle.value)
+					if (cl.onground)
 					{
 						cycle = cl.time / cl_bobrollcycle.value;
 						cycle -= (int) cycle;
