@@ -679,7 +679,7 @@ void V_CalcRefdef (void)
 							cycle = sin(M_PI * cycle / 0.5);
 						else
 							cycle = sin(M_PI + M_PI * (cycle-0.5)/0.5);
-						bob = xyspeed * bound(0, cl_bob2.value, 0.05) * cycle;
+						bob = bound(0, cl_bob2.value, 0.05) * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
@@ -696,8 +696,8 @@ void V_CalcRefdef (void)
 						// calculate the front and side of the player between the X and Y axes
 						AngleVectors(viewangles, forward, right, up);
 						// now get the speed based on those angles. The division is for mathing vertical bob intensity
-						side = DotProduct (cl.velocity, right) / 1000 * cl.bob2_smooth;
-						front = DotProduct (cl.velocity, forward) / 1000 * cl.bob2_smooth;
+						side = DotProduct (cl.velocity, right) * cl.bob2_smooth;
+						front = DotProduct (cl.velocity, forward) * cl.bob2_smooth;
 						VectorScale(forward, bob, forward);
 						VectorScale(right, bob, right);
 						// we use side with forward and front with right, so the bobbing goes
