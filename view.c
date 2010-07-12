@@ -40,7 +40,7 @@ cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
-cvar_t cl_bob_side = {CVAR_SAVE, "cl_bob_side","0.02", "view bobbing amount"};
+cvar_t cl_bob_side = {CVAR_SAVE, "cl_bob_side","0.002", "view bobbing amount"};
 cvar_t cl_bobcycle_side = {CVAR_SAVE, "cl_bobcycle_side","0.6", "view bobbing speed"};
 cvar_t cl_bobup_side = {CVAR_SAVE, "cl_bobup_side","0.5", "view bobbing adjustment that makes the sideways swing of the bob last longer"};
 
@@ -644,7 +644,7 @@ void V_CalcRefdef (void)
 					VectorAdd(vieworg, gunorg, gunorg);
 					VectorAdd(viewangles, gunangles, gunangles);
 
-					// view bobbing code
+					// vertical view bobbing code
 					xyspeed = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
@@ -670,9 +670,11 @@ void V_CalcRefdef (void)
 						gunorg[2] += bound(-7, bob, 4);
 					}
 
-					// view bobbing code 2
+					// horizontal bobbing code
 					if (cl_bob_side.value && cl_bobcycle_side.value)
 					{
+						vec3_t bobvel;
+						vec3_t forward, right, up;
 						// LordHavoc: this code is *weird*, but not replacable (I think it
 						// should be done in QC on the server, but oh well, quake is quake)
 						// LordHavoc: figured out bobup: the time at which the sin is at 180
@@ -687,31 +689,25 @@ void V_CalcRefdef (void)
 						// (don't count Z, or jumping messes it up)
 						bob = xyspeed * cl_bob_side.value;
 						bob = bob*0.3 + bob*0.7*cycle;
-						//vieworg[1] += bound(-7, bob, 4);
-						//vieworg[0] += bound(-7, bob, 4);
+
+						// now we calculate the side and front of the player, between the X and Y axis
+						AngleVectors(viewangles, forward, right, up);
+						forward[0] *= bob;
+						forward[1] *= bob;
+						right[0] *= bob;
+						right[1] *= bob;
+						// we use cl.cmd.sidemove with forward and cl.cmd.forwardmove with right so the side bobbing
+						// goes to the side when we walk forward and to the front when we strafe
+						VectorMAMAM(cl.cmd.sidemove, forward, cl.cmd.forwardmove, right, cl.cmd.upmove, up, bobvel);
+						vieworg[0] += bobvel[0];
+						vieworg[1] += bobvel[1];
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						//gunorg[1] += bound(-7, bob, 4);
-						//gunorg[0] += bound(-7, bob, 4);
-						//vieworg[0] += bound(-7, bob, 4);
+						gunorg[0] += bobvel[0];
+						gunorg[1] += bobvel[1];
 					}
-					
-					//TEST!!!
-					vec3_t wishvel;
-					vec3_t forward, right, up;
-					AngleVectors(viewangles, forward, right, up);
-					forward[0] *= 0.1;
-					forward[1] *= 0.1;
-					right[0] *= 0.1;
-					right[1] *= 0.1;
-					// we use cl.cmd.sidemove with forward and cl.cmd.forwardmove with right so the side bobbing
-					// goes to the side when we walk forward and to the front when we strafe
-					VectorMAMAM(cl.cmd.sidemove, forward, cl.cmd.forwardmove, right, cl.cmd.upmove, up, wishvel);
-					vieworg[0] += wishvel[0];
-					vieworg[1] += wishvel[1];
-					//End of TEST!!!
 
 					// view rolling code
 					if (cl_bobroll.value && cl_bobrollcycle.value)
