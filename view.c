@@ -668,7 +668,7 @@ void V_CalcRefdef (void)
 					// horizontal view bobbing code
 					if (cl_bob2.value && cl_bob2cycle.value)
 					{
-						vec3_t bobvel;
+						vec3_t bob2vel;
 						vec3_t forward, right, up;
 						float side, front;
 
@@ -678,13 +678,11 @@ void V_CalcRefdef (void)
 							cycle = sin(M_PI * cycle / cl_bob2up.value);
 						else
 							cycle = sin(M_PI + M_PI * (cycle-cl_bob2up.value)/(1.0 - cl_bob2up.value));
-						// bob is proportional to velocity in the xy plane
-						// (don't count Z, or jumping messes it up)
 						bob = xyspeed * cl_bob2.value * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
-						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
+						if (cl.onground && !cl.cmd.jump) // also block while the jump button is pressed, to avoid twitches when bunny-hopping
 							cl.bob2_smooth = 1;
 						else
 						{
@@ -694,26 +692,24 @@ void V_CalcRefdef (void)
 								cl.bob2_smooth = 0;
 						}
 
-						// now we calculate the side and front of the player, between the X and Y axis
+						// calculate the side and front of the player between the X and Y axes
 						AngleVectors(viewangles, forward, right, up);
-						// now the speed based on these angles. The division is for mathing vertical bobbing intensity
+						// now get the speed based on those angles. The division is for mathing vertical bobbing intensity
 						side = DotProduct (cl.velocity, right) / 1000 * cl.bob2_smooth;
 						front = DotProduct (cl.velocity, forward) / 1000 * cl.bob2_smooth;
-						forward[0] *= bob;
-						forward[1] *= bob;
-						right[0] *= bob;
-						right[1] *= bob;
-						// we use side with forward and front with right so the side bobbing goes
-						// to the side when we walk forward and to the front when we strafe.
-						VectorMAMAM(side, forward, front, right, 0, up, bobvel);
-						vieworg[0] += bound(-8, bobvel[0], 8);
-						vieworg[1] += bound(-8, bobvel[1], 8);
+						VectorScale(forward, bob, forward);
+						VectorScale(right, bob, right);
+						// we use side with forward and front with right, so the bobbing goes
+						// to the side when we walk forward and to the front when we strafe
+						VectorMAMAM(side, forward, front, right, 0, up, bob2vel);
+						vieworg[0] += bound(-8, bob2vel[0], 8);
+						vieworg[1] += bound(-8, bob2vel[1], 8);
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[0] += bound(-8, bobvel[0], 8);
-						gunorg[1] += bound(-8, bobvel[1], 8);
+						gunorg[0] += bound(-8, bob2vel[0], 8);
+						gunorg[1] += bound(-8, bob2vel[1], 8);
 					}
 
 					// gun model bobbing code
