@@ -714,7 +714,8 @@ void V_CalcRefdef (void)
 					}
 
 					// gun model bobbing code
-					if (cl_bob.value && cl_bobmodel.value)
+					if (cl_bob.value || cl_bob2.value)
+					if (cl_bobmodel.value)
 					{
 						// calculate for swinging gun model
 						// the gun bobs when running on the ground, but doesn't bob when you're in the air.
