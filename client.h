@@ -977,9 +977,7 @@ typedef struct client_state_s
 	qboolean oldonground;
 	double lastongroundtime;
 	double hitgroundtime;
-
-	// used by bob2
-	float bob2_airtime;
+	float bob2_smooth;
 
 	// don't change view angle, full screen, etc
 	int intermission;

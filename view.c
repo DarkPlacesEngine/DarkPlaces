@@ -42,7 +42,7 @@ cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that ma
 cvar_t cl_bob2 = {CVAR_SAVE, "cl_bob2","0", "sideway view bobbing amount"};
 cvar_t cl_bob2cycle = {CVAR_SAVE, "cl_bob2cycle","0.6", "sideway view bobbing speed"};
 cvar_t cl_bob2up = {CVAR_SAVE, "cl_bob2up","0.5", "view bobbing adjustment that makes the side swing of the bob last longer"};
-cvar_t cl_bob2airtime = {CVAR_SAVE, "cl_bob2airtime","0.05", "how fast the view goes back when you stop touching the ground"};
+cvar_t cl_bob2smooth = {CVAR_SAVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -686,20 +686,20 @@ void V_CalcRefdef (void)
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
 						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
-							cl.bob2_airtime = 1;
+							cl.bob2_smooth = 1;
 						else
 						{
-							if(cl.bob2_airtime > 0)
-								cl.bob2_airtime -= bound(0, cl_bob2airtime.value, 1);
+							if(cl.bob2_smooth > 0)
+								cl.bob2_smooth -= bound(0, cl_bob2smooth.value, 1);
 							else
-								cl.bob2_airtime = 0;
+								cl.bob2_smooth = 0;
 						}
 
 						// now we calculate the side and front of the player, between the X and Y axis
 						AngleVectors(viewangles, forward, right, up);
 						// now the speed based on these angles. The division is for mathing vertical bobbing intensity
-						side = DotProduct (cl.velocity, right) / 1000 * cl.bob2_airtime;
-						front = DotProduct (cl.velocity, forward) / 1000 * cl.bob2_airtime;
+						side = DotProduct (cl.velocity, right) / 1000 * cl.bob2_smooth;
+						front = DotProduct (cl.velocity, forward) / 1000 * cl.bob2_smooth;
 						forward[0] *= bob;
 						forward[1] *= bob;
 						right[0] *= bob;
@@ -954,7 +954,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bob2);
 	Cvar_RegisterVariable (&cl_bob2cycle);
 	Cvar_RegisterVariable (&cl_bob2up);
-	Cvar_RegisterVariable (&cl_bob2airtime);
+	Cvar_RegisterVariable (&cl_bob2smooth);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
