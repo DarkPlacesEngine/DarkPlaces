@@ -690,7 +690,7 @@ void V_CalcRefdef (void)
 						}
 
 						cycle2 *= cl_bobrollup.value * cl.bobroll_airtime;
-						bobroll = xyspeed * cycle2;
+						bobroll = bound(0, xyspeed, sv_maxspeed.value) * cycle2;
 						viewangles[2] = bound(-45, bobroll, 45);
 					}
 
