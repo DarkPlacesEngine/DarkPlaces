@@ -40,9 +40,10 @@ cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
-cvar_t cl_bob_side = {CVAR_SAVE, "cl_bob_side","0.02", "view bobbing amount"};
-cvar_t cl_bobcycle_side = {CVAR_SAVE, "cl_bobcycle_side","0.6", "view bobbing speed"};
-cvar_t cl_bobup_side = {CVAR_SAVE, "cl_bobup_side","0.5", "view bobbing adjustment that makes the sideways swing of the bob last longer"};
+cvar_t cl_bobside = {CVAR_SAVE, "cl_bobside","0.02", "view bobbing amount"};
+cvar_t cl_bobsidecycle = {CVAR_SAVE, "cl_bobsidecycle","0.6", "view bobbing speed"};
+cvar_t cl_bobsideup = {CVAR_SAVE, "cl_bobsideup","0.5", "view bobbing adjustment that makes the sideways swing of the bob last longer"};
+cvar_t cl_bobsideairtime = {CVAR_SAVE, "cl_bobsideairtime","0.05", "how fast the view goes back when you stop touching the ground"};
 
 cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","0", "view rolling amount"};
 cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.8", "view rolling speed"};
@@ -671,7 +672,7 @@ void V_CalcRefdef (void)
 					}
 
 					// horizontal bobbing code
-					if (cl_bob_side.value && cl_bobcycle_side.value)
+					if (cl_bobside.value && cl_bobsidecycle.value)
 					{
 						vec3_t bobvel;
 						vec3_t forward, right, up;
@@ -680,22 +681,34 @@ void V_CalcRefdef (void)
 						// should be done in QC on the server, but oh well, quake is quake)
 						// LordHavoc: figured out bobup: the time at which the sin is at 180
 						// degrees (which allows lengthening or squishing the peak or valley)
-						cycle = cl.time / cl_bobcycle_side.value;
+						cycle = cl.time / cl_bobsidecycle.value;
 						cycle -= (int) cycle;
-						if (cycle < cl_bobup_side.value)
-							cycle = sin(M_PI * cycle / cl_bobup_side.value);
+						if (cycle < cl_bobsideup.value)
+							cycle = sin(M_PI * cycle / cl_bobsideup.value);
 						else
-							cycle = sin(M_PI + M_PI * (cycle-cl_bobup_side.value)/(1.0 - cl_bobup_side.value));
+							cycle = sin(M_PI + M_PI * (cycle-cl_bobsideup.value)/(1.0 - cl_bobsideup.value));
 						// bob is proportional to velocity in the xy plane
 						// (don't count Z, or jumping messes it up)
-						bob = xyspeed * cl_bob_side.value;
+						bob = xyspeed * cl_bobside.value;
 						bob = bob*0.3 + bob*0.7*cycle;
+
+						// this value slowly decreases from 1 to 0 when we stop touching the ground.
+						// The cycle is later multiplied with it so the view smooths back to normal
+						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
+							cl.bobside_airtime = 1;
+						else
+						{
+							if(cl.bobside_airtime > 0)
+								cl.bobside_airtime -= bound(0, cl_bobsideairtime.value, 1);
+							else
+								cl.bobside_airtime = 0;
+						}
 
 						// now we calculate the side and front of the player, between the X and Y axis
 						AngleVectors(viewangles, forward, right, up);
 						// now the speed based on these angles. The division is for mathing vertical bobbing intensity
-						side = DotProduct (cl.velocity, right) / 1000;
-						front = DotProduct (cl.velocity, forward) / 1000;
+						side = DotProduct (cl.velocity, right) / 100 * cl.bobside_airtime;
+						front = DotProduct (cl.velocity, forward) / 100 * cl.bobside_airtime;
 						forward[0] *= bob;
 						forward[1] *= bob;
 						right[0] *= bob;
@@ -975,9 +988,10 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobcycle);
 	Cvar_RegisterVariable (&cl_bobup);
 
-	Cvar_RegisterVariable (&cl_bob_side);
-	Cvar_RegisterVariable (&cl_bobcycle_side);
-	Cvar_RegisterVariable (&cl_bobup_side);
+	Cvar_RegisterVariable (&cl_bobside);
+	Cvar_RegisterVariable (&cl_bobsidecycle);
+	Cvar_RegisterVariable (&cl_bobsideup);
+	Cvar_RegisterVariable (&cl_bobsideairtime);
 
 	Cvar_RegisterVariable (&cl_bobroll);
 	Cvar_RegisterVariable (&cl_bobrollcycle);
