@@ -397,7 +397,7 @@ cl_beams_quakepositionhack                        1                   makes your
 cl_bob                                            0.02                view bobbing amount
 cl_bobcycle                                       0.6                 view bobbing speed
 cl_bobroll                                        0                   view rolling amount
-cl_bobrollcycle                                   0.75                view rolling speed
+cl_bobrollcycle                                   0.8                 view rolling speed
 cl_bobrollairtime                                 0.05                how fast the view rolls back when you stop touching the ground
 cl_bobmodel                                       1                   enables gun bobbing
 cl_bobmodel_side                                  0.05                gun bobbing sideways sway amount
