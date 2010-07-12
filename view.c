@@ -40,7 +40,7 @@ cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 
-cvar_t cl_bob_side = {CVAR_SAVE, "cl_bob_side","0.002", "view bobbing amount"};
+cvar_t cl_bob_side = {CVAR_SAVE, "cl_bob_side","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle_side = {CVAR_SAVE, "cl_bobcycle_side","0.6", "view bobbing speed"};
 cvar_t cl_bobup_side = {CVAR_SAVE, "cl_bobup_side","0.5", "view bobbing adjustment that makes the sideways swing of the bob last longer"};
 
@@ -675,6 +675,7 @@ void V_CalcRefdef (void)
 					{
 						vec3_t bobvel;
 						vec3_t forward, right, up;
+						float side, front;
 						// LordHavoc: this code is *weird*, but not replacable (I think it
 						// should be done in QC on the server, but oh well, quake is quake)
 						// LordHavoc: figured out bobup: the time at which the sin is at 180
@@ -692,13 +693,16 @@ void V_CalcRefdef (void)
 
 						// now we calculate the side and front of the player, between the X and Y axis
 						AngleVectors(viewangles, forward, right, up);
+						// now the speed based on these angles. The division is for mathing vertical bobbing intensity
+						side = DotProduct (cl.velocity, right) / 1000;
+						front = DotProduct (cl.velocity, forward) / 1000;
 						forward[0] *= bob;
 						forward[1] *= bob;
 						right[0] *= bob;
 						right[1] *= bob;
-						// we use cl.cmd.sidemove with forward and cl.cmd.forwardmove with right so the side bobbing
-						// goes to the side when we walk forward and to the front when we strafe
-						VectorMAMAM(cl.cmd.sidemove, forward, cl.cmd.forwardmove, right, cl.cmd.upmove, up, bobvel);
+						// we use side with forward and front with right so the side bobbing goes
+						// to the side when we walk forward and to the front when we strafe.
+						VectorMAMAM(side, forward, front, right, 0, up, bobvel);
 						vieworg[0] += bobvel[0];
 						vieworg[1] += bobvel[1];
 						// we also need to adjust gunorg, or this appears like pushing the gun!
