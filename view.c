@@ -700,13 +700,15 @@ void V_CalcRefdef (void)
 					
 					//TEST!!!
 					vec3_t wishvel;
-					vec3_t forward;
-					vec3_t right;
-					vec3_t up;
+					vec3_t forward, right, up;
 					AngleVectors(viewangles, forward, right, up);
-					VectorSet(forward, 0, 0, 0);
-					VectorSet(right, 0, 0, 0);
-					VectorMAMAM(cl.cmd.forwardmove, forward, cl.cmd.sidemove, right, cl.cmd.upmove, up, wishvel);
+					forward[0] *= 0.1;
+					forward[1] *= 0.1;
+					right[0] *= 0.1;
+					right[1] *= 0.1;
+					// we use cl.cmd.sidemove with forward and cl.cmd.forwardmove with right so the side bobbing
+					// goes to the side when we walk forward and to the front when we strafe
+					VectorMAMAM(cl.cmd.sidemove, forward, cl.cmd.forwardmove, right, cl.cmd.upmove, up, wishvel);
 					vieworg[0] += wishvel[0];
 					vieworg[1] += wishvel[1];
 					//End of TEST!!!
