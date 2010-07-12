@@ -593,7 +593,7 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					double xyspeed, bob, bob2, bobroll;
+					double xyspeed, bob, bobroll;
 					float cycle, cycle2;
 					vec_t frametime;
 
