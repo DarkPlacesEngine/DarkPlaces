@@ -680,8 +680,7 @@ void V_CalcRefdef (void)
 							cycle = sin(M_PI + M_PI * (cycle-cl_bob2up.value)/(1.0 - cl_bob2up.value));
 						// bob is proportional to velocity in the xy plane
 						// (don't count Z, or jumping messes it up)
-						bob = xyspeed * cl_bob2.value;
-						bob = bob*0.3 + bob*0.7*cycle;
+						bob = xyspeed * cl_bob2.value * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
