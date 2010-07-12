@@ -41,7 +41,6 @@ cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
 cvar_t cl_bob2 = {CVAR_SAVE, "cl_bob2","0", "sideways view bobbing amount"};
 cvar_t cl_bob2cycle = {CVAR_SAVE, "cl_bob2cycle","0.6", "sideways view bobbing speed"};
-cvar_t cl_bob2up = {CVAR_SAVE, "cl_bob2up","0.5", "view bobbing adjustment that makes the side swing of the bob last longer"};
 cvar_t cl_bob2smooth = {CVAR_SAVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
@@ -674,10 +673,10 @@ void V_CalcRefdef (void)
 
 						cycle = cl.time / cl_bob2cycle.value;
 						cycle -= (int) cycle;
-						if (cycle < cl_bob2up.value)
-							cycle = sin(M_PI * cycle / cl_bob2up.value);
+						if (cycle < 0.5)
+							cycle = sin(M_PI * cycle / 0.5);
 						else
-							cycle = sin(M_PI + M_PI * (cycle-cl_bob2up.value)/(1.0 - cl_bob2up.value));
+							cycle = sin(M_PI + M_PI * (cycle-0.5)/0.5);
 						bob = xyspeed * cl_bob2.value * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
@@ -948,7 +947,6 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobup);
 	Cvar_RegisterVariable (&cl_bob2);
 	Cvar_RegisterVariable (&cl_bob2cycle);
-	Cvar_RegisterVariable (&cl_bob2up);
 	Cvar_RegisterVariable (&cl_bob2smooth);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
