@@ -687,16 +687,29 @@ void V_CalcRefdef (void)
 						// (don't count Z, or jumping messes it up)
 						bob = xyspeed * cl_bob_side.value;
 						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[1] += bound(-7, bob, 4);
-						vieworg[0] += bound(-7, bob, 4);
+						//vieworg[1] += bound(-7, bob, 4);
+						//vieworg[0] += bound(-7, bob, 4);
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[1] += bound(-7, bob, 4);
-						gunorg[0] += bound(-7, bob, 4);
+						//gunorg[1] += bound(-7, bob, 4);
+						//gunorg[0] += bound(-7, bob, 4);
 						//vieworg[0] += bound(-7, bob, 4);
 					}
+					
+					//TEST!!!
+					vec3_t wishvel;
+					vec3_t forward;
+					vec3_t right;
+					vec3_t up;
+					AngleVectors(viewangles, forward, right, up);
+					VectorSet(forward, 0, 0, 0);
+					VectorSet(right, 0, 0, 0);
+					VectorMAMAM(cl.cmd.forwardmove, forward, cl.cmd.sidemove, right, cl.cmd.upmove, up, wishvel);
+					vieworg[0] += wishvel[0];
+					vieworg[1] += wishvel[1];
+					//End of TEST!!!
 
 					// view rolling code
 					if (cl_bobroll.value && cl_bobrollcycle.value)
