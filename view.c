@@ -689,7 +689,7 @@ void V_CalcRefdef (void)
 
 						cycle2 *= cl_bobroll.value * cl.bobroll_airtime;
 						bobroll = bound(0, xyspeed, sv_maxspeed.value) * cycle2;
-						viewangles[2] = bound(-45, bobroll, 45);
+						viewangles[2] += bound(-45, bobroll, 45);
 					}
 
 					// gun model bobbing code
