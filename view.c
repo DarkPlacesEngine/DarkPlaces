@@ -39,7 +39,9 @@ cvar_t cl_rollangle = {0, "cl_rollangle", "2.0", "how much to tilt the view when
 cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
-
+cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","0.02", "view rolling amount"};
+cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.5", "view rolling speed"};
+cvar_t cl_bobrollup = {CVAR_SAVE, "cl_bobrollup","0.5", "view bobbing adjustment that makes the up or down swing of the roll last longer"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -586,7 +588,8 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					double xyspeed, bob;
+					double xyspeed, bob, bobroll;
+					float cycle;
 					vec_t frametime;
 
 					frametime = cl.realframetime * cl.movevars_timescale;
@@ -640,7 +643,6 @@ void V_CalcRefdef (void)
 					xyspeed = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
-						float cycle;
 						// LordHavoc: this code is *weird*, but not replacable (I think it
 						// should be done in QC on the server, but oh well, quake is quake)
 						// LordHavoc: figured out bobup: the time at which the sin is at 180
@@ -661,6 +663,24 @@ void V_CalcRefdef (void)
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
 						gunorg[2] += bound(-7, bob, 4);
+					}
+
+					// view rolling code
+					// TODO 1: Make it work around the center rather than the left side
+					// TODO 2: Don't bob roll when not touching the ground
+					// TODO 3: Write cvars in darkplaces.txt, set better defaults and possibly disable by default once the first TODOs are ready.
+					if (cl_bobroll.value && cl_bobrollcycle.value)
+					{
+						cycle = cl.time / cl_bobrollcycle.value;
+						cycle -= (int) cycle;
+						if (cycle < cl_bobrollup.value)
+							cycle = sin(M_PI * cycle / cl_bobrollup.value);
+						else
+							cycle = sin(M_PI + M_PI * (cycle-cl_bobrollup.value)/(1.0 - cl_bobrollup.value));
+
+						bobroll = xyspeed * cl_bobroll.value;
+						bobroll = bobroll*0.3 + bobroll*0.7*cycle;
+						viewangles[2] = bound(-5, bobroll, 5);
 					}
 
 					// gun model bobbing code
@@ -897,6 +917,9 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bob);
 	Cvar_RegisterVariable (&cl_bobcycle);
 	Cvar_RegisterVariable (&cl_bobup);
+	Cvar_RegisterVariable (&cl_bobroll);
+	Cvar_RegisterVariable (&cl_bobrollcycle);
+	Cvar_RegisterVariable (&cl_bobrollup);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
