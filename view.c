@@ -677,7 +677,7 @@ void V_CalcRefdef (void)
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
-						if (cl.onground)
+						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
 							cl.bobroll_airtime = 1;
 						else
 						{
