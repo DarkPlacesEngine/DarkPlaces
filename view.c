@@ -695,9 +695,9 @@ void V_CalcRefdef (void)
 
 						// calculate the front and side of the player between the X and Y axes
 						AngleVectors(viewangles, forward, right, up);
-						// now get the speed based on those angles. The division is for mathing vertical bob intensity
-						side = DotProduct (cl.velocity, right) * cl.bob2_smooth;
-						front = DotProduct (cl.velocity, forward) * cl.bob2_smooth;
+						// now get the speed based on those angles. The bounds should match the same value as xyspeed's
+						side = bound(-400, DotProduct (cl.velocity, right) * cl.bob2_smooth, 400);
+						front = bound(-400, DotProduct (cl.velocity, forward) * cl.bob2_smooth, 400);
 						VectorScale(forward, bob, forward);
 						VectorScale(right, bob, right);
 						// we use side with forward and front with right, so the bobbing goes
