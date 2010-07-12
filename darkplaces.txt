@@ -396,6 +396,9 @@ cl_beams_polygons                                 1                   use beam p
 cl_beams_quakepositionhack                        1                   makes your lightning gun appear to fire from your waist (as in Quake and QuakeWorld)
 cl_bob                                            0.02                view bobbing amount
 cl_bobcycle                                       0.6                 view bobbing speed
+cl_bobside                                        0                   sideway view bobbing amount
+cl_bobsidecycle                                   0.6                 sideway view bobbing speed
+cl_bobsideairtime                                 0.05                how fast the view goes back when you stop touching the ground
 cl_bobroll                                        0                   view rolling amount
 cl_bobrollcycle                                   0.8                 view rolling speed
 cl_bobrollairtime                                 0.05                how fast the view rolls back when you stop touching the ground
@@ -426,6 +429,7 @@ cl_followmodel_up_highpass1                       60                  gun follow
 cl_followmodel_up_highpass                        3                   gun following upward highpass in 1/s
 cl_followmodel_up_lowpass                         30                  gun following upward lowpass in 1/s
 cl_bobup                                          0.5                 view bobbing adjustment that makes the up or down swing of the bob last longer
+cl_bobsideup                                      0.5                 view bobbing adjustment that makes the side swing of the bob last longer
 cl_capturevideo                                   0                   enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)
 cl_capturevideo_fps                               30                  how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)
 cl_capturevideo_number                            1                   number to append to video filename, incremented each time a capture begins
