@@ -39,9 +39,9 @@ cvar_t cl_rollangle = {0, "cl_rollangle", "2.0", "how much to tilt the view when
 cvar_t cl_bob = {CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
 cvar_t cl_bobcycle = {CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
 cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
-cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","0.02", "view rolling amount"};
+cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","1", "view rolling amount"};
 cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.5", "view rolling speed"};
-cvar_t cl_bobrollup = {CVAR_SAVE, "cl_bobrollup","0.5", "view bobbing adjustment that makes the up or down swing of the roll last longer"};
+cvar_t cl_bobrollup = {CVAR_SAVE, "cl_bobrollup","0.01", "view bobbing adjustment that makes the up or down swing of the roll last longer"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -679,7 +679,7 @@ void V_CalcRefdef (void)
 						else
 							cycle2 = sin(M_PI + M_PI * (cycle2-0.5)/0.5);
 						cycle2 *= cl_bobrollup.value;
-						bobroll = xyspeed * cl_bobroll.value * cycle2;
+						bobroll = xyspeed * cycle2;
 						viewangles[2] = bound(-45, bobroll, 45);
 					}
 
