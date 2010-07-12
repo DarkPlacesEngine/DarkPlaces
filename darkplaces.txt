@@ -396,8 +396,8 @@ cl_beams_polygons                                 1                   use beam p
 cl_beams_quakepositionhack                        1                   makes your lightning gun appear to fire from your waist (as in Quake and QuakeWorld)
 cl_bob                                            0.02                view bobbing amount
 cl_bobcycle                                       0.6                 view bobbing speed
-cl_bob2                                           0                   sideway view bobbing amount
-cl_bob2cycle                                      0.6                 sideway view bobbing speed
+cl_bob2                                           0                   sideways view bobbing amount
+cl_bob2cycle                                      0.6                 sideways view bobbing speed
 cl_bob2smooth                                     0.05                how fast the view goes back when you stop touching the ground
 cl_bobmodel                                       1                   enables gun bobbing
 cl_bobmodel_side                                  0.05                gun bobbing sideways sway amount
