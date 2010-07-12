@@ -654,14 +654,14 @@ void V_CalcRefdef (void)
 							cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
 						// bob is proportional to velocity in the xy plane
 						// (don't count Z, or jumping messes it up)
-						bob = xyspeed * cl_bob.value;
+						bob = xyspeed * bound(0, cl_bob.value, 0.05);
 						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[2] += bound(-8, bob, 10);
+						vieworg[2] += bob;
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[2] += bound(-8, bob, 10);
+						gunorg[2] += bob;
 					}
 
 					// horizontal view bobbing code
@@ -677,7 +677,7 @@ void V_CalcRefdef (void)
 							cycle = sin(M_PI * cycle / 0.5);
 						else
 							cycle = sin(M_PI + M_PI * (cycle-0.5)/0.5);
-						bob = xyspeed * cl_bob2.value * cycle;
+						bob = xyspeed * bound(0, cl_bob2.value, 0.05) * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
 						// The cycle is later multiplied with it so the view smooths back to normal
@@ -701,14 +701,14 @@ void V_CalcRefdef (void)
 						// we use side with forward and front with right, so the bobbing goes
 						// to the side when we walk forward and to the front when we strafe
 						VectorMAMAM(side, forward, front, right, 0, up, bob2vel);
-						vieworg[0] += bound(-8, bob2vel[0], 8);
-						vieworg[1] += bound(-8, bob2vel[1], 8);
+						vieworg[0] += bob2vel[0];
+						vieworg[1] += bob2vel[1];
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[0] += bound(-8, bob2vel[0], 8);
-						gunorg[1] += bound(-8, bob2vel[1], 8);
+						gunorg[0] += bob2vel[0];
+						gunorg[1] += bob2vel[1];
 					}
 
 					// gun model bobbing code
