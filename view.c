@@ -660,12 +660,12 @@ void V_CalcRefdef (void)
 						// (don't count Z, or jumping messes it up)
 						bob = xyspeed * cl_bob.value;
 						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[2] += bound(-7, bob, 4);
+						vieworg[2] += bound(-7, bob, 7);
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[2] += bound(-7, bob, 4);
+						gunorg[2] += bound(-7, bob, 7);
 					}
 
 					// horizontal bobbing code
@@ -710,14 +710,14 @@ void V_CalcRefdef (void)
 						// we use side with forward and front with right so the side bobbing goes
 						// to the side when we walk forward and to the front when we strafe.
 						VectorMAMAM(side, forward, front, right, 0, up, bobvel);
-						vieworg[0] += bobvel[0];
-						vieworg[1] += bobvel[1];
+						vieworg[0] += bound(-8, bobvel[0], 8);
+						vieworg[1] += bound(-8, bobvel[1], 8);
 						// we also need to adjust gunorg, or this appears like pushing the gun!
 						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
 						// but this is not viable with the new followmodel code as that would mean
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[0] += bobvel[0];
-						gunorg[1] += bobvel[1];
+						gunorg[0] += bound(-8, bobvel[0], 8);
+						gunorg[1] += bound(-8, bobvel[1], 8);
 					}
 
 					// view rolling code
