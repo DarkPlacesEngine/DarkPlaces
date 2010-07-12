@@ -638,8 +638,10 @@ void V_CalcRefdef (void)
 					VectorAdd(vieworg, gunorg, gunorg);
 					VectorAdd(viewangles, gunangles, gunangles);
 
+					// bounded XY speed calculation, used by several effects below
+					xyspeed = bound (0, sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]), 400);
+
 					// vertical view bobbing code
-					xyspeed = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]);
 					if (cl_bob.value && cl_bobcycle.value)
 					{
 						// LordHavoc: this code is *weird*, but not replacable (I think it
@@ -745,7 +747,7 @@ void V_CalcRefdef (void)
 							t *= 5;
 						}
 
-						bspeed = bound (0, xyspeed, 400) * 0.01f;
+						bspeed = xyspeed * 0.01f;
 						AngleVectors (gunangles, forward, right, up);
 						bob = bspeed * cl_bobmodel_side.value * cl_viewmodel_scale.value * sin (s) * t;
 						VectorMA (gunorg, bob, right, gunorg);
