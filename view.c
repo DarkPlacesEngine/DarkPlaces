@@ -43,9 +43,6 @@ cvar_t cl_bobside = {CVAR_SAVE, "cl_bobside","0", "sideway view bobbing amount"}
 cvar_t cl_bobsidecycle = {CVAR_SAVE, "cl_bobsidecycle","0.6", "sideway view bobbing speed"};
 cvar_t cl_bobsideup = {CVAR_SAVE, "cl_bobsideup","0.5", "view bobbing adjustment that makes the side swing of the bob last longer"};
 cvar_t cl_bobsideairtime = {CVAR_SAVE, "cl_bobsideairtime","0.05", "how fast the view goes back when you stop touching the ground"};
-cvar_t cl_bobroll = {CVAR_SAVE, "cl_bobroll","0", "view rolling amount"};
-cvar_t cl_bobrollcycle = {CVAR_SAVE, "cl_bobrollcycle","0.8", "view rolling speed"};
-cvar_t cl_bobrollairtime = {CVAR_SAVE, "cl_bobrollairtime","0.05", "how fast the view rolls back when you stop touching the ground"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -591,8 +588,8 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					double xyspeed, bob, bobroll;
-					float cycle, cycle2;
+					double xyspeed, bob;
+					float cycle;
 					vec_t frametime;
 
 					frametime = cl.realframetime * cl.movevars_timescale;
@@ -718,33 +715,6 @@ void V_CalcRefdef (void)
 						// that followmodel would work on the munged-by-bob vieworg and do feedback
 						gunorg[0] += bound(-8, bobvel[0], 8);
 						gunorg[1] += bound(-8, bobvel[1], 8);
-					}
-
-					// view rolling code
-					if (cl_bobroll.value && cl_bobrollcycle.value)
-					{
-						cycle2 = cl.time / cl_bobrollcycle.value;
-						cycle2 -= (int) cycle2;
-						if (cycle2 < 0.5)
-							cycle2 = sin(M_PI * cycle2 / 0.5);
-						else
-							cycle2 = sin(M_PI + M_PI * (cycle2-0.5)/0.5);
-
-						// this value slowly decreases from 1 to 0 when we stop touching the ground.
-						// The cycle is later multiplied with it so the view smooths back to normal
-						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
-							cl.bobroll_airtime = 1;
-						else
-						{
-							if(cl.bobroll_airtime > 0)
-								cl.bobroll_airtime -= bound(0, cl_bobrollairtime.value, 1);
-							else
-								cl.bobroll_airtime = 0;
-						}
-
-						cycle2 *= cl_bobroll.value * cl.bobroll_airtime;
-						bobroll = bound(0, xyspeed, sv_maxspeed.value) * cycle2;
-						viewangles[2] += bound(-15, bobroll, 15);
 					}
 
 					// gun model bobbing code
@@ -985,9 +955,6 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobsidecycle);
 	Cvar_RegisterVariable (&cl_bobsideup);
 	Cvar_RegisterVariable (&cl_bobsideairtime);
-	Cvar_RegisterVariable (&cl_bobroll);
-	Cvar_RegisterVariable (&cl_bobrollcycle);
-	Cvar_RegisterVariable (&cl_bobrollairtime);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
