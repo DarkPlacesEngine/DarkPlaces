@@ -4701,9 +4701,7 @@ static char *R_HLSL_GetText(const char *filename, qboolean printfromdisknotice)
 
 #include <d3dx9.h>
 #include <d3dx9mesh.h>
-#ifdef _MSC_VER
 #pragma comment(lib, "d3dx9.lib")
-#endif
 
 static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, const char *vertstring, const char *fragstring)
 {
@@ -8884,11 +8882,6 @@ void R_Bloom_StartFrame(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -13402,7 +13395,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 		return;
 	}
 
-	if (!model->brush.data_leafs && !cl_decals_models.integer)
+	if (!model->brush.data_nodes && !cl_decals_models.integer)
 	{
 		if (decalsystem->model)
 			R_DecalSystem_Reset(decalsystem);
