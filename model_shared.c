@@ -2741,7 +2741,7 @@ void Mod_BuildVBOs(void)
 
 static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *mtlfilename, const char *originalfilename)
 {
-	int vertexindex, surfaceindex, triangleindex, textureindex, countvertices = 0, countsurfaces = 0, countfaces = 0, counttextures = 0;
+	int submodelindex, vertexindex, surfaceindex, triangleindex, textureindex, countvertices = 0, countsurfaces = 0, countfaces = 0, counttextures = 0;
 	int a, b, c;
 	const char *texname;
 	const int *e;
@@ -2753,6 +2753,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 	const msurface_t *surface;
 	const int maxtextures = 256;
 	char *texturenames = (char *) Z_Malloc(maxtextures * MAX_QPATH);
+	dp_model_t *submodel;
 
 	// construct the mtllib file
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# mtllib for %s exported by darkplaces engine\n", originalfilename);
@@ -2788,12 +2789,13 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 
 	// write the mtllib file
 	FS_WriteFile(mtlfilename, outbuffer, outbufferpos);
-	outbufferpos = 0;
 
 	// construct the obj file
+	outbufferpos = 0;
 	l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "# model exported from %s by darkplaces engine\n# %i vertices, %i faces, %i surfaces\nmtllib %s\n", originalfilename, countvertices, countfaces, countsurfaces, mtlfilename);
 	if (l > 0)
 		outbufferpos += l;
+
 	for (vertexindex = 0, v = model->surfmesh.data_vertex3f, vn = model->surfmesh.data_normal3f, vt = model->surfmesh.data_texcoordtexture2f;vertexindex < model->surfmesh.num_vertices;vertexindex++, v += 3, vn += 3, vt += 2)
 	{
 		if (outbufferpos >= outbuffermax >> 1)
@@ -2804,31 +2806,40 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], -v[1], vn[0], vn[2], -vn[1], vt[0], 1-vt[1]);
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
 		if (l > 0)
 			outbufferpos += l;
 	}
-	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->num_surfaces;surfaceindex++, surface++)
+
+	for (submodelindex = 0;submodelindex < max(1, model->brush.numsubmodels);submodelindex++)
 	{
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default");
+		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "o %i\n", submodelindex);
 		if (l > 0)
 			outbufferpos += l;
-		for (triangleindex = 0, e = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+		submodel = model->brush.numsubmodels ? model->brush.submodels[submodelindex] : model;
+		for (surfaceindex = 0;surfaceindex < submodel->nummodelsurfaces;surfaceindex++)
 		{
-			if (outbufferpos >= outbuffermax >> 1)
-			{
-				outbuffermax *= 2;
-				oldbuffer = outbuffer;
-				outbuffer = (char *) Z_Malloc(outbuffermax);
-				memcpy(outbuffer, oldbuffer, outbufferpos);
-				Z_Free(oldbuffer);
-			}
-			a = e[0]+1;
-			b = e[2]+1;
-			c = e[1]+1;
-			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,b,b,b,c,c,c);
+			surface = model->data_surfaces + submodel->sortedmodelsurfaces[surfaceindex];
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default");
 			if (l > 0)
 				outbufferpos += l;
+			for (triangleindex = 0, e = model->surfmesh.data_element3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+			{
+				if (outbufferpos >= outbuffermax >> 1)
+				{
+					outbuffermax *= 2;
+					oldbuffer = outbuffer;
+					outbuffer = (char *) Z_Malloc(outbuffermax);
+					memcpy(outbuffer, oldbuffer, outbufferpos);
+					Z_Free(oldbuffer);
+				}
+				a = e[0]+1;
+				b = e[1]+1;
+				c = e[2]+1;
+				l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,b,b,b,c,c,c);
+				if (l > 0)
+					outbufferpos += l;
+			}
 		}
 	}
 
