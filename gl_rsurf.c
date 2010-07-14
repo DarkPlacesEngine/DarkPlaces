@@ -737,7 +737,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 			if (SVBSP_AddPolygon(&r_svbsp, portal->numpoints, points[0], false, NULL, NULL, 0) & 2)
 				break;
 		}
-		if (portal == NULL)
+		if (leaf->portals && portal == NULL)
 			return; // no portals of this leaf visible
 	}
 	if (info->svbsp_insertoccluder)
