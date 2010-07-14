@@ -19,12 +19,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vid_wgl.c -- NT GL vid component
 
+#ifdef _MSC_VER
 #pragma comment(lib, "comctl32.lib")
+#endif
 
 #ifdef SUPPORTDIRECTX
 // Include DX libs
+#ifdef _MSC_VER
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
+#endif
 #ifndef DIRECTINPUT_VERSION
 #	define DIRECTINPUT_VERSION 0x0500  /* Version 5.0 */
 #endif
@@ -44,7 +48,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
+#ifdef _MSC_VER
 #pragma comment(lib, "d3d9.lib")
+#endif
 
 cvar_t vid_dx9 = {CVAR_SAVE, "vid_dx9", "0", "use Microsoft Direct3D9(r) for rendering"};
 cvar_t vid_dx9_hal = {CVAR_SAVE, "vid_dx9_hal", "1", "enables hardware rendering (1), otherwise software reference rasterizer (0 - very slow), note that 0 is necessary when using NVPerfHUD (which renders in hardware but requires this option to enable it)"};
