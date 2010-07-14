@@ -2556,6 +2556,11 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	case RENDERPATH_D3D11:
 		r_shadow_lightscissor[1] = vid.height - r_shadow_lightscissor[1] - r_shadow_lightscissor[3];
 		break;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
 	}
 
 	r_refdef.stats.lights_scissored++;
