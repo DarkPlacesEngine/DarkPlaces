@@ -10,9 +10,7 @@
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
-#ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
-#endif
 #else
 # include <unistd.h>
 # include <fcntl.h>
