@@ -2186,7 +2186,7 @@ q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
 {
 	int j;
-	int texflagsmask;
+	int texflagsmask, texflagsor;
 	qboolean success = true;
 	q3shaderinfo_t *shader;
 	if (!name)
@@ -2199,6 +2199,11 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texflagsmask &= ~TEXF_PICMIP;
 	if(!(defaulttexflags & TEXF_COMPRESS))
 		texflagsmask &= ~TEXF_COMPRESS;
+	texflagsor = 0;
+	if(defaulttexflags & TEXF_ISWORLD)
+		texflagsor |= TEXF_ISWORLD;
+	if(defaulttexflags & TEXF_ISSPRITE)
+		texflagsor |= TEXF_ISSPRITE;
 	// unless later loaded from the shader
 	texture->offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
 	texture->offsetscale = 1;
@@ -2215,7 +2220,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		texture->surfaceparms = shader->surfaceparms;
 
 		// allow disabling of picmip or compression by defaulttexflags
-		texture->textureflags = shader->textureflags & texflagsmask;
+		texture->textureflags = (shader->textureflags & texflagsmask) | texflagsor;
 
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
@@ -2303,7 +2308,7 @@ nothing                GL_ZERO GL_ONE
 				{
 					texture->skinframes[j] = NULL;
 				}
-				else if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], primarylayer->texflags & texflagsmask, false)))
+				else if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], (primarylayer->texflags & texflagsmask) | texflagsor, false)))
 				{
 					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, primarylayer->texturename[j], j, texture->name);
 					texture->skinframes[j] = R_SkinFrame_LoadMissing();
@@ -2324,7 +2329,7 @@ nothing                GL_ZERO GL_ONE
 				{
 					texture->skinframes[j] = NULL;
 				}
-				else if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], backgroundlayer->texflags & texflagsmask, false)))
+				else if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], (backgroundlayer->texflags & texflagsmask) | texflagsor, false)))
 				{
 					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (background frame %i) for shader ^2\"%s\"\n", loadmodel->name, backgroundlayer->texturename[j], j, texture->name);
 					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
