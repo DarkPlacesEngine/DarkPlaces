@@ -3082,7 +3082,7 @@ void SV_SpawnServer (const char *server)
 		dpsnprintf (modelname, sizeof(modelname), "maps/%s", server);
 		if (!FS_FileExists(modelname))
 		{
-			Con_Printf("SpawnServer: no map file named %s\n", modelname);
+			Con_Printf("SpawnServer: no map file named maps/%s.bsp\n", server);
 			return;
 		}
 	}
