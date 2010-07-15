@@ -515,13 +515,25 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	memset(m, 0, sizeof(m));
 	m[0]  = 2/(right - left);
 	m[5]  = 2/(top - bottom);
-//	m[10] = -2/(zFar - zNear);
-	m[10] = -1/(zFar - zNear);
+	m[10] = -2/(zFar - zNear);
 	m[12] = - (right + left)/(right - left);
 	m[13] = - (top + bottom)/(top - bottom);
-//	m[14] = - (zFar + zNear)/(zFar - zNear);
-	m[14] = -zNear/(zFar-zNear);
+	m[14] = - (zFar + zNear)/(zFar - zNear);
 	m[15] = 1;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		m[10] = -1/(zFar - zNear);
+		m[14] = -zNear/(zFar-zNear);
+		break;
+	}
 	v->screentodepth[0] = -farclip / (farclip - nearclip);
 	v->screentodepth[1] = farclip * nearclip / (farclip - nearclip);
 
