@@ -4452,33 +4452,26 @@ void R_DrawModelShadowMaps(void)
 	R_Viewport_InitOrtho(&viewport, &cameramatrix, 0, 0, size, size, 0, 0, 1, 1, 0, -1, NULL); 
 
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
-
+ 
+#if 0
+	R_Mesh_ResetRenderTargets();
+	R_SetupShader_ShowDepth();
+#else
 	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, NULL, NULL, NULL, NULL);
 	R_SetupShader_DepthOrShadow();
+#endif
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	R_SetViewport(&viewport);
 	GL_Scissor(viewport.x, viewport.y, min(viewport.width + r_shadow_shadowmapborder, 2*r_shadow_shadowmapmaxsize), viewport.height + r_shadow_shadowmapborder);
 	Vector4Set(clearcolor, 1,1,1,1);
-	// in D3D9 we have to render to a color texture shadowmap
-	// in GL we render directly to a depth texture only
-	if (r_shadow_shadowmap2dtexture)
-		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
-	else
-		GL_Clear(GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
-	// render into a slightly restricted region so that the borders of the
-	// shadowmap area fade away, rather than streaking across everything
-	// outside the usable area
-	GL_Scissor(viewport.x + r_shadow_shadowmapborder, viewport.y + r_shadow_shadowmapborder, viewport.width - 2*r_shadow_shadowmapborder, viewport.height - 2*r_shadow_shadowmapborder);
-
 #if 0
-	// debugging
-	R_Mesh_ResetRenderTargets();
-	R_SetupShader_ShowDepth();
-	GL_ColorMask(1,1,1,1);
 	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
+#else
+	GL_Clear(GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
 #endif
+	GL_Scissor(viewport.x + r_shadow_shadowmapborder, viewport.y + r_shadow_shadowmapborder, viewport.width - 2*r_shadow_shadowmapborder, viewport.height - 2*r_shadow_shadowmapborder);
 
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
@@ -4503,19 +4496,6 @@ void R_DrawModelShadowMaps(void)
 			rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 		}
 	}
-
-#if 0
-	if (r_test.integer)
-	{
-		unsigned char *rawpixels = Z_Malloc(viewport.width*viewport.height*4);
-		CHECKGLERROR
-		qglReadPixels(viewport.x, viewport.y, viewport.width, viewport.height, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, rawpixels);
-		CHECKGLERROR
-		Image_WriteTGABGRA("r_shadows_2.tga", viewport.width, viewport.height, rawpixels);
-		Cvar_SetValueQuick(&r_test, 0);
-		Z_Free(rawpixels);
-	}
-#endif
 
 	R_Shadow_RenderMode_End();
 
