@@ -721,13 +721,13 @@ void V_CalcRefdef (void)
 					{
 						if (!cl.onground)
 						{
-							cl.bobfall_speed = cl.velocity[2] * cl_bobfall.value;
+							cl.bobfall_speed = bound(-400, cl.velocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
 							cl.bobfall_swing = 1;
 						}
 						else
 						{
 							if(cl.bobfall_swing > 0)
-								cl.bobfall_swing -= cl_bobfallcycle.value;
+								cl.bobfall_swing -= bound(0, cl_bobfallcycle.value, 1);
 							else
 								cl.bobfall_swing = 0;
 
