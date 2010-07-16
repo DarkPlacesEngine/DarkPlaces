@@ -712,6 +712,18 @@ void V_CalcRefdef (void)
 						gunorg[0] += bob2vel[0];
 						gunorg[1] += bob2vel[1];
 					}
+					
+					
+					// TEST!!!
+
+					if (!cl.onground)
+						cl.ground_hit_speed = cl.velocity[2];
+					else
+						vieworg[2] += cl.ground_hit_speed;
+
+					// End of TEST!!!
+					
+					
 
 					// gun model bobbing code
 					if (cl_bob.value || cl_bob2.value)
