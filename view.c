@@ -717,14 +717,15 @@ void V_CalcRefdef (void)
 					// TEST!!!
 
 					float ground_hit_target;
+					// get the speed while in the air, apply it while we're not
 					if (!cl.onground)
-						cl.ground_hit_speed = cl.velocity[2] * 0.1;
+						cl.ground_hit_speed = bound(0, cl.velocity[2] * 0.1, 400); // replace 0.1 with cvar
 					else
 					{
 						if(cl.ground_hit_speed > ground_hit_target)
-							cl.ground_hit_speed -= 0.1;
+							cl.ground_hit_speed -= 0.1; // replace 0.1 with cvar
 						if(cl.ground_hit_speed < ground_hit_target)
-							cl.ground_hit_speed += 0.1;
+							cl.ground_hit_speed += 0.1; // replace 0.1 with cvar
 
 						vieworg[2] += cl.ground_hit_speed;
 						gunorg[2] += cl.ground_hit_speed;
