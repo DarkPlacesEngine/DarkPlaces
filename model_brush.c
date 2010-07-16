@@ -7088,7 +7088,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	char *argv[512];
 	char line[1024];
 	char materialname[MAX_QPATH];
-	int i, j, l, numvertices, firstvertex, firsttriangle, elementindex, vertexindex, surfacevertices, surfacetriangles, surfaceelements, submodelindex;
+	int i, j, l, numvertices, firstvertex, firsttriangle, elementindex, vertexindex, surfacevertices, surfacetriangles, surfaceelements, submodelindex = 0;
 	int index1, index2, index3;
 	objvertex_t vfirst, vprev, vcurrent;
 	int argc;
