@@ -973,9 +973,8 @@ typedef struct client_state_s
 	double lastongroundtime;
 	double hitgroundtime;
 	float bob2_smooth;
-
-	float ground_hit_speed;
-	float ground_hit_counter;
+	float bobfall_speed;
+	float bobfall_swing;
 
 	// don't change view angle, full screen, etc
 	int intermission;

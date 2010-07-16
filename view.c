@@ -712,30 +712,24 @@ void V_CalcRefdef (void)
 						gunorg[0] += bob2vel[0];
 						gunorg[1] += bob2vel[1];
 					}
-					
-					
-					// TEST!!!
 
-					// get the speed while in the air, apply it while we're not
+					// fall bobbing code
+					// causes the view to swing down and back up when touching the ground
 					if (!cl.onground)
 					{
-						cl.ground_hit_speed = cl.velocity[2] * 0.1; // replace 0.1 with cvar
-						cl.ground_hit_counter = 1;
+						cl.bobfall_speed = cl.velocity[2] * 0.1; // replace 0.1 with cvar
+						cl.bobfall_swing = 1;
 					}
 					else
 					{
-						if(cl.ground_hit_counter > 0)
-							cl.ground_hit_counter -= 0.1; // replace 0.1 with cvar
+						if(cl.bobfall_swing > 0)
+							cl.bobfall_swing -= 0.01; // replace 0.1 with cvar
 						else
-							cl.ground_hit_counter = 0;
+							cl.bobfall_swing = 0;
 
-						vieworg[2] += sin(M_PI + M_PI * cl.ground_hit_counter) * -cl.ground_hit_speed;
-						gunorg[2] += sin(M_PI + M_PI * cl.ground_hit_counter) * -cl.ground_hit_speed;
+						vieworg[2] += sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
+						gunorg[2] += sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
 					}
-
-					// End of TEST!!!
-					
-					
 
 					// gun model bobbing code
 					if (cl_bob.value || cl_bob2.value)
