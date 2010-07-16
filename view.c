@@ -716,10 +716,19 @@ void V_CalcRefdef (void)
 					
 					// TEST!!!
 
+					float ground_hit_target;
 					if (!cl.onground)
-						cl.ground_hit_speed = cl.velocity[2];
+						cl.ground_hit_speed = cl.velocity[2] * 0.1;
 					else
+					{
+						if(cl.ground_hit_speed > ground_hit_target)
+							cl.ground_hit_speed -= 0.1;
+						if(cl.ground_hit_speed < ground_hit_target)
+							cl.ground_hit_speed += 0.1;
+
 						vieworg[2] += cl.ground_hit_speed;
+						gunorg[2] += cl.ground_hit_speed;
+					}
 
 					// End of TEST!!!
 					
