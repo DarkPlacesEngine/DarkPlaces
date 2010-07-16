@@ -975,7 +975,6 @@ typedef struct client_state_s
 	float bob2_smooth;
 	
 	float ground_hit_speed;
-	float ground_hit_target;
 
 	// don't change view angle, full screen, etc
 	int intermission;
