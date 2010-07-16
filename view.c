@@ -729,8 +729,8 @@ void V_CalcRefdef (void)
 						if(cl.ground_hit_speed < cl.ground_hit_target)
 							cl.ground_hit_speed += 0.1; // replace 0.1 with cvar
 
-						vieworg[2] += cl.ground_hit_speed;
-						gunorg[2] += cl.ground_hit_speed;
+						vieworg[2] += sin(M_PI + M_PI * cl.ground_hit_speed * 0.2);
+						gunorg[2] += sin(M_PI + M_PI * cl.ground_hit_speed * 0.2);
 					}
 
 					// End of TEST!!!
