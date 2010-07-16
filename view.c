@@ -720,16 +720,17 @@ void V_CalcRefdef (void)
 					if (!cl.onground)
 					{
 						cl.ground_hit_speed = cl.velocity[2] * 0.1; // replace 0.1 with cvar
+						cl.ground_hit_counter = 1;
 					}
 					else
 					{
-						if(cl.ground_hit_speed < 0)
-							cl.ground_hit_speed += 0.1; // replace 0.1 with cvar
+						if(cl.ground_hit_counter > 0)
+							cl.ground_hit_counter -= 0.1; // replace 0.1 with cvar
 						else
-							cl.ground_hit_speed = 0;
+							cl.ground_hit_counter = 0;
 
-						vieworg[2] += sin(M_PI + M_PI * cl.ground_hit_speed * 1);
-						gunorg[2] += sin(M_PI + M_PI * cl.ground_hit_speed * 1);
+						vieworg[2] += sin(M_PI + M_PI * cl.ground_hit_counter) * -cl.ground_hit_speed;
+						gunorg[2] += sin(M_PI + M_PI * cl.ground_hit_counter) * -cl.ground_hit_speed;
 					}
 
 					// End of TEST!!!
