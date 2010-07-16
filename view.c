@@ -42,7 +42,7 @@ cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that ma
 cvar_t cl_bob2 = {CVAR_SAVE, "cl_bob2","0", "sideways view bobbing amount"};
 cvar_t cl_bob2cycle = {CVAR_SAVE, "cl_bob2cycle","0.6", "sideways view bobbing speed"};
 cvar_t cl_bob2smooth = {CVAR_SAVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
-cvar_t cl_bobfall = {CVAR_SAVE, "cl_bobfall","0.05", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
+cvar_t cl_bobfall = {CVAR_SAVE, "cl_bobfall","0", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
 cvar_t cl_bobfallcycle = {CVAR_SAVE, "cl_bobfallcycle","0.025", "speed of the bobfall swing"};
 cvar_t cl_bobfallminspeed = {CVAR_SAVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
@@ -590,7 +590,7 @@ void V_CalcRefdef (void)
 				VectorAdd(vieworg, cl.punchvector, vieworg);
 				if (cl.stats[STAT_HEALTH] > 0)
 				{
-					double xyspeed, bob;
+					double xyspeed, bob, bobfall;
 					float cycle;
 					vec_t frametime;
 
@@ -735,8 +735,9 @@ void V_CalcRefdef (void)
 							else
 								cl.bobfall_swing = 0;
 
-							vieworg[2] += sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
-							gunorg[2] += sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
+							bobfall = sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
+							vieworg[2] += bobfall;
+							gunorg[2] += bobfall;
 						}
 					}
 
