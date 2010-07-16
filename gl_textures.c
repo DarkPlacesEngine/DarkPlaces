@@ -1252,7 +1252,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	dds_height = BuffLittleLong(dds+12);
 	ddspixels = dds + 128;
 
-	flags &= ~TEXF_ALPHA;
+	//flags &= ~TEXF_ALPHA; // disabled, as we DISABLE TEXF_ALPHA in the alpha detection, not enable it!
 	if ((dds_format_flags & 0x40) && BuffLittleLong(dds+88) == 32)
 	{
 		// very sloppy BGRA 32bit identification
@@ -1389,7 +1389,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			mipheight >>= 1;
 	}
 
-	if (dds_miplevels > 1)
+	// when not requesting mipmaps, do not load them
+	if(!(flags & TEXF_MIPMAP))
+		dds_miplevels = 0;
+
+	if (dds_miplevels >= 1)
 		flags |= TEXF_MIPMAP;
 	else
 		flags &= ~TEXF_MIPMAP;
