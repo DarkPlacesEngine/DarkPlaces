@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "polygon.h"
 
 cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
+cvar_t r_mipnormalmaps = {CVAR_SAVE, "r_mipnormalmaps", "1", "mipmaps normalmaps (turning it off looks sharper but may have aliasing)"};
 cvar_t mod_generatelightmaps_unitspersample = {CVAR_SAVE, "mod_generatelightmaps_unitspersample", "8", "lightmap resolution"};
 cvar_t mod_generatelightmaps_borderpixels = {CVAR_SAVE, "mod_generatelightmaps_borderpixels", "2", "extra space around polygons to prevent sampling artifacts"};
 cvar_t mod_generatelightmaps_texturesize = {CVAR_SAVE, "mod_generatelightmaps_texturesize", "1024", "size of lightmap textures"};
@@ -160,6 +161,7 @@ void Mod_Init (void)
 	Mod_SpriteInit();
 
 	Cvar_RegisterVariable(&r_mipskins);
+	Cvar_RegisterVariable(&r_mipnormalmaps);
 	Cvar_RegisterVariable(&mod_generatelightmaps_unitspersample);
 	Cvar_RegisterVariable(&mod_generatelightmaps_borderpixels);
 	Cvar_RegisterVariable(&mod_generatelightmaps_texturesize);
