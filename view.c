@@ -42,8 +42,9 @@ cvar_t cl_bobup = {CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that ma
 cvar_t cl_bob2 = {CVAR_SAVE, "cl_bob2","0", "sideways view bobbing amount"};
 cvar_t cl_bob2cycle = {CVAR_SAVE, "cl_bob2cycle","0.6", "sideways view bobbing speed"};
 cvar_t cl_bob2smooth = {CVAR_SAVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
-cvar_t cl_bobfall = {CVAR_SAVE, "cl_bobfall","0.1", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
+cvar_t cl_bobfall = {CVAR_SAVE, "cl_bobfall","0.05", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
 cvar_t cl_bobfallcycle = {CVAR_SAVE, "cl_bobfallcycle","0.025", "speed of the bobfall swing"};
+cvar_t cl_bobfallminspeed = {CVAR_SAVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
 cvar_t cl_bobmodel = {CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
 cvar_t cl_bobmodel_side = {CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
 cvar_t cl_bobmodel_up = {CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
@@ -722,7 +723,10 @@ void V_CalcRefdef (void)
 						if (!cl.onground)
 						{
 							cl.bobfall_speed = bound(-400, cl.velocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
-							cl.bobfall_swing = 1;
+							if (cl.velocity[2] < -cl_bobfallminspeed.value)
+								cl.bobfall_swing = 1;
+							else
+								cl.bobfall_swing = 0;
 						}
 						else
 						{
@@ -976,6 +980,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bob2smooth);
 	Cvar_RegisterVariable (&cl_bobfall);
 	Cvar_RegisterVariable (&cl_bobfallcycle);
+	Cvar_RegisterVariable (&cl_bobfallminspeed);
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
