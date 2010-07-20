@@ -680,9 +680,9 @@ void V_CalcRefdef (void)
 						cycle = cl.time / cl_bob2cycle.value;
 						cycle -= (int) cycle;
 						if (cycle < 0.5)
-							cycle = sin(M_PI * cycle / 0.5);
+							cycle = cos(M_PI * cycle / 0.5); // cos looks better here with the other view bobbing using sin
 						else
-							cycle = sin(M_PI + M_PI * (cycle-0.5)/0.5);
+							cycle = cos(M_PI + M_PI * (cycle-0.5)/0.5);
 						bob = bound(0, cl_bob2.value, 0.05) * cycle;
 
 						// this value slowly decreases from 1 to 0 when we stop touching the ground.
