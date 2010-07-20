@@ -62,6 +62,7 @@ cvar_t sv_maxairstrafespeed = {0, "sv_maxairstrafespeed", "0", "when set, replac
 cvar_t sv_airstrafeaccel_qw = {0, "sv_airstrafeaccel_qw", "0", "when set, replacement for sv_airaccel_qw when just strafing"};
 cvar_t sv_aircontrol = {0, "sv_aircontrol", "0", "CPMA-style air control"};
 cvar_t sv_aircontrol_power = {0, "sv_aircontrol_power", "2", "CPMA-style air control exponent"};
+cvar_t sv_aircontrol_penalty = {0, "sv_aircontrol_penalty", "0", "deceleration while using CPMA-style air control"};
 cvar_t sv_allowdownloads = {0, "sv_allowdownloads", "1", "whether to allow clients to download files from the server (does not affect http downloads)"};
 cvar_t sv_allowdownloads_archive = {0, "sv_allowdownloads_archive", "0", "whether to allow downloads of archives (pak/pk3)"};
 cvar_t sv_allowdownloads_config = {0, "sv_allowdownloads_config", "0", "whether to allow downloads of config files (cfg)"};
@@ -385,6 +386,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_airspeedlimit_nonqw);
 	Cvar_RegisterVariable (&sv_aircontrol);
 	Cvar_RegisterVariable (&sv_aircontrol_power);
+	Cvar_RegisterVariable (&sv_aircontrol_penalty);
 	Cvar_RegisterVariable (&sv_allowdownloads);
 	Cvar_RegisterVariable (&sv_allowdownloads_archive);
 	Cvar_RegisterVariable (&sv_allowdownloads_config);
@@ -1973,6 +1975,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW] = sv_airstrafeaccel_qw.value;
 	statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
 	statsf[STAT_MOVEVARS_AIRCONTROL_POWER] = sv_aircontrol_power.value;
+	statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY] = sv_aircontrol_penalty.value;
 	statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL] = sv_warsowbunny_airforwardaccel.value;
 	statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL] = sv_warsowbunny_accel.value;
 	statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED] = sv_warsowbunny_topspeed.value;
