@@ -1142,7 +1142,9 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	dot = DotProduct(s->velocity, wishdir);
 
 	if(dot > 0) { // we can't change direction while slowing down
-		k *= cl.movevars_aircontrol*pow(dot, cl.movevars_aircontrol_power)*s->cmd.frametime;
+		k *= pow(dot, cl.movevars_aircontrol_power)*s->cmd.frametime;
+		speed = max(0, speed - cl.movevars_aircontrol_penalty * sqrt(max(0, 1 - dot*dot)) * k/32);
+		k *= cl.movevars_aircontrol;
 		VectorMAM(speed, s->velocity, k, wishdir, s->velocity);
 		VectorNormalize(s->velocity);
 	}
@@ -1478,6 +1480,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccel_qw = cl.statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW];
 		cl.movevars_aircontrol = cl.statsf[STAT_MOVEVARS_AIRCONTROL];
 		cl.movevars_aircontrol_power = cl.statsf[STAT_MOVEVARS_AIRCONTROL_POWER];
+		cl.movevars_aircontrol_penalty = cl.statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY];
 		cl.movevars_warsowbunny_airforwardaccel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL];
 		cl.movevars_warsowbunny_accel = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL];
 		cl.movevars_warsowbunny_topspeed = cl.statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED];
@@ -1513,6 +1516,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_airstrafeaccel_qw = 0;
 		cl.movevars_aircontrol = 0;
 		cl.movevars_aircontrol_power = 2;
+		cl.movevars_aircontrol_penalty = 0;
 		cl.movevars_warsowbunny_airforwardaccel = 0;
 		cl.movevars_warsowbunny_accel = 0;
 		cl.movevars_warsowbunny_topspeed = 0;
