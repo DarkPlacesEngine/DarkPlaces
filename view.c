@@ -736,7 +736,7 @@ void V_CalcRefdef (void)
 							else
 								cl.bobfall_swing = 0;
 
-							bobfall = sin(M_PI + M_PI * cl.bobfall_swing) * -cl.bobfall_speed;
+							bobfall = sin(M_PI * cl.bobfall_swing) * cl.bobfall_speed;
 							vieworg[2] += bobfall;
 							gunorg[2] += bobfall;
 						}
