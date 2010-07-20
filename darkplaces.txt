@@ -410,24 +410,24 @@ cl_leanmodel                                      0                   enables gu
 cl_leanmodel_side_speed                           0.7                 gun leaning sideways speed
 cl_leanmodel_side_limit                           35                  gun leaning sideways limit
 cl_leanmodel_side_highpass1                       30                  gun leaning sideways pre-highpass in 1/s
-cl_leanmodel_side_highpass                        5                   gun leaning sideways highpass in 1/s
-cl_leanmodel_side_lowpass                         30                  gun leaning sideways lowpass in 1/s
+cl_leanmodel_side_highpass                        3                   gun leaning sideways highpass in 1/s
+cl_leanmodel_side_lowpass                         20                  gun leaning sideways lowpass in 1/s
 cl_leanmodel_up_speed                             0.65                gun leaning upward speed
 cl_leanmodel_up_limit                             50                  gun leaning upward limit
 cl_leanmodel_up_highpass1                         5                   gun leaning upward pre-highpass in 1/s
 cl_leanmodel_up_highpass                          15                  gun leaning upward highpass in 1/s
-cl_leanmodel_up_lowpass                           30                  gun leaning upward lowpass in 1/s
+cl_leanmodel_up_lowpass                           20                  gun leaning upward lowpass in 1/s
 cl_followmodel                                    0                   enables gun following
 cl_followmodel_side_speed                         0.25                gun following sideways speed
 cl_followmodel_side_limit                         6                   gun following sideways limit
 cl_followmodel_side_highpass1                     30                  gun following sideways pre-highpass in 1/s
 cl_followmodel_side_highpass                      5                   gun following sideways highpass in 1/s
-cl_followmodel_side_lowpass                       30                  gun following sideways lowpass in 1/s
+cl_followmodel_side_lowpass                       10                  gun following sideways lowpass in 1/s
 cl_followmodel_up_speed                           0.5                 gun following upward speed
 cl_followmodel_up_limit                           5                   gun following upward limit
 cl_followmodel_up_highpass1                       60                  gun following upward pre-highpass in 1/s
-cl_followmodel_up_highpass                        3                   gun following upward highpass in 1/s
-cl_followmodel_up_lowpass                         30                  gun following upward lowpass in 1/s
+cl_followmodel_up_highpass                        2                   gun following upward highpass in 1/s
+cl_followmodel_up_lowpass                         10                  gun following upward lowpass in 1/s
 cl_bobup                                          0.5                 view bobbing adjustment that makes the up or down swing of the bob last longer
 cl_capturevideo                                   0                   enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)
 cl_capturevideo_fps                               30                  how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)
