@@ -1399,8 +1399,14 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 
 			// CPM: air control
 			if(cl.movevars_airstopaccelerate != 0)
-				if(DotProduct(s->velocity, wishdir) < 0)
-					accel = cl.movevars_airstopaccelerate;
+			{
+				vec3_t curdir;
+				curdir[0] = s->velocity[0];
+				curdir[1] = s->velocity[1];
+				curdir[2] = 0;
+				VectorNormalize(curdir);
+				accel = accel + (cl.movevars_airstopaccelerate - accel) * max(0, -DotProduct(curdir, wishdir));
+			}
 			strafity = CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, -90) + CL_IsMoveInDirection(s->cmd.forwardmove, s->cmd.sidemove, +90); // if one is nonzero, other is always zero
 			if(cl.movevars_maxairstrafespeed)
 				wishspeed = min(wishspeed, CL_GeomLerp(cl.movevars_maxairspeed, strafity, cl.movevars_maxairstrafespeed));
