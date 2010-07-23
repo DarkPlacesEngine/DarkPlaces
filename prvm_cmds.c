@@ -3234,7 +3234,7 @@ void VM_precache_pic(void)
 	VM_CheckEmptyString (s);
 
 	// AK Draw_CachePic is supposed to always return a valid pointer
-	if( Draw_CachePic_Flags(s, CACHEPICFLAG_NOTPERSISTENT)->tex == r_texture_notexture )
+	if( Draw_CachePic_Flags(s, 0)->tex == r_texture_notexture )
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
@@ -3689,7 +3689,7 @@ void VM_drawpic(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_Pic(pos[0], pos[1], Draw_CachePic (picname), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	DrawQ_Pic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 /*
@@ -3734,7 +3734,7 @@ void VM_drawrotpic(void)
 	if(pos[2] || size[2] || org[2])
 		Con_Printf("VM_drawrotpic: z value from pos/size/org discarded\n");
 
-	DrawQ_RotPic(pos[0], pos[1], Draw_CachePic(picname), size[0], size[1], org[0], org[1], PRVM_G_FLOAT(OFS_PARM4), rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM6), flag);
+	DrawQ_RotPic(pos[0], pos[1], Draw_CachePic_Flags(picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], org[0], org[1], PRVM_G_FLOAT(OFS_PARM4), rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM6), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 /*
@@ -3782,7 +3782,7 @@ void VM_drawsubpic(void)
 	if(pos[2] || size[2])
 		Con_Printf("VM_drawsubpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
 
-	DrawQ_SuperPic(pos[0], pos[1], Draw_CachePic (picname),
+	DrawQ_SuperPic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT),
 		size[0], size[1],
 		srcPos[0],              srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
 		srcPos[0] + srcSize[0], srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,

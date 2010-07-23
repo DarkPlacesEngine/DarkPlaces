@@ -1459,7 +1459,7 @@ void SHOWLMP_drawall(void)
 	int i;
 	for (i = 0;i < cl.num_showlmps;i++)
 		if (cl.showlmps[i].isactive)
-			DrawQ_Pic(cl.showlmps[i].x, cl.showlmps[i].y, Draw_CachePic (cl.showlmps[i].pic), 0, 0, 1, 1, 1, 1, 0);
+			DrawQ_Pic(cl.showlmps[i].x, cl.showlmps[i].y, Draw_CachePic_Flags (cl.showlmps[i].pic, CACHEPICFLAG_NOTPERSISTENT), 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
