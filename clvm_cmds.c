@@ -3284,7 +3284,7 @@ void Debug_PolygonBegin(const char *picname, int drawflag)
 		Con_Printf("Debug_PolygonBegin: called twice without Debug_PolygonEnd after first\n");
 		return;
 	}
-	debugPolys.begin_texture = picname[0] ? Draw_CachePic (picname)->tex : r_texture_white;
+	debugPolys.begin_texture = picname[0] ? Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT)->tex : r_texture_white;
 	debugPolys.begin_drawflag = drawflag;
 	debugPolys.begin_vertices = 0;
 	debugPolys.begin_active = true;

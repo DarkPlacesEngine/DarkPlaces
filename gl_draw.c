@@ -331,7 +331,11 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
 			if(pic->texflags == texflags)
+			{
+				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
+					pic->autoload = false; // persist it
 				return pic;
+			}
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
@@ -438,7 +442,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 
 cachepic_t *Draw_CachePic (const char *path)
 {
-	return Draw_CachePic_Flags (path, 0);
+	return Draw_CachePic_Flags (path, 0); // default to persistent!
 }
 
 int draw_frame = 1;
