@@ -348,5 +348,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 void FindFraction(double val, int *num, int *denom, int denomMax);
 
+// decodes XPM file to XPM array (as if #include'd)
+char **XPM_DecodeString(const char *in);
+
 #endif
 

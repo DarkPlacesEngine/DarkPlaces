@@ -815,6 +815,8 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	XVisualInfo *visinfo;
 	int MajorVersion, MinorVersion;
 	const char *drivername;
+	char *xpm;
+	char **idata;
 
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
@@ -997,11 +999,21 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, mode->width, mode->height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
+	xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
+	idata = NULL;
+	if(xpm)
+		idata = XPM_DecodeString(xpm);
+	if(!idata)
+		idata = ENGINE_ICON;
+
 	wmhints = XAllocWMHints();
 	if(XpmCreatePixmapFromData(vidx11_display, win,
-		(gamemode == GAME_NEXUIZ) ? nexuiz_xpm : darkplaces_xpm,
+		idata,
 		&wmhints->icon_pixmap, &wmhints->icon_mask, NULL) == XpmSuccess)
 		wmhints->flags |= IconPixmapHint | IconMaskHint;
+
+	if(xpm)
+		Mem_Free(xpm);
 
 	clshints = XAllocClassHint();
 	clshints->res_name = strdup(gamename);

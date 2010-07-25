@@ -549,9 +549,19 @@ static void VID_SetIcon(void)
 	int thenone = -1;
 	static SDL_Color palette[256];
 	unsigned short palenc[256]; // store color id by char
+	char *xpm;
+	char **idata, *data;
 
-	char **idata = ENGINE_ICON;
-	char *data = idata[0];
+	xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
+	idata = NULL;
+	if(xpm)
+		idata = XPM_DecodeString(xpm);
+	if(!idata)
+		idata = ENGINE_ICON;
+	if(xpm)
+		Mem_Free(xpm);
+
+	data = idata[0];
 
 	if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) != 4)
 	{

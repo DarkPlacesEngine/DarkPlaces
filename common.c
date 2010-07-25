@@ -2228,3 +2228,31 @@ void FindFraction(double val, int *num, int *denom, int denomMax)
 		}
 	}
 }
+
+// decodes an XPM from C syntax
+char **XPM_DecodeString(const char *in)
+{
+	static char *tokens[257];
+	static char lines[257][512];
+	size_t line = 0;
+
+	// skip until "{" token
+	while(COM_ParseToken_QuakeC(&in, false) && strcmp(com_token, "{"));
+
+	// now, read in succession: string, comma-or-}
+	while(COM_ParseToken_QuakeC(&in, false))
+	{
+		tokens[line] = lines[line];
+		strlcpy(lines[line++], com_token, sizeof(lines[0]));
+		if(!COM_ParseToken_QuakeC(&in, false))
+			return NULL;
+		if(!strcmp(com_token, "}"))
+			break;
+		if(strcmp(com_token, ","))
+			return NULL;
+		if(line >= sizeof(tokens) / sizeof(tokens[0]))
+			return NULL;
+	}
+
+	return tokens;
+}
