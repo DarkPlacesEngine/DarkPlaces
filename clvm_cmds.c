@@ -2954,6 +2954,7 @@ typedef struct vmpolygons_triangle_s
 {
 	rtexture_t		*texture;
 	int				drawflag;
+	qboolean hasalpha;
 	unsigned short	elements[3];
 }vmpolygons_triangle_t;
 
@@ -2981,6 +2982,7 @@ typedef struct vmpolygons_s
 	float			begin_vertex[VMPOLYGONS_MAXPOINTS][3];
 	float			begin_color[VMPOLYGONS_MAXPOINTS][4];
 	float			begin_texcoord[VMPOLYGONS_MAXPOINTS][2];
+	qboolean		begin_texture_hasalpha;
 } vmpolygons_t;
 
 // FIXME: make VM_CL_R_Polygon functions use Debug_Polygon functions?
@@ -3072,18 +3074,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 		int numtriangles = 0;
 		rtexture_t *tex = polys->data_triangles[surfacelist[surfacelistindex]].texture;
 		int drawflag = polys->data_triangles[surfacelist[surfacelistindex]].drawflag;
-		// this can't call _DrawQ_ProcessDrawFlag, but should be in sync with it
-		// FIXME factor this out
-		if(drawflag == DRAWFLAG_ADDITIVE)
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else if(drawflag == DRAWFLAG_MODULATE)
-			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-		else if(drawflag == DRAWFLAG_2XMODULATE)
-			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
-		else if(drawflag == DRAWFLAG_SCREEN)
-			GL_BlendFunc(GL_ONE_MINUS_DST_COLOR,GL_ONE);
-		else
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		DrawQ_ProcessDrawFlag(drawflag, polys->data_triangles[surfacelist[surfacelistindex]].hasalpha);
 		R_SetupShader_Generic(tex, NULL, GL_MODULATE, 1);
 		numtriangles = 0;
 		for (;surfacelistindex < numsurfaces;surfacelistindex++)
@@ -3099,6 +3090,15 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 
 void VMPolygons_Store(vmpolygons_t *polys)
 {
+	qboolean hasalpha;
+	int i;
+
+	// detect if we have alpha
+	hasalpha = polys->begin_texture_hasalpha;
+	for(i = 0; !hasalpha && (i < polys->begin_vertices); ++i)
+		if(polys->begin_color[i][3] < 1)
+			hasalpha = true;
+
 	if (r_refdef.draw2dstage)
 	{
 		// draw the polygon as 2D immediately
@@ -3111,7 +3111,7 @@ void VMPolygons_Store(vmpolygons_t *polys)
 		mesh.data_vertex3f = polys->begin_vertex[0];
 		mesh.data_color4f = polys->begin_color[0];
 		mesh.data_texcoord2f = polys->begin_texcoord[0];
-		DrawQ_Mesh(&mesh, polys->begin_drawflag);
+		DrawQ_Mesh(&mesh, polys->begin_drawflag, hasalpha);
 	}
 	else
 	{
@@ -3138,6 +3138,7 @@ void VMPolygons_Store(vmpolygons_t *polys)
 				polys->data_triangles[polys->num_triangles].elements[0] = polys->num_vertices;
 				polys->data_triangles[polys->num_triangles].elements[1] = polys->num_vertices + i+1;
 				polys->data_triangles[polys->num_triangles].elements[2] = polys->num_vertices + i+2;
+				polys->data_triangles[polys->num_triangles].hasalpha = hasalpha;
 				polys->num_triangles++;
 			}
 			polys->num_vertices += polys->begin_vertices;
@@ -3221,6 +3222,7 @@ void VM_CL_R_PolygonBegin (void)
 	}
 
 	polys->begin_texture = (sf && sf->base) ? sf->base : r_texture_white;
+	polys->begin_texture_hasalpha = (sf && sf->base) ? sf->hasalpha : false;
 	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1) & DRAWFLAG_MASK;
 	polys->begin_vertices = 0;
 	polys->begin_active = true;

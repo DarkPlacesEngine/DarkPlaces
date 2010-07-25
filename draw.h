@@ -39,6 +39,8 @@ typedef struct cachepic_s
 	rtexture_t *tex;
 	// used for hash lookups
 	struct cachepic_s *chain;
+	// has alpha?
+	qboolean hasalpha;
 	// name of pic
 	char name[MAX_QPATH];
 }
@@ -169,7 +171,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 // draw a very fancy pic (per corner texcoord/color control), the order is tl, tr, bl, br
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags);
 // draw a triangle mesh
-void DrawQ_Mesh(drawqueuemesh_t *mesh, int flags);
+void DrawQ_Mesh(drawqueuemesh_t *mesh, int flags, qboolean hasalpha);
 // set the clipping area
 void DrawQ_SetClipArea(float x, float y, float width, float height);
 // reset the clipping area
@@ -180,6 +182,7 @@ void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, fl
 void DrawQ_LineLoop(drawqueuemesh_t *mesh, int flags);
 // resets r_refdef.draw2dstage
 void DrawQ_Finish(void);
+void DrawQ_ProcessDrawFlag(int flags, qboolean alpha); // sets GL_DepthMask and GL_BlendFunc
 
 void R_DrawGamma(void);
 

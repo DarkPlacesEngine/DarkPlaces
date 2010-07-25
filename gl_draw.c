@@ -318,6 +318,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	unsigned char *lmpdata;
 	char lmpname[MAX_QPATH];
 	int texflags;
+	int j;
 
 	texflags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
@@ -359,6 +360,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		return pic;
 	}
 
+	pic->hasalpha = true; // assume alpha unless we know it has none
 	pic->texflags = texflags;
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
@@ -368,10 +370,23 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer, NULL);
 	if (pixels)
 	{
+		pic->hasalpha = false;
+		if (pic->texflags & TEXF_ALPHA)
+		{
+			for (j = 3;j < image_width * image_height * 4;j += 4)
+			{
+				if (pixels[j] < 255)
+				{
+					pic->hasalpha = true;
+					break;
+				}
+			}
+		}
+
 		pic->width = image_width;
 		pic->height = image_height;
 		if (!pic->autoload)
-			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, TEXTYPE_BGRA, pic->texflags, -1, NULL);
+			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
 	}
 	else
 	{
@@ -964,7 +979,7 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap, NULL, NULL);
 }
 
-void _DrawQ_Setup(void)
+static void _DrawQ_Setup(void)
 {
 	r_viewport_t viewport;
 	if (r_refdef.draw2dstage)
@@ -979,39 +994,61 @@ void _DrawQ_Setup(void)
 	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
 	R_EntityMatrix(&identitymatrix);
 
-	GL_DepthMask(true);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
 	GL_Color(1,1,1,1);
 	GL_AlphaTest(false);
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 qboolean r_draw2d_force = false;
-static void _DrawQ_ProcessDrawFlag(int flags)
+void _DrawQ_SetupAndProcessDrawFlag(int flags, cachepic_t *pic, float alpha)
 {
 	_DrawQ_Setup();
 	CHECKGLERROR
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
+	DrawQ_ProcessDrawFlag(flags, (alpha < 1) || (pic && pic->hasalpha));
+}
+void DrawQ_ProcessDrawFlag(int flags, qboolean alpha)
+{
 	if(flags == DRAWFLAG_ADDITIVE)
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	{
+		GL_DepthMask(false);
+		GL_BlendFunc(alpha ? GL_SRC_ALPHA : GL_ONE, GL_ONE);
+	}
 	else if(flags == DRAWFLAG_MODULATE)
+	{
+		GL_DepthMask(false);
 		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+	}
 	else if(flags == DRAWFLAG_2XMODULATE)
-		GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
+	{
+		GL_DepthMask(false);
+		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+	}
 	else if(flags == DRAWFLAG_SCREEN)
-		GL_BlendFunc(GL_ONE_MINUS_DST_COLOR,GL_ONE);
-	else
+	{
+		GL_DepthMask(false);
+		GL_BlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE);
+	}
+	else if(alpha)
+	{
+		GL_DepthMask(false);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	else
+	{
+		GL_DepthMask(true);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+	}
 }
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
 	float floats[20];
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, pic, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -1069,7 +1106,7 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	float sinar = sin(ar);
 	float cosar = cos(ar);
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, pic, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -1120,7 +1157,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 {
 	float floats[12];
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -1440,7 +1477,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	if (maxlen < 1)
 		maxlen = 1<<30;
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, 0);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return startx + DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, &maxlen, w, h, sw, sh, NULL, ignorecolorcodes, fnt, 1000000000);
 
@@ -1780,7 +1817,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 {
 	float floats[36];
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, pic, a1*a2*a3*a4);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -1816,11 +1853,13 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
 }
 
-void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
+void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
 {
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_Setup();
+	CHECKGLERROR
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
+	DrawQ_ProcessDrawFlag(flags, hasalpha);
 
 	R_Mesh_VertexPointer(mesh->data_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(mesh->data_color4f, 0, 0);
@@ -1835,7 +1874,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 {
 	int num;
 
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, 1);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -1855,7 +1894,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 //[515]: this is old, delete
 void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
 {
-	_DrawQ_ProcessDrawFlag(flags);
+	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
