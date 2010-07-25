@@ -1921,8 +1921,8 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	// OGL uses top to bottom
 	ix = (int)(0.5 + x * ((float)vid.width / vid_conwidth.integer));
 	iy = (int)(0.5 + y * ((float) vid.height / vid_conheight.integer));
-	iw = (int)(width * ((float)vid.width / vid_conwidth.integer));
-	ih = (int)(height * ((float)vid.height / vid_conheight.integer));
+	iw = (int)(0.5 + (x+width) * ((float)vid.width / vid_conwidth.integer)) - ix;
+	ih = (int)(0.5 + (y+height) * ((float) vid.height / vid_conheight.integer)) - iy;
 	GL_Scissor(ix, vid.height - iy - ih, iw, ih);
 
 	GL_ScissorTest(true);
