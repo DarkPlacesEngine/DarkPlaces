@@ -622,17 +622,10 @@ void CL_Input (void)
 	}
 
 	// if not in menu, apply mouse move to viewangles/movement
-	if (!key_consoleactive && key_dest == key_game && !cl.csqc_wantsmousemove)
+	if (!key_consoleactive && key_dest == key_game && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0)
 	{
 		float modulatedsensitivity = sensitivity.value * cl.sensitivityscale;
-		if (cl_prydoncursor.integer > 0)
-		{
-			// mouse interacting with the scene, mostly stationary view
-			V_StopPitchDrift();
-			cl.cmd.cursor_screen[0] += in_mouse_x * modulatedsensitivity / vid.width;
-			cl.cmd.cursor_screen[1] += in_mouse_y * modulatedsensitivity / vid.height;
-		}
-		else if (in_strafe.state & 1)
+		if (in_strafe.state & 1)
 		{
 			// strafing mode, all looking is movement
 			V_StopPitchDrift();
@@ -660,7 +653,13 @@ void CL_Input (void)
 		}
 	}
 	else // don't pitch drift when csqc is controlling the mouse
+	{
+		// mouse interacting with the scene, mostly stationary view
 		V_StopPitchDrift();
+		// update prydon cursor
+		cl.cmd.cursor_screen[0] = in_windowmouse_x * 2.0 / vid.width - 1.0;
+		cl.cmd.cursor_screen[1] = in_windowmouse_y * 2.0 / vid.height - 1.0;
+	}
 
 	if(v_flipped.integer)
 	{
