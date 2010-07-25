@@ -404,9 +404,6 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 	float m[16];
 	memset(v, 0, sizeof(*v));
 
-	if(v_flipped.integer)
-		frustumx = -frustumx;
-
 	v->type = R_VIEWPORTTYPE_PERSPECTIVE;
 	v->cameramatrix = *cameramatrix;
 	v->x = x;
@@ -432,6 +429,14 @@ void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlaneFloatGL(v, m, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
 
+	if(v_flipped.integer)
+	{
+		m[0] = -m[0];
+		m[4] = -m[4];
+		m[8] = -m[8];
+		m[12] = -m[12];
+	}
+
 	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, m);
 }
 
@@ -441,9 +446,6 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 	const float nudge = 1.0 - 1.0 / (1<<23);
 	float m[16];
 	memset(v, 0, sizeof(*v));
-
-	if(v_flipped.integer)
-		frustumx = -frustumx;
 
 	v->type = R_VIEWPORTTYPE_PERSPECTIVE_INFINITEFARCLIP;
 	v->cameramatrix = *cameramatrix;
@@ -469,6 +471,14 @@ void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *came
 
 	if (nearplane)
 		R_Viewport_ApplyNearClipPlaneFloatGL(v, m, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
+
+	if(v_flipped.integer)
+	{
+		m[0] = -m[0];
+		m[4] = -m[4];
+		m[8] = -m[8];
+		m[12] = -m[12];
+	}
 
 	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, m);
 }
