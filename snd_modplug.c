@@ -81,6 +81,9 @@ void ModPlug_CloseLibrary (void)
 			int mBits;           /* Bits per sample - 8, 16, or 32 */
 			int mFrequency;      /* Sampling rate - 11025, 22050, or 44100 */
 			int mResamplingMode; /* One of MODPLUG_RESAMPLE_*, above */
+
+			int mStereoSeparation; /* Stereo separation, 1 - 256 */
+			int mMaxMixChannels; /* Maximum number of mixing channels (polyphony), 32 - 256 */
 			
 			int mReverbDepth;    /* Reverb level 0(quiet)-100(loud)      */
 			int mReverbDelay;    /* Reverb delay in ms, usually 40-200ms */
@@ -141,12 +144,12 @@ qboolean ModPlug_OpenLibrary (void)
 	const char* dllnames_modplug [] =
 	{
 #if defined(WIN32)
-		"libmodplug-0.dll",
+		"libmodplug-1.dll",
 		"modplug.dll",
 #elif defined(MACOSX)
 		"libmodplug.dylib",
 #else
-		"libmodplug.so.0",
+		"libmodplug.so.1",
 		"libmodplug.so",
 #endif
 		NULL
