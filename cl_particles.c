@@ -842,7 +842,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 		{
 			// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
 			if (count == 1024)
-				CL_ParticleExplosion(center);
+				CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
 			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
 				CL_ParticleEffect(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
 			else
