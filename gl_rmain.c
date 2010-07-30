@@ -9520,6 +9520,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		}
 		else if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
 		{
+			// don't colormod customblend textures
+			VectorSet(t->lightmapcolor, 1, 1, 1);
 			blendfunc1 = t->customblendfunc[0];
 			blendfunc2 = t->customblendfunc[1];
 		}
