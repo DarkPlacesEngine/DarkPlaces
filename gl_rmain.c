@@ -10442,6 +10442,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	}
 
 	Vector4Set(t->lightmapcolor, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2], t->currentalpha);
+	// don't colormod customblend textures
+	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
+		VectorSet(t->lightmapcolor, 1, 1, 1);
 	VectorClear(t->dlightcolor);
 	t->currentnumlayers = 0;
 	if (t->currentmaterialflags & MATERIALFLAG_WALL)
@@ -10460,8 +10463,6 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		}
 		else if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
 		{
-			// don't colormod customblend textures
-			VectorSet(t->lightmapcolor, 1, 1, 1);
 			blendfunc1 = t->customblendfunc[0];
 			blendfunc2 = t->customblendfunc[1];
 		}
