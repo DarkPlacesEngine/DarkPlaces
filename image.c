@@ -416,7 +416,7 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
-	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	if (image_width > 32768 || image_height > 32768 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Print("LoadTGA: invalid size\n");
 		PrintTargaHeader(&targa_header);
@@ -759,7 +759,7 @@ unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize, int *miplevel
 
 	image_width = LittleLong(inwal->width);
 	image_height = LittleLong(inwal->height);
-	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	if (image_width > 32768 || image_height > 32768 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf("LoadWAL: invalid size %ix%i\n", image_width, image_height);
 		return NULL;
