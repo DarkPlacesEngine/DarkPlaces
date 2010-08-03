@@ -219,7 +219,7 @@ unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize, int *miplevel
 
 	image_width = pcx.xmax + 1 - pcx.xmin;
 	image_height = pcx.ymax + 1 - pcx.ymin;
-	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || image_width > 32768 || image_height > 32768 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Print("Bad pcx file\n");
 		return NULL;
