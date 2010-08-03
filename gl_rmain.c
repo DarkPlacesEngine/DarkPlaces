@@ -5261,6 +5261,101 @@ extern rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 extern cvar_t gl_mesh_separatearrays;
+static qboolean R_BlendFuncAllowsColormod(int src, int dst)
+{
+	// a blendfunc allows colormod if:
+	// a) it can never keep the destination pixel invariant, or
+	// b) it can keep the destination pixel invariant, and still can do so if colormodded
+	// this is to prevent unintended side effects from colormod
+
+	// in formulas:
+	// IF there is a (s, sa) for which for all (d, da),
+	//   s * src(s, d, sa, da) + d * dst(s, d, sa, da) == d
+	// THEN, for this (s, sa) and all (colormod, d, da):
+	//   s*colormod * src(s*colormod, d, sa, da) + d * dst(s*colormod, d, sa, da) == d
+	// OBVIOUSLY, this means that
+	//   s*colormod * src(s*colormod, d, sa, da) = 0
+	//   dst(s*colormod, d, sa, da)              = 1
+
+	// note: not caring about GL_SRC_ALPHA_SATURATE and following here, these are unused in DP code
+
+	// main condition to leave dst color invariant:
+	//   s * src(s, d, sa, da) + d * dst(s, d, sa, da) == d
+	//   src == GL_ZERO:
+	//     s * 0 + d * dst(s, d, sa, da) == d
+	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is a problem for GL_SRC_COLOR only
+	//   src == GL_ONE:
+	//     s + d * dst(s, d, sa, da) == d
+	//       => s == 0
+	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is never problematic for these
+	//   src == GL_SRC_COLOR:
+	//     s*s + d * dst(s, d, sa, da) == d
+	//       => s == 0
+	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is never problematic for these
+	//   src == GL_ONE_MINUS_SRC_COLOR:
+	//     s*(1-s) + d * dst(s, d, sa, da) == d
+	//       => s == 0 or s == 1
+	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is a problem for GL_SRC_COLOR only
+	//   src == GL_DST_COLOR
+	//     s*d + d * dst(s, d, sa, da) == d
+	//       => s == 1
+	//       => dst == GL_ZERO/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is always a problem
+	//     or
+	//       => s == 0
+	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is never problematic for these
+	//       => BUT, we do not know s! We must assume it is problematic
+	//       then... except in GL_ONE case, where we know all invariant
+	//       cases are fine
+	//   src == GL_ONE_MINUS_DST_COLOR
+	//     s*(1-d) + d * dst(s, d, sa, da) == d
+	//       => s == 0 (1-d is impossible to handle for our desired result)
+	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is never problematic for these
+	//   src == GL_SRC_ALPHA
+	//     s*sa + d * dst(s, d, sa, da) == d
+	//       => s == 0, or sa == 0
+	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod breaks in the case GL_SRC_COLOR only
+	//   src == GL_ONE_MINUS_SRC_ALPHA
+	//     s*(1-sa) + d * dst(s, d, sa, da) == d
+	//       => s == 0, or sa == 1
+	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod breaks in the case GL_SRC_COLOR only
+	//   src == GL_DST_ALPHA
+	//     s*da + d * dst(s, d, sa, da) == d
+	//       => s == 0
+	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
+	//       => colormod is never problematic for these
+
+	switch(src)
+	{
+		case GL_ZERO:
+		case GL_ONE_MINUS_SRC_COLOR:
+		case GL_SRC_ALPHA:
+		case GL_ONE_MINUS_SRC_ALPHA:
+			if(dst == GL_SRC_COLOR)
+				return false;
+			return true;
+		case GL_ONE:
+		case GL_SRC_COLOR:
+		case GL_ONE_MINUS_DST_COLOR:
+		case GL_DST_ALPHA:
+		case GL_ONE_MINUS_DST_ALPHA:
+			return true;
+		case GL_DST_COLOR:
+			if(dst == GL_ONE)
+				return true;
+			return false;
+		default:
+			return false;
+	}
+}
 void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane)
 {
 	// select a permutation of the lighting shader appropriate to this
@@ -5269,6 +5364,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	// fragment shader on features that are not being used
 	unsigned int permutation = 0;
 	unsigned int mode = 0;
+	qboolean allow_colormod;
+	static float dummy_colormod[3] = {1, 1, 1};
+	float *colormod = rsurface.colormod;
 	float m16f[16];
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
 	if (rsurfacepass == RSURFPASS_BACKGROUND)
@@ -5285,6 +5383,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		GL_AlphaTest(false);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
+		allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
 	{
@@ -5311,6 +5410,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		GL_AlphaTest(false);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
+		allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_RTLIGHT)
 	{
@@ -5369,6 +5469,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
@@ -5417,6 +5518,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT_DIRECTIONAL)
 	{
@@ -5473,6 +5575,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
@@ -5522,6 +5625,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else
 	{
@@ -5607,7 +5711,10 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		GL_AlphaTest((rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
+	if(!allow_colormod)
+		colormod = dummy_colormod;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
@@ -5638,8 +5745,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			hlslPSSetParameter3f(D3DPSREGISTER_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
 			hlslPSSetParameter3f(D3DPSREGISTER_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
-			hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);
-			hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, rsurface.colormod[0] * diffusescale, rsurface.colormod[1] * diffusescale, rsurface.colormod[2] * diffusescale);
+			hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);
+			hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
 			hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);
 
 			// additive passes are only darkened by fog, not tinted
@@ -5650,24 +5757,24 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (mode == SHADERMODE_FLATCOLOR)
 			{
-				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2]);
+				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, colormod[0], colormod[1], colormod[2]);
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * rsurface.colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * rsurface.colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * rsurface.colormod[2]);
-				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, r_refdef.lightmapintensity * rsurface.colormod[0], r_refdef.lightmapintensity * rsurface.colormod[1], r_refdef.lightmapintensity * rsurface.colormod[2]);
+				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);
+				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, rsurface.colormod[0] * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
 				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
 			else
 			{
-				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, r_refdef.scene.ambient * rsurface.colormod[0], r_refdef.scene.ambient * rsurface.colormod[1], r_refdef.scene.ambient * rsurface.colormod[2]);
+				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, rsurface.colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
 				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
@@ -5777,8 +5884,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_glsl_permutation->loc_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToLight, 1, false, m16f);}
 			if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
 			if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
-			if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);
-			if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, rsurface.colormod[0] * diffusescale, rsurface.colormod[1] * diffusescale, rsurface.colormod[2] * diffusescale);
+			if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);
+			if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
 			if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);
 	
 			// additive passes are only darkened by fog, not tinted
@@ -5790,24 +5897,24 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (mode == SHADERMODE_FLATCOLOR)
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, colormod[0], colormod[1], colormod[2]);
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * rsurface.colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * rsurface.colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * rsurface.colormod[2]);
-				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * rsurface.colormod[0], r_refdef.lightmapintensity * rsurface.colormod[1], r_refdef.lightmapintensity * rsurface.colormod[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);
+				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, rsurface.colormod[0] * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
 				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
 			else
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * rsurface.colormod[0], r_refdef.scene.ambient * rsurface.colormod[1], r_refdef.scene.ambient * rsurface.colormod[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, rsurface.colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
@@ -5949,8 +6056,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (r_cg_permutation->fp_LightPosition) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);CHECKCGERROR
 			if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKCGERROR
-			if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0] * ambientscale, rsurface.colormod[1] * ambientscale, rsurface.colormod[2] * ambientscale);CHECKCGERROR
-			if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.colormod[0] * diffusescale, rsurface.colormod[1] * diffusescale, rsurface.colormod[2] * diffusescale);CHECKCGERROR
+			if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);CHECKCGERROR
+			if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);CHECKCGERROR
 			if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);CHECKCGERROR
 
 			// additive passes are only darkened by fog, not tinted
@@ -5961,24 +6068,24 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (mode == SHADERMODE_FLATCOLOR)
 			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, colormod[0], colormod[1], colormod[2]);CHECKCGERROR
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * rsurface.colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * rsurface.colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * rsurface.colormod[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, r_refdef.lightmapintensity * rsurface.colormod[0], r_refdef.lightmapintensity * rsurface.colormod[1], r_refdef.lightmapintensity * rsurface.colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);CHECKCGERROR
 				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * r_shadow_deferred_8bitrange.value);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);CHECKCGERROR
 				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
 				if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);CHECKCGERROR
 				if (r_cg_permutation->fp_LightDir) cgGLSetParameter3f(r_cg_permutation->fp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
 			}
 			else
 			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, r_refdef.scene.ambient * rsurface.colormod[0], r_refdef.scene.ambient * rsurface.colormod[1], r_refdef.scene.ambient * rsurface.colormod[2]);CHECKCGERROR
+				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);CHECKCGERROR
 				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);CHECKCGERROR
 				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, rsurface.colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, rsurface.colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
+				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
 				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
 			}
 			// additive passes are only darkened by fog, not tinted
@@ -10442,9 +10549,6 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	}
 
 	Vector4Set(t->lightmapcolor, rsurface.colormod[0], rsurface.colormod[1], rsurface.colormod[2], t->currentalpha);
-	// don't colormod customblend textures
-	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
-		VectorSet(t->lightmapcolor, 1, 1, 1);
 	VectorClear(t->dlightcolor);
 	t->currentnumlayers = 0;
 	if (t->currentmaterialflags & MATERIALFLAG_WALL)
@@ -10471,6 +10575,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			blendfunc1 = GL_ONE;
 			blendfunc2 = GL_ZERO;
 		}
+		// don't colormod evilblend textures
+		if(!R_BlendFuncAllowsColormod(blendfunc1, blendfunc2))
+			VectorSet(t->lightmapcolor, 1, 1, 1);
 		depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
 		if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 		{
