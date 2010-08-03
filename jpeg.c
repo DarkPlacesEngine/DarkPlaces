@@ -626,7 +626,7 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize, int *m
 	image_width = cinfo.output_width;
 	image_height = cinfo.output_height;
 
-	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
+	if (image_width > 32768 || image_height > 32768 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf("JPEG_LoadImage: invalid image size %ix%i\n", image_width, image_height);
 		return NULL;
