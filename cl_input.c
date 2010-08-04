@@ -1750,10 +1750,13 @@ void CL_SendMove(void)
 	if (in_button16.state  & 3) bits |= 262144;
 	// button bits 19-31 unused currently
 	// rotate/zoom view serverside if PRYDON_CLIENTCURSOR cursor is at edge of screen
-	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
-	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
-	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
-	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+	if(cl_prydoncursor.integer > 0)
+	{
+		if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
+		if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
+		if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
+		if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
+	}
 
 	// set buttons and impulse
 	cl.cmd.buttons = bits;
