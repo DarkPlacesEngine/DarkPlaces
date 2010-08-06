@@ -27,6 +27,7 @@ cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0",
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
+cvar_t r_texture_dds_load_dxt1_noalpha = {0, "r_texture_dds_load_dxt1_noalpha", "0", "if set, alpha detection on DXT1 is turned off, and DXT1 textures are assumed to never have alpha"};
 
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
@@ -589,6 +590,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
+	Cvar_RegisterVariable (&r_texture_dds_load_dxt1_noalpha);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, NULL, NULL);
 }
@@ -1289,13 +1291,20 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT1 DDS image\n", filename);
 			return NULL;
 		}
-		for (i = 0;i < size;i += bytesperblock)
-			if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
-				break;
-		if (i < size)
-			textype = TEXTYPE_DXT1A;
-		else
+		if(r_texture_dds_load_dxt1_noalpha.integer)
+		{
 			flags &= ~TEXF_ALPHA;
+		}
+		else
+		{
+			for (i = 0;i < size;i += bytesperblock)
+				if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
+					break;
+			if (i < size)
+				textype = TEXTYPE_DXT1A;
+			else
+				flags &= ~TEXF_ALPHA;
+		}
 	}
 	else if (!memcmp(dds+84, "DXT3", 4))
 	{
