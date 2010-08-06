@@ -106,7 +106,7 @@ rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char 
 rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel);
 
 // saves a texture to a DDS file
-int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed);
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);

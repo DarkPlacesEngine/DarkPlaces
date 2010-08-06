@@ -27,7 +27,7 @@ cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0",
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
-cvar_t r_texture_dds_load_dxt1_noalpha = {0, "r_texture_dds_load_dxt1_noalpha", "0", "if set, alpha detection on DXT1 is turned off, and DXT1 textures are assumed to never have alpha"};
+cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "0", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambigous, 2: texture format only"};
 
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
@@ -590,7 +590,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
-	Cvar_RegisterVariable (&r_texture_dds_load_dxt1_noalpha);
+	Cvar_RegisterVariable (&r_texture_dds_load_alphamode);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, NULL, NULL);
 }
@@ -1092,7 +1092,7 @@ rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char 
     return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
-int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed)
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)
 {
 	gltexture_t *glt = (gltexture_t *)rt;
 	unsigned char *dds;
@@ -1167,13 +1167,15 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	else
 	{
 		dds_flags = 0x100F; // DDSD_CAPS | DDSD_PIXELFORMAT | DDSD_WIDTH | DDSD_HEIGHT | DDSD_PITCH
-		dds_format_flags = 0x41; // DDPF_RGB | DDPF_ALPHAPIXELS
+		dds_format_flags = 0x40; // DDPF_RGB
 	}
 	if (mipmaps)
 	{
 		dds_flags |= 0x20000; // DDSD_MIPMAPCOUNT
 		dds_caps1 |= 0x400008; // DDSCAPS_MIPMAP | DDSCAPS_COMPLEX
 	}
+	if(hasalpha)
+		dds_format_flags |= 0x1; // DDPF_ALPHAPIXELS
 	memcpy(dds, "DDS ", 4);
 	StoreLittleLong(dds+4, ddssize);
 	StoreLittleLong(dds+8, dds_flags);
@@ -1254,6 +1256,10 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	dds_height = BuffLittleLong(dds+12);
 	ddspixels = dds + 128;
 
+	if(r_texture_dds_load_alphamode.integer == 0)
+		if(!(dds_format_flags & 0x1)) // DDPF_ALPHAPIXELS
+			flags &= ~TEXF_ALPHA;
+
 	//flags &= ~TEXF_ALPHA; // disabled, as we DISABLE TEXF_ALPHA in the alpha detection, not enable it!
 	if ((dds_format_flags & 0x40) && BuffLittleLong(dds+88) == 32)
 	{
@@ -1268,12 +1274,15 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid BGRA DDS image\n", filename);
 			return NULL;
 		}
-		// check alpha
-		for (i = 3;i < size;i += 4)
-			if (ddspixels[i] < 255)
-				break;
-		if (i >= size)
-			flags &= ~TEXF_ALPHA;
+		if((r_texture_dds_load_alphamode.integer == 1) && (flags & TEXF_ALPHA))
+		{
+			// check alpha
+			for (i = 3;i < size;i += 4)
+				if (ddspixels[i] < 255)
+					break;
+			if (i >= size)
+				flags &= ~TEXF_ALPHA;
+		}
 	}
 	else if (!memcmp(dds+84, "DXT1", 4))
 	{
@@ -1291,19 +1300,23 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT1 DDS image\n", filename);
 			return NULL;
 		}
-		if(r_texture_dds_load_dxt1_noalpha.integer)
+		if(r_texture_dds_load_alphamode.integer && (flags & TEXF_ALPHA))
 		{
-			flags &= ~TEXF_ALPHA;
-		}
-		else
-		{
-			for (i = 0;i < size;i += bytesperblock)
-				if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
-					break;
-			if (i < size)
-				textype = TEXTYPE_DXT1A;
+			if(r_texture_dds_load_alphamode.integer == 1)
+			{
+				// check alpha
+				for (i = 0;i < size;i += bytesperblock)
+					if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
+						break;
+				if (i < size)
+					textype = TEXTYPE_DXT1A;
+				else
+					flags &= ~TEXF_ALPHA;
+			}
 			else
+			{
 				flags &= ~TEXF_ALPHA;
+			}
 		}
 	}
 	else if (!memcmp(dds+84, "DXT3", 4))
@@ -1318,6 +1331,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT3 DDS image\n", filename);
 			return NULL;
 		}
+		// we currently always assume alpha
 	}
 	else if (!memcmp(dds+84, "DXT5", 4))
 	{
@@ -1331,6 +1345,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT5 DDS image\n", filename);
 			return NULL;
 		}
+		// we currently always assume alpha
 	}
 	else
 	{
