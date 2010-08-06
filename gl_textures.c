@@ -1584,5 +1584,5 @@ int R_PicmipForFlags(int flags)
 		else
 			miplevel += gl_picmip_other.integer;
 	}
-	return miplevel;
+	return max(0, miplevel);
 }
