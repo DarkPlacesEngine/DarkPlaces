@@ -1674,7 +1674,8 @@ static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *
 void S_SetChannelVolume(unsigned int ch_ind, float fvol)
 {
 	sfx_t *sfx = channels[ch_ind].sfx;
-	S_SetChannelVolume_WithSfx(ch_ind, fvol, sfx);
+	if(sfx)
+		S_SetChannelVolume_WithSfx(ch_ind, fvol, sfx);
 }
 
 float S_GetChannelPosition (unsigned int ch_ind)
