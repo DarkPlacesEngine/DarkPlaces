@@ -27,7 +27,7 @@ cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0",
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
-cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "0", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambigous, 2: texture format only"};
+cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambigous, 2: texture format only"};
 
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
@@ -1307,7 +1307,13 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 				// check alpha
 				for (i = 0;i < size;i += bytesperblock)
 					if (ddspixels[i+0] + ddspixels[i+1] * 256 <= ddspixels[i+2] + ddspixels[i+3] * 256)
-						break;
+					{
+						// NOTE: this assumes sizeof(unsigned int) == 4
+						unsigned int data = * (unsigned int *) &(ddspixels[i+4]);
+						// check if data, in base 4, contains a digit 3 (DXT1: transparent pixel)
+						if(data & (data<<1) & 0xAAAAAAAA)//rgh
+							break;
+					}
 				if (i < size)
 					textype = TEXTYPE_DXT1A;
 				else
