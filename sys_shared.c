@@ -3,6 +3,10 @@
 #define SUPPORTDLL
 
 #ifdef WIN32
+# ifdef _WIN64
+#  define _WIN32_WINNT 0x0502
+   // for SetDllDirectory
+# endif
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
@@ -124,7 +128,13 @@ notfound:
 	{
 		Con_DPrintf (" \"%s\"", dllnames[i]);
 #ifdef WIN32
+# ifdef _WIN64
+		SetDllDirectory("bin64");
+# endif
 		dllhandle = LoadLibrary (dllnames[i]);
+# ifdef _WIN64
+		SetDllDirectory(NULL);
+# endif
 #else
 		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
