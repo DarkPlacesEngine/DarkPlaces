@@ -1313,7 +1313,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;!ISWHITESPACE(*data) && *data != ',' && *data != ';' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
+		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		com_token[len] = 0;
