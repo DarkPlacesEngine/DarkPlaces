@@ -7382,7 +7382,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_surfaces = 0;
 	// allocate storage for the worst case number of surfaces, later we resize
 	tempsurfaces = (msurface_t *)Mem_Alloc(loadmodel->mempool, numtextures * loadmodel->brush.numsubmodels * sizeof(msurface_t));
-	submodelfirstsurface = Mem_Alloc(loadmodel->mempool, (loadmodel->brush.numsubmodels+1) * sizeof(int));
+	submodelfirstsurface = (int *)Mem_Alloc(loadmodel->mempool, (loadmodel->brush.numsubmodels+1) * sizeof(int));
 	surface = tempsurfaces;
 	for (submodelindex = 0;submodelindex < loadmodel->brush.numsubmodels;submodelindex++)
 	{
