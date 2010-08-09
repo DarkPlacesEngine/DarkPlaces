@@ -955,6 +955,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername)
 {
 	int i;
+	static char stripbuf[MAX_QPATH];
 	skinfileitem_t *skinfileitem;
 	if (skinfile)
 	{
@@ -968,7 +969,8 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 				// leave the skin unitialized (nodraw) if the replacement is "common/nodraw" or "textures/common/nodraw"
 				if (!strcmp(skinfileitem->name, meshname))
 				{
-					Mod_LoadTextureFromQ3Shader(skin, skinfileitem->replacement, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+					Image_StripImageExtension(skinfileitem->replacement, stripbuf, sizeof(stripbuf));
+					Mod_LoadTextureFromQ3Shader(skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
 					break;
 				}
 			}
@@ -981,7 +983,10 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 		}
 	}
 	else
-		Mod_LoadTextureFromQ3Shader(skin, shadername, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+	{
+		Image_StripImageExtension(shadername, stripbuf, sizeof(stripbuf));
+		Mod_LoadTextureFromQ3Shader(skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+	}
 }
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)", loadmodel->name, VALUE, MIN, MAX);
