@@ -17,8 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-#include "quakedef.h"
-#include "snd_main.h"
 
 #ifdef SUPPORTDIRECTX
 #ifndef DIRECTSOUND_VERSION
@@ -30,6 +28,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef SUPPORTDIRECTX
 #include <dsound.h>
 #endif
+
+#include "qtypes.h"
+#include "quakedef.h"
+#include "snd_main.h"
 
 // ==============================================================================
 

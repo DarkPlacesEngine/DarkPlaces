@@ -22,8 +22,6 @@
 		Boston, MA  02111-1307, USA
 */
 
-#include "quakedef.h"
-
 #include <limits.h>
 #include <fcntl.h>
 
@@ -36,6 +34,8 @@
 # include <sys/stat.h>
 # include <unistd.h>
 #endif
+
+#include "quakedef.h"
 
 #include "fs.h"
 #include "wad.h"
