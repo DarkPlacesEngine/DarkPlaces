@@ -1377,6 +1377,8 @@ void FS_Rescan (void)
 		else
 			Con_Print("Playing shareware version.\n");
 		break;
+	default:
+		break;
 	}
 
 	// unload all wads so that future queries will return the new data
