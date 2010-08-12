@@ -1354,18 +1354,29 @@ void FS_Rescan (void)
 		unlink (va("%s/qconsole.log", fs_gamedir));
 
 	// look for the pop.lmp file and set registered to true if it is found
-	if ((gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE) && !FS_FileExists("gfx/pop.lmp"))
+	if (FS_FileExists("gfx/pop.lmp"))
+		Cvar_Set ("registered", "1");
+	switch(gamemode)
 	{
-		if (fs_modified)
-			Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
+	case GAME_NORMAL:
+	case GAME_HIPNOTIC:
+	case GAME_ROGUE:
+		if (!registered.integer)
+		{
+			if (fs_modified)
+				Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
+			else
+				Con_Print("Playing shareware version.\n");
+		}
+		else
+			Con_Print("Playing registered version.\n");
+		break;
+	case GAME_STEELSTORM:
+		if (registered.integer)
+			Con_Print("Playing registered version.\n");
 		else
 			Con_Print("Playing shareware version.\n");
-	}
-	else
-	{
-		Cvar_Set ("registered", "1");
-		if (gamemode == GAME_NORMAL || gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-			Con_Print("Playing registered version.\n");
+		break;
 	}
 
 	// unload all wads so that future queries will return the new data
