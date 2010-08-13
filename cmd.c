@@ -1145,10 +1145,11 @@ static void Cmd_Apropos_f(void)
 	}
 	for (alias = cmd_alias; alias; alias = alias->next)
 	{
+		// procede here a bit differently as an alias value always got a final \n
 		if (!matchpattern_with_separator(alias->name, partial, true, "", false))
-		if (!matchpattern_with_separator(alias->value, partial, true, "", false))
+		if (!matchpattern_with_separator(alias->value, partial, true, "\n", false)) // when \n is as separator wildcards don't match it
 			continue;
-		Con_Printf("alias ^5%s^7: %s", alias->name, alias->value);
+		Con_Printf("alias ^5%s^7: %s", alias->name, alias->value); // do not print an extra \n
 		count++;
 	}
 	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
