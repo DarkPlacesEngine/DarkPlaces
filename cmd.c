@@ -1111,15 +1111,11 @@ static void Cmd_Apropos_f(void)
 	cvar_t *cvar;
 	cmdalias_t *alias;
 	const char *partial;
-	size_t len;
 	int count;
 	qboolean ispattern;
 
 	if (Cmd_Argc() > 1)
-	{
 		partial = Cmd_Args();
-		len = strlen(partial);
-	}
 	else
 	{
 		Con_Printf("usage: apropos <string>\n");
@@ -1128,10 +1124,7 @@ static void Cmd_Apropos_f(void)
 
 	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
 	if(!ispattern)
-	{
 		partial = va("*%s*", partial);
-		len += 2;
-	}
 
 	count = 0;
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
