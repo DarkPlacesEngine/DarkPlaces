@@ -8,6 +8,8 @@ int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 	return matchpattern_with_separator(in, pattern, caseinsensitive, "/\\:", false);
 }
 
+// wildcard_least_one: if true * matches 1 or more characters
+//                     if false * matches 0 or more characters
 int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qboolean wildcard_least_one)
 {
 	int c1, c2;
@@ -25,10 +27,11 @@ int matchpattern_with_separator(const char *in, const char *pattern, int caseins
 			break;
 		case '*': // match anything until following string
 			if(wildcard_least_one)
+			{
 				if (*in == 0 || strchr(separators, *in))
 					return 0; // no match
-			if (!*in)
-				return 1; // match
+				in++;
+			}
 			pattern++;
 			while (*in)
 			{
