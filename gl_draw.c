@@ -331,7 +331,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
-			if(pic->texflags == texflags)
+			if(!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag
 			{
 				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 					pic->autoload = false; // persist it
