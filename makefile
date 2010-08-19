@@ -163,8 +163,10 @@ ifeq ($(WIN32RELEASE), 1)
 #	TARGET=i686-pc-mingw32
 #	CC=$(TARGET)-g++
 #	WINDRES=$(TARGET)-windres
-	CPUOPTIMIZATIONS+=-march=i686 -DUSE_WSPIAPI_H
-	LDFLAGS_WINCOMMON+=-Wl,--large-address-aware
+	CPUOPTIMIZATIONS=-march=i686 -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math -DUSE_WSPIAPI_H
+	LDFLAGS_WINCOMMON=-Wl,--large-address-aware
+else
+	LDFLAGS_WINCOMMON=
 endif
 
 ifeq ($(WIN64RELEASE), 1)
@@ -174,12 +176,13 @@ ifeq ($(WIN64RELEASE), 1)
 endif
 
 ifeq ($(D3D), 1)
-	CPUOPTIMIZATIONS+=-DSUPPORTD3D -DSUPPORTDIRECTX
+	CFLAGS_D3D=-DSUPPORTD3D -DSUPPORTDIRECTX
 	CFLAGS_WARNINGS=-Wall
-	LDFLAGS_WINCOMMON=-ld3d9
+	LDFLAGS_D3D=-ld3d9
 else
+	CFLAGS_D3D=
 	CFLAGS_WARNINGS=-Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
-	LDFLAGS_WINCOMMON=
+	LDFLAGS_D3D=
 endif
 
 
