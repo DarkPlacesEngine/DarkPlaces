@@ -48,9 +48,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "d3d9.lib")
-#endif
 
 cvar_t vid_dx9 = {CVAR_SAVE, "vid_dx9", "0", "use Microsoft Direct3D9(r) for rendering"};
 cvar_t vid_dx9_hal = {CVAR_SAVE, "vid_dx9_hal", "1", "enables hardware rendering (1), otherwise software reference rasterizer (0 - very slow), note that 0 is necessary when using NVPerfHUD (which renders in hardware but requires this option to enable it)"};
@@ -60,18 +57,18 @@ cvar_t vid_dx9_triplebuffer = {CVAR_SAVE, "vid_dx9_triplebuffer", "0", "enables 
 //cvar_t vid_dx11 = {CVAR_SAVE, "vid_dx11", "1", "use Microsoft Direct3D11(r) for rendering"};
 
 D3DPRESENT_PARAMETERS vid_d3dpresentparameters;
+
+// we declare this in vid_shared.c because it is required by dedicated server and all clients when SUPPORTD3D is defined
+extern LPDIRECT3DDEVICE9 vid_d3d9dev;
+
+LPDIRECT3D9 vid_d3d9;
+D3DCAPS9 vid_d3d9caps;
+qboolean vid_d3ddevicelost;
 #endif
 
 extern HINSTANCE global_hInstance;
 
 static HINSTANCE gldll;
-
-#ifdef SUPPORTD3D
-LPDIRECT3D9 vid_d3d9;
-LPDIRECT3DDEVICE9 vid_d3d9dev;
-D3DCAPS9 vid_d3d9caps;
-qboolean vid_d3ddevicelost;
-#endif
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL                   0x020A
