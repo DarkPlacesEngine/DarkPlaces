@@ -6,15 +6,6 @@
 #include <Cg/cgGL.h>
 #endif
 
-#ifdef SUPPORTD3D
-#include <d3d9.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "d3d9.lib")
-#endif
-
-LPDIRECT3DDEVICE9 vid_d3d9dev;
-#endif
-
 // global video state
 viddef_t vid;
 
