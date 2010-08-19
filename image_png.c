@@ -126,6 +126,7 @@ qboolean PNG_OpenLibrary (void)
 	const char* dllnames [] =
 	{
 #if WIN32
+		"libpng14-14.dll",
 		"libpng14.dll",
 		"libpng12.dll",
 #elif defined(MACOSX)
