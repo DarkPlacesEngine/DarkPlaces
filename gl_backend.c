@@ -45,7 +45,7 @@ int gl_maxdrawrangeelementsindices;
 #ifdef DEBUGGL
 int errornumber = 0;
 
-void GL_PrintError(int errornumber, char *filename, int linenumber)
+void GL_PrintError(int errornumber, const char *filename, int linenumber)
 {
 	switch(errornumber)
 	{

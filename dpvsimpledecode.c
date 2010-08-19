@@ -333,7 +333,7 @@ static int dpvsimpledecode_setpixelformat(dpvsimpledecodestream_t *s, unsigned i
 // opening and closing streams
 
 // opens a stream
-void *dpvsimpledecode_open(char *filename, char **errorstring)
+void *dpvsimpledecode_open(char *filename, const char **errorstring)
 {
 	dpvsimpledecodestream_t *s;
 	char t[8], *wavename;
@@ -437,7 +437,7 @@ void dpvsimpledecode_close(void *stream)
 // number to DPVSIMPLEDECODEERROR_NONE
 // if the supplied string pointer variable is not NULL, it will be set to the
 // error message
-int dpvsimpledecode_error(void *stream, char **errorstring)
+int dpvsimpledecode_error(void *stream, const char **errorstring)
 {
 	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	int e;

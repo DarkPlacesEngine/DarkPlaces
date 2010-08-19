@@ -220,7 +220,7 @@ extern unsigned int r_queries[MAX_OCCLUSION_QUERIES];
 extern unsigned int r_numqueries;
 extern unsigned int r_maxqueries;
 
-void R_TimeReport(char *name);
+void R_TimeReport(const char *name);
 
 // r_stain
 void R_Stain(const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
@@ -462,7 +462,7 @@ typedef enum rsurfacepass_e
 	RSURFPASS_BASE,
 	RSURFPASS_BACKGROUND,
 	RSURFPASS_RTLIGHT,
-	RSURFPASS_DEFERREDGEOMETRY,
+	RSURFPASS_DEFERREDGEOMETRY
 }
 rsurfacepass_t;
 
