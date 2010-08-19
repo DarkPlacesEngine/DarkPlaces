@@ -1058,12 +1058,12 @@ static void VM_CL_unproject (void)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
 	f = PRVM_G_VECTOR(OFS_PARM0);
-	if(v_flipped.integer)
-		f[0] = (2 * r_refdef.view.x + r_refdef.view.width) * (vid_conwidth.integer / (float) vid.width) - f[0];
 	VectorSet(temp,
 		f[2],
-		(-1.0 + 2.0 * (f[0] / (vid_conwidth.integer / (float) vid.width) - r_refdef.view.x) / r_refdef.view.width) * f[2] * -r_refdef.view.frustum_x,
-		(-1.0 + 2.0 * (f[1] / (vid_conheight.integer / (float) vid.height) - r_refdef.view.y) / r_refdef.view.height) * f[2] * -r_refdef.view.frustum_y);
+		(-1.0 + 2.0 * (f[0] / vid_conwidth.integer)) * f[2] * -r_refdef.view.frustum_x,
+		(-1.0 + 2.0 * (f[1] / vid_conheight.integer)) * f[2] * -r_refdef.view.frustum_y);
+	if(v_flipped.integer)
+		temp[1] = -temp[1];
 	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
@@ -1081,9 +1081,12 @@ static void VM_CL_project (void)
 	if(v_flipped.integer)
 		v[1] = -v[1];
 	VectorSet(PRVM_G_VECTOR(OFS_RETURN),
-		(vid_conwidth.integer / (float) vid.width) * (r_refdef.view.x + r_refdef.view.width*0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x)),
-		(vid_conheight.integer / (float) vid.height) * (r_refdef.view.y + r_refdef.view.height*0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y)),
+		vid_conwidth.integer * (0.5*(1.0+v[1]/v[0]/-r_refdef.view.frustum_x)),
+		vid_conheight.integer * (0.5*(1.0+v[2]/v[0]/-r_refdef.view.frustum_y)),
 		v[0]);
+	// explanation:
+	// after transforming, relative position to viewport (0..1) = 0.5 * (1 + v[2]/v[0]/-frustum_{x \or y})
+	// as 2D drawing honors the viewport too, to get the same pixel, we simply multiply this by conwidth/height
 }
 
 //#330 float(float stnum) getstatf (EXT_CSQC)
