@@ -341,7 +341,7 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 
 typedef struct glmode_s
 {
-	char *name;
+	const char *name;
 	int minification, magnification;
 }
 glmode_t;
@@ -359,7 +359,7 @@ static glmode_t modes[6] =
 #ifdef SUPPORTD3D
 typedef struct d3dmode_s
 {
-	char *name;
+	const char *name;
 	int m1, m2;
 }
 d3dmode_t;
@@ -2161,7 +2161,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		Host_Error("R_UpdateTexture: no texture supplied");
 	if (!glt->texnum && !glt->d3dtexture)
 	{
-		Con_Printf("R_UpdateTexture: texture %p \"%s\" in pool %p has not been uploaded yet", glt, glt->identifier, glt->pool);
+		Con_Printf("R_UpdateTexture: texture %p \"%s\" in pool %p has not been uploaded yet", (void *)glt, glt->identifier, (void *)glt->pool);
 		return;
 	}
 	// update part of the texture

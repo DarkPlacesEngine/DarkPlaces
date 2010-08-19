@@ -839,7 +839,11 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 		{
 			if (lastfd < s->inetsocket)
 				lastfd = s->inetsocket;
+#ifdef WIN32
+			FD_SET((int)s->inetsocket, &fdreadset);
+#else
 			FD_SET((unsigned int)s->inetsocket, &fdreadset);
+#endif
 		}
 	}
 	tv.tv_sec = microseconds / 1000000;

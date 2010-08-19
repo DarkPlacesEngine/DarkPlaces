@@ -857,6 +857,7 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 	static char varval[MAX_INPUTLINE];
 	const char *varstr;
 	char *varfunc;
+static char asis[] = "asis"; // just to suppress const char warnings
 
 	if(varlen >= MAX_INPUTLINE)
 		varlen = MAX_INPUTLINE - 1;
@@ -887,7 +888,7 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 		varstr = Cmd_GetDirectCvarValue(varname, alias, &is_multiple);
 		if(is_multiple)
 			if(!varfunc)
-				varfunc = "asis";
+				varfunc = asis;
 	}
 
 	if(!varstr)

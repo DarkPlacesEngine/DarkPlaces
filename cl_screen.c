@@ -696,7 +696,7 @@ int speedstringcount, r_timereport_active;
 double r_timereport_temp = 0, r_timereport_current = 0, r_timereport_start = 0;
 int r_speeds_longestitem = 0;
 
-void R_TimeReport(char *desc)
+void R_TimeReport(const char *desc)
 {
 	char tempbuf[256];
 	int length;
@@ -1314,7 +1314,7 @@ Grab six views for environment mapping tests
 struct envmapinfo_s
 {
 	float angles[3];
-	char *name;
+	const char *name;
 	qboolean flipx, flipy, flipdiagonaly;
 }
 envmapinfo[12] =

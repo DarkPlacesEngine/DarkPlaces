@@ -269,7 +269,7 @@ checkextension(extensionname)
 static qboolean checkextension(const char *name)
 {
 	int len;
-	char *e, *start;
+	const char *e, *start;
 	len = (int)strlen(name);
 
 	for (e = prog->extensionstring;*e;e++)

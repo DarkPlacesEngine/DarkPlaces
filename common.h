@@ -134,7 +134,7 @@ typedef enum protocolversion_e
 	PROTOCOL_QUAKEWORLD, ///< quakeworld protocol
 	PROTOCOL_NEHAHRABJP, ///< same as QUAKEDP but with 16bit modelindex
 	PROTOCOL_NEHAHRABJP2, ///< same as NEHAHRABJP but with 16bit soundindex
-	PROTOCOL_NEHAHRABJP3, ///< same as NEHAHRABJP2 but with some changes
+	PROTOCOL_NEHAHRABJP3 ///< same as NEHAHRABJP2 but with some changes
 }
 protocolversion_t;
 

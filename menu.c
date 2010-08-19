@@ -107,7 +107,7 @@ static void M_ModList_Key (int key, int ascii);
 
 static qboolean	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
 
-void M_Update_Return_Reason(char *s)
+void M_Update_Return_Reason(const char *s)
 {
 	strlcpy(m_return_reason, s, sizeof(m_return_reason));
 	if (s)
@@ -121,8 +121,8 @@ void M_Update_Return_Reason(char *s)
 #define NumberOfNehahraDemos 34
 typedef struct nehahrademonames_s
 {
-	char *name;
-	char *desc;
+	const char *name;
+	const char *desc;
 } nehahrademonames_t;
 
 static nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
@@ -167,8 +167,8 @@ static float menu_x, menu_y, menu_width, menu_height;
 
 static void M_Background(int width, int height)
 {
-	menu_width = bound(1, width, vid_conwidth.integer);
-	menu_height = bound(1, height, vid_conheight.integer);
+	menu_width = bound(1.0f, (float)width, vid_conwidth.value);
+	menu_height = bound(1.0f, (float)height, vid_conheight.value);
 	menu_x = (vid_conwidth.integer - menu_width) * 0.5;
 	menu_y = (vid_conheight.integer - menu_height) * 0.5;
 	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
@@ -1266,7 +1266,7 @@ static unsigned int *menuplyr_translated;
 typedef struct ratetable_s
 {
 	int rate;
-	char *name;
+	const char *name;
 }
 ratetable_t;
 
@@ -2315,7 +2315,7 @@ static void M_Options_ColorControl_Key (int k, int ascii)
 //=============================================================================
 /* KEYS MENU */
 
-static char *quakebindnames[][2] =
+static const char *quakebindnames[][2] =
 {
 {"+attack", 		"attack"},
 {"impulse 10", 		"next weapon"},
@@ -2338,7 +2338,7 @@ static char *quakebindnames[][2] =
 {"+movedown",		"swim down"}
 };
 
-static char *transfusionbindnames[][2] =
+static const char *transfusionbindnames[][2] =
 {
 {"",				"Movement"},		// Movement commands
 {"+forward", 		"walk forward"},
@@ -2396,7 +2396,7 @@ static char *transfusionbindnames[][2] =
 {"impulse 79",		"taunt 9"}
 };
 
-static char *goodvsbad2bindnames[][2] =
+static const char *goodvsbad2bindnames[][2] =
 {
 {"impulse 69",		"Power 1"},
 {"impulse 70",		"Power 2"},
@@ -2420,7 +2420,7 @@ static char *goodvsbad2bindnames[][2] =
 };
 
 static int numcommands;
-static char *(*bindnames)[2];
+static const char *(*bindnames)[2];
 
 /*
 typedef struct binditem_s
@@ -2525,10 +2525,10 @@ void M_Menu_Keys_f (void)
 
 #define NUMKEYS 5
 
-static void M_UnbindCommand (char *command)
+static void M_UnbindCommand (const char *command)
 {
 	int		j;
-	char	*b;
+	const char	*b;
 
 	for (j = 0; j < (int)sizeof (keybindings[0]) / (int)sizeof (keybindings[0][0]); j++)
 	{
@@ -3107,12 +3107,12 @@ static void M_Credits_Key (int key, int ascii)
 //=============================================================================
 /* QUIT MENU */
 
-static char *m_quit_message[9];
+static const char *m_quit_message[9];
 static int		m_quit_prevstate;
 static qboolean	wasInMenus;
 
 
-static int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, char *line5, char *line6, char *line7, char *line8)
+static int M_QuitMessage(const char *line1, const char *line2, const char *line3, const char *line4, const char *line5, const char *line6, const char *line7, const char *line8)
 {
 	m_quit_message[0] = line1;
 	m_quit_message[1] = line2;
@@ -3292,8 +3292,8 @@ static void M_LanConfig_Draw (void)
 {
 	cachepic_t	*p;
 	int		basex;
-	char	*startJoin;
-	char	*protocol;
+	const char	*startJoin;
+	const char	*protocol;
 
 	M_Background(320, 200);
 
@@ -3456,20 +3456,20 @@ static void M_LanConfig_Key (int key, int ascii)
 
 typedef struct level_s
 {
-	char	*name;
-	char	*description;
+	const char	*name;
+	const char	*description;
 } level_t;
 
 typedef struct episode_s
 {
-	char	*description;
+	const char	*description;
 	int		firstLevel;
 	int		levels;
 } episode_t;
 
 typedef struct gamelevels_s
 {
-	char *gamename;
+	const char *gamename;
 	level_t *levels;
 	episode_t *episodes;
 	int numepisodes;
@@ -3976,7 +3976,7 @@ void M_GameOptions_Draw (void)
 		M_Print(0, 72, "        Teamplay");
 		if (gamemode == GAME_ROGUE)
 		{
-			char *msg;
+			const char *msg;
 
 			switch((int)teamplay.integer)
 			{
@@ -3992,7 +3992,7 @@ void M_GameOptions_Draw (void)
 		}
 		else
 		{
-			char *msg;
+			const char *msg;
 
 			switch (teamplay.integer)
 			{
@@ -5029,7 +5029,7 @@ void M_Restart(void)
 //============================================================================
 // Menu prog handling
 
-static char *m_required_func[] = {
+static const char *m_required_func[] = {
 "m_init",
 "m_keydown",
 "m_draw",

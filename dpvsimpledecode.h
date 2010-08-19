@@ -16,7 +16,7 @@
 // opening and closing streams
 
 // opens a stream
-void *dpvsimpledecode_open(char *filename, char **errorstring);
+void *dpvsimpledecode_open(char *filename, const char **errorstring);
 // closes a stream
 void dpvsimpledecode_close(void *stream);
 
@@ -26,7 +26,7 @@ void dpvsimpledecode_close(void *stream);
 // number to DPVDECODEERROR_NONE
 // if the supplied string pointer variable is not NULL, it will be set to the
 // error message
-int dpvsimpledecode_error(void *stream, char **errorstring);
+int dpvsimpledecode_error(void *stream, const char **errorstring);
 
 // returns the width of the image data
 unsigned int dpvsimpledecode_getwidth(void *stream);
