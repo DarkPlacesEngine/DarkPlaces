@@ -478,9 +478,9 @@ void V_CalcRefdef (void)
 			else
 			{
 				if (cl.stairsmoothz < vieworg[2])
-					vieworg[2] = cl.stairsmoothz = bound(vieworg[2] - 16, cl.stairsmoothz + smoothtime * cl_stairsmoothspeed.value, vieworg[2]);
+					vieworg[2] = cl.stairsmoothz = bound(vieworg[2] - cl.movevars_stepheight, cl.stairsmoothz + smoothtime * cl_stairsmoothspeed.value, vieworg[2]);
 				else if (cl.stairsmoothz > vieworg[2])
-					vieworg[2] = cl.stairsmoothz = bound(vieworg[2], cl.stairsmoothz - smoothtime * cl_stairsmoothspeed.value, vieworg[2] + 16);
+					vieworg[2] = cl.stairsmoothz = bound(vieworg[2], cl.stairsmoothz - smoothtime * cl_stairsmoothspeed.value, vieworg[2] + cl.movevars_stepheight);
 			}
 
 			// apply qw weapon recoil effect (this did not work in QW)
