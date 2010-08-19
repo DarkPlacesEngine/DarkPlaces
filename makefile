@@ -159,6 +159,30 @@ endif
 endif
 
 # Win32 configuration
+ifeq ($(WIN32RELEASE), 1)
+#	TARGET=i686-pc-mingw32
+#	CC=$(TARGET)-g++
+#	WINDRES=$(TARGET)-windres
+	CPUOPTIMIZATIONS+=-march=i686 -DUSE_WSPIAPI_H
+	LDFLAGS_WINCOMMON+=-Wl,--large-address-aware
+endif
+
+ifeq ($(WIN64RELEASE), 1)
+#	TARGET=x86_64-pc-mingw32
+#	CC=$(TARGET)-g++
+#	WINDRES=$(TARGET)-windres
+endif
+
+ifeq ($(D3D), 1)
+	CPUOPTIMIZATIONS+=-DSUPPORTD3D -DSUPPORTDIRECTX
+	CFLAGS_WARNINGS=-Wall
+	LDFLAGS_WINCOMMON=-ld3d9
+else
+	CFLAGS_WARNINGS=-Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
+	LDFLAGS_WINCOMMON=
+endif
+
+
 ifeq ($(DP_MAKE_TARGET), mingw)
 	DEFAULT_SNDAPI=WIN
 	OBJ_CD=$(OBJ_WINCD)
@@ -181,14 +205,6 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_CLNEXUIZ=$(EXE_WINCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
-endif
-
-ifeq ($(WIN32RELEASE), 1)
-	CPUOPTIMIZATIONS=-march=i686 -DSUPPORTDIRECTX -DUSE_WSPIAPI_H
-endif
-
-ifeq ($(WIN64RELEASE), 1)
-	CPUOPTIMIZATIONS=
 endif
 
 ##### Sound configuration #####
