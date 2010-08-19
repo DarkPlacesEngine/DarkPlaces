@@ -186,8 +186,8 @@ qboolean Font_OpenLibrary (void)
 	const char* dllnames [] =
 	{
 #if defined(WIN32)
-		"freetype6.dll",
 		"libfreetype-6.dll",
+		"freetype6.dll",
 #elif defined(MACOSX)
 		"libfreetype.6.dylib",
 		"libfreetype.dylib",
