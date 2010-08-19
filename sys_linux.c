@@ -1,3 +1,4 @@
+#include "quakedef.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -12,7 +13,6 @@
 
 #include <signal.h>
 
-#include "quakedef.h"
 
 // =======================================================================
 // General routines

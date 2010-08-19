@@ -1208,7 +1208,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		if (!mainwindow)
 		{
-			Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), (void *)NULL, (void *)NULL, (void *)global_hInstance, (void *)NULL);
+			Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, global_hInstance, NULL);
 			VID_Shutdown();
 			return false;
 		}
@@ -1221,14 +1221,14 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		if (!pixelformat)
 		{
 			VID_Shutdown();
-			Con_Printf("ChoosePixelFormat(%p, %p) failed\n", (void *)baseDC, (void *)&pfd);
+			Con_Printf("ChoosePixelFormat(%p, %p) failed\n", baseDC, &pfd);
 			return false;
 		}
 
 		if (SetPixelFormat(baseDC, pixelformat, &pfd) == false)
 		{
 			VID_Shutdown();
-			Con_Printf("SetPixelFormat(%p, %d, %p) failed\n", (void *)baseDC, pixelformat, (void *)&pfd);
+			Con_Printf("SetPixelFormat(%p, %d, %p) failed\n", baseDC, pixelformat, &pfd);
 			return false;
 		}
 
@@ -1249,7 +1249,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		if (!qwglMakeCurrent(baseDC, baseRC))
 		{
 			VID_Shutdown();
-			Con_Printf("wglMakeCurrent(%p, %p) failed\n", (void *)baseDC, (void *)baseRC);
+			Con_Printf("wglMakeCurrent(%p, %p) failed\n", baseDC, baseRC);
 			return false;
 		}
 
@@ -1430,7 +1430,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 	if (!mainwindow)
 	{
-		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), (void *)NULL, (void *)NULL, global_hInstance, (void *)NULL);
+		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), NULL, NULL, global_hInstance, NULL);
 		VID_Shutdown();
 		return false;
 	}
@@ -1513,10 +1513,10 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 
 	Con_Printf("D3D9 adapter info:\n");
 	Con_Printf("Description: %s\n", d3d9adapteridentifier.Description);
-	Con_Printf("DeviceId: %x\n", (unsigned int)d3d9adapteridentifier.DeviceId);
-	Con_Printf("DeviceName: %p\n", d3d9adapteridentifier.DeviceName);
+	Con_Printf("DeviceId: %x\n", d3d9adapteridentifier.DeviceId);
+	Con_Printf("DeviceName: %x\n", d3d9adapteridentifier.DeviceName);
 	Con_Printf("Driver: %s\n", d3d9adapteridentifier.Driver);
-	Con_Printf("DriverVersion: %08x%08x\n", (unsigned int)d3d9adapteridentifier.DriverVersion.u.HighPart, (unsigned int)d3d9adapteridentifier.DriverVersion.u.LowPart);
+	Con_Printf("DriverVersion: %x\n", d3d9adapteridentifier.DriverVersion);
 	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
 	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
@@ -1904,31 +1904,57 @@ static void IN_MouseMove (void)
 
 			/* Look at the element to see what happened */
 
-			if ((int)od.dwOfs == DIMOFS_X)
-				in_mouse_x += (LONG) od.dwData;
-			if ((int)od.dwOfs == DIMOFS_Y)
-				in_mouse_y += (LONG) od.dwData;
-			if ((int)od.dwOfs == DIMOFS_Z)
+			switch (od.dwOfs)
 			{
-				if((LONG)od.dwData < 0)
-				{
-					Key_Event(K_MWHEELDOWN, 0, true);
-					Key_Event(K_MWHEELDOWN, 0, false);
-				}
-				else if((LONG)od.dwData > 0)
-				{
-					Key_Event(K_MWHEELUP, 0, true);
-					Key_Event(K_MWHEELUP, 0, false);
-				}
+				case DIMOFS_X:
+					in_mouse_x += (LONG) od.dwData;
+					break;
+
+				case DIMOFS_Y:
+					in_mouse_y += (LONG) od.dwData;
+					break;
+
+				case DIMOFS_Z:
+					if((LONG) od.dwData < 0)
+					{
+						Key_Event (K_MWHEELDOWN, 0, true);
+						Key_Event (K_MWHEELDOWN, 0, false);
+					}
+					else if((LONG) od.dwData > 0)
+					{
+						Key_Event (K_MWHEELUP, 0, true);
+						Key_Event (K_MWHEELUP, 0, false);
+					}
+					break;
+
+				case DIMOFS_BUTTON0:
+					if (od.dwData & 0x80)
+						mstate_di |= 1;
+					else
+						mstate_di &= ~1;
+					break;
+
+				case DIMOFS_BUTTON1:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<1);
+					else
+						mstate_di &= ~(1<<1);
+					break;
+
+				case DIMOFS_BUTTON2:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<2);
+					else
+						mstate_di &= ~(1<<2);
+					break;
+
+				case DIMOFS_BUTTON3:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<3);
+					else
+						mstate_di &= ~(1<<3);
+					break;
 			}
-			if ((int)od.dwOfs == DIMOFS_BUTTON0)
-				mstate_di = (mstate_di & ~1) | ((od.dwData & 0x80) >> 7);
-			if ((int)od.dwOfs == DIMOFS_BUTTON1)
-				mstate_di = (mstate_di & ~2) | ((od.dwData & 0x80) >> 6);
-			if ((int)od.dwOfs == DIMOFS_BUTTON2)
-				mstate_di = (mstate_di & ~4) | ((od.dwData & 0x80) >> 5);
-			if ((int)od.dwOfs == DIMOFS_BUTTON3)
-				mstate_di = (mstate_di & ~8) | ((od.dwData & 0x80) >> 4);
 		}
 
 		// perform button actions

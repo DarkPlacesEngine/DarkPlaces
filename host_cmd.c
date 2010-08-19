@@ -1937,7 +1937,7 @@ Kicks a user off of the server
 */
 void Host_Kick_f (void)
 {
-	const char *who;
+	char *who;
 	const char *message = NULL;
 	client_t *save;
 	int i;

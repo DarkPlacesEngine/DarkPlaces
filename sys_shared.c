@@ -4,9 +4,7 @@
 
 #ifdef WIN32
 # ifdef _WIN64
-#  ifndef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0502
-#  endif
+#  define _WIN32_WINNT 0x0502
    // for SetDllDirectory
 # endif
 # include <windows.h>

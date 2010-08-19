@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "libcurl.h"
 #include "utf8lib.h"
 
-const char *svc_strings[128] =
+char *svc_strings[128] =
 {
 	"svc_bad",
 	"svc_nop",
@@ -100,7 +100,7 @@ const char *svc_strings[128] =
 	"svc_pointparticles1", //	62		// [short] effectnum [vector] start, same as svc_pointparticles except velocity is zero and count is 1
 };
 
-const char *qw_svc_strings[128] =
+char *qw_svc_strings[128] =
 {
 	"qw_svc_bad",					// 0
 	"qw_svc_nop",					// 1
@@ -3288,7 +3288,7 @@ void CL_ParseServerMessage(void)
 	int			i;
 	protocolversion_t protocol;
 	unsigned char		cmdlog[32];
-	const char		*cmdlogname[32], *temp;
+	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 	qboolean	qwplayerupdatereceived;
 	qboolean	strip_pqc;

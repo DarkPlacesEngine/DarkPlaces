@@ -34,7 +34,7 @@ static clvideo_t *FindUnusedVid( void )
 
 static qboolean OpenStream( clvideo_t * video )
 {
-	const char *errorstring;
+	char *errorstring;
 	video->stream = dpvsimpledecode_open( video->filename, &errorstring);
 	if (!video->stream )
 	{

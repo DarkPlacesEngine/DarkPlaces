@@ -6,7 +6,7 @@
 typedef struct rendermodule_s
 {
 	int active; // set by start, cleared by shutdown
-	const char *name;
+	char *name;
 	void(*start)(void);
 	void(*shutdown)(void);
 	void(*newmap)(void);
@@ -22,7 +22,7 @@ void R_Modules_Init(void)
 	Cmd_AddCommand("r_restart", R_Modules_Restart, "restarts renderer");
 }
 
-void R_RegisterModule(const char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void), void(*devicelost)(void), void(*devicerestored)(void))
+void R_RegisterModule(char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void), void(*devicelost)(void), void(*devicerestored)(void))
 {
 	int i;
 	for (i = 0;i < MAXRENDERMODULES;i++)

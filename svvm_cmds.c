@@ -8,7 +8,7 @@
 
 
 
-const char *vm_sv_extensions =
+char *vm_sv_extensions =
 "BX_WAL_SUPPORT "
 "DP_BUTTONCHAT "
 "DP_BUTTONUSE "

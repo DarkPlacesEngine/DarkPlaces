@@ -21,11 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-const char *cvar_dummy_description = "custom cvar";
+char *cvar_dummy_description = "custom cvar";
 
 cvar_t *cvar_vars = NULL;
 cvar_t *cvar_hashtable[CVAR_HASHSIZE];
-const char *cvar_null_string = "";
+char *cvar_null_string = "";
 
 /*
 ============
@@ -324,11 +324,11 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	valuelen = strlen(value);
 	if (!var->string || strlen(var->string) != valuelen)
 	{
-		Z_Free ((char *)var->string);	// free the old value string
+		Z_Free (var->string);	// free the old value string
 
 		var->string = (char *)Z_Malloc (valuelen + 1);
 	}
-	memcpy ((char *)var->string, value, valuelen + 1);
+	memcpy (var->string, value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active)
@@ -504,7 +504,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 
 			// get rid of old allocated cvar
 			// (but not cvar->string and cvar->defstring, because we kept those)
-			Z_Free((char *)cvar->name);
+			Z_Free(cvar->name);
 			Z_Free(cvar);
 		}
 		else
@@ -520,12 +520,12 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 // copy the value off, because future sets will Z_Free it
-	oldstr = (char *)variable->string;
+	oldstr = variable->string;
 	alloclen = strlen(variable->string) + 1;
 	variable->string = (char *)Z_Malloc (alloclen);
-	memcpy ((char *)variable->string, oldstr, alloclen);
+	memcpy (variable->string, oldstr, alloclen);
 	variable->defstring = (char *)Z_Malloc (alloclen);
-	memcpy ((char *)variable->defstring, oldstr, alloclen);
+	memcpy (variable->defstring, oldstr, alloclen);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 
@@ -571,13 +571,13 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 		if(newdescription && (cvar->flags & CVAR_ALLOCATED))
 		{
 			if(cvar->description != cvar_dummy_description)
-				Z_Free((char *)cvar->description);
+				Z_Free(cvar->description);
 
 			if(*newdescription)
 			{
 				alloclen = strlen(newdescription) + 1;
 				cvar->description = (char *)Z_Malloc(alloclen);
-				memcpy((char *)cvar->description, newdescription, alloclen);
+				memcpy(cvar->description, newdescription, alloclen);
 			}
 			else
 				cvar->description = cvar_dummy_description;
@@ -606,12 +606,12 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 	cvar->flags = flags | CVAR_ALLOCATED;
 	alloclen = strlen(name) + 1;
 	cvar->name = (char *)Z_Malloc(alloclen);
-	memcpy((char *)cvar->name, name, alloclen);
+	memcpy(cvar->name, name, alloclen);
 	alloclen = strlen(value) + 1;
 	cvar->string = (char *)Z_Malloc(alloclen);
-	memcpy((char *)cvar->string, value, alloclen);
+	memcpy(cvar->string, value, alloclen);
 	cvar->defstring = (char *)Z_Malloc(alloclen);
-	memcpy((char *)cvar->defstring, value, alloclen);
+	memcpy(cvar->defstring, value, alloclen);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 
@@ -619,7 +619,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 	{
 		alloclen = strlen(newdescription) + 1;
 		cvar->description = (char *)Z_Malloc(alloclen);
-		memcpy((char *)cvar->description, newdescription, alloclen);
+		memcpy(cvar->description, newdescription, alloclen);
 	}
 	else
 		cvar->description = cvar_dummy_description; // actually checked by VM_cvar_type
@@ -702,10 +702,10 @@ void Cvar_LockDefaults_f (void)
 
 			//Con_Printf("locking cvar %s (%s -> %s)\n", var->name, var->string, var->defstring);
 			var->flags |= CVAR_DEFAULTSET;
-			Z_Free((char *)var->defstring);
+			Z_Free(var->defstring);
 			alloclen = strlen(var->string) + 1;
 			var->defstring = (char *)Z_Malloc(alloclen);
-			memcpy((char *)var->defstring, var->string, alloclen);
+			memcpy(var->defstring, var->string, alloclen);
 		}
 	}
 }
@@ -912,11 +912,11 @@ void Cvar_Del_f (void)
 			*link = cvar->nextonhashchain;
 
 		if(cvar->description != cvar_dummy_description)
-			Z_Free((char *)cvar->description);
+			Z_Free(cvar->description);
 
-		Z_Free((char *)cvar->name);
-		Z_Free((char *)cvar->string);
-		Z_Free((char *)cvar->defstring);
+		Z_Free(cvar->name);
+		Z_Free(cvar->string);
+		Z_Free(cvar->defstring);
 		Z_Free(cvar);
 	}
 }

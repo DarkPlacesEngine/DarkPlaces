@@ -9,7 +9,7 @@
 //============================================================================
 // Menu
 
-const char *vm_m_extensions =
+char *vm_m_extensions =
 "BX_WAL_SUPPORT "
 "DP_CINEMATIC_DPV "
 "DP_CSQC_BINDMAPS "

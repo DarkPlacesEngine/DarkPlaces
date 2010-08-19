@@ -7273,7 +7273,6 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// parse the OBJ text now
 	for(;;)
 	{
-		static char emptyarg[1] = "";
 		if (!*text)
 			break;
 		linenumber++;
@@ -7282,7 +7281,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			line[linelen] = text[linelen];
 		line[linelen] = 0;
 		for (argc = 0;argc < 4;argc++)
-			argv[argc] = emptyarg;
+			argv[argc] = "";
 		argc = 0;
 		s = line;
 		while (*s == ' ' || *s == '\t')

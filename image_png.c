@@ -286,9 +286,7 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
 #ifdef __cplusplus
-#ifdef WIN64
-	if (setjmp((_JBTYPE *)png))
-#elif defined(MACOSX) || defined(WIN32)
+#if defined(MACOSX) || defined(WIN32)
 	if (setjmp((int *)png))
 #else
 	if (setjmp((__jmp_buf_tag *)png))
@@ -481,9 +479,7 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
 #ifdef __cplusplus
-#ifdef WIN64
-	if (setjmp((_JBTYPE *)png))
-#elif defined(MACOSX) || defined(WIN32)
+#if defined(MACOSX) || defined(WIN32)
 	if (setjmp((int *)png))
 #else
 	if (setjmp((__jmp_buf_tag *)png))

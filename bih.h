@@ -9,7 +9,7 @@
 typedef enum biherror_e
 {
 	BIHERROR_OK, // no error, be happy
-	BIHERROR_OUT_OF_NODES // could not produce complete hierarchy, maxnodes too low (should be roughly half of numleafs)
+	BIHERROR_OUT_OF_NODES, // could not produce complete hierarchy, maxnodes too low (should be roughly half of numleafs)
 }
 biherror_t;
 
@@ -17,7 +17,7 @@ typedef enum bih_nodetype_e
 {
 	BIH_SPLITX = 0,
 	BIH_SPLITY = 1,
-	BIH_SPLITZ = 2
+	BIH_SPLITZ = 2,
 }
 bih_nodetype_t;
 
@@ -25,7 +25,7 @@ typedef enum bih_leaftype_e
 {
 	BIH_BRUSH = 3,
 	BIH_COLLISIONTRIANGLE = 4,
-	BIH_RENDERTRIANGLE = 5
+	BIH_RENDERTRIANGLE = 5,
 }
 bih_leaftype_t;
 

@@ -36,7 +36,7 @@ typedef enum renderpath_e
 	RENDERPATH_CGGL,
 	RENDERPATH_D3D9,
 	RENDERPATH_D3D10,
-	RENDERPATH_D3D11
+	RENDERPATH_D3D11,
 }
 renderpath_t;
 

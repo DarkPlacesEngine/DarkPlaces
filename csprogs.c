@@ -30,7 +30,7 @@ void CL_VM_PreventInformationLeaks(void)
 }
 
 //[515]: these are required funcs
-static const char *cl_required_func[] =
+static char *cl_required_func[] =
 {
 	"CSQC_Init",
 	"CSQC_InputEvent",
