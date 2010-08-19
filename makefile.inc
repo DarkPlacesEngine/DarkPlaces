@@ -178,7 +178,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) -Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS)
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -290,9 +290,7 @@ OBJ_WINCD=cd_win.o
 OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
-# Note that Windows Vista users may need --large-address-aware because Vista seems to map over 500MB of application address space for its own purposes, which is a significant chunk taken out of the default 2GB address space, this option raises the limit to 4GB (or 3GB on Vista 32 and older versions of Windows).
-# if using mingw64 you need to use LDFLAGS_WINCOMMON= on the commandline to get rid of this, otherwise it produces a compile error
-LDFLAGS_WINCOMMON=-Wl,--large-address-aware
+# see LDFLAGS_WINCOMMON in makefile
 LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm -lws2_32
 LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32
