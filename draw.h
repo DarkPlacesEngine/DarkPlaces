@@ -183,6 +183,7 @@ void DrawQ_LineLoop(drawqueuemesh_t *mesh, int flags);
 // resets r_refdef.draw2dstage
 void DrawQ_Finish(void);
 void DrawQ_ProcessDrawFlag(int flags, qboolean alpha); // sets GL_DepthMask and GL_BlendFunc
+void DrawQ_RecalcView(void); // use this when changing r_refdef.view.* from e.g. csqc
 
 void R_DrawGamma(void);
 

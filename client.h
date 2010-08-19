@@ -1775,7 +1775,7 @@ typedef struct r_refdef_s
 	float fog_height_texcoordscale;
 	char fogheighttexturename[64]; // detects changes to active fog height texture
 
-	qboolean draw2dstage;
+	int draw2dstage; // 0 = no, 1 = yes, other value = needs setting up again
 
 	// true during envmap command capture
 	qboolean envmap;
