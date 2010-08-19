@@ -186,11 +186,11 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 	case TEXTYPE_PALETTE:
 		return (flags & TEXF_ALPHA) ? &textype_palette_alpha : &textype_palette;
 	case TEXTYPE_RGBA:
-		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.arb_texture_compression)
+		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.ext_texture_compression_s3tc)
 			return (flags & TEXF_ALPHA) ? &textype_rgba_alpha_compress : &textype_rgba_compress;
 		return (flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba;
 	case TEXTYPE_BGRA:
-		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.arb_texture_compression)
+		if ((flags & TEXF_COMPRESS) && gl_texturecompression.integer >= 1 && vid.support.ext_texture_compression_s3tc)
 			return (flags & TEXF_ALPHA) ? &textype_bgra_alpha_compress : &textype_bgra_compress;
 		return (flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra;
 	case TEXTYPE_ALPHA:
@@ -1286,6 +1286,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 	else if (!memcmp(dds+84, "DXT1", 4))
 	{
+		if(!vid.support.ext_texture_compression_s3tc)
+		{
+			Mem_Free(dds);
+			return NULL;
+		}
 		// we need to find out if this is DXT1 (opaque) or DXT1A (transparent)
 		// LordHavoc: it is my belief that this does not infringe on the
 		// patent because it is not decoding pixels...
@@ -1327,6 +1332,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 	else if (!memcmp(dds+84, "DXT3", 4))
 	{
+		if(!vid.support.ext_texture_compression_s3tc)
+		{
+			Mem_Free(dds);
+			return NULL;
+		}
 		textype = TEXTYPE_DXT3;
 		bytesperblock = 16;
 		bytesperpixel = 0;
@@ -1341,6 +1351,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 	else if (!memcmp(dds+84, "DXT5", 4))
 	{
+		if(!vid.support.ext_texture_compression_s3tc)
+		{
+			Mem_Free(dds);
+			return NULL;
+		}
 		textype = TEXTYPE_DXT5;
 		bytesperblock = 16;
 		bytesperpixel = 0;
