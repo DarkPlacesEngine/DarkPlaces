@@ -4700,8 +4700,10 @@ static char *R_HLSL_GetText(const char *filename, qboolean printfromdisknotice)
 }
 
 #include <d3dx9.h>
-//#include <d3dx9shader.h>
-//#include <d3dx9mesh.h>
+#include <d3dx9mesh.h>
+#ifdef _MSC_VER
+#pragma comment(lib, "d3dx9.lib")
+#endif
 
 static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, const char *vertstring, const char *fragstring)
 {
@@ -4727,79 +4729,42 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 	psbin = (DWORD *)FS_LoadFile(va("%s.psbin", cachename), r_main_mempool, true, &psbinsize);
 	if ((!vsbin && vertstring) || (!psbin && fragstring))
 	{
-		const char* dllnames_d3dx9 [] =
+		vsbin = (DWORD *)Mem_Realloc(tempmempool, vsbin, 0);
+		psbin = (DWORD *)Mem_Realloc(tempmempool, psbin, 0);
+		if (vertstring && vertstring[0])
 		{
-			"d3dx9_43.dll",
-			"d3dx9_42.dll",
-			"d3dx9_41.dll",
-			"d3dx9_40.dll",
-			"d3dx9_39.dll",
-			"d3dx9_38.dll",
-			"d3dx9_37.dll",
-			"d3dx9_36.dll",
-			"d3dx9_35.dll",
-			"d3dx9_34.dll",
-			"d3dx9_33.dll",
-			"d3dx9_32.dll",
-			"d3dx9_31.dll",
-			"d3dx9_30.dll",
-			"d3dx9_29.dll",
-			"d3dx9_28.dll",
-			"d3dx9_27.dll",
-			"d3dx9_26.dll",
-			"d3dx9_25.dll",
-			"d3dx9_24.dll",
-			NULL
-		};
-		dllhandle_t d3dx9_dll = NULL;
-		HRESULT WINAPI (*qD3DXCompileShader)(LPCSTR pSrcData, UINT SrcDataLen, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
-		dllfunction_t d3dx9_dllfuncs[] =
-		{
-			{"D3DXCompileShader",			(void **) &qD3DXCompileShader},
-			{NULL, NULL}
-		};
-		if (Sys_LoadLibrary(dllnames_d3dx9, &d3dx9_dll, d3dx9_dllfuncs))
-		{
-			vsbin = (DWORD *)Mem_Realloc(tempmempool, vsbin, 0);
-			psbin = (DWORD *)Mem_Realloc(tempmempool, psbin, 0);
-			if (vertstring && vertstring[0])
+			vsresult = D3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, 0, &vsbuffer, &vslog, &vsconstanttable);
+			if (vsbuffer)
 			{
-				vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, 0, &vsbuffer, &vslog, &vsconstanttable);
-				if (vsbuffer)
-				{
-					vsbinsize = vsbuffer->GetBufferSize();
-					vsbin = (DWORD *)Mem_Alloc(tempmempool, vsbinsize);
-					memcpy(vsbin, vsbuffer->GetBufferPointer(), vsbinsize);
-					vsbuffer->Release();
-				}
-				if (vslog)
-				{
-					strlcpy(temp, (const char *)vslog->GetBufferPointer(), min(sizeof(temp), vslog->GetBufferSize()));
-					Con_Printf("HLSL vertex shader compile output for %s follows:\n%s\n", cachename, temp);
-					vslog->Release();
-				}
+				vsbinsize = vsbuffer->GetBufferSize();
+				vsbin = (DWORD *)Mem_Alloc(tempmempool, vsbinsize);
+				memcpy(vsbin, vsbuffer->GetBufferPointer(), vsbinsize);
+				vsbuffer->Release();
 			}
-			if (fragstring && fragstring[0])
+			if (vslog)
 			{
-				psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, 0, &psbuffer, &pslog, &psconstanttable);
-				if (psbuffer)
-				{
-					psbinsize = psbuffer->GetBufferSize();
-					psbin = (DWORD *)Mem_Alloc(tempmempool, psbinsize);
-					memcpy(psbin, psbuffer->GetBufferPointer(), psbinsize);
-					psbuffer->Release();
-				}
-				if (pslog)
-				{
-					strlcpy(temp, (const char *)pslog->GetBufferPointer(), min(sizeof(temp), pslog->GetBufferSize()));
-					Con_Printf("HLSL pixel shader compile output for %s follows:\n%s\n", cachename, temp);
-					pslog->Release();
-				}
+				strlcpy(temp, (const char *)vslog->GetBufferPointer(), min(sizeof(temp), vslog->GetBufferSize()));
+				Con_Printf("HLSL vertex shader compile output for %s follows:\n%s\n", cachename, temp);
+				vslog->Release();
 			}
-			Sys_UnloadLibrary(&d3dx9_dll);
 		}
-		else
-			Con_Printf("Unable to compile shader - D3DXCompileShader function not found\n");
+		if (fragstring && fragstring[0])
+		{
+			psresult = D3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, 0, &psbuffer, &pslog, &psconstanttable);
+			if (psbuffer)
+			{
+				psbinsize = psbuffer->GetBufferSize();
+				psbin = (DWORD *)Mem_Alloc(tempmempool, psbinsize);
+				memcpy(psbin, psbuffer->GetBufferPointer(), psbinsize);
+				psbuffer->Release();
+			}
+			if (pslog)
+			{
+				strlcpy(temp, (const char *)pslog->GetBufferPointer(), min(sizeof(temp), pslog->GetBufferSize()));
+				Con_Printf("HLSL pixel shader compile output for %s follows:\n%s\n", cachename, temp);
+				pslog->Release();
+			}
+		}
 	}
 	if (vsbin)
 	{
@@ -7003,7 +6968,7 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 //static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
 typedef struct suffixinfo_s
 {
-	const char *suffix;
+	char *suffix;
 	qboolean flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
