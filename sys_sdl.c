@@ -1,4 +1,3 @@
-#include "quakedef.h"
 
 #ifdef WIN32
 #ifdef _MSC_VER
@@ -16,6 +15,8 @@
 #include <signal.h>
 
 #include <SDL.h>
+
+#include "quakedef.h"
 
 // =======================================================================
 // General routines
