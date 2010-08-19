@@ -177,8 +177,12 @@ OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COM
 OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
+# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
+LIB_JPEG=-ljpeg
+
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS)
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG)
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -206,7 +210,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG) $(LIB_JPEG)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
@@ -291,9 +295,9 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMO
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
-LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm -lws2_32
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32
+LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LIB_JPEG)
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) -mconsole -lwinmm -lws2_32 $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32 $(LIB_JPEG)
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
