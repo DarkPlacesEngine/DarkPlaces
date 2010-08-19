@@ -887,22 +887,28 @@ void VM_CL_R_SetView (void)
 	case VF_MIN:
 		r_refdef.view.x = (int)(f[0]);
 		r_refdef.view.y = (int)(f[1]);
+		DrawQ_RecalcView();
 		break;
 	case VF_MIN_X:
 		r_refdef.view.x = (int)(k);
+		DrawQ_RecalcView();
 		break;
 	case VF_MIN_Y:
 		r_refdef.view.y = (int)(k);
+		DrawQ_RecalcView();
 		break;
 	case VF_SIZE:
 		r_refdef.view.width = (int)(f[0]);
 		r_refdef.view.height = (int)(f[1]);
+		DrawQ_RecalcView();
 		break;
 	case VF_SIZE_X:
 		r_refdef.view.width = (int)(k);
+		DrawQ_RecalcView();
 		break;
 	case VF_SIZE_Y:
 		r_refdef.view.height = (int)(k);
+		DrawQ_RecalcView();
 		break;
 	case VF_VIEWPORT:
 		r_refdef.view.x = (int)(f[0]);
@@ -910,6 +916,7 @@ void VM_CL_R_SetView (void)
 		f = PRVM_G_VECTOR(OFS_PARM2);
 		r_refdef.view.width = (int)(f[0]);
 		r_refdef.view.height = (int)(f[1]);
+		DrawQ_RecalcView();
 		break;
 	case VF_FOV:
 		r_refdef.view.frustum_x = tan(f[0] * M_PI / 360.0);r_refdef.view.ortho_x = f[0];

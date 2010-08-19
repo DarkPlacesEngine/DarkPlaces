@@ -982,9 +982,9 @@ void GL_Draw_Init (void)
 static void _DrawQ_Setup(void)
 {
 	r_viewport_t viewport;
-	if (r_refdef.draw2dstage)
+	if (r_refdef.draw2dstage == 1)
 		return;
-	r_refdef.draw2dstage = true;
+	r_refdef.draw2dstage = 1;
 	CHECKGLERROR
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_SetViewport(&viewport);
@@ -1936,7 +1936,13 @@ void DrawQ_ResetClipArea(void)
 
 void DrawQ_Finish(void)
 {
-	r_refdef.draw2dstage = false;
+	r_refdef.draw2dstage = 0;
+}
+
+void DrawQ_RecalcView(void)
+{
+	if(r_refdef.draw2dstage)
+		r_refdef.draw2dstage = -1; // next draw call will set viewport etc. again
 }
 
 static float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
