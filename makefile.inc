@@ -177,10 +177,6 @@ OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COM
 OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
-# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
-CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
-LIB_JPEG=-ljpeg
-
 # Compilation
 CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D)
 CFLAGS_DEBUG=-ggdb

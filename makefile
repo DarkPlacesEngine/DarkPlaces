@@ -71,6 +71,10 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	EXE_CLNEXUIZ=$(EXE_UNIXCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
+
+	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
+	LIB_JPEG=-ljpeg
 endif
 
 # Mac OS X configuration
@@ -100,6 +104,11 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	ifeq ($(word 2, $(filter -arch, $(CC))), -arch)
 		CFLAGS_MAKEDEP=
 	endif
+
+	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	# we don't currently link to libjpeg on Mac because the OS does not have an easy way to load libjpeg and we provide our own in the .app
+	CFLAGS_LIBJPEG=
+	LIB_JPEG=
 endif
 
 # SunOS configuration (Solaris)
@@ -127,6 +136,10 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	EXE_CLNEXUIZ=$(EXE_UNIXCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
+
+	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
+	LIB_JPEG=-ljpeg
 endif
 
 # BSD configuration
@@ -156,6 +169,10 @@ endif
 	EXE_CLNEXUIZ=$(EXE_UNIXCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
+
+	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
+	LIB_JPEG=-ljpeg
 endif
 
 # Win32 configuration
@@ -208,6 +225,10 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_CLNEXUIZ=$(EXE_WINCLNEXUIZ)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
+
+	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
+	LIB_JPEG=-ljpeg
 endif
 
 ##### Sound configuration #####
