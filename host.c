@@ -1122,6 +1122,7 @@ static void Host_Init (void)
 	Mod_Init();
 	World_Init();
 	SV_Init();
+	V_Init(); // some cvars needed by server player physics (cl_rollangle etc)
 	Host_InitCommands();
 	Host_InitLocal();
 	Host_ServerOptions();
@@ -1141,7 +1142,6 @@ static void Host_Init (void)
 		S_Init();
 		CDAudio_Init();
 		Key_Init();
-		V_Init();
 		CL_Init();
 	}
 
