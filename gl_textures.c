@@ -812,7 +812,7 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 	else
 	{
 		if (fragx || fragy || fragz || glt->inputwidth != fragwidth || glt->inputheight != fragheight || glt->inputdepth != fragdepth)
-			Host_Error("R_Upload: partial update not allowed on initial upload or in combination with PICMIP or MIPMAP\n");
+			Sys_Error("R_Upload \"%s\": partial update not allowed on initial upload or in combination with PICMIP or MIPMAP\n", glt->identifier);
 
 		// cubemaps contain multiple images and thus get processed a bit differently
 		if (glt->texturetype != GLTEXTURETYPE_CUBEMAP)
