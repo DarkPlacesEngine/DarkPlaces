@@ -1608,9 +1608,9 @@ void SV_AddCameraEyes(void)
 {
 	int e, i, j, k;
 	prvm_edict_t *ed;
-	int cameras[MAX_LEVELNETWORKEYES];
-	vec3_t camera_origins[MAX_LEVELNETWORKEYES];
-	int eye_levels[MAX_CLIENTNETWORKEYES];
+	static int cameras[MAX_LEVELNETWORKEYES];
+	static vec3_t camera_origins[MAX_LEVELNETWORKEYES];
+	static int eye_levels[MAX_CLIENTNETWORKEYES];
 	int n_cameras = 0;
 	vec3_t mi, ma;
 	prvm_eval_t *valendpos, *val;
