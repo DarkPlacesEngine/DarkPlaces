@@ -976,13 +976,119 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 	CHECKGLERROR
 }
 
-static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
+static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, int fragx, int fragy, int fragz, int fragwidth, int fragheight, int fragdepth)
 {
-	int i, mip, width, height, depth;
+	if (data == NULL)
+		Sys_Error("R_UploadPartialTexture \"%s\": partial update with NULL pixels", glt->identifier);
+
+	if (glt->texturetype != GLTEXTURETYPE_2D)
+		Sys_Error("R_UploadPartialTexture \"%s\": partial update of type other than 2D", glt->identifier);
+
+	if (glt->textype->textype == TEXTYPE_PALETTE)
+		Sys_Error("R_UploadPartialTexture \"%s\": partial update of paletted texture", glt->identifier);
+
+	if (glt->flags & (TEXF_MIPMAP | TEXF_PICMIP))
+		Sys_Error("R_UploadPartialTexture \"%s\": partial update not supported with MIPMAP or PICMIP flags", glt->identifier);
+
+	if (glt->inputwidth != glt->tilewidth || glt->inputheight != glt->tileheight || glt->tiledepth != 1)
+		Sys_Error("R_UploadPartialTexture \"%s\": partial update not supported with stretched or special textures", glt->identifier);
+
+	// update a portion of the image
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		{
+			int oldbindtexnum;
+			CHECKGLERROR
+			// we need to restore the texture binding after finishing the upload
+			GL_ActiveTexture(0);
+			oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
+			qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
+			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, glt->gltype, data);CHECKGLERROR
+			qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
+		}
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		{
+			RECT d3drect;
+			D3DLOCKED_RECT d3dlockedrect;
+			int y;
+			memset(&d3drect, 0, sizeof(d3drect));
+			d3drect.left = fragx;
+			d3drect.top = fragy;
+			d3drect.right = fragx+fragwidth;
+			d3drect.bottom = fragy+fragheight;
+			if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, 0, &d3dlockedrect, &d3drect, 0) == D3D_OK && d3dlockedrect.pBits)
+			{
+				for (y = 0;y < fragheight;y++)
+					memcpy((unsigned char *)d3dlockedrect.pBits + d3dlockedrect.Pitch * y, data + fragwidth*glt->bytesperpixel * y, fragwidth*glt->bytesperpixel);
+				IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, 0);
+			}
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
+static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
+{
+	int i, mip = 0, width, height, depth;
 	GLint oldbindtexnum = 0;
 	const unsigned char *prevbuffer;
 	prevbuffer = data;
 
+	// error out if a stretch is needed on special texture types
+	if (glt->texturetype != GLTEXTURETYPE_2D && (glt->tilewidth != glt->inputwidth || glt->tileheight != glt->inputheight || glt->tiledepth != glt->inputdepth))
+		Sys_Error("R_UploadFullTexture \"%s\": stretch uploads allowed only on 2D textures\n", glt->identifier);
+
+	// when picmip or maxsize is applied, we scale up to a power of 2 multiple
+	// of the target size and then use the mipmap reduction function to get
+	// high quality supersampled results
+	for (width  = glt->tilewidth;width  < glt->inputwidth ;width  <<= 1);
+	for (height = glt->tileheight;height < glt->inputheight;height <<= 1);
+	for (depth  = glt->tiledepth;depth  < glt->inputdepth ;depth  <<= 1);
+	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
+
+	if (prevbuffer == NULL)
+	{
+		width = glt->tilewidth;
+		height = glt->tileheight;
+		depth = glt->tiledepth;
+		memset(resizebuffer, 0, width * height * depth * glt->sides * glt->bytesperpixel);
+		prevbuffer = resizebuffer;
+	}
+	else if (glt->textype->textype == TEXTYPE_PALETTE)
+	{
+		// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
+		Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, glt->inputwidth * glt->inputheight * glt->inputdepth * glt->sides, glt->palette);
+		prevbuffer = colorconvertbuffer;
+	}
+
+	// scale up to a power of 2 size (if appropriate)
+	if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+	{
+		Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+		prevbuffer = resizebuffer;
+	}
+	// apply mipmap reduction algorithm to get down to picmip/max_size
+	while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+	{
+		Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+		prevbuffer = resizebuffer;
+	}
+
+	// do the appropriate upload type...
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
@@ -995,144 +1101,134 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 		GL_ActiveTexture(0);
 		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
 		qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		break;
-	}
 
-	// these are rounded up versions of the size to do better resampling
-	if (vid.support.arb_texture_non_power_of_two || glt->texturetype == GLTEXTURETYPE_RECTANGLE)
-	{
-		width = glt->inputwidth;
-		height = glt->inputheight;
-		depth = glt->inputdepth;
-	}
-	else
-	{
-		for (width  = 1;width  < glt->inputwidth ;width  <<= 1);
-		for (height = 1;height < glt->inputheight;height <<= 1);
-		for (depth  = 1;depth  < glt->inputdepth ;depth  <<= 1);
-	}
-
-	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
-	R_MakeResizeBufferBigger(fragwidth * fragheight * fragdepth * glt->sides * glt->bytesperpixel);
-
-	if (prevbuffer == NULL)
-	{
-		memset(resizebuffer, 0, fragwidth * fragheight * fragdepth * glt->bytesperpixel);
-		prevbuffer = resizebuffer;
-	}
-	else if (glt->textype->textype == TEXTYPE_PALETTE)
-	{
-		// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
-		Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, fragwidth * fragheight * fragdepth * glt->sides, glt->palette);
-		prevbuffer = colorconvertbuffer;
-	}
-
-	// upload the image - preferring to do only complete uploads (drivers do not really like partial updates)
-
-	if ((glt->flags & (TEXF_MIPMAP | TEXF_PICMIP)) == 0 && glt->inputwidth == glt->tilewidth && glt->inputheight == glt->tileheight && glt->inputdepth == glt->tiledepth && (fragx != 0 || fragy != 0 || fragwidth != glt->tilewidth || fragheight != glt->tileheight))
-	{
-		// update a portion of the image
-		if (glt->texturetype != GLTEXTURETYPE_2D)
-			Sys_Error("R_Upload: partial update of type other than 2D");
-		switch(vid.renderpath)
+		if (qglGetCompressedTexImageARB)
 		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			qglTexSubImage2D(GL_TEXTURE_2D, 0, fragx, fragy, fragwidth, fragheight, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
-			qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
+			if (gl_texturecompression.integer >= 2)
+				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
+			else
+				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
+			CHECKGLERROR
+		}
+		switch(glt->texturetype)
+		{
+		case GLTEXTURETYPE_2D:
+			qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+			if (glt->flags & TEXF_MIPMAP)
 			{
-				RECT d3drect;
-				D3DLOCKED_RECT d3dlockedrect;
-				int y;
-				memset(&d3drect, 0, sizeof(d3drect));
-				d3drect.left = fragx;
-				d3drect.top = fragy;
-				d3drect.right = fragx+fragwidth;
-				d3drect.bottom = fragy+fragheight;
-				if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, 0, &d3dlockedrect, &d3drect, 0) == D3D_OK && d3dlockedrect.pBits)
+				while (width > 1 || height > 1 || depth > 1)
 				{
-					for (y = 0;y < fragheight;y++)
-						memcpy((unsigned char *)d3dlockedrect.pBits + d3dlockedrect.Pitch * y, (unsigned char *)prevbuffer + fragwidth*glt->bytesperpixel * y, fragwidth*glt->bytesperpixel);
-					IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, 0);
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+					prevbuffer = resizebuffer;
+					qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				}
 			}
-#endif
 			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		case GLTEXTURETYPE_3D:
+			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+			if (glt->flags & TEXF_MIPMAP)
+			{
+				while (width > 1 || height > 1 || depth > 1)
+				{
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+					prevbuffer = resizebuffer;
+					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+				}
+			}
 			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		}
-	}
-	else
-	{
-		if (fragx || fragy || fragz || glt->inputwidth != fragwidth || glt->inputheight != fragheight || glt->inputdepth != fragdepth)
-			Sys_Error("R_Upload \"%s\": partial update not allowed on initial upload or in combination with PICMIP or MIPMAP\n", glt->identifier);
-
-		// cubemaps contain multiple images and thus get processed a bit differently
-		if (glt->texturetype != GLTEXTURETYPE_CUBEMAP)
-		{
-			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+		case GLTEXTURETYPE_CUBEMAP:
+			// convert and upload each side in turn,
+			// from a continuous block of input texels
+			texturebuffer = (unsigned char *)prevbuffer;
+			for (i = 0;i < 6;i++)
 			{
-				Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
-				prevbuffer = resizebuffer;
-			}
-			// picmip/max_size
-			while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
-			{
-				Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
-				prevbuffer = resizebuffer;
-			}
-		}
-		mip = 0;
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			if (qglGetCompressedTexImageARB)
-			{
-				if (gl_texturecompression.integer >= 2)
-					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
-				else
-					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
-				CHECKGLERROR
-			}
-			switch(glt->texturetype)
-			{
-			case GLTEXTURETYPE_2D:
-				qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+				prevbuffer = texturebuffer;
+				texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+				if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+				{
+					Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+					prevbuffer = resizebuffer;
+				}
+				// picmip/max_size
+				while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+				{
+					Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+					prevbuffer = resizebuffer;
+				}
+				mip = 0;
+				qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
-						qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+						qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+					}
+				}
+			}
+			break;
+		case GLTEXTURETYPE_RECTANGLE:
+			qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
+			break;
+		}
+		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
+		qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		if (!(glt->flags & TEXF_RENDERTARGET))
+		{
+			D3DLOCKED_RECT d3dlockedrect;
+			D3DLOCKED_BOX d3dlockedbox;
+			switch(glt->texturetype)
+			{
+			case GLTEXTURETYPE_2D:
+				if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+				{
+					if (prevbuffer)
+						memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+					else
+						memset(d3dlockedrect.pBits, 255, width*height*glt->bytesperpixel);
+					IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
+				}
+				mip++;
+				if ((glt->flags & TEXF_MIPMAP) && prevbuffer)
+				{
+					while (width > 1 || height > 1 || depth > 1)
+					{
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
+						prevbuffer = resizebuffer;
+						if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+						{
+							memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+							IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
+						}
+						mip++;
 					}
 				}
 				break;
 			case GLTEXTURETYPE_3D:
-				qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+				if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
+				{
+					// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
+					memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
+					IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
+				}
+				mip++;
 				if (glt->flags & TEXF_MIPMAP)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
-						qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+						if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
+						{
+							// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
+							memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
+							IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
+						}
+						mip++;
 					}
 				}
 				break;
@@ -1156,180 +1252,83 @@ static void R_Upload(gltexture_t *glt, const unsigned char *data, int fragx, int
 						prevbuffer = resizebuffer;
 					}
 					mip = 0;
-					qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+					if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+					{
+						memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+						IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
+					}
+					mip++;
 					if (glt->flags & TEXF_MIPMAP)
 					{
 						while (width > 1 || height > 1 || depth > 1)
 						{
 							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 							prevbuffer = resizebuffer;
-							qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
+							if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
+							{
+								memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
+								IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
+							}
+							mip++;
 						}
 					}
 				}
 				break;
 			case GLTEXTURETYPE_RECTANGLE:
-				qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
+				Sys_Error("Direct3D does not have RECTANGLE textures\n");
 				break;
 			}
-			GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
-			qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			if (!(glt->flags & TEXF_RENDERTARGET))
-			{
-				D3DLOCKED_RECT d3dlockedrect;
-				D3DLOCKED_BOX d3dlockedbox;
-				switch(glt->texturetype)
-				{
-				case GLTEXTURETYPE_2D:
-					if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
-					{
-						if (prevbuffer)
-							memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
-						else
-							memset(d3dlockedrect.pBits, 255, width*height*glt->bytesperpixel);
-						IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
-					}
-					mip++;
-					if ((glt->flags & TEXF_MIPMAP) && prevbuffer)
-					{
-						while (width > 1 || height > 1 || depth > 1)
-						{
-							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-							prevbuffer = resizebuffer;
-							if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
-							{
-								memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
-								IDirect3DTexture9_UnlockRect((IDirect3DTexture9*)glt->d3dtexture, mip);
-							}
-							mip++;
-						}
-					}
-					break;
-				case GLTEXTURETYPE_3D:
-					if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
-					{
-						// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
-						memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
-						IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
-					}
-					mip++;
-					if (glt->flags & TEXF_MIPMAP)
-					{
-						while (width > 1 || height > 1 || depth > 1)
-						{
-							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-							prevbuffer = resizebuffer;
-							if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
-							{
-								// we are not honoring the RowPitch or SlicePitch, hopefully this works with all sizes
-								memcpy(d3dlockedbox.pBits, prevbuffer, width*height*depth*glt->bytesperpixel);
-								IDirect3DVolumeTexture9_UnlockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip);
-							}
-							mip++;
-						}
-					}
-					break;
-				case GLTEXTURETYPE_CUBEMAP:
-					// convert and upload each side in turn,
-					// from a continuous block of input texels
-					texturebuffer = (unsigned char *)prevbuffer;
-					for (i = 0;i < 6;i++)
-					{
-						prevbuffer = texturebuffer;
-						texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
-						if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
-						{
-							Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
-							prevbuffer = resizebuffer;
-						}
-						// picmip/max_size
-						while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
-						{
-							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
-							prevbuffer = resizebuffer;
-						}
-						mip = 0;
-						if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
-						{
-							memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
-							IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
-						}
-						mip++;
-						if (glt->flags & TEXF_MIPMAP)
-						{
-							while (width > 1 || height > 1 || depth > 1)
-							{
-								Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
-								prevbuffer = resizebuffer;
-								if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
-								{
-									memcpy(d3dlockedrect.pBits, prevbuffer, width*height*glt->bytesperpixel);
-									IDirect3DCubeTexture9_UnlockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip);
-								}
-								mip++;
-							}
-						}
-					}
-					break;
-				case GLTEXTURETYPE_RECTANGLE:
-					Sys_Error("Direct3D does not have RECTANGLE textures\n");
-					break;
-				}
-			}
-			glt->d3daddressw = 0;
-			if (glt->flags & TEXF_CLAMP)
-			{
-				glt->d3daddressu = D3DTADDRESS_CLAMP;
-				glt->d3daddressv = D3DTADDRESS_CLAMP;
-				if (glt->tiledepth > 1)
-					glt->d3daddressw = D3DTADDRESS_CLAMP;
-			}
-			else
-			{
-				glt->d3daddressu = D3DTADDRESS_WRAP;
-				glt->d3daddressv = D3DTADDRESS_WRAP;
-				if (glt->tiledepth > 1)
-					glt->d3daddressw = D3DTADDRESS_WRAP;
-			}
-			glt->d3dmipmaplodbias = 0;
-			glt->d3dmaxmiplevel = 0;
-			glt->d3dmaxmiplevelfilter = d3d_filter_nomip ? 0 : glt->d3dmaxmiplevel;
-			if (glt->flags & TEXF_FORCELINEAR)
-			{
-				glt->d3dminfilter = D3DTEXF_LINEAR;
-				glt->d3dmagfilter = D3DTEXF_LINEAR;
-				glt->d3dmipfilter = D3DTEXF_POINT;
-			}
-			else if (glt->flags & TEXF_FORCENEAREST)
-			{
-				glt->d3dminfilter = D3DTEXF_POINT;
-				glt->d3dmagfilter = D3DTEXF_POINT;
-				glt->d3dmipfilter = D3DTEXF_POINT;
-			}
-			else if (glt->flags & TEXF_MIPMAP)
-			{
-				glt->d3dminfilter = d3d_filter_mipmin;
-				glt->d3dmagfilter = d3d_filter_mipmag;
-				glt->d3dmipfilter = d3d_filter_mipmix;
-			}
-			else
-			{
-				glt->d3dminfilter = d3d_filter_flatmin;
-				glt->d3dmagfilter = d3d_filter_flatmag;
-				glt->d3dmipfilter = d3d_filter_flatmix;
-			}
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
 		}
+		glt->d3daddressw = 0;
+		if (glt->flags & TEXF_CLAMP)
+		{
+			glt->d3daddressu = D3DTADDRESS_CLAMP;
+			glt->d3daddressv = D3DTADDRESS_CLAMP;
+			if (glt->tiledepth > 1)
+				glt->d3daddressw = D3DTADDRESS_CLAMP;
+		}
+		else
+		{
+			glt->d3daddressu = D3DTADDRESS_WRAP;
+			glt->d3daddressv = D3DTADDRESS_WRAP;
+			if (glt->tiledepth > 1)
+				glt->d3daddressw = D3DTADDRESS_WRAP;
+		}
+		glt->d3dmipmaplodbias = 0;
+		glt->d3dmaxmiplevel = 0;
+		glt->d3dmaxmiplevelfilter = d3d_filter_nomip ? 0 : glt->d3dmaxmiplevel;
+		if (glt->flags & TEXF_FORCELINEAR)
+		{
+			glt->d3dminfilter = D3DTEXF_LINEAR;
+			glt->d3dmagfilter = D3DTEXF_LINEAR;
+			glt->d3dmipfilter = D3DTEXF_POINT;
+		}
+		else if (glt->flags & TEXF_FORCENEAREST)
+		{
+			glt->d3dminfilter = D3DTEXF_POINT;
+			glt->d3dmagfilter = D3DTEXF_POINT;
+			glt->d3dmipfilter = D3DTEXF_POINT;
+		}
+		else if (glt->flags & TEXF_MIPMAP)
+		{
+			glt->d3dminfilter = d3d_filter_mipmin;
+			glt->d3dmagfilter = d3d_filter_mipmag;
+			glt->d3dmipfilter = d3d_filter_mipmix;
+		}
+		else
+		{
+			glt->d3dminfilter = d3d_filter_flatmin;
+			glt->d3dmagfilter = d3d_filter_flatmag;
+			glt->d3dmipfilter = d3d_filter_flatmix;
+		}
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -1535,7 +1534,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		break;
 	}
 
-	R_Upload(glt, data, 0, 0, 0, glt->inputwidth, glt->inputheight, glt->inputdepth);
+	R_UploadFullTexture(glt, data);
 	if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
 		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 
@@ -2197,8 +2196,10 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
 			memcpy(output, input, width*bpp);
 	}
+	else if (x || y || width != glt->inputwidth || height != glt->inputheight)
+		R_UploadPartialTexture(glt, data, x, y, 0, width, height, 1);
 	else
-		R_Upload(glt, data, x, y, 0, width, height, 1);
+		R_UploadFullTexture(glt, data);
 }
 
 int R_RealGetTexture(rtexture_t *rt)
@@ -2212,7 +2213,7 @@ int R_RealGetTexture(rtexture_t *rt)
 		if (glt->buffermodified && glt->bufferpixels)
 		{
 			glt->buffermodified = false;
-			R_Upload(glt, glt->bufferpixels, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth);
+			R_UploadFullTexture(glt, glt->bufferpixels);
 		}
 		glt->dirty = false;
 		return glt->texnum;
@@ -2225,7 +2226,7 @@ void R_ClearTexture (rtexture_t *rt)
 {
 	gltexture_t *glt = (gltexture_t *)rt;
 
-	R_Upload( glt, NULL, 0, 0, 0, glt->tilewidth, glt->tileheight, glt->tiledepth );
+	R_UploadFullTexture(glt, NULL);
 }
 
 int R_PicmipForFlags(int flags)
