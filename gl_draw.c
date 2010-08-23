@@ -536,7 +536,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	pic->height = height;
 	if (pic->tex)
 		R_FreeTexture(pic->tex);
-	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, (alpha ? TEXF_ALPHA : 0) | TEXF_ALLOWUPDATES, -1, NULL);
+	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, (alpha ? TEXF_ALPHA : 0), -1, NULL);
 	return pic;
 }
 

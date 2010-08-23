@@ -22,7 +22,7 @@
 #define TEXF_COMPARE 0x00000800
 // indicates texture should use lower precision where supported
 #define TEXF_LOWPRECISION 0x00001000
-// indicates texture should support R_UpdateTexture, actual uploads may be delayed until R_Mesh_TexBind if gl_nopartialtextureupdates is on
+// indicates texture should support R_UpdateTexture on small regions, actual uploads may be delayed until R_Mesh_TexBind if gl_nopartialtextureupdates is on
 #define TEXF_ALLOWUPDATES 0x00002000
 // indicates texture should be affected by gl_picmip_world and r_picmipworld (maybe others in the future) instead of gl_picmip_other
 #define TEXF_ISWORLD 0x00004000
