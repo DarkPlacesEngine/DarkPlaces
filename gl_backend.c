@@ -189,6 +189,9 @@ typedef struct gl_state_s
 	IDirect3DSurface9 *d3drt_colorsurfaces[MAX_RENDERTARGETS];
 	IDirect3DSurface9 *d3drt_backbufferdepthsurface;
 	IDirect3DSurface9 *d3drt_backbuffercolorsurface;
+	void *d3dvertexbuffer;
+	void *d3dvertexdata;
+	size_t d3dvertexsize;
 #endif
 }
 gl_state_t;
@@ -265,16 +268,39 @@ static void GL_Backend_ResetState(void);
 static void R_Mesh_InitVertexDeclarations(void);
 static void R_Mesh_DestroyVertexDeclarations(void);
 
+static void R_Mesh_SetUseVBO(void)
+{
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
+		gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
+		gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
+		gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
+		break;
+	case RENDERPATH_D3D9:
+		gl_state.usevbo_staticvertex = gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
+		gl_state.usevbo_dynamicvertex = gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer && gl_vbo_dynamicindex.integer) || vid.forcevbo;
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
 static void gl_backend_start(void)
 {
 	memset(&gl_state, 0, sizeof(gl_state));
 
 	R_Mesh_InitVertexDeclarations();
 
-	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
-	gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
-	gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
+	R_Mesh_SetUseVBO();
 	Mem_ExpandableArray_NewArray(&gl_state.meshbufferarray, r_main_mempool, sizeof(r_meshbuffer_t), 128);
 
 	Con_DPrintf("OpenGL backend started.\n");
@@ -350,6 +376,9 @@ static void gl_backend_devicelost(void)
 {
 	int i, endindex;
 	r_meshbuffer_t *buffer;
+#ifdef SUPPORTD3D
+	gl_state.d3dvertexbuffer = NULL;
+#endif
 	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
 	{
@@ -2050,10 +2079,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
-	gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-	gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
-	gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
-	gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
+	R_Mesh_SetUseVBO();
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
 		Con_Printf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
@@ -2188,11 +2214,23 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		element3s += firsttriangle * 3;
 	if (element3s_indexbuffer)
 		element3s_bufferoffset += firsttriangle * 3 * sizeof(*element3s);
-	// check if the user specified to ignore static index buffers
-	if (!gl_state.usevbo_staticindex || (gl_vbo.integer == 3 && !vid.forcevbo && (element3i_bufferoffset || element3s_bufferoffset)))
+	switch(vid.renderpath)
 	{
-		element3i_indexbuffer = NULL;
-		element3s_indexbuffer = NULL;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		// check if the user specified to ignore static index buffers
+		if (!gl_state.usevbo_staticindex || (gl_vbo.integer == 3 && !vid.forcevbo && (element3i_bufferoffset || element3s_bufferoffset)))
+		{
+			element3i_indexbuffer = NULL;
+			element3s_indexbuffer = NULL;
+		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
 	}
 	// upload a dynamic index buffer if needed
 	if (element3s)
@@ -2486,6 +2524,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
+			if (gl_state.d3dvertexbuffer && ((element3s && element3s_indexbuffer) || (element3i && element3i_indexbuffer)))
 			{
 				if (element3s_indexbuffer)
 				{
@@ -2499,6 +2538,15 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				}
 				else
 					IDirect3DDevice9_DrawPrimitive(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices);
+			}
+			else
+			{
+				if (element3s)
+					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3s + firsttriangle*3, D3DFMT_INDEX16, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
+				else if (element3i)
+					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3i + firsttriangle*3, D3DFMT_INDEX32, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
+				else
+					IDirect3DDevice9_DrawPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, numvertices, (void *) ((byte *) gl_state.d3dvertexdata + (numvertices * gl_state.d3dvertexsize)), gl_state.d3dvertexsize);
 			}
 #endif
 			break;
@@ -2571,7 +2619,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			if (buffer->isindexbuffer)
 			{
 				IDirect3DIndexBuffer9 *d3d9indexbuffer = (IDirect3DIndexBuffer9 *)buffer->devicebuffer;
-				if (size != buffer->size || !buffer->devicebuffer)
+				if (size > buffer->size || !buffer->devicebuffer)
 				{
 					if (buffer->devicebuffer)
 						IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9*)buffer->devicebuffer);
@@ -2593,7 +2641,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			else
 			{
 				IDirect3DVertexBuffer9 *d3d9vertexbuffer = (IDirect3DVertexBuffer9 *)buffer->devicebuffer;
-				if (size != buffer->size || !buffer->devicebuffer)
+				if (size > buffer->size || !buffer->devicebuffer)
 				{
 					if (buffer->devicebuffer)
 						IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9*)buffer->devicebuffer);
@@ -2638,12 +2686,15 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
+		if (gl_state.d3dvertexbuffer == (void *)buffer)
+			gl_state.d3dvertexbuffer = NULL;
 		if (buffer->devicebuffer)
 		{
 			if (buffer->isindexbuffer)
 				IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9 *)buffer->devicebuffer);
 			else
 				IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9 *)buffer->devicebuffer);
+			buffer->devicebuffer = NULL;
 		}
 #endif
 		break;
@@ -3391,8 +3442,17 @@ void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		return;
 	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		gl_state.d3dvertexbuffer = NULL;
+		gl_state.d3dvertexdata = (void *)vertex3f;
+		gl_state.d3dvertexsize = sizeof(float[3]);
+#endif
+		return;
 	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 
@@ -3417,54 +3477,78 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
-	if (vertexbuffer)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL11:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9decl);
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		}
-		return;
-	}
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		break;
 	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		break;
 	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
 		break;
 	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9decl);
+		if (vertexbuffer)
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+		else
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, NULL, 0, 0);
+		gl_state.d3dvertexbuffer = (void *)vertexbuffer;
+		gl_state.d3dvertexdata = (void *)vertex;
+		gl_state.d3dvertexsize = sizeof(*vertex);
+#endif
+		break;
 	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
@@ -3574,54 +3658,78 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
-	if (vertexbuffer)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		case RENDERPATH_GL11:
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9decl);
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		}
-		return;
-	}
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		break;
 	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		}
+		break;
 	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
+		}
 		break;
 	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9decl);
+		if (vertexbuffer)
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+		else
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, NULL, 0, 0);
+		gl_state.d3dvertexbuffer = (void *)vertexbuffer;
+		gl_state.d3dvertexdata = (void *)vertex;
+		gl_state.d3dvertexsize = sizeof(*vertex);
+#endif
+		break;
 	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
@@ -3742,12 +3850,12 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
-	if (vertexbuffer)
+	switch(vid.renderpath)
 	{
-		switch(vid.renderpath)
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (vertexbuffer)
 		{
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
 			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
@@ -3755,51 +3863,65 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , vertexbuffer, (int)((unsigned char *)vertex->tvector3f          - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(3, 4, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , vertexbuffer, (int)((unsigned char *)vertex->normal3f           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
-			break;
-		case RENDERPATH_GL13:
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
-		case RENDERPATH_GL11:
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
+			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , NULL, 0);
+			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , NULL, 0);
+			R_Mesh_TexCoordPointer(3, 4, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , NULL, 0);
+			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
+		}
+		break;
+	case RENDERPATH_GL13:
+		if (vertexbuffer)
+		{
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
 			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9decl);
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
 		}
-		return;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , NULL, 0);
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , NULL, 0);
-		R_Mesh_TexCoordPointer(3, 4, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
+			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
+		}
 		break;
-	case RENDERPATH_GL13:
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
 	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-		R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
+		if (vertexbuffer)
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
+		}
+		else
+		{
+			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
+			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
+		}
 		break;
 	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9decl);
+		if (vertexbuffer)
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+		else
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, NULL, 0, 0);
+		gl_state.d3dvertexbuffer = (void *)vertexbuffer;
+		gl_state.d3dvertexdata = (void *)vertex;
+		gl_state.d3dvertexsize = sizeof(*vertex);
+#endif
+		break;
 	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
