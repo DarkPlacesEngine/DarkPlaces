@@ -284,7 +284,7 @@ void VID_Finish (void)
 #ifdef SUPPORTD3D
 	if (vid_d3d9dev)
 	{
-		HRESULT hr;
+		DWORD d;
 		if (vid_begunscene)
 		{
 			IDirect3DDevice9_EndScene(vid_d3d9dev);
@@ -292,39 +292,25 @@ void VID_Finish (void)
 		}
 		if (vid_reallyhidden)
 			return;
-		if (!vid_d3ddevicelost)
+		d = IDirect3DDevice9_TestCooperativeLevel(vid_d3d9dev);
+		switch(d)
 		{
+		case D3DERR_DEVICELOST:
+			vid_d3ddevicelost = true;
+			vid_hidden = true;
+			Sleep(100);
+			break;
+		case D3DERR_DEVICENOTRESET:
+			vid_d3ddevicelost = false;
 			vid_hidden = vid_reallyhidden;
-			hr = IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
-			if (hr == D3DERR_DEVICELOST)
-			{
-				vid_d3ddevicelost = true;
-				vid_hidden = true;
-				Sleep(100);
-			}
-		}
-		else
-		{
-			hr = IDirect3DDevice9_TestCooperativeLevel(vid_d3d9dev);
-			switch(hr)
-			{
-			case D3DERR_DEVICELOST:
-				vid_d3ddevicelost = true;
-				vid_hidden = true;
-				Sleep(100);
-				break;
-			case D3DERR_DEVICENOTRESET:
-				vid_d3ddevicelost = false;
-				vid_hidden = vid_reallyhidden;
-				R_Modules_DeviceLost();
-				IDirect3DDevice9_Reset(vid_d3d9dev, &vid_d3dpresentparameters);
-				R_Modules_DeviceRestored();
-				break;
-			case D3D_OK:
-				vid_hidden = vid_reallyhidden;
-				IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
-				break;
-			}
+			R_Modules_DeviceLost();
+			IDirect3DDevice9_Reset(vid_d3d9dev, &vid_d3dpresentparameters);
+			R_Modules_DeviceRestored();
+			break;
+		case D3D_OK:
+			vid_hidden = vid_reallyhidden;
+			IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
+			break;
 		}
 		if (!vid_begunscene && !vid_hidden)
 		{
@@ -1537,7 +1523,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 
 	CHECKGLERROR
 
-	vid.forcevbo = false;
+	vid.forcevbo = true;
 	vid.support.arb_depth_texture = true;
 	vid.support.arb_draw_buffers = vid_d3d9caps.NumSimultaneousRTs > 1;
 	vid.support.arb_occlusion_query = true; // can't find a cap for this
