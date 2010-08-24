@@ -839,7 +839,7 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 		{
 			if (lastfd < s->inetsocket)
 				lastfd = s->inetsocket;
-#if defined(WIN32) && !defined(_MSC_VER)
+#ifdef WIN32
 			FD_SET((int)s->inetsocket, &fdreadset);
 #else
 			FD_SET((unsigned int)s->inetsocket, &fdreadset);
