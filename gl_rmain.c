@@ -2071,8 +2071,8 @@ const char *builtincgshaderstring =
 "#ifdef USESATURATION\n"
 "	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
 "	float y = dot(gl_FragColor.rgb, float3(0.299, 0.587, 0.114));\n"
-"	//gl_FragColor = float3(y,y,y) + (gl_FragColor.rgb - float3(y)) * Saturation;\n"
-"	gl_FragColor.rgb = lerp(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
+"	//gl_FragColor = float3(y) + (gl_FragColor.rgb - float3(y)) * Saturation;\n"
+"	gl_FragColor.rgb = lerp(float3(y), gl_FragColor.rgb, Saturation);\n"
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -2307,7 +2307,7 @@ const char *builtincgshaderstring =
 "	//float4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	float4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	//SafeScreenTexCoord = gl_FragCoord.xyxy * float4(1.0 / 1920.0, 1.0 / 1200.0, 1.0 / 1920.0, 1.0 / 1200.0);\n"
-"	float4 ScreenTexCoord = SafeScreenTexCoord + float2(normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy).xyxy * DistortScaleRefractReflect;\n"
+"	float4 ScreenTexCoord = SafeScreenTexCoord + float2(normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5))).xyxy * DistortScaleRefractReflect;\n"
 "	// FIXME temporary hack to detect the case that the reflection\n"
 "	// gets blackened at edges due to leaving the area that contains actual\n"
 "	// content.\n"
@@ -4752,7 +4752,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			NULL
 		};
 		dllhandle_t d3dx9_dll = NULL;
-		HRESULT (WINAPI *qD3DXCompileShader)(LPCSTR pSrcData, UINT SrcDataLen, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
+		HRESULT WINAPI (*qD3DXCompileShader)(LPCSTR pSrcData, UINT SrcDataLen, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
 		dllfunction_t d3dx9_dllfuncs[] =
 		{
 			{"D3DXCompileShader",			(void **) &qD3DXCompileShader},
@@ -11410,7 +11410,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// when the model data has no vertex buffer (dynamic mesh), we need to
 	// eliminate gaps
-	if (!rsurface.modelvertexmeshbuffer)
+	if (!rsurface.modelvertexmeshbuffer || (!gl_vbo.integer && !vid.forcevbo))
 		batchneed |= BATCHNEED_NOGAPS;
 
 	// if needsupdate, we have to do a dynamic vertex batch for sure
