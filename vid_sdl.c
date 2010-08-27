@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #undef WIN32_LEAN_AND_MEAN  //hush a warning, SDL.h redefines this
 #include <SDL.h>
+#include <SDL_syswm.h>
 #include <stdio.h>
 
 #include "quakedef.h"
@@ -558,7 +559,7 @@ static void VID_SetIcon(void)
 	// only use non-XPM icon support in SDL v1.3 and higher
 	// SDL v1.2 does not support "smooth" transparency, and thus is better
 	// off the xpm way
-	if(version->major >= 2 || version->major == 1 && version->minor >= 3)
+	if(version->major >= 2 || (version->major == 1 && version->minor >= 3))
 	{
 		data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
 		if(data)
@@ -589,6 +590,51 @@ static void VID_SetIcon(void)
 			icon->pixels = data;
 		}
 	}
+#if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
+	// ugly hack to upload a good icon on X11 too
+	else
+	{
+		SDL_SysWMinfo info;
+		SDL_VERSION(&info.version);
+		if(SDL_GetWMInfo(&info) == 1 && info.subsystem == SDL_SYSWM_X11)
+		{
+			data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
+			if(data)
+			{
+				// use _NET_WM_ICON too
+				static long netwm_icon[MAX_NETWM_ICON];
+				int pos = 0;
+				int i = 1;
+
+				while(data)
+				{
+					if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
+					{
+						netwm_icon[pos++] = image_width;
+						netwm_icon[pos++] = image_height;
+						for(i = 0; i < image_height; ++i)
+							for(j = 0; j < image_width; ++j)
+								netwm_icon[pos++] = BuffLittleLong((unsigned char *) &data[(i*image_width+j)*4]);
+					}
+					else
+					{
+						Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
+					}
+					++i;
+					Mem_Free(data);
+					data = (char *) loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+				}
+
+				info.info.x11.lock_func();
+				{
+					Atom net_wm_icon = XInternAtom(info.info.x11.display, "_NET_WM_ICON", false);
+					XChangeProperty(info.info.x11.display, info.info.x11.wmwindow, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
+				}
+				info.info.x11.unlock_func();
+			}
+		}
+	}
+#endif
 
 	// we only get here if non-XPM icon was missing, or SDL version is not
 	// sufficient for transparent non-XPM icons
