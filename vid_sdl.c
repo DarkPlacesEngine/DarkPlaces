@@ -532,7 +532,10 @@ static void VID_SetCaption(void)
 #endif
 	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
 }
-static void VID_SetIcon(void)
+static void VID_SetIcon_Pre(void)
+{
+}
+static void VID_SetIcon_Post(void)
 {
 }
 #else
@@ -540,7 +543,7 @@ static void VID_SetIcon(void)
 #include "darkplaces.xpm"
 #include "nexuiz.xpm"
 static SDL_Surface *icon = NULL;
-static void VID_SetIcon(void)
+static void VID_SetIcon_Pre(void)
 {
 	/*
 	 * Somewhat restricted XPM reader. Only supports XPMs saved by GIMP 2.4 at
@@ -590,51 +593,6 @@ static void VID_SetIcon(void)
 			icon->pixels = data;
 		}
 	}
-#if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
-	// ugly hack to upload a good icon on X11 too
-	else
-	{
-		SDL_SysWMinfo info;
-		SDL_VERSION(&info.version);
-		if(SDL_GetWMInfo(&info) == 1 && info.subsystem == SDL_SYSWM_X11)
-		{
-			data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
-			if(data)
-			{
-				// use _NET_WM_ICON too
-				static long netwm_icon[MAX_NETWM_ICON];
-				int pos = 0;
-				int i = 1;
-
-				while(data)
-				{
-					if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
-					{
-						netwm_icon[pos++] = image_width;
-						netwm_icon[pos++] = image_height;
-						for(i = 0; i < image_height; ++i)
-							for(j = 0; j < image_width; ++j)
-								netwm_icon[pos++] = BuffLittleLong((unsigned char *) &data[(i*image_width+j)*4]);
-					}
-					else
-					{
-						Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
-					}
-					++i;
-					Mem_Free(data);
-					data = (char *) loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
-				}
-
-				info.info.x11.lock_func();
-				{
-					Atom net_wm_icon = XInternAtom(info.info.x11.display, "_NET_WM_ICON", false);
-					XChangeProperty(info.info.x11.display, info.info.x11.wmwindow, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
-				}
-				info.info.x11.unlock_func();
-			}
-		}
-	}
-#endif
 
 	// we only get here if non-XPM icon was missing, or SDL version is not
 	// sufficient for transparent non-XPM icons
@@ -738,6 +696,62 @@ static void VID_SetIcon(void)
 
 	SDL_WM_SetIcon(icon, NULL);
 }
+static void VID_SetIcon_Post(void)
+{
+#if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
+	int j;
+	char *data;
+	const SDL_version *version;
+
+	version = SDL_Linked_Version();
+	// only use non-XPM icon support in SDL v1.3 and higher
+	// SDL v1.2 does not support "smooth" transparency, and thus is better
+	// off the xpm way
+	if(!(version->major >= 2 || (version->major == 1 && version->minor >= 3)))
+	{
+		// in this case, we did not set the good icon yet
+		SDL_SysWMinfo info;
+		SDL_VERSION(&info.version);
+		if(SDL_GetWMInfo(&info) == 1 && info.subsystem == SDL_SYSWM_X11)
+		{
+			data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
+			if(data)
+			{
+				// use _NET_WM_ICON too
+				static long netwm_icon[MAX_NETWM_ICON];
+				int pos = 0;
+				int i = 1;
+
+				while(data)
+				{
+					if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
+					{
+						netwm_icon[pos++] = image_width;
+						netwm_icon[pos++] = image_height;
+						for(i = 0; i < image_height; ++i)
+							for(j = 0; j < image_width; ++j)
+								netwm_icon[pos++] = BuffLittleLong((unsigned char *) &data[(i*image_width+j)*4]);
+					}
+					else
+					{
+						Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
+					}
+					++i;
+					Mem_Free(data);
+					data = (char *) loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+				}
+
+				info.info.x11.lock_func();
+				{
+					Atom net_wm_icon = XInternAtom(info.info.x11.display, "_NET_WM_ICON", false);
+					XChangeProperty(info.info.x11.display, info.info.x11.wmwindow, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
+				}
+				info.info.x11.unlock_func();
+			}
+		}
+	}
+#endif
+}
 
 
 static void VID_SetCaption(void)
@@ -840,8 +854,9 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	video_bpp = mode->bitsperpixel;
 	video_flags = flags;
-	VID_SetIcon();
+	VID_SetIcon_Pre();
 	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
+	VID_SetIcon_Post();
 
 	if (screen == NULL)
 	{
