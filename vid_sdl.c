@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdio.h>
 
 #include "quakedef.h"
+#include "image.h"
 
 #ifdef WIN32
 #define SDL_R_RESTART
@@ -551,100 +552,143 @@ static void VID_SetIcon(void)
 	unsigned short palenc[256]; // store color id by char
 	char *xpm;
 	char **idata, *data;
+	const SDL_version *version;
 
-	xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
-	idata = NULL;
-	if(xpm)
-		idata = XPM_DecodeString(xpm);
-	if(!idata)
-		idata = ENGINE_ICON;
-	if(xpm)
-		Mem_Free(xpm);
-
-	data = idata[0];
-
-	if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) != 4)
+	version = SDL_Linked_Version();
+	// only use non-XPM icon support in SDL v1.3 and higher
+	// SDL v1.2 does not support "smooth" transparency, and thus is better
+	// off the xpm way
+	if(version->major >= 2 || version->major == 1 && version->minor >= 3)
 	{
-		// NOTE: Only 1-char colornames are supported
-		Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
-		return;
-	}
-
-	if(isize != 1)
-	{
-		// NOTE: Only 1-char colornames are supported
-		Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
-		return;
-	}
-
-	for(i = 0; i < colors; ++i)
-	{
-		unsigned int r, g, b;
-		char idx;
-
-		if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
+		data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
+		if(data)
 		{
-			char foo[2];
-			if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
-			{
-				Con_Printf("This XPM's palette looks odd. Can't continue.\n");
+			unsigned int red = 0x00FF0000;
+			unsigned int green = 0x0000FF00;
+			unsigned int blue = 0x000000FF;
+			unsigned int alpha = 0xFF000000;
+			width = image_width;
+			height = image_height;
+
+			// reallocate with malloc, as this is in tempmempool (do not want)
+			xpm = data;
+			data = malloc(width * height * 4);
+			memcpy(data, xpm, width * height * 4);
+			Mem_Free(xpm);
+			xpm = NULL;
+
+			icon = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, LittleLong(red), LittleLong(green), LittleLong(blue), LittleLong(alpha));
+
+			if(icon == NULL) {
+				Con_Printf(	"Failed to create surface for the window Icon!\n"
+						"%s\n", SDL_GetError());
+				free(data);
 				return;
+			}
+
+			icon->pixels = data;
+		}
+	}
+
+	// we only get here if non-XPM icon was missing, or SDL version is not
+	// sufficient for transparent non-XPM icons
+	if(!icon)
+	{
+		xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
+		idata = NULL;
+		if(xpm)
+			idata = XPM_DecodeString(xpm);
+		if(!idata)
+			idata = ENGINE_ICON;
+		if(xpm)
+			Mem_Free(xpm);
+
+		data = idata[0];
+
+		if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) != 4)
+		{
+			// NOTE: Only 1-char colornames are supported
+			Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
+			return;
+		}
+
+		if(isize != 1)
+		{
+			// NOTE: Only 1-char colornames are supported
+			Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
+			return;
+		}
+
+		for(i = 0; i < colors; ++i)
+		{
+			unsigned int r, g, b;
+			char idx;
+
+			if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
+			{
+				char foo[2];
+				if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
+				{
+					Con_Printf("This XPM's palette looks odd. Can't continue.\n");
+					return;
+				}
+				else
+				{
+					palette[i].r = 255; // color key
+					palette[i].g = 0;
+					palette[i].b = 255;
+					thenone = i; // weeeee
+				}
 			}
 			else
 			{
-				palette[i].r = 255; // color key
-				palette[i].g = 0;
-				palette[i].b = 255;
-				thenone = i; // weeeee
+				palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
+				palette[i].g = g;
+				palette[i].b = b;
+			}
+
+			palenc[(unsigned char) idx] = i;
+		}
+
+		// allocate the image data
+		data = (char*) malloc(width*height);
+
+		for(j = 0; j < height; ++j)
+		{
+			for(i = 0; i < width; ++i)
+			{
+				// casting to the safest possible datatypes ^^
+				data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
 			}
 		}
-		else
+
+		if(icon != NULL)
 		{
-			palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
-			palette[i].g = g;
-			palette[i].b = b;
+			// SDL_FreeSurface should free the data too
+			// but for completeness' sake...
+			if(icon->flags & SDL_PREALLOC)
+			{
+				free(icon->pixels);
+				icon->pixels = NULL; // safety
+			}
+			SDL_FreeSurface(icon);
 		}
 
-		palenc[(unsigned char) idx] = i;
-	}
+		icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
+		// 8 bit surfaces get an empty palette allocated according to the docs
+		// so it's a palette image for sure :) no endian check necessary for the mask
 
-	// allocate the image data
-	data = (char*) malloc(width*height);
-
-	for(j = 0; j < height; ++j)
-	{
-		for(i = 0; i < width; ++i)
-		{
-			// casting to the safest possible datatypes ^^
-			data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
+		if(icon == NULL) {
+			Con_Printf(	"Failed to create surface for the window Icon!\n"
+					"%s\n", SDL_GetError());
+			free(data);
+			return;
 		}
-	}
 
-	if(icon != NULL)
-	{
-		// SDL_FreeSurface should free the data too
-		// but for completeness' sake...
-		if(icon->flags & SDL_PREALLOC)
-		{
-			free(icon->pixels);
-			icon->pixels = NULL; // safety
-		}
-		SDL_FreeSurface(icon);
+		icon->pixels = data;
+		SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
+		SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
 	}
-
-	icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
-	// 8 bit surfaces get an empty palette allocated according to the docs
-	// so it's a palette image for sure :) no endian check necessary for the mask
-
-	if(icon == NULL) {
-		Con_Printf(	"Failed to create surface for the window Icon!\n"
-				"%s\n", SDL_GetError());
-		free(data);
-		return;
-	}
-	icon->pixels = data;
-	SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
-	SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
 
 	SDL_WM_SetIcon(icon, NULL);
 }
