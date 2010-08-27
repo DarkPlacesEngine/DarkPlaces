@@ -41,6 +41,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // get the Uchar type
 #include "utf8lib.h"
+#include "image.h"
 
 #include "nexuiz.xpm"
 #include "darkplaces.xpm"
@@ -86,6 +87,8 @@ Atom wm_delete_window_atom;
 Atom net_wm_state_atom;
 Atom net_wm_state_hidden_atom;
 Atom net_wm_state_fullscreen_atom;
+Atom net_wm_icon;
+Atom cardinal;
 
 #define KEY_MASK (KeyPressMask | KeyReleaseMask)
 #define MOUSE_MASK (ButtonPressMask | ButtonReleaseMask | \
@@ -805,7 +808,7 @@ void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, in
 
 qboolean VID_InitMode(viddef_mode_t *mode)
 {
-	int i;
+	int i, j;
 	int attrib[32];
 	XSetWindowAttributes attr;
 	XClassHint *clshints;
@@ -817,6 +820,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	const char *drivername;
 	char *xpm;
 	char **idata;
+	unsigned char *data;
 
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
@@ -852,6 +856,8 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
 	net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
 	net_wm_state_hidden_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_HIDDEN", false);
+	net_wm_icon = XInternAtom(vidx11_display, "_NET_WM_ICON", false);
+	cardinal = XInternAtom(vidx11_display, "CARDINAL", false);
 
 	// make autorepeat send keypress/keypress/.../keyrelease instead of intervening keyrelease
 	XkbSetDetectableAutoRepeat(vidx11_display, true, NULL);
@@ -999,6 +1005,36 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	win = XCreateWindow(vidx11_display, root, 0, 0, mode->width, mode->height, 0, visinfo->depth, InputOutput, visinfo->visual, mask, &attr);
 
+	data = loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
+	if(data)
+	{
+		// use _NET_WM_ICON too
+		static long netwm_icon[MAX_NETWM_ICON];
+		int pos = 0;
+		int i = 1;
+
+		while(data)
+		{
+			if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
+			{
+				netwm_icon[pos++] = image_width;
+				netwm_icon[pos++] = image_height;
+				for(i = 0; i < image_height; ++i)
+					for(j = 0; j < image_width; ++j)
+						netwm_icon[pos++] = BuffLittleLong(&data[(i*image_width+j)*4]);
+			}
+			else
+			{
+				Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
+			}
+			++i;
+			Mem_Free(data);
+			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+		}
+		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
+	}
+
+	// fallthrough for old window managers
 	xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
 	idata = NULL;
 	if(xpm)
