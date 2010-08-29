@@ -536,6 +536,37 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 
 /*
 ====================
+CleanURL
+
+Returns a "cleaned up" URL for display (to strip login data)
+====================
+*/
+static const char *CleanURL(const char *url)
+{
+	static char urlbuf[1024];
+	const char *p, *q, *r;
+
+	// if URL is of form anything://foo-without-slash@rest, replace by anything://rest
+	p = strstr(url, "://");
+	if(p)
+	{
+		q = strchr(p + 3, '@');
+		if(q)
+		{
+			r = strchr(p + 3, '/');
+			if(!r || q < r)
+			{
+				dpsnprintf(urlbuf, sizeof(urlbuf), "%.*s%s", (int)(p - url + 3), url, q + 1);
+				return urlbuf;
+			}
+		}
+	}
+
+	return url;
+}
+
+/*
+====================
 CheckPendingDownloads
 
 checks if there are free download slots to start new downloads in.
@@ -556,7 +587,7 @@ static void CheckPendingDownloads(void)
 			{
 				if(!di->buffer)
 				{
-					Con_Printf("Downloading %s -> %s", di->url, di->filename);
+					Con_Printf("Downloading %s -> %s", CleanURL(di->url), di->filename);
 
 					di->stream = FS_OpenRealFile(di->filename, "ab", false);
 					if(!di->stream)
@@ -574,7 +605,7 @@ static void CheckPendingDownloads(void)
 				}
 				else
 				{
-					Con_DPrintf("Downloading %s -> memory\n", di->url);
+					Con_DPrintf("Downloading %s -> memory\n", CleanURL(di->url));
 					di->startpos = 0;
 				}
 
@@ -746,7 +777,7 @@ static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, q
 		//   141.2.16.3 - - [17/Mar/2006:22:32:43 +0100] "GET /maps/tznex07.pk3 HTTP/1.1" 200 1077455 "dp://141.2.16.7:26000/" "Nexuiz Linux 22:07:43 Mar 17 2006"
 
 		if(!name)
-			name = URL;
+			name = CleanURL(URL);
 
 		if(!buf)
 		{
@@ -763,7 +794,7 @@ static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, q
 				downloadinfo *di = Curl_Find(fn);
 				if(di)
 				{
-					Con_Printf("Can't download %s, already getting it from %s!\n", fn, di->url);
+					Con_Printf("Can't download %s, already getting it from %s!\n", fn, CleanURL(di->url));
 
 					// however, if it was not for this map yet...
 					if(forthismap && !di->forthismap)
@@ -1073,7 +1104,7 @@ static void Curl_Info_f(void)
 		for(di = downloads; di; di = di->next)
 		{
 			double speed, percent;
-			Con_Printf("  %s -> %s ",  di->url, di->filename);
+			Con_Printf("  %s -> %s ",  CleanURL(di->url), di->filename);
 			percent = 100.0 * Curl_GetDownloadAmount(di);
 			speed = Curl_GetDownloadSpeed(di);
 			if(percent >= 0)
@@ -1135,10 +1166,6 @@ void Curl_Curl_f(void)
 		Con_Print("curl support not enabled. Set cl_curl_enabled to 1 to enable.\n");
 		return;
 	}
-
-	for(i = 0; i != Cmd_Argc(); ++i)
-		Con_DPrintf("%s ", Cmd_Argv(i));
-	Con_DPrint("\n");
 
 	if(Cmd_Argc() < 2)
 	{
