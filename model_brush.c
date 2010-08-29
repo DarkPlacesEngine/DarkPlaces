@@ -4546,15 +4546,32 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 {
 	q3dlightmap_t *input_pointer;
-	int i, j, k, count, power, power2, endlightmap, mergewidth, mergeheight, mergecount, mergefield;
+	int i;
+	int j;
+	int k;
+	int count;
+	int powerx;
+	int powery;
+	int powerxy;
+	int powerdxy;
+	int endlightmap;
+	int mergegoal;
+	int lightmapindex;
+	int realcount;
+	int realindex;
+	int mergedwidth;
+	int mergedheight;
+	int mergedcolumns;
+	int mergedrows;
+	int mergedrowsxcolumns;
+	int size;
+	int bytesperpixel;
+	int rgbmap[3];
 	unsigned char *c;
-
-	unsigned char *convertedpixels;
-	unsigned char *converteddeluxepixels;
+	unsigned char *mergedpixels;
+	unsigned char *mergeddeluxepixels;
 	unsigned char *mergebuf;
-
 	char mapname[MAX_QPATH];
-	int size, bytesperpixel, rgbmap[3];
 	qboolean external;
 	unsigned char *inpixels[10000]; // max count q3map2 can output (it uses 4 digits)
 
@@ -4695,18 +4712,42 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 	// figure out what the most reasonable merge power is within limits
 
-	loadmodel->brushq3.num_lightmapmergepower = 0;
+	// find the appropriate NxN dimensions to merge to, to avoid wasted space
+	realcount = count >> loadmodel->brushq3.deluxemapping;
 
-	for(i = 0; (128 << i) < size; ++i)
-		;
-	// i is now 0 for 128, 1 for 256, etc
+	// figure out how big the merged texture has to be
+	mergegoal = 128<<bound(0, mod_q3bsp_lightmapmergepower.integer, 6);
+	mergegoal = bound(size, mergegoal, (int)vid.maxtexturesize_2d);
+	while (mergegoal > size && mergegoal * mergegoal / 4 >= size * size * realcount)
+		mergegoal /= 2;
+	mergedwidth = mergegoal;
+	mergedheight = mergegoal;
+	// choose non-square size (2x1 aspect) if only half the space is used;
+	// this really only happens when the entire set fits in one texture, if
+	// there are multiple textures, we don't worry about shrinking the last
+	// one to fit, because the driver prefers the same texture size on
+	// consecutive draw calls...
+	if (mergedwidth * mergedheight / 2 >= size*size*realcount)
+		mergedheight /= 2;
 
-	for (power = 1;power + i <= mod_q3bsp_lightmapmergepower.integer && (size << power) <= (int)vid.maxtexturesize_2d && (1 << (power * 2)) < 4 * (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)); power++)
-		loadmodel->brushq3.num_lightmapmergepower = power;
+	loadmodel->brushq3.num_lightmapmergedwidthpower = 0;
+	loadmodel->brushq3.num_lightmapmergedheightpower = 0;
+	while (mergedwidth > size<<loadmodel->brushq3.num_lightmapmergedwidthpower)
+		loadmodel->brushq3.num_lightmapmergedwidthpower++;
+	while (mergedheight > size<<loadmodel->brushq3.num_lightmapmergedheightpower)
+		loadmodel->brushq3.num_lightmapmergedheightpower++;
+	loadmodel->brushq3.num_lightmapmergedwidthheightdeluxepower = loadmodel->brushq3.num_lightmapmergedwidthpower + loadmodel->brushq3.num_lightmapmergedheightpower + (loadmodel->brushq3.deluxemapping ? 1 : 0);
 
-	loadmodel->brushq3.num_lightmapmerge = 1 << loadmodel->brushq3.num_lightmapmergepower;
+	powerx = loadmodel->brushq3.num_lightmapmergedwidthpower;
+	powery = loadmodel->brushq3.num_lightmapmergedheightpower;
+	powerxy = powerx+powery;
+	powerdxy = loadmodel->brushq3.deluxemapping + powerxy;
 
-	loadmodel->brushq3.num_mergedlightmaps = ((count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) + (1 << (loadmodel->brushq3.num_lightmapmergepower * 2)) - 1) >> (loadmodel->brushq3.num_lightmapmergepower * 2);
+	mergedcolumns = 1 << powerx;
+	mergedrows = 1 << powery;
+	mergedrowsxcolumns = 1 << powerxy;
+
+	loadmodel->brushq3.num_mergedlightmaps = (realcount + (1 << powerxy) - 1) >> powerxy;
 	loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 	if (loadmodel->brushq3.deluxemapping)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
@@ -4715,71 +4756,43 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
 		loadmodel->texturepool = R_AllocTexturePool();
 
-	power = loadmodel->brushq3.num_lightmapmergepower;
-	power2 = power * 2;
-	convertedpixels = (unsigned char *) Mem_Alloc(tempmempool, (size*size*4) << power2);
-	converteddeluxepixels = loadmodel->brushq3.deluxemapping ? (unsigned char *) Mem_Alloc(tempmempool, (size*size*4) << power2) : NULL;
+	mergedpixels = (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4);
+	mergeddeluxepixels = loadmodel->brushq3.deluxemapping ? (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4) : NULL;
 	for (i = 0;i < count;i++)
 	{
 		// figure out which merged lightmap texture this fits into
-		int lightmapindex = i >> (loadmodel->brushq3.deluxemapping + power2);
-		mergefield = (i >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) & ((1 << power2) - 1);
-			// power == 0: mergefield == 0
-		mergecount = (count >> (loadmodel->brushq3.deluxemapping ? 1 : 0)) - (lightmapindex << power2);
-			// power == 0: mergecount > 0
-		// first index: calculate mergewidth/mergeheight; later index: use previous mergewidth/mergeheight
-		if (mergefield == 0 && !(loadmodel->brushq3.deluxemapping && (i & 1)))
-		{
-			// create a lightmap only as large as necessary to hold the
-			// remaining size*size blocks
-			// if there are multiple merged lightmap textures then they will
-			// all be full size except the last one which may be smaller
-			// because it only needs to the remaining blocks, and it will often
-			// be odd sizes like 2048x512 due to only being 25% full or so.
-			for (mergewidth = 1;mergewidth < mergecount && mergewidth < (1 << power);mergewidth *= 2)
-				;
-				// power == 0: mergewidth == 1
-			for (mergeheight = 1;mergewidth*mergeheight < mergecount && mergeheight < (1 << power);mergeheight *= 2)
-				;
-				// power == 0: mergeheight == 1
-			if (power > 0)
-			if (developer_loading.integer)
-				Con_Printf("lightmap merge texture #%i is %ix%i (%i of %i used)\n", lightmapindex, mergewidth*size, mergeheight*size, min(mergecount, mergewidth*mergeheight), mergewidth*mergeheight);
-		}
+		realindex = i >> loadmodel->brushq3.deluxemapping;
+		lightmapindex = i >> powerdxy;
 
-		// we still have it from last iteration, so no need to recalculate
-		// mergewidth = R_TextureWidth(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
-		// mergeheight = R_TextureHeight(loadmodel->brushq3.data_lightmaps[lightmapindex]) / size;
-		if (loadmodel->brushq3.deluxemapping && (i & 1))
-			mergebuf = converteddeluxepixels + 4 * ((mergefield % mergewidth) * size + (mergefield / mergewidth) * size * (mergewidth * size));
-		else
-			mergebuf = convertedpixels       + 4 * ((mergefield % mergewidth) * size + (mergefield / mergewidth) * size * (mergewidth * size));
-			//                                      x                                   y                         pixperrow
-			// power == 0; converteddeluxepixels or convertedpixels
+		// choose the destination address
+		mergebuf = (loadmodel->brushq3.deluxemapping && (i & 1)) ? mergeddeluxepixels : mergedpixels;
+		mergebuf += 4 * (realindex & (mergedcolumns-1))*size + 4 * ((realindex >> powerx) & (mergedrows-1))*mergedwidth*size;
+		if ((i & 1) == 0 || !loadmodel->brushq3.deluxemapping)
+			Con_Printf("copying original lightmap %i (%ix%i) to %i (at %i,%i)\n", i, size, size, lightmapindex, (realindex & (mergedcolumns-1))*size, ((realindex >> powerx) & (mergedrows-1))*size);
 
-		// convert
+		// convert pixels from RGB or BGRA while copying them into the destination rectangle
 		for (j = 0;j < size;j++)
 		for (k = 0;k < size;k++)
 		{
-			mergebuf[(j*size*mergewidth+k)*4+0] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[0]];
-			mergebuf[(j*size*mergewidth+k)*4+1] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[1]];
-			mergebuf[(j*size*mergewidth+k)*4+2] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[2]];
-			mergebuf[(j*size*mergewidth+k)*4+3] = 255;
+			mergebuf[(j*mergedwidth+k)*4+0] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[0]];
+			mergebuf[(j*mergedwidth+k)*4+1] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[1]];
+			mergebuf[(j*mergedwidth+k)*4+2] = inpixels[i][(j*size+k)*bytesperpixel+rgbmap[2]];
+			mergebuf[(j*mergedwidth+k)*4+3] = 255;
 		}
 
-		// upload if this was the last lightmap on the texture
-		if((mergefield >= (lightmapindex << power2) - 1) || (mergefield >= mergecount - 1))
+		// upload texture if this was the last tile being written to the texture
+		if (((realindex + 1) & (mergedrowsxcolumns - 1)) == 0 || (realindex + 1) == realcount)
 		{
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), size*mergewidth, size*mergeheight, converteddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), size*mergewidth, size*mergeheight, convertedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 		}
 	}
 
-	if (loadmodel->brushq3.deluxemapping)
-		Mem_Free(converteddeluxepixels);
-	Mem_Free(convertedpixels);
+	if (mergeddeluxepixels)
+		Mem_Free(mergeddeluxepixels);
+	Mem_Free(mergedpixels);
 	if(external)
 	{
 		for(i = 0; i < count; ++i)
@@ -4941,9 +4954,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			else
 			{
-				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
+				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> loadmodel->brushq3.num_lightmapmergedwidthheightdeluxepower];
 				if (loadmodel->brushq3.deluxemapping)
-					out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> (loadmodel->brushq3.num_lightmapmergepower * 2 + loadmodel->brushq3.deluxemapping)];
+					out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> loadmodel->brushq3.num_lightmapmergedwidthheightdeluxepower];
 			}
 		}
 

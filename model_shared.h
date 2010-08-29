@@ -827,7 +827,9 @@ typedef struct model_brushq3_s
 	// lightmap textures
 	int num_originallightmaps;
 	int num_mergedlightmaps;
-	int num_lightmapmergepower;
+	int num_lightmapmergedwidthpower;
+	int num_lightmapmergedheightpower;
+	int num_lightmapmergedwidthheightdeluxepower;
 	int num_lightmapmerge;
 	rtexture_t **data_lightmaps;
 	rtexture_t **data_deluxemaps;
