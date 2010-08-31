@@ -7761,14 +7761,52 @@ void R_AnimCache_ClearCache(void)
 void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
 {
 	int i;
+
+	// identical memory layout, so no need to allocate...
+	// this also provides the vertexposition structure to everything, e.g.
+	// depth masked rendering currently uses it even if having separate
+	// arrays
+	// NOTE: get rid of this optimization if changing it to e.g. 4f
+	ent->animcache_vertexposition = (r_vertexposition_t *)ent->animcache_vertex3f;
+
+	// TODO:
+	// get rid of following uses of VERTEXPOSITION, change to the array:
+	// R_DrawTextureSurfaceList_Sky if skyrendermasked
+	// R_DrawSurface_TransparentCallback if r_transparentdepthmasking.integer
+	// R_DrawTextureSurfaceList_DepthOnly
+	// R_Q1BSP_DrawShadowMap
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		// need the meshbuffers if !gl_mesh_separatearrays.integer
+		if (gl_mesh_separatearrays.integer)
+			return;
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		// always need the meshbuffers
+		break;
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		// never need the meshbuffers
+		return;
+	}
+
 	if (!ent->animcache_vertexmesh && ent->animcache_normal3f)
 		ent->animcache_vertexmesh = (r_vertexmesh_t *)R_FrameData_Alloc(sizeof(r_vertexmesh_t)*numvertices);
+	/*
 	if (!ent->animcache_vertexposition)
 		ent->animcache_vertexposition = (r_vertexposition_t *)R_FrameData_Alloc(sizeof(r_vertexposition_t)*numvertices);
+	*/
 	if (ent->animcache_vertexposition)
 	{
+		/*
 		for (i = 0;i < numvertices;i++)
 			VectorCopy(ent->animcache_vertex3f + 3*i, ent->animcache_vertexposition[i].vertex3f);
+		*/
 		// TODO: upload vertex buffer?
 	}
 	if (ent->animcache_vertexmesh)
