@@ -11761,6 +11761,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 					VectorMAMAMAM(1, center, DotProduct(forward, v), newforward, DotProduct(right, v), newright, DotProduct(up, v), newup, rsurface.array_batchvertex3f + 3*(j+i));
 				}
 			}
+			// if we get here, BATCHNEED_ARRAY_NORMAL and BATCHNEED_ARRAY_VECTOR are in batchneed, so no need to check
 			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
 			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
@@ -11861,20 +11862,26 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 					}
 				}
 			}
-			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
-			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
-			rsurface.batchsvector3f = rsurface.array_batchsvector3f;
-			rsurface.batchsvector3f_vertexbuffer = NULL;
-			rsurface.batchsvector3f_bufferoffset = 0;
-			rsurface.batchtvector3f = rsurface.array_batchtvector3f;
-			rsurface.batchtvector3f_vertexbuffer = NULL;
-			rsurface.batchtvector3f_bufferoffset = 0;
-			rsurface.batchnormal3f = rsurface.array_batchnormal3f;
-			rsurface.batchnormal3f_vertexbuffer = NULL;
-			rsurface.batchnormal3f_bufferoffset = 0;
+			if(batchneed & (BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR)) // otherwise these can stay NULL
+			{
+				Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
+				rsurface.batchnormal3f = rsurface.array_batchnormal3f;
+				rsurface.batchnormal3f_vertexbuffer = NULL;
+				rsurface.batchnormal3f_bufferoffset = 0;
+			}
+			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
+			{
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
+				rsurface.batchsvector3f_vertexbuffer = NULL;
+				rsurface.batchsvector3f_bufferoffset = 0;
+				rsurface.batchtvector3f = rsurface.array_batchtvector3f;
+				rsurface.batchtvector3f_vertexbuffer = NULL;
+				rsurface.batchtvector3f_bufferoffset = 0;
+			}
 			break;
 		case Q3DEFORM_NORMAL:
 			// deform the normals to make reflections wavey
@@ -11888,16 +11895,19 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				normal[2] = rsurface.batchnormal3f[j*3+2] + deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
 				VectorNormalize(normal);
 			}
-			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
-			rsurface.batchsvector3f = rsurface.array_batchsvector3f;
-			rsurface.batchsvector3f_vertexbuffer = NULL;
-			rsurface.batchsvector3f_bufferoffset = 0;
-			rsurface.batchtvector3f = rsurface.array_batchtvector3f;
-			rsurface.batchtvector3f_vertexbuffer = NULL;
-			rsurface.batchtvector3f_bufferoffset = 0;
 			rsurface.batchnormal3f = rsurface.array_batchnormal3f;
 			rsurface.batchnormal3f_vertexbuffer = NULL;
 			rsurface.batchnormal3f_bufferoffset = 0;
+			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
+			{
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
+				rsurface.batchsvector3f_vertexbuffer = NULL;
+				rsurface.batchsvector3f_bufferoffset = 0;
+				rsurface.batchtvector3f = rsurface.array_batchtvector3f;
+				rsurface.batchtvector3f_vertexbuffer = NULL;
+				rsurface.batchtvector3f_bufferoffset = 0;
+			}
 			break;
 		case Q3DEFORM_WAVE:
 			// deform vertex array to make wavey water and flags and such
@@ -11920,20 +11930,24 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				}
 				VectorMA(rsurface.batchvertex3f + 3*j, scale, rsurface.batchnormal3f + 3*j, rsurface.array_batchvertex3f + 3*j);
 			}
+			// if we get here, BATCHNEED_ARRAY_NORMAL is in batchneed, so no need to check
 			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
-			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
-			rsurface.batchsvector3f = rsurface.array_batchsvector3f;
-			rsurface.batchsvector3f_vertexbuffer = NULL;
-			rsurface.batchsvector3f_bufferoffset = 0;
-			rsurface.batchtvector3f = rsurface.array_batchtvector3f;
-			rsurface.batchtvector3f_vertexbuffer = NULL;
-			rsurface.batchtvector3f_bufferoffset = 0;
 			rsurface.batchnormal3f = rsurface.array_batchnormal3f;
 			rsurface.batchnormal3f_vertexbuffer = NULL;
 			rsurface.batchnormal3f_bufferoffset = 0;
+			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
+			{
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
+				rsurface.batchsvector3f_vertexbuffer = NULL;
+				rsurface.batchsvector3f_bufferoffset = 0;
+				rsurface.batchtvector3f = rsurface.array_batchtvector3f;
+				rsurface.batchtvector3f_vertexbuffer = NULL;
+				rsurface.batchtvector3f_bufferoffset = 0;
+			}
 			break;
 		case Q3DEFORM_BULGE:
 			// deform vertex array to make the surface have moving bulges
@@ -11942,20 +11956,24 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				scale = sin(rsurface.batchtexcoordtexture2f[j*2+0] * deform->parms[0] + r_refdef.scene.time * deform->parms[2]) * deform->parms[1];
 				VectorMA(rsurface.batchvertex3f + 3*j, scale, rsurface.batchnormal3f + 3*j, rsurface.array_batchvertex3f + 3*j);
 			}
+			// if we get here, BATCHNEED_ARRAY_NORMAL is in batchneed, so no need to check
 			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
-			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
-			rsurface.batchsvector3f = rsurface.array_batchsvector3f;
-			rsurface.batchsvector3f_vertexbuffer = NULL;
-			rsurface.batchsvector3f_bufferoffset = 0;
-			rsurface.batchtvector3f = rsurface.array_batchtvector3f;
-			rsurface.batchtvector3f_vertexbuffer = NULL;
-			rsurface.batchtvector3f_bufferoffset = 0;
 			rsurface.batchnormal3f = rsurface.array_batchnormal3f;
 			rsurface.batchnormal3f_vertexbuffer = NULL;
 			rsurface.batchnormal3f_bufferoffset = 0;
+			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
+			{
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
+				rsurface.batchsvector3f_vertexbuffer = NULL;
+				rsurface.batchsvector3f_bufferoffset = 0;
+				rsurface.batchtvector3f = rsurface.array_batchtvector3f;
+				rsurface.batchtvector3f_vertexbuffer = NULL;
+				rsurface.batchtvector3f_bufferoffset = 0;
+			}
 			break;
 		case Q3DEFORM_MOVE:
 			// deform vertex array
