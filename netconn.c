@@ -1660,7 +1660,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 			// TODO: add userinfo stuff here instead of using NQ commands?
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\challenge\\%s", protocolnames, string + 10), peeraddress);
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\protocols\\%s\\%schallenge\\%s", protocolnames, cls.connect_userinfo, string + 10), peeraddress);
 			return true;
 		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
@@ -1844,7 +1844,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			cls.qw_qport = qport.integer;
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
-			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s\"\n", 28, cls.qw_qport, atoi(string + 1), cls.userinfo), peeraddress);
+			NetConn_WriteString(mysocket, va("\377\377\377\377connect %i %i %i \"%s%s\"\n", 28, cls.qw_qport, atoi(string + 1), cls.userinfo, cls.connect_userinfo), peeraddress);
 			return true;
 		}
 		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
