@@ -522,9 +522,9 @@ User command to connect to server
 */
 void Host_Connect_f (void)
 {
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc() < 2)
 	{
-		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
+		Con_Print("connect <serveraddress> [<key> <value> ...]: connect to a multiplayer game\n");
 		return;
 	}
 	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
