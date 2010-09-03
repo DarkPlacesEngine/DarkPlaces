@@ -407,7 +407,7 @@ CL_EstablishConnection
 Host should be either "local" or a net address
 =====================
 */
-void CL_EstablishConnection(const char *host)
+void CL_EstablishConnection(const char *host, int firstarg)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -434,7 +434,24 @@ void CL_EstablishConnection(const char *host)
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
+
+		// only NOW, set connect_userinfo
+		if(firstarg >= 0)
+		{
+			int i;
+			*cls.connect_userinfo = 0;
+			for(i = firstarg; i+2 <= Cmd_Argc(); i += 2)
+				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(i), Cmd_Argv(i+1));
+		}
+		else if(firstarg < -1)
+		{
+			// -1: keep as is (reconnect)
+			// -2: clear
+			*cls.connect_userinfo = 0;
+		}
+
 		M_Update_Return_Reason("Trying to connect...");
+
 		// run several network frames to jump into the game quickly
 		//if (sv.active)
 		//{

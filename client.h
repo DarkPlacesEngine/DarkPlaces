@@ -705,6 +705,9 @@ typedef struct client_static_s
 	// password spectator name team skin topcolor bottomcolor rate noaim msg *ver *ip
 	char userinfo[MAX_USERINFO_STRING];
 
+	// extra user info for the "connect" command
+	char connect_userinfo[MAX_USERINFO_STRING];
+
 	// video capture stuff
 	capturevideostate_t capturevideo;
 }
@@ -1329,7 +1332,7 @@ void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point);
 void CL_Shutdown (void);
 void CL_Init (void);
 
-void CL_EstablishConnection(const char *host);
+void CL_EstablishConnection(const char *host, int firstarg);
 
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);

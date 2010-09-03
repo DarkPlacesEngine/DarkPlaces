@@ -383,7 +383,7 @@ void Host_Map_f (void)
 	strlcpy(level, Cmd_Argv(1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1");
+		CL_EstablishConnection("local:1", -2);
 }
 
 /*
@@ -420,7 +420,7 @@ void Host_Changelevel_f (void)
 	strlcpy(level, Cmd_Argv(1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1");
+		CL_EstablishConnection("local:1", -2);
 }
 
 /*
@@ -454,7 +454,7 @@ void Host_Restart_f (void)
 	strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1");
+		CL_EstablishConnection("local:1", -2);
 }
 
 /*
@@ -475,7 +475,7 @@ void Host_Reconnect_f (void)
 		// will still contain its IP address, so get the address...
 		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
 		if (temp[0])
-			CL_EstablishConnection(temp);
+			CL_EstablishConnection(temp, -1);
 		else
 			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
 		return;
@@ -530,7 +530,7 @@ void Host_Connect_f (void)
 	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
 	if(rcon_secure.integer <= 0)
 		Cvar_SetQuick(&rcon_password, "");
-	CL_EstablishConnection(Cmd_Argv(1));
+	CL_EstablishConnection(Cmd_Argv(1), 2);
 }
 
 
@@ -1072,7 +1072,7 @@ void Host_Loadgame_f (void)
 
 	// make sure we're connected to loopback
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1");
+		CL_EstablishConnection("local:1", -2);
 }
 
 //============================================================================
