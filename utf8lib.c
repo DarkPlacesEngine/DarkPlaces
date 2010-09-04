@@ -682,7 +682,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 	const unsigned char *s = (const unsigned char*)_s;
 	const unsigned char *end;
 	size_t len = 0;
-	size_t bits = 0;
+	size_t st, ln;
 
 	if (!utf8_enable.integer)
 		return COM_StringLengthNoColors(_s, size_s, valid);
@@ -691,7 +691,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 
 	for(;;)
 	{
-		switch((s == end) ? 0 : *s)
+		switch((s >= end) ? 0 : *s)
 		{
 			case 0:
 				if(valid)
@@ -728,23 +728,45 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 						++len; // the character
 						break;
 				}
-				break;
+				continue;
 			default:
-				++len;
 				break;
 		}
 
-		// start of a wide character
-		bits = utf8_lengths[*s];
-		if (bits >= 2)
+		// ascii char, skip u8_analyze
+		if (*s < 0x80)
 		{
-			for (++s; bits >= 1 && *s >= 0x80 && *s < 0xC0; ++s, --bits);
+			++len;
+			++s;
 			continue;
 		}
-		// part of a wide character or invalid character, we ignore that one
-		if (bits == 0)
-			--len;
-		++s;
+
+		// invalid, skip u8_analyze
+		if (*s < 0xC2)
+		{
+			++s;
+			continue;
+		}
+
+		if (!u8_analyze((const char*)s, &st, &ln, NULL, U8_ANALYZE_INFINITY))
+		{
+			// we CAN end up here, if an invalid char is between this one and the end of the string
+			if(valid)
+				*valid = TRUE;
+			return len;
+		}
+
+		if(s + st + ln >= end)
+		{
+			// string length exceeded by new character
+			if(valid)
+				*valid = TRUE;
+			return len;
+		}
+
+		// valid character, skip after it
+		s += st + ln;
+		++len;
 	}
 	// never get here
 }
