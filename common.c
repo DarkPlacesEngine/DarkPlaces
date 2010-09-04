@@ -1448,6 +1448,9 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 // GAME_NEXUIZ
 // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
 { "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz" },
+// GAME_XONOTIC
+// COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
+{ "xonotic",			"-xonotic",		"Xonotic",				"data",		NULL,			"xonotic",		"xonotic" },
 // GAME_TRANSFUSION
 // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
 { "transfusion",	"-transfusion",	"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion" },

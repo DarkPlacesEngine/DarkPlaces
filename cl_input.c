@@ -1074,7 +1074,7 @@ void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 				s->velocity[2] =  80;
 			else
 			{
-				if (gamemode == GAME_NEXUIZ)
+				if (gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 					s->velocity[2] = 200;
 				else
 					s->velocity[2] = 100;
@@ -1798,7 +1798,7 @@ void CL_SendMove(void)
 		break;
 	case PROTOCOL_DARKPLACES6:
 	case PROTOCOL_DARKPLACES7:
-		// FIXME: cl.cmd.buttons & 16 is +button5, Nexuiz specific
+		// FIXME: cl.cmd.buttons & 16 is +button5, Nexuiz/Xonotic specific
 		cl.cmd.crouch = (cl.cmd.buttons & 16) != 0;
 		break;
 	case PROTOCOL_UNKNOWN:

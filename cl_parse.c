@@ -1190,13 +1190,13 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		// finished loading sounds
 	}
 
-	if(gamemode == GAME_NEXUIZ)
+	if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 		Cvar_SetValueQuick(&cl_serverextension_download, false);
-		// in Nexuiz, the built in download protocol is kinda broken (misses lots
+		// in Nexuiz/Xonotic, the built in download protocol is kinda broken (misses lots
 		// of dependencies) anyway, and can mess around with the game directory;
 		// until this is fixed, only support pk3 downloads via curl, and turn off
 		// individual file downloads other than for CSQC
-		// on the other end of the download protocol, GAME_NEXUIZ enforces writing
+		// on the other end of the download protocol, GAME_NEXUIZ/GAME_XONOTIC enforces writing
 		// to dlcache only
 		// idea: support download of pk3 files using this protocol later
 
@@ -1369,8 +1369,8 @@ void CL_StopDownload(int size, int crc)
 			// save to disk only if we don't already have it
 			// (this is mainly for playing back demos)
 			existingcrc = FS_CRCFile(cls.qw_downloadname, &existingsize);
-			if (existingsize || gamemode == GAME_NEXUIZ || !strcmp(cls.qw_downloadname, csqc_progname.string))
-				// let csprogs ALWAYS go to dlcache, to prevent "viral csprogs"; also, never put files outside dlcache for Nexuiz
+			if (existingsize || gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC || !strcmp(cls.qw_downloadname, csqc_progname.string))
+				// let csprogs ALWAYS go to dlcache, to prevent "viral csprogs"; also, never put files outside dlcache for Nexuiz/Xonotic
 			{
 				if ((int)existingsize != size || existingcrc != crc)
 				{
