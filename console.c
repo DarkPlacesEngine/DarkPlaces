@@ -1049,7 +1049,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 				{
 					if (con_chatsound.value)
 					{
-						if(gamemode == GAME_NEXUIZ)
+						if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 						{
 							if(msg[1] == '\r' && cl.foundtalk2wav)
 								S_LocalSound ("sound/misc/talk2.wav");

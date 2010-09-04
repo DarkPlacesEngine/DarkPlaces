@@ -273,6 +273,7 @@ typedef enum gamemode_e
 	GAME_BLOODOMNICIDE,
 	GAME_STEELSTORM, // added by motorsep
 	GAME_STRAPBOMB, // added by motorsep for Urre
+	GAME_XONOTIC,
 	GAME_COUNT
 }
 gamemode_t;
