@@ -7805,7 +7805,7 @@ void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
 	{
 		/*
 		for (i = 0;i < numvertices;i++)
-			VectorCopy(ent->animcache_vertex3f + 3*i, ent->animcache_vertexposition[i].vertex3f);
+			memcpy(ent->animcache_vertexposition[i].vertex3f, ent->animcache_vertex3f + 3*i, sizeof(float[3]));
 		*/
 		// TODO: upload vertex buffer?
 	}
@@ -7813,16 +7813,16 @@ void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
 	{
 		memcpy(ent->animcache_vertexmesh, ent->model->surfmesh.vertexmesh, sizeof(r_vertexmesh_t)*numvertices);
 		for (i = 0;i < numvertices;i++)
-			VectorCopy(ent->animcache_vertex3f + 3*i, ent->animcache_vertexmesh[i].vertex3f);
+			memcpy(ent->animcache_vertexmesh[i].vertex3f, ent->animcache_vertex3f + 3*i, sizeof(float[3]));
 		if (ent->animcache_svector3f)
 			for (i = 0;i < numvertices;i++)
-				VectorCopy(ent->animcache_svector3f + 3*i, ent->animcache_vertexmesh[i].svector3f);
+				memcpy(ent->animcache_vertexmesh[i].svector3f, ent->animcache_svector3f + 3*i, sizeof(float[3]));
 		if (ent->animcache_tvector3f)
 			for (i = 0;i < numvertices;i++)
-				VectorCopy(ent->animcache_tvector3f + 3*i, ent->animcache_vertexmesh[i].tvector3f);
+				memcpy(ent->animcache_vertexmesh[i].tvector3f, ent->animcache_tvector3f + 3*i, sizeof(float[3]));
 		if (ent->animcache_normal3f)
 			for (i = 0;i < numvertices;i++)
-				VectorCopy(ent->animcache_normal3f + 3*i, ent->animcache_vertexmesh[i].normal3f);
+				memcpy(ent->animcache_vertexmesh[i].normal3f, ent->animcache_normal3f + 3*i, sizeof(float[3]));
 		// TODO: upload vertex buffer?
 	}
 }
