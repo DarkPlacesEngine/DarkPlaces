@@ -682,6 +682,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 	const unsigned char *s = (const unsigned char*)_s;
 	const unsigned char *end;
 	size_t len = 0;
+	size_t bits = 0;
 
 	if (!utf8_enable.integer)
 		return COM_StringLengthNoColors(_s, size_s, valid);
@@ -734,13 +735,14 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 		}
 
 		// start of a wide character
-		if (*s & 0xC0)
+		bits = utf8_lengths[*s];
+		if (bits >= 2)
 		{
-			for (++s; *s >= 0x80 && *s <= 0xC0; ++s);
+			for (++s; bits >= 1 && *s >= 0x80 && *s < 0xC0; ++s, --bits);
 			continue;
 		}
-		// part of a wide character, we ignore that one
-		if (*s <= 0xBF)
+		// part of a wide character or invalid character, we ignore that one
+		if (bits == 0)
 			--len;
 		++s;
 	}
