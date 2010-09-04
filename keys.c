@@ -713,7 +713,7 @@ Key_Console (int key, int unicode)
 		{
 			int		pos;
 			size_t          inchar = 0;
-			pos = u8_prevbyte(key_line, key_linepos);
+			pos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 			while (pos)
 				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
 					pos-=2;
@@ -733,7 +733,7 @@ Key_Console (int key, int unicode)
 		}
 		else
 		{
-			key_linepos = u8_prevbyte(key_line, key_linepos);
+			key_linepos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 		}
 		return;
 	}
@@ -743,7 +743,7 @@ Key_Console (int key, int unicode)
 	{
 		if (key_linepos > 1)
 		{
-			int newpos = u8_prevbyte(key_line, key_linepos);
+			int newpos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 			strlcpy(key_line + newpos, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
 			key_linepos = newpos;
 		}
