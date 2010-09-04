@@ -171,7 +171,7 @@ void CL_ClearState(void)
 		cl.entities[i].state_current = defaultstate;
 	}
 
-	if (gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 	{
 		VectorSet(cl.playerstandmins, -16, -16, -24);
 		VectorSet(cl.playerstandmaxs, 16, 16, 45);
@@ -1176,7 +1176,7 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	{
 		if (e->render.effects & EF_BRIGHTFIELD)
 		{
-			if (gamemode == GAME_NEXUIZ)
+			if (gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 				trailtype = EFFECT_TR_NEXUIZPLASMA;
 			else
 				CL_EntityParticles(e);
@@ -1395,7 +1395,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	{
 		if (e->render.effects & EF_BRIGHTFIELD)
 		{
-			if (gamemode == GAME_NEXUIZ)
+			if (gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 				trailtype = EFFECT_TR_NEXUIZPLASMA;
 		}
 		if (e->render.effects & EF_DIMLIGHT)

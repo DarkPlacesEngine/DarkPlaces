@@ -1054,7 +1054,7 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 	{
 		default:
 		case 1:
-			if(gamemode == GAME_NEXUIZ)
+			if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 				*unit = "in/s";
 			else
 				*unit = "qu/s";
@@ -1063,23 +1063,23 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 		case 2:
 			*unit = "m/s";
 			*conversion_factor = 0.0254;
-			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
-			// 1qu=1.5in is for non-Nexuiz only - Nexuiz players are overly large, but 1qu=1in fixes that
+			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
+			// 1qu=1.5in is for non-Nexuiz/Xonotic only - Nexuiz/Xonotic players are overly large, but 1qu=1in fixes that
 			break;
 		case 3:
 			*unit = "km/h";
 			*conversion_factor = 0.0254 * 3.6;
-			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
 			break;
 		case 4:
 			*unit = "mph";
 			*conversion_factor = 0.0254 * 3.6 * 0.6213711922;
-			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
 			break;
 		case 5:
 			*unit = "knots";
 			*conversion_factor = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
-			if(gamemode != GAME_NEXUIZ) *conversion_factor *= 1.5;
+			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
 			break;
 	}
 }
