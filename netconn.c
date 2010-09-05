@@ -32,7 +32,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DPMASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
-cvar_t sv_public = {0, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect"};
+cvar_t sv_public = {0, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
+cvar_t sv_public_rejectreason = {0, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 
 static cvar_t sv_masters [] =
@@ -2624,7 +2625,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
-		if (length >= 12 && !memcmp(string, "getchallenge", 12) && (islocal || sv_public.integer > -2))
+		if (length >= 12 && !memcmp(string, "getchallenge", 12) && (islocal || sv_public.integer > -3))
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
 			{
@@ -2647,7 +2648,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			NetConn_WriteString(mysocket, va("\377\377\377\377challenge %s", challenge[i].string), peeraddress);
 			return true;
 		}
-		if (length > 8 && !memcmp(string, "connect\\", 8) && (islocal || sv_public.integer > -2))
+		if (length > 8 && !memcmp(string, "connect\\", 8))
 		{
 			string += 7;
 			length -= 7;
@@ -2662,6 +2663,14 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// if the challenge is not recognized, drop the packet
 			if (i == MAX_CHALLENGES)
 				return true;
+
+			if(!(islocal || sv_public.integer > -2))
+			{
+				if (developer_extra.integer)
+					Con_Printf("Datagram_ParseConnectionless: sending \"reject %s\" to %s.\n", sv_public_rejectreason.string, addressstring2);
+				NetConn_WriteString(mysocket, va("\377\377\377\377reject %s", sv_public_rejectreason.string), peeraddress);
+				return true;
+			}
 
 			// check engine protocol
 			if(!(s = SearchInfostring(string, "protocol")) || strcmp(s, "darkplaces 3"))
@@ -2863,8 +2872,20 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_CONNECT:
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_CONNECT from %s.\n", addressstring2);
-			if(!islocal && sv_public.integer <= -2)
+			if(!(islocal || sv_public.integer > -2))
+			{
+				if (developer_extra.integer)
+					Con_DPrintf("Datagram_ParseConnectionless: sending CCREP_REJECT \"%s\" to %s.\n", sv_public_rejectreason.string, addressstring2);
+				SZ_Clear(&net_message);
+				// save space for the header, filled in later
+				MSG_WriteLong(&net_message, 0);
+				MSG_WriteByte(&net_message, CCREP_REJECT);
+				MSG_WriteString(&net_message, va("%s\n", sv_public_rejectreason.string));
+				StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
+				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
+				SZ_Clear(&net_message);
 				break;
+			}
 
 			protocolname = MSG_ReadString();
 			protocolnumber = MSG_ReadByte();
@@ -2964,7 +2985,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_SERVER_INFO:
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_SERVER_INFO from %s.\n", addressstring2);
-			if(!islocal && sv_public.integer <= -1)
+			if(!(islocal || sv_public.integer > -1))
 				break;
 			if (sv.active && !strcmp(MSG_ReadString(), "QUAKE"))
 			{
@@ -2995,7 +3016,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_PLAYER_INFO:
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_PLAYER_INFO from %s.\n", addressstring2);
-			if(!islocal && sv_public.integer <= -1)
+			if(!(islocal || sv_public.integer > -1))
 				break;
 			if (sv.active)
 			{
@@ -3028,7 +3049,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREQ_RULE_INFO:
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_RULE_INFO from %s.\n", addressstring2);
-			if(!islocal && sv_public.integer <= -1)
+			if(!(islocal || sv_public.integer > -1))
 				break;
 			if (sv.active)
 			{
@@ -3368,6 +3389,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_address);
 	Cvar_RegisterVariable(&net_address_ipv6);
 	Cvar_RegisterVariable(&sv_public);
+	Cvar_RegisterVariable(&sv_public_rejectreason);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)
 		Cvar_RegisterVariable(&sv_masters[i]);
