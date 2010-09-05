@@ -1826,6 +1826,8 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
 static cvar_t r_drawparticles_drawdistance = {CVAR_SAVE, "r_drawparticles_drawdistance", "2000", "particles further than drawdistance*size will not be drawn"};
+static cvar_t r_drawparticles_nearclip_min = {CVAR_SAVE, "r_drawparticles_nearclip_min", "4", "particles closer than drawnearclip_min will not be drawn"};
+static cvar_t r_drawparticles_nearclip_max = {CVAR_SAVE, "r_drawparticles_nearclip_max", "4", "particles closer than drawnearclip_min will be faded"};
 static cvar_t r_drawdecals = {0, "r_drawdecals", "1", "enables drawing of decals"};
 static cvar_t r_drawdecals_drawdistance = {CVAR_SAVE, "r_drawdecals_drawdistance", "500", "decals further than drawdistance*size will not be drawn"};
 
@@ -2291,6 +2293,8 @@ void R_Particles_Init (void)
 
 	Cvar_RegisterVariable(&r_drawparticles);
 	Cvar_RegisterVariable(&r_drawparticles_drawdistance);
+	Cvar_RegisterVariable(&r_drawparticles_nearclip_min);
+	Cvar_RegisterVariable(&r_drawparticles_nearclip_max);
 	Cvar_RegisterVariable(&r_drawdecals);
 	Cvar_RegisterVariable(&r_drawdecals_drawdistance);
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap, NULL, NULL);
@@ -2458,8 +2462,10 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	particletexture_t *tex;
 	float up2[3], v[3], right[3], up[3], fog, ifog, size, len, lenfactor, alpha;
 	float ambient[3], diffuse[3], diffusenormal[3];
-	float spintime, spinrad, spincos, spinsin, spinm1, spinm2, spinm3, spinm4, baseright[3], baseup[3];
+	float palpha, spintime, spinrad, spincos, spinsin, spinm1, spinm2, spinm3, spinm4, baseright[3], baseup[3];
 	vec4_t colormultiplier;
+	float minparticledist_start, minparticledist_end;
+	qboolean dofade;
 
 	RSurf_ActiveWorldEntity();
 
@@ -2476,18 +2482,25 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 	spintime = r_refdef.scene.time;
 
+	minparticledist_start = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + r_drawparticles_nearclip_min.value;
+	minparticledist_end = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + r_drawparticles_nearclip_max.value;
+	dofade = (minparticledist_start < minparticledist_end);
+
 	// first generate all the vertices at once
 	for (surfacelistindex = 0, v3f = particle_vertex3f, t2f = particle_texcoord2f, c4f = particle_color4f;surfacelistindex < numsurfaces;surfacelistindex++, v3f += 3*4, t2f += 2*4, c4f += 4*4)
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
 
 		blendmode = (pblend_t)p->blendmode;
+		palpha = p->alpha;
+		if(dofade && p->orientation != PARTICLE_VBEAM && p->orientation != PARTICLE_HBEAM)
+			palpha *= min(1, (DotProduct(p->org, r_refdef.view.forward)  - minparticledist_start) / (minparticledist_end - minparticledist_start));
 
 		switch (blendmode)
 		{
 		case PBLEND_INVALID:
 		case PBLEND_INVMOD:
-			alpha = p->alpha * colormultiplier[3];
+			alpha = palpha * colormultiplier[3];
 			// ensure alpha multiplier saturates properly
 			if (alpha > 1.0f)
 				alpha = 1.0f;
@@ -2502,7 +2515,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[3] = 1;
 			break;
 		case PBLEND_ADD:
-			alpha = p->alpha * colormultiplier[3];
+			alpha = palpha * colormultiplier[3];
 			// ensure alpha multiplier saturates properly
 			if (alpha > 1.0f)
 				alpha = 1.0f;
@@ -2519,7 +2532,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[0] = p->color[0] * colormultiplier[0];
 			c4f[1] = p->color[1] * colormultiplier[1];
 			c4f[2] = p->color[2] * colormultiplier[2];
-			c4f[3] = p->alpha * colormultiplier[3];
+			c4f[3] = palpha * colormultiplier[3];
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
 			{
@@ -2711,7 +2724,7 @@ void R_DrawParticles (void)
 {
 	int i, a;
 	int drawparticles = r_drawparticles.integer;
-	float minparticledist;
+	float minparticledist_start;
 	particle_t *p;
 	float gravity, frametime, f, dist, oldorg[3];
 	float drawdist2;
@@ -2726,7 +2739,7 @@ void R_DrawParticles (void)
 	if (!cl.num_particles)
 		return;
 
-	minparticledist = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + 4.0f;
+	minparticledist_start = DotProduct(r_refdef.view.origin, r_refdef.view.forward) + r_drawparticles_nearclip_min.value;
 	gravity = frametime * cl.movevars_gravity;
 	update = frametime > 0;
 	drawdist2 = r_drawparticles_drawdistance.value * r_refdef.view.quality;
@@ -2907,7 +2920,7 @@ void R_DrawParticles (void)
 								continue;
 					}
 			// anything else just has to be in front of the viewer and visible at this distance
-			if (DotProduct(p->org, r_refdef.view.forward) >= minparticledist && VectorDistance2(p->org, r_refdef.view.origin) < drawdist2 * (p->size * p->size))
+			if (DotProduct(p->org, r_refdef.view.forward) >= minparticledist_start && VectorDistance2(p->org, r_refdef.view.origin) < drawdist2 * (p->size * p->size))
 				R_MeshQueue_AddTransparent(p->sortorigin, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			break;
 		}
