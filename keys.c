@@ -1528,6 +1528,11 @@ Key_Event (int key, int ascii, qboolean down)
 		return;
 	}
 
+	if (ascii == 0x80 && utf8_enable.integer) // pressing AltGr-5 (or AltGr-e) and for some reason we get windows-1252 encoding?
+		ascii = 0x20AC; // we want the Euro currency sign
+		// TODO find out which vid_ drivers do it and fix it there
+		// but catching U+0080 here is no loss as that char is not useful anyway
+
 	// get key binding
 	bind = keybindings[key_bmap][key];
 	if (!bind)
