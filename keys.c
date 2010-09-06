@@ -1011,6 +1011,10 @@ Key_Message (int key, int ascii)
 		return;
 	}
 
+	// ctrl+key generates an ascii value < 32 and shows a char from the charmap
+	if (ascii < 32 && utf8_enable.integer)
+		ascii = 0xE000 + ascii;
+
 	if (chat_bufferlen == sizeof (chat_buffer) - 1)
 		return;							// all full
 
