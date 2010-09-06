@@ -191,7 +191,6 @@ typedef struct prvm_prog_fieldoffsets_s
 	int discardabledemo; // ssqc
 	int dphitcontentsmask; // ssqc / csqc
 	int drawonlytoclient; // ssqc
-	int effects; // ssqc / csqc
 	int exteriormodeltoclient; // ssqc
 	int fatness; // ssqc / csqc
 	int forceshader; // csqc

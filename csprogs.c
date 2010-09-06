@@ -205,7 +205,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		entrender->scale = scale = val->_float;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->colormod);
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->glowmod);
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.effects)) && val->_float)	entrender->effects |= (int)val->_float;
+	if(ed->fields.client->effects)	entrender->effects |= (int)ed->fields.client->effects;
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
 	{
 		int tagentity;
