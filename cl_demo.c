@@ -452,8 +452,10 @@ CL_FinishTimeDemo
 void CL_FinishTimeDemo (void)
 {
 	int frames;
+	int i;
 	double time, totalfpsavg;
 	double fpsmin, fpsavg, fpsmax; // report min/avg/max fps
+	static int benchmark_runs = 0;
 
 	cls.timedemo = false;
 
@@ -465,9 +467,25 @@ void CL_FinishTimeDemo (void)
 	fpsmax = cls.td_onesecondmaxfps;
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
-	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
+	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | run %d | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, benchmark_runs + 1, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	if (COM_CheckParm("-benchmark"))
-		Host_Quit_f();
+	{
+		++benchmark_runs;
+		i = COM_CheckParm("-benchmarkruns");
+		if(i && i + 1 < com_argc)
+		{
+			if(atoi(com_argv[i + 1]) > benchmark_runs)
+			{
+				// restart the benchmark
+				Cbuf_AddText(va("timedemo %s\n", cls.demoname));
+				// cannot execute here
+			}
+			else
+				Host_Quit_f();
+		}
+		else
+			Host_Quit_f();
+	}
 }
 
 /*
