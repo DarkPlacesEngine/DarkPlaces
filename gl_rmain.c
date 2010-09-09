@@ -8773,7 +8773,11 @@ static void R_Water_ProcessPlanes(void)
 				r_waterstate.renderingrefraction = false; // we don't want to hide the player model from these ones
 				CL_VM_TransformView(p->camera_entity - MAX_EDICTS, &r_refdef.view.matrix, &r_refdef.view.clipplane, visorigin);
 				R_RenderView_UpdateViewVectors();
-				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+				if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
+				{
+					r_refdef.view.usecustompvs = true;
+					r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+				}
 			}
 
 			PlaneClassify(&r_refdef.view.clipplane);
@@ -8811,8 +8815,11 @@ static void R_Water_ProcessPlanes(void)
 			// also reverse the view matrix
 			Matrix4x4_ConcatScale3(&r_refdef.view.matrix, 1, 1, -1); // this serves to invert texcoords in the result, as the copied texture is mapped the wrong way round
 			R_RenderView_UpdateViewVectors();
-			if(p->camera_entity)
+			if(p->camera_entity && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
+			{
+				r_refdef.view.usecustompvs = true;
 				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+			}
 			
 			// camera needs no clipplane
 			r_refdef.view.useclipplane = false;
