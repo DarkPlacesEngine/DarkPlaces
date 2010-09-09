@@ -2789,7 +2789,7 @@ void R_DrawParticles (void)
 				VectorCopy(p->org, oldorg);
 				VectorMA(p->org, frametime, p->vel, p->org);
 //				if (p->bounce && cl.time >= p->delayedcollisions)
-				if (p->bounce && cl_particles_collisions.integer)
+				if (p->bounce && cl_particles_collisions.integer && VectorLength(p->vel))
 				{
 					trace = CL_TraceLine(oldorg, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false);
 					// if the trace started in or hit something of SUPERCONTENTS_NODROP
@@ -2846,10 +2846,15 @@ void R_DrawParticles (void)
 							// anything else - bounce off solid
 							dist = DotProduct(p->vel, trace.plane.normal) * -p->bounce;
 							VectorMA(p->vel, dist, trace.plane.normal, p->vel);
-							if (DotProduct(p->vel, p->vel) < 0.03)
-								VectorClear(p->vel);
 						}
 					}
+				}
+
+				if (VectorLength2(p->vel) < 0.03)
+				{
+					if(p->orientation == PARTICLE_SPARK) // sparks are virtually invisible if very slow, so rather let them go off
+						goto killparticle;
+					VectorClear(p->vel);
 				}
 			}
 
