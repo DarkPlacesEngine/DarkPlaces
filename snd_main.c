@@ -1376,6 +1376,25 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		intensity = mastervol * (1.0 - dist * ch->dist_mult);
 		if (intensity > 0)
 		{
+			qboolean occluded = false;
+			if (snd_spatialization_occlusion.integer)
+			{
+				if(snd_spatialization_occlusion.integer & 1)
+					if(listener_pvs)
+					{
+						int cluster = cl.worldmodel->brush.PointInLeaf(cl.worldmodel, ch->origin)->clusterindex;
+						if(cluster >= 0 && cluster < 8 * listener_pvsbytes && !CHECKPVSBIT(listener_pvs, cluster))
+							occluded = true;
+					}
+
+				if(snd_spatialization_occlusion.integer & 2)
+					if(!occluded)
+						if(cl.worldmodel && cl.worldmodel->brush.TraceLineOfSight && !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, ch->origin))
+							occluded = true;
+			}
+			if(occluded)
+				intensity *= 0.5;
+
 			for (i = 0;i < SND_LISTENERS;i++)
 			{
 				Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
@@ -1405,29 +1424,6 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				}
 
 				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
-
-				if (snd_spatialization_occlusion.integer)
-				{
-					qboolean occluded = false;
-
-					if(snd_spatialization_occlusion.integer & 1)
-					if(listener_pvs)
-					{
-						int cluster = cl.worldmodel->brush.PointInLeaf(cl.worldmodel, ch->origin)->clusterindex;
-						if(cluster >= 0 && cluster < 8 * listener_pvsbytes && !CHECKPVSBIT(listener_pvs, cluster))
-							occluded = true;
-					}
-
-					if(snd_spatialization_occlusion.integer & 2)
-					if(!occluded)
-					if(cl.worldmodel && cl.worldmodel->brush.TraceLineOfSight && !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, ch->origin))
-					{
-						occluded = true;
-					}
-
-					if(occluded)
-						vol *= 0.5f;
-				}
 
 				ch->listener_volume[i] = (int)bound(0, vol, 255);
 			}
