@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef WIN32
 #include <windows.h>
+#include <winbase.h>
 #else
 #include <unistd.h>
 #endif
@@ -883,10 +884,11 @@ void Memory_Init_Commands (void)
 	Cvar_RegisterVariable (&sys_memsize_virtual);
 
 #if defined(WIN32)
+#ifdef _WIN64
 	{
 		MEMORYSTATUSEX status;
 		// first guess
-		Cvar_SetQuick(&sys_memsize_virtual, (sizeof(void*) == 4) ? 2048 : 8388608);
+		Cvar_SetValueQuick(&sys_memsize_virtual, 8388608);
 		// then improve
 		status.dwLength = sizeof(status);
 		if(!GlobalMemoryStatusEx(&status))
@@ -895,6 +897,18 @@ void Memory_Init_Commands (void)
 			Cvar_SetValueQuick(&sys_memsize_virtual, min(sys_memsize_virtual.value, status.ullTotalVirtual / 1048576.0));
 		}
 	}
+#else
+	{
+		MEMORYSTATUS status;
+		// first guess
+		Cvar_SetValueQuick(&sys_memsize_virtual, 2048);
+		// then improve
+		status.dwLength = sizeof(status);
+		GlobalMemoryStatus(&status);
+		Cvar_SetValueQuick(&sys_memsize_physical, status.dwTotalPhys / 1048576.0);
+		Cvar_SetValueQuick(&sys_memsize_virtual, min(sys_memsize_virtual.value, status.dwTotalVirtual / 1048576.0));
+	}
+#endif
 #else
 	{
 		// first guess
