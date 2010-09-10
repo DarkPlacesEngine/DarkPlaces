@@ -2013,7 +2013,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 			if(listener_pvs)
 				Mem_Free(listener_pvs);
 			listener_pvsbytes = cl.worldmodel->brush.num_pvsclusterbytes;
-			listener_pvs = Mem_Alloc(snd_mempool, listener_pvsbytes);
+			listener_pvs = (unsigned char *) Mem_Alloc(snd_mempool, listener_pvsbytes);
 		}
 		cl.worldmodel->brush.FatPVS(cl.worldmodel, listener_origin, 2, listener_pvs, listener_pvsbytes, 0);
 	}
