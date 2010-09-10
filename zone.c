@@ -81,6 +81,8 @@ static memclump_t *clumpchain = NULL;
 
 cvar_t developer_memory = {0, "developer_memory", "0", "prints debugging information about memory allocations"};
 cvar_t developer_memorydebug = {0, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
+cvar_t sys_memsize_physical = {CVAR_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
+cvar_t sys_memsize_virtual = {CVAR_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
 
 static mempool_t *poolchain = NULL;
 
@@ -877,5 +879,55 @@ void Memory_Init_Commands (void)
 	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);
+	Cvar_RegisterVariable (&sys_memsize_physical);
+	Cvar_RegisterVariable (&sys_memsize_virtual);
+
+#if defined(WIN32)
+	{
+		MEMORYSTATUSEX status;
+		// first guess
+		Cvar_SetQuick(&sys_memsize_virtual, (sizeof(void*) == 4) ? 2048 : 8388608);
+		// then improve
+		status.dwLength = sizeof(status);
+		if(!GlobalMemoryStatusEx(&status))
+		{
+			Cvar_SetValueQuick(&sys_memsize_physical, status.ullTotalPhys / 1048576.0);
+			Cvar_SetValueQuick(&sys_memsize_virtual, min(sys_memsize_virtual.value, status.ullTotalVirtual / 1048576.0));
+		}
+	}
+#else
+	{
+		// first guess
+		Cvar_SetValueQuick(&sys_memsize_virtual, (sizeof(void*) == 4) ? 2048 : 268435456);
+		// then improve
+		{
+			// Linux, and BSD with linprocfs mounted
+			FILE *f = fopen("/proc/meminfo", "r");
+			if(f)
+			{
+				static char buf[1024];
+				while(fgets(buf, sizeof(buf), f))
+				{
+					const char *p = buf;
+					if(!COM_ParseToken_Console(&p))
+						continue;
+					if(!strcmp(com_token, "MemTotal:"))
+					{
+						if(!COM_ParseToken_Console(&p))
+							continue;
+						Cvar_SetValueQuick(&sys_memsize_physical, atof(com_token) / 1024.0);
+					}
+					if(!strcmp(com_token, "SwapTotal:"))
+					{
+						if(!COM_ParseToken_Console(&p))
+							continue;
+						Cvar_SetValueQuick(&sys_memsize_virtual, min(sys_memsize_virtual.value , atof(com_token) / 1024.0 + sys_memsize_physical.value));
+					}
+				}
+				fclose(f);
+			}
+		}
+	}
+#endif
 }
 
