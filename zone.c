@@ -891,7 +891,7 @@ void Memory_Init_Commands (void)
 		Cvar_SetValueQuick(&sys_memsize_virtual, 8388608);
 		// then improve
 		status.dwLength = sizeof(status);
-		if(!GlobalMemoryStatusEx(&status))
+		if(GlobalMemoryStatusEx(&status))
 		{
 			Cvar_SetValueQuick(&sys_memsize_physical, status.ullTotalPhys / 1048576.0);
 			Cvar_SetValueQuick(&sys_memsize_virtual, min(sys_memsize_virtual.value, status.ullTotalVirtual / 1048576.0));
