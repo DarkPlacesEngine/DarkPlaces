@@ -4713,7 +4713,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	// figure out what the most reasonable merge power is within limits
 
 	// find the appropriate NxN dimensions to merge to, to avoid wasted space
-	realcount = count >> loadmodel->brushq3.deluxemapping;
+	realcount = count >> (int)loadmodel->brushq3.deluxemapping;
 
 	// figure out how big the merged texture has to be
 	mergegoal = 128<<bound(0, mod_q3bsp_lightmapmergepower.integer, 6);
@@ -4761,7 +4761,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	for (i = 0;i < count;i++)
 	{
 		// figure out which merged lightmap texture this fits into
-		realindex = i >> loadmodel->brushq3.deluxemapping;
+		realindex = i >> (int)loadmodel->brushq3.deluxemapping;
 		lightmapindex = i >> powerdxy;
 
 		// choose the destination address
