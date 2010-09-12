@@ -1579,11 +1579,11 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFAIL, d3dstencilopforglfunc(frontfail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILZFAIL, d3dstencilopforglfunc(frontzfail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILPASS, d3dstencilopforglfunc(frontzpass));
-		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, frontcompare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, d3dcmpforglfunc(frontcompare));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILFAIL, d3dstencilopforglfunc(backfail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILZFAIL, d3dstencilopforglfunc(backzfail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILPASS, d3dstencilopforglfunc(backzpass));
-		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILFUNC, backcompare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CCW_STENCILFUNC, d3dcmpforglfunc(backcompare));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILREF, comparereference);
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILMASK, comparemask);
 #endif
@@ -1632,7 +1632,7 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFAIL, d3dstencilopforglfunc(fail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILZFAIL, d3dstencilopforglfunc(zfail));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILPASS, d3dstencilopforglfunc(zpass));
-		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, compare);
+		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILFUNC, d3dcmpforglfunc(compare));
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILREF, comparereference);
 		IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_STENCILMASK, comparemask);
 #endif
