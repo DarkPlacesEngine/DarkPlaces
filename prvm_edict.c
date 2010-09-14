@@ -3233,7 +3233,7 @@ void PRVM_LeakTest(void)
 		if(prog->knownstrings[i])
 		if(prog->knownstrings_freeable[i])
 		if(prog->knownstrings_origin[i])
-		if(!PRVM_IsStringReferenced(-1 - i))
+		if(!PRVM_IsStringReferenced(PRVM_KNOWNSTRINGBASE + i))
 		{
 			Con_Printf("Unreferenced string found!\n  Value: %s\n  Origin: %s\n", prog->knownstrings[i], prog->knownstrings_origin[i]);
 			leaked = true;
