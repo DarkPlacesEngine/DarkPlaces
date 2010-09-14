@@ -3757,6 +3757,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			// point traces and contents checks still use the bsp tree
 			mod->TraceLine = Mod_CollisionBIH_TraceLine;
 			mod->TraceBox = Mod_CollisionBIH_TraceBox;
+			mod->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		}
 		else
 			Mod_MakeCollisionBIH(mod, true, &mod->render_bih);
@@ -6215,6 +6216,24 @@ void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 	Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, &thisbrush_start.brush, &thisbrush_end.brush, segmentmins, segmentmaxs);
 }
 
+void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
+{
+	float segmentmins[3], segmentmaxs[3];
+
+	// box trace, performed as brush trace
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	segmentmins[0] = min(start->mins[0], end->mins[0]);
+	segmentmins[1] = min(start->mins[1], end->mins[1]);
+	segmentmins[2] = min(start->mins[2], end->mins[2]);
+	segmentmaxs[0] = max(start->maxs[0], end->maxs[0]);
+	segmentmaxs[1] = max(start->maxs[1], end->maxs[1]);
+	segmentmaxs[2] = max(start->maxs[2], end->maxs[2]);
+	Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, segmentmins, segmentmaxs);
+}
+
 int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
 {
 	trace_t trace;
@@ -6594,6 +6613,40 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, &thisbrush_start.brush, &thisbrush_end.brush, ++markframe, segmentmins, segmentmaxs);
 }
 
+void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
+{
+	float segmentmins[3], segmentmaxs[3];
+	int i;
+	msurface_t *surface;
+	q3mbrush_t *brush;
+
+	// box trace, performed as brush trace
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	segmentmins[0] = min(start->mins[0], end->mins[0]);
+	segmentmins[1] = min(start->mins[1], end->mins[1]);
+	segmentmins[2] = min(start->mins[2], end->mins[2]);
+	segmentmaxs[0] = max(start->maxs[0], end->maxs[0]);
+	segmentmaxs[1] = max(start->maxs[1], end->maxs[1]);
+	segmentmaxs[2] = max(start->maxs[2], end->maxs[2]);
+	if (mod_collision_bih.integer)
+		Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, segmentmins, segmentmaxs);
+	else if (model->brush.submodel)
+	{
+		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
+				Collision_TraceBrushBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
+		if (mod_q3bsp_curves_collisions.integer)
+			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
+					Collision_TraceBrushTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
+	}
+	else
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, ++markframe, segmentmins, segmentmaxs);
+}
+
 static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
 {
 	int i;
@@ -6862,6 +6915,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
+	mod->TraceBrush = Mod_Q3BSP_TraceBrush;
 	mod->TraceLine = Mod_Q3BSP_TraceLine;
 	mod->TracePoint = Mod_Q3BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q3BSP_PointSuperContents;
@@ -7159,6 +7213,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_obj;
 	loadmodel->soundfromcenter = true;
 	loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
+	loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 	loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 	loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 	loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
