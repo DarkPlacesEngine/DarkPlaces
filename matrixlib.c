@@ -1648,6 +1648,7 @@ void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[
 #endif
 }
 
+// transforms a positive distance plane (A*x+B*y+C*z-D=0) through a rotation or translation matrix
 void Matrix4x4_TransformPositivePlane(const matrix4x4_t *in, float x, float y, float z, float d, float *o)
 {
 	float scale = sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
@@ -1665,6 +1666,7 @@ void Matrix4x4_TransformPositivePlane(const matrix4x4_t *in, float x, float y, f
 #endif
 }
 
+// transforms a standard plane (A*x+B*y+C*z+D=0) through a rotation or translation matrix
 void Matrix4x4_TransformStandardPlane(const matrix4x4_t *in, float x, float y, float z, float d, float *o)
 {
 	float scale = sqrt(in->m[0][0] * in->m[0][0] + in->m[0][1] * in->m[0][1] + in->m[0][2] * in->m[0][2]);
