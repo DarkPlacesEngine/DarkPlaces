@@ -4453,7 +4453,7 @@ void R_DrawModelShadowMaps(void)
 
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
-	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, NULL, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
 	R_SetupShader_DepthOrShadow();
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
