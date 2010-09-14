@@ -6189,10 +6189,7 @@ void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 		if (VectorCompare(start, end))
 			Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, shiftstart, hitsupercontentsmask);
 		else
-		{
 			Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
-			VectorSubtract(trace->endpos, boxmins, trace->endpos);
-		}
 		return;
 	}
 
@@ -6219,6 +6216,15 @@ void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
 {
 	float segmentmins[3], segmentmaxs[3];
+
+	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(start->mins, start->maxs) && VectorCompare(end->mins, end->maxs))
+	{
+		if (VectorCompare(start->mins, end->mins))
+			Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start->mins, hitsupercontentsmask);
+		else
+			Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start->mins, end->mins, hitsupercontentsmask);
+		return;
+	}
 
 	// box trace, performed as brush trace
 	memset(trace, 0, sizeof(*trace));
@@ -6573,10 +6579,7 @@ static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 		if (VectorCompare(start, end))
 			Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, shiftstart, hitsupercontentsmask);
 		else
-		{
 			Mod_Q3BSP_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
-			VectorSubtract(trace->endpos, boxmins, trace->endpos);
-		}
 		return;
 	}
 
@@ -6619,6 +6622,15 @@ void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, con
 	int i;
 	msurface_t *surface;
 	q3mbrush_t *brush;
+
+	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(start->mins, start->maxs) && VectorCompare(end->mins, end->maxs))
+	{
+		if (VectorCompare(start->mins, end->mins))
+			Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, start->mins, hitsupercontentsmask);
+		else
+			Mod_Q3BSP_TraceLine(model, frameblend, skeleton, trace, start->mins, end->mins, hitsupercontentsmask);
+		return;
+	}
 
 	// box trace, performed as brush trace
 	memset(trace, 0, sizeof(*trace));
