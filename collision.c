@@ -1609,6 +1609,57 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 
 //===========================================
 
+void Collision_TranslateBrush(const vec3_t shift, colbrushf_t *brush)
+{
+	int i;
+	// now we can transform the data
+	for(i = 0; i < brush->numplanes; ++i)
+	{
+		brush->planes[i].dist += DotProduct(shift, brush->planes[i].normal);
+	}
+	for(i = 0; i < brush->numpoints; ++i)
+	{
+		VectorAdd(brush->points[i].v, shift, brush->points[i].v);
+	}
+	VectorAdd(brush->mins, shift, brush->mins);
+	VectorAdd(brush->maxs, shift, brush->maxs);
+}
+
+void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *brush)
+{
+	int i;
+	vec3_t v;
+	// we're breaking any AABB properties here...
+	brush->isaabb = false;
+	brush->hasaabbplanes = false;
+	// now we can transform the data
+	for(i = 0; i < brush->numplanes; ++i)
+	{
+		Matrix4x4_TransformPositivePlane(matrix, brush->planes[i].normal[0], brush->planes[i].normal[1], brush->planes[i].normal[2], brush->planes[i].dist, brush->planes[i].normal);
+	}
+	for(i = 0; i < brush->numedgedirs; ++i)
+	{
+		Matrix4x4_Transform(matrix, brush->edgedirs[i].v, v);
+		VectorCopy(v, brush->edgedirs[i].v);
+	}
+	for(i = 0; i < brush->numpoints; ++i)
+	{
+		Matrix4x4_Transform(matrix, brush->points[i].v, v);
+		VectorCopy(v, brush->points[i].v);
+	}
+	VectorCopy(brush->points[0].v, brush->mins);
+	VectorCopy(brush->points[0].v, brush->maxs);
+	for(i = 1; i < brush->numpoints; ++i)
+	{
+		if(brush->points[i].v[0] < brush->mins[0]) brush->mins[0] = brush->points[i].v[0];
+		if(brush->points[i].v[1] < brush->mins[1]) brush->mins[1] = brush->points[i].v[1];
+		if(brush->points[i].v[2] < brush->mins[2]) brush->mins[2] = brush->points[i].v[2];
+		if(brush->points[i].v[0] > brush->maxs[0]) brush->maxs[0] = brush->points[i].v[0];
+		if(brush->points[i].v[1] > brush->maxs[1]) brush->maxs[1] = brush->points[i].v[1];
+		if(brush->points[i].v[2] > brush->maxs[2]) brush->maxs[2] = brush->points[i].v[2];
+	}
+}
+
 void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	float starttransformed[3], endtransformed[3];
@@ -1623,8 +1674,27 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const fram
 #endif
 
 	if (model && model->TraceBox)
-		model->TraceBox(model, frameblend, skeleton, trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
-	else
+	{
+		if(model->TraceBrush && (inversematrix->m[0][1] || inversematrix->m[0][2] || inversematrix->m[1][0] || inversematrix->m[1][2] || inversematrix->m[2][0] || inversematrix->m[2][1]))
+		{
+			// we get here if TraceBrush exists, AND we have a rotation component (SOLID_BSP case)
+			// using starttransformed, endtransformed is WRONG in this case!
+			// should rather build a brush and trace using it
+			colboxbrushf_t thisbrush_start, thisbrush_end;
+			Collision_BrushForBox(&thisbrush_start, mins, maxs, 0, 0, NULL);
+			Collision_BrushForBox(&thisbrush_end, mins, maxs, 0, 0, NULL);
+			Collision_TranslateBrush(start, &thisbrush_start.brush);
+			Collision_TranslateBrush(end, &thisbrush_end.brush);
+			Collision_TransformBrush(inversematrix, &thisbrush_start.brush);
+			Collision_TransformBrush(inversematrix, &thisbrush_end.brush);
+			//Collision_TranslateBrush(starttransformed, &thisbrush_start.brush);
+			//Collision_TranslateBrush(endtransformed, &thisbrush_end.brush);
+			model->TraceBrush(model, frameblend, skeleton, trace, &thisbrush_start.brush, &thisbrush_end.brush, hitsupercontentsmask);
+		}
+		else // this is only approximate if rotated, quite useless
+			model->TraceBox(model, frameblend, skeleton, trace, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask);
+	}
+	else // and this requires that the transformation matrix doesn't have angles components, like SV_TraceBox ensures; FIXME may get called if a model is SOLID_BSP but has no TraceBox function
 		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, mins, maxs, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
 	trace->fraction = bound(0, trace->fraction, 1);
 	trace->realfraction = bound(0, trace->realfraction, 1);
@@ -1639,6 +1709,7 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
+	// ->TraceBox: TraceBrush not needed here, as worldmodel is never rotated
 	if (model && model->TraceBox)
 		model->TraceBox(model, NULL, NULL, trace, start, mins, maxs, end, hitsupercontents);
 	trace->fraction = bound(0, trace->fraction, 1);
