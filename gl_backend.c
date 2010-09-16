@@ -1026,7 +1026,11 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 			gl_state.framebufferobject = 1;
 			gl_state.d3drt_depthtexture = depthtexture;
 			if (gl_state.d3drt_depthtexture)
-				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, (IDirect3DSurface9 *)gl_state.d3drt_depthtexture->d3dtexture);
+			{
+				IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)gl_state.d3drt_depthtexture->d3dtexture, 0, &gl_state.d3drt_depthsurface);
+				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_depthsurface);
+				IDirect3DSurface9_Release(gl_state.d3drt_depthsurface);
+			}
 			else
 				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, NULL);
 			for (i = 0;i < vid.maxdrawbuffers;i++)
@@ -1039,7 +1043,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 					IDirect3DSurface9_Release(gl_state.d3drt_colorsurfaces[i]);
 				}
 				else
-					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, i ? NULL : gl_state.d3drt_backbuffercolorsurface);
+					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, NULL);
 			}
 		}
 		else

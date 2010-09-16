@@ -122,7 +122,6 @@ typedef struct gltexture_s
 	// d3d stuff the backend needs
 	void *d3dtexture;
 #ifdef SUPPORTD3D
-	qboolean d3disdepthsurface; // for depth/stencil surfaces
 	int d3dformat;
 	int d3dusage;
 	int d3dpool;
@@ -293,37 +292,10 @@ void R_FreeTexture(rtexture_t *rt)
 	else
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
-	switch(vid.renderpath)
+	if (glt->texnum)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		if (glt->texnum)
-		{
-			CHECKGLERROR
-			qglDeleteTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
-		}
-		break;
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-		if (glt->d3disdepthsurface)
-			IDirect3DSurface9_Release((IDirect3DSurface9 *)glt->d3dtexture);
-		else if (glt->tiledepth > 1)
-			IDirect3DVolumeTexture9_Release((IDirect3DVolumeTexture9 *)glt->d3dtexture);
-		else if (glt->sides == 6)
-			IDirect3DCubeTexture9_Release((IDirect3DCubeTexture9 *)glt->d3dtexture);
-		else
-			IDirect3DTexture9_Release((IDirect3DTexture9 *)glt->d3dtexture);
-		glt->d3dtexture = NULL;
-#endif
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
+		CHECKGLERROR
+		qglDeleteTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 	}
 
 	if (glt->inputtexels)
@@ -487,7 +459,7 @@ static void GL_TextureMode_f (void)
 			for (glt = pool->gltchain;glt;glt = glt->chain)
 			{
 				// only update already uploaded images
-				if (glt->d3dtexture && !glt->d3disdepthsurface && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
+				if (glt->d3dtexture && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
 				{
 					if (glt->flags & TEXF_MIPMAP)
 					{
@@ -566,14 +538,12 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 	case RENDERPATH_D3D11:
 		break;
 	case RENDERPATH_D3D9:
-#if 0
 		// for some reason the REF rasterizer (and hence the PIX debugger) does not like small textures...
 		if (texturetype == GLTEXTURETYPE_2D)
 		{
 			width2 = max(width2, 2);
 			height2 = max(height2, 2);
 		}
-#endif
 		break;
 	}
 
@@ -749,9 +719,7 @@ static void r_textures_devicelost(void)
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-			if (glt->d3disdepthsurface)
-				IDirect3DSurface9_Release((IDirect3DSurface9 *)glt->d3dtexture);
-			else if (glt->tiledepth > 1)
+			if (glt->tiledepth > 1)
 				IDirect3DVolumeTexture9_Release((IDirect3DVolumeTexture9 *)glt->d3dtexture);
 			else if (glt->sides == 6)
 				IDirect3DCubeTexture9_Release((IDirect3DCubeTexture9 *)glt->d3dtexture);
@@ -791,12 +759,7 @@ static void r_textures_devicerestored(void)
 #ifdef SUPPORTD3D
 			{
 				HRESULT d3dresult;
-				if (glt->d3disdepthsurface)
-				{
-					if (FAILED(d3dresult = IDirect3DDevice9_CreateDepthStencilSurface(vid_d3d9dev, glt->tilewidth, glt->tileheight, (D3DFORMAT)glt->d3dformat, D3DMULTISAMPLE_NONE, 0, false, (IDirect3DSurface9 **)&glt->d3dtexture, NULL)))
-						Sys_Error("IDirect3DDevice9_CreateDepthStencilSurface failed!");
-				}
-				else if (glt->tiledepth > 1)
+				if (glt->tiledepth > 1)
 				{
 					if (FAILED(d3dresult = IDirect3DDevice9_CreateVolumeTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DVolumeTexture9 **)&glt->d3dtexture, NULL)))
 						Sys_Error("IDirect3DDevice9_CreateVolumeTexture failed!");
@@ -1553,13 +1516,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			glt->d3dformat = d3dformat;
 			glt->d3dusage = d3dusage;
 			glt->d3dpool = d3dpool;
-			glt->d3disdepthsurface = textype == TEXTYPE_SHADOWMAP;
-			if (glt->d3disdepthsurface)
-			{
-				if (FAILED(d3dresult = IDirect3DDevice9_CreateDepthStencilSurface(vid_d3d9dev, glt->tilewidth, glt->tileheight, (D3DFORMAT)glt->d3dformat, D3DMULTISAMPLE_NONE, 0, false, (IDirect3DSurface9 **)&glt->d3dtexture, NULL)))
-					Sys_Error("IDirect3DDevice9_CreateDepthStencilSurface failed!");
-			}
-			else if (glt->tiledepth > 1)
+			if (glt->tiledepth > 1)
 			{
 				if (FAILED(d3dresult = IDirect3DDevice9_CreateVolumeTexture(vid_d3d9dev, glt->tilewidth, glt->tileheight, glt->tiledepth, glt->miplevels, glt->d3dusage, (D3DFORMAT)glt->d3dformat, (D3DPOOL)glt->d3dpool, (IDirect3DVolumeTexture9 **)&glt->d3dtexture, NULL)))
 					Sys_Error("IDirect3DDevice9_CreateVolumeTexture failed!");
