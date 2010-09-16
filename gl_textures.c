@@ -493,25 +493,6 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 {
 	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1, miplevels = 1;
 
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		break;
-	case RENDERPATH_D3D9:
-		// for some reason the REF rasterizer (and hence the PIX debugger) does not like small textures...
-		if (indepth == 1)
-		{
-			width2 = max(width2, 2);
-			height2 = max(height2, 2);
-		}
-		break;
-	}
-
 	switch (texturetype)
 	{
 	default:
@@ -531,38 +512,39 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 		break;
 	}
 
-	if (outwidth)
+	if (vid.support.arb_texture_non_power_of_two)
 	{
-		if (vid.support.arb_texture_non_power_of_two)
-			width2 = min(inwidth >> picmip, maxsize);
-		else
-		{
-			for (width2 = 1;width2 < inwidth;width2 <<= 1);
-			for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
-		}
-		*outwidth = max(1, width2);
+		width2 = min(inwidth >> picmip, maxsize);
+		height2 = min(inheight >> picmip, maxsize);
+		depth2 = min(indepth >> picmip, maxsize);
 	}
-	if (outheight)
+	else
 	{
-		if (vid.support.arb_texture_non_power_of_two)
-			height2 = min(inheight >> picmip, maxsize);
-		else
-		{
-			for (height2 = 1;height2 < inheight;height2 <<= 1);
-			for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
-		}
-		*outheight = max(1, height2);
+		for (width2 = 1;width2 < inwidth;width2 <<= 1);
+		for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
+		for (height2 = 1;height2 < inheight;height2 <<= 1);
+		for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
+		for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
+		for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
 	}
-	if (outdepth)
+
+	switch(vid.renderpath)
 	{
-		if (vid.support.arb_texture_non_power_of_two)
-			depth2 = min(indepth >> picmip, maxsize);
-		else
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_D3D9:
+		// for some reason the REF rasterizer (and hence the PIX debugger) does not like small textures...
+		if (texturetype == GLTEXTURETYPE_2D)
 		{
-			for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
-			for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
+			width2 = max(width2, 2);
+			height2 = max(height2, 2);
 		}
-		*outdepth = max(1, depth2);
+		break;
 	}
 
 	miplevels = 1;
@@ -572,6 +554,13 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 		while(extent >>= 1)
 			miplevels++;
 	}
+
+	if (outwidth)
+		*outwidth = max(1, width2);
+	if (outheight)
+		*outheight = max(1, height2);
+	if (outdepth)
+		*outdepth = max(1, depth2);
 	if (outmiplevels)
 		*outmiplevels = miplevels;
 }
