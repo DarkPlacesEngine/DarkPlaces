@@ -4753,18 +4753,24 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 		};
 		dllhandle_t d3dx9_dll = NULL;
 		HRESULT (WINAPI *qD3DXCompileShader)(LPCSTR pSrcData, UINT SrcDataLen, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
+//		HRESULT (WINAPI *qD3DXCompileShaderFromFileA)(LPCSTR pSrcFile, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
 		dllfunction_t d3dx9_dllfuncs[] =
 		{
 			{"D3DXCompileShader",			(void **) &qD3DXCompileShader},
+//			{"D3DXCompileShaderFromFileA",	(void **) &qD3DXCompileShaderFromFileA},
 			{NULL, NULL}
 		};
 		if (Sys_LoadLibrary(dllnames_d3dx9, &d3dx9_dll, d3dx9_dllfuncs))
 		{
+			DWORD shaderflags = 0;
+//			shaderflags = D3DXSHADER_DEBUG | D3DXSHADER_SKIPOPTIMIZATION;
 			vsbin = (DWORD *)Mem_Realloc(tempmempool, vsbin, 0);
 			psbin = (DWORD *)Mem_Realloc(tempmempool, psbin, 0);
 			if (vertstring && vertstring[0])
 			{
-				vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, 0, &vsbuffer, &vslog, &vsconstanttable);
+//				FS_WriteFile(va("%s_vs.fx", cachename), vertstring, strlen(vertstring));
+//				vsresult = qD3DXCompileShaderFromFileA(va("%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
+				vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				if (vsbuffer)
 				{
 					vsbinsize = vsbuffer->GetBufferSize();
@@ -4781,7 +4787,9 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			}
 			if (fragstring && fragstring[0])
 			{
-				psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, 0, &psbuffer, &pslog, &psconstanttable);
+//				FS_WriteFile(va("%s_ps.fx", cachename), fragstring, strlen(fragstring));
+//				psresult = qD3DXCompileShaderFromFileA(va("%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
+				psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				if (psbuffer)
 				{
 					psbinsize = psbuffer->GetBufferSize();
