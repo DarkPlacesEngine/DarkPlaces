@@ -78,6 +78,7 @@ typedef struct rtexture_s
 	// d3d stuff the backend needs
 	void *d3dtexture;
 #ifdef SUPPORTD3D
+	qboolean d3disdepthsurface; // for depth/stencil surfaces
 	int d3dformat;
 	int d3dusage;
 	int d3dpool;
