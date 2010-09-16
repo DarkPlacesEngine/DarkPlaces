@@ -493,6 +493,25 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 {
 	int picmip = 0, maxsize = 0, width2 = 1, height2 = 1, depth2 = 1, miplevels = 1;
 
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_D3D9:
+		// for some reason the REF rasterizer (and hence the PIX debugger) does not like small textures...
+		if (indepth == 1)
+		{
+			width2 = max(width2, 2);
+			height2 = max(height2, 2);
+		}
+		break;
+	}
+
 	switch (texturetype)
 	{
 	default:
