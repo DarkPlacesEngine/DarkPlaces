@@ -3072,24 +3072,21 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef USESHADOWMAP2D\n"
 "#ifdef USESHADOWMAPVSDCT\n"
-"//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection);\n"
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n"
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection).xy * ShadowMap_TextureScale).rgb);\n"
+"//	color.rgb = half3(GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection).xyz * float3(ShadowMap_TextureScale,1.0));\n"
+"//	color.r = half(texDepth2D(Texture_ShadowMap2D, GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection).xy * ShadowMap_TextureScale));\n"
 "#else\n"
 "//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters);\n"
-"#endif\n"
 "//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n"
-"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n"
-"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n"
-"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n"
-"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, GetShadowMapTC2D(CubeVector, ShadowMap_Parameters).xy * ShadowMap_TextureScale).rgb);\n"
+"//	color.rgb = half3(GetShadowMapTC2D(CubeVector, ShadowMap_Parameters).xyz * float3(ShadowMap_TextureScale,1.0));\n"
+"//	color.r = half(texDepth2D(Texture_ShadowMap2D, GetShadowMapTC2D(CubeVector, ShadowMap_Parameters).xy * ShadowMap_TextureScale));\n"
 "//	color.r = half(shadowmaptc.z - texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.r = half(shadowmaptc.z);\n"
 "//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
 "//	color.r = half(shadowmaptc.z);\n"
+"#endif\n"
 "//	color.r = 1;\n"
-"//	color.rgb = abs(CubeVector);\n"
 "#endif\n"
 "//	color.rgb = half3(1,1,1);\n"
 "#endif // MODE_LIGHTSOURCE\n"
@@ -12162,7 +12159,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 			// just to make sure that braindead drivers don't draw
 			// anything despite that colormask...
 			GL_BlendFunc(GL_ZERO, GL_ONE);
-			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXPOSITION | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXPOSITION, texturenumsurfaces, texturesurfacelist);
 			R_Mesh_PrepareVertices_Position(rsurface.batchnumvertices, rsurface.batchvertexposition, rsurface.batchvertexpositionbuffer);
 		}
 		else
@@ -12170,7 +12167,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 			// fog sky
 			GL_BlendFunc(GL_ONE, GL_ZERO);
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, texturenumsurfaces, texturesurfacelist);
 			GL_Color(r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], 1);
 			R_Mesh_PrepareVertices_Generic_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, NULL, NULL);
 		}
