@@ -500,8 +500,11 @@ typedef enum gl20_texunit_e
 	// conflicts with lightmap/deluxemap
 	GL20TU_ATTENUATION = 9,
 	GL20TU_CUBE = 10,
-	GL20TU_SHADOWMAP2D = 15,
+	GL20TU_SHADOWMAP2D = 11,
 	GL20TU_CUBEPROJECTION = 12,
+	// orthographic-projection shadowmapping
+	GL20TU_SHADOWMAPORTHORECT = 15,
+	GL20TU_SHADOWMAPORTHO2D = 15,
 	// rtlight prepass data (screenspace depth and normalmap)
 	GL20TU_SCREENDEPTH = 13,
 	GL20TU_SCREENNORMALMAP = 14,

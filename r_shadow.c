@@ -254,7 +254,6 @@ GLuint r_shadow_prepasslightingfbo;
 int r_shadow_prepass_width;
 int r_shadow_prepass_height;
 rtexture_t *r_shadow_prepassgeometrydepthtexture;
-rtexture_t *r_shadow_prepassgeometrydepthcolortexture;
 rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
 rtexture_t *r_shadow_prepasslightingdiffusetexture;
 rtexture_t *r_shadow_prepasslightingspeculartexture;
@@ -3852,10 +3851,6 @@ static void R_Shadow_FreeDeferred(void)
 		R_FreeTexture(r_shadow_prepassgeometrydepthtexture);
 	r_shadow_prepassgeometrydepthtexture = NULL;
 
-	if (r_shadow_prepassgeometrydepthcolortexture)
-		R_FreeTexture(r_shadow_prepassgeometrydepthcolortexture);
-	r_shadow_prepassgeometrydepthcolortexture = NULL;
-
 	if (r_shadow_prepassgeometrynormalmaptexture)
 		R_FreeTexture(r_shadow_prepassgeometrynormalmaptexture);
 	r_shadow_prepassgeometrynormalmaptexture = NULL;
@@ -3887,9 +3882,9 @@ void R_Shadow_DrawPrepass(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(1,1,1,1);
 	GL_DepthTest(true);
-	R_Mesh_SetRenderTargets(r_shadow_prepassgeometryfbo, r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, r_shadow_prepassgeometrydepthcolortexture, NULL, NULL);
+	R_Mesh_SetRenderTargets(r_shadow_prepassgeometryfbo, r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
 	Vector4Set(clearcolor, 0.5f,0.5f,0.5f,1.0f);
-	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, clearcolor, 1.0f, 0);
 	if (r_timereport_active)
 		R_TimeReport("prepasscleargeom");
 
@@ -3997,21 +3992,13 @@ void R_Shadow_PrepareLights(void)
 			r_shadow_prepass_width = vid.width;
 			r_shadow_prepass_height = vid.height;
 			r_shadow_prepassgeometrydepthtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "prepassgeometrydepthmap", vid.width, vid.height, 24, false);
-			switch (vid.renderpath)
-			{
-			case RENDERPATH_D3D9:
-				r_shadow_prepassgeometrydepthcolortexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrydepthcolormap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-				break;
-			default:
-				break;
-			}
 			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 
 			// set up the geometry pass fbo (depth + normalmap)
 			r_shadow_prepassgeometryfbo = R_Mesh_CreateFramebufferObject(r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
-			R_Mesh_SetRenderTargets(r_shadow_prepassgeometryfbo, r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, r_shadow_prepassgeometrydepthcolortexture, NULL, NULL);
+			R_Mesh_SetRenderTargets(r_shadow_prepassgeometryfbo, r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
 			// render depth into one texture and normalmap into the other
 			if (qglDrawBuffersARB)
 			{

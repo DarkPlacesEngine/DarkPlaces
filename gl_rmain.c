@@ -1833,9 +1833,9 @@ const char *builtincgshaderstring =
 ")\n"
 "{\n"
 "//	float3 temp = float3(Depth,Depth*(65536.0/255.0),Depth*(16777216.0/255.0));\n"
-"	float4 temp = float4(Depth,Depth*256.0,Depth*65536.0,0.0);\n"
+"	float3 temp = float3(Depth,Depth*256.0,Depth*65536.0);\n"
 "	temp.yz -= floor(temp.yz);\n"
-"	gl_FragColor = temp;\n"
+"	gl_FragColor = float4(temp,0);\n"
 "//	gl_FragColor = float4(Depth,0,0,0);\n"
 "}\n"
 "#endif\n"
@@ -2468,7 +2468,7 @@ const char *builtincgshaderstring =
 "#endif\n"
 "out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
 "out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"out float4 VectorR : TEXCOORD7 // direction of R texcoord (surface normal), Depth value\n"
+"out float3 VectorR : TEXCOORD7 // direction of R texcoord (surface normal)\n"
 ")\n"
 "{\n"
 "	TexCoordBoth = mul(TexMatrix, gl_MultiTexCoord0);\n"
@@ -2491,9 +2491,8 @@ const char *builtincgshaderstring =
 "\n"
 "	VectorS = mul(ModelViewMatrix, float4(gl_MultiTexCoord1.xyz, 0)).xyz;\n"
 "	VectorT = mul(ModelViewMatrix, float4(gl_MultiTexCoord2.xyz, 0)).xyz;\n"
-"	VectorR.xyz = mul(ModelViewMatrix, float4(gl_MultiTexCoord3.xyz, 0)).xyz;\n"
+"	VectorR = mul(ModelViewMatrix, float4(gl_MultiTexCoord3.xyz, 0)).xyz;\n"
 "	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"	VectorR.w = gl_Position.z;\n"
 "}\n"
 "#endif // VERTEX_SHADER\n"
 "\n"
@@ -2504,7 +2503,7 @@ const char *builtincgshaderstring =
 "float3 EyeVector : TEXCOORD2,\n"
 "float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
 "float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"float4 VectorR : TEXCOORD7, // direction of R texcoord (surface normal), Depth value\n"
+"float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n"
 "uniform sampler Texture_Normal : register(s0),\n"
 "#ifdef USEALPHAKILL\n"
 "uniform sampler Texture_Color : register(s1),\n"
@@ -2518,12 +2517,7 @@ const char *builtincgshaderstring =
 "uniform float OffsetMapping_Scale : register(c24),\n"
 "#endif\n"
 "uniform half SpecularPower : register(c36),\n"
-"#ifdef HLSL\n"
-"out float4 gl_FragData0 : COLOR0,\n"
-"out float4 gl_FragData1 : COLOR1\n"
-"#else\n"
 "out float4 gl_FragColor : COLOR\n"
-"#endif\n"
 ")\n"
 "{\n"
 "	float2 TexCoord = TexCoordBoth.xy;\n"
@@ -2553,16 +2547,7 @@ const char *builtincgshaderstring =
 "	float a = tex2D(Texture_Gloss, TexCoord).a;\n"
 "#endif\n"
 "\n"
-"#ifdef HLSL\n"
-"	gl_FragData0 = float4(normalize(surfacenormal.x * VectorS + surfacenormal.y * VectorT + surfacenormal.z * VectorR.xyz) * 0.5 + float3(0.5, 0.5, 0.5), a);\n"
-"	float Depth = VectorR.w / 256.0;\n"
-"	float4 depthcolor = float4(Depth,Depth*65536.0/255.0,Depth*16777216.0/255.0,0.0);\n"
-"//	float4 depthcolor = float4(Depth,Depth*256.0,Depth*65536.0,0.0);\n"
-"	depthcolor.yz -= floor(depthcolor.yz);\n"
-"	gl_FragData1 = depthcolor;\n"
-"#else\n"
 "	gl_FragColor = float4(normalize(surfacenormal.x * VectorS + surfacenormal.y * VectorT + surfacenormal.z * VectorR) * 0.5 + float3(0.5, 0.5, 0.5), a);\n"
-"#endif\n"
 "}\n"
 "#endif // FRAGMENT_SHADER\n"
 "#else // !MODE_DEFERREDGEOMETRY\n"
@@ -2615,9 +2600,9 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef USESHADOWSAMPLER\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
+"uniform sampler Texture_ShadowMap2D : register(s11),\n"
 "# else\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
+"uniform sampler Texture_ShadowMap2D : register(s11),\n"
 "# endif\n"
 "#endif\n"
 "\n"
@@ -2638,11 +2623,7 @@ const char *builtincgshaderstring =
 "	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
 "	//ScreenTexCoord.y = ScreenTexCoord.y * -1 + 1; // Cg is opposite?\n"
 "	float3 position;\n"
-"#ifdef HLSL\n"
-"	position.z = texDepth2D(Texture_ScreenDepth, ScreenTexCoord) * 256.0;\n"
-"#else\n"
 "	position.z = ScreenToDepth.y / (texDepth2D(Texture_ScreenDepth, ScreenTexCoord) + ScreenToDepth.x);\n"
-"#endif\n"
 "	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n"
 "	// decode viewspace pixel normal\n"
 "	half4 normalmap = half4(tex2D(Texture_ScreenNormalMap, ScreenTexCoord));\n"
@@ -2662,19 +2643,19 @@ const char *builtincgshaderstring =
 "	// calculate directional shading\n"
 "	float3 eyevector = position * -1.0;\n"
 "#  ifdef USEEXACTSPECULARMATH\n"
-"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(eyevector)))*-1.0, 0.0)), SpecularPower * normalmap.a));\n"
+"	half specular = pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(eyevector)))*-1.0, 0.0)), SpecularPower * normalmap.a);\n"
 "#  else\n"
 "	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(eyevector))));\n"
-"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower * normalmap.a));\n"
+"	half specular = pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), SpecularPower * normalmap.a);\n"
 "#  endif\n"
 "#endif\n"
 "\n"
 "#if defined(USESHADOWMAP2D)\n"
-"	fade *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
+"	fade *= ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
 "#ifdef USESHADOWMAPVSDCT\n"
 ", Texture_CubeProjection\n"
 "#endif\n"
-"	));\n"
+"	);\n"
 "#endif\n"
 "\n"
 "#ifdef USEDIFFUSE\n"
@@ -2923,8 +2904,6 @@ const char *builtincgshaderstring =
 "uniform sampler Texture_ScreenNormalMap : register(s14),\n"
 "#endif\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
-"uniform sampler Texture_ScreenDepth : register(s13),\n"
-"uniform sampler Texture_ScreenNormalMap : register(s14),\n"
 "uniform sampler Texture_ScreenDiffuse : register(s11),\n"
 "uniform sampler Texture_ScreenSpecular : register(s12),\n"
 "#endif\n"
@@ -2984,9 +2963,9 @@ const char *builtincgshaderstring =
 "\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef USESHADOWSAMPLER\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
+"uniform sampler Texture_ShadowMap2D : register(s11),\n"
 "# else\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
+"uniform sampler Texture_ShadowMap2D : register(s11),\n"
 "# endif\n"
 "#endif\n"
 "\n"
@@ -3189,15 +3168,13 @@ const char *builtincgshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USESHADOWMAPORTHO\n"
-"	color.rgb *= half(ShadowMapCompare(ShadowMapTC, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale));\n"
+"	color.rgb *= ShadowMapCompare(ShadowMapTC, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale);\n"
 "#endif\n"
 "\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
 "	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
 "	color.rgb += diffusetex * half3(tex2D(Texture_ScreenDiffuse, ScreenTexCoord).rgb) * DeferredMod_Diffuse;\n"
 "	color.rgb += glosstex.rgb * half3(tex2D(Texture_ScreenSpecular, ScreenTexCoord).rgb) * DeferredMod_Specular;\n"
-"//	color.rgb = half3(tex2D(Texture_ScreenDepth, ScreenTexCoord).rgb);\n"
-"//	color.r = half(texDepth2D(Texture_ScreenDepth, ScreenTexCoord)) * 1.0;\n"
 "#endif\n"
 "\n"
 "#ifdef USEGLOW\n"
@@ -3761,7 +3738,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_Cube            >= 0) qglUniform1iARB(p->loc_Texture_Cube           , GL20TU_CUBE);
 		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
 		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
-		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
+		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , permutation & SHADERPERMUTATION_SHADOWMAPORTHO ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D);
 		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1iARB(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
 		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1iARB(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
 		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1iARB(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
@@ -4508,7 +4485,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 		vsbin = (DWORD *)FS_LoadFile(va("%s.vsbin", cachename), r_main_mempool, true, &vsbinsize);
 		psbin = (DWORD *)FS_LoadFile(va("%s.psbin", cachename), r_main_mempool, true, &psbinsize);
 	}
-	if ((!vsbin && vertstring) || (!psbin && fragstring))
+	if (debugshader || (!vsbin && vertstring) || (!psbin && fragstring))
 	{
 		const char* dllnames_d3dx9 [] =
 		{
@@ -4601,11 +4578,14 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 		else
 			Con_Printf("Unable to compile shader - D3DXCompileShader function not found\n");
 	}
-	if (vsbin && psbin)
+	if (vsbin)
 	{
 		vsresult = IDirect3DDevice9_CreateVertexShader(vid_d3d9dev, vsbin, &p->vertexshader);
 		if (FAILED(vsresult))
 			Con_Printf("HLSL CreateVertexShader failed for %s (hresult = %8x)\n", cachename, vsresult);
+	}
+	if (psbin)
+	{
 		psresult = IDirect3DDevice9_CreatePixelShader(vid_d3d9dev, psbin, &p->pixelshader);
 		if (FAILED(psresult))
 			Con_Printf("HLSL CreatePixelShader failed for %s (hresult = %8x)\n", cachename, psresult);
@@ -5086,7 +5066,6 @@ extern int r_shadow_prepass_width;
 extern int r_shadow_prepass_height;
 extern rtexture_t *r_shadow_prepassgeometrydepthtexture;
 extern rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
-extern rtexture_t *r_shadow_prepassgeometrydepthcolortexture;
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 extern cvar_t gl_mesh_separatearrays;
@@ -5657,7 +5636,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dcolortexture);
+			R_Mesh_TexBind((permutation & SHADERPERMUTATION_SHADOWMAPORTHO) ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D, (permutation & SHADERPERMUTATION_SHADOWSAMPLER) ? r_shadow_shadowmap2dtexture : r_shadow_shadowmap2dcolortexture);
 			if (rsurface.rtlight)
 			{
 				if (permutation & SHADERPERMUTATION_CUBEFILTER        ) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
@@ -5813,7 +5792,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
+			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
 			if (rsurface.rtlight)
 			{
 				if (r_glsl_permutation->loc_Texture_Cube            >= 0) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
@@ -6062,10 +6041,10 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
 
 		R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
-		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthcolortexture           );
+		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
 		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dcolortexture                    );
+		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 #endif
 		break;
