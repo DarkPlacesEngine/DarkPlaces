@@ -500,6 +500,8 @@ typedef enum gl20_texunit_e
 	// conflicts with lightmap/deluxemap
 	GL20TU_ATTENUATION = 9,
 	GL20TU_CUBE = 10,
+	GL20TU_SHADOWMAPRECT = 11,
+	GL20TU_SHADOWMAPCUBE = 11,
 	GL20TU_SHADOWMAP2D = 11,
 	GL20TU_CUBEPROJECTION = 12,
 	// orthographic-projection shadowmapping
