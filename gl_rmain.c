@@ -4500,7 +4500,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 	int psresult = 0;
 	char temp[MAX_INPUTLINE];
 	const char *vsversion = "vs_3_0", *psversion = "ps_3_0";
-	qboolean debugshader = 1;//gl_paranoid.integer != 0;
+	qboolean debugshader = gl_paranoid.integer != 0;
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (!debugshader)
@@ -4536,12 +4536,10 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 		};
 		dllhandle_t d3dx9_dll = NULL;
 		HRESULT (WINAPI *qD3DXCompileShaderFromFileA)(LPCSTR pSrcFile, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
-		HRESULT (WINAPI *qD3DXPreprocessShader)(LPCSTR pSrcData, UINT SrcDataSize, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPD3DXBUFFER* ppShaderText, LPD3DXBUFFER* ppErrorMsgs);
 		HRESULT (WINAPI *qD3DXCompileShader)(LPCSTR pSrcData, UINT SrcDataLen, CONST D3DXMACRO* pDefines, LPD3DXINCLUDE pInclude, LPCSTR pFunctionName, LPCSTR pProfile, DWORD Flags, LPD3DXBUFFER* ppShader, LPD3DXBUFFER* ppErrorMsgs, LPD3DXCONSTANTTABLE* ppConstantTable);
 		dllfunction_t d3dx9_dllfuncs[] =
 		{
 			{"D3DXCompileShaderFromFileA",	(void **) &qD3DXCompileShaderFromFileA},
-			{"D3DXPreprocessShader",		(void **) &qD3DXPreprocessShader},
 			{"D3DXCompileShader",			(void **) &qD3DXCompileShader},
 			{NULL, NULL}
 		};
@@ -4556,8 +4554,6 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			{
 				if (debugshader)
 				{
-//					vsresult = qD3DXPreprocessShader(vertstring, strlen(vertstring), NULL, NULL, &vsbuffer, &vslog);
-//					FS_WriteFile(va("%s_vs.fx", cachename), vsbuffer->GetBufferPointer(), vsbuffer->GetBufferSize());
 					FS_WriteFile(va("%s_vs.fx", cachename), vertstring, strlen(vertstring));
 					vsresult = qD3DXCompileShaderFromFileA(va("%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				}
@@ -4581,8 +4577,6 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			{
 				if (debugshader)
 				{
-//					psresult = qD3DXPreprocessShader(fragstring, strlen(fragstring), NULL, NULL, &psbuffer, &pslog);
-//					FS_WriteFile(va("%s_ps.fx", cachename), psbuffer->GetBufferPointer(), psbuffer->GetBufferSize());
 					FS_WriteFile(va("%s_ps.fx", cachename), fragstring, strlen(fragstring));
 					psresult = qD3DXCompileShaderFromFileA(va("%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				}
