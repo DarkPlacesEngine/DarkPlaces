@@ -953,7 +953,7 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 #define DEBUGGL
 
 #ifdef DEBUGGL
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError();if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError ? qglGetError() : 0;if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
 extern int errornumber;
 void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
