@@ -4500,7 +4500,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 	int psresult = 0;
 	char temp[MAX_INPUTLINE];
 	const char *vsversion = "vs_3_0", *psversion = "ps_3_0";
-	qboolean debugshader = gl_paranoid.integer != 0;
+	qboolean debugshader = 1;//gl_paranoid.integer != 0;
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (!debugshader)
