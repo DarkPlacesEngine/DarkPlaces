@@ -56,7 +56,6 @@ typedef struct viddef_support_s
 	qboolean arb_texture_env_combine;
 	qboolean arb_texture_gather;
 	qboolean arb_texture_non_power_of_two;
-	qboolean arb_texture_rectangle;
 	qboolean arb_vertex_buffer_object;
 	qboolean arb_vertex_shader;
 	qboolean ati_separate_stencil;
@@ -114,7 +113,6 @@ typedef struct viddef_s
 	unsigned int maxtexturesize_2d;
 	unsigned int maxtexturesize_3d;
 	unsigned int maxtexturesize_cubemap;
-	unsigned int maxtexturesize_rectangle;
 	unsigned int max_anisotropy;
 	unsigned int maxdrawbuffers;
 

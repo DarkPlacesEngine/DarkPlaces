@@ -587,10 +587,6 @@ static const char *builtinshaderstring =
 "#define USEEYEVECTOR\n"
 "#endif\n"
 "\n"
-"#if defined(USESHADOWMAPRECT) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USEDEFERREDLIGHTMAP)\n"
-"# extension GL_ARB_texture_rectangle : enable\n"
-"#endif\n"
-"\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef GL_EXT_gpu_shader4\n"
 "#   extension GL_EXT_gpu_shader4 : enable\n"
@@ -602,10 +598,6 @@ static const char *builtinshaderstring =
 "#     extension GL_AMD_texture_texture4 : enable\n"
 "#   endif\n"
 "# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"# extension GL_EXT_gpu_shader4 : enable\n"
 "#endif\n"
 "\n"
 "//#ifdef USESHADOWSAMPLER\n"
@@ -1152,14 +1144,6 @@ static const char *builtinshaderstring =
 "\n"
 "#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n"
 "\n"
-"#ifdef USESHADOWMAPRECT\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform sampler2DRectShadow Texture_ShadowMapRect;\n"
-"# else\n"
-"uniform sampler2DRect Texture_ShadowMapRect;\n"
-"# endif\n"
-"#endif\n"
-"\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef USESHADOWSAMPLER\n"
 "uniform sampler2DShadow Texture_ShadowMap2D;\n"
@@ -1172,20 +1156,12 @@ static const char *builtinshaderstring =
 "uniform samplerCube Texture_CubeProjection;\n"
 "#endif\n"
 "\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform samplerCubeShadow Texture_ShadowMapCube;\n"
-"# else\n"
-"uniform samplerCube Texture_ShadowMapCube;\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D) || defined(USESHADOWMAPCUBE)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "uniform vec2 ShadowMap_TextureScale;\n"
 "uniform vec4 ShadowMap_Parameters;\n"
 "#endif\n"
 "\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "# ifdef USESHADOWMAPORTHO\n"
 "#  define GetShadowMapTC2D(dir) (min(dir, ShadowMap_Parameters.xyz))\n"
 "# else\n"
@@ -1210,63 +1186,7 @@ static const char *builtinshaderstring =
 "}\n"
 "#  endif\n"
 "# endif\n"
-"#endif // defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D)\n"
-"\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"vec4 GetShadowMapTCCube(vec3 dir)\n"
-"{\n"
-"	vec3 adir = abs(dir);\n"
-"	return vec4(dir, ShadowMap_Parameters.w + ShadowMap_Parameters.y / max(max(adir.x, adir.y), adir.z));\n"
-"}\n"
-"#endif\n"
-"\n"
-"# ifdef USESHADOWMAPRECT\n"
-"float ShadowMapCompare(vec3 dir)\n"
-"{\n"
-"	vec3 shadowmaptc = GetShadowMapTC2D(dir);\n"
-"	float f;\n"
-"#  ifdef USESHADOWSAMPLER\n"
-"\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#      define texval(x, y) shadow2DRect(Texture_ShadowMapRect, shadowmaptc + vec3(x, y, 0.0)).r\n"
-"	f = dot(vec4(0.25), vec4(texval(-0.4, 1.0), texval(-1.0, -0.4), texval(0.4, -1.0), texval(1.0, 0.4)));\n"
-"#    else\n"
-"	f = shadow2DRect(Texture_ShadowMapRect, shadowmaptc).r;\n"
-"#    endif\n"
-"\n"
-"#  else\n"
-"\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#      if USESHADOWMAPPCF > 1\n"
-"#        define texval(x, y) texture2DRect(Texture_ShadowMapRect, center + vec2(x, y)).r\n"
-"	vec2 center = shadowmaptc.xy - 0.5, offset = fract(center);\n"
-"	vec4 row1 = step(shadowmaptc.z, vec4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
-"	vec4 row2 = step(shadowmaptc.z, vec4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n"
-"	vec4 row3 = step(shadowmaptc.z, vec4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n"
-"	vec4 row4 = step(shadowmaptc.z, vec4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n"
-"	vec4 cols = row2 + row3 + mix(row1, row4, offset.y);\n"
-"	f = dot(mix(cols.xyz, cols.yzw, offset.x), vec3(1.0/9.0));\n"
-"#      else\n"
-"#        define texval(x, y) texture2DRect(Texture_ShadowMapRect, shadowmaptc.xy + vec2(x, y)).r\n"
-"	vec2 offset = fract(shadowmaptc.xy);\n"
-"	vec3 row1 = step(shadowmaptc.z, vec3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n"
-"	vec3 row2 = step(shadowmaptc.z, vec3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n"
-"	vec3 row3 = step(shadowmaptc.z, vec3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
-"	vec3 cols = row2 + mix(row1, row3, offset.y);\n"
-"	f = dot(mix(cols.xy, cols.yz, offset.x), vec2(0.25));\n"
-"#      endif\n"
-"#    else\n"
-"	f = step(shadowmaptc.z, texture2DRect(Texture_ShadowMapRect, shadowmaptc.xy).r);\n"
-"#    endif\n"
-"\n"
-"#  endif\n"
-"#  ifdef USESHADOWMAPORTHO\n"
-"	return mix(ShadowMap_Parameters.w, 1.0, f);\n"
-"#  else\n"
-"	return f;\n"
-"#  endif\n"
-"}\n"
-"# endif\n"
+"#endif // defined(USESHADOWMAP2D)\n"
 "\n"
 "# ifdef USESHADOWMAP2D\n"
 "float ShadowMapCompare(vec3 dir)\n"
@@ -1353,21 +1273,6 @@ static const char *builtinshaderstring =
 "#  else\n"
 "	return f;\n"
 "#  endif\n"
-"}\n"
-"# endif\n"
-"\n"
-"# ifdef USESHADOWMAPCUBE\n"
-"float ShadowMapCompare(vec3 dir)\n"
-"{\n"
-"	// apply depth texture cubemap as light filter\n"
-"	vec4 shadowmaptc = GetShadowMapTCCube(dir);\n"
-"	float f;\n"
-"#  ifdef USESHADOWSAMPLER\n"
-"	f = shadowCube(Texture_ShadowMapCube, shadowmaptc).r;\n"
-"#  else\n"
-"	f = step(shadowmaptc.w, textureCube(Texture_ShadowMapCube, shadowmaptc.xyz).r);\n"
-"#  endif\n"
-"	return f;\n"
 "}\n"
 "# endif\n"
 "#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n"
@@ -1496,7 +1401,7 @@ static const char *builtinshaderstring =
 "#  endif\n"
 "#endif\n"
 "\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAPCUBE) || defined(USESHADOWMAP2D)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "	fade *= ShadowMapCompare(CubeVector);\n"
 "#endif\n"
 "\n"
@@ -1710,7 +1615,7 @@ static const char *builtinshaderstring =
 "#endif\n"
 "	color.rgb *= LightColor;\n"
 "	color.rgb *= myhalf(texture2D(Texture_Attenuation, vec2(length(CubeVector), 0.0)));\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAPCUBE) || defined(USESHADOWMAP2D)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "	color.rgb *= ShadowMapCompare(CubeVector);\n"
 "#endif\n"
 "# ifdef USECUBEFILTER\n"
@@ -2402,7 +2307,7 @@ const char *builtincgshaderstring =
 "#endif // USEOFFSETMAPPING\n"
 "\n"
 "#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "# ifdef USESHADOWMAPORTHO\n"
 "#  define GetShadowMapTC2D(dir, ShadowMap_Parameters) (min(dir, ShadowMap_Parameters.xyz))\n"
 "# else\n"
@@ -2431,71 +2336,7 @@ const char *builtincgshaderstring =
 "}\n"
 "#  endif\n"
 "# endif\n"
-"#endif // defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D)\n"
-"\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"float4 GetShadowMapTCCube(float3 dir, float4 ShadowMap_Parameters)\n"
-"{\n"
-"	float3 adir = abs(dir);\n"
-"	return float4(dir, ShadowMap_Parameters.w + ShadowMap_Parameters.y / max(max(adir.x, adir.y), adir.z));\n"
-"}\n"
-"#endif\n"
-"\n"
-"# ifdef USESHADOWMAPRECT\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"float ShadowMapCompare(float3 dir, samplerRECT Texture_ShadowMapRect, float4 ShadowMap_Parameters, samplerCUBE Texture_CubeProjection)\n"
-"#else\n"
-"float ShadowMapCompare(float3 dir, samplerRECT Texture_ShadowMapRect, float4 ShadowMap_Parameters)\n"
-"#endif\n"
-"{\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters, Texture_CubeProjection);\n"
-"#else\n"
-"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters);\n"
-"#endif\n"
-"	float f;\n"
-"#  ifdef USESHADOWSAMPLER\n"
-"\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#      define texval(x, y) shadow2DRect(Texture_ShadowMapRect, shadowmaptc + float3(x, y, 0.0)).r\n"
-"	f = dot(float4(0.25,0.25,0.25,0.25), float4(texval(-0.4, 1.0), texval(-1.0, -0.4), texval(0.4, -1.0), texval(1.0, 0.4)));\n"
-"#    else\n"
-"	f = shadow2DRect(Texture_ShadowMapRect, shadowmaptc).r;\n"
-"#    endif\n"
-"\n"
-"#  else\n"
-"\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#      if USESHADOWMAPPCF > 1\n"
-"#        define texval(x, y) texRECT(Texture_ShadowMapRect, center + float2(x, y)).r\n"
-"	float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n"
-"	float4 row1 = step(shadowmaptc.z, float4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
-"	float4 row2 = step(shadowmaptc.z, float4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n"
-"	float4 row3 = step(shadowmaptc.z, float4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n"
-"	float4 row4 = step(shadowmaptc.z, float4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n"
-"	float4 cols = row2 + row3 + lerp(row1, row4, offset.y);\n"
-"	f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
-"#      else\n"
-"#        define texval(x, y) texRECT(Texture_ShadowMapRect, shadowmaptc.xy + float2(x, y)).r\n"
-"	float2 offset = frac(shadowmaptc.xy);\n"
-"	float3 row1 = step(shadowmaptc.z, float3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n"
-"	float3 row2 = step(shadowmaptc.z, float3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n"
-"	float3 row3 = step(shadowmaptc.z, float3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
-"	float3 cols = row2 + lerp(row1, row3, offset.y);\n"
-"	f = dot(lerp(cols.xy, cols.yz, offset.x), float2(0.25,0.25));\n"
-"#      endif\n"
-"#    else\n"
-"	f = step(shadowmaptc.z, texRECT(Texture_ShadowMapRect, shadowmaptc.xy).r);\n"
-"#    endif\n"
-"\n"
-"#  endif\n"
-"#  ifdef USESHADOWMAPORTHO\n"
-"	return lerp(ShadowMap_Parameters.w, 1.0, f);\n"
-"#  else\n"
-"	return f;\n"
-"#  endif\n"
-"}\n"
-"# endif\n"
+"#endif // defined(USESHADOWMAP2D)\n"
 "\n"
 "# ifdef USESHADOWMAP2D\n"
 "#ifdef USESHADOWMAPVSDCT\n"
@@ -2590,21 +2431,6 @@ const char *builtincgshaderstring =
 "#  else\n"
 "	return f;\n"
 "#  endif\n"
-"}\n"
-"# endif\n"
-"\n"
-"# ifdef USESHADOWMAPCUBE\n"
-"float ShadowMapCompare(float3 dir, samplerCUBE Texture_ShadowMapCube, float4 ShadowMap_Parameters)\n"
-"{\n"
-"	// apply depth texture cubemap as light filter\n"
-"	float4 shadowmaptc = GetShadowMapTCCube(dir, ShadowMap_Parameters);\n"
-"	float f;\n"
-"#  ifdef USESHADOWSAMPLER\n"
-"	f = shadowCube(Texture_ShadowMapCube, shadowmaptc).r;\n"
-"#  else\n"
-"	f = step(shadowmaptc.w, texCUBE(Texture_ShadowMapCube, shadowmaptc.xyz).r);\n"
-"#  endif\n"
-"	return f;\n"
 "}\n"
 "# endif\n"
 "#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n"
@@ -2772,14 +2598,6 @@ const char *builtincgshaderstring =
 "uniform samplerCUBE Texture_Cube : register(s10),\n"
 "#endif\n"
 "\n"
-"#ifdef USESHADOWMAPRECT\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform samplerRECTShadow Texture_ShadowMapRect : register(s11),\n"
-"# else\n"
-"uniform samplerRECT Texture_ShadowMapRect : register(s11),\n"
-"# endif\n"
-"#endif\n"
-"\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef USESHADOWSAMPLER\n"
 "uniform sampler Texture_ShadowMap2D : register(s11),\n"
@@ -2792,15 +2610,7 @@ const char *builtincgshaderstring =
 "uniform samplerCUBE Texture_CubeProjection : register(s12),\n"
 "#endif\n"
 "\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform samplerCUBEShadow Texture_ShadowMapCube : register(s11),\n"
-"# else\n"
-"uniform samplerCUBE Texture_ShadowMapCube : register(s11),\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D) || defined(USESHADOWMAPCUBE)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "uniform float2 ShadowMap_TextureScale : register(c35),\n"
 "uniform float4 ShadowMap_Parameters : register(c34),\n"
 "#endif\n"
@@ -2840,18 +2650,8 @@ const char *builtincgshaderstring =
 "#  endif\n"
 "#endif\n"
 "\n"
-"#if defined(USESHADOWMAP2D) || defined(USESHADOWMAPRECT) || defined(USESHADOWMAPCUBE)\n"
-"	fade *= ShadowMapCompare(CubeVector,\n"
-"# if defined(USESHADOWMAP2D)\n"
-"Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
-"# endif\n"
-"# if defined(USESHADOWMAPRECT)\n"
-"Texture_ShadowMapRect, ShadowMap_Parameters\n"
-"# endif\n"
-"# if defined(USESHADOWMAPCUBE)\n"
-"Texture_ShadowMapCube, ShadowMap_Parameters\n"
-"# endif\n"
-"\n"
+"#if defined(USESHADOWMAP2D)\n"
+"	fade *= ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
 "#ifdef USESHADOWMAPVSDCT\n"
 ", Texture_CubeProjection\n"
 "#endif\n"
@@ -3161,14 +2961,6 @@ const char *builtincgshaderstring =
 "\n"
 "#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n"
 "\n"
-"#ifdef USESHADOWMAPRECT\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform samplerRECTShadow Texture_ShadowMapRect : register(s11),\n"
-"# else\n"
-"uniform samplerRECT Texture_ShadowMapRect : register(s11),\n"
-"# endif\n"
-"#endif\n"
-"\n"
 "#ifdef USESHADOWMAP2D\n"
 "# ifdef USESHADOWSAMPLER\n"
 "uniform sampler Texture_ShadowMap2D : register(s11),\n"
@@ -3181,15 +2973,7 @@ const char *builtincgshaderstring =
 "uniform samplerCUBE Texture_CubeProjection : register(s12),\n"
 "#endif\n"
 "\n"
-"#ifdef USESHADOWMAPCUBE\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform samplerCUBEShadow Texture_ShadowMapCube : register(s11),\n"
-"# else\n"
-"uniform samplerCUBE Texture_ShadowMapCube : register(s11),\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAP2D) || defined(USESHADOWMAPCUBE)\n"
+"#if defined(USESHADOWMAP2D)\n"
 "uniform float2 ShadowMap_TextureScale : register(c35),\n"
 "uniform float4 ShadowMap_Parameters : register(c34),\n"
 "#endif\n"
@@ -3274,18 +3058,8 @@ const char *builtincgshaderstring =
 "#endif\n"
 "	color.rgb *= LightColor;\n"
 "	color.rgb *= half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)).r);\n"
-"#if defined(USESHADOWMAPRECT) || defined(USESHADOWMAPCUBE) || defined(USESHADOWMAP2D)\n"
-"	color.rgb *= half(ShadowMapCompare(CubeVector,\n"
-"# if defined(USESHADOWMAP2D)\n"
-"Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
-"# endif\n"
-"# if defined(USESHADOWMAPRECT)\n"
-"Texture_ShadowMapRect, ShadowMap_Parameters\n"
-"# endif\n"
-"# if defined(USESHADOWMAPCUBE)\n"
-"Texture_ShadowMapCube, ShadowMap_Parameters\n"
-"# endif\n"
-"\n"
+"#if defined(USESHADOWMAP2D)\n"
+"	color.rgb *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
 "#ifdef USESHADOWMAPVSDCT\n"
 ", Texture_CubeProjection\n"
 "#endif\n"
@@ -3391,14 +3165,7 @@ const char *builtincgshaderstring =
 "#endif\n"
 "\n"
 "#ifdef USESHADOWMAPORTHO\n"
-"	color.rgb *= ShadowMapCompare(ShadowMapTC,\n"
-"# if defined(USESHADOWMAP2D)\n"
-"Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
-"# endif\n"
-"# if defined(USESHADOWMAPRECT)\n"
-"Texture_ShadowMapRect, ShadowMap_Parameters\n"
-"# endif\n"
-"	);\n"
+"	color.rgb *= ShadowMapCompare(ShadowMapTC, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale);\n"
 "#endif\n"
 "\n"
 "#ifdef USEDEFERREDLIGHTMAP\n"
@@ -3496,19 +3263,17 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_REFLECTION = 1<<15, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
 	SHADERPERMUTATION_OFFSETMAPPING = 1<<16, ///< adjust texcoords to roughly simulate a displacement mapped surface
 	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<17, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_SHADOWMAPRECT = 1<<18, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPCUBE = 1<<19, ///< (lightsource) use shadowmap cubemap texture as light filter
-	SHADERPERMUTATION_SHADOWMAP2D = 1<<20, ///< (lightsource) use shadowmap rectangle texture as light filter
-	SHADERPERMUTATION_SHADOWMAPPCF = 1<<21, ///< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<22, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<23, ///< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<24, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<25, //< (lightsource) use orthographic shadowmap projection
-	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<26, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
-	SHADERPERMUTATION_ALPHAKILL = 1<<27, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
-	SHADERPERMUTATION_REFLECTCUBE = 1<<28, ///< fake reflections using global cubemap (not HDRI light probe)
-	SHADERPERMUTATION_LIMIT = 1<<29, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 29 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SHADOWMAP2D = 1<<18, ///< (lightsource) use shadowmap texture as light filter
+	SHADERPERMUTATION_SHADOWMAPPCF = 1<<19, ///< (lightsource) use percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<20, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
+	SHADERPERMUTATION_SHADOWSAMPLER = 1<<21, ///< (lightsource) use hardware shadowmap test
+	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<22, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<23, //< (lightsource) use orthographic shadowmap projection
+	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<24, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
+	SHADERPERMUTATION_ALPHAKILL = 1<<25, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
+	SHADERPERMUTATION_REFLECTCUBE = 1<<26, ///< fake reflections using global cubemap (not HDRI light probe)
+	SHADERPERMUTATION_LIMIT = 1<<27, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 27 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -3533,8 +3298,6 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEREFLECTION\n", " reflection"},
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
-	{"#define USESHADOWMAPRECT\n", " shadowmaprect"},
-	{"#define USESHADOWMAPCUBE\n", " shadowmapcube"},
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
 	{"#define USESHADOWMAPPCF 1\n", " shadowmappcf"},
 	{"#define USESHADOWMAPPCF 2\n", " shadowmappcf2"},
@@ -3664,8 +3427,6 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Cube;
 	int loc_Texture_Refraction;
 	int loc_Texture_Reflection;
-	int loc_Texture_ShadowMapRect;
-	int loc_Texture_ShadowMapCube;
 	int loc_Texture_ShadowMap2D;
 	int loc_Texture_CubeProjection;
 	int loc_Texture_ScreenDepth;
@@ -3892,8 +3653,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_Cube               = qglGetUniformLocationARB(p->program, "Texture_Cube");
 		p->loc_Texture_Refraction         = qglGetUniformLocationARB(p->program, "Texture_Refraction");
 		p->loc_Texture_Reflection         = qglGetUniformLocationARB(p->program, "Texture_Reflection");
-		p->loc_Texture_ShadowMapRect      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapRect");
-		p->loc_Texture_ShadowMapCube      = qglGetUniformLocationARB(p->program, "Texture_ShadowMapCube");
 		p->loc_Texture_ShadowMap2D        = qglGetUniformLocationARB(p->program, "Texture_ShadowMap2D");
 		p->loc_Texture_CubeProjection     = qglGetUniformLocationARB(p->program, "Texture_CubeProjection");
 		p->loc_Texture_ScreenDepth        = qglGetUniformLocationARB(p->program, "Texture_ScreenDepth");
@@ -3976,8 +3735,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_Cube            >= 0) qglUniform1iARB(p->loc_Texture_Cube           , GL20TU_CUBE);
 		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
 		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
-		if (p->loc_Texture_ShadowMapRect   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapRect  , permutation & SHADERPERMUTATION_SHADOWMAPORTHO ? GL20TU_SHADOWMAPORTHORECT : GL20TU_SHADOWMAPRECT);
-		if (p->loc_Texture_ShadowMapCube   >= 0) qglUniform1iARB(p->loc_Texture_ShadowMapCube  , GL20TU_SHADOWMAPCUBE);
 		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , permutation & SHADERPERMUTATION_SHADOWMAPORTHO ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D);
 		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1iARB(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
 		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1iARB(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
@@ -4093,8 +3850,6 @@ typedef struct r_cg_permutation_s
 	CGparameter fp_Texture_Cube;
 	CGparameter fp_Texture_Refraction;
 	CGparameter fp_Texture_Reflection;
-	CGparameter fp_Texture_ShadowMapRect;
-	CGparameter fp_Texture_ShadowMapCube;
 	CGparameter fp_Texture_ShadowMap2D;
 	CGparameter fp_Texture_CubeProjection;
 	CGparameter fp_Texture_ScreenDepth;
@@ -4393,8 +4148,6 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
 		p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
 		p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
-		p->fp_Texture_ShadowMapRect      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapRect");
-		p->fp_Texture_ShadowMapCube      = cgGetNamedParameter(p->fprogram, "Texture_ShadowMapCube");
 		p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
 		p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
 		p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
@@ -5281,8 +5034,6 @@ extern cvar_t r_shadow_deferred_8bitrange;
 extern rtexture_t *r_shadow_attenuationgradienttexture;
 extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
-extern qboolean r_shadow_usingshadowmaprect;
-extern qboolean r_shadow_usingshadowmapcube;
 extern qboolean r_shadow_usingshadowmap2d;
 extern qboolean r_shadow_usingshadowmaportho;
 extern float r_shadow_shadowmap_texturescale[2];
@@ -5290,9 +5041,7 @@ extern float r_shadow_shadowmap_parameters[4];
 extern qboolean r_shadow_shadowmapvsdct;
 extern qboolean r_shadow_shadowmapsampler;
 extern int r_shadow_shadowmappcf;
-extern rtexture_t *r_shadow_shadowmaprectangletexture;
 extern rtexture_t *r_shadow_shadowmap2dtexture;
-extern rtexture_t *r_shadow_shadowmapcubetexture[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
 extern rtexture_t *r_shadow_shadowmap2dcolortexture;
 extern rtexture_t *r_shadow_shadowmapvsdcttexture;
 extern matrix4x4_t r_shadow_shadowmapmatrix;
@@ -5490,15 +5239,10 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
 		if (rsurface.texture->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
-		if (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d || r_shadow_usingshadowmapcube)
+		if (r_shadow_usingshadowmap2d)
 		{
-			if (r_shadow_usingshadowmaprect)
-				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-			if (r_shadow_usingshadowmap2d)
-				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
-			if (r_shadow_usingshadowmapcube)
-				permutation |= SHADERPERMUTATION_SHADOWMAPCUBE;
-			else if(r_shadow_shadowmapvsdct)
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			if(r_shadow_shadowmapvsdct)
 				permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
 			if (r_shadow_shadowmapsampler)
@@ -5543,10 +5287,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
-			if (r_shadow_usingshadowmaprect)
-				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-			if (r_shadow_usingshadowmap2d)
-				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
 			if (r_shadow_shadowmapsampler)
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
@@ -5598,10 +5339,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
-			if (r_shadow_usingshadowmaprect)
-				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-			if (r_shadow_usingshadowmap2d)
-				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
 			if (r_shadow_shadowmapsampler)
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
@@ -5648,10 +5386,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
-			if (r_shadow_usingshadowmaprect)
-				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-			if (r_shadow_usingshadowmap2d)
-				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
 			if (r_shadow_shadowmapsampler)
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
@@ -5697,10 +5432,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
 		{
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
-			if (r_shadow_usingshadowmaprect)
-				permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-			if (r_shadow_usingshadowmap2d)
-				permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
 			if (r_shadow_shadowmapsampler)
 				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
@@ -6045,12 +5777,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
 			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHO2D : GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
-			if (r_glsl_permutation->loc_Texture_ShadowMapRect   >= 0) R_Mesh_TexBind(r_shadow_usingshadowmaportho ? GL20TU_SHADOWMAPORTHORECT : GL20TU_SHADOWMAPRECT, r_shadow_shadowmaprectangletexture                  );
 			if (rsurface.rtlight)
 			{
 				if (r_glsl_permutation->loc_Texture_Cube            >= 0) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
-				if (r_shadow_usingshadowmapcube)
-					if (r_glsl_permutation->loc_Texture_ShadowMapCube   >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAPCUBE     , r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);
 				if (r_glsl_permutation->loc_Texture_CubeProjection  >= 0) R_Mesh_TexBind(GL20TU_CUBEPROJECTION    , r_shadow_shadowmapvsdcttexture                      );
 			}
 		}
@@ -6215,12 +5944,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
 			if (r_cg_permutation->fp_Texture_ShadowMap2D    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , r_shadow_shadowmap2dtexture                         );CHECKCGERROR
-			if (r_cg_permutation->fp_Texture_ShadowMapRect  ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapRect  , r_shadow_shadowmaprectangletexture                  );CHECKCGERROR
 			if (rsurface.rtlight)
 			{
 				if (r_cg_permutation->fp_Texture_Cube           ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , rsurface.rtlight->currentcubemap                    );CHECKCGERROR
-				if (r_shadow_usingshadowmapcube)
-					if (r_cg_permutation->fp_Texture_ShadowMapCube  ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapCube  , r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);CHECKCGERROR
 				if (r_cg_permutation->fp_Texture_CubeProjection ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , r_shadow_shadowmapvsdcttexture                      );CHECKCGERROR
 			}
 		}
@@ -6265,15 +5991,10 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_shadow_glossexact.integer)
 			permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
 	}
-	if (r_shadow_usingshadowmaprect || r_shadow_usingshadowmap2d || r_shadow_usingshadowmapcube)
+	if (r_shadow_usingshadowmap2d)
 	{
-		if (r_shadow_usingshadowmaprect)
-			permutation |= SHADERPERMUTATION_SHADOWMAPRECT;
-		if (r_shadow_usingshadowmap2d)
-			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
-		if (r_shadow_usingshadowmapcube)
-			permutation |= SHADERPERMUTATION_SHADOWMAPCUBE;
-		else if(r_shadow_shadowmapvsdct)
+		permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+		if (r_shadow_shadowmapvsdct)
 			permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
 		if (r_shadow_shadowmapsampler)
@@ -6307,9 +6028,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
 		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		R_Mesh_TexBind(GL20TU_SHADOWMAPRECT      , r_shadow_shadowmaprectangletexture                  );
-		if (r_shadow_usingshadowmapcube)
-			R_Mesh_TexBind(GL20TU_SHADOWMAPCUBE      , r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);
 		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 #endif
@@ -6337,9 +6055,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
 		if (r_glsl_permutation->loc_Texture_ScreenNormalMap   >= 0) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		if (r_glsl_permutation->loc_Texture_Cube              >= 0) R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		if (r_glsl_permutation->loc_Texture_ShadowMapRect     >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAPRECT      , r_shadow_shadowmaprectangletexture                  );
-		if (r_shadow_usingshadowmapcube)
-			if (r_glsl_permutation->loc_Texture_ShadowMapCube     >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAPCUBE      , r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);
 		if (r_glsl_permutation->loc_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
 		if (r_glsl_permutation->loc_Texture_CubeProjection    >= 0) R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 		break;
@@ -6361,9 +6076,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_cg_permutation->fp_Texture_ScreenDepth      ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , r_shadow_prepassgeometrydepthtexture                );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_ScreenNormalMap  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, r_shadow_prepassgeometrynormalmaptexture            );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_Cube             ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , rsurface.rtlight->currentcubemap                    );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ShadowMapRect    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapRect  , r_shadow_shadowmaprectangletexture                  );CHECKCGERROR
-		if (r_shadow_usingshadowmapcube)
-			if (r_cg_permutation->fp_Texture_ShadowMapCube    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMapCube  , r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]);CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_ShadowMap2D      ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , r_shadow_shadowmap2dtexture                         );CHECKCGERROR
 		if (r_cg_permutation->fp_Texture_CubeProjection   ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , r_shadow_shadowmapvsdcttexture                      );CHECKCGERROR
 #endif

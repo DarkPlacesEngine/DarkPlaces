@@ -95,13 +95,12 @@ typedef enum gltexturetype_e
 	GLTEXTURETYPE_2D,
 	GLTEXTURETYPE_3D,
 	GLTEXTURETYPE_CUBEMAP,
-	GLTEXTURETYPE_RECTANGLE,
 	GLTEXTURETYPE_TOTAL
 }
 gltexturetype_t;
 
-static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB, GL_TEXTURE_RECTANGLE_ARB};
-static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {2, 3, 2, 2};
+static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB};
+static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {2, 3, 2};
 static int cubemapside[6] =
 {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
@@ -1213,9 +1212,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				}
 			}
 			break;
-		case GLTEXTURETYPE_RECTANGLE:
-			qglTexImage2D(GL_TEXTURE_RECTANGLE_ARB, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, NULL);CHECKGLERROR
-			break;
 		}
 		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
 		qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
@@ -1319,9 +1315,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					}
 				}
 				break;
-			case GLTEXTURETYPE_RECTANGLE:
-				Sys_Error("Direct3D does not have RECTANGLE textures\n");
-				break;
 			}
 		}
 		glt->d3daddressw = 0;
@@ -1388,11 +1381,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	if (texturetype == GLTEXTURETYPE_RECTANGLE && !vid.support.arb_texture_rectangle)
-	{
-		Con_Printf ("R_LoadTexture: rectangle texture not supported by driver\n");
-		return NULL;
-	}
 	if (texturetype == GLTEXTURETYPE_CUBEMAP && !vid.support.arb_texture_cube_map)
 	{
 		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
@@ -1615,11 +1603,6 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, miplevel, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette)
-{
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, miplevel, textype, GLTEXTURETYPE_RECTANGLE, data, palette);
-}
-
 static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 {
 	int flags = TEXF_RENDERTARGET | TEXF_CLAMP;
@@ -1632,19 +1615,9 @@ static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 	return flags;
 }
 
-rtexture_t *R_LoadTextureShadowMapRectangle(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
-{
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_RECTANGLE, NULL, NULL);
-}
-
 rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
-}
-
-rtexture_t *R_LoadTextureShadowMapCube(rtexturepool_t *rtexturepool, const char *identifier, int width, int precision, qboolean filter)
-{
-    return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_CUBEMAP, NULL, NULL);
 }
 
 int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)

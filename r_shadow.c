@@ -163,18 +163,14 @@ typedef enum r_shadow_rendermode_e
 	R_SHADOW_RENDERMODE_LIGHT_GLSL,
 	R_SHADOW_RENDERMODE_VISIBLEVOLUMES,
 	R_SHADOW_RENDERMODE_VISIBLELIGHTING,
-	R_SHADOW_RENDERMODE_SHADOWMAP2D,
-	R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE,
-	R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE
+	R_SHADOW_RENDERMODE_SHADOWMAP2D
 }
 r_shadow_rendermode_t;
 
 typedef enum r_shadow_shadowmode_e
 {
     R_SHADOW_SHADOWMODE_STENCIL,
-    R_SHADOW_SHADOWMODE_SHADOWMAP2D,
-    R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE,
-    R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE
+    R_SHADOW_SHADOWMODE_SHADOWMAP2D
 }
 r_shadow_shadowmode_t;
 
@@ -182,9 +178,7 @@ r_shadow_rendermode_t r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 r_shadow_rendermode_t r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_NONE;
 r_shadow_rendermode_t r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_NONE;
 r_shadow_rendermode_t r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_NONE;
-qboolean r_shadow_usingshadowmaprect;
 qboolean r_shadow_usingshadowmap2d;
-qboolean r_shadow_usingshadowmapcube;
 qboolean r_shadow_usingshadowmaportho;
 int r_shadow_shadowmapside;
 float r_shadow_shadowmap_texturescale[2];
@@ -194,12 +188,9 @@ int r_shadow_drawbuffer;
 int r_shadow_readbuffer;
 #endif
 int r_shadow_cullface_front, r_shadow_cullface_back;
-GLuint r_shadow_fborectangle;
-GLuint r_shadow_fbocubeside[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
 GLuint r_shadow_fbo2d;
 r_shadow_shadowmode_t r_shadow_shadowmode;
 int r_shadow_shadowmapfilterquality;
-int r_shadow_shadowmaptexturetype;
 int r_shadow_shadowmapdepthbits;
 int r_shadow_shadowmapmaxsize;
 qboolean r_shadow_shadowmapvsdct;
@@ -252,9 +243,7 @@ rtexture_t *r_shadow_attenuationgradienttexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
 skinframe_t *r_shadow_lightcorona;
-rtexture_t *r_shadow_shadowmaprectangletexture;
 rtexture_t *r_shadow_shadowmap2dtexture;
-rtexture_t *r_shadow_shadowmapcubetexture[R_SHADOW_SHADOWMAP_NUMCUBEMAPS];
 rtexture_t *r_shadow_shadowmap2dcolortexture;
 rtexture_t *r_shadow_shadowmapvsdcttexture;
 int r_shadow_shadowmapsize; // changes for each light based on distance
@@ -309,7 +298,6 @@ cvar_t r_shadow_realtime_world_compilesvbsp = {0, "r_shadow_realtime_world_compi
 cvar_t r_shadow_realtime_world_compileportalculling = {0, "r_shadow_realtime_world_compileportalculling", "0", "enables portal-based culling optimization during compilation (overrides compilesvbsp)"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "0", "enables use of shadowmapping (depth texture sampling) instead of stencil shadow volumes, requires gl_fbo 1"};
-cvar_t r_shadow_shadowmapping_texturetype = {CVAR_SAVE, "r_shadow_shadowmapping_texturetype", "-1", "shadowmap texture types: -1 = auto-select, 0 = 2D, 1 = rectangle, 2 = cubemap"};
 cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
 cvar_t r_shadow_shadowmapping_depthbits = {CVAR_SAVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
 cvar_t r_shadow_shadowmapping_vsdct = {CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
@@ -382,7 +370,6 @@ void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4);
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
-	r_shadow_shadowmaptexturetype = r_shadow_shadowmapping_texturetype.integer;
 	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
 	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
 	r_shadow_shadowmaplod = -1;
@@ -428,32 +415,10 @@ void R_Shadow_SetShadowMode(void)
 					break;
 				}
 			}
-			switch (r_shadow_shadowmaptexturetype)
-			{
-			case 0:
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-				break;
-			case 1:
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
-				break;
-			case 2:
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE;
-				break;
-			default:
-				if((vid.support.amd_texture_texture4 || vid.support.arb_texture_gather) && r_shadow_shadowmappcf && !r_shadow_shadowmapsampler)
-					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-				else if(vid.support.arb_texture_rectangle) 
-					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE;
-				else
-					r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-				break;
-			}
+			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			// Cg has very little choice in depth texture sampling
 			if (vid.cgcontext)
-			{
 				r_shadow_shadowmapsampler = false;
-				r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			}
 			break;
 		case RENDERPATH_CGGL:
 		case RENDERPATH_D3D9:
@@ -476,8 +441,6 @@ qboolean R_Shadow_ShadowMappingEnabled(void)
 	switch (r_shadow_shadowmode)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 		return true;
 	default:
 		return false;
@@ -486,32 +449,15 @@ qboolean R_Shadow_ShadowMappingEnabled(void)
 
 void R_Shadow_FreeShadowMaps(void)
 {
-	int i;
-
 	R_Shadow_SetShadowMode();
 
-	R_Mesh_DestroyFramebufferObject(r_shadow_fborectangle);
-
 	R_Mesh_DestroyFramebufferObject(r_shadow_fbo2d);
-	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-		R_Mesh_DestroyFramebufferObject(r_shadow_fbocubeside[i]);
 
-	r_shadow_fborectangle = 0;
 	r_shadow_fbo2d = 0;
-	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
-
-	if (r_shadow_shadowmaprectangletexture)
-		R_FreeTexture(r_shadow_shadowmaprectangletexture);
-	r_shadow_shadowmaprectangletexture = NULL;
 
 	if (r_shadow_shadowmap2dtexture)
 		R_FreeTexture(r_shadow_shadowmap2dtexture);
 	r_shadow_shadowmap2dtexture = NULL;
-
-	for (i = 0;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-		if (r_shadow_shadowmapcubetexture[i])
-			R_FreeTexture(r_shadow_shadowmapcubetexture[i]);
-	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
 
 	if (r_shadow_shadowmap2dcolortexture)
 		R_FreeTexture(r_shadow_shadowmap2dcolortexture);
@@ -529,23 +475,18 @@ void r_shadow_start(void)
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
 	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
-	r_shadow_shadowmaprectangletexture = NULL;
 	r_shadow_shadowmap2dtexture = NULL;
-	memset(r_shadow_shadowmapcubetexture, 0, sizeof(r_shadow_shadowmapcubetexture));
 	r_shadow_shadowmap2dcolortexture = NULL;
 	r_shadow_shadowmapvsdcttexture = NULL;
 	r_shadow_shadowmapmaxsize = 0;
 	r_shadow_shadowmapsize = 0;
 	r_shadow_shadowmaplod = 0;
 	r_shadow_shadowmapfilterquality = -1;
-	r_shadow_shadowmaptexturetype = -1;
 	r_shadow_shadowmapdepthbits = 0;
 	r_shadow_shadowmapvsdct = false;
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
-	r_shadow_fborectangle = 0;
 	r_shadow_fbo2d = 0;
-	memset(r_shadow_fbocubeside, 0, sizeof(r_shadow_fbocubeside));
 
 	R_Shadow_FreeShadowMaps();
 
@@ -714,7 +655,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_vsdct);
-	Cvar_RegisterVariable(&r_shadow_shadowmapping_texturetype);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_filterquality);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_depthbits);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_precision);
@@ -2005,8 +1945,6 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
-	r_shadow_usingshadowmaprect = false;
-	r_shadow_usingshadowmapcube = false;
 	r_shadow_usingshadowmap2d = false;
 	r_shadow_usingshadowmaportho = false;
 	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
@@ -2086,20 +2024,6 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 			break;
 		}
 		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		if (r_shadow_shadowmaprectangletexture) return;
-		r_shadow_shadowmaprectangletexture = R_LoadTextureShadowMapRectangle(r_shadow_texturepool, "shadowmap", size*2, size*3, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
-		r_shadow_fborectangle = R_Mesh_CreateFramebufferObject(r_shadow_shadowmaprectangletexture, NULL, NULL, NULL, NULL);
-		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
-		if (r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]) return;
-		r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod] = R_LoadTextureShadowMapCube(r_shadow_texturepool, "shadowmapcube", size, r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
-		// special trick to get an empty fbo we configure ourselves...
-		r_shadow_fbocubeside[r_shadow_shadowmaplod] = R_Mesh_CreateFramebufferObject(NULL, NULL, NULL, NULL, NULL);
-		R_Mesh_SetRenderTargets(r_shadow_fbocubeside[r_shadow_shadowmaplod], NULL, NULL, NULL, NULL, NULL);
-		if (qglFramebufferTexture2DEXT)
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
-		break;
 	default:
 		return;
 	}
@@ -2135,58 +2059,24 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	r_shadow_shadowmap_parameters[3] = 0.5f + 0.5f * (farclip + nearclip) / (farclip - nearclip);
 	r_shadow_shadowmapside = side;
 	r_shadow_shadowmapsize = size;
-	switch (r_shadow_shadowmode)
-	{
-	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[2] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
-		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
-		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D) goto init_done;
 
-		// complex unrolled cube approach (more flexible)
-		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
-			R_Shadow_MakeVSDCT();
-		if (!r_shadow_shadowmap2dtexture)
-			R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
-		if (r_shadow_shadowmap2dtexture) fbo = r_shadow_fbo2d;
-		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
-		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
-		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
-		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
-		r_shadow_shadowmap_parameters[2] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
-		R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
-		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE) goto init_done;
+	r_shadow_shadowmap_parameters[0] = 0.5f * (size - r_shadow_shadowmapborder);
+	r_shadow_shadowmap_parameters[2] = r_shadow_shadowmapvsdct ? 2.5f*size : size;
+	R_Viewport_InitRectSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, r_shadow_shadowmapborder, nearclip, farclip, NULL);
+	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAP2D) goto init_done;
 
-		// complex unrolled cube approach (more flexible)
-		if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
-			R_Shadow_MakeVSDCT();
-		if (!r_shadow_shadowmaprectangletexture)
-			R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
-		if(r_shadow_shadowmaprectangletexture) fbo = r_shadow_fborectangle;
-		r_shadow_shadowmap_texturescale[0] = 1.0f;
-		r_shadow_shadowmap_texturescale[1] = 1.0f;
-		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
-		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
-		r_shadow_shadowmap_parameters[0] = 1.0f;
-		r_shadow_shadowmap_parameters[2] = 1.0f;
-		R_Viewport_InitCubeSideView(&viewport, &rsurface.rtlight->matrix_lighttoworld, side, size, nearclip, farclip, NULL);
-		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE) goto init_done;
+	// complex unrolled cube approach (more flexible)
+	if (r_shadow_shadowmapvsdct && !r_shadow_shadowmapvsdcttexture)
+		R_Shadow_MakeVSDCT();
+	if (!r_shadow_shadowmap2dtexture)
+		R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
+	if (r_shadow_shadowmap2dtexture) fbo = r_shadow_fbo2d;
+	r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
+	r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
+	r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 
-		// simple cube approach
-		if (!r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod])
-			R_Shadow_MakeShadowMap(side, size);
-		if (r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]) fbo = r_shadow_fbocubeside[r_shadow_shadowmaplod];
-		r_shadow_shadowmap_texturescale[0] = 0.0f;
-		r_shadow_shadowmap_texturescale[1] = 0.0f;
-		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE;
-		break;
-	default:
-		break;
-	}
-
+	R_Mesh_ResetTextureState();
+	R_Mesh_ResetRenderTargets();
 	R_Shadow_RenderMode_Reset();
 	if (fbo)
 	{
@@ -2201,79 +2091,66 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 
 init_done:
 	R_SetViewport(&viewport);
-	switch (r_shadow_rendermode)
+	flipped = (side & 1) ^ (side >> 2);
+	r_refdef.view.cullface_front = flipped ? r_shadow_cullface_back : r_shadow_cullface_front;
+	r_refdef.view.cullface_back = flipped ? r_shadow_cullface_front : r_shadow_cullface_back;
+	switch(vid.renderpath)
 	{
-	case R_SHADOW_RENDERMODE_SHADOWMAP2D:
-	case R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE:
-		flipped = (side & 1) ^ (side >> 2);
-		r_refdef.view.cullface_front = flipped ? r_shadow_cullface_back : r_shadow_cullface_front;
-		r_refdef.view.cullface_back = flipped ? r_shadow_cullface_front : r_shadow_cullface_back;
-		switch(vid.renderpath)
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		GL_CullFace(r_refdef.view.cullface_back);
+		// OpenGL lets us scissor larger than the viewport, so go ahead and clear all views at once
+		if ((clear & ((2 << side) - 1)) == (1 << side)) // only clear if the side is the first in the mask
 		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
-			GL_CullFace(r_refdef.view.cullface_back);
-			// OpenGL lets us scissor larger than the viewport, so go ahead and clear all views at once
-			if ((clear & ((2 << side) - 1)) == (1 << side)) // only clear if the side is the first in the mask
-			{
-				// get tightest scissor rectangle that encloses all viewports in the clear mask
-				int x1 = clear & 0x15 ? 0 : size;
-				int x2 = clear & 0x2A ? 2 * size : size;
-				int y1 = clear & 0x03 ? 0 : (clear & 0xC ? size : 2 * size);
-				int y2 = clear & 0x30 ? 3 * size : (clear & 0xC ? 2 * size : size);
-				GL_Scissor(x1, y1, x2 - x1, y2 - y1);
-				GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
-			}
-			GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
-			break;
-		case RENDERPATH_D3D9:
-			// completely different meaning than in OpenGL path
-			r_shadow_shadowmap_parameters[1] = 0;
-			r_shadow_shadowmap_parameters[3] = -bias;
-			// we invert the cull mode because we flip the projection matrix
-			// NOTE: this actually does nothing because the DrawShadowMap code sets it to doublesided...
-			GL_CullFace(r_refdef.view.cullface_front);
-			// D3D considers it an error to use a scissor larger than the viewport...  clear just this view
-			GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
-			if (r_shadow_shadowmapsampler)
-			{
-				GL_ColorMask(0,0,0,0);
-				if (clear)
-					GL_Clear(GL_DEPTH_BUFFER_BIT, testcolor, 1.0f, 0);
-			}
-			else
-			{
-				GL_ColorMask(1,1,1,1);
-				if (clear)
-					GL_Clear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT, testcolor, 1.0f, 0);
-			}
-			break;
-		case RENDERPATH_D3D10:
-		case RENDERPATH_D3D11:
-			// D3D considers it an error to use a scissor larger than the viewport...  clear just this view
-			GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+			// get tightest scissor rectangle that encloses all viewports in the clear mask
+			int x1 = clear & 0x15 ? 0 : size;
+			int x2 = clear & 0x2A ? 2 * size : size;
+			int y1 = clear & 0x03 ? 0 : (clear & 0xC ? size : 2 * size);
+			int y2 = clear & 0x30 ? 3 * size : (clear & 0xC ? 2 * size : size);
+			GL_Scissor(x1, y1, x2 - x1, y2 - y1);
+			GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
+		}
+		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+		break;
+	case RENDERPATH_D3D9:
+		// completely different meaning than in OpenGL path
+		r_shadow_shadowmap_parameters[1] = 0;
+		r_shadow_shadowmap_parameters[3] = -bias;
+		// we invert the cull mode because we flip the projection matrix
+		// NOTE: this actually does nothing because the DrawShadowMap code sets it to doublesided...
+		GL_CullFace(r_refdef.view.cullface_front);
+		// D3D considers it an error to use a scissor larger than the viewport...  clear just this view
+		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+		if (r_shadow_shadowmapsampler)
+		{
 			GL_ColorMask(0,0,0,0);
 			if (clear)
-				GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
-			break;
+				GL_Clear(GL_DEPTH_BUFFER_BIT, testcolor, 1.0f, 0);
+		}
+		else
+		{
+			GL_ColorMask(1,1,1,1);
+			if (clear)
+				GL_Clear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT, testcolor, 1.0f, 0);
 		}
 		break;
-	case R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE:
-		if (qglFramebufferTexture2DEXT)
-			qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB + side, R_GetTexture(r_shadow_shadowmapcubetexture[r_shadow_shadowmaplod]), 0);CHECKGLERROR
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		// D3D considers it an error to use a scissor larger than the viewport...  clear just this view
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
+		GL_ColorMask(0,0,0,0);
 		if (clear)
 			GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
-		break;
-	default:
 		break;
 	}
 }
 
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
 {
+	R_Mesh_ResetTextureState();
+	R_Mesh_ResetRenderTargets();
 	if (transparent)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
@@ -2288,23 +2165,7 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 	// do global setup needed for the chosen lighting mode
 	if (r_shadow_rendermode == R_SHADOW_RENDERMODE_LIGHT_GLSL)
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
-	if (shadowmapping)
-	{
-		switch (r_shadow_shadowmode)
-		{
-		case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-			r_shadow_usingshadowmap2d = true;
-			break;
-		case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-			r_shadow_usingshadowmaprect = true;
-			break;
-		case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
-			r_shadow_usingshadowmapcube = true;
-			break;
-		default:
-			break;
-		}
-	}
+	r_shadow_usingshadowmap2d = shadowmapping;
 	r_shadow_rendermode = r_shadow_lightingrendermode;
 	// only draw light where this geometry was already rendered AND the
 	// stencil is 128 (values other than this mean shadow)
@@ -2351,23 +2212,7 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	R_SetStencil(stenciltest, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_EQUAL, 128, 255);
 	R_Mesh_SetRenderTargets(r_shadow_prepasslightingfbo, r_shadow_prepassgeometrydepthtexture, r_shadow_prepasslightingdiffusetexture, r_shadow_prepasslightingspeculartexture, NULL, NULL);
 
-	if (shadowmapping)
-	{
-		switch (r_shadow_shadowmode)
-		{
-		case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-			r_shadow_usingshadowmap2d = true;
-			break;
-		case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-			r_shadow_usingshadowmaprect = true;
-			break;
-		case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
-			r_shadow_usingshadowmapcube = true;
-			break;
-		default:
-			break;
-		}
-	}
+	r_shadow_usingshadowmap2d = shadowmapping;
 
 	// render the lighting
 	R_SetupShader_DeferredLight(rsurface.rtlight);
@@ -3104,8 +2949,6 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		switch (rtlight->shadowmode)
 		{
 		case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-		case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		case R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE:
 			if (model->CompileShadowMap && rtlight->shadow)
 				model->CompileShadowMap(ent, rtlight->shadoworigin, NULL, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
 			break;
@@ -3469,8 +3312,6 @@ void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	switch (r_shadow_rendermode)
 	{
 	case R_SHADOW_RENDERMODE_SHADOWMAP2D:
-	case R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE:
-	case R_SHADOW_RENDERMODE_SHADOWMAPCUBESIDE:
 		ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
 		break;
 	default:
@@ -3847,7 +3688,7 @@ void R_Shadow_DrawLight(rtlight_t *rtlight)
 	//lodlinear = (int)(r_shadow_shadowmapping_lod_bias.value + r_shadow_shadowmapping_lod_scale.value * rtlight->radius / max(1.0f, distance));
 	lodlinear = bound(r_shadow_shadowmapping_minsize.integer, lodlinear, r_shadow_shadowmapmaxsize);
 
-	if (castshadows && (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE))
+	if (castshadows && r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
 	{
 		float borderbias;
 		int side;
@@ -3862,10 +3703,7 @@ void R_Shadow_DrawLight(rtlight_t *rtlight)
 			if ((r_shadow_shadowmapmaxsize >> i) > lodlinear)
 				r_shadow_shadowmaplod = i;
 
-		if (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE)
-			size = max(1, r_shadow_shadowmapmaxsize >> r_shadow_shadowmaplod);
-		else
-			size = bound(r_shadow_shadowmapborder, lodlinear, r_shadow_shadowmapmaxsize);
+		size = bound(r_shadow_shadowmapborder, lodlinear, r_shadow_shadowmapmaxsize);
 			
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
 
@@ -3992,7 +3830,7 @@ void R_Shadow_DrawLight(rtlight_t *rtlight)
 	if (r_shadow_usingdeferredprepass)
 	{
 		// when rendering deferred lighting, we simply rasterize the box
-		if (castshadows && (r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAPCUBESIDE))
+		if (castshadows && r_shadow_shadowmode == R_SHADOW_SHADOWMODE_SHADOWMAP2D)
 			R_Shadow_RenderMode_DrawDeferredLight(false, true);
 		else if (castshadows && vid.stencil)
 			R_Shadow_RenderMode_DrawDeferredLight(true, false);
@@ -4123,7 +3961,6 @@ void R_Shadow_PrepareLights(void)
 	if (r_shadow_shadowmapmaxsize != bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4) ||
 		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0) || 
-		r_shadow_shadowmaptexturetype != r_shadow_shadowmapping_texturetype.integer ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
 		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
@@ -4302,7 +4139,6 @@ void R_Shadow_PrepareModelShadows(void)
 	switch (r_shadow_shadowmode)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 		if (r_shadows.integer >= 2) 
 			break;
 		// fall through
@@ -4380,7 +4216,6 @@ void R_DrawModelShadowMaps(void)
 	switch (r_shadow_shadowmode)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
 		break;
 	default:
 		return;
@@ -4399,14 +4234,6 @@ void R_DrawModelShadowMaps(void)
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
-		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		if (!r_shadow_shadowmaprectangletexture)
-			R_Shadow_MakeShadowMap(0, r_shadow_shadowmapmaxsize);
-		fbo = r_shadow_fborectangle;
-		r_shadow_shadowmap_texturescale[0] = 1.0f;
-		r_shadow_shadowmap_texturescale[1] = 1.0f;
-		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAPRECTANGLE;
 		break;
 	default:
 		break;
@@ -4531,9 +4358,6 @@ void R_DrawModelShadowMaps(void)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		r_shadow_usingshadowmap2d = true;
-		break;
-	case R_SHADOW_SHADOWMODE_SHADOWMAPRECTANGLE:
-		r_shadow_usingshadowmaprect = true;
 		break;
 	default:
 		break;

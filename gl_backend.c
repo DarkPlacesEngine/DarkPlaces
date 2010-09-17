@@ -110,7 +110,7 @@ typedef struct gltextureunit_s
 	size_t pointer_texcoord_offset;
 
 	rtexture_t *texture;
-	int t2d, t3d, tcubemap, trectangle;
+	int t2d, t3d, tcubemap;
 	int arrayenabled;
 	int rgbscale, alphascale;
 	int combine;
@@ -183,8 +183,8 @@ typedef struct gl_state_s
 	qboolean active;
 
 #ifdef SUPPORTD3D
-	rtexture_t *d3drt_depthtexture;
-	rtexture_t *d3drt_colortextures[MAX_RENDERTARGETS];
+//	rtexture_t *d3drt_depthtexture;
+//	rtexture_t *d3drt_colortextures[MAX_RENDERTARGETS];
 	IDirect3DSurface9 *d3drt_depthsurface;
 	IDirect3DSurface9 *d3drt_colorsurfaces[MAX_RENDERTARGETS];
 	IDirect3DSurface9 *d3drt_backbufferdepthsurface;
@@ -379,6 +379,26 @@ static void gl_backend_devicelost(void)
 #ifdef SUPPORTD3D
 	gl_state.d3dvertexbuffer = NULL;
 #endif
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DSurface9_Release(gl_state.d3drt_backbufferdepthsurface);
+		IDirect3DSurface9_Release(gl_state.d3drt_backbuffercolorsurface);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
 	{
@@ -416,6 +436,26 @@ static void gl_backend_devicelost(void)
 
 static void gl_backend_devicerestored(void)
 {
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+		IDirect3DDevice9_GetDepthStencilSurface(vid_d3d9dev, &gl_state.d3drt_backbufferdepthsurface);
+		IDirect3DDevice9_GetRenderTarget(vid_d3d9dev, 0, &gl_state.d3drt_backbuffercolorsurface);
+#endif
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
 
 void gl_backend_init(void)
@@ -948,6 +988,42 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	}
 }
 
+#ifdef SUPPORTD3D
+void R_Mesh_SetRenderTargetsD3D9(IDirect3DSurface9 *depthsurface, IDirect3DSurface9 *colorsurface0, IDirect3DSurface9 *colorsurface1, IDirect3DSurface9 *colorsurface2, IDirect3DSurface9 *colorsurface3)
+{
+// LordHavoc: for some weird reason the redundant SetDepthStencilSurface calls are necessary (otherwise the lights fail depth test, as if they were using the shadowmap depth surface and render target still)
+//	if (gl_state.d3drt_depthsurface == depthsurface && gl_state.d3drt_colorsurfaces[0] == colorsurface0 && gl_state.d3drt_colorsurfaces[1] == colorsurface1 && gl_state.d3drt_colorsurfaces[2] == colorsurface2 && gl_state.d3drt_colorsurfaces[3] == colorsurface3)
+//		return;
+
+	gl_state.framebufferobject = depthsurface != gl_state.d3drt_backbufferdepthsurface || colorsurface0 != gl_state.d3drt_backbuffercolorsurface;
+//	if (gl_state.d3drt_depthsurface != depthsurface)
+	{
+		gl_state.d3drt_depthsurface = depthsurface;
+		IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_depthsurface);
+	}
+	if (gl_state.d3drt_colorsurfaces[0] != colorsurface0)
+	{
+		gl_state.d3drt_colorsurfaces[0] = colorsurface0;
+		IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 0, gl_state.d3drt_colorsurfaces[0]);
+	}
+	if (gl_state.d3drt_colorsurfaces[1] != colorsurface1)
+	{
+		gl_state.d3drt_colorsurfaces[1] = colorsurface1;
+		IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 1, gl_state.d3drt_colorsurfaces[1]);
+	}
+	if (gl_state.d3drt_colorsurfaces[2] != colorsurface2)
+	{
+		gl_state.d3drt_colorsurfaces[2] = colorsurface2;
+		IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 2, gl_state.d3drt_colorsurfaces[2]);
+	}
+	if (gl_state.d3drt_colorsurfaces[3] != colorsurface3)
+	{
+		gl_state.d3drt_colorsurfaces[3] = colorsurface3;
+		IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 3, gl_state.d3drt_colorsurfaces[3]);
+	}
+}
+#endif
+
 void R_Mesh_ResetRenderTargets(void)
 {
 	switch(vid.renderpath)
@@ -964,22 +1040,7 @@ void R_Mesh_ResetRenderTargets(void)
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-		if (gl_state.framebufferobject)
-		{
-			unsigned int i;
-			gl_state.framebufferobject = 0;
-			IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_backbufferdepthsurface);
-			IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, 0, gl_state.d3drt_backbuffercolorsurface);
-			gl_state.d3drt_depthsurface = NULL;
-			for (i = 1;i < vid.maxdrawbuffers;i++)
-			{
-				if (gl_state.d3drt_colorsurfaces[i])
-				{
-					gl_state.d3drt_colorsurfaces[i] = NULL;
-					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, NULL);
-				}
-			}
-		}
+		R_Mesh_SetRenderTargetsD3D9(gl_state.d3drt_backbufferdepthsurface, gl_state.d3drt_backbuffercolorsurface, NULL, NULL, NULL);
 #endif
 		break;
 	case RENDERPATH_D3D10:
@@ -1023,27 +1084,22 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		// TODO: optimize: keep surface pointer around in rtexture_t until texture is freed or lost
 		if (fbo)
 		{
-			gl_state.framebufferobject = 1;
-			gl_state.d3drt_depthtexture = depthtexture;
-			if (gl_state.d3drt_depthtexture)
-				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, (IDirect3DSurface9 *)gl_state.d3drt_depthtexture->d3dtexture);
-			else
-				IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, NULL);
-			for (i = 0;i < vid.maxdrawbuffers;i++)
+			IDirect3DSurface9 *colorsurfaces[4];
+			for (i = 0;i < 4;i++)
 			{
-				gl_state.d3drt_colortextures[i] = textures[i];
-				if (gl_state.d3drt_colortextures[i])
-				{
-					IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)gl_state.d3drt_colortextures[i]->d3dtexture, 0, &gl_state.d3drt_colorsurfaces[i]);
-					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, gl_state.d3drt_colorsurfaces[i]);
-					IDirect3DSurface9_Release(gl_state.d3drt_colorsurfaces[i]);
-				}
-				else
-					IDirect3DDevice9_SetRenderTarget(vid_d3d9dev, i, i ? NULL : gl_state.d3drt_backbuffercolorsurface);
+				colorsurfaces[i] = NULL;
+				if (textures[i])
+					IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)textures[i]->d3dtexture, 0, &colorsurfaces[i]);
 			}
+			// set the render targets for real
+			R_Mesh_SetRenderTargetsD3D9(depthtexture ? (IDirect3DSurface9 *)depthtexture->d3dtexture : NULL, colorsurfaces[0], colorsurfaces[1], colorsurfaces[2], colorsurfaces[3]);
+			// release the texture surface levels (they won't be lost while bound...)
+			for (i = 0;i < 4;i++)
+				if (textures[i])
+					IDirect3DSurface9_Release(colorsurfaces[i]);
 		}
 		else
-			R_Mesh_ResetRenderTargets();
+			R_Mesh_SetRenderTargetsD3D9(gl_state.d3drt_backbufferdepthsurface, gl_state.d3drt_backbuffercolorsurface, NULL, NULL, NULL);
 #endif
 		break;
 	case RENDERPATH_D3D10:
@@ -1184,10 +1240,6 @@ static void GL_Backend_ResetState(void)
 			{
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
 			}
-			if (vid.support.arb_texture_rectangle)
-			{
-				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
-			}
 		}
 
 		for (i = 0;i < vid.texarrayunits;i++)
@@ -1254,11 +1306,6 @@ static void GL_Backend_ResetState(void)
 			{
 				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
-			}
-			if (vid.support.arb_texture_rectangle)
-			{
-				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0);CHECKGLERROR
 			}
 			GL_BindVBO(0);
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
@@ -2075,6 +2122,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
+	R_Mesh_ResetRenderTargets();
 	R_Mesh_SetUseVBO();
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
@@ -2559,6 +2607,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 // restores backend state, used when done with 3D rendering
 void R_Mesh_Finish(void)
 {
+	R_Mesh_ResetRenderTargets();
 }
 
 r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16)
@@ -2836,8 +2885,6 @@ int R_Mesh_TexBound(unsigned int unitnum, int id)
 		return unit->t3d;
 	if (id == GL_TEXTURE_CUBE_MAP_ARB)
 		return unit->tcubemap;
-	if (id == GL_TEXTURE_RECTANGLE_ARB)
-		return unit->trectangle;
 	return 0;
 }
 
@@ -2919,7 +2966,6 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 		case GL_TEXTURE_2D: if (unit->t2d != texnum) {GL_ActiveTexture(unitnum);unit->t2d = texnum;qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR}break;
 		case GL_TEXTURE_3D: if (unit->t3d != texnum) {GL_ActiveTexture(unitnum);unit->t3d = texnum;qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR}break;
 		case GL_TEXTURE_CUBE_MAP_ARB: if (unit->tcubemap != texnum) {GL_ActiveTexture(unitnum);unit->tcubemap = texnum;qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR}break;
-		case GL_TEXTURE_RECTANGLE_ARB: if (unit->trectangle != texnum) {GL_ActiveTexture(unitnum);unit->trectangle = texnum;qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR}break;
 		}
 		break;
 	case RENDERPATH_GL13:
@@ -3212,12 +3258,6 @@ void R_Mesh_ResetTextureState(void)
 				GL_ActiveTexture(unitnum);
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 			}
-			if (unit->trectangle)
-			{
-				unit->trectangle = 0;
-				GL_ActiveTexture(unitnum);
-				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
-			}
 		}
 		for (unitnum = 0;unitnum < vid.texarrayunits;unitnum++)
 		{
@@ -3269,13 +3309,6 @@ void R_Mesh_ResetTextureState(void)
 				GL_ActiveTexture(unitnum);
 				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
-			}
-			if (unit->trectangle)
-			{
-				unit->trectangle = 0;
-				GL_ActiveTexture(unitnum);
-				qglDisable(GL_TEXTURE_RECTANGLE_ARB);CHECKGLERROR
-				qglBindTexture(GL_TEXTURE_RECTANGLE_ARB, unit->trectangle);CHECKGLERROR
 			}
 			if (unit->arrayenabled)
 			{
