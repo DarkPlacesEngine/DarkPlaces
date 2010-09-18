@@ -4366,25 +4366,6 @@ void R_DrawModelShadowMaps(void)
 	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
 
-	switch (vid.renderpath)
-	{
-		case RENDERPATH_D3D9:
-		case RENDERPATH_D3D10:
-		case RENDERPATH_D3D11:
-#ifdef OPENGL_ORIENTATION
-		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][1]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][2]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][3]	*= -1.0f;
-#else
-		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[1][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[2][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[3][0]	*= -1.0f;
-#endif
-		break;
-	}
-
 	r_shadow_usingshadowmaportho = true;
 	switch (r_shadow_shadowmode)
 	{
