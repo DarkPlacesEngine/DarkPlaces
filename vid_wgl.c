@@ -1458,8 +1458,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	for (deviceindex = 0;deviceindex < numdevices && !vid_d3d9dev;deviceindex++)
 	{
 		memset(&vid_d3dpresentparameters, 0, sizeof(vid_d3dpresentparameters));
-//		vid_d3dpresentparameters.Flags = D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL;
-		vid_d3dpresentparameters.Flags = 0;
+		vid_d3dpresentparameters.Flags = D3DPRESENTFLAG_DISCARD_DEPTHSTENCIL;
 		vid_d3dpresentparameters.SwapEffect = D3DSWAPEFFECT_DISCARD;
 		vid_d3dpresentparameters.hDeviceWindow = mainwindow;
 		vid_d3dpresentparameters.BackBufferWidth = width;
