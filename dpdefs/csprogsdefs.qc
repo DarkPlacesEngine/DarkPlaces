@@ -147,6 +147,10 @@ void		end_sys_fields;			// flag for structure dumping
 // Additional OPTIONAL Fields and Globals
 float		intermission;
 
+vector		view_angles; // same as input_angles
+vector		view_punchangle;
+vector		view_punchvector;
+
 /*
 ==============================================================================
 

@@ -1730,6 +1730,8 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.v_right                       = PRVM_ED_FindGlobalOffset("v_right");
 	prog->globaloffsets.v_up                          = PRVM_ED_FindGlobalOffset("v_up");
 	prog->globaloffsets.view_angles                   = PRVM_ED_FindGlobalOffset("view_angles");
+	prog->globaloffsets.view_punchangle               = PRVM_ED_FindGlobalOffset("view_punchangle");
+	prog->globaloffsets.view_punchvector              = PRVM_ED_FindGlobalOffset("view_punchvector");
 	prog->globaloffsets.worldstatus                   = PRVM_ED_FindGlobalOffset("worldstatus");
 	prog->globaloffsets.particles_alphamin            = PRVM_ED_FindGlobalOffset("particles_alphamin");
 	prog->globaloffsets.particles_alphamax            = PRVM_ED_FindGlobalOffset("particles_alphamax");
