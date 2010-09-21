@@ -123,6 +123,10 @@ static void CSQC_SetGlobals (void)
 
 		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
 			VectorCopy(cl.viewangles, val->vector);
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_punchangle)))
+			VectorCopy(cl.punchangle, val->vector);
+		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_punchvector)))
+			VectorCopy(cl.punchvector, val->vector);
 		prog->globals.client->maxclients = cl.maxclients;
 	CSQC_END
 }
