@@ -2046,7 +2046,6 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 	}
 }
 
-static float testcolor[4] = {0,1,0,1};
 void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 {
 	float nearclip, farclip, bias;
@@ -2116,6 +2115,8 @@ init_done:
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 		break;
 	case RENDERPATH_D3D9:
+		float clearcolor[4];
+		Vector4Set(clearcolor, 1,1,1,1);
 		// completely different meaning than in OpenGL path
 		r_shadow_shadowmap_parameters[1] = 0;
 		r_shadow_shadowmap_parameters[3] = -bias;
@@ -2128,13 +2129,13 @@ init_done:
 		{
 			GL_ColorMask(0,0,0,0);
 			if (clear)
-				GL_Clear(GL_DEPTH_BUFFER_BIT, testcolor, 1.0f, 0);
+				GL_Clear(GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
 		}
 		else
 		{
 			GL_ColorMask(1,1,1,1);
 			if (clear)
-				GL_Clear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT, testcolor, 1.0f, 0);
+				GL_Clear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT, clearcolor, 1.0f, 0);
 		}
 		break;
 	case RENDERPATH_D3D10:
