@@ -94,6 +94,7 @@ typedef struct channel_s
 	vec3_t			origin;			// origin of sound effect
 	vec_t			dist_mult;		// distance multiplier (attenuation/clipK)
 	void			*fetcher_data;	// Per-channel data for the sound fetching function
+	int				prologic_invert;// whether a sound is played on the surround channels in prologic
 } channel_t;
 
 // Sound fetching functions
