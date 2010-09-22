@@ -134,6 +134,7 @@ qboolean snd_threaded = false;
 qboolean snd_usethreadedmixing = false;
 
 vec3_t listener_origin;
+matrix4x4_t listener_basematrix;
 static unsigned char *listener_pvs = NULL;
 static int listener_pvsbytes = 0;
 matrix4x4_t listener_matrix[SND_LISTENERS];
@@ -170,6 +171,8 @@ cvar_t snd_spatialization_min = {CVAR_SAVE, "snd_spatialization_min", "0.70", "m
 cvar_t snd_spatialization_max = {CVAR_SAVE, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
 cvar_t snd_spatialization_power = {CVAR_SAVE, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
 cvar_t snd_spatialization_control = {CVAR_SAVE, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
+cvar_t snd_spatialization_prologic = {CVAR_SAVE, "snd_spatialization_prologic", "0", "use dolby prologic (I, II or IIx) encoding (snd_channels must be 2)"};
+cvar_t snd_spatialization_prologic_frontangle = {CVAR_SAVE, "snd_spatialization_prologic_frontangle", "30", "the angle between the front speakers and the center speaker"};
 cvar_t snd_spatialization_occlusion = {CVAR_SAVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world; 1 enables PVS method, 2 enables LineOfSight method, 3 enables both"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
@@ -816,6 +819,8 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_spatialization_power);
 	Cvar_RegisterVariable(&snd_spatialization_control);
 	Cvar_RegisterVariable(&snd_spatialization_occlusion);
+	Cvar_RegisterVariable(&snd_spatialization_prologic);
+	Cvar_RegisterVariable(&snd_spatialization_prologic_frontangle);
 
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
@@ -1263,6 +1268,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 {
 	int i;
 	double f;
+	float angle_side, angle_front, angle_factor;
 	vec_t dist, mastervol, intensity, vol;
 	vec3_t source_vec;
 
@@ -1362,10 +1368,21 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 	// LordHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
 	{
-		for (i = 0;i < SND_LISTENERS;i++)
+		ch->prologic_invert = 1;
+		if (snd_spatialization_prologic.integer != 0)
 		{
-			vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
-			ch->listener_volume[i] = (int)bound(0, vol, 255);
+			vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5);
+			ch->listener_volume[0] = ch->listener_volume[1] = (int)bound(0, vol, 255);
+			for (i = 2;i < SND_LISTENERS;i++)
+				ch->listener_volume[i] = 0;
+		}
+		else
+		{
+			for (i = 0;i < SND_LISTENERS;i++)
+			{
+				vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
+				ch->listener_volume[i] = (int)bound(0, vol, 255);
+			}
 		}
 	}
 	else
@@ -1395,37 +1412,100 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 			if(occluded)
 				intensity *= 0.5;
 
-			for (i = 0;i < SND_LISTENERS;i++)
+			ch->prologic_invert = 1;
+			if (snd_spatialization_prologic.integer != 0)
 			{
-				Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
-				VectorNormalize(source_vec);
-
-				switch(spatialmethod)
+				if (dist == 0)
+					angle_factor = 0.5;
+				else
 				{
-					case SPATIAL_LOG:
-						if(dist == 0)
-							f = spatialmin + spatialdiff * (spatialfactor < 0); // avoid log(0), but do the right thing
-						else
-							f = spatialmin + spatialdiff * bound(0, (log(dist) - spatialoffset) * spatialfactor, 1);
-						VectorScale(source_vec, f, source_vec);
-						break;
-					case SPATIAL_POW:
-						f = (pow(dist, spatialpower) - spatialoffset) * spatialfactor;
-						f = spatialmin + spatialdiff * bound(0, f, 1);
-						VectorScale(source_vec, f, source_vec);
-						break;
-					case SPATIAL_THRESH:
-						f = spatialmin + spatialdiff * (dist < spatialoffset);
-						VectorScale(source_vec, f, source_vec);
-						break;
-					case SPATIAL_NONE:
-					default:
-						break;
+					Matrix4x4_Transform(&listener_basematrix, ch->origin, source_vec);
+					VectorNormalize(source_vec);
+
+					switch(spatialmethod)
+					{
+						case SPATIAL_LOG:
+							if(dist == 0)
+								f = spatialmin + spatialdiff * (spatialfactor < 0); // avoid log(0), but do the right thing
+							else
+								f = spatialmin + spatialdiff * bound(0, (log(dist) - spatialoffset) * spatialfactor, 1);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_POW:
+							f = (pow(dist, spatialpower) - spatialoffset) * spatialfactor;
+							f = spatialmin + spatialdiff * bound(0, f, 1);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_THRESH:
+							f = spatialmin + spatialdiff * (dist < spatialoffset);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_NONE:
+						default:
+							break;
+					}
+
+					// the z axis needs to be removed and normalized because otherwise the volume would get lower as the sound source goes higher or lower then normal
+					source_vec[2] = 0;
+					VectorNormalize(source_vec);
+					angle_side = acos(source_vec[0]) / M_PI * 180;	// angle between 0 and 180 degrees
+					angle_front = asin(source_vec[1]) / M_PI * 180;	// angle between -90 and 90 degrees
+					if (angle_side > snd_spatialization_prologic_frontangle.value)
+					{
+						ch->prologic_invert = -1;	// this will cause the right channel to do a 180 degrees phase shift (turning the sound wave upside down),
+													// but the best would be 90 degrees phase shift left and a -90 degrees phase shift right.
+						angle_factor = (angle_side - snd_spatialization_prologic_frontangle.value) / (360 - 2 * snd_spatialization_prologic_frontangle.value);
+						// angle_factor is between 0 and 1 and represents the angle range from the front left, to all the surround speakers (amount may vary,
+						// 1 in prologic I 2 in prologic II and 3 or 4 in prologic IIx) to the front right speaker.
+						if (angle_front > 0)
+							angle_factor = 1 - angle_factor;
+					}
+					else
+						angle_factor = angle_front / snd_spatialization_prologic_frontangle.value / 2.0 + 0.5;
+						//angle_factor is between 0 and 1 and represents the angle range from the front left to the center to the front right speaker
 				}
 
-				vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
+				vol = intensity * sqrt(angle_factor);
+				ch->listener_volume[0] = (int)bound(0, vol, 255);
+				vol = intensity * sqrt(1 - angle_factor);
+				ch->listener_volume[1] = (int)bound(0, vol, 255);
+				for (i = 2;i < SND_LISTENERS;i++)
+					ch->listener_volume[i] = 0;
+			}
+			else
+			{
+				for (i = 0;i < SND_LISTENERS;i++)
+				{
+					Matrix4x4_Transform(&listener_matrix[i], ch->origin, source_vec);
+					VectorNormalize(source_vec);
 
-				ch->listener_volume[i] = (int)bound(0, vol, 255);
+					switch(spatialmethod)
+					{
+						case SPATIAL_LOG:
+							if(dist == 0)
+								f = spatialmin + spatialdiff * (spatialfactor < 0); // avoid log(0), but do the right thing
+							else
+								f = spatialmin + spatialdiff * bound(0, (log(dist) - spatialoffset) * spatialfactor, 1);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_POW:
+							f = (pow(dist, spatialpower) - spatialoffset) * spatialfactor;
+							f = spatialmin + spatialdiff * bound(0, f, 1);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_THRESH:
+							f = spatialmin + spatialdiff * (dist < spatialoffset);
+							VectorScale(source_vec, f, source_vec);
+							break;
+						case SPATIAL_NONE:
+						default:
+							break;
+					}
+
+					vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
+
+					ch->listener_volume[i] = (int)bound(0, vol, 255);
+				}
 			}
 		}
 		else
@@ -1794,8 +1874,17 @@ void S_UpdateAmbientSounds (void)
 			}
 		}
 
-		for (i = 0;i < SND_LISTENERS;i++)
-			chan->listener_volume[i] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume);
+		if (snd_spatialization_prologic.integer != 0)
+		{
+			chan->listener_volume[0] = chan->listener_volume[1] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5));
+			for (i = 2;i < SND_LISTENERS;i++)
+				chan->listener_volume[i] = 0;
+		}
+		else
+		{
+			for (i = 0;i < SND_LISTENERS;i++)
+				chan->listener_volume[i] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume);
+		}
 	}
 }
 
@@ -1955,7 +2044,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 {
 	unsigned int i, j, k;
 	channel_t *ch, *combine;
-	matrix4x4_t basematrix, rotatematrix;
+	matrix4x4_t rotatematrix;
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
@@ -2004,7 +2093,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		current_channellayout != snd_channellayout.integer)
 		S_SetChannelLayout();
 
-	Matrix4x4_Invert_Simple(&basematrix, listenermatrix);
+	Matrix4x4_Invert_Simple(&listener_basematrix, listenermatrix);
 	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);
 	if (cl.worldmodel && cl.worldmodel->brush.FatPVS && cl.worldmodel->brush.num_pvsclusterbytes && cl.worldmodel->brush.PointInLeaf)
 	{
@@ -2031,7 +2120,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	for (j = 0;j < SND_LISTENERS;j++)
 	{
 		Matrix4x4_CreateFromQuakeEntity(&rotatematrix, 0, 0, 0, 0, -snd_speakerlayout.listeners[j].yawangle, 0, 1);
-		Matrix4x4_Concat(&listener_matrix[j], &rotatematrix, &basematrix);
+		Matrix4x4_Concat(&listener_matrix[j], &rotatematrix, &listener_basematrix);
 		// I think this should now do this:
 		//   1. create a rotation matrix for rotating by e.g. -90 degrees CCW
 		//      (note: the matrix will rotate the OBJECT, not the VIEWER, so its

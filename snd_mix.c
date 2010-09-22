@@ -272,7 +272,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 8;
-						paint[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						paint[i].sample[1] += (samples[1] * vol[1] * ch->prologic_invert) >> 8;
 						samples += 2;
 					}
 				}
@@ -323,7 +323,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 8;
-						paint[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						paint[i].sample[1] += (samples[0] * vol[1] * ch->prologic_invert) >> 8;
 						samples += 1;
 					}
 				}
@@ -382,7 +382,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 16;
-						paint[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						paint[i].sample[1] += (samples[1] * vol[1] * ch->prologic_invert) >> 16;
 						samples += 2;
 					}
 				}
@@ -433,7 +433,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 16;
-						paint[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						paint[i].sample[1] += (samples[0] * vol[1] * ch->prologic_invert) >> 16;
 						samples += 1;
 					}
 				}
