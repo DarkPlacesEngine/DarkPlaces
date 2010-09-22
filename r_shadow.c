@@ -2052,7 +2052,6 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	r_viewport_t viewport;
 	int flipped;
 	GLuint fbo = 0;
-	float clearcolor[4];
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
 	bias = r_shadow_shadowmapping_bias.value * nearclip * (1024.0f / size);// * rsurface.rtlight->radius;
@@ -2116,6 +2115,7 @@ init_done:
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 		break;
 	case RENDERPATH_D3D9:
+		float clearcolor[4];
 		Vector4Set(clearcolor, 1,1,1,1);
 		// completely different meaning than in OpenGL path
 		r_shadow_shadowmap_parameters[1] = 0;
@@ -4369,14 +4369,9 @@ void R_DrawModelShadowMaps(void)
 
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
 #ifdef OPENGL_ORIENTATION
 		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
 		r_shadow_shadowmapmatrix.m[0][1]	*= -1.0f;
