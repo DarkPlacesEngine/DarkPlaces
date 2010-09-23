@@ -1297,13 +1297,6 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 
 	mastervol = ch->master_vol;
 
-	// always apply "master"
-	mastervol *= mastervolume.value;
-
-	// If this channel does not manage its own volume (like CD tracks)
-	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
-		mastervol *= volume.value;
-
 	// Adjust volume of static sounds
 	if (isstatic)
 		mastervol *= snd_staticvolume.value;
@@ -1370,6 +1363,16 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 			}
 		}
 	}
+
+	// If this channel does not manage its own volume (like CD tracks)
+	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
+		mastervol *= volume.value;
+
+	// clamp HERE to allow to go at most 10dB past mastervolume (before clamping), when mastervolume < -10dB (so relative volumes don't get too messy)
+	mastervol = bound(0, mastervol, 655360);
+
+	// always apply "master"
+	mastervol *= mastervolume.value;
 
 	// clamp HERE to keep relative volumes of the channels correct
 	mastervol = bound(0, mastervol, 65536);
