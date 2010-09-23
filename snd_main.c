@@ -1264,7 +1264,7 @@ Spatializes a channel
 =================
 */
 extern cvar_t cl_gameplayfix_soundsmovewithentities;
-void SND_Spatialize(channel_t *ch, qboolean isstatic)
+void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 {
 	int i;
 	double f;
@@ -1373,6 +1373,18 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 
 	// always apply "master"
 	mastervol *= mastervolume.value;
+
+	// add in ReplayGain very late; prevent clipping when close
+	if(sfx)
+	if(sfx->volume_peak > 0)
+	{
+		// Replaygain support
+		// Con_DPrintf("Setting volume on ReplayGain-enabled track... %f -> ", fvol);
+		mastervol *= sfx->volume_mult;
+		if(mastervol * sfx->volume_peak > 65536)
+			mastervol = 65536 / sfx->volume_peak;
+		// Con_DPrintf("%f\n", fvol);
+	}
 
 	// clamp HERE to keep relative volumes of the channels correct
 	mastervol = bound(0, mastervol, 65536);
@@ -1528,13 +1540,17 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				ch->listener_volume[i] = 0;
 	}
 }
+void SND_Spatialize(channel_t *ch, qboolean isstatic)
+{
+	sfx_t *sfx = ch->sfx;
+	SND_Spatialize_WithSfx(ch, isstatic, sfx);
+}
 
 
 // =======================================================================
 // Start a sound effect
 // =======================================================================
 
-static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *sfx);
 void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos)
 {
 	if (!sfx)
@@ -1569,12 +1585,9 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	else
 		target_chan->dist_mult = attenuation / snd_soundradius.value;
 
-	// we have to set the channel volume AFTER the sfx because the function
-	// needs it for replaygain support
-	S_SetChannelVolume_WithSfx(target_chan - channels, fvol, sfx);
-
 	// set the listener volumes
-	SND_Spatialize (target_chan, isstatic);
+	S_SetChannelVolume(target_chan - channels, fvol);
+	SND_Spatialize_WithSfx (target_chan, isstatic, sfx);
 
 	// Lock the SFX during play
 	S_LockSfx (sfx);
@@ -1763,25 +1776,9 @@ void S_PauseGameSounds (qboolean toggle)
 	}
 }
 
-static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *sfx)
-{
-	if(sfx->volume_peak > 0)
-	{
-		// Replaygain support
-		// Con_DPrintf("Setting volume on ReplayGain-enabled track... %f -> ", fvol);
-		fvol *= sfx->volume_mult;
-		if(fvol * sfx->volume_peak > 1)
-			fvol = 1 / sfx->volume_peak;
-		// Con_DPrintf("%f\n", fvol);
-	}
-	channels[ch_ind].master_vol = (int)(fvol * 65536.0f);
-}
-
 void S_SetChannelVolume(unsigned int ch_ind, float fvol)
 {
-	sfx_t *sfx = channels[ch_ind].sfx;
-	if(sfx)
-		S_SetChannelVolume_WithSfx(ch_ind, fvol, sfx);
+	channels[ch_ind].master_vol = (int)(fvol * 65536.0f);
 }
 
 float S_GetChannelPosition (unsigned int ch_ind)
