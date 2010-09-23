@@ -1297,6 +1297,13 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 
 	mastervol = ch->master_vol;
 
+	// always apply "master"
+	mastervol *= mastervolume.value;
+
+	// If this channel does not manage its own volume (like CD tracks)
+	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
+		mastervol *= volume.value;
+
 	// Adjust volume of static sounds
 	if (isstatic)
 		mastervol *= snd_staticvolume.value;
@@ -1364,6 +1371,9 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		}
 	}
 
+	// clamp HERE to keep relative volumes of the channels correct
+	mastervol = bound(0, mastervol, 65536);
+
 	// anything coming from the view entity will always be full volume
 	// LordHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
@@ -1371,11 +1381,10 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		ch->prologic_invert = 1;
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			for (i = 0;i < 2;i++)
-			{
-				vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5);
-				ch->listener_volume[i] = (int)bound(0, vol, 255);
-			}
+			vol = mastervol * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5);
+			ch->listener_volume[0] = (int)bound(0, vol, 65536);
+			vol = mastervol * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5);
+			ch->listener_volume[1] = (int)bound(0, vol, 65536);
 			for (i = 2;i < SND_LISTENERS;i++)
 				ch->listener_volume[i] = 0;
 		}
@@ -1384,7 +1393,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 			for (i = 0;i < SND_LISTENERS;i++)
 			{
 				vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
-				ch->listener_volume[i] = (int)bound(0, vol, 255);
+				ch->listener_volume[i] = (int)bound(0, vol, 65536);
 			}
 		}
 	}
@@ -1469,9 +1478,9 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 				}
 
 				vol = intensity * sqrt(angle_factor);
-				ch->listener_volume[0] = (int)bound(0, vol, 255);
+				ch->listener_volume[0] = (int)bound(0, vol, 65536);
 				vol = intensity * sqrt(1 - angle_factor);
-				ch->listener_volume[1] = (int)bound(0, vol, 255);
+				ch->listener_volume[1] = (int)bound(0, vol, 65536);
 				for (i = 2;i < SND_LISTENERS;i++)
 					ch->listener_volume[i] = 0;
 			}
@@ -1507,7 +1516,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 
 					vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
 
-					ch->listener_volume[i] = (int)bound(0, vol, 255);
+					ch->listener_volume[i] = (int)bound(0, vol, 65536);
 				}
 			}
 		}
@@ -1762,7 +1771,7 @@ static void S_SetChannelVolume_WithSfx (unsigned int ch_ind, float fvol, sfx_t *
 			fvol = 1 / sfx->volume_peak;
 		// Con_DPrintf("%f\n", fvol);
 	}
-	channels[ch_ind].master_vol = (int)(fvol * 255.0f);
+	channels[ch_ind].master_vol = (int)(fvol * 65536.0f);
 }
 
 void S_SetChannelVolume(unsigned int ch_ind, float fvol)
@@ -1858,6 +1867,7 @@ void S_UpdateAmbientSounds (void)
 		vol = (int)ambientlevels[ambient_channel];
 		if (vol < 8)
 			vol = 0;
+		vol *= 256;
 
 		// Don't adjust volume too fast
 		// FIXME: this rounds off to an int each frame, meaning there is little to no fade at extremely high framerates!
@@ -1865,13 +1875,13 @@ void S_UpdateAmbientSounds (void)
 		{
 			if (chan->master_vol < vol)
 			{
-				chan->master_vol += (int)((cl.time - cl.oldtime) * ambient_fade.value);
+				chan->master_vol += (int)((cl.time - cl.oldtime) * 256.0 * ambient_fade.value);
 				if (chan->master_vol > vol)
 					chan->master_vol = vol;
 			}
 			else if (chan->master_vol > vol)
 			{
-				chan->master_vol -= (int)((cl.time - cl.oldtime) * ambient_fade.value);
+				chan->master_vol -= (int)((cl.time - cl.oldtime) * 256.0 * ambient_fade.value);
 				if (chan->master_vol < vol)
 					chan->master_vol = vol;
 			}
@@ -1879,14 +1889,14 @@ void S_UpdateAmbientSounds (void)
 
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			chan->listener_volume[0] = chan->listener_volume[1] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5));
+			chan->listener_volume[0] = chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5), 65536);
 			for (i = 2;i < SND_LISTENERS;i++)
 				chan->listener_volume[i] = 0;
 		}
 		else
 		{
 			for (i = 0;i < SND_LISTENERS;i++)
-				chan->listener_volume[i] = (int)(chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume);
+				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
 		}
 	}
 }
@@ -2183,7 +2193,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 			{
 				for (j = 0;j < SND_LISTENERS;j++)
 				{
-					combine->listener_volume[j] += ch->listener_volume[j];
+					combine->listener_volume[j] = bound(0, combine->listener_volume[j] + ch->listener_volume[j], 65536);
 					ch->listener_volume[j] = 0;
 				}
 			}
