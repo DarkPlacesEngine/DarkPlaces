@@ -1371,8 +1371,11 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 		ch->prologic_invert = 1;
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5);
-			ch->listener_volume[0] = ch->listener_volume[1] = (int)bound(0, vol, 255);
+			for (i = 0;i < 2;i++)
+			{
+				vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume * sqrt(0.5);
+				ch->listener_volume[i] = (int)bound(0, vol, 255);
+			}
 			for (i = 2;i < SND_LISTENERS;i++)
 				ch->listener_volume[i] = 0;
 		}
