@@ -10255,12 +10255,12 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
 		t->currentskinframe = r_qwskincache[i].skinframe;
 		if (t->currentskinframe == NULL)
-			t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
+			t->currentskinframe = t->skinframes[(unsigned int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
 	}
 	else if (t->numskinframes >= 2)
-		t->currentskinframe = t->skinframes[(int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
+		t->currentskinframe = t->skinframes[(unsigned int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
 	if (t->backgroundnumskinframes >= 2)
-		t->backgroundcurrentskinframe = t->backgroundskinframes[(int)(t->backgroundskinframerate * (cl.time - rsurface.ent_shadertime)) % t->backgroundnumskinframes];
+		t->backgroundcurrentskinframe = t->backgroundskinframes[(unsigned int)(t->backgroundskinframerate * (cl.time - rsurface.ent_shadertime)) % t->backgroundnumskinframes];
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.colormod[3];
