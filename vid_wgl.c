@@ -1379,6 +1379,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	int deviceindex;
 	RECT rect;
 	MSG msg;
+	int pixelformat, newpixelformat;
 	DWORD WindowStyle, ExWindowStyle;
 	int CenterX, CenterY;
 	int bpp = mode->bitsperpixel;
@@ -1432,6 +1433,8 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	rect.top += CenterY;
 	rect.bottom += CenterY;
 
+	pixelformat = 0;
+	newpixelformat = 0;
 	gl_extensions = "";
 	gl_platformextensions = "";
 
