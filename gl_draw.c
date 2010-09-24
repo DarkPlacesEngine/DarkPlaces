@@ -365,9 +365,9 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
-	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer, NULL);
+	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
 	if (pixels == NULL && !strncmp(path, "gfx/", 4))
-		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer, NULL);
+		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
 	if (pixels)
 	{
 		pic->hasalpha = false;
@@ -466,9 +466,9 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
 	if (pic->autoload && !pic->tex)
 	{
-		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
+		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
 	}
@@ -738,7 +738,7 @@ dp_font_t *FindFont(const char *title, qboolean allocate_new)
 		dp_fonts.maxsize = dp_fonts.maxsize + FONTS_EXPAND;
 		if (developer_font.integer)
 			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", i, dp_fonts.maxsize);
-		dp_fonts.f = Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+		dp_fonts.f = (dp_font_t *)Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
 		// register a font in first expanded slot
 		strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
 		return &dp_fonts.f[i];
@@ -958,7 +958,7 @@ void GL_Draw_Init (void)
 	// allocate fonts storage
 	fonts_mempool = Mem_AllocPool("FONTS", 0, NULL);
 	dp_fonts.maxsize = MAX_FONTS;
-	dp_fonts.f = Mem_Alloc(fonts_mempool, sizeof(dp_font_t) * dp_fonts.maxsize);
+	dp_fonts.f = (dp_font_t *)Mem_Alloc(fonts_mempool, sizeof(dp_font_t) * dp_fonts.maxsize);
 	memset(dp_fonts.f, 0, sizeof(dp_font_t) * dp_fonts.maxsize);
 
 	// assign starting font names
@@ -989,9 +989,9 @@ static void _DrawQ_Setup(void)
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_SetViewport(&viewport);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	qglDepthFunc(GL_LEQUAL);CHECKGLERROR
-	qglDisable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
-	GL_CullFace(GL_FRONT); // quake is backwards, this culls back faces
+	GL_DepthFunc(GL_LEQUAL);
+	GL_PolygonOffset(0,0);
+	GL_CullFace(GL_NONE);
 	R_EntityMatrix(&identitymatrix);
 
 	GL_DepthRange(0, 1);
@@ -1046,17 +1046,21 @@ void DrawQ_ProcessDrawFlag(int flags, qboolean alpha)
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	float floats[20];
+	float floats[36];
 
 	_DrawQ_SetupAndProcessDrawFlag(flags, pic, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	GL_Color(red, green, blue, alpha);
-
-	R_Mesh_VertexPointer(floats, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
+	floats[12] = 0.0f;floats[13] = 0.0f;
+	floats[14] = 1.0f;floats[15] = 0.0f;
+	floats[16] = 1.0f;floats[17] = 1.0f;
+	floats[18] = 0.0f;floats[19] = 1.0f;
+	floats[20] = floats[24] = floats[28] = floats[32] = red;
+	floats[21] = floats[25] = floats[29] = floats[33] = green;
+	floats[22] = floats[26] = floats[30] = floats[34] = blue;
+	floats[23] = floats[27] = floats[31] = floats[35] = alpha;
 	if (pic)
 	{
 		if (width == 0)
@@ -1064,14 +1068,8 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 		if (height == 0)
 			height = pic->height;
 		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1);
-		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
 
-#if 1
-		floats[12] = 0.0f;floats[13] = 0.0f;
-		floats[14] = 1.0f;floats[15] = 0.0f;
-		floats[16] = 1.0f;floats[17] = 1.0f;
-		floats[18] = 0.0f;floats[19] = 1.0f;
-#else
+#if 0
       // AK07: lets be texel correct on the corners
       {
          float horz_offset = 0.5f / pic->width;
@@ -1093,12 +1091,13 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	floats[3] = floats[6] = x + width;
 	floats[7] = floats[10] = y + height;
 
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(4, floats, floats + 20, floats + 12);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
 void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, float org_x, float org_y, float angle, float red, float green, float blue, float alpha, int flags)
 {
-	float floats[20];
+	float floats[36];
 	float af = DEG2RAD(-angle); // forward
 	float ar = DEG2RAD(-angle + 90); // right
 	float sinaf = sin(af);
@@ -1110,10 +1109,6 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	GL_Color(red, green, blue, alpha);
-
-	R_Mesh_VertexPointer(floats, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	if (pic)
 	{
@@ -1122,12 +1117,6 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 		if (height == 0)
 			height = pic->height;
 		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1);
-		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
-
-		floats[12] = 0.0f;floats[13] = 0.0f;
-		floats[14] = 1.0f;floats[15] = 0.0f;
-		floats[16] = 1.0f;floats[17] = 1.0f;
-		floats[18] = 0.0f;floats[19] = 1.0f;
 	}
 	else
 		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
@@ -1150,21 +1139,27 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	floats[9]  = x - cosaf*org_x + cosar*(height-org_y);
 	floats[10] = y - sinaf*org_x + sinar*(height-org_y);
 
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+	floats[12] = 0.0f;floats[13] = 0.0f;
+	floats[14] = 1.0f;floats[15] = 0.0f;
+	floats[16] = 1.0f;floats[17] = 1.0f;
+	floats[18] = 0.0f;floats[19] = 1.0f;
+	floats[20] = floats[24] = floats[28] = floats[32] = red;
+	floats[21] = floats[25] = floats[29] = floats[33] = green;
+	floats[22] = floats[26] = floats[30] = floats[34] = blue;
+	floats[23] = floats[27] = floats[31] = floats[35] = alpha;
+
+	R_Mesh_PrepareVertices_Generic_Arrays(4, floats, floats + 20, floats + 12);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
 void DrawQ_Fill(float x, float y, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	float floats[12];
+	float floats[36];
 
 	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, alpha);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	GL_Color(red, green, blue, alpha);
-
-	R_Mesh_VertexPointer(floats, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
@@ -1173,8 +1168,17 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	floats[1] = floats[4] = y;
 	floats[3] = floats[6] = x + width;
 	floats[7] = floats[10] = y + height;
+	floats[12] = 0.0f;floats[13] = 0.0f;
+	floats[14] = 1.0f;floats[15] = 0.0f;
+	floats[16] = 1.0f;floats[17] = 1.0f;
+	floats[18] = 0.0f;floats[19] = 1.0f;
+	floats[20] = floats[24] = floats[28] = floats[32] = red;
+	floats[21] = floats[25] = floats[29] = floats[33] = green;
+	floats[22] = floats[26] = floats[30] = floats[34] = blue;
+	floats[23] = floats[27] = floats[31] = floats[35] = alpha;
 
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(4, floats, floats + 20, floats + 12);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
 /// color tag printing
@@ -1481,12 +1485,9 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return startx + DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, &maxlen, w, h, sw, sh, NULL, ignorecolorcodes, fnt, 1000000000);
 
-	R_Mesh_ColorPointer(color4f, 0, 0);
 	R_Mesh_ResetTextureState();
 	if (!fontmap)
 		R_Mesh_TexBind(0, fnt->tex);
-	R_Mesh_TexCoordPointer(0, 2, texcoord2f, 0, 0);
-	R_Mesh_VertexPointer(vertex3f, 0, 0);
 	R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1);
 
 	ac = color4f;
@@ -1616,7 +1617,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 						if (batchcount)
 						{
 							// switching from freetype to non-freetype rendering
-							R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+							R_Mesh_PrepareVertices_Generic_Arrays(batchcount * 4, vertex3f, color4f, texcoord2f);
+							R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, NULL, 0, quadelement3s, NULL, 0);
 							batchcount = 0;
 							ac = color4f;
 							at = texcoord2f;
@@ -1653,7 +1655,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				batchcount++;
 				if (batchcount >= QUADELEMENTS_MAXQUADS)
 				{
-					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+					R_Mesh_PrepareVertices_Generic_Arrays(batchcount * 4, vertex3f, color4f, texcoord2f);
+					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, NULL, 0, quadelement3s, NULL, 0);
 					batchcount = 0;
 					ac = color4f;
 					at = texcoord2f;
@@ -1667,7 +1670,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 					if (batchcount)
 					{
 						// we need a different character map, render what we currently have:
-						R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+						R_Mesh_PrepareVertices_Generic_Arrays(batchcount * 4, vertex3f, color4f, texcoord2f);
+						R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, NULL, 0, quadelement3s, NULL, 0);
 						batchcount = 0;
 						ac = color4f;
 						at = texcoord2f;
@@ -1726,7 +1730,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				batchcount++;
 				if (batchcount >= QUADELEMENTS_MAXQUADS)
 				{
-					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+					R_Mesh_PrepareVertices_Generic_Arrays(batchcount * 4, vertex3f, color4f, texcoord2f);
+					R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, NULL, 0, quadelement3s, NULL, 0);
 					batchcount = 0;
 					ac = color4f;
 					at = texcoord2f;
@@ -1744,7 +1749,10 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		}
 	}
 	if (batchcount > 0)
-		R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, quadelement3s, 0, 0);
+	{
+		R_Mesh_PrepareVertices_Generic_Arrays(batchcount * 4, vertex3f, color4f, texcoord2f);
+		R_Mesh_Draw(0, batchcount * 4, 0, batchcount * 2, quadelement3i, NULL, 0, quadelement3s, NULL, 0);
+	}
 
 	if (outcolor)
 		*outcolor = colorindex;
@@ -1821,8 +1829,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	R_Mesh_VertexPointer(floats, 0, 0);
-	R_Mesh_ColorPointer(floats + 20, 0, 0);
 	R_Mesh_ResetTextureState();
 	if (pic)
 	{
@@ -1831,11 +1837,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 		if (height == 0)
 			height = pic->height;
 		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1);
-		R_Mesh_TexCoordPointer(0, 2, floats + 12, 0, 0);
-		floats[12] = s1;floats[13] = t1;
-		floats[14] = s2;floats[15] = t2;
-		floats[16] = s4;floats[17] = t4;
-		floats[18] = s3;floats[19] = t3;
 	}
 	else
 		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
@@ -1845,12 +1846,17 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	floats[1] = floats[4] = y;
 	floats[3] = floats[6] = x + width;
 	floats[7] = floats[10] = y + height;
+	floats[12] = s1;floats[13] = t1;
+	floats[14] = s2;floats[15] = t2;
+	floats[16] = s4;floats[17] = t4;
+	floats[18] = s3;floats[19] = t3;
 	floats[20] = r1;floats[21] = g1;floats[22] = b1;floats[23] = a1;
 	floats[24] = r2;floats[25] = g2;floats[26] = b2;floats[27] = a2;
 	floats[28] = r4;floats[29] = g4;floats[30] = b4;floats[31] = a4;
 	floats[32] = r3;floats[33] = g3;floats[34] = b3;floats[35] = a3;
 
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, polygonelement3s, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(4, floats, floats + 20, floats + 12);
+	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
@@ -1861,13 +1867,11 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
 		return;
 	DrawQ_ProcessDrawFlag(flags, hasalpha);
 
-	R_Mesh_VertexPointer(mesh->data_vertex3f, 0, 0);
-	R_Mesh_ColorPointer(mesh->data_color4f, 0, 0);
 	R_Mesh_ResetTextureState();
-	R_Mesh_TexCoordPointer(0, 2, mesh->data_texcoord2f, 0, 0);
 	R_SetupShader_Generic(mesh->texture, NULL, GL_MODULATE, 1);
 
-	R_Mesh_Draw(0, mesh->num_vertices, 0, mesh->num_triangles, mesh->data_element3i, mesh->data_element3s, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(mesh->num_vertices, mesh->data_vertex3f, mesh->data_color4f, mesh->data_texcoord2f);
+	R_Mesh_Draw(0, mesh->num_vertices, 0, mesh->num_triangles, mesh->data_element3i, NULL, 0, mesh->data_element3s, NULL, 0);
 }
 
 void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
@@ -1879,16 +1883,33 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		return;
 
 	GL_Color(1,1,1,1);
-	CHECKGLERROR
-	qglBegin(GL_LINE_LOOP);
-	for (num = 0;num < mesh->num_vertices;num++)
+	switch(vid.renderpath)
 	{
-		if (mesh->data_color4f)
-			GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
-		qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		qglBegin(GL_LINE_LOOP);
+		for (num = 0;num < mesh->num_vertices;num++)
+		{
+			if (mesh->data_color4f)
+				GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
+			qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+		}
+		qglEnd();
+		CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
-	qglEnd();
-	CHECKGLERROR
 }
 
 //[515]: this is old, delete
@@ -1900,16 +1921,34 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
-	CHECKGLERROR
-	//qglLineWidth(width);CHECKGLERROR
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
 
-	GL_Color(r,g,b,alpha);
-	CHECKGLERROR
-	qglBegin(GL_LINES);
-	qglVertex2f(x1, y1);
-	qglVertex2f(x2, y2);
-	qglEnd();
-	CHECKGLERROR
+		//qglLineWidth(width);CHECKGLERROR
+
+		GL_Color(r,g,b,alpha);
+		CHECKGLERROR
+		qglBegin(GL_LINES);
+		qglVertex2f(x1, y1);
+		qglVertex2f(x2, y2);
+		qglEnd();
+		CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 }
 
 void DrawQ_SetClipArea(float x, float y, float width, float height)
@@ -1953,6 +1992,9 @@ void R_DrawGamma(void)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
 		if (vid_usinghwgamma || v_glslgamma.integer)
 			return;
 		break;
@@ -1963,8 +2005,6 @@ void R_DrawGamma(void)
 		break;
 	}
 	// all the blends ignore depth
-	R_Mesh_VertexPointer(blendvertex3f, 0, 0);
-	R_Mesh_ColorPointer(NULL, 0, 0);
 	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	GL_DepthMask(true);
@@ -1984,8 +2024,9 @@ void R_DrawGamma(void)
 		GL_BlendFunc(GL_DST_COLOR, GL_ONE);
 		while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
-			GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
+			GL_Color(c[0] - 1, c[1] - 1, c[2] - 1, 1);
+			R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
+			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			VectorScale(c, 0.5, c);
 		}
 	}
@@ -2000,8 +2041,9 @@ void R_DrawGamma(void)
 	if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
 	{
 		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_Color(c[0], c[1], c[2], 1);
-		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, polygonelement3s, 0, 0);
+		GL_Color(c[0] - 1, c[1] - 1, c[2] - 1, 1);
+		R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
+		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
 }
 

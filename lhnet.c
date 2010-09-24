@@ -2,6 +2,9 @@
 // Written by Forest Hale 2003-06-15 and placed into public domain.
 
 #ifdef WIN32
+#ifdef _MSC_VER
+#pragma comment(lib, "ws2_32.lib")
+#endif
 # ifdef SUPPORTIPV6
 // Windows XP or higher is required for getaddrinfo, but the inclusion of wspiapi provides fallbacks for older versions
 # define _WIN32_WINNT 0x0501
@@ -836,7 +839,11 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 		{
 			if (lastfd < s->inetsocket)
 				lastfd = s->inetsocket;
+#if defined(WIN32) && !defined(_MSC_VER)
+			FD_SET((int)s->inetsocket, &fdreadset);
+#else
 			FD_SET((unsigned int)s->inetsocket, &fdreadset);
+#endif
 		}
 	}
 	tv.tv_sec = microseconds / 1000000;

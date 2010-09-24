@@ -606,7 +606,7 @@ void SZ_Write (sizebuf_t *buf, const unsigned char *data, int length)
 // attention, it has been eradicated from here, its only (former) use in
 // all of darkplaces.
 
-static char *hexchar = "0123456789ABCDEF";
+static const char *hexchar = "0123456789ABCDEF";
 void Com_HexDumpToConsole(const unsigned char *data, int size)
 {
 	int i, j, n;
@@ -1999,8 +1999,6 @@ void InfoString_GetValue(const char *buffer, const char *key, char *value, size_
 	size_t keylength;
 	if (!key)
 		key = "";
-	if (!value)
-		value = "";
 	keylength = strlen(key);
 	if (valuelength < 1 || !value)
 	{

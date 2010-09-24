@@ -6,6 +6,15 @@
 #include <Cg/cgGL.h>
 #endif
 
+#ifdef SUPPORTD3D
+#include <d3d9.h>
+#ifdef _MSC_VER
+#pragma comment(lib, "d3d9.lib")
+#endif
+
+LPDIRECT3DDEVICE9 vid_d3d9dev;
+#endif
+
 // global video state
 viddef_t vid;
 
@@ -147,12 +156,14 @@ void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, 
 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglArrayElement)(GLint i);
 
+void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
 void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
@@ -160,6 +171,7 @@ void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
 void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
+void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 void (GLAPIENTRY *qglBegin)(GLenum mode);
 void (GLAPIENTRY *qglEnd)(void);
 
@@ -386,7 +398,7 @@ void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *par
 #define sscanf sscanf_s
 #endif
 
-int GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
+qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
 	const dllfunction_t *func;
@@ -488,12 +500,14 @@ static dllfunction_t opengl110funcs[] =
 	{"glDepthMask", (void **) &qglDepthMask},
 	{"glDepthRange", (void **) &qglDepthRange},
 	{"glDrawElements", (void **) &qglDrawElements},
+	{"glDrawArrays", (void **) &qglDrawArrays},
 	{"glColorMask", (void **) &qglColorMask},
 	{"glVertexPointer", (void **) &qglVertexPointer},
 	{"glNormalPointer", (void **) &qglNormalPointer},
 	{"glColorPointer", (void **) &qglColorPointer},
 	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
 	{"glArrayElement", (void **) &qglArrayElement},
+	{"glColor4ub", (void **) &qglColor4ub},
 	{"glColor4f", (void **) &qglColor4f},
 	{"glTexCoord1f", (void **) &qglTexCoord1f},
 	{"glTexCoord2f", (void **) &qglTexCoord2f},
@@ -501,6 +515,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexCoord4f", (void **) &qglTexCoord4f},
 	{"glVertex2f", (void **) &qglVertex2f},
 	{"glVertex3f", (void **) &qglVertex3f},
+	{"glVertex4f", (void **) &qglVertex4f},
 	{"glBegin", (void **) &qglBegin},
 	{"glEnd", (void **) &qglEnd},
 //[515]: added on 29.07.2005
@@ -784,13 +799,37 @@ static dllfunction_t drawbuffersfuncs[] =
 	{NULL, NULL}
 };
 
-void VID_CheckExtensions(void)
+void VID_ClearExtensions(void)
 {
-	// clear the extension flags
-	memset(&vid.support, 0, sizeof(vid.support));
-
 	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
 	Cvar_SetQuick(&gl_info_extensions, "");
+
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+	vid.renderpath = RENDERPATH_GL11;
+	vid.forcevbo = false;
+	vid.maxtexturesize_2d = 0;
+	vid.maxtexturesize_3d = 0;
+	vid.maxtexturesize_cubemap = 0;
+	vid.texunits = 1;
+	vid.teximageunits = 1;
+	vid.texarrayunits = 1;
+	vid.max_anisotropy = 1;
+	vid.maxdrawbuffers = 1;
+
+	// this is a complete list of all functions that are directly checked in the renderer
+	qglDrawRangeElements = NULL;
+	qglDrawBuffer = NULL;
+	qglPolygonStipple = NULL;
+	qglFlush = NULL;
+	qglActiveTexture = NULL;
+	qglGetCompressedTexImageARB = NULL;
+	qglFramebufferTexture2DEXT = NULL;
+	qglDrawBuffersARB = NULL;
+}
+
+void VID_CheckExtensions(void)
+{
 	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 
@@ -812,7 +851,6 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
-	vid.support.arb_texture_rectangle = GL_CheckExtension("GL_ARB_texture_rectangle", NULL, "-norectangle", false);
 	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
 	vid.support.arb_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false);
 	vid.support.ati_separate_stencil = GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
@@ -838,7 +876,6 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (allows pixel shader effects, can improve per pixel lighting performance and capabilities)
 // COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
 // COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
-// COMMANDLINEOPTION: GL: -norectangle disables GL_ARB_texture_rectangle (required for bumpmapping)
 // COMMANDLINEOPTION: GL: -nos3tc disables GL_EXT_texture_compression_s3tc (which allows use of .dds texture caching)
 // COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
 // COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
@@ -852,15 +889,6 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
 // COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
 // COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (allows vertex shader effects)
-
-	vid.maxtexturesize_2d = 0;
-	vid.maxtexturesize_3d = 0;
-	vid.maxtexturesize_cubemap = 0;
-	vid.texunits = 1;
-	vid.teximageunits = 1;
-	vid.texarrayunits = 1;
-	vid.max_anisotropy = 1;
-	vid.maxdrawbuffers = 1;
 
 	if (vid.support.arb_draw_buffers)
 		qglGetIntegerv(GL_MAX_DRAW_BUFFERS_ARB, (GLint*)&vid.maxdrawbuffers);
@@ -885,8 +913,6 @@ void VID_CheckExtensions(void)
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
 	if (vid.support.arb_texture_cube_map)
 		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_cubemap);
-	if (vid.support.arb_texture_rectangle)
-		qglGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_rectangle);
 	if (vid.support.ext_texture_3d)
 		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
@@ -1029,6 +1055,9 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
 		if (v_glslgamma.integer)
 			wantgamma = 0;
 		break;
@@ -1220,15 +1249,16 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 {
 	viddef_mode_t mode;
 	memset(&mode, 0, sizeof(mode));
-	mode.fullscreen = fullscreen;
+	mode.fullscreen = fullscreen != 0;
 	mode.width = width;
 	mode.height = height;
 	mode.bitsperpixel = bpp;
 	mode.refreshrate = vid_userefreshrate.integer ? max(1, refreshrate) : 0;
-	mode.userefreshrate = vid_userefreshrate.integer;
-	mode.stereobuffer = stereobuffer;
+	mode.userefreshrate = vid_userefreshrate.integer != 0;
+	mode.stereobuffer = stereobuffer != 0;
 	mode.samples = samples;
 	cl_ignoremousemoves = 2;
+	VID_ClearExtensions();
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode

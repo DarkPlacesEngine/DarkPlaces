@@ -368,6 +368,11 @@ typedef struct entity_render_s
 	float *animcache_normal3f;
 	float *animcache_svector3f;
 	float *animcache_tvector3f;
+	// interleaved arrays for rendering and dynamic vertex buffers for them
+	r_vertexposition_t *animcache_vertexposition;
+	r_meshbuffer_t *animcache_vertexpositionbuffer;
+	r_vertexmesh_t *animcache_vertexmesh;
+	r_meshbuffer_t *animcache_vertexmeshbuffer;
 
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;
@@ -532,7 +537,7 @@ qw_downloadtype_t;
 typedef enum capturevideoformat_e
 {
 	CAPTUREVIDEOFORMAT_AVI_I420,
-	CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA,
+	CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA
 }
 capturevideoformat_t;
 
@@ -1551,6 +1556,10 @@ typedef struct r_refdef_stats_s
 	int bloom;
 	int bloom_copypixels;
 	int bloom_drawpixels;
+	int indexbufferuploadcount;
+	int indexbufferuploadsize;
+	int vertexbufferuploadcount;
+	int vertexbufferuploadsize;
 }
 r_refdef_stats_t;
 

@@ -84,8 +84,8 @@ struct sfx_s
 
 typedef struct channel_s
 {
-	short			listener_volume [SND_LISTENERS];	// 0-255 volume per speaker
-	int				master_vol;		// 0-255 master volume
+	int			listener_volume [SND_LISTENERS];	// 0-65536 volume per speaker
+	int				master_vol;		// 0-65536 master volume
 	sfx_t			*sfx;			// sfx number
 	unsigned int	flags;			// cf CHANNELFLAG_* defines
 	int				pos;			// sample position in sfx, negative values delay the start of the sound playback
@@ -94,6 +94,7 @@ typedef struct channel_s
 	vec3_t			origin;			// origin of sound effect
 	vec_t			dist_mult;		// distance multiplier (attenuation/clipK)
 	void			*fetcher_data;	// Per-channel data for the sound fetching function
+	int				prologic_invert;// whether a sound is played on the surround channels in prologic
 } channel_t;
 
 // Sound fetching functions

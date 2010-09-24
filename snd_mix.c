@@ -183,23 +183,13 @@ CHANNEL MIXING
 
 static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, unsigned int count)
 {
-	int snd_vol, vol[SND_LISTENERS];
+	int vol[SND_LISTENERS];
 	const snd_buffer_t *sb;
 	unsigned int i, sb_offset;
 
-	// If this channel manages its own volume
-	if (ch->flags & CHANNELFLAG_FULLVOLUME)
-		snd_vol = (int)(mastervolume.value * 256);
-	else
-		snd_vol = (int)(mastervolume.value * volume.value * 256);
-
-	// calculate mixing volumes based on channel volumes and volume cvar
-	// also limit the volumes to values that won't clip
+	// move to the stack (do we need to?)
 	for (i = 0;i < SND_LISTENERS;i++)
-	{
-		vol[i] = ch->listener_volume[i] * snd_vol;
-		vol[i] = bound(0, vol[i], 65536);
-	}
+		vol[i] = ch->listener_volume[i];
 
 	// if volumes are all zero, just return
 	for (i = 0;i < SND_LISTENERS;i++)
@@ -272,7 +262,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 8;
-						paint[i].sample[1] += (samples[1] * vol[1]) >> 8;
+						paint[i].sample[1] += (samples[1] * vol[1] * ch->prologic_invert) >> 8;
 						samples += 2;
 					}
 				}
@@ -323,7 +313,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 8;
-						paint[i].sample[1] += (samples[0] * vol[1]) >> 8;
+						paint[i].sample[1] += (samples[0] * vol[1] * ch->prologic_invert) >> 8;
 						samples += 1;
 					}
 				}
@@ -382,7 +372,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 16;
-						paint[i].sample[1] += (samples[1] * vol[1]) >> 16;
+						paint[i].sample[1] += (samples[1] * vol[1] * ch->prologic_invert) >> 16;
 						samples += 2;
 					}
 				}
@@ -433,7 +423,7 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 					for (i = 0;i < count;i++)
 					{
 						paint[i].sample[0] += (samples[0] * vol[0]) >> 16;
-						paint[i].sample[1] += (samples[0] * vol[1]) >> 16;
+						paint[i].sample[1] += (samples[0] * vol[1] * ch->prologic_invert) >> 16;
 						samples += 1;
 					}
 				}

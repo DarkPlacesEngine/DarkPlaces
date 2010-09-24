@@ -188,7 +188,7 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 		ed->priv.server->skeleton.model = edmodel;
 	}
 	if (!ed->priv.server->skeleton.relativetransforms && ed->priv.server->skeleton.model && ed->priv.server->skeleton.model->num_bones)
-		ed->priv.server->skeleton.relativetransforms = Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
+		ed->priv.server->skeleton.relativetransforms = (matrix4x4_t *)Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
 	if (ed->priv.server->skeleton.relativetransforms)
 	{
 		int skeletonindex = -1;
@@ -269,7 +269,7 @@ checkextension(extensionname)
 static qboolean checkextension(const char *name)
 {
 	int len;
-	char *e, *start;
+	const char *e, *start;
 	len = (int)strlen(name);
 
 	for (e = prog->extensionstring;*e;e++)
@@ -6366,13 +6366,13 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 	need |= (animatemodel_cache.model != model);
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
-	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend)));
+	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend))) != 0;
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.skeletonindex))) skeletonindex = (int)val->_float - 1;
 	if (!(skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
 		skeleton = NULL;
 	need |= (animatemodel_cache.skeleton_p != skeleton);
 	if(skeleton)
-		need |= (memcmp(&animatemodel_cache.skeleton, skeleton, sizeof(ed->priv.server->skeleton)));
+		need |= (memcmp(&animatemodel_cache.skeleton, skeleton, sizeof(ed->priv.server->skeleton))) != 0;
 	if(!need)
 		return;
 	if(model->surfmesh.num_vertices > animatemodel_cache.max_vertices)
@@ -6382,10 +6382,10 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 		if(animatemodel_cache.buf_svector3f) Mem_Free(animatemodel_cache.buf_svector3f);
 		if(animatemodel_cache.buf_tvector3f) Mem_Free(animatemodel_cache.buf_tvector3f);
 		if(animatemodel_cache.buf_normal3f) Mem_Free(animatemodel_cache.buf_normal3f);
-		animatemodel_cache.buf_vertex3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
-		animatemodel_cache.buf_svector3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
-		animatemodel_cache.buf_tvector3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
-		animatemodel_cache.buf_normal3f = Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_vertex3f = (float *)Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_svector3f = (float *)Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_tvector3f = (float *)Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
+		animatemodel_cache.buf_normal3f = (float *)Mem_Alloc(prog->progs_mempool, sizeof(float[3]) * animatemodel_cache.max_vertices);
 	}
 	animatemodel_cache.data_vertex3f = animatemodel_cache.buf_vertex3f;
 	animatemodel_cache.data_svector3f = animatemodel_cache.buf_svector3f;

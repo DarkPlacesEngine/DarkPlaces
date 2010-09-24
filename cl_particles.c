@@ -1687,16 +1687,15 @@ void CL_ParticleExplosion (const vec3_t org)
 			{
 				for (i = 0;i < 512 * cl_particles_quality.value;i++)
 				{
-					int k;
+					int k = 0;
 					vec3_t v, v2;
-					for (k = 0;k < 16;k++)
+					do
 					{
 						VectorRandom(v2);
 						VectorMA(org, 128, v2, v);
 						trace = CL_TraceLine(org, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
-						if (trace.fraction >= 0.1)
-							break;
 					}
+					while (k < 16 && trace.fraction < 0.1f);
 					VectorSubtract(trace.endpos, org, v2);
 					VectorScale(v2, 2.0f, v2);
 					CL_NewParticle(org, pt_spark, 0x903010, 0xFFD030, tex_particle, 1.0f, 0, lhrandom(0, 255), 512, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, true, 0, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
@@ -1943,7 +1942,7 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 {
 	int i, j, k, m;
 	size_t datasize = PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4;
-	unsigned char *data = Mem_Alloc(tempmempool, datasize);
+	unsigned char *data = (unsigned char *)Mem_Alloc(tempmempool, datasize);
 
 	// blood particles
 	for (i = 0;i < 8;i++)
@@ -2159,7 +2158,7 @@ static void R_InitParticleTexture (void)
 	}
 
 #ifndef DUMPPARTICLEFONT
-	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true, r_texture_convertsRGB_particles.integer);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true, r_texture_convertsRGB_particles.integer != 0);
 	if (!particletexture[tex_beam].texture)
 #endif
 	{
@@ -2309,15 +2308,11 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	particletexture_t *tex;
 	float right[3], up[3], size, ca;
 	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
-	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
 
 	r_refdef.stats.drawndecals += numsurfaces;
 	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
-	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2374,7 +2369,8 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1);
-	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
+	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, NULL, 0, particle_elements, NULL, 0);
 }
 
 void R_DrawDecals (void)
@@ -2477,9 +2473,6 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 
 	r_refdef.stats.particles += numsurfaces;
 	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
-	R_Mesh_ColorPointer(particle_color4f, 0, 0);
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2685,6 +2678,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	texture = NULL;
 	batchstart = 0;
 	batchcount = 0;
+	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
@@ -2722,7 +2716,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		}
 
 		batchcount = surfacelistindex - batchstart;
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, particle_elements, 0, 0);
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, NULL, 0, particle_elements, NULL, 0);
 	}
 }
 

@@ -4,12 +4,17 @@
 
 #ifdef WIN32
 # ifdef _WIN64
-#  define _WIN32_WINNT 0x0502
+#  ifndef _WIN32_WINNT
+#   define _WIN32_WINNT 0x0502
+#  endif
    // for SetDllDirectory
 # endif
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
+#ifdef _MSC_VER
+#pragma comment(lib, "winmm.lib")
+#endif
 #else
 # include <unistd.h>
 # include <fcntl.h>
