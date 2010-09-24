@@ -3447,7 +3447,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	dmodel_t *bm;
 	float dist, modelyawradius, modelradius;
 	msurface_t *surface;
-	int numshadowmeshtriangles;
 	hullinfo_t hullinfo;
 	int totalstylesurfaces, totalstyles, stylecounts[256], remapstyles[256];
 	model_brush_lightstyleinfo_t styleinfo[256];
@@ -3575,7 +3574,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->numskins = 1;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
-	numshadowmeshtriangles = Mod_Q1BSP_CreateShadowMesh(loadmodel);
+	Mod_Q1BSP_CreateShadowMesh(loadmodel);
 
 	if (loadmodel->brush.numsubmodels)
 		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
@@ -6907,7 +6906,7 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 
 void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
-	int i, j, numshadowmeshtriangles, lumps;
+	int i, j, lumps;
 	q3dheader_t *header;
 	float corner[3], yawradius, modelradius;
 
@@ -7028,7 +7027,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.supportwateralpha = true;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
-	numshadowmeshtriangles = Mod_Q1BSP_CreateShadowMesh(loadmodel);
+	Mod_Q1BSP_CreateShadowMesh(loadmodel);
 
 	loadmodel->brush.num_leafs = 0;
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
