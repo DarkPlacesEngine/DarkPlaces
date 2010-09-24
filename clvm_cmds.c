@@ -1258,7 +1258,7 @@ static void VM_CL_pointparticles (void)
 static void VM_CL_boxparticles (void)
 {
 	int effectnum;
-	prvm_edict_t *own;
+	// prvm_edict_t *own;
 	float *origin_from, *origin_to, *dir_from, *dir_to;
 	float count;
 	int flags;
@@ -1267,7 +1267,7 @@ static void VM_CL_boxparticles (void)
 	VM_SAFEPARMCOUNTRANGE(7, 8, VM_CL_boxparticles);
 
 	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
-	own = PRVM_G_EDICT(OFS_PARM1); // TODO find use for this
+	// own = PRVM_G_EDICT(OFS_PARM1); // TODO find use for this
 	origin_from = PRVM_G_VECTOR(OFS_PARM2);
 	origin_to = PRVM_G_VECTOR(OFS_PARM3);
 	dir_from = PRVM_G_VECTOR(OFS_PARM4);
