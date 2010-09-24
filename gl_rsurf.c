@@ -1199,8 +1199,10 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	const msurface_t *surface;
 	int i, k, kend, l, endsurface, batchnumsurfaces, texturenumsurfaces;
 	const msurface_t **texturesurfacelist;
+	const int *element3i;
 	texture_t *tex;
 	CHECKGLERROR
+	element3i = rsurface.modelelement3i;
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
