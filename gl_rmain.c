@@ -8383,12 +8383,8 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	vec3_t normal;
 	vec3_t center;
 	mplane_t plane;
-	int cam_ent;
 	r_waterstate_waterplane_t *p;
 	texture_t *t = R_GetCurrentTexture(surface->texture);
-	cam_ent = t->camera_entity;
-	if(!(t->currentmaterialflags & MATERIALFLAG_CAMERA))
-		cam_ent = 0;
 
 	// just use the first triangle with a valid normal for any decisions
 	VectorClear(normal);
@@ -11057,7 +11053,6 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	int surfacefirstvertex;
 	int surfaceendvertex;
 	int surfacenumvertices;
-	int surfaceadjustvertex;
 	int needsupdate;
 	int i, j;
 	qboolean gaps;
@@ -11387,7 +11382,6 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			surfacefirstvertex = texturesurfacelist[i]->num_firstvertex;
 			surfacenumvertices = texturesurfacelist[i]->num_vertices;
 			surfacefirsttriangle = texturesurfacelist[i]->num_firsttriangle;
-			surfaceadjustvertex = numvertices - surfacefirstvertex;
 			surfacenumtriangles = texturesurfacelist[i]->num_triangles;
 			// copy only the data requested
 			if ((batchneed & BATCHNEED_VERTEXPOSITION) && rsurface.modelvertexposition)
