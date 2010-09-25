@@ -888,10 +888,28 @@ static void LoadFont_f(void)
 					voffset = atof(Cmd_Argv(i));
 				continue;
 			}
+
+			if (sizes == -1)
+				continue; // no slot for other sizes
+
 			// parse one of sizes
 			sz = atof(Cmd_Argv(i));
 			if (sz > 0.001f && sz < 1000.0f) // do not use crap sizes
 			{
+				// search for duplicated sizes
+				int j;
+				for (j=0; j<sizes; j++)
+					if (f->req_sizes[j] == sz)
+						break;
+				if (j != sizes)
+					continue; // sz already in req_sizes, don't add it again
+
+				if (sizes == MAX_FONT_SIZES)
+				{
+					Con_Printf("Warning: specified more than %i different font sizes, exceding ones are ignored\n", MAX_FONT_SIZES);
+					sizes = -1;
+					continue;
+				}
 				f->req_sizes[sizes] = sz;
 				sizes++;
 			}
