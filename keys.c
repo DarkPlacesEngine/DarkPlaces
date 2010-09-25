@@ -36,8 +36,11 @@ qboolean	key_insert = true;	// insert key toggle (for editing)
 keydest_t	key_dest;
 int			key_consoleactive;
 char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
-int         history_line;
+
+int			history_line;
 char		history_savedline[MAX_INPUTLINE];
+char		history_searchstring[MAX_INPUTLINE];
+qboolean	history_matchfound = false;
 conbuffer_t history;
 
 extern cvar_t	con_textsize;
@@ -107,12 +110,27 @@ static void Key_History_Push(void)
 		ConBuffer_AddLine(&history, key_line + 1, strlen(key_line) - 1, 0);
 	Con_Printf("%s\n", key_line); // don't mark empty lines as history
 	history_line = -1;
+	if (history_matchfound)
+		history_matchfound = false;
+}
+
+qboolean Key_History_Get_foundCommand(void)
+{
+	if (!history_matchfound)
+		return false;
+	strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+	key_linepos = strlen(key_line);
+	history_matchfound = false;
+	return true;
 }
 
 static void Key_History_Up(void)
 {
 	if(history_line == -1) // editing the "new" line
 		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+
+	if (Key_History_Get_foundCommand())
+		return;
 
 	if(history_line == -1)
 	{
@@ -136,6 +154,9 @@ static void Key_History_Down(void)
 	if(history_line == -1) // editing the "new" line
 		return;
 
+	if (Key_History_Get_foundCommand())
+		return;
+
 	if(history_line < CONBUFFER_LINES_COUNT(&history) - 1)
 	{
 		++history_line;
@@ -148,6 +169,143 @@ static void Key_History_Down(void)
 	}
 
 	key_linepos = strlen(key_line);
+}
+
+static void Key_History_First(void)
+{
+	if(history_line == -1) // editing the "new" line
+		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+
+	if (CONBUFFER_LINES_COUNT(&history) > 0)
+	{
+		history_line = 0;
+		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		key_linepos = strlen(key_line);
+	}
+}
+
+static void Key_History_Last(void)
+{
+	if(history_line == -1) // editing the "new" line
+		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+
+	if (CONBUFFER_LINES_COUNT(&history) > 0)
+	{
+		history_line = CONBUFFER_LINES_COUNT(&history) - 1;
+		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		key_linepos = strlen(key_line);
+	}
+}
+
+static void Key_History_Find_Backwards(void)
+{
+	int i;
+	const char *partial = key_line + 1;
+	size_t digits = strlen(va("%i", HIST_MAXLINES));
+
+	if (history_line == -1) // editing the "new" line
+		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+
+	if (strcmp(key_line + 1, history_searchstring)) // different string? Start a new search
+	{
+		strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
+		i = CONBUFFER_LINES_COUNT(&history) - 1;
+	}
+	else if (history_line == -1)
+		i = CONBUFFER_LINES_COUNT(&history) - 1;
+	else
+		i = history_line - 1;
+
+	if (!*partial)
+		partial = "*";
+	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
+		partial = va("*%s*", partial);
+
+	for ( ; i >= 0; i--)
+		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
+		{
+			Con_Printf("^2%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+			history_line = i;
+			history_matchfound = true;
+			return;
+		}
+}
+
+static void Key_History_Find_Forwards(void)
+{
+	int i;
+	const char *partial = key_line + 1;
+	size_t digits = strlen(va("%i", HIST_MAXLINES));
+
+	if (history_line == -1) // editing the "new" line
+		return;
+
+	if (strcmp(key_line + 1, history_searchstring)) // different string? Start a new search
+	{
+		strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
+		i = 0;
+	}
+	else i = history_line + 1;
+
+	if (!*partial)
+		partial = "*";
+	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
+		partial = va("*%s*", partial);
+
+	for ( ; i < CONBUFFER_LINES_COUNT(&history); i++)
+		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
+		{
+			Con_Printf("^2%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+			history_line = i;
+			history_matchfound = true;
+			return;
+		}
+}
+
+static void Key_History_Find_All(void)
+{
+	const char *partial = key_line + 1;
+	int i, count = 0;
+	size_t digits = strlen(va("%i", HIST_MAXLINES));
+	Con_Printf("History commands containing \"%s\":\n", key_line + 1);
+
+	if (!*partial)
+		partial = "*";
+	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
+		partial = va("*%s*", partial);
+
+	for (i=0; i<CONBUFFER_LINES_COUNT(&history); i++)
+		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
+		{
+			Con_Printf("%s%*i^7 %s\n", (i == history_line) ? "^2" : "^3", digits, i+1, ConBuffer_GetLine(&history, i));
+			count++;
+		}
+	Con_Printf("%i result%s\n\n", count, (count != 1) ? "s" : "");
+}
+
+static void Key_History_f(void)
+{
+	char *errchar = NULL;
+	int i = 0;
+	size_t digits = strlen(va("%i", HIST_MAXLINES));
+
+	if (Cmd_Argc () > 1)
+	{
+		if (!strcmp(Cmd_Argv (1), "-c"))
+		{
+			ConBuffer_Clear(&history);
+			return;
+		}
+		i = strtol(Cmd_Argv (1), &errchar, 0);
+		if ((i < 0) || (i > CONBUFFER_LINES_COUNT(&history)) || (errchar && *errchar))
+			i = 0;
+		else
+			i = CONBUFFER_LINES_COUNT(&history) - i;
+	}
+
+	for ( ; i<CONBUFFER_LINES_COUNT(&history); i++)
+		Con_Printf("^3%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+	Con_Printf("\n");
 }
 
 static int	key_bmap, key_bmap2;
@@ -850,6 +1008,39 @@ Key_Console (int key, int unicode)
 		return;
 	}
 	// ~1.0795 = 82/76  using con_textsize 64 76 is height of the char, 6 is the distance between 2 lines
+
+	if (keydown[K_CTRL])
+	{
+		// prints all the matching commands
+		if (key == 'f')
+		{
+			Key_History_Find_All();
+			return;
+		}
+		// Search forwards/backwards, pointing the history's index to the
+		// matching command but without fetching it to let one continue the search.
+		// To fetch it, it suffices to just press UP or DOWN.
+		if (key == 'r')
+		{
+			if (keydown[K_SHIFT])
+				Key_History_Find_Forwards();
+			else
+				Key_History_Find_Backwards();
+			return;
+		}
+		// go to the last/first command of the history
+		if (key == ',')
+		{
+			Key_History_First();
+			return;
+		}
+		if (key == '.')
+		{
+			Key_History_Last();
+			return;
+		}
+	}
+
 	if (key == K_PGUP || key == K_KP_PGUP)
 	{
 		if(keydown[K_CTRL])
@@ -1405,6 +1596,8 @@ Key_Init (void)
 	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
 	Cmd_AddCommand ("bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
 	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+
+	Cmd_AddCommand ("history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }
