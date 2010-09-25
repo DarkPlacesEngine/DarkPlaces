@@ -691,7 +691,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 
 	for(;;)
 	{
-		switch((s >= end) ? 0 : *s)
+		switch((s == end) ? 0 : *s)
 		{
 			case 0:
 				if(valid)
@@ -756,7 +756,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 			return len;
 		}
 
-		if(s + st + ln >= end)
+		if(end && s + st + ln > end)
 		{
 			// string length exceeded by new character
 			if(valid)
