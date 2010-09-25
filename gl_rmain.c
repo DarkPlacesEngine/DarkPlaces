@@ -5215,17 +5215,25 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		// distorted background
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
+		{
 			mode = SHADERMODE_WATER;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
+		{
 			mode = SHADERMODE_REFRACTION;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 		else
 		{
 			mode = SHADERMODE_GENERIC;
 			permutation |= SHADERPERMUTATION_DIFFUSE;
+			GL_BlendFunc(GL_ONE, GL_ZERO);
+			allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
 		}
 		GL_AlphaTest(false);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
 	{
@@ -5610,8 +5618,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			hlslPSSetParameter4f(D3DPSREGISTER_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
 			hlslPSSetParameter4f(D3DPSREGISTER_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
 			hlslPSSetParameter4f(D3DPSREGISTER_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-			hlslPSSetParameter4fv(D3DPSREGISTER_RefractColor, rsurface.texture->refractcolor4f);
-			hlslPSSetParameter4fv(D3DPSREGISTER_ReflectColor, rsurface.texture->reflectcolor4f);
+			hlslPSSetParameter4f(D3DPSREGISTER_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			hlslPSSetParameter4f(D3DPSREGISTER_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);
 			hlslPSSetParameter1f(D3DPSREGISTER_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
 			hlslPSSetParameter1f(D3DPSREGISTER_ReflectOffset, rsurface.texture->reflectmin);
 			hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
@@ -5753,8 +5761,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
 			if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
 			if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-			if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_RefractColor, 1, rsurface.texture->refractcolor4f);
-			if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fvARB(r_glsl_permutation->loc_ReflectColor, 1, rsurface.texture->reflectcolor4f);
+			if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);
 			if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
 			if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
@@ -5922,8 +5930,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_cg_permutation->fp_DistortScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);CHECKCGERROR
 			if (r_cg_permutation->fp_ScreenScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);CHECKCGERROR
 			if (r_cg_permutation->fp_ScreenCenterRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);CHECKCGERROR
-			if (r_cg_permutation->fp_RefractColor) cgGLSetParameter4fv(r_cg_permutation->fp_RefractColor, rsurface.texture->refractcolor4f);CHECKCGERROR
-			if (r_cg_permutation->fp_ReflectColor) cgGLSetParameter4fv(r_cg_permutation->fp_ReflectColor, rsurface.texture->reflectcolor4f);CHECKCGERROR
+			if (r_cg_permutation->fp_RefractColor) cgGLSetParameter4fv(r_cg_permutation->fp_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);CHECKCGERROR
+			if (r_cg_permutation->fp_ReflectColor) cgGLSetParameter4fv(r_cg_permutation->fp_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);CHECKCGERROR
 			if (r_cg_permutation->fp_ReflectFactor) cgGLSetParameter1f(r_cg_permutation->fp_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);CHECKCGERROR
 			if (r_cg_permutation->fp_ReflectOffset) cgGLSetParameter1f(r_cg_permutation->fp_ReflectOffset, rsurface.texture->reflectmin);CHECKCGERROR
 			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
