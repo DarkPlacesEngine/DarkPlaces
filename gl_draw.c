@@ -334,7 +334,12 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 			if(!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag
 			{
 				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
-					pic->autoload = false; // persist it
+				{
+					if(pic->tex)
+						pic->autoload = false; // persist it
+					else
+						goto reload; // load it below, and then persist
+				}
 				return pic;
 			}
 
@@ -350,6 +355,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;
 
+reload:
 	// check whether it is an dynamic texture (if so, we can directly use its texture handler)
 	pic->tex = CL_GetDynTexture( path );
 	// if so, set the width/height, too
