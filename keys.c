@@ -224,7 +224,7 @@ static void Key_History_Find_Backwards(void)
 	for ( ; i >= 0; i--)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
 		{
-			Con_Printf("^2%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+			Con_Printf("^2%*i^7 %s\n", (int)digits, i+1, ConBuffer_GetLine(&history, i));
 			history_line = i;
 			history_matchfound = true;
 			return;
@@ -255,7 +255,7 @@ static void Key_History_Find_Forwards(void)
 	for ( ; i < CONBUFFER_LINES_COUNT(&history); i++)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
 		{
-			Con_Printf("^2%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+			Con_Printf("^2%*i^7 %s\n", (int)digits, i+1, ConBuffer_GetLine(&history, i));
 			history_line = i;
 			history_matchfound = true;
 			return;
@@ -277,7 +277,7 @@ static void Key_History_Find_All(void)
 	for (i=0; i<CONBUFFER_LINES_COUNT(&history); i++)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
 		{
-			Con_Printf("%s%*i^7 %s\n", (i == history_line) ? "^2" : "^3", digits, i+1, ConBuffer_GetLine(&history, i));
+			Con_Printf("%s%*i^7 %s\n", (i == history_line) ? "^2" : "^3", (int)digits, i+1, ConBuffer_GetLine(&history, i));
 			count++;
 		}
 	Con_Printf("%i result%s\n\n", count, (count != 1) ? "s" : "");
@@ -304,7 +304,7 @@ static void Key_History_f(void)
 	}
 
 	for ( ; i<CONBUFFER_LINES_COUNT(&history); i++)
-		Con_Printf("^3%*i^7 %s\n", digits, i+1, ConBuffer_GetLine(&history, i));
+		Con_Printf("^3%*i^7 %s\n", (int)digits, i+1, ConBuffer_GetLine(&history, i));
 	Con_Printf("\n");
 }
 
