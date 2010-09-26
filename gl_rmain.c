@@ -5627,7 +5627,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		hlslPSSetParameter3f(D3DPSREGISTER_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
-		hlslPSSetParameter1f(D3DPSREGISTER_Alpha, rsurface.texture->lightmapcolor[3]);
+		hlslPSSetParameter1f(D3DPSREGISTER_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
 		hlslPSSetParameter3f(D3DPSREGISTER_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
 		if (rsurface.texture->pantstexture)
 			hlslPSSetParameter3f(D3DPSREGISTER_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
@@ -5774,7 +5774,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4fARB(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 
 		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
-		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1fARB(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3]);
+		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1fARB(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
 		if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
 		if (r_glsl_permutation->loc_Color_Pants >= 0)
 		{
@@ -5939,7 +5939,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_cg_permutation->fp_ShadowMap_TextureScale) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
 		if (r_cg_permutation->fp_ShadowMap_Parameters) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
 		if (r_cg_permutation->fp_Color_Glow) cgGLSetParameter3f(r_cg_permutation->fp_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);CHECKCGERROR
-		if (r_cg_permutation->fp_Alpha) cgGLSetParameter1f(r_cg_permutation->fp_Alpha, rsurface.texture->lightmapcolor[3]);CHECKCGERROR
+		if (r_cg_permutation->fp_Alpha) cgGLSetParameter1f(r_cg_permutation->fp_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));CHECKCGERROR
 		if (r_cg_permutation->fp_EyePosition) cgGLSetParameter3f(r_cg_permutation->fp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
 		if (r_cg_permutation->fp_Color_Pants)
 		{
@@ -10275,7 +10275,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
 		t->currentalpha *= r_wateralpha.value;
 	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay)
-		t->currentalpha *= t->r_water_wateralpha;
+		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW; // we apply wateralpha later
 	if(!r_waterstate.enabled || r_refdef.view.isoverlay)
 		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA);
 	if (!(rsurface.ent_flags & RENDER_LIGHT))
