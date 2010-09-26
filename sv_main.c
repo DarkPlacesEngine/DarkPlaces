@@ -1636,11 +1636,13 @@ void SV_AddCameraEyes(void)
 				VectorClear(PRVM_G_VECTOR(OFS_PARM1));
 				PRVM_ExecuteProgram(val->function, "QC function e.camera_transform is missing");
 				if(!VectorCompare(valendpos->vector, sv.writeentitiestoclient_eyes[0]))
+				{
 					VectorCopy(valendpos->vector, camera_origins[n_cameras]);
-				cameras[n_cameras] = e;
-				++n_cameras;
-				if(n_cameras >= MAX_LEVELNETWORKEYES)
-					break;
+					cameras[n_cameras] = e;
+					++n_cameras;
+					if(n_cameras >= MAX_LEVELNETWORKEYES)
+						break;
+				}
 			}
 		}
 	}
