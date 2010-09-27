@@ -409,6 +409,9 @@ int SVBSP_AddPolygon(svbsp_t *b, int numpoints, const float *points, int inserto
 	// note we still allow points and lines to be tested...
 	if (numpoints < 1)
 		return 0;
+	// if the polygon has too many points, we would crash
+	if (numpoints > MAX_SVBSP_POLYGONPOINTS)
+		return 0;
 	poly.numpoints = numpoints;
 	for (i = 0;i < numpoints;i++)
 	{
