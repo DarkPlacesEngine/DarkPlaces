@@ -5115,6 +5115,10 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_shadow_glossexact.integer)
 					permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
 			}
+			if (permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				R_Mesh_ColorPointer(rsurface.modellightmapcolor4f, rsurface.modellightmapcolor4f_bufferobject, rsurface.modellightmapcolor4f_bufferoffset);
+			else
+				R_Mesh_ColorPointer(NULL, 0, 0);
 		}
 		else if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
