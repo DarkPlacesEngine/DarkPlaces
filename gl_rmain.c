@@ -12896,7 +12896,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		surface = rsurface.modelsurfaces + surfacelist[i];
 		texture = surface->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.lightmaptexture = FAKELIGHT_ENABLED ? NULL : surface->lightmaptexture;
+		rsurface.lightmaptexture = surface->lightmaptexture;
 		rsurface.deluxemaptexture = surface->deluxemaptexture;
 		rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
@@ -13002,7 +13002,7 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 		// use skin 1 instead)
 		texture = surfacelist[i]->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.lightmaptexture = FAKELIGHT_ENABLED ? NULL : surfacelist[i]->lightmaptexture;
+		rsurface.lightmaptexture = surfacelist[i]->lightmaptexture;
 		rsurface.deluxemaptexture = surfacelist[i]->deluxemaptexture;
 		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
 		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
@@ -13066,7 +13066,7 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 		// use skin 1 instead)
 		texture = surfacelist[i]->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.lightmaptexture = FAKELIGHT_ENABLED ? NULL : surfacelist[i]->lightmaptexture;
+		rsurface.lightmaptexture = surfacelist[i]->lightmaptexture;
 		rsurface.deluxemaptexture = surfacelist[i]->deluxemaptexture;
 		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
 		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
