@@ -984,6 +984,9 @@ typedef struct model_s
 	model_brushq3_t	brushq3;
 	// flags this model for offseting sounds to the model center (used by brush models)
 	int soundfromcenter;
+
+	// if set, the model contains light information (lightmap, or vertexlight)
+	qboolean lit;
 }
 dp_model_t;
 

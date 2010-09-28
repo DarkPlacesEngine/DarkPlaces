@@ -87,6 +87,11 @@ cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "
 cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
 cvar_t r_fullbright = {0, "r_fullbright","0", "makes map very bright and renders faster"};
+
+cvar_t r_fakelight = {0, "r_fakelight","0", "render 'fake' lighting instead of real lightmaps"};
+cvar_t r_fakelight_intensity = {0, "r_fakelight_intensity","0.75", "fakelight intensity modifier"};
+#define FAKELIGHT_ENABLED (r_fakelight.integer >= 2 || (r_fakelight.integer && r_refdef.scene.worldmodel && !r_refdef.scene.worldmodel->lit))
+
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
@@ -570,7 +575,7 @@ static const char *builtinshaderstring =
 "#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "#define USELIGHTMAP\n"
 "#endif\n"
-"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE)\n"
+"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE) || defined(MODE_FAKELIGHT)\n"
 "#define USEEYEVECTOR\n"
 "#endif\n"
 "\n"
@@ -1745,6 +1750,15 @@ static const char *builtinshaderstring =
 "\n"
 "\n"
 "\n"
+"#ifdef MODE_FAKELIGHT\n"
+"#define SHADING\n"
+"myhalf3 lightnormal = myhalf3(normalize(EyeVector));\n"
+"myhalf3 lightcolor = myhalf3(1.0);\n"
+"#endif // MODE_FAKELIGHT\n"
+"\n"
+"\n"
+"\n"
+"\n"
 "#ifdef MODE_LIGHTMAP\n"
 "	color.rgb = diffusetex * (Color_Ambient + myhalf3(texture2D(Texture_Lightmap, TexCoordLightmap)) * Color_Diffuse);\n"
 "#endif // MODE_LIGHTMAP\n"
@@ -1877,7 +1891,7 @@ const char *builtincgshaderstring =
 "#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
 "#define USELIGHTMAP\n"
 "#endif\n"
-"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE)\n"
+"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE) || defined(MODE_FAKELIGHT)\n"
 "#define USEEYEVECTOR\n"
 "#endif\n"
 "\n"
@@ -3217,6 +3231,15 @@ const char *builtincgshaderstring =
 "\n"
 "\n"
 "\n"
+"#ifdef MODE_FAKELIGHT\n"
+"#define SHADING\n"
+"half3 lightnormal = half3(normalize(EyeVector));\n"
+"half3 lightcolor = half3(1.0);\n"
+"#endif // MODE_FAKELIGHT\n"
+"\n"
+"\n"
+"\n"
+"\n"
 "#ifdef MODE_LIGHTMAP\n"
 "	color.rgb = diffusetex * (Color_Ambient + half3(tex2D(Texture_Lightmap, TexCoordLightmap)) * Color_Diffuse);\n"
 "#endif // MODE_LIGHTMAP\n"
@@ -3413,6 +3436,7 @@ typedef enum shadermode_e
 	SHADERMODE_FLATCOLOR, ///< (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
 	SHADERMODE_VERTEXCOLOR, ///< (lightmap) modulate texture by vertex colors (q3bsp)
 	SHADERMODE_LIGHTMAP, ///< (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
+	SHADERMODE_FAKELIGHT, ///< (fakelight) modulate texture by "fake" lighting (no lightmaps, no nothing)
 	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
 	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
 	SHADERMODE_LIGHTDIRECTION, ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
@@ -3435,6 +3459,7 @@ shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FAKELIGHT\n", " fakelight"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
@@ -3455,6 +3480,7 @@ shadermodeinfo_t cgshadermodeinfo[SHADERMODE_COUNT] =
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FAKELIGHT\n", " fakelight"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
@@ -5078,7 +5104,19 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
+		if (FAKELIGHT_ENABLED)
+		{
+			// fake lightmapping (q1bsp, q3bsp, fullbright map)
+			mode = SHADERMODE_FAKELIGHT;
+			permutation |= SHADERPERMUTATION_DIFFUSE;
+			if (specularscale > 0)
+			{
+				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
+				if (r_shadow_glossexact.integer)
+					permutation |= SHADERPERMUTATION_EXACTSPECULARMATH;
+			}
+		}
+		else if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
 			if (rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping && r_refdef.scene.worldmodel->brushq3.deluxemapping_modelspace)
@@ -5098,7 +5136,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			else
 				R_Mesh_ColorPointer(NULL, 0, 0);
 		}
-		else if (r_glsl_deluxemapping.integer >= 2)
+		else if (r_glsl_deluxemapping.integer >= 2 && rsurface.uselightmaptexture)
 		{
 			// fake deluxemapping (uniform light direction in tangentspace)
 			mode = SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE;
@@ -6587,6 +6625,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fullbrights);
 	Cvar_RegisterVariable(&r_wateralpha);
 	Cvar_RegisterVariable(&r_dynamic);
+	Cvar_RegisterVariable(&r_fakelight);
+	Cvar_RegisterVariable(&r_fakelight_intensity);
 	Cvar_RegisterVariable(&r_fullbright);
 	Cvar_RegisterVariable(&r_shadows);
 	Cvar_RegisterVariable(&r_shadows_darken);
@@ -8412,6 +8452,10 @@ void R_UpdateVariables(void)
 	r_refdef.scene.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
 	r_refdef.scene.rtdlightshadows = r_refdef.scene.rtdlight && r_shadow_realtime_dlight_shadows.integer && vid.stencil;
 	r_refdef.lightmapintensity = r_refdef.scene.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
+	if (FAKELIGHT_ENABLED)
+	{
+		r_refdef.lightmapintensity *= r_fakelight_intensity.value;
+	}
 	if (r_showsurfaces.integer)
 	{
 		r_refdef.scene.rtworld = false;
@@ -9501,6 +9545,10 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags &= ~(MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA);
 	if (!(rsurface.ent_flags & RENDER_LIGHT))
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
+	else if (FAKELIGHT_ENABLED)
+	{
+			// no modellight if using fakelight for the map
+	}
 	else if (rsurface.modeltexcoordlightmap2f == NULL && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
 		// pick a model lighting mode
@@ -11037,6 +11085,49 @@ static void RSurf_DrawBatch_GL11_VertexColor(int texturenumsurfaces, const msurf
 	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
 }
 
+static void RSurf_DrawBatch_GL11_ApplyFakeLight(int texturenumsurfaces, const msurface_t **texturesurfacelist)
+{
+	int texturesurfaceindex;
+	int i;
+	float f;
+	const float *v;
+	const float *n;
+	float *c;
+	//vec3_t eyedir;
+
+	// fake shading
+	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	{
+		const msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+		int numverts = surface->num_vertices;
+		v = rsurface.vertex3f + 3 * surface->num_firstvertex;
+		n = rsurface.normal3f + 3 * surface->num_firstvertex;
+		c = rsurface.array_color4f + 4 * surface->num_firstvertex;
+		for (i = 0;i < numverts;i++, v += 3, n += 3, c += 4)
+		{
+			f = -DotProduct(r_refdef.view.forward, n);
+			f = max(0, f);
+			f = f * 0.85 + 0.15; // work around so stuff won't get black
+			f *= r_refdef.lightmapintensity;
+			Vector4Set(c, f, f, f, 1);
+		}
+	}
+
+	rsurface.lightmapcolor4f = rsurface.array_color4f;
+	rsurface.lightmapcolor4f_bufferobject = 0;
+	rsurface.lightmapcolor4f_bufferoffset = 0;
+}
+
+static void RSurf_DrawBatch_GL11_FakeLight(int texturenumsurfaces, const msurface_t **texturesurfacelist, float r, float g, float b, float a, qboolean applycolor, qboolean applyfog)
+{
+	RSurf_DrawBatch_GL11_ApplyFakeLight(texturenumsurfaces, texturesurfacelist);
+	if (applyfog)   RSurf_DrawBatch_GL11_ApplyFog(texturenumsurfaces, texturesurfacelist);
+	if (applycolor) RSurf_DrawBatch_GL11_ApplyColor(texturenumsurfaces, texturesurfacelist, r, g, b, a);
+	R_Mesh_ColorPointer(rsurface.lightmapcolor4f, rsurface.lightmapcolor4f_bufferobject, rsurface.lightmapcolor4f_bufferoffset);
+	GL_Color(r, g, b, a);
+	RSurf_DrawBatch_Simple(texturenumsurfaces, texturesurfacelist);
+}
+
 static void RSurf_DrawBatch_GL11_ApplyVertexShade(int texturenumsurfaces, const msurface_t **texturesurfacelist, float *r, float *g, float *b, float *a, qboolean *applycolor)
 {
 	int texturesurfaceindex;
@@ -11265,6 +11356,8 @@ static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface
 			R_Mesh_TexCoordPointer(1, 2, rsurface.texcoordtexture2f, rsurface.texcoordtexture2f_bufferobject, rsurface.texcoordtexture2f_bufferoffset);
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 				RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
+			else if (FAKELIGHT_ENABLED)
+				RSurf_DrawBatch_GL11_FakeLight(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
 			else if (rsurface.uselightmaptexture)
 				RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, layercolor[0], layercolor[1], layercolor[2], layercolor[3], applycolor, applyfog);
 			else
@@ -11366,6 +11459,8 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 				R_Mesh_TexCoordPointer(0, 2, rsurface.modeltexcoordlightmap2f, rsurface.modeltexcoordlightmap2f_bufferobject, rsurface.modeltexcoordlightmap2f_bufferoffset);
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 					RSurf_DrawBatch_GL11_VertexShade(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
+				else if (FAKELIGHT_ENABLED)
+					RSurf_DrawBatch_GL11_FakeLight(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 				else if (rsurface.uselightmaptexture)
 					RSurf_DrawBatch_GL11_Lightmap(texturenumsurfaces, texturesurfacelist, 1, 1, 1, 1, false, false);
 				else
@@ -11508,8 +11603,6 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, const
 		GL_DepthMask(writedepth);
 	}
 
-	rsurface.lightmapcolor4f = NULL;
-
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
 		RSurf_PrepareVerticesForBatch(false, false, texturenumsurfaces, texturesurfacelist);
@@ -11527,6 +11620,14 @@ static void R_DrawTextureSurfaceList_ShowSurfaces3(int texturenumsurfaces, const
 
 		r_refdef.lightmapintensity = 1;
 		RSurf_DrawBatch_GL11_ApplyVertexShade(texturenumsurfaces, texturesurfacelist, &one, &one, &one, &one, &applycolor);
+		r_refdef.lightmapintensity = 0; // we're in showsurfaces, after all
+	}
+	else if (FAKELIGHT_ENABLED)
+	{
+		RSurf_PrepareVerticesForBatch(true, false, texturenumsurfaces, texturesurfacelist);
+
+		r_refdef.lightmapintensity = r_fakelight_intensity.value;
+		RSurf_DrawBatch_GL11_ApplyFakeLight(texturenumsurfaces, texturesurfacelist);
 		r_refdef.lightmapintensity = 0; // we're in showsurfaces, after all
 	}
 	else

@@ -2413,6 +2413,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			// lightmap is needed on this surface (rather than duplicating the
 			// logic above)
 			loadmodel->brushq1.lightmapupdateflags[surfacenum] = true;
+			loadmodel->lit = true;
 		}
 	}
 
@@ -4506,6 +4507,8 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f);
 		loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f);
 		loadmodel->brushq3.data_color4f[i * 4 + 3] = in->color4ub[3] * (1.0f / 255.0f);
+		if(in->color4ub[0] != 255 || in->color4ub[1] != 255 || in->color4ub[2] != 255)
+			loadmodel->lit = true;
 	}
 }
 
@@ -4957,6 +4960,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n >> loadmodel->brushq3.num_lightmapmergedwidthheightdeluxepower];
 				if (loadmodel->brushq3.deluxemapping)
 					out->deluxemaptexture = loadmodel->brushq3.data_deluxemaps[n >> loadmodel->brushq3.num_lightmapmergedwidthheightdeluxepower];
+				loadmodel->lit = true;
 			}
 		}
 
