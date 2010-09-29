@@ -13025,7 +13025,7 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 				;
 			continue;
 		}
-		if(FAKELIGHT_ENABLED)
+		if(FAKELIGHT_ENABLED || depthonly || prepass)
 		{
 			rsurface.lightmaptexture = NULL;
 			rsurface.deluxemaptexture = NULL;
@@ -13038,7 +13038,7 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 		{
 			rsurface.lightmaptexture = surfacelist[i]->lightmaptexture;
 			rsurface.deluxemaptexture = surfacelist[i]->deluxemaptexture;
-			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
+			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
 			// simply scan ahead until we find a different texture or lightmap state
 			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.lightmaptexture == surfacelist[j]->lightmaptexture;j++)
 				;
@@ -13101,7 +13101,7 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 				;
 			continue;
 		}
-		if(FAKELIGHT_ENABLED)
+		if(FAKELIGHT_ENABLED || depthonly || prepass)
 		{
 			rsurface.lightmaptexture = NULL;
 			rsurface.deluxemaptexture = NULL;
@@ -13114,7 +13114,7 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 		{
 			rsurface.lightmaptexture = surfacelist[i]->lightmaptexture;
 			rsurface.deluxemaptexture = surfacelist[i]->deluxemaptexture;
-			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
+			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL;
 			// simply scan ahead until we find a different texture or lightmap state
 			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.lightmaptexture == surfacelist[j]->lightmaptexture;j++)
 				;
