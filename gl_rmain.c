@@ -11745,17 +11745,31 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			surface = rsurface.modelsurfaces + surfacelist[i];
 			texture = surface->texture;
 			rsurface.texture = R_GetCurrentTexture(texture);
-			rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
 			// scan ahead until we find a different texture
 			endsurface = min(i + 1024, numsurfaces);
 			texturenumsurfaces = 0;
 			texturesurfacelist[texturenumsurfaces++] = surface;
-			for (;j < endsurface;j++)
+			if(FAKELIGHT_ENABLED)
 			{
-				surface = rsurface.modelsurfaces + surfacelist[j];
-				if (texture != surface->texture || rsurface.uselightmaptexture != (surface->lightmaptexture != NULL))
-					break;
-				texturesurfacelist[texturenumsurfaces++] = surface;
+				rsurface.uselightmaptexture = false;
+				for (;j < endsurface;j++)
+				{
+					surface = rsurface.modelsurfaces + surfacelist[j];
+					if (texture != surface->texture)
+						break;
+					texturesurfacelist[texturenumsurfaces++] = surface;
+				}
+			}
+			else
+			{
+				rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
+				for (;j < endsurface;j++)
+				{
+					surface = rsurface.modelsurfaces + surfacelist[j];
+					if (texture != surface->texture || rsurface.uselightmaptexture != (surface->lightmaptexture != NULL))
+						break;
+					texturesurfacelist[texturenumsurfaces++] = surface;
+				}
 			}
 			if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_TRANSDEPTH))
 				continue;
@@ -11787,17 +11801,31 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		surface = rsurface.modelsurfaces + surfacelist[i];
 		texture = surface->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
 		// scan ahead until we find a different texture
 		endsurface = min(i + MAXBATCH_TRANSPARENTSURFACES, numsurfaces);
 		texturenumsurfaces = 0;
 		texturesurfacelist[texturenumsurfaces++] = surface;
-		for (;j < endsurface;j++)
+		if(FAKELIGHT_ENABLED)
 		{
-			surface = rsurface.modelsurfaces + surfacelist[j];
-			if (texture != surface->texture || rsurface.uselightmaptexture != (surface->lightmaptexture != NULL))
-				break;
-			texturesurfacelist[texturenumsurfaces++] = surface;
+			rsurface.uselightmaptexture = false;
+			for (;j < endsurface;j++)
+			{
+				surface = rsurface.modelsurfaces + surfacelist[j];
+				if (texture != surface->texture)
+					break;
+				texturesurfacelist[texturenumsurfaces++] = surface;
+			}
+		}
+		else
+		{
+			rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
+			for (;j < endsurface;j++)
+			{
+				surface = rsurface.modelsurfaces + surfacelist[j];
+				if (texture != surface->texture || rsurface.uselightmaptexture != (surface->lightmaptexture != NULL))
+					break;
+				texturesurfacelist[texturenumsurfaces++] = surface;
+			}
 		}
 		// render the range of surfaces
 		if (ent == r_refdef.scene.worldentity)
@@ -11914,7 +11942,6 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 		// use skin 1 instead)
 		texture = surfacelist[i]->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
 		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
 		{
 			// if this texture is not the kind we want, skip ahead to the next one
@@ -11922,9 +11949,20 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 				;
 			continue;
 		}
-		// simply scan ahead until we find a different texture or lightmap state
-		for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
-			;
+		if(FAKELIGHT_ENABLED)
+		{
+			rsurface.uselightmaptexture = false;
+			// simply scan ahead until we find a different texture or lightmap state
+			for (;j < numsurfaces && texture == surfacelist[j]->texture;j++)
+				;
+		}
+		else
+		{
+			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
+			// simply scan ahead until we find a different texture or lightmap state
+			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
+				;
+		}
 		// render the range of surfaces
 		R_ProcessWorldTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, prepass);
 	}
@@ -12011,7 +12049,6 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 		// use skin 1 instead)
 		texture = surfacelist[i]->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
-		rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
 		if (!(rsurface.texture->currentmaterialflags & flagsmask) || (rsurface.texture->currentmaterialflags & MATERIALFLAG_NODRAW))
 		{
 			// if this texture is not the kind we want, skip ahead to the next one
@@ -12019,9 +12056,20 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 				;
 			continue;
 		}
-		// simply scan ahead until we find a different texture or lightmap state
-		for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
-			;
+		if(FAKELIGHT_ENABLED)
+		{
+			rsurface.uselightmaptexture = false;
+			// simply scan ahead until we find a different texture or lightmap state
+			for (;j < numsurfaces && texture == surfacelist[j]->texture;j++)
+				;
+		}
+		else
+		{
+			rsurface.uselightmaptexture = surfacelist[i]->lightmaptexture != NULL && !depthonly && !prepass;
+			// simply scan ahead until we find a different texture or lightmap state
+			for (;j < numsurfaces && texture == surfacelist[j]->texture && rsurface.uselightmaptexture == (surfacelist[j]->lightmaptexture != NULL);j++)
+				;
+		}
 		// render the range of surfaces
 		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent, prepass);
 	}
