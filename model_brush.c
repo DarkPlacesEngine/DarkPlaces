@@ -7382,9 +7382,12 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				vcurrent.nextindex = -1;
 				vcurrent.textureindex = textureindex;
 				vcurrent.submodelindex = submodelindex;
-				VectorCopy(v + 3*index1, vcurrent.v);
-				Vector2Copy(vt + 2*index2, vcurrent.vt);
-				VectorCopy(vn + 3*index3, vcurrent.vn);
+				if (v && index1 >= 0 && index1 < numv)
+					VectorCopy(v + 3*index1, vcurrent.v);
+				if (vt && index2 >= 0 && index2 < numvt)
+					Vector2Copy(vt + 2*index2, vcurrent.vt);
+				if (vn && index3 >= 0 && index3 < numvn)
+					VectorCopy(vn + 3*index3, vcurrent.vn);
 				if (numtriangles == 0)
 				{
 					VectorCopy(vcurrent.v, mins);
