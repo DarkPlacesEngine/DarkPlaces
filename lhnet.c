@@ -1105,7 +1105,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		SOCKLEN_T inetaddresslength;
 		address->addresstype = LHNETADDRESSTYPE_NONE;
 		inetaddresslength = sizeof(address->addr.in6);
-		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, 0, &address->addr.sock, &inetaddresslength);
+		value = recvfrom(lhnetsocket->inetsocket, (char *)content, maxcontentlength, LHNET_RECVFROM_FLAGS, &address->addr.sock, &inetaddresslength);
 		if (value > 0)
 		{
 			address->addresstype = LHNETADDRESSTYPE_INET6;
