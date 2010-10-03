@@ -72,7 +72,7 @@ void Host_Status_f (void)
 	client_t *client;
 	int seconds = 0, minutes = 0, hours = 0, i, j, k, in, players, ping = 0, packetloss = 0;
 	void (*print) (const char *fmt, ...);
-	char ip[22];
+	char ip[48]; // can contain a full length v6 address with [] and a port
 	int frags;
 
 	if (cmd_source == src_command)
@@ -185,11 +185,11 @@ void Host_Status_f (void)
 		}
 		else if (in == 1) // extended layout
 		{
-			print ("%s%-21s %2i %4i %2i:%02i:%02i %4i  #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, packetloss, ping, hours, minutes, seconds, frags, i+1, client->name);
+			print ("%s%-47s %2i %4i %2i:%02i:%02i %4i  #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, packetloss, ping, hours, minutes, seconds, frags, i+1, client->name);
 		}
 		else if (in == 2) // reduced layout
 		{
-			print ("%s%-21s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
+			print ("%s%-47s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
 		}
 	}
 
