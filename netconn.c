@@ -1528,6 +1528,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 				/// \TODO: make some basic checks of the IP address (broadcast, ...)
 
+#ifdef WHY_JUST_WHY
 				ifname = LHNETADDRESS_GetInterfaceName(senderaddress);
 				if (ifname != NULL)
 				{
@@ -1537,6 +1538,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 								ifname, port);
 				}
 				else
+#endif
 				{
 					dpsnprintf (ipstring, sizeof (ipstring), "[%x:%x:%x:%x:%x:%x:%x:%x]:%hu",
 								(data[1] << 8) | data[2], (data[3] << 8) | data[4], (data[5] << 8) | data[6], (data[7] << 8) | data[8],
