@@ -1531,16 +1531,16 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 				ifname = LHNETADDRESS_GetInterfaceName(senderaddress);
 				if (ifname != NULL)
 				{
-					dpsnprintf (ipstring, sizeof (ipstring), "[%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x%%%s]:%hu",
-								data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
-								data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
+					dpsnprintf (ipstring, sizeof (ipstring), "[%x:%x:%x:%x:%x:%x:%x:%x%%%s]:%hu",
+								(data[1] << 8) | data[2], (data[3] << 8) | data[4], (data[5] << 8) | data[6], (data[7] << 8) | data[8],
+								(data[9] << 8) | data[10], (data[11] << 8) | data[12], (data[13] << 8) | data[14], (data[15] << 8) | data[16],
 								ifname, port);
 				}
 				else
 				{
-					dpsnprintf (ipstring, sizeof (ipstring), "[%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x:%x%02x]:%hu",
-								data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8],
-								data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
+					dpsnprintf (ipstring, sizeof (ipstring), "[%x:%x:%x:%x:%x:%x:%x:%x]:%hu",
+								(data[1] << 8) | data[2], (data[3] << 8) | data[4], (data[5] << 8) | data[6], (data[7] << 8) | data[8],
+								(data[9] << 8) | data[10], (data[11] << 8) | data[12], (data[13] << 8) | data[14], (data[15] << 8) | data[16],
 								port);
 				}
 			}
