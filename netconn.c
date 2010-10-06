@@ -1527,11 +1527,11 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 			if (port != 0)
 			{
+#ifdef WHY_JUST_WHY
 				const char *ifname;
 
 				/// \TODO: make some basic checks of the IP address (broadcast, ...)
 
-#ifdef WHY_JUST_WHY
 				ifname = LHNETADDRESS_GetInterfaceName(senderaddress);
 				if (ifname != NULL)
 				{
