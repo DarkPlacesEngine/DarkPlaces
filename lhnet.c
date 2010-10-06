@@ -386,8 +386,12 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 	address->addresstype = LHNETADDRESSTYPE_NONE;
 	port = 0;
 	colon = strrchr(string, ':');
-	if (colon)
+	if (colon && (colon == strchr(string, ':') || (string[0] == '[' && colon - string > 0 && colon[-1] == ']'))I)
+	//           EITHER: colon is the ONLY colon  OR: colon comes after [...] delimited IPv6 address
+	//           fixes misparsing of IPv6 addresses without port
+	{
 		port = atoi(colon + 1);
+	}
 	else
 		colon = string + strlen(string);
 	if (port == 0)
