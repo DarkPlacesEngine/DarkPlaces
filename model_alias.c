@@ -21,7 +21,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "r_shadow.h"
+#include "mod_skeletal_animatevertices_generic.h"
+#ifdef SSE_POSSIBLE
+#include "mod_skeletal_animatevertices_sse.h"
+#endif
 
+#ifdef SSE_POSSIBLE
+static qboolean r_skeletal_use_sse_defined = false;
+cvar_t r_skeletal_use_sse = {0, "r_skeletal_use_sse", "1", "use SSE for skeletal model animation"};
+#endif
 cvar_t r_skeletal_debugbone = {0, "r_skeletal_debugbone", "-1", "development cvar for testing skeletal model code"};
 cvar_t r_skeletal_debugbonecomponent = {0, "r_skeletal_debugbonecomponent", "3", "development cvar for testing skeletal model code"};
 cvar_t r_skeletal_debugbonevalue = {0, "r_skeletal_debugbonevalue", "100", "development cvar for testing skeletal model code"};
@@ -31,6 +39,88 @@ cvar_t r_skeletal_debugtranslatez = {0, "r_skeletal_debugtranslatez", "1", "deve
 cvar_t mod_alias_supporttagscale = {0, "mod_alias_supporttagscale", "1", "support scaling factors in bone/tag attachment matrices as supported by MD3"};
 
 float mod_md3_sin[320];
+
+static size_t Mod_Skeltal_AnimateVertices_maxbonepose = 0;
+static void *Mod_Skeltal_AnimateVertices_bonepose = NULL;
+void Mod_Skeletal_FreeBuffers(void)
+{
+	if(Mod_Skeltal_AnimateVertices_bonepose)
+		Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
+	Mod_Skeltal_AnimateVertices_maxbonepose = 0;
+	Mod_Skeltal_AnimateVertices_bonepose = NULL;
+}
+void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes)
+{
+	if(Mod_Skeltal_AnimateVertices_maxbonepose < nbytes)
+	{
+		Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
+		Mod_Skeltal_AnimateVertices_bonepose = Z_Malloc(nbytes);
+		Mod_Skeltal_AnimateVertices_maxbonepose = nbytes;
+	}
+	return Mod_Skeltal_AnimateVertices_bonepose;
+}
+
+void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+{
+#ifdef SSE_POSSIBLE
+	if(r_skeletal_use_sse_defined)
+		if(r_skeletal_use_sse.integer)
+		{
+			Mod_Skeletal_AnimateVertices_SSE(model, frameblend, skeleton, vertex3f, normal3f, svector3f, tvector3f);
+			return;
+		}
+#endif
+	Mod_Skeletal_AnimateVertices_Generic(model, frameblend, skeleton, vertex3f, normal3f, svector3f, tvector3f);
+}
+
+#ifdef SSE_POSSIBLE
+#ifndef SSE_PRESENT
+// code from SDL, shortened as we can expect CPUID to work
+static int CPUID_Features(void)
+{
+	int features = 0;
+# if defined(__GNUC__) && defined(__i386__)
+        __asm__ (
+"        movl    %%ebx,%%edi\n"
+"        xorl    %%eax,%%eax                                           \n"
+"        incl    %%eax                                                 \n"
+"        cpuid                       # Get family/model/stepping/features\n"
+"        movl    %%edx,%0                                              \n"
+"        movl    %%edi,%%ebx\n"
+        : "=m" (features)
+        :
+        : "%eax", "%ecx", "%edx", "%edi"
+        );
+# elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+        __asm {
+        xor     eax, eax
+        inc     eax
+        cpuid                       ; Get family/model/stepping/features
+        mov     features, edx
+        }
+# else
+#  error SSE_POSSIBLE set but no CPUID implementation
+# endif
+	return features;
+}
+#endif
+static qboolean Have_SSE(void)
+{
+	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
+	if(COM_CheckParm("-nosse"))
+		return false;
+	// COMMANDLINEOPTION: SSE: -forcesse enables SSE support and disables detection
+#ifdef SSE_PRESENT
+	return true;
+#else
+	if(COM_CheckParm("-forcesse"))
+		return true;
+	if(CPUID_Features() & (1 << 25))
+		return true;
+	return false;
+#endif
+}
+#endif
 
 void Mod_AliasInit (void)
 {
@@ -44,6 +134,20 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&mod_alias_supporttagscale);
 	for (i = 0;i < 320;i++)
 		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
+#ifdef SSE_POSSIBLE
+	{
+		if(Have_SSE())
+		{
+			Con_Printf("Skeletal animation uses SSE code path\n");
+			r_skeletal_use_sse_defined = true;
+			Cvar_RegisterVariable(&r_skeletal_use_sse);
+		}
+		else
+			Con_Printf("Skeletal animation uses generic code path (SSE disabled or not detected)\n");
+	}
+#else
+	Con_Printf("Skeletal animation uses generic code path (SSE not compiled in)\n");
+#endif
 }
 
 int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
@@ -104,216 +208,6 @@ int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const flo
 		}
 	}
 	return Mod_Skeletal_AddBlend(model, &newweights);
-}
-
-static int maxbonepose = 0;
-static float (*bonepose)[12] = NULL;
-
-void Mod_Skeletal_FreeBuffers(void)
-{
-	if(bonepose)
-		Mem_Free(bonepose);
-	maxbonepose = 0;
-	bonepose = NULL;
-}
-
-void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
-{
-	// vertex weighted skeletal
-	int i, k;
-	int blends;
-	float m[12];
-	float (*boneposerelative)[12];
-	const blendweights_t * RESTRICT weights;
-
-	if (maxbonepose < model->num_bones*2 + model->surfmesh.num_blends)
-	{
-		if (bonepose)
-			Z_Free(bonepose);
-		maxbonepose = model->num_bones*2 + model->surfmesh.num_blends;
-		bonepose = (float (*)[12])Z_Malloc(maxbonepose * sizeof(float[12]));
-	}
-
-	boneposerelative = bonepose + model->num_bones;
-
-	if (skeleton && !skeleton->relativetransforms)
-		skeleton = NULL;
-
-	// interpolate matrices
-	if (skeleton)
-	{
-		for (i = 0;i < model->num_bones;i++)
-		{
-			Matrix4x4_ToArray12FloatD3D(&skeleton->relativetransforms[i], m);
-			if (model->data_bones[i].parent >= 0)
-				R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
-			else
-				memcpy(bonepose[i], m, sizeof(m));
-
-			// create a relative deformation matrix to describe displacement
-			// from the base mesh, which is used by the actual weighting
-			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
-		}
-	}
-	else
-	{
-		float originscale = model->num_posescale;
-		float x,y,z,w,lerp;
-		const short * RESTRICT pose6s;
-		for (i = 0;i < model->num_bones;i++)
-		{
-			memset(m, 0, sizeof(m));
-			for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
-			{
-				pose6s = model->data_poses6s + 6 * (frameblend[blends].subframe * model->num_bones + i);
-				lerp = frameblend[blends].lerp;
-				x = pose6s[3] * (1.0f / 32767.0f);
-				y = pose6s[4] * (1.0f / 32767.0f);
-				z = pose6s[5] * (1.0f / 32767.0f);
-				w = 1.0f - (x*x+y*y+z*z);
-				w = w > 0.0f ? -sqrt(w) : 0.0f;
-				m[ 0] += (1-2*(y*y+z*z)) * lerp;
-				m[ 1] += (  2*(x*y-z*w)) * lerp;
-				m[ 2] += (  2*(x*z+y*w)) * lerp;
-				m[ 3] += (pose6s[0] * originscale) * lerp;
-				m[ 4] += (  2*(x*y+z*w)) * lerp;
-				m[ 5] += (1-2*(x*x+z*z)) * lerp;
-				m[ 6] += (  2*(y*z-x*w)) * lerp;
-				m[ 7] += (pose6s[1] * originscale) * lerp;
-				m[ 8] += (  2*(x*z-y*w)) * lerp;
-				m[ 9] += (  2*(y*z+x*w)) * lerp;
-				m[10] += (1-2*(x*x+y*y)) * lerp;
-				m[11] += (pose6s[2] * originscale) * lerp;
-			}
-			VectorNormalize(m	);
-			VectorNormalize(m + 4);
-			VectorNormalize(m + 8);
-			if (i == r_skeletal_debugbone.integer)
-				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
-			m[3] *= r_skeletal_debugtranslatex.value;
-			m[7] *= r_skeletal_debugtranslatey.value;
-			m[11] *= r_skeletal_debugtranslatez.value;
-			if (model->data_bones[i].parent >= 0)
-				R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
-			else
-				memcpy(bonepose[i], m, sizeof(m));
-			// create a relative deformation matrix to describe displacement
-			// from the base mesh, which is used by the actual weighting
-			R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative[i]);
-		}
-	}
-	
-	// generate matrices for all blend combinations
-	weights = model->surfmesh.data_blendweights;
-	for (i = 0;i < model->surfmesh.num_blends;i++, weights++)
-	{
-		float * RESTRICT b = boneposerelative[model->num_bones + i];
-		const float * RESTRICT m = boneposerelative[weights->index[0]];
-		float f = weights->influence[0] * (1.0f / 255.0f);
-		b[ 0] = f*m[ 0]; b[ 1] = f*m[ 1]; b[ 2] = f*m[ 2]; b[ 3] = f*m[ 3];
-		b[ 4] = f*m[ 4]; b[ 5] = f*m[ 5]; b[ 6] = f*m[ 6]; b[ 7] = f*m[ 7];
-		b[ 8] = f*m[ 8]; b[ 9] = f*m[ 9]; b[10] = f*m[10]; b[11] = f*m[11];
-		for (k = 1;k < 4 && weights->influence[k];k++)
-		{
-			m = boneposerelative[weights->index[k]];
-			f = weights->influence[k] * (1.0f / 255.0f);
-			b[ 0] += f*m[ 0]; b[ 1] += f*m[ 1]; b[ 2] += f*m[ 2]; b[ 3] += f*m[ 3];
-			b[ 4] += f*m[ 4]; b[ 5] += f*m[ 5]; b[ 6] += f*m[ 6]; b[ 7] += f*m[ 7];
-			b[ 8] += f*m[ 8]; b[ 9] += f*m[ 9]; b[10] += f*m[10]; b[11] += f*m[11];
-		}
-	}
-
-	// transform vertex attributes by blended matrices
-	if (vertex3f)
-	{
-		const float * RESTRICT v = model->surfmesh.data_vertex3f;
-		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		// special case common combinations of attributes to avoid repeated loading of matrices
-		if (normal3f)
-		{
-			const float * RESTRICT n = model->surfmesh.data_normal3f;
-			if (svector3f && tvector3f)
-			{
-				const float * RESTRICT sv = model->surfmesh.data_svector3f;
-				const float * RESTRICT tv = model->surfmesh.data_tvector3f;
-				for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, sv += 3, tv += 3, b++, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3)
-				{
-					const float * RESTRICT m = boneposerelative[*b];
-					vertex3f[0] = (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-					vertex3f[1] = (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-					vertex3f[2] = (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
-					normal3f[0] = (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
-					normal3f[1] = (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
-					normal3f[2] = (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
-					svector3f[0] = (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
-					svector3f[1] = (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
-					svector3f[2] = (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
-					tvector3f[0] = (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
-					tvector3f[1] = (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
-					tvector3f[2] = (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
-				}
-				return;
-			}
-			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, n += 3, b++, vertex3f += 3, normal3f += 3)
-			{
-				const float * RESTRICT m = boneposerelative[*b];
-				vertex3f[0] = (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-			   	vertex3f[1] = (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-			   	vertex3f[2] = (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
-			   	normal3f[0] = (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
-				normal3f[1] = (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
-				normal3f[2] = (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
-			}
-		}
-		else
-		{
-			for (i = 0;i < model->surfmesh.num_vertices;i++, v += 3, b++, vertex3f += 3)
-			{
-				const float * RESTRICT m = boneposerelative[*b];
-				vertex3f[0] = (v[0] * m[0] + v[1] * m[1] + v[2] * m[ 2] + m[ 3]);
-				vertex3f[1] = (v[0] * m[4] + v[1] * m[5] + v[2] * m[ 6] + m[ 7]);
-				vertex3f[2] = (v[0] * m[8] + v[1] * m[9] + v[2] * m[10] + m[11]);
-			}
-		}
-	}
-	else if (normal3f)
-	{
-		const float * RESTRICT n = model->surfmesh.data_normal3f;
-		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0;i < model->surfmesh.num_vertices;i++, n += 3, b++, normal3f += 3)
-		{
-			const float * RESTRICT m = boneposerelative[*b];
-			normal3f[0] = (n[0] * m[0] + n[1] * m[1] + n[2] * m[ 2]);
-			normal3f[1] = (n[0] * m[4] + n[1] * m[5] + n[2] * m[ 6]);
-			normal3f[2] = (n[0] * m[8] + n[1] * m[9] + n[2] * m[10]);
-		}
-	}
-
-	if (svector3f)
-	{
-		const float * RESTRICT sv = model->surfmesh.data_svector3f;
-		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0;i < model->surfmesh.num_vertices;i++, sv += 3, b++, svector3f += 3)
-		{
-			const float * RESTRICT m = boneposerelative[*b];
-			svector3f[0] = (sv[0] * m[0] + sv[1] * m[1] + sv[2] * m[ 2]);
-			svector3f[1] = (sv[0] * m[4] + sv[1] * m[5] + sv[2] * m[ 6]);
-			svector3f[2] = (sv[0] * m[8] + sv[1] * m[9] + sv[2] * m[10]);
-		}
-	}
-
-	if (tvector3f)
-	{
-		const float * RESTRICT tv = model->surfmesh.data_tvector3f;
-		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0;i < model->surfmesh.num_vertices;i++, tv += 3, b++, tvector3f += 3)
-		{
-			const float * RESTRICT m = boneposerelative[*b];
-			tvector3f[0] = (tv[0] * m[0] + tv[1] * m[1] + tv[2] * m[ 2]);
-			tvector3f[1] = (tv[0] * m[4] + tv[1] * m[5] + tv[2] * m[ 6]);
-			tvector3f[2] = (tv[0] * m[8] + tv[1] * m[9] + tv[2] * m[10]);
-		}
-	}
 }
 
 void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
@@ -404,7 +298,6 @@ void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend
 		}
 	}
 }
-
 void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph

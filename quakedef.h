@@ -445,15 +445,28 @@ extern cvar_t developer_loading;
 #if defined(__GNUC__)
 # if defined(__i386__)
 #  define DP_ARCH_STR		"686"
+#  define SSE_POSSIBLE
 # elif defined(__x86_64__)
 #  define DP_ARCH_STR		"x86_64"
+#  define SSE_PRESENT
 # elif defined(__powerpc__)
 #  define DP_ARCH_STR		"ppc"
 # endif
 #elif defined(_WIN64)
 # define DP_ARCH_STR		"x86_64"
+# define SSE_PRESENT
 #elif defined(WIN32)
 # define DP_ARCH_STR		"x86"
+# define SSE_POSSIBLE
+#endif
+
+#ifdef SSE_PRESENT
+# define SSE_POSSIBLE
+#endif
+
+#ifdef NO_SSE
+# undef SSE_PRESENT
+# undef SSE_POSSIBLE
 #endif
 
 /// incremented every frame, never reset

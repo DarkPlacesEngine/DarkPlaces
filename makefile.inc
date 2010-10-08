@@ -138,6 +138,8 @@ OBJ_COMMON= \
 	mdfour.o \
 	menu.o \
 	meshqueue.o \
+	mod_skeletal_animatevertices_sse.o \
+	mod_skeletal_animatevertices_generic.o \
 	model_alias.o \
 	model_brush.o \
 	model_shared.o \
@@ -187,6 +189,8 @@ CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
 CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
 CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
+
+CFLAGS_SSE=-msse
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
@@ -512,6 +516,10 @@ snd_3dras.o: snd_3dras.c
 cd_sdl.o: cd_sdl.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
+
+mod_skeletal_animatevertices_sse.o: mod_skeletal_animatevertices_sse.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SSE)
 
 darkplaces.o: %.o : %.rc
 	$(CHECKLEVEL2)
