@@ -235,5 +235,14 @@ aliasbone_t;
 // for decoding md3 model latlong vertex normals
 extern float mod_md3_sin[320];
 
+extern cvar_t r_skeletal_debugbone;
+extern cvar_t r_skeletal_debugbonecomponent;
+extern cvar_t r_skeletal_debugbonevalue;
+extern cvar_t r_skeletal_debugtranslatex;
+extern cvar_t r_skeletal_debugtranslatey;
+extern cvar_t r_skeletal_debugtranslatez;
+
+void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes);
+
 #endif
 
