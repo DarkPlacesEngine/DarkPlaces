@@ -2536,9 +2536,13 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 
 	// now convert the scissor rectangle to integer screen coordinates
 	ix1 = (int)(x1 - 1.0f);
-	iy1 = vid.height - (int)(y2 - 1.0f);
+	//iy1 = vid.height - (int)(y2 - 1.0f);
+	//iy1 = r_refdef.view.viewport.width + 2 * r_refdef.view.viewport.x - (int)(y2 - 1.0f);
+	iy1 = (int)(y1 - 1.0f);
 	ix2 = (int)(x2 + 1.0f);
-	iy2 = vid.height - (int)(y1 + 1.0f);
+	//iy2 = vid.height - (int)(y1 + 1.0f);
+	//iy2 = r_refdef.view.viewport.height + 2 * r_refdef.view.viewport.y - (int)(y1 + 1.0f);
+	iy2 = (int)(y2 + 1.0f);
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
 
 	// clamp it to the screen
