@@ -516,7 +516,11 @@ void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t
 	Matrix4x4_Transform4 (&v->projectmatrix, temp, out);
 	iw = 1.0f / out[3];
 	out[0] = v->x + (out[0] * iw + 1.0f) * v->width * 0.5f;
-	out[1] = v->y + v->height - (out[1] * iw + 1.0f) * v->height * 0.5f;
+
+	// for an odd reason, inverting this is wrong for R_Shadow_ScissorForBBox (we then get badly scissored lights)
+	//out[1] = v->y + v->height - (out[1] * iw + 1.0f) * v->height * 0.5f;
+	out[1] = v->y + (out[1] * iw + 1.0f) * v->height * 0.5f;
+
 	out[2] = v->z + (out[2] * iw + 1.0f) * v->depth * 0.5f;
 }
 
