@@ -2265,8 +2265,161 @@ void R_Shadow_RenderMode_End(void)
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 }
 
+int bboxedges[12][2] =
+{
+	// top
+	{0, 1}, // +X
+	{0, 2}, // +Y
+	{1, 3}, // Y, +X
+	{2, 3}, // X, +Y
+	// bottom
+	{4, 5}, // +X
+	{4, 6}, // +Y
+	{5, 7}, // Y, +X
+	{6, 7}, // X, +Y
+	// verticals
+	{0, 4}, // +Z
+	{1, 5}, // X, +Z
+	{2, 6}, // Y, +Z
+	{3, 7}, // XY, +Z
+};
+
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
+	int i, ix1, iy1, ix2, iy2;
+	float x1, y1, x2, y2;
+	vec4_t v, v2;
+	float vertex[20][3];
+	int j, k;
+	vec4_t plane4f;
+	int numvertices;
+	float corner[8][4];
+	float dist[8];
+	int sign[8];
+	float f;
+
+	r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
+	r_shadow_lightscissor[1] = r_refdef.view.viewport.y;
+	r_shadow_lightscissor[2] = r_refdef.view.viewport.width;
+	r_shadow_lightscissor[3] = r_refdef.view.viewport.height;
+
+	if (!r_shadow_scissor.integer)
+		return false;
+
+	// if view is inside the light box, just say yes it's visible
+	if (BoxesOverlap(r_refdef.view.origin, r_refdef.view.origin, mins, maxs))
+		return false;
+
+	x1 = y1 = x2 = y2 = 0;
+
+	// transform all corners that are infront of the nearclip plane
+	VectorNegate(r_refdef.view.frustum[4].normal, plane4f);
+	plane4f[3] = r_refdef.view.frustum[4].dist;
+	numvertices = 0;
+	for (i = 0;i < 8;i++)
+	{
+		Vector4Set(corner[i], (i & 1) ? maxs[0] : mins[0], (i & 2) ? maxs[1] : mins[1], (i & 4) ? maxs[2] : mins[2], 1);
+		dist[i] = DotProduct4(corner[i], plane4f);
+		sign[i] = dist[i] > 0;
+		if (!sign[i])
+		{
+			VectorCopy(corner[i], vertex[numvertices]);
+			numvertices++;
+		}
+	}
+	// if some points are behind the nearclip, add clipped edge points to make
+	// sure that the scissor boundary is complete
+	if (numvertices > 0 && numvertices < 8)
+	{
+		// add clipped edge points
+		for (i = 0;i < 12;i++)
+		{
+			j = bboxedges[i][0];
+			k = bboxedges[i][1];
+			if (sign[j] != sign[k])
+			{
+				f = dist[j] / (dist[j] - dist[k]);
+				VectorLerp(corner[j], f, corner[k], vertex[numvertices]);
+				numvertices++;
+			}
+		}
+	}
+
+	// if we have no points to check, the light is behind the view plane
+	if (!numvertices)
+		return true;
+
+	// if we have some points to transform, check what screen area is covered
+	x1 = y1 = x2 = y2 = 0;
+	v[3] = 1.0f;
+	//Con_Printf("%i vertices to transform...\n", numvertices);
+	for (i = 0;i < numvertices;i++)
+	{
+		VectorCopy(vertex[i], v);
+		R_Viewport_TransformToScreen(&r_refdef.view.viewport, v, v2);
+		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
+		if (i)
+		{
+			if (x1 > v2[0]) x1 = v2[0];
+			if (x2 < v2[0]) x2 = v2[0];
+			if (y1 > v2[1]) y1 = v2[1];
+			if (y2 < v2[1]) y2 = v2[1];
+		}
+		else
+		{
+			x1 = x2 = v2[0];
+			y1 = y2 = v2[1];
+		}
+	}
+
+	// now convert the scissor rectangle to integer screen coordinates
+	ix1 = (int)(x1 - 1.0f);
+	//iy1 = vid.height - (int)(y2 - 1.0f);
+	//iy1 = r_refdef.view.viewport.width + 2 * r_refdef.view.viewport.x - (int)(y2 - 1.0f);
+	iy1 = (int)(y1 - 1.0f);
+	ix2 = (int)(x2 + 1.0f);
+	//iy2 = vid.height - (int)(y1 + 1.0f);
+	//iy2 = r_refdef.view.viewport.height + 2 * r_refdef.view.viewport.y - (int)(y1 + 1.0f);
+	iy2 = (int)(y2 + 1.0f);
+	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
+
+	// clamp it to the screen
+	if (ix1 < r_refdef.view.viewport.x) ix1 = r_refdef.view.viewport.x;
+	if (iy1 < r_refdef.view.viewport.y) iy1 = r_refdef.view.viewport.y;
+	if (ix2 > r_refdef.view.viewport.x + r_refdef.view.viewport.width) ix2 = r_refdef.view.viewport.x + r_refdef.view.viewport.width;
+	if (iy2 > r_refdef.view.viewport.y + r_refdef.view.viewport.height) iy2 = r_refdef.view.viewport.y + r_refdef.view.viewport.height;
+
+	// if it is inside out, it's not visible
+	if (ix2 <= ix1 || iy2 <= iy1)
+		return true;
+
+	// the light area is visible, set up the scissor rectangle
+	r_shadow_lightscissor[0] = ix1;
+	r_shadow_lightscissor[1] = iy1;
+	r_shadow_lightscissor[2] = ix2 - ix1;
+	r_shadow_lightscissor[3] = iy2 - iy1;
+
+	// D3D Y coordinate is top to bottom, OpenGL is bottom to top, fix the D3D one
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		r_shadow_lightscissor[1] = vid.height - r_shadow_lightscissor[1] - r_shadow_lightscissor[3];
+		break;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		break;
+	}
+
+	r_refdef.stats.lights_scissored++;
+	return false;
+
+	/*
+	VorteX: originally written by divVerent, that code is broken on ATI
+
 	if (!r_shadow_scissor.integer)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
@@ -2275,7 +2428,6 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		r_shadow_lightscissor[3] = r_refdef.view.viewport.height;
 		return false;
 	}
-
 	if(R_ScissorForBBox(mins, maxs, r_shadow_lightscissor))
 	{
 		if(r_shadow_lightscissor[0] != r_refdef.view.viewport.x
@@ -2287,6 +2439,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	}
 	else
 		return true; // invisible
+	*/
 }
 
 static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int numverts, const float *diffusecolor, const float *ambientcolor)
