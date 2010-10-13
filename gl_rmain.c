@@ -189,7 +189,6 @@ cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspectiv
 cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "16", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
 
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
-cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
 
 cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "1", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
 
@@ -750,16 +749,8 @@ static const char *builtinshaderstring =
 "#ifdef USESATURATION\n"
 "	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
 "	float y = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));\n"
-"	// 'vampire sight' effect, wheres red is compensated\n"
-"	#ifdef SATURATION_REDCOMPENSATE\n"
-"		float rboost = max(0.0, (gl_FragColor.r - max(gl_FragColor.g, gl_FragColor.b))*(1.0 - Saturation));\n"
-"		gl_FragColor.rgb = mix(vec3(y), gl_FragColor.rgb, Saturation);\n"
-"		gl_FragColor.r += rboost;\n"
-"	#else\n"
-"		// normal desaturation\n"
-"		//gl_FragColor = vec3(y) + (gl_FragColor.rgb - vec3(y)) * Saturation;\n"
-"		gl_FragColor.rgb = mix(vec3(y), gl_FragColor.rgb, Saturation);\n"
-"	#endif\n"
+"	//gl_FragColor = vec3(y) + (gl_FragColor.rgb - vec3(y)) * Saturation;\n"
+"	gl_FragColor.rgb = mix(vec3(y), gl_FragColor.rgb, Saturation);\n"
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -2012,16 +2003,8 @@ const char *builtincgshaderstring =
 "#ifdef USESATURATION\n"
 "	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
 "	float y = dot(gl_FragColor.rgb, float3(0.299, 0.587, 0.114));\n"
-"	// 'vampire sight' effect, wheres red is compensated\n"
-"	#ifdef SATURATION_REDCOMPENSATE\n"
-"		float rboost = max(0.0, (gl_FragColor.r - max(gl_FragColor.g, gl_FragColor.b))*(1.0 - Saturation));\n"
-"		gl_FragColor.rgb = mix(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
-"		gl_FragColor.r += r;\n"
-"	#else\n"
-"		// normal desaturation\n"
-"		//gl_FragColor = float3(y,y,y) + (gl_FragColor.rgb - float3(y)) * Saturation;\n"
-"		gl_FragColor.rgb = lerp(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
-"	#endif\n"
+"	//gl_FragColor = float3(y,y,y) + (gl_FragColor.rgb - float3(y)) * Saturation;\n"
+"	gl_FragColor.rgb = lerp(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
 "#endif\n"
 "\n"
 "#ifdef USEGAMMARAMPS\n"
@@ -3584,21 +3567,6 @@ r_glsl_permutation_t;
 
 #define SHADERPERMUTATION_HASHSIZE 256
 
-// this called both on R_GLSL_CompileShader and R_HLSL_CacheShader
-// this function adds more "#define" to supply static parms, could be used by game-specific code part
-int vertstrings_count = 0;
-int geomstrings_count = 0;
-int fragstrings_count = 0;
-const char *vertstrings_list[64+3];
-const char *geomstrings_list[64+3];
-const char *fragstrings_list[64+3];
-void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
-{
-	if (mode == SHADERMODE_POSTPROCESS && (permutation & SHADERPERMUTATION_SATURATION))
-		if (r_glsl_saturation_redcompensate.integer)
-			fragstrings_list[fragstrings_count++] = "#define SATURATION_REDCOMPENSATE\n";
-}
-
 /// information about each possible shader permutation
 r_glsl_permutation_t *r_glsl_permutationhash[SHADERMODE_COUNT][SHADERPERMUTATION_HASHSIZE];
 /// currently selected permutation
@@ -3664,7 +3632,13 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 {
 	int i;
 	shadermodeinfo_t *modeinfo = glslshadermodeinfo + mode;
+	int vertstrings_count = 0;
+	int geomstrings_count = 0;
+	int fragstrings_count = 0;
 	char *vertexstring, *geometrystring, *fragmentstring;
+	const char *vertstrings_list[32+3];
+	const char *geomstrings_list[32+3];
+	const char *fragstrings_list[32+3];
 	char permutationname[256];
 
 	if (p->compiled)
@@ -3712,9 +3686,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 			fragstrings_list[fragstrings_count++] = "\n";
 		}
 	}
-
-	// add static parms
-	R_CompileShader_AddStaticParms(mode, permutation);
 
 	// now append the shader text itself
 	vertstrings_list[vertstrings_count++] = vertexstring;
@@ -4088,11 +4059,13 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 {
 	int i;
 	shadermodeinfo_t *modeinfo = cgshadermodeinfo + mode;
-	int vertstring_length = 0;
-	int geomstring_length = 0;
-	int fragstring_length = 0;
-	char *t;
+	int vertstrings_count = 0, vertstring_length = 0;
+	int geomstrings_count = 0, geomstring_length = 0;
+	int fragstrings_count = 0, fragstring_length = 0;
 	char *vertexstring, *geometrystring, *fragmentstring;
+	const char *vertstrings_list[32+3];
+	const char *geomstrings_list[32+3];
+	const char *fragstrings_list[32+3];
 	char *vertstring, *geomstring, *fragstring;
 	char permutationname[256];
 	char cachename[256];
@@ -4116,9 +4089,6 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 
 	// the first pretext is which type of shader to compile as
 	// (later these will all be bound together as a program object)
-	vertstrings_count = 0;
-	geomstrings_count = 0;
-	fragstrings_count = 0;
 	vertstrings_list[vertstrings_count++] = "#define VERTEX_SHADER\n";
 	geomstrings_list[geomstrings_count++] = "#define GEOMETRY_SHADER\n";
 	fragstrings_list[fragstrings_count++] = "#define FRAGMENT_SHADER\n";
@@ -4713,11 +4683,14 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 {
 	int i;
 	shadermodeinfo_t *modeinfo = hlslshadermodeinfo + mode;
-	int vertstring_length = 0;
-	int geomstring_length = 0;
-	int fragstring_length = 0;
+	int vertstrings_count = 0, vertstring_length = 0;
+	int geomstrings_count = 0, geomstring_length = 0;
+	int fragstrings_count = 0, fragstring_length = 0;
 	char *t;
 	char *vertexstring, *geometrystring, *fragmentstring;
+	const char *vertstrings_list[32+3];
+	const char *geomstrings_list[32+3];
+	const char *fragstrings_list[32+3];
 	char *vertstring, *geomstring, *fragstring;
 	char permutationname[256];
 	char cachename[256];
@@ -4738,9 +4711,6 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 	strlcat(cachename, "hlsl/", sizeof(cachename));
 
 	// define HLSL so that the shader can tell apart the HLSL compiler and the Cg compiler
-	vertstrings_count = 0;
-	geomstrings_count = 0;
-	fragstrings_count = 0;
 	vertstrings_list[vertstrings_count++] = "#define HLSL\n";
 	geomstrings_list[geomstrings_count++] = "#define HLSL\n";
 	fragstrings_list[fragstrings_count++] = "#define HLSL\n";
@@ -4780,9 +4750,6 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 			fragstrings_list[fragstrings_count++] = "\n";
 		}
 	}
-
-	// add static parms
-	R_CompileShader_AddStaticParms(mode, permutation);
 
 	// replace spaces in the cachename with _ characters
 	for (i = 0;cachename[i];i++)
@@ -7373,7 +7340,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&gl_lightmaps);
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_glsl_saturation);
-	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
 	Cvar_RegisterVariable(&r_framedatasize);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
