@@ -8020,9 +8020,25 @@ static void R_View_SetFrustum(const int *scissor)
 		fpx =  1.0 - 2.0 * (scissor[0]              - r_refdef.view.viewport.x) / (double) (r_refdef.view.viewport.width);
 		fnx =  1.0 - 2.0 * (scissor[0] + scissor[2] - r_refdef.view.viewport.x) / (double) (r_refdef.view.viewport.width);
 
-		// non-flipped y coordinates
-		fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
-		fpy = -1.0 + 2.0 * (scissor[1] + scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+		// D3D Y coordinate is top to bottom, OpenGL is bottom to top, fix the D3D one
+		switch(vid.renderpath)
+		{
+			case RENDERPATH_D3D9:
+			case RENDERPATH_D3D10:
+			case RENDERPATH_D3D11:
+				// non-flipped y coordinates
+				fny = -1.0 + 2.0 * (vid.height - scissor[1] - scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+				fpy = -1.0 + 2.0 * (vid.height - scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+				break;
+			case RENDERPATH_GL11:
+			case RENDERPATH_GL13:
+			case RENDERPATH_GL20:
+			case RENDERPATH_CGGL:
+				// non-flipped y coordinates
+				fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+				fpy = -1.0 + 2.0 * (scissor[1] + scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+				break;
+		}
 	}
 	else
 	{
