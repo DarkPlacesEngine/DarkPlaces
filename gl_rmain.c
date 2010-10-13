@@ -7810,9 +7810,9 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 		p->mins[0] = min(p->mins[0], surface->mins[0]);
 		p->mins[1] = min(p->mins[1], surface->mins[1]);
 		p->mins[2] = min(p->mins[2], surface->mins[2]);
-		p->maxs[0] = min(p->maxs[0], surface->maxs[0]);
-		p->maxs[1] = min(p->maxs[1], surface->maxs[1]);
-		p->maxs[2] = min(p->maxs[2], surface->maxs[2]);
+		p->maxs[0] = max(p->maxs[0], surface->maxs[0]);
+		p->maxs[1] = max(p->maxs[1], surface->maxs[1]);
+		p->maxs[2] = max(p->maxs[2], surface->maxs[2]);
 	}
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= t->currentmaterialflags;
