@@ -7316,7 +7316,7 @@ static void R_DrawModelsAddWaterPlanes(void)
 static void R_View_SetFrustum(const int *scissor)
 {
 	int i;
-	double fpx, fnx, fpy, fny;
+	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
 
 	if(scissor)
@@ -7328,11 +7328,6 @@ static void R_View_SetFrustum(const int *scissor)
 		// non-flipped y coordinates
 		fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
 		fpy = -1.0 + 2.0 * (scissor[1] + scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
-	}
-	else
-	{
-		fnx = fny = -1;
-		fpx = fpy = +1;
 	}
 
 	// we can't trust r_refdef.view.forward and friends in reflected scenes
