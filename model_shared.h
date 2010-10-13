@@ -471,6 +471,7 @@ typedef struct q3shaderinfo_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+	float r_water_waterscroll[2]; // water normalmapscrollblend - scale and speed
 
 	// offsetmapping
 	dpoffsetmapping_technique_t offsetmapping;
@@ -607,6 +608,7 @@ typedef struct texture_s
 	float reflectfactor; // amount of reflection distort (1.0 = like the cvar specifies)
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
+	float r_water_waterscroll[2]; // scale and speed
 	int camera_entity; // entity number for use by cameras
 
 	// offsetmapping
