@@ -149,6 +149,7 @@ cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1",
 cvar_t r_water_resolutionmultiplier = {CVAR_SAVE, "r_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
 cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
+cvar_t r_water_scissormode = {CVAR_SAVE, "r_water_scissormode", "2", "scissor (1) and cull (2) water renders"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -6672,6 +6673,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
 	Cvar_RegisterVariable(&r_water_refractdistort);
 	Cvar_RegisterVariable(&r_water_reflectdistort);
+	Cvar_RegisterVariable(&r_water_scissormode);
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_lerplightstyles);
@@ -7311,11 +7313,27 @@ static void R_DrawModelsAddWaterPlanes(void)
 	}
 }
 
-static void R_View_SetFrustum(void)
+static void R_View_SetFrustum(const int *scissor)
 {
 	int i;
-	double slopex, slopey;
+	double fpx, fnx, fpy, fny;
 	vec3_t forward, left, up, origin;
+
+	if(scissor)
+	{
+		// flipped x coordinates (because x points left here)
+		fpx =  1.0 - 2.0 * (scissor[0]              - r_refdef.view.viewport.x) / (double) (r_refdef.view.viewport.width);
+		fnx =  1.0 - 2.0 * (scissor[0] + scissor[2] - r_refdef.view.viewport.x) / (double) (r_refdef.view.viewport.width);
+
+		// non-flipped y coordinates
+		fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+		fpy = -1.0 + 2.0 * (scissor[1] + scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
+	}
+	else
+	{
+		fnx = fny = -1;
+		fpx = fpy = +1;
+	}
 
 	// we can't trust r_refdef.view.forward and friends in reflected scenes
 	Matrix4x4_ToVectors(&r_refdef.view.matrix, forward, left, up, origin);
@@ -7384,13 +7402,17 @@ static void R_View_SetFrustum(void)
 
 	if (r_refdef.view.useperspective)
 	{
-		slopex = 1.0 / r_refdef.view.frustum_x;
-		slopey = 1.0 / r_refdef.view.frustum_y;
-		VectorMA(forward, -slopex, left, r_refdef.view.frustum[0].normal);
-		VectorMA(forward,  slopex, left, r_refdef.view.frustum[1].normal);
-		VectorMA(forward, -slopey, up  , r_refdef.view.frustum[2].normal);
-		VectorMA(forward,  slopey, up  , r_refdef.view.frustum[3].normal);
-		VectorCopy(forward, r_refdef.view.frustum[4].normal);
+		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
+		VectorMAMAM(1024, forward, fnx * 1024.0 * r_refdef.view.frustum_x, left, fny * 1024.0 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[0]);
+		VectorMAMAM(1024, forward, fpx * 1024.0 * r_refdef.view.frustum_x, left, fny * 1024.0 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[1]);
+		VectorMAMAM(1024, forward, fnx * 1024.0 * r_refdef.view.frustum_x, left, fpy * 1024.0 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[2]);
+		VectorMAMAM(1024, forward, fpx * 1024.0 * r_refdef.view.frustum_x, left, fpy * 1024.0 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[3]);
+
+		// then the normals from the corners relative to origin
+		CrossProduct(r_refdef.view.frustumcorner[2], r_refdef.view.frustumcorner[0], r_refdef.view.frustum[0].normal);
+		CrossProduct(r_refdef.view.frustumcorner[1], r_refdef.view.frustumcorner[3], r_refdef.view.frustum[1].normal);
+		CrossProduct(r_refdef.view.frustumcorner[0], r_refdef.view.frustumcorner[1], r_refdef.view.frustum[2].normal);
+		CrossProduct(r_refdef.view.frustumcorner[3], r_refdef.view.frustumcorner[2], r_refdef.view.frustum[3].normal);
 
 		// Leaving those out was a mistake, those were in the old code, and they
 		// fix a reproducable bug in this one: frustum culling got fucked up when viewmatrix was an identity matrix
@@ -7400,11 +7422,14 @@ static void R_View_SetFrustum(void)
 		VectorNormalize(r_refdef.view.frustum[2].normal);
 		VectorNormalize(r_refdef.view.frustum[3].normal);
 
-		// calculate frustum corners, which are used to calculate deformed frustum planes for shadow caster culling
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * r_refdef.view.frustum_x, left, -1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[0]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * r_refdef.view.frustum_x, left, -1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[1]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward, -1024 * r_refdef.view.frustum_x, left,  1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[2]);
-		VectorMAMAMAM(1, r_refdef.view.origin, 1024, forward,  1024 * r_refdef.view.frustum_x, left,  1024 * r_refdef.view.frustum_y, up, r_refdef.view.frustumcorner[3]);
+		// make the corners absolute
+		VectorAdd(r_refdef.view.frustumcorner[0], r_refdef.view.origin, r_refdef.view.frustumcorner[0]);
+		VectorAdd(r_refdef.view.frustumcorner[1], r_refdef.view.origin, r_refdef.view.frustumcorner[1]);
+		VectorAdd(r_refdef.view.frustumcorner[2], r_refdef.view.origin, r_refdef.view.frustumcorner[2]);
+		VectorAdd(r_refdef.view.frustumcorner[3], r_refdef.view.origin, r_refdef.view.frustumcorner[3]);
+
+		// one more normal
+		VectorCopy(forward, r_refdef.view.frustum[4].normal);
 
 		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal);
 		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal);
@@ -7466,10 +7491,19 @@ static void R_View_SetFrustum(void)
 	//PlaneClassify(&frustum[4]);
 }
 
+void R_View_UpdateWithScissor(const int *myscissor)
+{
+	R_Main_ResizeViewCache();
+	R_View_SetFrustum(myscissor);
+	R_View_WorldVisibility(r_refdef.view.useclipplane);
+	R_View_UpdateEntityVisible();
+	R_View_UpdateEntityLighting();
+}
+
 void R_View_Update(void)
 {
 	R_Main_ResizeViewCache();
-	R_View_SetFrustum();
+	R_View_SetFrustum(NULL);
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
 	R_View_UpdateEntityLighting();
@@ -7755,6 +7789,18 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 		p->materialflags = 0;
 		p->pvsvalid = false;
 		p->camera_entity = t->camera_entity;
+		VectorCopy(surface->mins, p->mins);
+		VectorCopy(surface->maxs, p->maxs);
+	}
+	else
+	{
+		// merge mins/maxs
+		p->mins[0] = min(p->mins[0], surface->mins[0]);
+		p->mins[1] = min(p->mins[1], surface->mins[1]);
+		p->mins[2] = min(p->mins[2], surface->mins[2]);
+		p->maxs[0] = min(p->maxs[0], surface->maxs[0]);
+		p->maxs[1] = min(p->maxs[1], surface->maxs[1]);
+		p->maxs[2] = min(p->maxs[2], surface->maxs[2]);
 	}
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= t->currentmaterialflags;
@@ -7773,6 +7819,7 @@ void R_Water_AddWaterPlane(msurface_t *surface)
 
 static void R_Water_ProcessPlanes(void)
 {
+	int myscissor[4];
 	r_refdef_view_t originalview;
 	r_refdef_view_t myview;
 	int planeindex;
@@ -7821,11 +7868,19 @@ static void R_Water_ProcessPlanes(void)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			r_refdef.view = myview;
+			if(r_water_scissormode.integer)
+			{
+				R_SetupView(true);
+				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
+					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
+			}
+
 			// render reflected scene and copy into texture
 			Matrix4x4_Reflect(&r_refdef.view.matrix, p->plane.normal[0], p->plane.normal[1], p->plane.normal[2], p->plane.dist, -2);
 			// update the r_refdef.view.origin because otherwise the sky renders at the wrong location (amongst other problems)
 			Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, r_refdef.view.origin);
 			r_refdef.view.clipplane = p->plane;
+
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
@@ -7840,7 +7895,12 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
-			R_View_Update();
+			if(r_water_scissormode.integer >= 2)
+				R_View_UpdateWithScissor(myscissor);
+			else
+				R_View_Update();
+			if(r_water_scissormode.integer)
+				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
@@ -7850,8 +7910,15 @@ static void R_Water_ProcessPlanes(void)
 		// (except that a clipping plane should be used to hide everything on one side of the water, and the viewer's weapon model should be omitted)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
-			r_waterstate.renderingrefraction = true;
 			r_refdef.view = myview;
+			if(r_water_scissormode.integer)
+			{
+				R_SetupView(true);
+				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
+					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
+			}
+
+			r_waterstate.renderingrefraction = true;
 
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
@@ -7874,7 +7941,12 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
-			R_View_Update();
+			if(r_water_scissormode.integer >= 2)
+				R_View_UpdateWithScissor(myscissor);
+			else
+				R_View_Update();
+			if(r_water_scissormode.integer)
+				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
@@ -7898,6 +7970,9 @@ static void R_Water_ProcessPlanes(void)
 				// we need to perform a matrix transform to render the view... so let's get the transformation matrix
 				CL_VM_TransformView(p->camera_entity - MAX_EDICTS, &r_refdef.view.matrix, &r_refdef.view.clipplane, visorigin);
 			}
+
+			// note: all of the view is used for displaying... so
+			// there is no use in scissoring
 
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
@@ -8695,6 +8770,7 @@ void R_RenderView(void)
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
+
 	CHECKGLERROR
 }
 
@@ -8945,6 +9021,27 @@ void R_RenderScene(void)
 		if (r_timereport_active)
 			R_TimeReport("coronas");
 	}
+
+#if 0
+	{
+		GL_DepthTest(false);
+		qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		GL_Color(1, 1, 1, 1);
+		qglBegin(GL_POLYGON);
+		qglVertex3f(r_refdef.view.frustumcorner[0][0], r_refdef.view.frustumcorner[0][1], r_refdef.view.frustumcorner[0][2]);
+		qglVertex3f(r_refdef.view.frustumcorner[1][0], r_refdef.view.frustumcorner[1][1], r_refdef.view.frustumcorner[1][2]);
+		qglVertex3f(r_refdef.view.frustumcorner[3][0], r_refdef.view.frustumcorner[3][1], r_refdef.view.frustumcorner[3][2]);
+		qglVertex3f(r_refdef.view.frustumcorner[2][0], r_refdef.view.frustumcorner[2][1], r_refdef.view.frustumcorner[2][2]);
+		qglEnd();
+		qglBegin(GL_POLYGON);
+		qglVertex3f(r_refdef.view.frustumcorner[0][0] + 1000 * r_refdef.view.forward[0], r_refdef.view.frustumcorner[0][1] + 1000 * r_refdef.view.forward[1], r_refdef.view.frustumcorner[0][2] + 1000 * r_refdef.view.forward[2]);
+		qglVertex3f(r_refdef.view.frustumcorner[1][0] + 1000 * r_refdef.view.forward[0], r_refdef.view.frustumcorner[1][1] + 1000 * r_refdef.view.forward[1], r_refdef.view.frustumcorner[1][2] + 1000 * r_refdef.view.forward[2]);
+		qglVertex3f(r_refdef.view.frustumcorner[3][0] + 1000 * r_refdef.view.forward[0], r_refdef.view.frustumcorner[3][1] + 1000 * r_refdef.view.forward[1], r_refdef.view.frustumcorner[3][2] + 1000 * r_refdef.view.forward[2]);
+		qglVertex3f(r_refdef.view.frustumcorner[2][0] + 1000 * r_refdef.view.forward[0], r_refdef.view.frustumcorner[2][1] + 1000 * r_refdef.view.forward[1], r_refdef.view.frustumcorner[2][2] + 1000 * r_refdef.view.forward[2]);
+		qglEnd();
+		qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+#endif
 
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)
