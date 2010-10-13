@@ -154,7 +154,7 @@ cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1",
 cvar_t r_water_resolutionmultiplier = {CVAR_SAVE, "r_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
 cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
-cvar_t r_water_scissormode = {CVAR_SAVE, "r_water_scissormode", "2", "scissor (1) and cull (2) water renders"};
+cvar_t r_water_scissormode = {CVAR_SAVE, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -8631,11 +8631,11 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
-			if(r_water_scissormode.integer >= 2)
+			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
 			else
 				R_View_Update();
-			if(r_water_scissormode.integer)
+			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene();
 
@@ -8677,11 +8677,11 @@ static void R_Water_ProcessPlanes(void)
 
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
-			if(r_water_scissormode.integer >= 2)
+			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
 			else
 				R_View_Update();
-			if(r_water_scissormode.integer)
+			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene();
 
