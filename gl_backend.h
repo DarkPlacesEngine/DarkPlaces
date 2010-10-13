@@ -20,6 +20,7 @@ extern int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 extern unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
 void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t out);
+qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor);
 void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float x1, float y1, float x2, float y2, float zNear, float zFar, const float *nearplane);
 void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float zNear, float zFar, const float *nearplane);
 void R_Viewport_InitPerspectiveInfinite(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float zNear, const float *nearplane);
