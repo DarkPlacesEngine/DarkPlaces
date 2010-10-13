@@ -943,6 +943,9 @@ static const char *builtinshaderstring =
 "uniform float ReflectFactor;\n"
 "uniform float ReflectOffset;\n"
 "uniform float ClientTime;\n"
+"#ifdef USENORMALMAPSCROLLBLEND\n"
+"uniform vec2 NormalmapScrollBlend;\n"
+"#endif\n"
 "\n"
 "void main(void)\n"
 "{\n"
@@ -951,9 +954,13 @@ static const char *builtinshaderstring =
 "	vec4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
 "	//SafeScreenTexCoord = gl_FragCoord.xyxy * vec4(1.0 / 1920.0, 1.0 / 1200.0, 1.0 / 1920.0, 1.0 / 1200.0);\n"
 "	// slight water animation via 2 layer scrolling (todo: tweak)\n"
-"	vec3 normal = texture2D(Texture_Normal, TexCoord + vec2(0.08, 0.08)*ClientTime*0.5).rgb - vec3(1.0);\n"
-"	normal += texture2D(Texture_Normal, (TexCoord + vec2(-0.06, -0.09)*ClientTime)*0.75).rgb;\n"
-"	vec4 ScreenTexCoord = SafeScreenTexCoord + vec2(normalize(normal) + vec3(0.15)).xyxy * DistortScaleRefractReflect;\n"
+"	#ifdef USENORMALMAPSCROLLBLEND\n"
+"		vec3 normal = texture2D(Texture_Normal, (TexCoord + vec2(0.08, 0.08)*ClientTime*NormalmapScrollBlend.x*0.5)*NormalmapScrollBlend.y).rgb - vec3(1.0);\n"
+"		normal += texture2D(Texture_Normal, (TexCoord + vec2(-0.06, -0.09)*ClientTime*NormalmapScrollBlend.x)*NormalmapScrollBlend.y*0.75).rgb;\n"
+"		vec4 ScreenTexCoord = SafeScreenTexCoord + vec2(normalize(normal) + vec3(0.15)).xyxy * DistortScaleRefractReflect;\n"
+"	#else\n"
+"		vec4 ScreenTexCoord = SafeScreenTexCoord + vec2(normalize(vec3(texture2D(Texture_Normal, TexCoord)) - vec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
+"	#endif\n"
 "	// FIXME temporary hack to detect the case that the reflection\n"
 "	// gets blackened at edges due to leaving the area that contains actual\n"
 "	// content.\n"
@@ -3351,8 +3358,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<24, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
 	SHADERPERMUTATION_ALPHAKILL = 1<<25, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
 	SHADERPERMUTATION_REFLECTCUBE = 1<<26, ///< fake reflections using global cubemap (not HDRI light probe)
-	SHADERPERMUTATION_LIMIT = 1<<27, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 27 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<27, // (water) counter-direction normalmaps scrolling
+	SHADERPERMUTATION_LIMIT = 1<<28, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 28 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -3386,6 +3394,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEDEFERREDLIGHTMAP\n", " deferredlightmap"},
 	{"#define USEALPHAKILL\n", " alphakill"},
 	{"#define USEREFLECTCUBE\n", " reflectcube"},
+	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 };
 
 /// this enum is multiplied by SHADERPERMUTATION_MODEBASE
@@ -3569,6 +3578,7 @@ typedef struct r_glsl_permutation_s
 	int loc_ModelToReflectCube;
 	int loc_ShadowMapMatrix;
 	int loc_BloomColorSubtract;
+	int loc_NormalmapScrollBlend;
 }
 r_glsl_permutation_t;
 
@@ -3810,6 +3820,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_ModelToReflectCube         = qglGetUniformLocationARB(p->program, "ModelToReflectCube");
 		p->loc_ShadowMapMatrix            = qglGetUniformLocationARB(p->program, "ShadowMapMatrix");
 		p->loc_BloomColorSubtract         = qglGetUniformLocationARB(p->program, "BloomColorSubtract");
+		p->loc_NormalmapScrollBlend       = qglGetUniformLocationARB(p->program, "NormalmapScrollBlend");
 		// initialize the samplers to refer to the texture units we use
 		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
 		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
@@ -4001,6 +4012,7 @@ typedef struct r_cg_permutation_s
 	CGparameter fp_PixelToScreenTexCoord;
 	CGparameter fp_ModelToReflectCube;
 	CGparameter fp_BloomColorSubtract;
+	CGparameter fp_NormalmapScrollBlend;
 }
 r_cg_permutation_t;
 
@@ -4302,6 +4314,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
 		p->fp_ModelToReflectCube         = cgGetNamedParameter(p->fprogram, "ModelToReflectCube");
 		p->fp_BloomColorSubtract         = cgGetNamedParameter(p->fprogram, "BloomColorSubtract");
+		p->fp_NormalmapScrollBlend       = cgGetNamedParameter(p->fprogram, "NormalmapScrollBlend");
 		CHECKCGERROR
 	}
 
@@ -4487,7 +4500,8 @@ typedef enum D3DPSREGISTER_e
 	D3DPSREGISTER_BloomColorSubtract = 43,
 	D3DPSREGISTER_ViewToLight = 44, // float4x4
 	D3DPSREGISTER_ModelToReflectCube = 48, // float4x4
-	// next at 52
+	D3DPSREGISTER_NormalmapScrollBlend = 52,
+	// next at 53
 }
 D3DPSREGISTER_t;
 
@@ -5290,6 +5304,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
 		{
 			mode = SHADERMODE_WATER;
+			if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
+				permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND;
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
@@ -5708,6 +5724,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			hlslPSSetParameter1f(D3DPSREGISTER_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
 			hlslPSSetParameter1f(D3DPSREGISTER_ReflectOffset, rsurface.texture->reflectmin);
 			hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
+			if (mode == SHADERMODE_WATER)
+				hlslPSSetParameter2f(D3DPSREGISTER_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
 		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
@@ -5851,6 +5869,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
 			if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
 			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));
+			if (r_glsl_permutation->loc_NormalmapScrollBlend >= 0) qglUniform2fARB(r_glsl_permutation->loc_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
 		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
@@ -6020,6 +6039,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (r_cg_permutation->fp_ReflectFactor) cgGLSetParameter1f(r_cg_permutation->fp_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);CHECKCGERROR
 			if (r_cg_permutation->fp_ReflectOffset) cgGLSetParameter1f(r_cg_permutation->fp_ReflectOffset, rsurface.texture->reflectmin);CHECKCGERROR
 			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * ((permutation & SHADERPERMUTATION_EXACTSPECULARMATH) ? 0.25f : 1.0f));CHECKCGERROR
+			if (r_cg_permutation->fp_NormalmapScrollBlend) cgGLSetParameter2f(r_cg_permutation->fp_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
 		if (r_cg_permutation->fp_ShadowMap_TextureScale) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
 		if (r_cg_permutation->fp_ShadowMap_Parameters) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR

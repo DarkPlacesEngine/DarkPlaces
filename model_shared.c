@@ -2120,6 +2120,11 @@ void Mod_LoadQ3Shaders(void)
 					Vector4Set(shader.reflectcolor4f, atof(parameter[8]), atof(parameter[9]), atof(parameter[10]), 1);
 					shader.r_water_wateralpha = atof(parameter[11]);
 				}
+				else if (!strcasecmp(parameter[0], "dpwaterscroll") && numparameters >= 3)
+				{
+					shader.r_water_waterscroll[0] = 1/atof(parameter[1]);
+					shader.r_water_waterscroll[1] = 1/atof(parameter[2]);
+				}
 				else if (!strcasecmp(parameter[0], "dpglossintensitymod") && numparameters >= 2)
 				{
 					shader.specularscalemod = atof(parameter[1]);
@@ -2400,6 +2405,7 @@ nothing                GL_ZERO GL_ONE
 		texture->reflectfactor = shader->reflectfactor;
 		Vector4Copy(shader->reflectcolor4f, texture->reflectcolor4f);
 		texture->r_water_wateralpha = shader->r_water_wateralpha;
+		Vector2Copy(shader->r_water_waterscroll, texture->r_water_waterscroll);
 		texture->offsetmapping = shader->offsetmapping;
 		texture->offsetscale = shader->offsetscale;
 		texture->specularscalemod = shader->specularscalemod;
