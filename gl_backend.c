@@ -443,21 +443,6 @@ qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 	scissor[2] = ix2 - ix1;
 	scissor[3] = iy2 - iy1;
 
-	// D3D Y coordinate is top to bottom, OpenGL is bottom to top, fix the D3D one
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		scissor[1] = vid.height - scissor[1] - scissor[3];
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		break;
-	}
-
 	return false;
 }
 
