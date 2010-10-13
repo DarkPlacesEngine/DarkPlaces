@@ -8012,7 +8012,7 @@ static void R_View_SetFrustum(const int *scissor)
 {
 	int i;
 	double fpx, fnx, fpy, fny;
-	vec3_t forward, left, up, origin;
+	vec3_t forward, left, up, origin, v;
 
 	if(scissor)
 	{
@@ -8108,6 +8108,18 @@ static void R_View_SetFrustum(const int *scissor)
 		CrossProduct(r_refdef.view.frustumcorner[1], r_refdef.view.frustumcorner[3], r_refdef.view.frustum[1].normal);
 		CrossProduct(r_refdef.view.frustumcorner[0], r_refdef.view.frustumcorner[1], r_refdef.view.frustum[2].normal);
 		CrossProduct(r_refdef.view.frustumcorner[3], r_refdef.view.frustumcorner[2], r_refdef.view.frustum[3].normal);
+
+		// in a NORMAL view, forward cross left == up
+		// in a REFLECTED view, forward cross left == down
+		// so our cross products above need to be adjusted for a left handed coordinate system
+		CrossProduct(forward, left, v);
+		if(DotProduct(v, up) < 0)
+		{
+			VectorNegate(r_refdef.view.frustum[0].normal, r_refdef.view.frustum[0].normal);
+			VectorNegate(r_refdef.view.frustum[1].normal, r_refdef.view.frustum[1].normal);
+			VectorNegate(r_refdef.view.frustum[2].normal, r_refdef.view.frustum[2].normal);
+			VectorNegate(r_refdef.view.frustum[3].normal, r_refdef.view.frustum[3].normal);
+		}
 
 		// Leaving those out was a mistake, those were in the old code, and they
 		// fix a reproducable bug in this one: frustum culling got fucked up when viewmatrix was an identity matrix
