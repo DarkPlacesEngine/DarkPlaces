@@ -531,6 +531,7 @@ typedef struct r_waterstate_waterplane_s
 	unsigned char pvsbits[(MAX_MAP_LEAFS+7)>>3]; // FIXME: buffer overflow on huge maps
 	qboolean pvsvalid;
 	int camera_entity;
+	vec3_t mins, maxs;
 }
 r_waterstate_waterplane_t;
 
