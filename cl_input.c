@@ -423,6 +423,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
 cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
+cvar_t cl_movement_replay = {0, "cl_movement_replay", "1", "use engine prediction"};
 cvar_t cl_movement_nettimeout = {CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
 cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
 cvar_t cl_movement_track_canjump = {CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
@@ -1549,6 +1550,9 @@ void CL_ClientMovement_Replay(void)
 	if (cl.movement_predicted && !cl.movement_replay)
 		return;
 
+	if (!cl_movement_replay.integer)
+		return;
+
 	// set up starting state for the series of moves
 	memset(&s, 0, sizeof(s));
 	VectorCopy(cl.entities[cl.playerentity].state_current.origin, s.origin);
@@ -2168,6 +2172,7 @@ void CL_InitInput (void)
 
 	Cvar_RegisterVariable(&cl_movecliptokeyboard);
 	Cvar_RegisterVariable(&cl_movement);
+	Cvar_RegisterVariable(&cl_movement_replay);
 	Cvar_RegisterVariable(&cl_movement_nettimeout);
 	Cvar_RegisterVariable(&cl_movement_minping);
 	Cvar_RegisterVariable(&cl_movement_track_canjump);
