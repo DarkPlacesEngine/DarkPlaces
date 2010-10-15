@@ -46,9 +46,9 @@ struct mdfour {
 };
 
 void mdfour_begin(struct mdfour *md); // old: MD4Init
-void mdfour_update(struct mdfour *md, unsigned char *in, int n); //old: MD4Update
+void mdfour_update(struct mdfour *md, const unsigned char *in, int n); //old: MD4Update
 void mdfour_result(struct mdfour *md, unsigned char *out); // old: MD4Final
-void mdfour(unsigned char *out, unsigned char *in, int n);
+void mdfour(unsigned char *out, const unsigned char *in, int n);
 
 #endif	// _MDFOUR_H
 

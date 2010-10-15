@@ -112,6 +112,8 @@ int masterreplycount = 0;
 int serverquerycount = 0;
 int serverreplycount = 0;
 
+challenge_t challenge[MAX_CHALLENGES];
+
 /// this is only false if there are still servers left to query
 static qboolean serverlist_querysleep = true;
 static qboolean serverlist_paused = false;
@@ -122,6 +124,8 @@ static double serverlist_querywaittime = 0;
 
 static unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+static unsigned char cryptosendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
+static unsigned char cryptoreadbuffer[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
 
 static int cl_numsockets;
 static lhnetsocket_t *cl_sockets[16];
@@ -162,16 +166,29 @@ qboolean serverlist_consoleoutput;
 
 static int nFavorites = 0;
 static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
+static int nFavorites_idfp = 0;
+static char favorites_idfp[MAX_FAVORITESERVERS][FP64_SIZE+1];
 
 void NetConn_UpdateFavorites(void)
 {
 	const char *p;
 	nFavorites = 0;
+	nFavorites_idfp = 0;
 	p = net_slist_favorites.string;
 	while((size_t) nFavorites < sizeof(favorites) / sizeof(*favorites) && COM_ParseToken_Console(&p))
 	{
-		if(LHNETADDRESS_FromString(&favorites[nFavorites], com_token, 26000))
-			++nFavorites;
+		if(com_token[0] != '[' && strlen(com_token) == FP64_SIZE && !strchr(com_token, '.'))
+		// currently 44 bytes, longest possible IPv6 address: 39 bytes, so this works
+		// (if v6 address contains port, it must start with '[')
+		{
+			strlcpy(favorites_idfp[nFavorites_idfp], com_token, sizeof(favorites_idfp[nFavorites_idfp]));
+			++nFavorites_idfp;
+		}
+		else 
+		{
+			if(LHNETADDRESS_FromString(&favorites[nFavorites], com_token, 26000))
+				++nFavorites;
+		}
 	}
 }
 
@@ -405,12 +422,24 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	entry->info.isfavorite = false;
 	if(LHNETADDRESS_FromString(&addr, entry->info.cname, 26000))
 	{
+		char idfp[FP64_SIZE+1];
 		for(i = 0; i < nFavorites; ++i)
 		{
 			if(LHNETADDRESS_Compare(&addr, &favorites[i]) == 0)
 			{
 				entry->info.isfavorite = true;
 				break;
+			}
+		}
+		if(Crypto_RetrieveHostKey(&addr, 0, NULL, 0, idfp, sizeof(idfp), NULL))
+		{
+			for(i = 0; i < nFavorites_idfp; ++i)
+			{
+				if(!strcmp(idfp, favorites_idfp[i]))
+				{
+					entry->info.isfavorite = true;
+					break;
+				}
 			}
 		}
 	}
@@ -715,6 +744,8 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		unsigned int packetLen;
 		unsigned int dataLen;
 		unsigned int eom;
+		const void *sendme;
+		size_t sendmelen;
 
 		// if a reliable message fragment has been lost, send it again
 		if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
@@ -738,13 +769,14 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
 
-			if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
+			if (sendme && NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress) == (int)sendmelen)
 			{
 				conn->lastSendTime = realtime;
 				packetsReSent++;
 			}
 
-			totallen += packetLen + 28;
+			totallen += sendmelen + 28;
 		}
 
 		// if we have a new reliable message to send, do so
@@ -788,13 +820,15 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
 
-			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
+			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
+			if(sendme)
+				NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
 
 			conn->lastSendTime = realtime;
 			packetsSent++;
 			reliableMessagesSent++;
 
-			totallen += packetLen + 28;
+			totallen += sendmelen + 28;
 		}
 
 		// if we have an unreliable message to send, do so
@@ -816,12 +850,14 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes += packetLen + 28;
 
-			NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress);
+			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
+			if(sendme)
+				NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
 
 			packetsSent++;
 			unreliableMessagesSent++;
 
-			totallen += packetLen + 28;
+			totallen += sendmelen + 28;
 		}
 	}
 
@@ -1087,7 +1123,7 @@ void NetConn_UpdateSockets(void)
 	}
 }
 
-static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int length, protocolversion_t protocol, double newtimeout)
+static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, size_t length, protocolversion_t protocol, double newtimeout)
 {
 	int originallength = length;
 	if (length < 8)
@@ -1171,7 +1207,16 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 		unsigned int count;
 		unsigned int flags;
 		unsigned int sequence;
-		int qlength;
+		size_t qlength;
+		const void *sendme;
+		size_t sendmelen;
+
+		originallength = length;
+		data = (const unsigned char *) Crypto_DecryptPacket(&conn->crypto, data, length, cryptoreadbuffer, &length, sizeof(cryptoreadbuffer));
+		if(!data)
+			return 0;
+		if(length < 8)
+			return 0;
 
 		qlength = (unsigned int)BuffBigLong(data);
 		flags = qlength & ~NETFLAG_LENGTH_MASK;
@@ -1262,7 +1307,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 
 							conn->nq.sendSequence++;
 
-							if (NetConn_Write(conn->mysocket, (void *)&sendbuffer, packetLen, &conn->peeraddress) == (int)packetLen)
+							sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
+							if (sendme && NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress) == (int)sendmelen)
 							{
 								conn->lastSendTime = realtime;
 								packetsSent++;
@@ -1285,7 +1331,9 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
 				StoreBigLong(temppacket, 8 | NETFLAG_ACK);
 				StoreBigLong(temppacket + 4, sequence);
-				NetConn_Write(conn->mysocket, (unsigned char *)temppacket, 8, &conn->peeraddress);
+				sendme = Crypto_EncryptPacket(&conn->crypto, temppacket, 8, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
+				if(sendme)
+					NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
 				if (sequence == conn->nq.receiveSequence)
 				{
 					conn->lastMessageTime = realtime;
@@ -1325,6 +1373,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, unsigned char *data, int len
 
 void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, protocolversion_t initialprotocol)
 {
+	crypto_t *crypto;
 	cls.connect_trying = false;
 	M_Update_Return_Reason("");
 	// the connection request succeeded, stop current connection and set up a new connection
@@ -1334,6 +1383,19 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 		Host_ShutdownServer ();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
+	crypto = &cls.crypto;
+	if(crypto && crypto->authenticated)
+	{
+		Crypto_ServerFinishInstance(&cls.netcon->crypto, crypto);
+		Con_Printf("%s connection to %s has been established: server is %s@%.*s, I am %.*s@%.*s\n",
+				crypto->use_aes ? "Encrypted" : "Authenticated",
+				cls.netcon->address,
+				crypto->server_idfp[0] ? crypto->server_idfp : "-",
+				crypto_keyfp_recommended_length, crypto->server_keyfp[0] ? crypto->server_keyfp : "-",
+				crypto_keyfp_recommended_length, crypto->client_idfp[0] ? crypto->client_idfp : "-",
+				crypto_keyfp_recommended_length, crypto->client_keyfp[0] ? crypto->client_keyfp : "-"
+				);
+	}
 	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
 	key_dest = key_game;
 	m_state = m_none;
@@ -1581,6 +1643,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	const char *s;
 	char *string, addressstring2[128], ipstring[32];
 	char stringbuf[16384];
+	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
+	size_t sendlength;
 
 	// quakeworld ingame packet
 	fromserver = cls.netcon && mysocket == cls.netcon->mysocket && !LHNETADDRESS_Compare(&cls.netcon->peeraddress, peeraddress);
@@ -1605,7 +1669,34 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
-		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.rcon_trying)
+		sendlength = sizeof(senddata) - 4;
+		switch(Crypto_ClientParsePacket(string, length, senddata+4, &sendlength, peeraddress))
+		{
+			case CRYPTO_NOMATCH:
+				// nothing to do
+				break;
+			case CRYPTO_MATCH:
+				if(sendlength)
+				{
+					memcpy(senddata, "\377\377\377\377", 4);
+					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+				}
+				break;
+			case CRYPTO_DISCARD:
+				if(sendlength)
+				{
+					memcpy(senddata, "\377\377\377\377", 4);
+					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+				}
+				return true;
+				break;
+			case CRYPTO_REPLACE:
+				string = senddata+4;
+				length = sendlength;
+				break;
+		}
+
+		if (length >= 10 && !memcmp(string, "challenge ", 10) && cls.rcon_trying)
 		{
 			int i = 0, j;
 			for (j = 0;j < MAX_RCONS;j++)
@@ -1656,7 +1747,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				}
 			}
 		}
-		if (length > 10 && !memcmp(string, "challenge ", 10) && cls.connect_trying)
+		if (length >= 10 && !memcmp(string, "challenge ", 10) && cls.connect_trying)
 		{
 			// darkplaces or quake3
 			char protocolnames[1400];
@@ -1678,7 +1769,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
 		{
-			char rejectreason[32];
+			char rejectreason[128];
 			cls.connect_trying = false;
 			string += 7;
 			length = min(length - 7, (int)sizeof(rejectreason) - 1);
@@ -1925,7 +2016,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return ret;
 	}
 	// netquake control packets, supported for compatibility only
-	if (length >= 5 && (control = BuffBigLong(data)) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length)
+	if (length >= 5 && (control = BuffBigLong(data)) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length && !ENCRYPTION_REQUIRED)
 	{
 		int n;
 		serverlist_info_t *info;
@@ -2148,15 +2239,6 @@ void NetConn_ClientFrame(void)
 	}
 }
 
-#define MAX_CHALLENGES 128
-struct challenge_s
-{
-	lhnetaddress_t address;
-	double time;
-	char string[12];
-}
-challenge[MAX_CHALLENGES];
-
 static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 {
 	int i;
@@ -2179,6 +2261,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	unsigned int nb_clients = 0, nb_bots = 0, i;
 	int length;
 	char teambuf[3];
+	const char *crypto_idstring;
 
 	SV_VM_Begin();
 
@@ -2202,7 +2285,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 			char *p;
 			const char *q;
 			p = qcstatus;
-			for(q = str; *q; ++q)
+			for(q = str; *q && p - qcstatus < (ssize_t)(sizeof(qcstatus)) - 1; ++q)
 				if(*q != '\\' && *q != '\n')
 					*p++ = *q;
 			*p = 0;
@@ -2210,10 +2293,12 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	}
 
 	/// \TODO: we should add more information for the full status string
+	crypto_idstring = Crypto_GetInfoResponseDataString();
 	length = dpsnprintf(out_msg, out_size,
 						"\377\377\377\377%s\x0A"
 						"\\gamename\\%s\\modname\\%s\\gameversion\\%d\\sv_maxclients\\%d"
 						"\\clients\\%d\\bots\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d"
+						"%s%s"
 						"%s%s"
 						"%s%s"
 						"%s",
@@ -2222,6 +2307,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 						nb_clients, nb_bots, sv.worldbasename, hostname.string, NET_PROTOCOL_VERSION,
 						*qcstatus ? "\\qcstatus\\" : "", qcstatus,
 						challenge ? "\\challenge\\" : "", challenge ? challenge : "",
+						crypto_idstring ? "\\d0_blind_id\\" : "", crypto_idstring ? crypto_idstring : "",
 						fullstatus ? "\n" : "");
 
 	// Make sure it fits in the buffer
@@ -2597,6 +2683,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	char *s, *string, response[1400], addressstring2[128];
 	static char stringbuf[16384];
 	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
+	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
+	size_t sendlength, response_len;
 
 	if (!sv.active)
 		return false;
@@ -2630,6 +2718,33 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			Com_HexDumpToConsole(data, length);
 		}
 
+		sendlength = sizeof(senddata) - 4;
+		switch(Crypto_ServerParsePacket(string, length, senddata+4, &sendlength, peeraddress))
+		{
+			case CRYPTO_NOMATCH:
+				// nothing to do
+				break;
+			case CRYPTO_MATCH:
+				if(sendlength)
+				{
+					memcpy(senddata, "\377\377\377\377", 4);
+					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+				}
+				break;
+			case CRYPTO_DISCARD:
+				if(sendlength)
+				{
+					memcpy(senddata, "\377\377\377\377", 4);
+					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+				}
+				return true;
+				break;
+			case CRYPTO_REPLACE:
+				string = senddata+4;
+				length = sendlength;
+				break;
+		}
+
 		if (length >= 12 && !memcmp(string, "getchallenge", 12) && (islocal || sv_public.integer > -3))
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
@@ -2650,24 +2765,50 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			challenge[i].time = realtime;
 			// send the challenge
-			NetConn_WriteString(mysocket, va("\377\377\377\377challenge %s", challenge[i].string), peeraddress);
+			dpsnprintf(response, sizeof(response), "\377\377\377\377challenge %s", challenge[i].string);
+			response_len = strlen(response) + 1;
+			Crypto_ServerAppendToChallenge(string, length, response, &response_len, sizeof(response));
+			NetConn_Write(mysocket, response, response_len, peeraddress);
 			return true;
 		}
 		if (length > 8 && !memcmp(string, "connect\\", 8))
 		{
+			crypto_t *crypto = Crypto_ServerGetInstance(peeraddress);
 			string += 7;
 			length -= 7;
 
-			if (!(s = SearchInfostring(string, "challenge")))
-				return true;
-			// validate the challenge
-			for (i = 0;i < MAX_CHALLENGES;i++)
-				if(challenge[i].time > 0)
-					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
-						break;
-			// if the challenge is not recognized, drop the packet
-			if (i == MAX_CHALLENGES)
-				return true;
+			if(crypto && crypto->authenticated)
+			{
+				// no need to check challenge
+				if(crypto_developer.integer)
+				{
+					Con_Printf("%s connection to %s is being established: client is %s@%.*s, I am %.*s@%.*s\n",
+							crypto->use_aes ? "Encrypted" : "Authenticated",
+							addressstring2,
+							crypto->client_idfp[0] ? crypto->client_idfp : "-",
+							crypto_keyfp_recommended_length, crypto->client_keyfp[0] ? crypto->client_keyfp : "-",
+							crypto_keyfp_recommended_length, crypto->server_idfp[0] ? crypto->server_idfp : "-",
+							crypto_keyfp_recommended_length, crypto->server_keyfp[0] ? crypto->server_keyfp : "-"
+						  );
+				}
+			}
+			else
+			{
+				if ((s = SearchInfostring(string, "challenge")))
+				{
+					// validate the challenge
+					for (i = 0;i < MAX_CHALLENGES;i++)
+						if(challenge[i].time > 0)
+							if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+								break;
+					// if the challenge is not recognized, drop the packet
+					if (i == MAX_CHALLENGES)
+						return true;
+				}
+			}
+
+			if((s = SearchInfostring(string, "message")))
+				Con_DPrintf("Connecting client %s sent us the message: %s\n", addressstring2, s);
 
 			if(!(islocal || sv_public.integer > -2))
 			{
@@ -2693,6 +2834,39 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 				{
 					// this is a known client...
+					if(crypto && crypto->authenticated)
+					{
+						// reject if changing key!
+						if(client->netconnection->crypto.authenticated)
+						{
+							if(
+									strcmp(client->netconnection->crypto.client_idfp, crypto->client_idfp)
+									||
+									strcmp(client->netconnection->crypto.server_idfp, crypto->server_idfp)
+									||
+									strcmp(client->netconnection->crypto.client_keyfp, crypto->client_keyfp)
+									||
+									strcmp(client->netconnection->crypto.server_keyfp, crypto->server_keyfp)
+							  )
+							{
+								if (developer_extra.integer)
+									Con_Printf("Datagram_ParseConnectionless: sending \"reject Attempt to change key of crypto.\" to %s.\n", addressstring2);
+								NetConn_WriteString(mysocket, "\377\377\377\377reject Attempt to change key of crypto.", peeraddress);
+								return true;
+							}
+						}
+					}
+					else
+					{
+						// reject if downgrading!
+						if(client->netconnection->crypto.authenticated)
+						{
+							if (developer_extra.integer)
+								Con_Printf("Datagram_ParseConnectionless: sending \"reject Attempt to downgrade crypto.\" to %s.\n", addressstring2);
+							NetConn_WriteString(mysocket, "\377\377\377\377reject Attempt to downgrade crypto.", peeraddress);
+							return true;
+						}
+					}
 					if (client->spawned)
 					{
 						// client crashed and is coming back,
@@ -2700,6 +2874,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						if (developer_extra.integer)
 							Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
 						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+						if(crypto && crypto->authenticated)
+							Crypto_ServerFinishInstance(&client->netconnection->crypto, crypto);
 						SV_VM_Begin();
 						SV_SendServerinfo(client);
 						SV_VM_End();
@@ -2710,6 +2886,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						// so we send a duplicate reply
 						if (developer_extra.integer)
 							Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
+						if(crypto && crypto->authenticated)
+							Crypto_ServerFinishInstance(&client->netconnection->crypto, crypto);
 						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 					}
 					return true;
@@ -2730,6 +2908,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
 					NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 					// now set up the client
+					if(crypto && crypto->authenticated)
+						Crypto_ServerFinishInstance(&conn->crypto, crypto);
 					SV_VM_Begin();
 					SV_ConnectClient(clientnum, conn);
 					SV_VM_End();
@@ -2861,7 +3041,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	// protocol
 	// (this protects more modern protocols against being used for
 	//  Quake packet flood Denial Of Service attacks)
-	if (length >= 5 && (i = BuffBigLong(data)) && (i & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (i & NETFLAG_LENGTH_MASK) == length && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3))
+	if (length >= 5 && (i = BuffBigLong(data)) && (i & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (i & NETFLAG_LENGTH_MASK) == length && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3) && !ENCRYPTION_REQUIRED)
 	{
 		int c;
 		int protocolnumber;

@@ -34,6 +34,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NETFLAG_EOM			0x00080000
 #define NETFLAG_UNRELIABLE	0x00100000
 #define NETFLAG_CTL			0x80000000
+#define NETFLAG_CRYPTO		0x40000000
 
 
 #define NET_PROTOCOL_VERSION	3
@@ -219,6 +220,7 @@ typedef struct netconn_s
 	netgraphitem_t outgoing_netgraph[NETGRAPH_PACKETS];
 
 	char address[128];
+	crypto_t crypto;
 } netconn_t;
 
 extern netconn_t *netconn_list;
@@ -440,6 +442,17 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 
 /// called whenever net_slist_favorites changes
 void NetConn_UpdateFavorites(void);
+
+#define MAX_CHALLENGES 128
+typedef struct challenge_s
+{
+	lhnetaddress_t address;
+	double time;
+	char string[12];
+}
+challenge_t;
+
+extern challenge_t challenge[MAX_CHALLENGES];
 
 #endif
 

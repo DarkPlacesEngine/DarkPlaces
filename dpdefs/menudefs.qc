@@ -448,3 +448,14 @@ float(string key) stringtokeynum = #341;
 //<also allowed builtin number to match EXT_CSQC> string(float keynum) keynumtostring = #340;
 //description: key bind setting/getting including support for switchable
 //bindmaps.
+
+//DP_CRYPTO
+//idea: divVerent
+//darkplaces implementation: divVerent
+//field definitions: (MENUQC)
+string crypto_getkeyfp(string serveraddress) = #633; // retrieves the cached host key's CA fingerprint of a server given by IP address
+string crypto_getidfp(string serveraddress) = #634; // retrieves the cached host key fingerprint of a server given by IP address
+string crypto_getencryptlevel(string serveraddress) = #635; // 0 if never encrypting, 1 supported, 2 requested, 3 required, appended by list of allowed methods in order of preference ("AES128"), preceded by a space each
+string crypto_getmykeyfp(float i) = #636; // retrieves the CA key fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
+string crypto_getmyidfp(float i) = #637; // retrieves the ID fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
+//description:
