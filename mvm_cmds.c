@@ -13,6 +13,7 @@ const char *vm_m_extensions =
 "BX_WAL_SUPPORT "
 "DP_CINEMATIC_DPV "
 "DP_CSQC_BINDMAPS "
+"DP_CRYPTO "
 "DP_GFX_FONTS "
 "DP_GFX_FONTS_FREETYPE "
 "DP_UTF8 "
@@ -750,6 +751,99 @@ static void VM_M_getmousepos(void)
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
 }
 
+void VM_M_crypto_getkeyfp(void)
+{
+	lhnetaddress_t addr;
+	const char *s;
+	char keyfp[FP64_SIZE + 1];
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getkeyfp);
+
+	s = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( s );
+
+	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, keyfp, sizeof(keyfp), NULL, 0, NULL))
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( keyfp );
+	else
+		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+}
+void VM_M_crypto_getidfp(void)
+{
+	lhnetaddress_t addr;
+	const char *s;
+	char idfp[FP64_SIZE + 1];
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getidfp);
+
+	s = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( s );
+
+	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, NULL, 0, idfp, sizeof(idfp), NULL))
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( idfp );
+	else
+		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+}
+void VM_M_crypto_getencryptlevel(void)
+{
+	lhnetaddress_t addr;
+	const char *s;
+	int aeslevel;
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getencryptlevel);
+
+	s = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( s );
+
+	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, NULL, 0, NULL, 0, &aeslevel))
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(aeslevel ? va("%d AES128", aeslevel) : "0");
+	else
+		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+}
+void VM_M_crypto_getmykeyfp(void)
+{
+	int i;
+	char keyfp[FP64_SIZE + 1];
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+
+	i = PRVM_G_FLOAT( OFS_PARM0 );
+	switch(Crypto_RetrieveLocalKey(i, keyfp, sizeof(keyfp), NULL, 0))
+	{
+		case -1:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString("");
+			break;
+		case 0:
+			PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+			break;
+		default:
+		case 1:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(keyfp);
+			break;
+	}
+}
+void VM_M_crypto_getmyidfp(void)
+{
+	int i;
+	char idfp[FP64_SIZE + 1];
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+
+	i = PRVM_G_FLOAT( OFS_PARM0 );
+	switch(Crypto_RetrieveLocalKey(i, NULL, 0, idfp, sizeof(idfp)))
+	{
+		case -1:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString("");
+			break;
+		case 0:
+			PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
+			break;
+		default:
+		case 1:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(idfp);
+			break;
+	}
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 NULL,									//   #0 NULL function (not callable)
 VM_checkextension,				//   #1
@@ -1411,6 +1505,11 @@ NULL, // #629
 VM_setkeybind,						// #630 float(float key, string bind[, float bindmap]) setkeybind
 VM_getbindmaps,						// #631 vector(void) getbindmap
 VM_setbindmaps,						// #632 float(vector bm) setbindmap
+VM_M_crypto_getkeyfp,					// #633 string(string addr) crypto_getkeyfp
+VM_M_crypto_getidfp,					// #634 string(string addr) crypto_getidfp
+VM_M_crypto_getencryptlevel,				// #635 string(string addr) crypto_getencryptlevel
+VM_M_crypto_getmykeyfp,					// #636 string(float addr) crypto_getmykeyfp
+VM_M_crypto_getmyidfp,					// #637 string(float addr) crypto_getmyidfp
 NULL
 };
 

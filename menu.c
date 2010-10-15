@@ -33,7 +33,7 @@ static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu inste
 static int NehGameType;
 
 enum m_state_e m_state;
-char m_return_reason[32];
+char m_return_reason[128];
 
 void M_Menu_Main_f (void);
 	void M_Menu_SinglePlayer_f (void);

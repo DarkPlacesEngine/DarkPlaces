@@ -53,7 +53,6 @@ typedef struct server_static_s
 	unsigned char *csqc_progdata;
 	size_t csqc_progsize_deflated;
 	unsigned char *csqc_progdata_deflated;
-
 } server_static_t;
 
 //=============================================================================
