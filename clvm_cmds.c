@@ -3075,6 +3075,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 	R_Mesh_ResetTextureState();
 	R_EntityMatrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
+	GL_DepthTest(true); // polys in 3D space shall always have depth test
 	R_Mesh_VertexPointer(polys->data_vertex3f, 0, 0);
 	R_Mesh_ColorPointer(polys->data_color4f, 0, 0);
 	R_Mesh_TexCoordPointer(0, 2, polys->data_texcoord2f, 0, 0);
