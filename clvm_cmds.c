@@ -2986,6 +2986,7 @@ typedef struct vmpolygons_s
 	unsigned short	*data_sortedelement3s;
 
 	qboolean		begin_active;
+	int	begin_draw2d;
 	rtexture_t		*begin_texture;
 	int				begin_drawflag;
 	int				begin_vertices;
@@ -3076,9 +3077,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 	R_EntityMatrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
 	GL_DepthTest(true); // polys in 3D space shall always have depth test
-	R_Mesh_VertexPointer(polys->data_vertex3f, 0, 0);
-	R_Mesh_ColorPointer(polys->data_color4f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, polys->data_texcoord2f, 0, 0);
+	GL_DepthRange(0, 1);
 
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
@@ -3110,7 +3109,7 @@ void VMPolygons_Store(vmpolygons_t *polys)
 		if(polys->begin_color[i][3] < 1)
 			hasalpha = true;
 
-	if (r_refdef.draw2dstage)
+	if (polys->begin_draw2d)
 	{
 		// draw the polygon as 2D immediately
 		drawqueuemesh_t mesh;
@@ -3130,7 +3129,8 @@ void VMPolygons_Store(vmpolygons_t *polys)
 		int i;
 		if (polys->max_triangles < polys->num_triangles + polys->begin_vertices-2)
 		{
-			polys->max_triangles *= 2;
+			while (polys->max_triangles < polys->num_triangles + polys->begin_vertices-2)
+				polys->max_triangles *= 2;
 			VM_ResizePolygons(polys);
 		}
 		if (polys->num_vertices + polys->begin_vertices <= polys->max_vertices)
@@ -3183,7 +3183,7 @@ void VM_CL_AddPolygonsToMeshQueue (void)
 	  polys->num_vertices = 0;  // otherwise it's not rendered at all and prints an error message --blub */
 }
 
-//void(string texturename, float flag) R_BeginPolygon
+//void(string texturename, float flag[, float is2d]) R_BeginPolygon
 void VM_CL_R_PolygonBegin (void)
 {
 	const char		*picname;
@@ -3195,7 +3195,7 @@ void VM_CL_R_PolygonBegin (void)
 	// better management of flags, and is more suited for 3D rendering), what
 	// about supporting Q3 shaders?
 
-	VM_SAFEPARMCOUNT(2, VM_CL_R_PolygonBegin);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_R_PolygonBegin);
 
 	if (!polys->initialized)
 		VM_InitPolygons(polys);
@@ -3237,6 +3237,7 @@ void VM_CL_R_PolygonBegin (void)
 	polys->begin_drawflag = (int)PRVM_G_FLOAT(OFS_PARM1) & DRAWFLAG_MASK;
 	polys->begin_vertices = 0;
 	polys->begin_active = true;
+	polys->begin_draw2d = (prog->argc >= 3 ? (int)PRVM_G_FLOAT(OFS_PARM2) : r_refdef.draw2dstage);
 }
 
 //void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
@@ -4304,7 +4305,7 @@ VM_CL_R_AddEntity,				// #302 void(entity ent) addentity (EXT_CSQC)
 VM_CL_R_SetView,				// #303 float(float property, ...) setproperty (EXT_CSQC)
 VM_CL_R_RenderScene,			// #304 void() renderscene (EXT_CSQC)
 VM_CL_R_AddDynamicLight,		// #305 void(vector org, float radius, vector lightcolours) adddynamiclight (EXT_CSQC)
-VM_CL_R_PolygonBegin,			// #306 void(string texturename, float flag[, float is2d, float lines]) R_BeginPolygon
+VM_CL_R_PolygonBegin,			// #306 void(string texturename, float flag, float is2d[NYI: , float lines]) R_BeginPolygon
 VM_CL_R_PolygonVertex,			// #307 void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
 VM_CL_R_PolygonEnd,				// #308 void() R_EndPolygon
 NULL /* R_LoadWorldModel in menu VM, should stay unassigned in client*/, // #309
