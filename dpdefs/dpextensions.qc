@@ -2369,3 +2369,15 @@ float JOINTTYPE_HINGE2 = 5; // hinge2; uses origin (anchor), angles (axis1), vel
 //description:
 //various physics properties can be defined in an entity and are executed via
 //ODE
+
+//DP_CRYPTO
+//idea: divVerent
+//darkplaces implementation: divVerent
+//field definitions: (SVQC)
+.string crypto_keyfp; // fingerprint of CA key the player used to authenticate, or string_null if not verified
+.string crypto_mykeyfp; // fingerprint of CA key the server used to authenticate to the player, or string_null if not verified
+.string crypto_idfp; // fingerprint of ID used by the player entity, or string_null if not identified
+.string crypto_encryptmethod; // the string "AES128" if encrypting, and string_null if plaintext
+.string crypto_signmethod; // the string "HMAC-SHA256" if signing, and string_null if plaintext
+// there is no field crypto_myidfp, as that info contains no additional information the QC may have a use for
+//description:

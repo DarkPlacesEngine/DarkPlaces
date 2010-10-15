@@ -715,6 +715,9 @@ typedef struct client_static_s
 
 	// video capture stuff
 	capturevideostate_t capturevideo;
+
+	// crypto channel
+	crypto_t crypto;
 }
 client_static_t;
 

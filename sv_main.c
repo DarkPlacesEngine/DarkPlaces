@@ -997,6 +997,18 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	Con_DPrintf("Client %s connected\n", client->netconnection ? client->netconnection->address : "botclient");
 
+	if(client->netconnection && client->netconnection->crypto.authenticated)
+	{
+		Con_Printf("%s connection to %s has been established: client is %s@%.*s, I am %.*s@%.*s\n",
+				client->netconnection->crypto.use_aes ? "Encrypted" : "Authenticated",
+				client->netconnection->address,
+				client->netconnection->crypto.client_idfp[0] ? client->netconnection->crypto.client_idfp : "-",
+				crypto_keyfp_recommended_length, client->netconnection->crypto.client_keyfp[0] ? client->netconnection->crypto.client_keyfp : "-",
+				crypto_keyfp_recommended_length, client->netconnection->crypto.server_idfp[0] ? client->netconnection->crypto.server_idfp : "-",
+				crypto_keyfp_recommended_length, client->netconnection->crypto.server_keyfp[0] ? client->netconnection->crypto.server_keyfp : "-"
+				);
+	}
+
 	strlcpy(client->name, "unconnected", sizeof(client->name));
 	strlcpy(client->old_name, "unconnected", sizeof(client->old_name));
 	client->spawned = false;
@@ -3425,6 +3437,41 @@ static void SV_VM_CB_InitEdict(prvm_edict_t *e)
 			else
 				// Invalid / Bot
 				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.netaddress)->string = PRVM_SetEngineString("null/botclient");
+		}
+		if(prog->fieldoffsets.crypto_idfp >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_idfp[0])
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_idfp)->string = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_idfp);
+			else
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_idfp)->string = 0;
+		}
+		if(prog->fieldoffsets.crypto_keyfp >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_keyfp[0])
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_keyfp)->string = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_keyfp);
+			else
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_keyfp)->string = 0;
+		}
+		if(prog->fieldoffsets.crypto_mykeyfp >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.server_keyfp[0])
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_mykeyfp)->string = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.server_keyfp);
+			else
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_mykeyfp)->string = 0;
+		}
+		if(prog->fieldoffsets.crypto_encryptmethod >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.use_aes)
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_encryptmethod)->string = PRVM_SetEngineString("AES128");
+			else
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_encryptmethod)->string = 0;
+		}
+		if(prog->fieldoffsets.crypto_signmethod >= 0)
+		{ // Valid Field; Process
+			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated)
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_signmethod)->string = PRVM_SetEngineString("HMAC-SHA256");
+			else
+				PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.crypto_signmethod)->string = 0;
 		}
 	}
 }

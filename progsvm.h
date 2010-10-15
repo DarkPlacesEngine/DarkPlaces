@@ -274,6 +274,12 @@ typedef struct prvm_prog_fieldoffsets_s
 	int userwavefunc_param1; // csqc (userwavefunc)
 	int userwavefunc_param2; // csqc (userwavefunc)
 	int userwavefunc_param3; // csqc (userwavefunc)
+
+	int crypto_keyfp; // svqc (crypto)
+	int crypto_mykeyfp; // svqc (crypto)
+	int crypto_idfp; // svqc (crypto)
+	int crypto_encryptmethod; // svqc (crypto)
+	int crypto_signmethod; // svqc (crypto)
 }
 prvm_prog_fieldoffsets_t;
 

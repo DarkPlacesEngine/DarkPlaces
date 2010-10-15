@@ -1114,6 +1114,10 @@ static void Host_Init (void)
 	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
 	FS_Init();
 
+	// must be after FS_Init
+	Crypto_Init();
+	Crypto_Init_Commands();
+
 	NetConn_Init();
 	Curl_Init();
 	//PR_Init();
@@ -1290,6 +1294,7 @@ void Host_Shutdown(void)
 	CL_Shutdown();
 	Sys_Shutdown();
 	Log_Close();
+	Crypto_Shutdown();
 	FS_Shutdown();
 	Con_Shutdown();
 	Memory_Shutdown();

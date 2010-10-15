@@ -88,6 +88,7 @@ extern char engineversion[128];
 #define	MAX_LEVELNETWORKEYES	0 // no portal support
 #define	MAX_OCCLUSION_QUERIES	256
 
+#define CRYPTO_HOSTKEY_HASHSIZE 256
 #define MAX_NETWM_ICON 1026 // one 32x32
 
 #define	MAX_WATERPLANES			2
@@ -154,6 +155,7 @@ extern char engineversion[128];
 #define	MAX_LEVELNETWORKEYES	512 ///< max number of locations that can be added to pvs when culling network entities (must be at least 2 for prediction)
 #define	MAX_OCCLUSION_QUERIES	4096 ///< max number of GL_ARB_occlusion_query objects that can be used in one frame
 
+#define CRYPTO_HOSTKEY_HASHSIZE 8192 ///< number of hash buckets for accelerating host key lookups
 #define MAX_NETWM_ICON 352822 // 16x16, 22x22, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256, 512x512
 
 #define	MAX_WATERPLANES			16 ///< max number of water planes visible (each one causes additional view renders)
@@ -374,6 +376,7 @@ extern char engineversion[128];
 
 #include "r_textures.h"
 
+#include "crypto.h"
 #include "draw.h"
 #include "screen.h"
 #include "netconn.h"

@@ -4,14 +4,14 @@
 qboolean hmac(
 	hashfunc_t hfunc, int hlen, int hblock,
 	unsigned char *out,
-	unsigned char *in, int n,
-	unsigned char *key, int k
+	const unsigned char *in, int n,
+	const unsigned char *key, int k
 )
 {
 	static unsigned char hashbuf[32];
 	static unsigned char k_xor_ipad[128];
 	static unsigned char k_xor_opad[128];
-	static unsigned char catbuf[4096];
+	static unsigned char catbuf[65600]; // 65535 bytes max quake packet size + 64 for the hash
 	int i;
 
 	if(sizeof(hashbuf) < (size_t) hlen)

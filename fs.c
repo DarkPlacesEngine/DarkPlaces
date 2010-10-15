@@ -1500,7 +1500,6 @@ void FS_GameDir_f (void)
 	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
 }
 
-static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking);
 static const char *FS_SysCheckGameDir(const char *gamedir)
 {
 	static char buf[8192];
@@ -1928,7 +1927,7 @@ FS_SysOpen
 Internal function used to create a qfile_t and open the relevant non-packed file on disk
 ====================
 */
-static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
+qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
 {
 	qfile_t* file;
 

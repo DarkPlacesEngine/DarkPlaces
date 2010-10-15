@@ -1662,6 +1662,12 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.userwavefunc_param2            = PRVM_ED_FindFieldOffset("userwavefunc_param2");
 	prog->fieldoffsets.userwavefunc_param3            = PRVM_ED_FindFieldOffset("userwavefunc_param3");
 
+	prog->fieldoffsets.crypto_keyfp                   = PRVM_ED_FindFieldOffset("crypto_keyfp");
+	prog->fieldoffsets.crypto_mykeyfp                 = PRVM_ED_FindFieldOffset("crypto_mykeyfp");
+	prog->fieldoffsets.crypto_idfp                    = PRVM_ED_FindFieldOffset("crypto_idfp");
+	prog->fieldoffsets.crypto_encryptmethod           = PRVM_ED_FindFieldOffset("crypto_encryptmethod");
+	prog->fieldoffsets.crypto_signmethod              = PRVM_ED_FindFieldOffset("crypto_signmethod");
+
 	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
 	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
 	prog->funcoffsets.CSQC_Ent_Spawn                  = PRVM_ED_FindFunctionOffset("CSQC_Ent_Spawn");

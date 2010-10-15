@@ -106,7 +106,7 @@ static void mdfour64(uint32 *M)
 	m->A = A; m->B = B; m->C = C; m->D = D;
 }
 
-static void copy64(uint32 *M, unsigned char *in)
+static void copy64(uint32 *M, const unsigned char *in)
 {
 	int i;
 
@@ -133,7 +133,7 @@ void mdfour_begin(struct mdfour *md)
 }
 
 
-static void mdfour_tail(unsigned char *in, int n)
+static void mdfour_tail(const unsigned char *in, int n)
 {
 	unsigned char buf[128];
 	uint32 M[16];
@@ -160,7 +160,7 @@ static void mdfour_tail(unsigned char *in, int n)
 	}
 }
 
-void mdfour_update(struct mdfour *md, unsigned char *in, int n)
+void mdfour_update(struct mdfour *md, const unsigned char *in, int n)
 {
 	uint32 M[16];
 
@@ -194,7 +194,7 @@ void mdfour_result(struct mdfour *md, unsigned char *out)
 }
 
 
-void mdfour(unsigned char *out, unsigned char *in, int n)
+void mdfour(unsigned char *out, const unsigned char *in, int n)
 {
 	struct mdfour md;
 	mdfour_begin(&md);
