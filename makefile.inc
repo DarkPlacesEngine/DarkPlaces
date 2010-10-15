@@ -190,7 +190,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) $(CFLAGS_CRYPTO)
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D)
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -523,6 +523,10 @@ snd_3dras.o: snd_3dras.c
 cd_sdl.o: cd_sdl.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
+
+crypto.o: crypto.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_CRYPTO) $(CFLAGS_CRYPTO_RIJNDAEL)
 
 mod_skeletal_animatevertices_sse.o: mod_skeletal_animatevertices_sse.c
 	$(CHECKLEVEL2)
