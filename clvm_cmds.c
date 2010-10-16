@@ -744,6 +744,8 @@ void VM_CL_R_AddEntities (void)
 	prog->globals.client->time = cl.time;
 	for(i=1;i<prog->num_edicts;i++)
 	{
+		// so we can easily check if CSQC entity #edictnum is currently drawn
+		cl.csqcrenderentities[i].entitynumber = 0;
 		ed = &prog->edicts[i];
 		if(ed->priv.required->free)
 			continue;
