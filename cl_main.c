@@ -922,6 +922,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	int frame;
 	float origin[3], angles[3], lerp;
 	entity_t *t;
+	entity_render_t *r;
 	//entity_persistent_t *p = &e->persistent;
 	//entity_render_t *r = &e->render;
 	// skip inactive entities and world
@@ -954,22 +955,33 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 			return;
 		t = cl.entities + e->state_current.tagentity;
 		// if the tag entity is inactive, skip it
-		if (!t->state_current.active)
-			return;
-		// update the parent first
-		CL_UpdateNetworkEntity(t, recursionlimit - 1, interpolate);
-		// make relative to the entity
-		matrix = &t->render.matrix;
-		// some properties of the tag entity carry over
-		e->render.flags |= t->render.flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
-		// if a valid tagindex is used, make it relative to that tag instead
-		// FIXME: use a model function to get tag info (need to handle skeletal)
-		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && t->render.model)
+		if (t->state_current.active)
 		{
-			if(!Mod_Alias_GetTagMatrix(t->render.model, t->render.frameblend, t->render.skeleton, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
+			// update the parent first
+			CL_UpdateNetworkEntity(t, recursionlimit - 1, interpolate);
+			r = &t->render;
+		}
+		else
+		{
+			// it may still be a CSQC entity... trying to use its
+			// info from last render frame (better than nothing)
+			if(!cl.csqc_server2csqcentitynumber[e->state_current.tagentity])
+				return;
+			r = cl.csqcrenderentities + cl.csqc_server2csqcentitynumber[e->state_current.tagentity];
+			if(!r->entitynumber)
+				return; // neither CSQC nor legacy entity... can't attach
+		}
+		// make relative to the entity
+		matrix = &r->matrix;
+		// some properties of the tag entity carry over
+		e->render.flags |= r->flags & (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL);
+		// if a valid tagindex is used, make it relative to that tag instead
+		if (e->state_current.tagentity && e->state_current.tagindex >= 1 && r->model)
+		{
+			if(!Mod_Alias_GetTagMatrix(r->model, r->frameblend, r->skeleton, e->state_current.tagindex - 1, &blendmatrix)) // i.e. no error
 			{
 				// concat the tag matrices onto the entity matrix
-				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
+				Matrix4x4_Concat(&tempmatrix, &r->matrix, &blendmatrix);
 				// use the constructed tag matrix
 				matrix = &tempmatrix;
 			}
@@ -1372,7 +1384,13 @@ void CL_LinkNetworkEntity(entity_t *e)
 			return;
 		// if the tag entity is inactive, skip it
 		if (!cl.entities[e->state_current.tagentity].state_current.active)
-			return;
+		{
+			if(!cl.csqc_server2csqcentitynumber[e->state_current.tagentity])
+				return;
+			if(!cl.csqcrenderentities[cl.csqc_server2csqcentitynumber[e->state_current.tagentity]].entitynumber)
+				return;
+			// if we get here, it's properly csqc networked and attached
+		}
 	}
 
 	// create entity dlights associated with this entity
