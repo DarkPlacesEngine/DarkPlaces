@@ -47,7 +47,8 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 			// create a relative deformation matrix to describe displacement
 			// from the base mesh, which is used by the actual weighting
 			Matrix4x4_FromArray12FloatD3D(&mm, model->data_baseboneposeinverse + i * 12); // baseboneposeinverse is 4x3 row-major
-			Matrix4x4_Concat(&boneposerelative[i], &bonepose[i], &mm);
+			Matrix4x4_Concat(&mm2, &bonepose[i], &mm);
+			Matrix4x4_Transpose(&boneposerelative[i], &mm2); // TODO: Eliminate this transpose
 		}
 	}
 	else
