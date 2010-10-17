@@ -384,6 +384,10 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			frame = model->sprite.sprdata_frames + ent->frameblend[i].subframe;
 			texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].subframe);
 
+			// lit sprite by lightgrid if it is not fullbright, lit only ambient
+			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+				VectorAdd(ent->modellight_ambient, ent->modellight_diffuse, rsurface.modellight_ambient);
+
 			// SPR_LABEL should not use depth test AT ALL
 			if(model->sprite.sprnum_type == SPR_LABEL || model->sprite.sprnum_type == SPR_LABEL_SCALE)
 				if(texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE)
