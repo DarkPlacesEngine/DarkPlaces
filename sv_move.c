@@ -216,6 +216,16 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	if ( (int)ent->fields.server->flags & FL_PARTIALGROUND )
 		ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_PARTIALGROUND;
 
+// gameplayfix: check if reached pretty steep plane and bail
+	if ( ! ( (int)ent->fields.server->flags & (FL_SWIM | FL_FLY) ) && sv_gameplayfix_nostepmoveonsteepslopes.integer )
+	{
+		if (trace.plane.normal[ 2 ] < 0.5)
+		{
+			VectorCopy (oldorg, ent->fields.server->origin);
+			return false;
+		}
+	}
+
 	ent->fields.server->groundentity = PRVM_EDICT_TO_PROG(trace.ent);
 
 // the move is ok
