@@ -337,7 +337,7 @@ void sha256(unsigned char *out, const unsigned char *in, int n)
 static size_t Crypto_LoadFile(const char *path, char *buf, size_t nmax)
 {
 	qfile_t *f = NULL;
-	ssize_t n;
+	fs_offset_t n;
 	if(*fs_userdir)
 		f = FS_SysOpen(va("%s%s", fs_userdir, path), "rb", false);
 	if(!f)
