@@ -2285,7 +2285,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 			char *p;
 			const char *q;
 			p = qcstatus;
-			for(q = str; *q && p - qcstatus < (ssize_t)(sizeof(qcstatus)) - 1; ++q)
+			for(q = str; *q && p - qcstatus < (ptrdiff_t)(sizeof(qcstatus)) - 1; ++q)
 				if(*q != '\\' && *q != '\n')
 					*p++ = *q;
 			*p = 0;
