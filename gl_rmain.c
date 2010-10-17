@@ -11123,7 +11123,7 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.ent_flags = entflags;
 	rsurface.modelnumvertices = numvertices;
 	rsurface.modelnumtriangles = numtriangles;
-	R_Mesh_ResizeArrays(rsurface.modelnumvertices, rsurface.modelnumtriangles);
+	R_Mesh_ResizeArrays(max(rsurface.modelnumvertices, rsurface.modelnumtriangles));
 	rsurface.matrix = *matrix;
 	rsurface.inversematrix = *inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
