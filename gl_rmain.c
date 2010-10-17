@@ -10829,8 +10829,7 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.ent_qwskin = -1;
 	rsurface.ent_shadertime = 0;
 	rsurface.ent_flags = r_refdef.scene.worldentity->flags;
-	if (rsurface.array_size < model->surfmesh.num_vertices)
-		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
+	R_Mesh_ResizeArrays(max(model->surfmesh.num_vertices, model->surfmesh.num_triangles));
 	rsurface.matrix = identitymatrix;
 	rsurface.inversematrix = identitymatrix;
 	rsurface.matrixscale = 1;
@@ -10944,8 +10943,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
 	rsurface.ent_shadertime = ent->shadertime;
 	rsurface.ent_flags = ent->flags;
-	if (rsurface.array_size < model->surfmesh.num_vertices)
-		R_Mesh_ResizeArrays(model->surfmesh.num_vertices);
+	R_Mesh_ResizeArrays(max(model->surfmesh.num_vertices, model->surfmesh.num_triangles));
 	rsurface.matrix = ent->matrix;
 	rsurface.inversematrix = ent->inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
@@ -11125,8 +11123,7 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.ent_flags = entflags;
 	rsurface.modelnumvertices = numvertices;
 	rsurface.modelnumtriangles = numtriangles;
-	if (rsurface.array_size < rsurface.modelnumvertices)
-		R_Mesh_ResizeArrays(rsurface.modelnumvertices);
+	R_Mesh_ResizeArrays(rsurface.modelnumvertices, rsurface.modelnumtriangles);
 	rsurface.matrix = *matrix;
 	rsurface.inversematrix = *inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
