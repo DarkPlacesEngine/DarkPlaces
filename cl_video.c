@@ -49,17 +49,20 @@ static void VideoUpdateCallback(rtexture_t *rt, void *data) {
 	R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
 }
 
-static void LinkVideoTexture( clvideo_t *video ) {
+static void LinkVideoTexture( clvideo_t *video )
+{
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT, -1, NULL );
 	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
 	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
 }
 
-static void UnlinkVideoTexture( clvideo_t *video ) {
+static void UnlinkVideoTexture( clvideo_t *video )
+{
 	CL_UnlinkDynTexture( video->cpif.name );
 	// free the texture
 	R_FreeTexture( video->cpif.tex );
+	video->cpif.tex = NULL;
 	// free the image data
 	Mem_Free( video->imagedata );
 }
@@ -576,7 +579,13 @@ static void cl_video_start( void )
 
 static void cl_video_shutdown( void )
 {
-	// TODO: unlink video textures?
+	int i;
+	clvideo_t *video;
+
+	for( video = cl_videos, i = 0 ; i < cl_num_videos ; i++, video++ )
+		if( video->state != CLVIDEO_UNUSED && !video->suspended )
+			SuspendVideo( video );
+
 	R_FreeTexturePool( &cl_videotexturepool );
 }
 
