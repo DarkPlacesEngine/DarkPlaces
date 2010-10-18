@@ -6007,7 +6007,7 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic)
+void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, qboolean dynamic, qboolean rtworld)
 {
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
@@ -6022,16 +6022,41 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 
 	if (dynamic)
 	{
-		int i;
+		int i, numlights, flag;
 		float f, v[3];
 		rtlight_t *light;
+		dlight_t *dlight;
+
+		// sample rtlights
+		if (rtworld)
+		{
+			flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+			numlights = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+			for (i = 0; i < numlights; i++)
+			{
+				dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);
+				light = &dlight->rtlight;
+				if (!(light->flags & flag))
+					continue;
+				Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
+				f = 1 - VectorLength2(v);
+				if (f <= 0)
+					continue;
+				if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
+					VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
+			}
+		}
+
+		// sample dlights
 		for (i = 0;i < r_refdef.scene.numlights;i++)
 		{
 			light = r_refdef.scene.lights[i];
 			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
-			f = 1 - VectorLength2(v);
-			if (f > 0 && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
-				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
+			f = (1 - VectorLength2(v)) * r_refdef.scene.rtlightstylevalue[light->style];
+			if (f <= 0)
+				continue;
+			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
+				VectorMA(ambientcolor, f, light->color, ambientcolor);
 		}
 	}
 }

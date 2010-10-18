@@ -7155,7 +7155,18 @@ static void R_View_UpdateEntityLighting (void)
 		{
 			vec3_t org;
 			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+
+			// complete lightning for lit sprites
+			// todo: make a EF_ field so small ents could be lit purely by modellight and skipping real rtlight pass (like EF_NORTLIGHT)?
+			if (ent->model->type == mod_sprite && !(ent->model->data_textures[0].basematerialflags & MATERIALFLAG_FULLBRIGHT))
+			{
+				if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
+					org[2] = org[2] + r_overheadsprites_pushback.value;
+				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, ent->modellight_lightdir, org, true, true);
+			}
+			else
+				r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+
 			if(ent->flags & RENDER_EQUALIZE)
 			{
 				// first fix up ambient lighting...
@@ -13400,7 +13411,6 @@ void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatri
 	const msurface_t *surfacelist = &surface;
 
 	// fake enough texture and surface state to render this geometry
-
 	surface.texture = texture;
 	surface.num_triangles = numtriangles;
 	surface.num_firsttriangle = firsttriangle;
