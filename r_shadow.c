@@ -6029,6 +6029,8 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			for (i = 0; i < numlights; i++)
 			{
 				dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);
+				if (!dlight)
+					continue;
 				light = &dlight->rtlight;
 				if (!(light->flags & flag))
 					continue;
