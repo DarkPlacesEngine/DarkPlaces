@@ -457,10 +457,10 @@ extern cvar_t developer_loading;
 # endif
 #elif defined(_WIN64)
 # define DP_ARCH_STR		"x86_64"
-//# define SSE_PRESENT
+# define SSE_PRESENT
 #elif defined(WIN32)
 # define DP_ARCH_STR		"x86"
-//# define SSE_POSSIBLE
+# define SSE_POSSIBLE
 #endif
 
 #ifdef SSE_PRESENT
