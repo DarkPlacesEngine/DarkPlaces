@@ -187,9 +187,14 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 		VM_RemoveEdictSkeleton(ed);
 		ed->priv.server->skeleton.model = edmodel;
 	}
-	if (!ed->priv.server->skeleton.relativetransforms && ed->priv.server->skeleton.model && ed->priv.server->skeleton.model->num_bones)
-		ed->priv.server->skeleton.relativetransforms = Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
-	if (ed->priv.server->skeleton.relativetransforms)
+	if (!ed->priv.server->skeleton.model || !ed->priv.server->skeleton.model->num_bones)
+	{
+		if(ed->priv.server->skeleton.relativetransforms)
+			Mem_Free(ed->priv.server->skeleton.relativetransforms);
+		ed->priv.server->skeleton.relativetransforms = NULL;
+		return;
+	}
+
 	{
 		int skeletonindex = -1;
 		skeleton_t *skeleton;
@@ -198,30 +203,15 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 		if (skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones)
 		{
 			// custom skeleton controlled by the game (FTE_CSQC_SKELETONOBJECTS)
+			if (!ed->priv.server->skeleton.relativetransforms)
+				ed->priv.server->skeleton.relativetransforms = (matrix4x4_t *)Mem_Alloc(prog->progs_mempool, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
 			memcpy(ed->priv.server->skeleton.relativetransforms, skeleton->relativetransforms, ed->priv.server->skeleton.model->num_bones * sizeof(matrix4x4_t));
 		}
 		else
 		{
-			// generated skeleton from frame animation
-			int blendindex;
-			int bonenum;
-			int numbones = ed->priv.server->skeleton.model->num_bones;
-			const short *framebones6s;
-			float lerp;
-			float scale = ed->priv.server->skeleton.model->num_posescale;
-			matrix4x4_t *relativetransforms = ed->priv.server->skeleton.relativetransforms;
-			matrix4x4_t matrix;
-			memset(relativetransforms, 0, numbones * sizeof(matrix4x4_t));
-			for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
-			{
-				lerp = frameblend[blendindex].lerp;
-				framebones6s = ed->priv.server->skeleton.model->data_poses6s + 6 * frameblend[blendindex].subframe * numbones;
-				for (bonenum = 0;bonenum < numbones;bonenum++)
-				{
-					Matrix4x4_FromBonePose6s(&matrix, scale, framebones6s + 6 * bonenum);
-					Matrix4x4_Accumulate(&ed->priv.server->skeleton.relativetransforms[bonenum], &matrix, lerp);
-				}
-			}
+			if(ed->priv.server->skeleton.relativetransforms)
+				Mem_Free(ed->priv.server->skeleton.relativetransforms);
+			ed->priv.server->skeleton.relativetransforms = NULL;
 		}
 	}
 }
