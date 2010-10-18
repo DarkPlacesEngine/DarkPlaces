@@ -53,7 +53,8 @@ void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes)
 {
 	if(Mod_Skeltal_AnimateVertices_maxbonepose < nbytes)
 	{
-		Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
+		if(Mod_Skeltal_AnimateVertices_bonepose)
+			Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
 		Mod_Skeltal_AnimateVertices_bonepose = Z_Malloc(nbytes);
 		Mod_Skeltal_AnimateVertices_maxbonepose = nbytes;
 	}
