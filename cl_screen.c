@@ -61,6 +61,8 @@ cvar_t cl_capturevideo_framestep = {CVAR_SAVE, "cl_capturevideo_framestep", "1",
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
 cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
+cvar_t r_stereo_horizontal = {0, "r_stereo_horizontal", "0", "aspect skewed side by side view for special decoder/display hardware"};
+cvar_t r_stereo_vertical = {0, "r_stereo_vertical", "0", "aspect skewed top and bottom view for special decoder/display hardware"};
 cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
 cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
 cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
@@ -907,6 +909,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&r_letterbox);
 	Cvar_RegisterVariable(&r_stereo_separation);
 	Cvar_RegisterVariable(&r_stereo_sidebyside);
+	Cvar_RegisterVariable(&r_stereo_horizontal);
+	Cvar_RegisterVariable(&r_stereo_vertical);
 	Cvar_RegisterVariable(&r_stereo_redblue);
 	Cvar_RegisterVariable(&r_stereo_redcyan);
 	Cvar_RegisterVariable(&r_stereo_redgreen);
@@ -1610,6 +1614,28 @@ void SCR_DrawScreen (void)
 			if (r_stereo_side)
 				r_refdef.view.x += (int)(r_refdef.view.width * 1.5);
 		}
+		else if (r_stereo_horizontal.integer)
+		{
+			r_refdef.view.width = (int)(vid.width * size / 2);
+			r_refdef.view.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100));
+			r_refdef.view.depth = 1;
+			r_refdef.view.x = (int)((vid.width - r_refdef.view.width * 2.0)/2);
+			r_refdef.view.y = (int)((vid.height - r_refdef.view.height)/2);
+			r_refdef.view.z = 0;
+			if (r_stereo_side)
+				r_refdef.view.x += (int)(r_refdef.view.width);
+		}
+		else if (r_stereo_vertical.integer)
+		{
+			r_refdef.view.width = (int)(vid.width * size);
+			r_refdef.view.height = (int)(vid.height * size * (1 - bound(0, r_letterbox.value, 100) / 100) / 2);
+			r_refdef.view.depth = 1;
+			r_refdef.view.x = (int)((vid.width - r_refdef.view.width)/2);
+			r_refdef.view.y = (int)((vid.height - r_refdef.view.height * 2.0)/2);
+			r_refdef.view.z = 0;
+			if (r_stereo_side)
+				r_refdef.view.y += (int)(r_refdef.view.height);
+		}
 		else
 		{
 			r_refdef.view.width = (int)(vid.width * size);
@@ -1659,7 +1685,7 @@ void SCR_DrawScreen (void)
 		}
 	}
 
-	if (!r_stereo_sidebyside.integer)
+	if (!r_stereo_sidebyside.integer && !r_stereo_horizontal.integer && !r_stereo_vertical.integer)
 	{
 		r_refdef.view.width = vid.width;
 		r_refdef.view.height = vid.height;
@@ -2075,7 +2101,7 @@ qboolean R_Stereo_ColorMasking(void)
 
 qboolean R_Stereo_Active(void)
 {
-	return (vid.stereobuffer || r_stereo_sidebyside.integer || R_Stereo_ColorMasking());
+	return (vid.stereobuffer || r_stereo_sidebyside.integer || r_stereo_horizontal.integer || r_stereo_vertical.integer || R_Stereo_ColorMasking());
 }
 
 extern cvar_t cl_minfps;
@@ -2202,8 +2228,7 @@ void CL_UpdateScreen(void)
 		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0, 0, r_stereo_angle.value * 0.5f, 0, 1);
 		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
 
-		if (r_stereo_sidebyside.integer)
-			r_stereo_side = 0;
+		r_stereo_side = 0;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
@@ -2220,8 +2245,7 @@ void CL_UpdateScreen(void)
 		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0, 0, r_stereo_angle.value * -0.5f, 0, 1);
 		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
 
-		if (r_stereo_sidebyside.integer)
-			r_stereo_side = 1;
+		r_stereo_side = 1;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
