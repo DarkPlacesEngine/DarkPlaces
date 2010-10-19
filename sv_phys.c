@@ -1297,12 +1297,24 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 			//Con_Printf("step %f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			VectorSet(steppush, 0, 0, stepheight);
 			VectorCopy(ent->fields.server->origin, org);
-			SV_PushEntity(&steptrace, ent, steppush, false, false);
+			if(!SV_PushEntity(&steptrace, ent, steppush, false, false))
+			{
+				blocked |= 8;
+				break;
+			}
 			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
-			SV_PushEntity(&steptrace2, ent, push, false, false);
+			if(!SV_PushEntity(&steptrace2, ent, push, false, false))
+			{
+				blocked |= 8;
+				break;
+			}
 			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			VectorSet(steppush, 0, 0, org[2] - ent->fields.server->origin[2]);
-			SV_PushEntity(&steptrace3, ent, steppush, false, false);
+			if(!SV_PushEntity(&steptrace3, ent, steppush, false, false))
+			{
+				blocked |= 8;
+				break;
+			}
 			//Con_Printf("%f %f %f : ", ent->fields.server->origin[0], ent->fields.server->origin[1], ent->fields.server->origin[2]);
 			// accept the new position if it made some progress...
 			if (fabs(ent->fields.server->origin[0] - org[0]) >= 0.03125 || fabs(ent->fields.server->origin[1] - org[1]) >= 0.03125)
