@@ -6343,7 +6343,7 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 	skeleton_t *skeleton;
 	int skeletonindex = -1;
 	qboolean need = false;
-	if(!model->AnimateVertices)
+	if(!(model->surfmesh.isanimated && model->AnimateVertices))
 	{
 		animatemodel_cache.data_vertex3f = model->surfmesh.data_vertex3f;
 		animatemodel_cache.data_svector3f = model->surfmesh.data_svector3f;
