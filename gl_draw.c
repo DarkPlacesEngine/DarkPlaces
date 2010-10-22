@@ -721,7 +721,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 extern cvar_t developer_font;
 dp_font_t *FindFont(const char *title, qboolean allocate_new)
 {
-	int i;
+	int i, oldsize;
 
 	// find font
 	for(i = 0; i < dp_fonts.maxsize; ++i)
@@ -740,14 +740,18 @@ dp_font_t *FindFont(const char *title, qboolean allocate_new)
 			}
 		}
 		// if no any 'free' fonts - expand buffer
-		i = dp_fonts.maxsize;
+		oldsize = dp_fonts.maxsize;
 		dp_fonts.maxsize = dp_fonts.maxsize + FONTS_EXPAND;
 		if (developer_font.integer)
-			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", i, dp_fonts.maxsize);
-		dp_fonts.f = Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+			Con_Printf("FindFont: enlarging fonts buffer (%i -> %i)\n", oldsize, dp_fonts.maxsize);
+		dp_fonts.f = (dp_font_t *)Mem_Realloc(fonts_mempool, dp_fonts.f, sizeof(dp_font_t) * dp_fonts.maxsize);
+		// relink ft2 structures
+		for(i = 0; i < oldsize; ++i)
+			if (dp_fonts.f[i].ft2)
+				dp_fonts.f[i].ft2->settings = &dp_fonts.f[i].settings;
 		// register a font in first expanded slot
-		strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
-		return &dp_fonts.f[i];
+		strlcpy(dp_fonts.f[oldsize].title, title, sizeof(dp_fonts.f[oldsize].title));
+		return &dp_fonts.f[oldsize];
 	}
 	return NULL;
 }
