@@ -315,9 +315,7 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 //============================================================================
 
 #ifndef ODE_STATIC
-# ifdef WIN32
-#  define ODE_DYNAMIC 1
-# endif
+# define ODE_DYNAMIC 1
 #endif
 
 #if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
@@ -336,9 +334,10 @@ cvar_t physics_ode_contact_erp = {0, "physics_ode_contact_erp", "0.96", "contact
 cvar_t physics_ode_contact_cfm = {0, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
 cvar_t physics_ode_world_erp = {0, "physics_ode_world_erp", "-1", "world solver erp parameter - Error Restitution Percent (see ODE User Guide); use defaults when set to -1"};
 cvar_t physics_ode_world_cfm = {0, "physics_ode_world_cfm", "-1", "world solver cfm parameter - Constraint Force Mixing (see ODE User Guide); not touched when -1"};
-cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "4", "divisor for time step, runs multiple physics steps per frame"};
+cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
 cvar_t physics_ode_movelimit = {0, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls"};
 cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
+cvar_t physics_ode = {0, "physics_ode", "0", "run ODE physics (enable this if you want them)"};
 
 // LordHavoc: this large chunk of definitions comes from the ODE library
 // include files.
@@ -1476,6 +1475,7 @@ static void World_Physics_Init(void)
 	Cvar_RegisterVariable(&physics_ode_iterationsperframe);
 	Cvar_RegisterVariable(&physics_ode_movelimit);
 	Cvar_RegisterVariable(&physics_ode_spinlimit);
+	Cvar_RegisterVariable(&physics_ode);
 
 #ifdef ODE_DYNAMIC
 	// Load the DLL
@@ -2479,7 +2479,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 void World_Physics_Frame(world_t *world, double frametime, double gravity)
 {
 #ifdef USEODE
-	if (world->physics.ode)
+	if (world->physics.ode && physics_ode.integer)
 	{
 		int i;
 		prvm_edict_t *ed;
