@@ -1514,6 +1514,9 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 // GAME_STRAPBOMB
 // COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
 { "strapbomb",				"-strapbomb",		"Strap-on-bomb Car",		"id1",		NULL,			"strap",			"strapbomb" },
+// GAME_MOONHELM
+// COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
+{ "moonhelm",				"-moonhelm",		"MoonHelm",		"data",		NULL,			"mh",			"moonhelm" },
 };
 
 void COM_InitGameType (void)
