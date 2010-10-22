@@ -338,7 +338,7 @@ cvar_t physics_ode_world_cfm = {0, "physics_ode_world_cfm", "-1", "world solver 
 cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
 cvar_t physics_ode_movelimit = {0, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls"};
 cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
-cvar_t physics_ode = {0, "physics_ode", "0", "run ODE physics (enable this if you want them)"};
+cvar_t physics_ode = {0, "physics_ode", "0", "run ODE physics (VERY experimental and potentially buggy)"};
 
 // LordHavoc: this large chunk of definitions comes from the ODE library
 // include files.
