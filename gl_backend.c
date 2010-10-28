@@ -1146,11 +1146,11 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 void R_Mesh_SetRenderTargetsD3D9(IDirect3DSurface9 *depthsurface, IDirect3DSurface9 *colorsurface0, IDirect3DSurface9 *colorsurface1, IDirect3DSurface9 *colorsurface2, IDirect3DSurface9 *colorsurface3)
 {
 // LordHavoc: for some weird reason the redundant SetDepthStencilSurface calls are necessary (otherwise the lights fail depth test, as if they were using the shadowmap depth surface and render target still)
-//	if (gl_state.d3drt_depthsurface == depthsurface && gl_state.d3drt_colorsurfaces[0] == colorsurface0 && gl_state.d3drt_colorsurfaces[1] == colorsurface1 && gl_state.d3drt_colorsurfaces[2] == colorsurface2 && gl_state.d3drt_colorsurfaces[3] == colorsurface3)
-//		return;
+	if (gl_state.d3drt_depthsurface == depthsurface && gl_state.d3drt_colorsurfaces[0] == colorsurface0 && gl_state.d3drt_colorsurfaces[1] == colorsurface1 && gl_state.d3drt_colorsurfaces[2] == colorsurface2 && gl_state.d3drt_colorsurfaces[3] == colorsurface3)
+		return;
 
 	gl_state.framebufferobject = depthsurface != gl_state.d3drt_backbufferdepthsurface || colorsurface0 != gl_state.d3drt_backbuffercolorsurface;
-//	if (gl_state.d3drt_depthsurface != depthsurface)
+	if (gl_state.d3drt_depthsurface != depthsurface)
 	{
 		gl_state.d3drt_depthsurface = depthsurface;
 		IDirect3DDevice9_SetDepthStencilSurface(vid_d3d9dev, gl_state.d3drt_depthsurface);
