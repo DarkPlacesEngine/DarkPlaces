@@ -1868,7 +1868,7 @@ const char *builtincgshaderstring =
 "out float4 gl_FragColor : COLOR\n"
 ")\n"
 "{\n"
-"//	float3 temp = float3(Depth,Depth*(65536.0/255.0),Depth*(16777216.0/255.0));\n"
+"//	float4 temp = float4(Depth,Depth*(65536.0/255.0),Depth*(16777216.0/255.0),0.0);\n"
 "	float4 temp = float4(Depth,Depth*256.0,Depth*65536.0,0.0);\n"
 "	temp.yz -= floor(temp.yz);\n"
 "	gl_FragColor = temp;\n"
@@ -3609,7 +3609,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 	if(r_shadow_glossexact.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_EXACTSPECULARMATH);
 
-	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms));
+	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
 
 #define R_COMPILESHADER_STATICPARM_EMIT(p, n) \
@@ -3746,11 +3746,11 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 
 	// add static parms
 	R_CompileShader_AddStaticParms(mode, permutation);
-	memcpy(vertstrings_list + vertstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
+	memcpy((char *)(vertstrings_list + vertstrings_count), shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
 	vertstrings_count += shaderstaticparms_count;
-	memcpy(geomstrings_list + geomstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
+	memcpy((char *)(geomstrings_list + geomstrings_count), shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
 	geomstrings_count += shaderstaticparms_count;
-	memcpy(fragstrings_list + fragstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
+	memcpy((char *)(fragstrings_list + fragstrings_count), shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
 	fragstrings_count += shaderstaticparms_count;
 
 	// now append the shader text itself

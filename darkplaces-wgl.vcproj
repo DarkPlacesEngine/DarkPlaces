@@ -595,6 +595,26 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\crypto.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\csprogs.c"
 				>
 				<FileConfiguration
@@ -1116,6 +1136,46 @@
 			</File>
 			<File
 				RelativePath=".\meshqueue.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\mod_skeletal_animatevertices_generic.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						CompileAs="2"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\mod_skeletal_animatevertices_sse.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -2073,6 +2133,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\crypto.h"
+				>
+			</File>
+			<File
 				RelativePath=".\csprogs.h"
 				>
 			</File>
@@ -2174,6 +2238,14 @@
 			</File>
 			<File
 				RelativePath=".\meshqueue.h"
+				>
+			</File>
+			<File
+				RelativePath=".\mod_skeletal_animatevertices_generic.h"
+				>
+			</File>
+			<File
+				RelativePath=".\mod_skeletal_animatevertices_sse.h"
 				>
 			</File>
 			<File

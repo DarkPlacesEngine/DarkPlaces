@@ -1620,7 +1620,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			crypto->client_idfp[0] = 0;
 			crypto->server_keyfp[0] = 0;
 			crypto->server_idfp[0] = 0;
-			crypto->use_aes = aes;
+			crypto->use_aes = aes != 0;
 
 			if(CDATA->s >= 0)
 			{
@@ -2201,7 +2201,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				CLEAR_CDATA;
 				return Crypto_ClientError(data_out, len_out, "Server insists on plaintext too hard");
 			}
-			crypto->use_aes = aes;
+			crypto->use_aes = aes != 0;
 
 			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\2\\id\\%d", CDATA->cdata_id));
 			if(!qd0_blind_id_authenticate_with_private_id_challenge(CDATA->id, true, false, data_in, len_in, data_out_p, len_out, &status))
@@ -2327,7 +2327,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 					CLEAR_CDATA;
 					return Crypto_ClientError(data_out, len_out, "Server insists on plaintext too hard");
 				}
-				crypto->use_aes = aes;
+				crypto->use_aes = aes != 0;
 			}
 
 			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\6\\id\\%d", CDATA->cdata_id));
