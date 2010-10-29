@@ -151,8 +151,10 @@ void USAGE(const char *me)
 			"%s -p public.d0pk\n"
 			"%s -P private.d0sk\n"
 			"%s -p public.d0pk -i id.d0pi\n"
-			"%s -p public.d0pk -I idkey.d0si\n",
-			me, me, me, me, me, me, me, me, me, me, me, me
+			"%s -p public.d0pk -I idkey.d0si\n"
+			"%s -0 -p public.d0pk -I idkey.d0si\n"
+			"%s -0 -p public.d0pk\n",
+			me, me, me, me, me, me, me, me, me, me, me, me, me, me
 		   );
 }
 
@@ -248,7 +250,7 @@ int main(int argc, char **argv)
 	umask_save = umask(0022);
 
 	ctx = d0_blind_id_new();
-	while((opt = getopt(argc, argv, "p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C")) != -1)
+	while((opt = getopt(argc, argv, "p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C0")) != -1)
 	{
 		switch(opt)
 		{
@@ -300,6 +302,10 @@ int main(int argc, char **argv)
 			case 'x':
 				prefix = optarg;
 				prefixlen = strlen(prefix);
+				break;
+			case '0':
+				// test mode
+				mask |= 0x200;
 				break;
 			case 'X':
 				infix = optarg;
@@ -568,6 +574,58 @@ int main(int argc, char **argv)
 			}
 			break;
 */
+		case 0x209:
+			// protocol client
+			{
+				char hexbuf[131073];
+				const char hex[] = "0123456789abcdef";
+				char buf[65536]; size_t bufsize;
+				char buf2[65536]; size_t buf2size;
+				bufsize = sizeof(buf);
+				CHECK(d0_blind_id_authenticate_with_private_id_start(ctx, 1, 1, "hello world", 11, buf, &bufsize));
+				for(i = 0; i < bufsize; ++i)
+					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
+				printf("%s\n", hexbuf);
+				fgets(hexbuf, sizeof(hexbuf), stdin);
+				buf2size = strlen(hexbuf) / 2;
+				for(i = 0; i < buf2size; ++i)
+					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
+				bufsize = sizeof(buf);
+				CHECK(d0_blind_id_authenticate_with_private_id_response(ctx, buf2, buf2size, buf, &bufsize));
+				for(i = 0; i < bufsize; ++i)
+					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
+				printf("%s\n", hexbuf);
+			}
+			break;
+		case 0x201:
+			// protocol server
+			{
+				char hexbuf[131073];
+				const char hex[] = "0123456789abcdef";
+				char buf[65536]; size_t bufsize;
+				char buf2[65536]; size_t buf2size;
+				D0_BOOL status;
+				fgets(hexbuf, sizeof(hexbuf), stdin);
+				buf2size = strlen(hexbuf) / 2;
+				for(i = 0; i < buf2size; ++i)
+					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
+				bufsize = sizeof(buf);
+				CHECK(d0_blind_id_authenticate_with_private_id_challenge(ctx, 1, 1, buf2, buf2size, buf, &bufsize, &status));
+				for(i = 0; i < bufsize; ++i)
+					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
+				printf("%s\n", hexbuf);
+				fgets(hexbuf, sizeof(hexbuf), stdin);
+				buf2size = strlen(hexbuf) / 2;
+				for(i = 0; i < buf2size; ++i)
+					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
+				bufsize = sizeof(buf);
+				CHECK(d0_blind_id_authenticate_with_private_id_verify(ctx, buf2, buf2size, buf, &bufsize, &status));
+				printf("verify status: %d\n", status);
+
+				CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
+				printf("%.*s\n", (int)fp64size, fp64);
+			}
+			break;
 		default:
 			USAGE(*argv);
 			exit(1);
