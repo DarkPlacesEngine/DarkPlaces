@@ -1,5 +1,8 @@
+#define _GNU_SOURCE
+
 #include <d0_blind_id/d0_blind_id.h>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -334,7 +337,7 @@ int main(int argc, char **argv)
 			for(i = 0; infix[i]; ++i)
 				if(toupper(infix[i]) != tolower(infix[i]))
 					guesscount /= 2;
-		for(i = 0; i < prefixlen; ++i)
+		for(i = 0; i < (int)prefixlen; ++i)
 			if(toupper(prefix[i]) != tolower(prefix[i]))
 				guesscount /= 2;
 	}
@@ -583,16 +586,16 @@ int main(int argc, char **argv)
 				char buf2[65536]; size_t buf2size;
 				bufsize = sizeof(buf);
 				CHECK(d0_blind_id_authenticate_with_private_id_start(ctx, 1, 1, "hello world", 11, buf, &bufsize));
-				for(i = 0; i < bufsize; ++i)
+				for(i = 0; i < (int)bufsize; ++i)
 					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
 				printf("%s\n", hexbuf);
 				fgets(hexbuf, sizeof(hexbuf), stdin);
 				buf2size = strlen(hexbuf) / 2;
-				for(i = 0; i < buf2size; ++i)
+				for(i = 0; i < (int)buf2size; ++i)
 					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
 				bufsize = sizeof(buf);
 				CHECK(d0_blind_id_authenticate_with_private_id_response(ctx, buf2, buf2size, buf, &bufsize));
-				for(i = 0; i < bufsize; ++i)
+				for(i = 0; i < (int)bufsize; ++i)
 					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
 				printf("%s\n", hexbuf);
 			}
@@ -607,16 +610,16 @@ int main(int argc, char **argv)
 				D0_BOOL status;
 				fgets(hexbuf, sizeof(hexbuf), stdin);
 				buf2size = strlen(hexbuf) / 2;
-				for(i = 0; i < buf2size; ++i)
+				for(i = 0; i < (int)buf2size; ++i)
 					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
 				bufsize = sizeof(buf);
 				CHECK(d0_blind_id_authenticate_with_private_id_challenge(ctx, 1, 1, buf2, buf2size, buf, &bufsize, &status));
-				for(i = 0; i < bufsize; ++i)
+				for(i = 0; i < (int)bufsize; ++i)
 					sprintf(&hexbuf[2*i], "%02x", (unsigned char)buf[i]);
 				printf("%s\n", hexbuf);
 				fgets(hexbuf, sizeof(hexbuf), stdin);
 				buf2size = strlen(hexbuf) / 2;
-				for(i = 0; i < buf2size; ++i)
+				for(i = 0; i < (int)buf2size; ++i)
 					buf2[i] = ((strchr(hex, hexbuf[2*i]) - hex) << 4) | (strchr(hex, hexbuf[2*i+1]) - hex);
 				bufsize = sizeof(buf);
 				CHECK(d0_blind_id_authenticate_with_private_id_verify(ctx, buf2, buf2size, buf, &bufsize, &status));
