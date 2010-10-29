@@ -12,6 +12,7 @@ cvar_t cl_video_scale = {CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = 
 cvar_t cl_video_scale_vpos = {CVAR_SAVE, "cl_video_scale_vpos", "0", "vertial align of scaled video, -1 is top, 1 is bottom"};
 cvar_t cl_video_stipple = {CVAR_SAVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
 cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
+cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas"};
 
 // constants (and semi-constants)
 static int  cl_videormask;
@@ -52,17 +53,15 @@ static void VideoUpdateCallback(rtexture_t *rt, void *data) {
 static void LinkVideoTexture( clvideo_t *video )
 {
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT, -1, NULL );
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT | TEXF_CLAMP, -1, NULL );
 	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
 	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
 }
 
-static void UnlinkVideoTexture( clvideo_t *video )
-{
+static void UnlinkVideoTexture( clvideo_t *video ) {
 	CL_UnlinkDynTexture( video->cpif.name );
 	// free the texture
 	R_FreeTexture( video->cpif.tex );
-	video->cpif.tex = NULL;
 	// free the image data
 	Mem_Free( video->imagedata );
 }
@@ -425,7 +424,7 @@ int cl_videoplaying = false; // old, but still supported
 void CL_DrawVideo(void)
 {
 	clvideo_t *video;
-	float videotime;
+	float videotime, px, py, sx, sy;
 	cl_video_subtitle_info_t si;
 	int i;
 
@@ -440,8 +439,37 @@ void CL_DrawVideo(void)
 	if (cl_video_brightness.value <= 0 || cl_video_brightness.value > 10)
 		Cvar_SetValueQuick( &cl_video_brightness, 1);
 
+	// calc video proportions
+	px = 0;
+	py = 0;
+	sx = vid_conwidth.integer;
+	sy = vid_conheight.integer;
+	if (cl_video_keepaspectratio.integer)
+	{
+		float a = ((float)video->cpif.width / (float)video->cpif.height) / ((float)vid.width / (float)vid.height);
+		Con_Printf("%f\n", a);
+		if (a < 1.0) // scale horizontally
+		{
+			px += sx * (1 - a) * 0.5;
+			sx *= a;
+		}
+		else if (a > 1.0) // scale vertically
+		{
+			a = 1 / a;
+			py += sy * (1 - a);
+			sy *= a;
+		}
+	}
+	if (cl_video_scale.value != 1)
+	{
+		px += sx * (1 - cl_video_scale.value) * 0.5;
+		py += sy * (1 - cl_video_scale.value) * ((bound(-1, cl_video_scale_vpos.value, 1) + 1) / 2);
+		sx *= cl_video_scale.value;
+		sy *= cl_video_scale.value;
+	}
+
 	// draw black bg in case stipple is active or video is scaled
-	if (cl_video_stipple.integer || cl_video_scale.value != 1)
+	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
 		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
 
 	// enable video-only polygon stipple (of global stipple is not active)
@@ -463,16 +491,7 @@ void CL_DrawVideo(void)
 	}
 
 	// draw video
-	if (cl_video_scale.value == 1)
-		DrawQ_Pic(0, 0, &video->cpif, vid_conwidth.integer, vid_conheight.integer, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
-	else
-	{
-		int px = (int)(vid_conwidth.integer * (1 - cl_video_scale.value) * 0.5);
-		int py = (int)(vid_conheight.integer * (1 - cl_video_scale.value) * ((bound(-1, cl_video_scale_vpos.value, 1) + 1) / 2));
-		int sx = (int)(vid_conwidth.integer * cl_video_scale.value);
-		int sy = (int)(vid_conheight.integer * cl_video_scale.value);
-		DrawQ_Pic(px, py, &video->cpif, sx , sy, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
-	}
+	DrawQ_Pic(px, py, &video->cpif, sx, sy, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
 
 	// disable video-only stipple
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
@@ -579,13 +598,7 @@ static void cl_video_start( void )
 
 static void cl_video_shutdown( void )
 {
-	int i;
-	clvideo_t *video;
-
-	for( video = cl_videos, i = 0 ; i < cl_num_videos ; i++, video++ )
-		if( video->state != CLVIDEO_UNUSED && !video->suspended )
-			SuspendVideo( video );
-
+	// TODO: unlink video textures?
 	R_FreeTexturePool( &cl_videotexturepool );
 }
 
@@ -620,7 +633,7 @@ void CL_Video_Init( void )
 	Cvar_RegisterVariable(&cl_video_scale_vpos);
 	Cvar_RegisterVariable(&cl_video_brightness);
 	Cvar_RegisterVariable(&cl_video_stipple);
+	Cvar_RegisterVariable(&cl_video_keepaspectratio);
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap, NULL, NULL );
 }
-
