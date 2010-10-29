@@ -1634,7 +1634,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 			}
 			if (!fontmap || (ch <= 0xFF && fontmap->glyphs[ch].image) || (ch >= 0xE000 && ch <= 0xE0FF))
 			{
-				if (ch > 0xE000)
+				if (ch >= 0xE000)
 					ch -= 0xE000;
 				if (ch > 0xFF)
 					goto out;
