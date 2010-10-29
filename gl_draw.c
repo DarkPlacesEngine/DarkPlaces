@@ -1637,7 +1637,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				if (ch > 0xE000)
 					ch -= 0xE000;
 				if (ch > 0xFF)
-					continue;
+					goto out;
 				if (fontmap)
 				{
 					if (map != ft2_oldstyle_map)
@@ -1769,6 +1769,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				//prevmap = map;
 				prevch = ch;
 			}
+out:
 			if (shadow)
 			{
 				x -= 1.0/pix_x * r_textshadow.value;
