@@ -30,6 +30,7 @@ extern cvar_t cl_video_scale;
 extern cvar_t cl_video_scale_vpos;
 extern cvar_t cl_video_stipple;
 extern cvar_t cl_video_brightness;
+extern cvar_t cl_video_keepaspectratio;
 
 typedef struct clvideo_s
 {
