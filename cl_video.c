@@ -62,6 +62,7 @@ static void UnlinkVideoTexture( clvideo_t *video ) {
 	CL_UnlinkDynTexture( video->cpif.name );
 	// free the texture
 	R_FreeTexture( video->cpif.tex );
+	video->cpif.tex = NULL;
 	// free the image data
 	Mem_Free( video->imagedata );
 }
@@ -598,7 +599,12 @@ static void cl_video_start( void )
 
 static void cl_video_shutdown( void )
 {
-	// TODO: unlink video textures?
+	int i;
+	clvideo_t *video;
+
+	for( video = cl_videos, i = 0 ; i < cl_num_videos ; i++, video++ )
+		if( video->state != CLVIDEO_UNUSED && !video->suspended )
+			SuspendVideo( video );
 	R_FreeTexturePool( &cl_videotexturepool );
 }
 
