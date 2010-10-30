@@ -148,6 +148,10 @@ cvar_t r_glsl_postprocess_uservec1 = {CVAR_SAVE, "r_glsl_postprocess_uservec1", 
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4 = {CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec1_enable = {CVAR_SAVE, "r_glsl_postprocess_uservec1_enable", "1", "enables postprocessing uservec1 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec2_enable = {CVAR_SAVE, "r_glsl_postprocess_uservec2_enable", "1", "enables postprocessing uservec2 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec3_enable = {CVAR_SAVE, "r_glsl_postprocess_uservec3_enable", "1", "enables postprocessing uservec3 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec4_enable = {CVAR_SAVE, "r_glsl_postprocess_uservec4_enable", "1", "enables postprocessing uservec4 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
 
 cvar_t r_water = {CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_clippingplanebias = {CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
@@ -3588,6 +3592,10 @@ enum
 {
 	SHADERSTATICPARM_SATURATION_REDCOMPENSATE = 0, ///< red compensation filter for saturation
 	SHADERSTATICPARM_EXACTSPECULARMATH = 1, ///< (lightsource or deluxemapping) use exact reflection map for specular effects, as opposed to the usual OpenGL approximation
+	SHADERSTATICPARM_POSTPROCESS_USERVEC1 = 2, ///< postprocess uservec1 is enabled
+	SHADERSTATICPARM_POSTPROCESS_USERVEC2 = 3, ///< postprocess uservec2 is enabled
+	SHADERSTATICPARM_POSTPROCESS_USERVEC3 = 4, ///< postprocess uservec3 is enabled
+	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5  ///< postprocess uservec4 is enabled
 };
 #define SHADERSTATICPARMS_COUNT 2
 
@@ -3605,9 +3613,19 @@ qboolean R_CompileShader_CheckStaticParms(void)
 	// detect all
 	if (r_glsl_saturation_redcompensate.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SATURATION_REDCOMPENSATE);
-	if(r_shadow_glossexact.integer)
+	if (r_shadow_glossexact.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_EXACTSPECULARMATH);
-
+	if (r_glsl_postprocess.integer)
+	{
+		if (r_glsl_postprocess_uservec1_enable.integer)
+			R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_POSTPROCESS_USERVEC1);
+		if (r_glsl_postprocess_uservec2_enable.integer)
+			R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_POSTPROCESS_USERVEC2);
+		if (r_glsl_postprocess_uservec3_enable.integer)
+			R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_POSTPROCESS_USERVEC3);
+		if (r_glsl_postprocess_uservec4_enable.integer)
+			R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_POSTPROCESS_USERVEC4);
+	}
 	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
 
@@ -3623,8 +3641,11 @@ void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
 	// emit all
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SATURATION_REDCOMPENSATE, "SATURATION_REDCOMPENSATE");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_EXACTSPECULARMATH, "USEEXACTSPECULARMATH");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC1, "USERVEC1");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC2, "USERVEC2");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC3, "USERVEC3");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC4, "USERVEC4");
 }
-
 
 /// information about each possible shader permutation
 r_glsl_permutation_t *r_glsl_permutationhash[SHADERMODE_COUNT][SHADERPERMUTATION_HASHSIZE];
@@ -5871,12 +5892,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
 				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
+				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
 				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
 			else
@@ -7377,6 +7398,11 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec1_enable);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2_enable);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3_enable);
+	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4_enable);
+
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
 	Cvar_RegisterVariable(&r_water_clippingplanebias);
@@ -9294,10 +9320,14 @@ static void R_BlendView(void)
 #define sscanf sscanf_s
 #endif
 		memset(uservecs, 0, sizeof(uservecs));
-		sscanf(r_glsl_postprocess_uservec1.string, "%f %f %f %f", &uservecs[0][0], &uservecs[0][1], &uservecs[0][2], &uservecs[0][3]);
-		sscanf(r_glsl_postprocess_uservec2.string, "%f %f %f %f", &uservecs[1][0], &uservecs[1][1], &uservecs[1][2], &uservecs[1][3]);
-		sscanf(r_glsl_postprocess_uservec3.string, "%f %f %f %f", &uservecs[2][0], &uservecs[2][1], &uservecs[2][2], &uservecs[2][3]);
-		sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &uservecs[3][0], &uservecs[3][1], &uservecs[3][2], &uservecs[3][3]);
+		if (r_glsl_postprocess_uservec1_enable.integer)
+			sscanf(r_glsl_postprocess_uservec1.string, "%f %f %f %f", &uservecs[0][0], &uservecs[0][1], &uservecs[0][2], &uservecs[0][3]);
+		if (r_glsl_postprocess_uservec2_enable.integer)
+			sscanf(r_glsl_postprocess_uservec2.string, "%f %f %f %f", &uservecs[1][0], &uservecs[1][1], &uservecs[1][2], &uservecs[1][3]);
+		if (r_glsl_postprocess_uservec3_enable.integer)
+			sscanf(r_glsl_postprocess_uservec3.string, "%f %f %f %f", &uservecs[2][0], &uservecs[2][1], &uservecs[2][2], &uservecs[2][3]);
+		if (r_glsl_postprocess_uservec4_enable.integer)
+			sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &uservecs[3][0], &uservecs[3][1], &uservecs[3][2], &uservecs[3][3]);
 
 		R_ResetViewRendering2D();
 		GL_Color(1, 1, 1, 1);
