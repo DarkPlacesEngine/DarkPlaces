@@ -6017,7 +6017,7 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	if (dynamic)
 	{
 		int i, numlights, flag;
-		float f, v[3];
+		float f, relativepoint[3], dist, dist2, lightradius2;
 		rtlight_t *light;
 		dlight_t *dlight;
 
@@ -6034,10 +6034,17 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 				light = &dlight->rtlight;
 				if (!(light->flags & flag))
 					continue;
-				Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
-				f = 1 - VectorLength2(v);
+				// sample
+				lightradius2 = light->radius * light->radius;
+				VectorSubtract(light->shadoworigin, p, relativepoint);
+				dist2 = VectorLength2(relativepoint);
+				if (dist2 >= lightradius2)
+					continue;
+				dist = sqrt(dist2) / light->radius;
+				f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
 				if (f <= 0)
 					continue;
+				// todo: add to both ambient and diffuse
 				if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 					VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
 			}
@@ -6047,10 +6054,17 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 		for (i = 0;i < r_refdef.scene.numlights;i++)
 		{
 			light = r_refdef.scene.lights[i];
-			Matrix4x4_Transform(&light->matrix_worldtolight, p, v);
-			f = (1 - VectorLength2(v)) * r_refdef.scene.rtlightstylevalue[light->style];
+			// sample
+			lightradius2 = light->radius * light->radius;
+			VectorSubtract(light->shadoworigin, p, relativepoint);
+			dist2 = VectorLength2(relativepoint);
+			if (dist2 >= lightradius2)
+				continue;
+			dist = sqrt(dist2) / light->radius;
+			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
 			if (f <= 0)
 				continue;
+			// todo: add to both ambient and diffuse
 			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
 				VectorMA(ambientcolor, f, light->color, ambientcolor);
 		}
