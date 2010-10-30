@@ -3639,7 +3639,7 @@ enum
 	SHADERSTATICPARM_POSTPROCESS_USERVEC3 = 4, ///< postprocess uservec3 is enabled
 	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5  ///< postprocess uservec4 is enabled
 };
-#define SHADERSTATICPARMS_COUNT 2
+#define SHADERSTATICPARMS_COUNT 6
 
 static const char *shaderstaticparmstrings_list[SHADERSTATICPARMS_COUNT];
 static int shaderstaticparms_count = 0;
