@@ -448,7 +448,6 @@ void CL_DrawVideo(void)
 	if (cl_video_keepaspectratio.integer)
 	{
 		float a = ((float)video->cpif.width / (float)video->cpif.height) / ((float)vid.width / (float)vid.height);
-		Con_Printf("%f\n", a);
 		if (a < 1.0) // scale horizontally
 		{
 			px += sx * (1 - a) * 0.5;
