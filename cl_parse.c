@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "libcurl.h"
 #include "utf8lib.h"
+#include "menu.h"
 
 char *svc_strings[128] =
 {
@@ -485,6 +486,9 @@ static void CL_SetupWorldModel(void)
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
+
+	// make menu know
+	MR_NewMap();
 
 	// load the csqc now
 	if (cl.loadcsqc)

@@ -1887,7 +1887,10 @@ Key_Event (int key, int ascii, qboolean down)
 	// ignore binds while a video is played, let the video system handle the key event
 	if (cl_videoplaying)
 	{
-		CL_Video_KeyEvent (key, ascii, keydown[key] != 0);
+		if (gamemode == GAME_BLOODOMNICIDE) // menu controls key events
+			MR_KeyEvent(key, ascii, down);
+		else
+			CL_Video_KeyEvent (key, ascii, keydown[key] != 0);
 		return;
 	}
 

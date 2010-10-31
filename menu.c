@@ -5016,6 +5016,10 @@ void M_KeyEvent (int key, int ascii, qboolean downevent)
 
 }
 
+void M_NewMap(void)
+{
+}
+
 void M_Shutdown(void)
 {
 	// reset key_dest
@@ -5136,6 +5140,15 @@ void MP_ToggleMenu(int mode)
 	PRVM_End;
 }
 
+void MP_NewMap(void)
+{
+	PRVM_Begin;
+	PRVM_SetProg(PRVM_MENUPROG);
+	if (prog->funcoffsets.m_newmap)
+		PRVM_ExecuteProgram(prog->funcoffsets.m_newmap,"m_newmap() required");
+	PRVM_End;
+}
+
 void MP_Shutdown (void)
 {
 	PRVM_Begin;
@@ -5198,6 +5211,7 @@ void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu) (int mode);
 void (*MR_Shutdown) (void);
+void (*MR_NewMap) (void);
 
 void MR_SetRouting(qboolean forceold)
 {
@@ -5211,6 +5225,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_Draw = M_Draw;
 		MR_ToggleMenu = M_ToggleMenu;
 		MR_Shutdown = M_Shutdown;
+		MR_NewMap = M_NewMap;
 
 		// init
 		if(!m_init)
@@ -5228,6 +5243,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_Draw = MP_Draw;
 		MR_ToggleMenu = MP_ToggleMenu;
 		MR_Shutdown = MP_Shutdown;
+		MR_NewMap = MP_NewMap;
 
 		if(!mp_init)
 		{

@@ -378,6 +378,7 @@ typedef struct prvm_prog_funcoffsets_s
 	func_t m_keyup; // mqc
 	func_t m_shutdown; // mqc
 	func_t m_toggle; // mqc
+	func_t m_newmap; // mqc
 }
 prvm_prog_funcoffsets_t;
 
