@@ -1751,6 +1751,7 @@ void PRVM_FindOffsets(void)
 	prog->funcoffsets.m_keyup                         = PRVM_ED_FindFunctionOffset("m_keyup");
 	prog->funcoffsets.m_shutdown                      = PRVM_ED_FindFunctionOffset("m_shutdown");
 	prog->funcoffsets.m_toggle                        = PRVM_ED_FindFunctionOffset("m_toggle");
+	prog->funcoffsets.m_newmap                        = PRVM_ED_FindFunctionOffset("m_newmap");
 }
 
 // not used
