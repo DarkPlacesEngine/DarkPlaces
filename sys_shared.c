@@ -234,8 +234,12 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 # define HAVE_GETTIMEOFDAY 1
 #endif
 
-#ifdef FD_SET
-# define HAVE_SELECT 1
+#ifndef WIN32
+// on Win32, select() cannot be used with all three FD list args being NULL according to MSDN
+// (so much for POSIX...)
+# ifdef FD_SET
+#  define HAVE_SELECT 1
+# endif
 #endif
 
 #ifndef WIN32
