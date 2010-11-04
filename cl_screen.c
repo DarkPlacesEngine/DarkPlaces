@@ -481,9 +481,9 @@ static int SCR_DrawQWDownload(int offset)
 		cls.qw_downloadspeedcount = 0;
 	}
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadspeedrate);
+		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i) at %i bytes/s", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadspeedrate);
 	else
-		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s\n", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
+		dpsnprintf(temp, sizeof(temp), "Downloading %s %3i%% (%i/%i) at %i bytes/s", cls.qw_downloadname, cls.qw_downloadpercent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize, cls.qw_downloadspeedrate);
 	len = (int)strlen(temp);
 	x = (vid_conwidth.integer - DrawQ_TextWidth(temp, len, size, size, true, FONT_INFOBAR)) / 2;
 	y = vid_conheight.integer - size - offset;
@@ -544,11 +544,11 @@ static int SCR_DrawCurlDownload(int offset)
 	for(i = 0; i != nDownloads; ++i)
 	{
 		if(downinfo[i].queued)
-			dpsnprintf(temp, sizeof(temp), "Still in queue: %s\n", downinfo[i].filename);
+			dpsnprintf(temp, sizeof(temp), "Still in queue: %s", downinfo[i].filename);
 		else if(downinfo[i].progress <= 0)
-			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  ???.?%% @ %.1f KiB/s\n", downinfo[i].filename, downinfo[i].speed / 1024.0);
+			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  ???.?%% @ %.1f KiB/s", downinfo[i].filename, downinfo[i].speed / 1024.0);
 		else
-			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s\n", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
+			dpsnprintf(temp, sizeof(temp), "Downloading %s ...  %5.1f%% @ %.1f KiB/s", downinfo[i].filename, 100.0 * downinfo[i].progress, downinfo[i].speed / 1024.0);
 		len = (int)strlen(temp);
 		x = (vid_conwidth.integer - DrawQ_TextWidth(temp, len, size, size, true, FONT_INFOBAR)) / 2;
 		DrawQ_Fill(0, y + i * size, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
