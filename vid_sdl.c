@@ -24,6 +24,36 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 
+#ifdef MACOSX
+#include <Carbon/Carbon.h>
+#include <IOKit/hidsystem/IOHIDLib.h>
+#include <IOKit/hidsystem/IOHIDParameter.h>
+#include <IOKit/hidsystem/event_status_driver.h>
+static cvar_t apple_mouse_noaccel = {CVAR_SAVE, "apple_mouse_noaccel", "1", "disables mouse acceleration while DarkPlaces is active"};
+static qboolean vid_usingnoaccel;
+static double originalMouseSpeed = -1.0;
+io_connect_t IN_GetIOHandle(void)
+{
+	io_connect_t iohandle = MACH_PORT_NULL;
+	kern_return_t status;
+	io_service_t iohidsystem = MACH_PORT_NULL;
+	mach_port_t masterport;
+
+	status = IOMasterPort(MACH_PORT_NULL, &masterport);
+	if(status != KERN_SUCCESS)
+		return 0;
+
+	iohidsystem = IORegistryEntryFromPath(masterport, kIOServicePlane ":/IOResources/IOHIDSystem");
+	if(!iohidsystem)
+		return 0;
+
+	status = IOServiceOpen(iohidsystem, mach_task_self(), kIOHIDParamConnectType, &iohandle);
+	IOObjectRelease(iohidsystem);
+
+	return iohandle;
+}
+#endif
+
 #ifdef WIN32
 #define SDL_R_RESTART
 #endif
@@ -241,11 +271,68 @@ static int MapKey( unsigned int sdlkey )
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
+#ifdef MACOSX
+	if(relative)
+		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
+			VID_SetMouse(false, false, false); // ungrab first!
+#endif
 	if (vid_usingmouse != relative)
 	{
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
 		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
+#ifdef MACOSX
+		if(relative)
+		{
+			// Save the status of mouse acceleration
+			originalMouseSpeed = -1.0; // in case of error
+			if(apple_mouse_noaccel.integer)
+			{
+				io_connect_t mouseDev = IN_GetIOHandle();
+				if(mouseDev != 0)
+				{
+					if(IOHIDGetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), &originalMouseSpeed) == kIOReturnSuccess)
+					{
+						Con_DPrintf("previous mouse acceleration: %f\n", originalMouseSpeed);
+						if(IOHIDSetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), -1.0) != kIOReturnSuccess)
+						{
+							Con_Print("Could not disable mouse acceleration (failed at IOHIDSetAccelerationWithKey).\n");
+							Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+						}
+					}
+					else
+					{
+						Con_Print("Could not disable mouse acceleration (failed at IOHIDGetAccelerationWithKey).\n");
+						Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+					}
+					IOServiceClose(mouseDev);
+				}
+				else
+				{
+					Con_Print("Could not disable mouse acceleration (failed at IO_GetIOHandle).\n");
+					Cvar_SetValueQuick(&apple_mouse_noaccel, 0);
+				}
+			}
+
+			vid_usingnoaccel = !!apple_mouse_noaccel.integer;
+		}
+		else
+		{
+			if(originalMouseSpeed != -1.0)
+			{
+				io_connect_t mouseDev = IN_GetIOHandle();
+				if(mouseDev != 0)
+				{
+					Con_DPrintf("restoring mouse acceleration to: %f\n", originalMouseSpeed);
+					if(IOHIDSetAccelerationWithKey(mouseDev, CFSTR(kIOHIDMouseAccelerationType), originalMouseSpeed) != kIOReturnSuccess)
+						Con_Print("Could not re-enable mouse acceleration (failed at IOHIDSetAccelerationWithKey).\n");
+					IOServiceClose(mouseDev);
+				}
+				else
+					Con_Print("Could not re-enable mouse acceleration (failed at IO_GetIOHandle).\n");
+			}
+		}
+#endif
 	}
 	if (vid_usinghidecursor != hidecursor)
 	{
@@ -467,6 +554,9 @@ static qboolean vid_sdl_initjoysticksystem = false;
 
 void VID_Init (void)
 {
+#ifdef MACOSX
+	Cvar_RegisterVariable(&apple_mouse_noaccel);
+#endif
 	Cvar_RegisterVariable(&joy_detected);
 	Cvar_RegisterVariable(&joy_enable);
 	Cvar_RegisterVariable(&joy_index);
