@@ -727,14 +727,11 @@ void V_CalcRefdef (void)
 							if (cl.velocity[2] < -cl_bobfallminspeed.value)
 								cl.bobfall_swing = 1;
 							else
-								cl.bobfall_swing = 0;
+								cl.bobfall_swing = 0; // TODO really?
 						}
 						else
 						{
-							if(cl.bobfall_swing > 0)
-								cl.bobfall_swing -= bound(0, cl_bobfallcycle.value * frametime, 1);
-							else
-								cl.bobfall_swing = 0;
+							cl.bobfall_swing = max(0, cl.bobfall_swing - cl_bobfallcycle.value * frametime);
 
 							bobfall = sin(M_PI * cl.bobfall_swing) * cl.bobfall_speed;
 							vieworg[2] += bobfall;
