@@ -1107,7 +1107,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 					Con_Print("Connection refused\n");
 					return 0;
 			}
-			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
+			Con_DPrintf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 #ifdef SUPPORTIPV6
@@ -1134,7 +1134,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 					Con_Print("Connection refused\n");
 					return 0;
 			}
-			Con_Printf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
+			Con_DPrintf("LHNET_Read: recvfrom returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 #endif
@@ -1175,7 +1175,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
-			Con_Printf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
+			Con_DPrintf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 #ifdef SUPPORTIPV6
@@ -1186,7 +1186,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		{
 			if (SOCKETERRNO == EWOULDBLOCK)
 				return 0;
-			Con_Printf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
+			Con_DPrintf("LHNET_Write: sendto returned error: %s\n", LHNETPRIVATE_StrError());
 		}
 	}
 #endif
