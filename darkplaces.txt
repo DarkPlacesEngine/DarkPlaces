@@ -1368,7 +1368,8 @@ Shader parameters for DP's own features:
   then align it in Radiant so only one of the animation frames can be seen on
   the surface, and specify "tcmod page 4 2 0.1". DP will then display the frames
   in order and the cycle will repeat every 0.8 seconds.
-
+- dppolygonoffset <factor> <offset>
+  This surface gets glPolygonOffset(factor, offset); useful for decals
 
 
 Thanks to:
