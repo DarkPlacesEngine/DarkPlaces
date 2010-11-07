@@ -1603,6 +1603,8 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 }
 
 extern cvar_t mod_q3shader_default_offsetmapping;
+extern cvar_t mod_q3shader_default_polygonoffset;
+extern cvar_t mod_q3shader_default_polygonfactor;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1693,6 +1695,8 @@ void Mod_LoadQ3Shaders(void)
 			shader.offsetscale = 1;
 			shader.specularscalemod = 1;
 			shader.specularpowermod = 1;
+			shader.biaspolygonoffset = mod_q3shader_default_polygonoffset.value;
+			shader.biaspolygonfactor = mod_q3shader_default_polygonfactor.value;
 
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -2093,6 +2097,18 @@ void Mod_LoadQ3Shaders(void)
 					shader.textureflags |= Q3TEXTUREFLAG_NOPICMIP;
 				else if (!strcasecmp(parameter[0], "polygonoffset"))
 					shader.textureflags |= Q3TEXTUREFLAG_POLYGONOFFSET;
+				else if (!strcasecmp(parameter[0], "dppolygonoffset"))
+				{
+					shader.textureflags |= Q3TEXTUREFLAG_POLYGONOFFSET;
+					if(numparameters >= 2)
+					{
+						shader.biaspolygonfactor = atof(parameter[1]);
+						if(numparameters >= 3)
+							shader.biaspolygonoffset = atof(parameter[2]);
+						else
+							shader.biaspolygonoffset = 0;
+					}
+				}
 				else if (!strcasecmp(parameter[0], "dprefract") && numparameters >= 5)
 				{
 					shader.textureflags |= Q3TEXTUREFLAG_REFRACTION;
@@ -2298,7 +2314,10 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 		if (shader->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 		if (shader->textureflags & Q3TEXTUREFLAG_POLYGONOFFSET)
-			texture->biaspolygonoffset -= 2;
+		{
+			texture->biaspolygonoffset += shader->biaspolygonoffset;
+			texture->biaspolygonfactor += shader->biaspolygonfactor;
+		}
 		if (shader->textureflags & Q3TEXTUREFLAG_REFRACTION)
 			texture->basematerialflags |= MATERIALFLAG_REFRACTION;
 		if (shader->textureflags & Q3TEXTUREFLAG_REFLECTION)

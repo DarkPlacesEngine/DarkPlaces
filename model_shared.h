@@ -477,6 +477,9 @@ typedef struct q3shaderinfo_s
 	dpoffsetmapping_technique_t offsetmapping;
 	float offsetscale;
 
+	// polygonoffset (only used if Q3TEXTUREFLAG_POLYGONOFFSET)
+	float biaspolygonoffset, biaspolygonfactor;
+
 	// gloss
 	float specularscalemod;
 	float specularpowermod;
