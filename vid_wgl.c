@@ -183,6 +183,16 @@ static unsigned int		mstate_di;
 #define JOY_AXIS_U			4
 #define JOY_AXIS_V			5
 
+// joystick axes state
+typedef struct
+{
+	float oldmove;
+	float move;
+	float mdelta;
+	double keytime;
+}joy_axiscache_t;
+static joy_axiscache_t joy_axescache[JOY_MAX_AXES];
+
 enum _ControlList
 {
 	AxisNada = 0, AxisForward, AxisLook, AxisSide, AxisTurn
@@ -221,6 +231,7 @@ static cvar_t joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0", "how fast
 static cvar_t joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0", "how fast the joystick turns left/right"};
 static cvar_t joy_wwhack1 = {0, "joywwhack1", "0.0", "special hack for wingman warrior"};
 static cvar_t joy_wwhack2 = {0, "joywwhack2", "0.0", "special hack for wingman warrior"};
+static cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
 
 static cvar_t vid_forcerefreshrate = {0, "vid_forcerefreshrate", "0", "try to set the given vid_refreshrate even if Windows doesn't list it as valid video mode"};
 
@@ -482,6 +493,7 @@ static keynum_t buttonremap[16] =
 };
 
 /* main window procedure */
+static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode);
 LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 {
 	LONG    lRet = 1;
@@ -526,7 +538,8 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			else if( charlength == 2 ) {
 				asciichar[0] = asciichar[1];
 			}
-			Key_Event (vkey, asciichar[0], down);
+			if (!IN_JoystickBlockDoubledKeyEvents(vkey))
+				Key_Event (vkey, asciichar[0], down);
 			break;
 
 		case WM_SYSCHAR:
@@ -1811,17 +1824,150 @@ static qboolean IN_ReadJoystick (void)
 	}
 }
 
+/*
+===========
+ IN_JoystickGetAxisNum
+===========
+*/
+
+int IN_JoystickGetAxisNum(int ControlListType)
+{
+	int i;
+
+	for (i = 0; i < JOY_MAX_AXES; i++)
+		if (dwAxisMap[i] == ControlListType)
+			return i;
+	return -1;
+}
 
 /*
 ===========
-IN_JoyMove
+ IN_JoystickGetAxis
+===========
+*/
+static double IN_JoystickGetAxis(int axis, double sensitivity, double deadzone)
+{
+	float	fAxisValue, fTemp;
+
+	if (!joy_avail || axis < 0 || axis >= JOY_MAX_AXES)
+		return 0; // no such axis on this joystick
+
+	// get the floating point zero-centered, potentially-inverted data for the current axis
+	fAxisValue = (float) *pdwRawValue[axis];
+
+	// move centerpoint to zero
+	fAxisValue -= 32768.0;
+
+	if (joy_wwhack2.integer != 0.0)
+	{
+		if (dwAxisMap[axis] == AxisTurn)
+		{
+			// this is a special formula for the Logitech WingMan Warrior
+			// y=ax^b; where a = 300 and b = 1.3
+			// also x values are in increments of 800 (so this is factored out)
+			// then bounds check result to level out excessively high spin rates
+			fTemp = 300.0 * pow(abs(fAxisValue) / 800.0, 1.3);
+			if (fTemp > 14000.0)
+				fTemp = 14000.0;
+			// restore direction information
+			fAxisValue = (fAxisValue > 0.0) ? fTemp : -fTemp;
+		}
+	}
+
+	// convert range from -32768..32767 to -1..1
+	fAxisValue /= 32768.0;
+
+	// deadzone around center
+	if (fabs(fAxisValue) < deadzone)
+		return 0; 
+
+	// apply sensitivity
+	return fAxisValue * sensitivity;
+}
+
+/*
+===========
+ IN_JoystickKeyeventForAxis
+===========
+*/
+
+static void IN_JoystickKeyeventForAxis(int axis, int key_pos, int key_neg)
+{
+	double joytime;
+
+	if (axis < 0 || axis >= JOY_MAX_AXES)
+		return; // no such axis on this joystick
+
+	joytime = Sys_DoubleTime();
+	// no key event, continuous keydown event
+	if (joy_axescache[axis].move == joy_axescache[axis].oldmove)
+	{
+		if (joy_axescache[axis].move != 0 && joytime > joy_axescache[axis].keytime)
+		{
+			//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
+			Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
+			joy_axescache[axis].keytime = joytime + 0.5 / 20;
+		}
+		return;
+	}
+	// generate key up event
+	if (joy_axescache[axis].oldmove)
+	{
+		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg), 1, cl.time);
+		Key_Event((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg, 0, 0);
+	}
+	// generate key down event
+	if (joy_axescache[axis].move)
+	{
+		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
+		Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
+		joy_axescache[axis].keytime = joytime + 0.5;
+	}
+}
+
+/*
+===========
+ IN_JoystickBlockDoubledKeyEvents
+===========
+*/
+
+static qboolean IN_ReadJoystick (void);
+static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
+{
+	int axis;
+
+	if (!joy_axiskeyevents.integer)
+		return false;
+
+	// block keyevent if it's going to be provided by joystick keyevent system
+	if (joy_avail)
+	{
+		// collect the joystick data, if possible
+		if (IN_ReadJoystick() != true)
+			return false;
+		axis = IN_JoystickGetAxisNum(AxisForward);
+		if (keycode == K_UPARROW || keycode == K_DOWNARROW)
+			if (IN_JoystickGetAxis(axis, 1, 0.01) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
+				return true;
+		axis = IN_JoystickGetAxisNum(AxisSide);
+		if (keycode == K_RIGHTARROW || keycode == K_LEFTARROW)
+			if (IN_JoystickGetAxis(axis, 1, 0.01) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
+				return true;
+	}
+
+	return false;
+}
+
+/*
+===========
+ IN_JoyMove
 ===========
 */
 static void IN_JoyMove (void)
 {
 	float	speed, aspeed;
-	float	fAxisValue, fTemp;
-	int		i, mouselook = (in_mlook.state & 1) || freelook.integer;
+	float	fAxisValue;
+	int		i, mouselook = (in_mlook.state & 1) || freelook.integer, AxisForwardIndex = -1, AxisSideIndex = -1;
 
 	// complete initialization if first time in
 	// this is needed as cvars are not available at initialization time
@@ -1846,7 +1992,6 @@ static void IN_JoyMove (void)
 				key_index = (i < 16) ? K_JOY1 : K_AUX1;
 				Key_Event (key_index + i, 0, true);
 			}
-
 			if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
 			{
 				key_index = (i < 16) ? K_JOY1 : K_AUX1;
@@ -1911,135 +2056,109 @@ static void IN_JoyMove (void)
 	// loop through the axes
 	for (i = 0; i < JOY_MAX_AXES; i++)
 	{
-		// get the floating point zero-centered, potentially-inverted data for the current axis
-		fAxisValue = (float) *pdwRawValue[i];
-		// move centerpoint to zero
-		fAxisValue -= 32768.0;
-
-		if (joy_wwhack2.integer != 0.0)
-		{
-			if (dwAxisMap[i] == AxisTurn)
-			{
-				// this is a special formula for the Logitech WingMan Warrior
-				// y=ax^b; where a = 300 and b = 1.3
-				// also x values are in increments of 800 (so this is factored out)
-				// then bounds check result to level out excessively high spin rates
-				fTemp = 300.0 * pow(abs(fAxisValue) / 800.0, 1.3);
-				if (fTemp > 14000.0)
-					fTemp = 14000.0;
-				// restore direction information
-				fAxisValue = (fAxisValue > 0.0) ? fTemp : -fTemp;
-			}
-		}
-
-		// convert range from -32768..32767 to -1..1
-		fAxisValue /= 32768.0;
-
+		// convert axis to real move
 		switch (dwAxisMap[i])
 		{
-		case AxisForward:
-			if ((joy_advanced.integer == 0) && mouselook)
-			{
-				// user wants forward control to become look control
-				if (fabs(fAxisValue) > joy_pitchthreshold.value)
+			case AxisForward:
+				if (AxisForwardIndex < 0)
+					AxisForwardIndex = i;
+				if ((joy_advanced.integer == 0) && mouselook)
 				{
-					// if mouse invert is on, invert the joystick pitch value
-					// only absolute control support here (joy_advanced is false)
-					if (m_pitch.value < 0.0)
+					// user wants forward control to become look control
+					fAxisValue = IN_JoystickGetAxis(i, joy_pitchsensitivity.value, joy_pitchthreshold.value);
+					if (fAxisValue != 0)
 					{
-						cl.viewangles[PITCH] -= (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
+						// if mouse invert is on, invert the joystick pitch value
+						// only absolute control support here (joy_advanced is false)
+						if (m_pitch.value < 0.0)
+							cl.viewangles[PITCH] -= fAxisValue * aspeed * cl_pitchspeed.value;
+						else
+							cl.viewangles[PITCH] += fAxisValue * aspeed * cl_pitchspeed.value;
+						V_StopPitchDrift();
 					}
 					else
 					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
+						// no pitch movement
+						// disable pitch return-to-center unless requested by user
+						// *** this code can be removed when the lookspring bug is fixed
+						// *** the bug always has the lookspring feature on
+						if (lookspring.value == 0.0)
+							V_StopPitchDrift();
 					}
-					V_StopPitchDrift();
 				}
 				else
 				{
-					// no pitch movement
-					// disable pitch return-to-center unless requested by user
-					// *** this code can be removed when the lookspring bug is fixed
-					// *** the bug always has the lookspring feature on
-					if(lookspring.value == 0.0)
-						V_StopPitchDrift();
+					// user wants forward control to be forward control
+					fAxisValue = IN_JoystickGetAxis(i, joy_forwardsensitivity.value, joy_forwardthreshold.value);
+					cl.cmd.forwardmove += fAxisValue * speed * cl_forwardspeed.value;
 				}
-			}
-			else
-			{
-				// user wants forward control to be forward control
-				if (fabs(fAxisValue) > joy_forwardthreshold.value)
-				{
-					cl.cmd.forwardmove += (fAxisValue * joy_forwardsensitivity.value) * speed * cl_forwardspeed.value;
-				}
-			}
-			break;
+				break;
 
-		case AxisSide:
-			if (fabs(fAxisValue) > joy_sidethreshold.value)
-			{
-				cl.cmd.sidemove += (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
-			}
-			break;
+			case AxisSide:
+				if (AxisSideIndex < 0)
+					AxisSideIndex = i;
+				fAxisValue = IN_JoystickGetAxis(i, joy_sidesensitivity.value, joy_sidethreshold.value);
+				cl.cmd.sidemove += fAxisValue * speed * cl_sidespeed.value;
+				break;
 
-		case AxisTurn:
-			if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
-			{
-				// user wants turn control to become side control
-				if (fabs(fAxisValue) > joy_sidethreshold.value)
+			case AxisTurn:
+				if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
 				{
-					cl.cmd.sidemove -= (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
-				}
-			}
-			else
-			{
-				// user wants turn control to be turn control
-				if (fabs(fAxisValue) > joy_yawthreshold.value)
-				{
-					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
-					{
-						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity.value) * aspeed * cl_yawspeed.value;
-					}
-					else
-					{
-						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity.value) * speed * 180.0;
-					}
-
-				}
-			}
-			break;
-
-		case AxisLook:
-			if (mouselook)
-			{
-				if (fabs(fAxisValue) > joy_pitchthreshold.value)
-				{
-					// pitch movement detected and pitch movement desired by user
-					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
-					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
-					}
-					else
-					{
-						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * speed * 180.0;
-					}
-					V_StopPitchDrift();
+					// user wants turn control to become side control
+					fAxisValue = IN_JoystickGetAxis(i, joy_sidesensitivity.value, joy_sidethreshold.value);
+					cl.cmd.sidemove -= fAxisValue * speed * cl_sidespeed.value;
 				}
 				else
 				{
-					// no pitch movement
-					// disable pitch return-to-center unless requested by user
-					// *** this code can be removed when the lookspring bug is fixed
-					// *** the bug always has the lookspring feature on
-					if(lookspring.integer == 0)
-						V_StopPitchDrift();
+					// user wants turn control to be turn control
+					fAxisValue = IN_JoystickGetAxis(i, joy_yawsensitivity.value, joy_yawthreshold.value);
+					if (dwControlMap[i] == JOY_ABSOLUTE_AXIS)
+						cl.viewangles[YAW] += fAxisValue * aspeed * cl_yawspeed.value;
+					else
+						cl.viewangles[YAW] += fAxisValue * speed * 180.0;
 				}
-			}
-			break;
+				break;
 
-		default:
-			break;
+			case AxisLook:
+				fAxisValue = IN_JoystickGetAxis(i, joy_pitchsensitivity.value, joy_pitchthreshold.value);
+				if (mouselook)
+				{
+					if (fAxisValue != 0)
+					{
+						// pitch movement detected and pitch movement desired by user
+						if (dwControlMap[i] == JOY_ABSOLUTE_AXIS)
+							cl.viewangles[PITCH] += fAxisValue * aspeed * cl_pitchspeed.value;
+						else
+							cl.viewangles[PITCH] += fAxisValue * speed * 180.0;
+						V_StopPitchDrift();
+					}
+					else
+					{
+						// no pitch movement
+						// disable pitch return-to-center unless requested by user
+						// *** this code can be removed when the lookspring bug is fixed
+						// *** the bug always has the lookspring feature on
+						if(lookspring.integer == 0)
+							V_StopPitchDrift();
+					}
+				}
+				break;
+
+			default:
+				fAxisValue = IN_JoystickGetAxis(i, 1, 0.01);
+				break;
 		}
+	
+		// cache for keyevents
+		joy_axescache[i].oldmove = joy_axescache[i].move;
+		joy_axescache[i].move = IN_JoystickGetAxis(i, 1, 0.01);
+	}
+
+	// run keyevents
+	if (joy_axiskeyevents.integer)
+	{
+		IN_JoystickKeyeventForAxis(AxisForwardIndex, K_DOWNARROW, K_UPARROW);
+		IN_JoystickKeyeventForAxis(AxisSideIndex, K_RIGHTARROW, K_LEFTARROW);
 	}
 }
 
@@ -2067,6 +2186,7 @@ static void IN_Init(void)
 	Cvar_RegisterVariable (&joy_yawsensitivity);
 	Cvar_RegisterVariable (&joy_wwhack1);
 	Cvar_RegisterVariable (&joy_wwhack2);
+	Cvar_RegisterVariable (&joy_axiskeyevents);
 	Cvar_RegisterVariable (&vid_forcerefreshrate);
 	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f, "applies current joyadv* cvar settings to the joystick driver");
 }
