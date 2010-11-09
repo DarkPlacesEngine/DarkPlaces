@@ -84,6 +84,7 @@ cvar_t joy_sensitivityup = {0, "joy_sensitivityup", "1", "movement multiplier"};
 cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multiplier"};
 cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
+cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
 
 static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
@@ -97,6 +98,16 @@ static int win_half_height = 50;
 static int video_bpp, video_flags;
 
 static SDL_Surface *screen;
+
+// joystick axes state
+#define MAX_JOYSTICK_AXES	16
+typedef struct
+{
+	float oldmove;
+	float move;
+	double keytime;
+}joy_axiscache_t;
+static joy_axiscache_t joy_axescache[MAX_JOYSTICK_AXES];
 
 /////////////////////////
 // Input handling
@@ -353,12 +364,79 @@ static double IN_JoystickGetAxis(SDL_Joystick *joy, int axis, double sensitivity
 	return value * sensitivity;
 }
 
+/////////////////////
+// Joystick axis keyevents
+// a sort of hack emulating Arrow keys for joystick axises
+// as some drives dont send such keyevents for them
+// additionally we should block drivers that do send arrow keyevents to prevent double events
+////
+
+static void IN_JoystickKeyeventForAxis(SDL_Joystick *joy, int axis, int key_pos, int key_neg)
+{
+	double joytime;
+
+	if (axis < 0 || axis >= SDL_JoystickNumAxes(joy))
+		return; // no such axis on this joystick
+
+	joytime = Sys_DoubleTime();
+	// no key event, continuous keydown event
+	if (joy_axescache[axis].move == joy_axescache[axis].oldmove)
+	{
+		if (joy_axescache[axis].move != 0 && joytime > joy_axescache[axis].keytime)
+		{
+			//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
+			Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
+			joy_axescache[axis].keytime = joytime + 0.5 / 20;
+		}
+		return;
+	}
+	// generate key up event
+	if (joy_axescache[axis].oldmove)
+	{
+		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg), 1, cl.time);
+		Key_Event((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg, 0, 0);
+	}
+	// generate key down event
+	if (joy_axescache[axis].move)
+	{
+		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
+		Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
+		joy_axescache[axis].keytime = joytime + 0.5;
+	}
+}
+
+static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
+{
+	if (!joy_axiskeyevents.integer)
+		return false;
+
+	// block keyevent if it's going to be provided by joystick keyevent system
+	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
+	{
+		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
+
+		if (keycode == K_UPARROW || keycode == K_DOWNARROW)
+			if (IN_JoystickGetAxis(joy, joy_axisforward.integer, 1, 0.01) || joy_axescache[joy_axisforward.integer].move || joy_axescache[joy_axisforward.integer].oldmove)
+				return true;
+		if (keycode == K_RIGHTARROW || keycode == K_LEFTARROW)
+			if (IN_JoystickGetAxis(joy, joy_axisside.integer, 1, 0.01) || joy_axescache[joy_axisside.integer].move || joy_axescache[joy_axisside.integer].oldmove)
+				return true;
+	}
+
+	return false;
+}
+
+/////////////////////
+// Movement handling
+////
+
 void IN_Move( void )
 {
 	int j;
 	static int old_x = 0, old_y = 0;
 	static int stuck = 0;
-	int x, y;
+	int x, y, numaxes, numballs;
+
 	if (vid_usingmouse)
 	{
 		if(vid_stick_mouse.integer)
@@ -396,19 +474,38 @@ void IN_Move( void )
 	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
 	{
 		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
-		int numballs = SDL_JoystickNumBalls(joy);
+
+		// balls convert to mousemove
+		numballs = SDL_JoystickNumBalls(joy);
 		for (j = 0;j < numballs;j++)
 		{
 			SDL_JoystickGetBall(joy, j, &x, &y);
 			in_mouse_x += x;
 			in_mouse_y += y;
 		}
+
+		// axes
 		cl.cmd.forwardmove += IN_JoystickGetAxis(joy, joy_axisforward.integer, joy_sensitivityforward.value, joy_deadzoneforward.value) * cl_forwardspeed.value;
 		cl.cmd.sidemove    += IN_JoystickGetAxis(joy, joy_axisside.integer, joy_sensitivityside.value, joy_deadzoneside.value) * cl_sidespeed.value;
 		cl.cmd.upmove      += IN_JoystickGetAxis(joy, joy_axisup.integer, joy_sensitivityup.value, joy_deadzoneup.value) * cl_upspeed.value;
 		cl.viewangles[0]   += IN_JoystickGetAxis(joy, joy_axispitch.integer, joy_sensitivitypitch.value, joy_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
 		cl.viewangles[1]   += IN_JoystickGetAxis(joy, joy_axisyaw.integer, joy_sensitivityyaw.value, joy_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
 		//cl.viewangles[2]   += IN_JoystickGetAxis(joy, joy_axisroll.integer, joy_sensitivityroll.value, joy_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
+	
+		// cache state of axes to emulate button events for them
+		numaxes = min(MAX_JOYSTICK_AXES, SDL_JoystickNumAxes(joy));
+		for (j = 0; j < numaxes; j++)
+		{
+			joy_axescache[j].oldmove = joy_axescache[j].move;
+			joy_axescache[j].move = IN_JoystickGetAxis(joy, j, 1, 0.01);
+		}
+
+		// run keyevents
+		if (joy_axiskeyevents.integer)
+		{
+			IN_JoystickKeyeventForAxis(joy, joy_axisforward.integer, K_DOWNARROW, K_UPARROW);
+			IN_JoystickKeyeventForAxis(joy, joy_axisside.integer, K_RIGHTARROW, K_LEFTARROW);
+		}
 	}
 }
 
@@ -468,6 +565,7 @@ static keynum_t buttonremap[18] =
 void Sys_SendKeyEvents( void )
 {
 	static qboolean sound_active = true;
+	int keycode;
 	SDL_Event event;
 
 	while( SDL_PollEvent( &event ) )
@@ -477,7 +575,9 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-				Key_Event( MapKey( event.key.keysym.sym ), event.key.keysym.unicode, (event.key.state == SDL_PRESSED) );
+				keycode = MapKey(event.key.keysym.sym);
+				if (!IN_JoystickBlockDoubledKeyEvents(keycode))
+					Key_Event(keycode, event.key.keysym.unicode, (event.key.state == SDL_PRESSED));
 				break;
 			case SDL_ACTIVEEVENT:
 				if( event.active.state & SDL_APPACTIVE )
@@ -578,6 +678,7 @@ void VID_Init (void)
 	Cvar_RegisterVariable(&joy_sensitivitypitch);
 	Cvar_RegisterVariable(&joy_sensitivityyaw);
 	//Cvar_RegisterVariable(&joy_sensitivityroll);
+	Cvar_RegisterVariable(&joy_axiskeyevents);
 	
 #ifdef SDL_R_RESTART
 	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
