@@ -536,8 +536,8 @@ static const snd_buffer_t* OGG_FetchSound (void *sfxfetcher, void **chfetcherpoi
 	newlength = (int)(per_sfx->format.speed*STREAM_BUFFER_FILL);
 	if (newlength + sb->nbframes > sb->maxframes)
 	{
-		Con_Printf ("OGG_FetchSound: stream buffer overflow (%u sample frames / %u)\n",
-					sb->format.speed + sb->nbframes, sb->maxframes);
+		Con_Printf ("OGG_FetchSound: stream buffer overflow (%u + %u = %u sample frames / %u)\n",
+					newlength, sb->nbframes, newlength + sb->nbframes, sb->maxframes);
 		return NULL;
 	}
 	newlength *= factor; // convert from sample frames to bytes
