@@ -840,7 +840,7 @@ static void R_Q1BSP_RecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, mnode_t 
 								if (castshadow)
 									SETPVSBIT(info->outshadowtrispvs, t);
 							}
-#if 0
+#if 1
 							else if (r_shadow_frontsidecasting.integer)
 							{
 								// front side casting occludes backfaces,
