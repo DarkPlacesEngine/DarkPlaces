@@ -510,6 +510,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 		_face = 0;
 		status = qFT_New_Memory_Face(font_ft2lib, (FT_Bytes)data, datasize, 0, (FT_Face*)&font->face);
 	}
+	font->data = data;
 	if (status)
 	{
 		Con_Printf("ERROR: can't create face for %s\n"
@@ -980,6 +981,10 @@ void Font_UnloadFont(ft2_font_t *font)
 			qFT_Done_Face((FT_Face)font->face);
 			font->face = NULL;
 		}
+	}
+	if (font->data) {
+	    Mem_Free(font->data);
+	    font->data = NULL;
 	}
 }
 
