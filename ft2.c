@@ -957,6 +957,10 @@ void Font_UnloadFont(ft2_font_t *font)
 	int i;
 	if (font->attachments && font->attachmentcount)
 	{
+		for (i = 0; i < font->attachmentcount; ++i) {
+			if (font->attachments[i].data)
+				Mem_Free(font->attachments[i].data);
+		}
 		Mem_Free(font->attachments);
 		font->attachmentcount = 0;
 		font->attachments = NULL;
