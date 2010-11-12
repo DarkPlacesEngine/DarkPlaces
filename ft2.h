@@ -43,7 +43,7 @@ typedef struct ft2_font_s
 
 	// TODO: clean this up and do not expose everything.
 	
-	//unsigned char  *data;
+	unsigned char  *data; // TODO: See if FT2 actually needs it to stay... probably does
 	//fs_offset_t     datasize;
 	void           *face;
 
