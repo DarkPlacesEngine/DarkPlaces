@@ -956,6 +956,11 @@ static void UnloadMapRec(ft2_font_map_t *map)
 void Font_UnloadFont(ft2_font_t *font)
 {
 	int i;
+
+	// unload fallbacks
+	if(font->next)
+		Font_UnloadFont(font->next);
+
 	if (font->attachments && font->attachmentcount)
 	{
 		for (i = 0; i < font->attachmentcount; ++i) {
