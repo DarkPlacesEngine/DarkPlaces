@@ -11402,8 +11402,6 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			endvertex = surfaceendvertex;
 		numtriangles += surfacenumtriangles;
 	}
-	if (!numtriangles)
-		return;
 
 	// we now know the vertex range used, and if there are any gaps in it
 	rsurface.batchfirstvertex = firstvertex;
@@ -12194,6 +12192,30 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 void RSurf_DrawBatch(void)
 {
+#if 0
+	// batch debugging code
+	if (r_test.integer && rsurface.entity == r_refdef.scene.worldentity && rsurface.batchvertex3f == r_refdef.scene.worldentity->model->surfmesh.data_vertex3f)
+	{
+		int i;
+		int j;
+		int c;
+		const int *e;
+		e = rsurface.batchelement3i + rsurface.batchfirsttriangle*3;
+		for (i = 0;i < rsurface.batchnumtriangles*3;i++)
+		{
+			c = e[i];
+			for (j = 0;j < rsurface.entity->model->num_surfaces;j++)
+			{
+				if (c >= rsurface.modelsurfaces[j].num_firstvertex && c < (rsurface.modelsurfaces[j].num_firstvertex + rsurface.modelsurfaces[j].num_vertices))
+				{
+					if (rsurface.modelsurfaces[j].texture != rsurface.texture)
+						Sys_Error("RSurf_DrawBatch: index %i uses different texture (%s) than surface %i which it belongs to (which uses %s)\n", c, rsurface.texture->name, j, rsurface.modelsurfaces[j].texture->name);
+					break;
+				}
+			}
+		}
+	}
+#endif
 	R_Mesh_Draw(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchfirsttriangle, rsurface.batchnumtriangles, rsurface.batchelement3i, rsurface.batchelement3i_indexbuffer, rsurface.batchelement3i_bufferoffset, rsurface.batchelement3s, rsurface.batchelement3s_indexbuffer, rsurface.batchelement3s_bufferoffset);
 }
 
