@@ -5319,9 +5319,16 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		if(out->num_vertices && out->num_triangles)
 			continue;
 		if(out->num_vertices == 0)
-			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d has no vertices, ignoring\n", i);
-		if(out->num_triangles == 0)
-			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d has no triangles, ignoring\n", i);
+		{
+			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d (texture %s) has no vertices, ignoring\n", i, out->texture->name);
+			if(out->num_triangles == 0)
+				Con_Printf("Mod_Q3BSP_LoadFaces: surface %d (texture %s) has no triangles, ignoring\n", i, out->texture->name);
+		}
+		else if(out->num_triangles == 0)
+			Con_Printf("Mod_Q3BSP_LoadFaces: surface %d (texture %s, near %f %f %f) has no triangles, ignoring\n", i, out->texture->name,
+					(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[0 * 3 + 0],
+					(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[1 * 3 + 0],
+					(loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex)[2 * 3 + 0]);
 	}
 
 	// for per pixel lighting
