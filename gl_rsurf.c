@@ -349,7 +349,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 
 	numpoints = min(portal->numpoints, POLYGONELEMENTS_MAXPOINTS);
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 
 	isvis = (portal->here->clusterindex >= 0 && portal->past->clusterindex >= 0 && portal->here->clusterindex != portal->past->clusterindex);
 
@@ -610,7 +610,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_AlphaTest(false);
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_DepthOrShadow();
 	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, true, false, false);

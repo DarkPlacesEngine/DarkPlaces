@@ -1943,7 +1943,7 @@ static void SCR_DrawLoadingStack(void)
 		GL_DepthRange(0, 1);
 		GL_PolygonOffset(0, 0);
 		GL_DepthTest(false);
-		R_Mesh_ResetTextureState();
+//		R_Mesh_ResetTextureState();
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
 		verts[0] = verts[9] = 0;
 		verts[1] = verts[4] = vid_conheight.integer - scr_loadingscreen_barheight.value;
@@ -2015,7 +2015,7 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	GL_Color(1,1,1,1);
 	if(loadingscreentexture)
 	{

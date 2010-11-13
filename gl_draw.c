@@ -1080,7 +1080,7 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	floats[12] = 0.0f;floats[13] = 0.0f;
 	floats[14] = 1.0f;floats[15] = 0.0f;
 	floats[16] = 1.0f;floats[17] = 1.0f;
@@ -1137,7 +1137,7 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	if (pic)
 	{
 		if (width == 0)
@@ -1188,7 +1188,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
@@ -1513,7 +1513,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return startx + DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, &maxlen, w, h, sw, sh, NULL, ignorecolorcodes, fnt, 1000000000);
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	if (!fontmap)
 		R_Mesh_TexBind(0, fnt->tex);
 	R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1);
@@ -1858,7 +1858,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	if (pic)
 	{
 		if (width == 0)
@@ -1896,7 +1896,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
 		return;
 	DrawQ_ProcessDrawFlag(flags, hasalpha);
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(mesh->texture, NULL, GL_MODULATE, 1);
 
 	R_Mesh_PrepareVertices_Generic_Arrays(mesh->num_vertices, mesh->data_vertex3f, mesh->data_color4f, mesh->data_texcoord2f);
@@ -1989,6 +1989,7 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 			hasalpha = true;
 
 	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, hasalpha ? 0.5f : 1.0f);
+
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 
@@ -2075,7 +2076,7 @@ void R_DrawGamma(void)
 		break;
 	}
 	// all the blends ignore depth
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	GL_DepthMask(true);
 	GL_DepthRange(0, 1);

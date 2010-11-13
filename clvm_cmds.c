@@ -3075,7 +3075,7 @@ static void VM_DrawPolygonCallback (const entity_render_t *ent, const rtlight_t 
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 	if(polys->progstarttime != prog->starttime) // from other progs? won't draw these (this can cause crashes!)
 		return;
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_EntityMatrix(&identitymatrix);
 	GL_CullFace(GL_NONE);
 	GL_DepthTest(true); // polys in 3D space shall always have depth test
