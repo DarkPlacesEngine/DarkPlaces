@@ -1958,6 +1958,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	if (!ode_dll)
 		return;
 #endif
+	VectorClear(entmins);
+	VectorClear(entmaxs);
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.solid);if (val) solid = (int)val->_float;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.movetype);if (val) movetype = (int)val->_float;
 	val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale);if (val && val->_float) scale = val->_float;
