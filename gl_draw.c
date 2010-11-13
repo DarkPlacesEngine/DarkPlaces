@@ -1980,6 +1980,47 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	}
 }
 
+void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float *color4f, int flags)
+{
+	int i;
+	qboolean hasalpha = false;
+	for (i = 0;i < numlines*2;i++)
+		if (color4f[i*4+3] < 1.0f)
+			hasalpha = true;
+
+	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, hasalpha ? 0.5f : 1.0f);
+	if(!r_draw2d.integer && !r_draw2d_force)
+		return;
+
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+
+		//qglLineWidth(width);CHECKGLERROR
+
+		CHECKGLERROR
+		R_Mesh_PrepareVertices_Generic_Arrays(numlines*2, vertex3f, color4f, NULL);
+		qglDrawArrays(GL_LINES, 0, numlines*2);
+		CHECKGLERROR
+		break;
+	case RENDERPATH_D3D9:
+		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
+}
+
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
 	int ix, iy, iw, ih;

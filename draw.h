@@ -178,6 +178,8 @@ void DrawQ_SetClipArea(float x, float y, float width, float height);
 void DrawQ_ResetClipArea(void);
 // draw a line
 void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags);
+// draw a lot of lines
+void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float *color4f, int flags);
 // draw a line loop
 void DrawQ_LineLoop(drawqueuemesh_t *mesh, int flags);
 // resets r_refdef.draw2dstage
