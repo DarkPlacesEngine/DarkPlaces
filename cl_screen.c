@@ -219,12 +219,16 @@ void SCR_CheckDrawCenterString (void)
 void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
 {
 	netgraphitem_t *graph;
-	int j, x, y;
+	int j, x, y, numlines;
 	int totalbytes = 0;
 	char bytesstring[128];
 	float g[NETGRAPH_PACKETS][6];
 	float *a;
 	float *b;
+	float vertex3f[(NETGRAPH_PACKETS+2)*5*2*3];
+	float color4f[(NETGRAPH_PACKETS+2)*5*2*4];
+	float *v;
+	float *c;
 	DrawQ_Fill(graphx, graphy, graphwidth, graphheight + textsize * 2, 0, 0, 0, 0.5, 0);
 	// draw the bar graph itself
 	// advance the packet counter because it is the latest packet column being
@@ -260,18 +264,34 @@ void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int gra
 		g[j][5] = bound(0.0f, g[j][5], 1.0f);
 	}
 	// render the lines for the graph
+	numlines = 0;
+	v = vertex3f;
+	c = color4f;
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
 		a = g[j];
 		b = g[(j+1)%NETGRAPH_PACKETS];
 		if (a[0] < 0.0f || b[0] > 1.0f || b[0] < a[0])
 			continue;
-		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[2], graphx + graphwidth * b[0], graphy + graphheight * b[2], 1.0f, 1.0f, 0.0f, 1.0f, 0);
-		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[1], graphx + graphwidth * b[0], graphy + graphheight * b[1], 1.0f, 0.0f, 0.0f, 1.0f, 0);
-		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[5], graphx + graphwidth * b[0], graphy + graphheight * b[5], 0.0f, 1.0f, 0.0f, 1.0f, 0);
-		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[4], graphx + graphwidth * b[0], graphy + graphheight * b[4], 1.0f, 1.0f, 1.0f, 1.0f, 0);
-		DrawQ_Line(0.0f, graphx + graphwidth * a[0], graphy + graphheight * a[3], graphx + graphwidth * b[0], graphy + graphheight * b[3], 1.0f, 0.5f, 0.0f, 1.0f, 0);
+		VectorSet(v, graphx + graphwidth * a[0], graphy + graphheight * a[2], 0.0f);v += 3;Vector4Set(c, 1.0f, 1.0f, 0.0f, 1.0f);c += 4;
+		VectorSet(v, graphx + graphwidth * b[0], graphy + graphheight * b[2], 0.0f);v += 3;Vector4Set(c, 1.0f, 1.0f, 0.0f, 1.0f);c += 4;
+
+		VectorSet(v, graphx + graphwidth * a[0], graphy + graphheight * a[1], 0.0f);v += 3;Vector4Set(c, 1.0f, 0.0f, 0.0f, 1.0f);c += 4;
+		VectorSet(v, graphx + graphwidth * b[0], graphy + graphheight * b[1], 0.0f);v += 3;Vector4Set(c, 1.0f, 0.0f, 0.0f, 1.0f);c += 4;
+
+		VectorSet(v, graphx + graphwidth * a[0], graphy + graphheight * a[5], 0.0f);v += 3;Vector4Set(c, 0.0f, 1.0f, 0.0f, 1.0f);c += 4;
+		VectorSet(v, graphx + graphwidth * b[0], graphy + graphheight * b[5], 0.0f);v += 3;Vector4Set(c, 0.0f, 1.0f, 0.0f, 1.0f);c += 4;
+
+		VectorSet(v, graphx + graphwidth * a[0], graphy + graphheight * a[4], 0.0f);v += 3;Vector4Set(c, 1.0f, 1.0f, 1.0f, 1.0f);c += 4;
+		VectorSet(v, graphx + graphwidth * b[0], graphy + graphheight * b[4], 0.0f);v += 3;Vector4Set(c, 1.0f, 1.0f, 1.0f, 1.0f);c += 4;
+
+		VectorSet(v, graphx + graphwidth * a[0], graphy + graphheight * a[3], 0.0f);v += 3;Vector4Set(c, 1.0f, 0.5f, 0.0f, 1.0f);c += 4;
+		VectorSet(v, graphx + graphwidth * b[0], graphy + graphheight * b[3], 0.0f);v += 3;Vector4Set(c, 1.0f, 0.5f, 0.0f, 1.0f);c += 4;
+
+		numlines += 5;
 	}
+	if (numlines > 0)
+		DrawQ_Lines(0.0f, numlines, vertex3f, color4f, 0);
 	x = graphx;
 	y = graphy + graphheight;
 	dpsnprintf(bytesstring, sizeof(bytesstring), "%i", totalbytes);
