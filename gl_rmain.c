@@ -12192,6 +12192,12 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 void RSurf_DrawBatch(void)
 {
+	// sometimes a zero triangle surface (usually a degenerate patch) makes it
+	// through the pipeline, killing it earlier in the pipeline would have
+	// per-surface overhead rather than per-batch overhead, so it's best to
+	// reject it here, before it hits glDraw.
+	if (rsurface.batchnumtriangles == 0)
+		return;
 #if 0
 	// batch debugging code
 	if (r_test.integer && rsurface.entity == r_refdef.scene.worldentity && rsurface.batchvertex3f == r_refdef.scene.worldentity->model->surfmesh.data_vertex3f)
