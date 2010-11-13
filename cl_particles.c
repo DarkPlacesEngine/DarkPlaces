@@ -2312,7 +2312,7 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	RSurf_ActiveWorldEntity();
 
 	r_refdef.stats.drawndecals += numsurfaces;
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2472,7 +2472,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
 	r_refdef.stats.particles += numsurfaces;
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);

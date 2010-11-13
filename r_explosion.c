@@ -212,7 +212,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	GL_CullFace(r_refdef.view.cullface_back);
 	R_EntityMatrix(&identitymatrix);
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(explosiontexture, NULL, GL_MODULATE, 1);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{

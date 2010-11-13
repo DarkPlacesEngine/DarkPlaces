@@ -10012,7 +10012,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2]; //
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
@@ -10182,7 +10182,6 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 	GL_PolygonOffset(rsurface.basepolygonfactor, rsurface.basepolygonoffset);
 	GL_DepthTest(!(rsurface.ent_flags & RENDER_NODEPTHTEST));
 	GL_CullFace((rsurface.ent_flags & RENDER_DOUBLESIDED) ? GL_NONE : r_refdef.view.cullface_back);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 	for (i = 0, c = color4f;i < 6;i++, c += 4)
 	{
@@ -10202,7 +10201,8 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 			c[2] = (c[2] * f1 + r_refdef.fogcolor[2] * f2);
 		}
 	}
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	R_Mesh_PrepareVertices_Generic_Arrays(6, nomodelvertex3f, color4f, NULL);
 	R_Mesh_Draw(0, 6, 0, 8, nomodelelement3i, NULL, 0, nomodelelement3s, NULL, 0);
 }
@@ -12832,7 +12832,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	float c[4];
 
 	GL_AlphaTest(false);
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 
 	if(rsurface.texture && rsurface.texture->currentskinframe)
@@ -13136,7 +13136,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_DepthMask(true);
 				GL_AlphaTest(false);
-				R_Mesh_ResetTextureState();
+//				R_Mesh_ResetTextureState();
 				R_SetupShader_DepthOrShadow();
 			}
 			RSurf_SetupDepthAndCulling();
@@ -13417,7 +13417,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 	GL_CullFace(GL_NONE);
 	R_EntityMatrix(&identitymatrix);
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 
 	i = surfacelist[0];
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_refdef.view.colorscale,
@@ -14042,7 +14042,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
 		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numtris, decalsystem->element3i, decalsystem->element3s, false, false);
-		R_Mesh_ResetTextureState();
+//		R_Mesh_ResetTextureState();
 		R_Mesh_PrepareVertices_Generic_Arrays(numtris * 3, decalsystem->vertex3f, decalsystem->color4f, decalsystem->texcoord2f);
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
@@ -14120,7 +14120,7 @@ void R_DrawDebugModel(void)
 
 	flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
 
-	R_Mesh_ResetTextureState();
+//	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
