@@ -2192,7 +2192,7 @@ const char *builtincgshaderstring =
 "	float2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
 "	//float2 ScreenTexCoord = (ModelViewProjectionPosition.xy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * DistortScaleRefractReflect.xy * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
 "	float2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
-"	float2 ScreenTexCoord = SafeScreenTexCoord + float2(normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5))).xy * DistortScaleRefractReflect.xy;\n"
+"	float2 ScreenTexCoord = SafeScreenTexCoord + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * DistortScaleRefractReflect.xy;\n"
 "	// FIXME temporary hack to detect the case that the reflection\n"
 "	// gets blackened at edges due to leaving the area that contains actual\n"
 "	// content.\n"
@@ -3213,7 +3213,7 @@ const char *builtincgshaderstring =
 "#ifdef MODE_FAKELIGHT\n"
 "#define SHADING\n"
 "half3 lightnormal = half3(normalize(EyeVector));\n"
-"half3 lightcolor = half3(1.0);\n"
+"half3 lightcolor = half3(1.0,1.0,1.0);\n"
 "#endif // MODE_FAKELIGHT\n"
 "\n"
 "\n"
@@ -3398,7 +3398,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 };
 
-/// this enum is multiplied by SHADERPERMUTATION_MODEBASE
+// this enum selects which of the glslshadermodeinfo entries should be used
 typedef enum shadermode_e
 {
 	SHADERMODE_GENERIC, ///< (particles/HUD/etc) vertex color, optionally multiplied by one texture
@@ -3447,7 +3447,7 @@ shadermodeinfo_t cgshadermodeinfo[SHADERMODE_COUNT] =
 {
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_GENERIC\n", " generic"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"cg/default.cg", NULL, NULL           , "#define MODE_DEPTH_OR_SHADOW\n", " depth"},
+	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTMAP\n", " lightmap"},
@@ -3469,10 +3469,11 @@ shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 {
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_GENERIC\n", " generic"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth"},
+	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_FAKELIGHT\n", " fakelight"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
