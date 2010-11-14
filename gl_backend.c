@@ -2459,8 +2459,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	bufferoffset3i = element3i_bufferoffset;
 	bufferobject3s = element3s_indexbuffer ? element3s_indexbuffer->bufferobject : 0;
 	bufferoffset3s = element3s_bufferoffset;
-	r_refdef.stats.meshes++;
-	r_refdef.stats.meshes_elements += numelements;
+	r_refdef.stats.draws++;
+	r_refdef.stats.draws_vertices += numvertices;
+	r_refdef.stats.draws_elements += numelements;
 	if (gl_paranoid.integer)
 	{
 		unsigned int i;
