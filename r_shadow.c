@@ -312,6 +312,7 @@ cvar_t r_shadow_shadowmapping_nearclip = {CVAR_SAVE, "r_shadow_shadowmapping_nea
 cvar_t r_shadow_shadowmapping_bias = {CVAR_SAVE, "r_shadow_shadowmapping_bias", "0.03", "shadowmap bias parameter (this is multiplied by nearclip * 1024 / lodsize)"};
 cvar_t r_shadow_shadowmapping_polygonfactor = {CVAR_SAVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
 cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_SAVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
+cvar_t r_shadow_sortsurfaces = {0, "r_shadow_sortsurfaces", "1", "improve performance by sorting illuminated surfaces by texture"};
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
@@ -668,6 +669,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_bias);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonoffset);
+	Cvar_RegisterVariable(&r_shadow_sortsurfaces);
 	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
@@ -3818,7 +3820,7 @@ void R_Shadow_DrawPrepass(void)
 	{
 		lightindex = r_shadow_debuglight.integer;
 		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-		if (light && (light->flags & flag))
+		if (light && (light->flags & flag) && light->rtlight.draw)
 			R_Shadow_DrawLight(&light->rtlight);
 	}
 	else
@@ -3827,13 +3829,14 @@ void R_Shadow_DrawPrepass(void)
 		for (lightindex = 0;lightindex < range;lightindex++)
 		{
 			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-			if (light && (light->flags & flag))
+			if (light && (light->flags & flag) && light->rtlight.draw)
 				R_Shadow_DrawLight(&light->rtlight);
 		}
 	}
 	if (r_refdef.scene.rtdlight)
 		for (lnum = 0;lnum < r_refdef.scene.numlights;lnum++)
-			R_Shadow_DrawLight(r_refdef.scene.lights[lnum]);
+			if (r_refdef.scene.lights[lnum]->draw)
+				R_Shadow_DrawLight(r_refdef.scene.lights[lnum]);
 
 	R_Mesh_ResetRenderTargets();
 

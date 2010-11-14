@@ -949,6 +949,23 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 	}
 }
 
+static msurface_t *r_q1bsp_getlightinfo_surfaces;
+
+int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
+{
+	int a = *(int*)ap;
+	int b = *(int*)bp;
+	const msurface_t *as = r_q1bsp_getlightinfo_surfaces + a;
+	const msurface_t *bs = r_q1bsp_getlightinfo_surfaces + b;
+	if (as->texture < bs->texture)
+		return -1;
+	if (as->texture > bs->texture)
+		return 1;
+	return a - b;
+}
+
+extern cvar_t r_shadow_sortsurfaces;
+
 void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes)
 {
 	r_q1bsp_getlightinfo_t info;
@@ -1027,6 +1044,11 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 
 	*outnumleafspointer = info.outnumleafs;
 	*outnumsurfacespointer = info.outnumsurfaces;
+
+	// now sort surfaces by texture for faster rendering
+	r_q1bsp_getlightinfo_surfaces = info.model->data_surfaces;
+	if (r_shadow_sortsurfaces.integer)
+		qsort(info.outsurfacelist, info.outnumsurfaces, sizeof(*info.outsurfacelist), R_Q1BSP_GetLightInfo_comparefunc);
 }
 
 void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
