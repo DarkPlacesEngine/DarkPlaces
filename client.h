@@ -1548,8 +1548,9 @@ typedef struct r_refdef_stats_s
 	int particles;
 	int drawndecals;
 	int totaldecals;
-	int meshes;
-	int meshes_elements;
+	int draws;
+	int draws_vertices;
+	int draws_elements;
 	int lights;
 	int lights_clears;
 	int lights_scissored;

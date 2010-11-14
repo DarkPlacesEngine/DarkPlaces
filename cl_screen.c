@@ -796,7 +796,7 @@ void R_TimeReport_EndFrame(void)
 "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n"
 "%7i lightmap updates (%7i pixels)\n"
 "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
-"rendered%6i meshes%8i triangles bloompixels%8i copied%8i drawn\n"
+"%6i draws%8i vertices%8i triangles bloompixels%8i copied%8i drawn\n"
 "updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "%s"
 , loc ? "Location: " : "", loc ? loc->name : ""
@@ -806,7 +806,7 @@ void R_TimeReport_EndFrame(void)
 , r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.drawndecals, r_refdef.stats.totaldecals, (int)(100 * r_refdef.view.quality)
 , r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
-, r_refdef.stats.meshes, r_refdef.stats.meshes_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
+, r_refdef.stats.draws, r_refdef.stats.draws_vertices, r_refdef.stats.draws_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
 , r_refdef.stats.indexbufferuploadcount, r_refdef.stats.indexbufferuploadsize, r_refdef.stats.vertexbufferuploadcount, r_refdef.stats.vertexbufferuploadsize
 , r_speeds_timestring);
 
