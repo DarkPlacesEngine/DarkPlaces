@@ -12,7 +12,9 @@ cvar_t cl_video_scale = {CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = 
 cvar_t cl_video_scale_vpos = {CVAR_SAVE, "cl_video_scale_vpos", "0", "vertial align of scaled video, -1 is top, 1 is bottom"};
 cvar_t cl_video_stipple = {CVAR_SAVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
 cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
-cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas"};
+cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with to & bottom being sliced out"};
+cvar_t cl_video_fadein = {CVAR_SAVE, "cl_video_fadein", "0", "fading-from-black effect once video is started, in seconds"};
+cvar_t cl_video_fadeout = {CVAR_SAVE, "cl_video_fadeout", "0", "fading-to-black effect once video is ended, in seconds"};
 
 // constants (and semi-constants)
 static int  cl_videormask;
@@ -268,118 +270,127 @@ clvideo_t *CL_GetVideoByName( const char *name )
 		return NULL;
 }
 
-void CL_SetVideoState( clvideo_t *video, clvideostate_t state )
+void CL_SetVideoState(clvideo_t *video, clvideostate_t state)
 {
-	if( !video )
+	if (!video)
 		return;
 
 	video->lasttime = realtime;
 	video->state = state;
-	if( state == CLVIDEO_FIRSTFRAME )
-		CL_RestartVideo( video );
+	if (state == CLVIDEO_FIRSTFRAME)
+		CL_RestartVideo(video);
 }
 
-void CL_RestartVideo( clvideo_t *video )
+void CL_RestartVideo(clvideo_t *video)
 {
-	if( !video )
+	if (!video)
 		return;
 
+	// reset time
 	video->starttime = video->lasttime = realtime;
 	video->framenum = -1;
 
-	dpvsimpledecode_close( video->stream );
-	if( !OpenStream( video ) )
+	// reopen stream
+	dpvsimpledecode_close(video->stream);
+	if (!OpenStream(video))
 		video->state = CLVIDEO_UNUSED;
 }
 
-void CL_CloseVideo( clvideo_t * video )
+// close video
+void CL_CloseVideo(clvideo_t * video)
 {
 	int i;
 
-	if( !video || video->state == CLVIDEO_UNUSED )
+	if (!video || video->state == CLVIDEO_UNUSED)
 		return;
 
-	if( !video->suspended || video->state != CLVIDEO_FIRSTFRAME )
-		dpvsimpledecode_close( video->stream );
-	if( !video->suspended )
-		UnlinkVideoTexture( video );
+	// close stream
+	if (!video->suspended || video->state != CLVIDEO_FIRSTFRAME)
+		dpvsimpledecode_close(video->stream);
+	// unlink texture
+	if (!video->suspended)
+		UnlinkVideoTexture(video);
+	// purge subtitles
 	if (video->subtitles)
 	{
 		for (i = 0; i < video->subtitles; i++)
 			Z_Free( video->subtitle_text[i] );
 		video->subtitles = 0;
 	}
-
 	video->state = CLVIDEO_UNUSED;
 }
 
-static void VideoFrame( clvideo_t *video )
+// update all videos
+void CL_Video_Frame(void) 
 {
-	int destframe;
-
-	if( video->state == CLVIDEO_FIRSTFRAME )
-		destframe = 0;
-	else
-		destframe = (int)((realtime - video->starttime) * video->framerate);
-	if( destframe < 0 )
-		destframe = 0;
-	if( video->framenum < destframe ) {
-		do {
-			video->framenum++;
-			if( dpvsimpledecode_video( video->stream, video->imagedata, cl_videormask,
-				cl_videogmask, cl_videobmask, cl_videobytesperpixel,
-				cl_videobytesperpixel * video->cpif.width )
-				) { // finished?
-				CL_RestartVideo( video );
-				if( video->state == CLVIDEO_PLAY )
-						video->state = CLVIDEO_FIRSTFRAME;
-				return;
-			}
-		} while( video->framenum < destframe );
-		R_MarkDirtyTexture( video->cpif.tex );
-	}
-}
-
-void CL_Video_Frame( void ) // update all videos
-{
-	int i;
 	clvideo_t *video;
+	int destframe;
+	int i;
 
 	if (!cl_num_videos)
 		return;
-
-	for( video = cl_videos, i = 0 ; i < cl_num_videos ; video++, i++ )
-		if( video->state != CLVIDEO_UNUSED && !video->suspended )
+	for (video = cl_videos, i = 0 ; i < cl_num_videos ; video++, i++)
+	{
+		if (video->state != CLVIDEO_UNUSED && !video->suspended)
 		{
-			if( realtime - video->lasttime > CLTHRESHOLD )
-				SuspendVideo( video );
-			else if( video->state == CLVIDEO_PAUSE )
+			if (realtime - video->lasttime > CLTHRESHOLD)
+			{
+				SuspendVideo(video);
+				continue;
+			}
+			if (video->state == CLVIDEO_PAUSE)
+			{
 				video->starttime = realtime - video->framenum * video->framerate;
+				continue;
+			}
+			// read video frame from stream if time has come
+			if (video->state == CLVIDEO_FIRSTFRAME )
+				destframe = 0;
 			else
-				VideoFrame( video );
+				destframe = (int)((realtime - video->starttime) * video->framerate);
+			if (destframe < 0)
+				destframe = 0;
+			if (video->framenum < destframe)
+			{
+				do {
+					video->framenum++;
+					if (dpvsimpledecode_video(video->stream, video->imagedata, cl_videormask, cl_videogmask, cl_videobmask, cl_videobytesperpixel, cl_videobytesperpixel * video->cpif.width))
+					{ 
+						// finished?
+						CL_RestartVideo(video);
+						if (video->state == CLVIDEO_PLAY)
+							video->state = CLVIDEO_FIRSTFRAME;
+						return;
+					}
+				} while(video->framenum < destframe);
+				R_MarkDirtyTexture(video->cpif.tex);
+			}
 		}
+	}
 
-	if( cl_videos->state == CLVIDEO_FIRSTFRAME )
+	// stop main video
+	if (cl_videos->state == CLVIDEO_FIRSTFRAME)
 		CL_VideoStop();
 
 	// reduce range to exclude unnecessary entries
-	while (cl_num_videos > 0 && cl_videos[cl_num_videos-1].state == CLVIDEO_UNUSED)
+	while(cl_num_videos > 0 && cl_videos[cl_num_videos-1].state == CLVIDEO_UNUSED)
 		cl_num_videos--;
 }
 
 void CL_Video_Shutdown( void )
 {
 	int i;
-	for( i = 0 ; i < cl_num_videos ; i++ )
-		CL_CloseVideo( &cl_videos[ i ] );
+	for (i = 0 ; i < cl_num_videos ; i++)
+		CL_CloseVideo(&cl_videos[ i ]);
 }
 
 void CL_PurgeOwner( int owner )
 {
 	int i;
-	for( i = 0 ; i < cl_num_videos ; i++ )
-		if( cl_videos[ i ].ownertag == owner )
-			CL_CloseVideo( &cl_videos[ i ] );
+
+	for (i = 0 ; i < cl_num_videos ; i++)
+		if (cl_videos[i].ownertag == owner)
+			CL_CloseVideo(&cl_videos[i]);
 }
 
 typedef struct
@@ -425,7 +436,7 @@ int cl_videoplaying = false; // old, but still supported
 void CL_DrawVideo(void)
 {
 	clvideo_t *video;
-	float videotime, px, py, sx, sy;
+	float videotime, px, py, sx, sy, st[8], b;
 	cl_video_subtitle_info_t si;
 	int i;
 
@@ -445,10 +456,28 @@ void CL_DrawVideo(void)
 	py = 0;
 	sx = vid_conwidth.integer;
 	sy = vid_conheight.integer;
+	st[0] = 0.0; st[1] = 0.0; 
+	st[2] = 1.0; st[3] = 0.0; 
+	st[4] = 0.0; st[5] = 1.0; 
+	st[6] = 1.0; st[7] = 1.0; 
 	if (cl_video_keepaspectratio.integer)
 	{
 		float a = ((float)video->cpif.width / (float)video->cpif.height) / ((float)vid.width / (float)vid.height);
-		if (a < 1.0) // scale horizontally
+		if (cl_video_keepaspectratio.integer >= 2)
+		{
+			// clip instead of scale
+			if (a < 1.0) // clip horizontally
+			{
+				st[1] = st[3] = (1 - a)*0.5;
+				st[5] = st[7] = 1 - (1 - a)*0.5;
+			}
+			else if (a > 1.0) // clip vertically
+			{
+				st[0] = st[4] = (1 - 1/a)*0.5;
+				st[2] = st[6] = (1/a)*0.5;
+			}
+		}
+		else if (a < 1.0) // scale horizontally
 		{
 			px += sx * (1 - a) * 0.5;
 			sx *= a;
@@ -460,6 +489,7 @@ void CL_DrawVideo(void)
 			sy *= a;
 		}
 	}
+
 	if (cl_video_scale.value != 1)
 	{
 		px += sx * (1 - cl_video_scale.value) * 0.5;
@@ -467,6 +497,13 @@ void CL_DrawVideo(void)
 		sx *= cl_video_scale.value;
 		sy *= cl_video_scale.value;
 	}
+
+	// calc brightness for fadein and fadeout effects
+	b = cl_video_brightness.value;
+	if (cl_video_fadein.value && (realtime - video->starttime) < cl_video_fadein.value)
+		b = pow((realtime - video->starttime)/cl_video_fadein.value, 2);
+	else if (cl_video_fadeout.value && ((video->starttime + video->framenum * video->framerate) - realtime) < cl_video_fadeout.value)
+		b = pow(((video->starttime + video->framenum * video->framerate) - realtime)/cl_video_fadeout.value, 2);
 
 	// draw black bg in case stipple is active or video is scaled
 	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
@@ -491,7 +528,7 @@ void CL_DrawVideo(void)
 	}
 
 	// draw video
-	DrawQ_Pic(px, py, &video->cpif, sx, sy, cl_video_brightness.value, cl_video_brightness.value, cl_video_brightness.value, 1, 0);
+	DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
 
 	// disable video-only stipple
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
@@ -639,6 +676,8 @@ void CL_Video_Init( void )
 	Cvar_RegisterVariable(&cl_video_brightness);
 	Cvar_RegisterVariable(&cl_video_stipple);
 	Cvar_RegisterVariable(&cl_video_keepaspectratio);
+	Cvar_RegisterVariable(&cl_video_fadein);
+	Cvar_RegisterVariable(&cl_video_fadeout);
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap, NULL, NULL );
 }
