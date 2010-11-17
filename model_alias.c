@@ -851,6 +851,8 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 	int i;
 	static char stripbuf[MAX_QPATH];
 	skinfileitem_t *skinfileitem;
+	if(developer_extra.integer)
+		Con_DPrintf("Looking up texture for %s (default: %s)\n", meshname, shadername);
 	if (skinfile)
 	{
 		// the skin += loadmodel->num_surfaces part of this is because data_textures on alias models is arranged as [numskins][numsurfaces]
@@ -864,6 +866,8 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 				if (!strcmp(skinfileitem->name, meshname))
 				{
 					Image_StripImageExtension(skinfileitem->replacement, stripbuf, sizeof(stripbuf));
+					if(developer_extra.integer)
+						Con_DPrintf("--> got %s from skin file\n", stripbuf);
 					Mod_LoadTextureFromQ3Shader(skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
 					break;
 				}
@@ -872,12 +876,16 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 			{
 				// don't render unmentioned meshes
 				Mod_BuildAliasSkinFromSkinFrame(skin, NULL);
+				if(developer_extra.integer)
+					Con_DPrintf("--> skipping\n");
 				skin->basematerialflags = skin->currentmaterialflags = MATERIALFLAG_NOSHADOW | MATERIALFLAG_NODRAW;
 			}
 		}
 	}
 	else
 	{
+		if(developer_extra.integer)
+			Con_DPrintf("--> using default\n");
 		Image_StripImageExtension(shadername, stripbuf, sizeof(stripbuf));
 		Mod_LoadTextureFromQ3Shader(skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
 	}
