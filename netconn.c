@@ -2037,6 +2037,21 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				lhnetaddress_t clientportaddress;
 				clientportaddress = *peeraddress;
 				LHNETADDRESS_SetPort(&clientportaddress, MSG_ReadLong());
+				// extra ProQuake stuff
+				if (length >= 6)
+					cls.proquake_servermod = MSG_ReadByte(); // MOD_PROQUAKE
+				else
+					cls.proquake_servermod = 0;
+				if (length >= 7)
+					cls.proquake_serverversion = MSG_ReadByte(); // version * 10
+				else
+					cls.proquake_serverversion = 0;
+				if (length >= 8)
+					cls.proquake_serverflags = MSG_ReadByte(); // flags (mainly PQF_CHEATFREE)
+				else
+					cls.proquake_serverflags = 0;
+				if (cls.proquake_servermod == 1)
+					Con_Printf("Connected to ProQuake %.1f server, enabling precise aim\n", cls.proquake_serverversion / 10.0f);
 				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 				M_Update_Return_Reason("Accepted");
@@ -2217,6 +2232,15 @@ void NetConn_ClientFrame(void)
 		MSG_WriteByte(&net_message, CCREQ_CONNECT);
 		MSG_WriteString(&net_message, "QUAKE");
 		MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
+		// extended proquake stuff
+		MSG_WriteByte(&net_message, 1); // mod = MOD_PROQUAKE
+		// this version matches ProQuake 3.40, the first version to support
+		// the NAT fix, and it only supports the NAT fix for ProQuake 3.40 or
+		// higher clients, so we pretend we are that version...
+		MSG_WriteByte(&net_message, 34); // version * 10
+		MSG_WriteByte(&net_message, 0); // flags
+		MSG_WriteLong(&net_message, 0); // password
+		// write the packetsize now...
 		StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 		NetConn_Write(cls.connect_mysocket, net_message.data, net_message.cursize, &cls.connect_address);
 		SZ_Clear(&net_message);

@@ -1914,9 +1914,17 @@ void CL_SendMove(void)
 			// 5 bytes
 			MSG_WriteByte (&buf, clc_move);
 			MSG_WriteFloat (&buf, cl.cmd.time); // last server packet time
-			// 3 bytes
-			for (i = 0;i < 3;i++)
-				MSG_WriteAngle8i (&buf, cl.cmd.viewangles[i]);
+			// 3 bytes (6 bytes in proquake)
+			if (cls.proquake_servermod == 1) // MOD_PROQUAKE
+			{
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle16i (&buf, cl.cmd.viewangles[i]);
+			}
+			else
+			{
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle8i (&buf, cl.cmd.viewangles[i]);
+			}
 			// 6 bytes
 			MSG_WriteCoord16i (&buf, cl.cmd.forwardmove);
 			MSG_WriteCoord16i (&buf, cl.cmd.sidemove);
