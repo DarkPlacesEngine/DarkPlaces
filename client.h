@@ -713,6 +713,11 @@ typedef struct client_static_s
 
 	// crypto channel
 	crypto_t crypto;
+
+	// ProQuake compatibility stuff
+	int proquake_servermod; // 0 = not proquake, 1 = proquake
+	int proquake_serverversion; // actual proquake server version * 10 (3.40 = 34, etc)
+	int proquake_serverflags; // 0 (PQF_CHEATFREE not supported)
 }
 client_static_t;
 
