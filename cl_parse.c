@@ -1909,11 +1909,14 @@ void CL_ValidateState(entity_state_t *s)
 	if (!(s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
 		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)\n", s->colormap, cl.maxclients);
 
-	model = CL_GetModelByIndex(s->modelindex);
-	if (model && model->type && s->frame >= model->numframes)
-		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);
-	if (model && model->type && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
-		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\" (which has %i skins)\n", s->skin, model->name, model->numskins);
+	if (developer_extra.integer)
+	{
+		model = CL_GetModelByIndex(s->modelindex);
+		if (model && model->type && s->frame >= model->numframes)
+			Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);
+		if (model && model->type && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
+			Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\" (which has %i skins)\n", s->skin, model->name, model->numskins);
+	}
 }
 
 void CL_MoveLerpEntityStates(entity_t *ent)
