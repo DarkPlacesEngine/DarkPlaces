@@ -914,7 +914,7 @@ void Con_Rcon_Redirect_Flush(void)
 		// update the length in the packet header
 		StoreBigLong((unsigned char *)rcon_redirect_buffer, NETFLAG_CTL | (rcon_redirect_bufferpos & NETFLAG_LENGTH_MASK));
 	}
-	NetConn_WriteString(rcon_redirect_sock, rcon_redirect_buffer, rcon_redirect_dest);
+	NetConn_Write(rcon_redirect_sock, rcon_redirect_buffer, rcon_redirect_bufferpos, rcon_redirect_dest);
 	memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
 	rcon_redirect_bufferpos = 5;
 	rcon_redirect_proquakeprotocol = false;
