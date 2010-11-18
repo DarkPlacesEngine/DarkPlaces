@@ -2636,7 +2636,7 @@ allow:
 	return va("%srcon", restricted ? "restricted " : "");
 }
 
-void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos)
+void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos, qboolean proquakeprotocol)
 {
 	if(userlevel)
 	{
@@ -2653,7 +2653,7 @@ void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const ch
 		Con_Printf("\n");
 
 		if (!host_client || !host_client->netconnection || LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-			Con_Rcon_Redirect_Init(mysocket, peeraddress);
+			Con_Rcon_Redirect_Init(mysocket, peeraddress, proquakeprotocol);
 		while(s != endpos)
 		{
 			size_t l = strlen(s);
@@ -2973,7 +2973,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			++s;
 
 			userlevel = RCon_Authenticate(peeraddress, password, s, endpos, hmac_mdfour_time_matching, timeval, endpos - timeval - 1); // not including the appended \0 into the HMAC
-			RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos);
+			RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos, false);
 			return true;
 		}
 		if (length >= 42 && !memcmp(string, "srcon HMAC-MD4 CHALLENGE ", 25))
@@ -2988,7 +2988,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			++s;
 
 			userlevel = RCon_Authenticate(peeraddress, password, s, endpos, hmac_mdfour_challenge_matching, challenge, endpos - challenge - 1); // not including the appended \0 into the HMAC
-			RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos);
+			RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos, false);
 			return true;
 		}
 		if (length >= 5 && !memcmp(string, "rcon ", 5))
@@ -3010,7 +3010,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (!ISWHITESPACE(password[0]))
 			{
 				const char *userlevel = RCon_Authenticate(peeraddress, password, s, endpos, plaintext_matching, NULL, 0);
-				RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos);
+				RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos, false);
 			}
 			return true;
 		}
@@ -3258,6 +3258,25 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 				NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 				SZ_Clear(&net_message);
+			}
+			break;
+		case CCREQ_RCON:
+			if (developer_extra.integer)
+				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_RCON from %s.\n", addressstring2);
+			if (sv.active && !rcon_secure.integer)
+			{
+				char password[2048];
+				char cmd[2048];
+				char *s;
+				char *endpos;
+				const char *userlevel;
+				strlcpy(password, MSG_ReadString(), sizeof(password));
+				strlcpy(cmd, MSG_ReadString(), sizeof(cmd));
+				s = cmd;
+				endpos = cmd + strlen(cmd) + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
+				userlevel = RCon_Authenticate(peeraddress, password, s, endpos, plaintext_matching, NULL, 0);
+				RCon_Execute(mysocket, peeraddress, addressstring2, userlevel, s, endpos, true);
+				return true;
 			}
 			break;
 		default:
