@@ -93,6 +93,7 @@ lhnetsocket_t *rcon_redirect_sock = NULL;
 lhnetaddress_t *rcon_redirect_dest = NULL;
 int rcon_redirect_bufferpos = 0;
 char rcon_redirect_buffer[1400];
+qboolean rcon_redirect_proquakeprotocol = false;
 
 // generic functions for console buffers
 
@@ -885,20 +886,38 @@ static char qfont_table[256] = {
 	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
 };
 
-void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest)
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean proquakeprotocol)
 {
 	rcon_redirect_sock = sock;
 	rcon_redirect_dest = dest;
-	memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
+	rcon_redirect_proquakeprotocol = proquakeprotocol;
+	if (rcon_redirect_proquakeprotocol)
+	{
+		// reserve space for the packet header
+		rcon_redirect_buffer[0] = 0;
+		rcon_redirect_buffer[1] = 0;
+		rcon_redirect_buffer[2] = 0;
+		rcon_redirect_buffer[3] = 0;
+		// this is a reply to a CCREQ_RCON
+		rcon_redirect_buffer[4] = CCREP_RCON;
+	}
+	else
+		memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
 	rcon_redirect_bufferpos = 5;
 }
 
 void Con_Rcon_Redirect_Flush(void)
 {
 	rcon_redirect_buffer[rcon_redirect_bufferpos] = 0;
+	if (rcon_redirect_proquakeprotocol)
+	{
+		// update the length in the packet header
+		StoreBigLong((unsigned char *)rcon_redirect_buffer, NETFLAG_CTL | (rcon_redirect_bufferpos & NETFLAG_LENGTH_MASK));
+	}
 	NetConn_WriteString(rcon_redirect_sock, rcon_redirect_buffer, rcon_redirect_dest);
 	memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
 	rcon_redirect_bufferpos = 5;
+	rcon_redirect_proquakeprotocol = false;
 }
 
 void Con_Rcon_Redirect_End(void)
