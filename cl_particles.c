@@ -2525,9 +2525,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[3] = 0;
 			break;
 		case PBLEND_ALPHA:
-			c4f[0] = alpha * p->color[0] * colormultiplier[0];
-			c4f[1] = alpha * p->color[1] * colormultiplier[1];
-			c4f[2] = alpha * p->color[2] * colormultiplier[2];
+			c4f[0] = p->color[0] * colormultiplier[0];
+			c4f[1] = p->color[1] * colormultiplier[1];
+			c4f[2] = p->color[2] * colormultiplier[2];
 			c4f[3] = alpha;
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
@@ -2546,6 +2546,8 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 				c4f[1] = c4f[1] * fog + r_refdef.fogcolor[1] * ifog;
 				c4f[2] = c4f[2] * fog + r_refdef.fogcolor[2] * ifog;
 			}
+			// for premultiplied alpha we have to apply the alpha to the color (after fog of course)
+			VectorScale(c4f, alpha, c4f);
 			break;
 		}
 		// copy the color into the other three vertices
