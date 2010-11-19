@@ -84,6 +84,12 @@ static void FindNextChunk(const char *name)
 			data_p = NULL;
 			return;
 		}
+		if (data_p + iff_chunk_len > iff_end)
+		{
+			// truncated chunk!
+			data_p = NULL;
+			return;
+		}
 		data_p -= 8;
 		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
 		if (!strncmp((const char *)data_p, name, 4))
