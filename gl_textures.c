@@ -1119,6 +1119,21 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		prevbuffer = colorconvertbuffer;
 	}
 
+	if (glt->flags & TEXF_RGBMULTIPLYBYALPHA)
+	{
+		// multiply RGB channels by A channel before uploading
+		int alpha;
+		for (i = 0;i < width*height*depth*4;i += 4)
+		{
+			alpha = prevbuffer[i+3];
+			colorconvertbuffer[i] = (prevbuffer[i] * alpha) >> 8;
+			colorconvertbuffer[i+1] = (prevbuffer[i+1] * alpha) >> 8;
+			colorconvertbuffer[i+2] = (prevbuffer[i+2] * alpha) >> 8;
+			colorconvertbuffer[i+3] = alpha;
+		}
+		prevbuffer = colorconvertbuffer;
+	}
+
 	// scale up to a power of 2 size (if appropriate)
 	if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 	{

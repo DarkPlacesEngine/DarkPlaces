@@ -6,6 +6,8 @@
 #define TEXF_ALPHA 0x00000001
 // mipmapped
 #define TEXF_MIPMAP 0x00000002
+// multiply RGB by A channel before uploading
+#define TEXF_RGBMULTIPLYBYALPHA 0x00000004
 // indicates texture coordinates should be clamped rather than wrapping
 #define TEXF_CLAMP 0x00000020
 // indicates texture should be uploaded using GL_NEAREST or GL_NEAREST_MIPMAP_NEAREST mode
@@ -31,7 +33,7 @@
 // indicates the texture will be used as a render target (D3D hint)
 #define TEXF_RENDERTARGET 0x0010000
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION | TEXF_RENDERTARGET)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_RGBMULTIPLYBYALPHA | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION | TEXF_RENDERTARGET)
 
 typedef enum textype_e
 {
