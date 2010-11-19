@@ -10860,6 +10860,7 @@ void R_Mesh_ResizeArrays(int newvertices)
 
 void RSurf_ActiveWorldEntity(void)
 {
+	int newvertices;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	//if (rsurface.entity == r_refdef.scene.worldentity)
 	//	return;
@@ -10870,7 +10871,9 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.ent_qwskin = -1;
 	rsurface.ent_shadertime = 0;
 	rsurface.ent_flags = r_refdef.scene.worldentity->flags;
-	R_Mesh_ResizeArrays(max(model->surfmesh.num_vertices, model->surfmesh.num_triangles));
+	newvertices = max(model->surfmesh.num_vertices, model->surfmesh.num_triangles);
+	if (rsurface.array_size < newvertices)
+		R_Mesh_ResizeArrays(newvertices);
 	rsurface.matrix = identitymatrix;
 	rsurface.inversematrix = identitymatrix;
 	rsurface.matrixscale = 1;
@@ -10974,6 +10977,7 @@ void RSurf_ActiveWorldEntity(void)
 
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass)
 {
+	int newvertices;
 	dp_model_t *model = ent->model;
 	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
 	//	return;
@@ -10984,7 +10988,9 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
 	rsurface.ent_shadertime = ent->shadertime;
 	rsurface.ent_flags = ent->flags;
-	R_Mesh_ResizeArrays(max(model->surfmesh.num_vertices, model->surfmesh.num_triangles));
+	newvertices = max(model->surfmesh.num_vertices, model->surfmesh.num_triangles);
+	if (rsurface.array_size < newvertices)
+		R_Mesh_ResizeArrays(newvertices);
 	rsurface.matrix = ent->matrix;
 	rsurface.inversematrix = ent->inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
@@ -11154,7 +11160,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
 {
-	int i;
+	int newvertices;
 
 	rsurface.entity = r_refdef.scene.worldentity;
 	rsurface.skeleton = NULL;
@@ -11164,7 +11170,9 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.ent_flags = entflags;
 	rsurface.modelnumvertices = numvertices;
 	rsurface.modelnumtriangles = numtriangles;
-	R_Mesh_ResizeArrays(max(rsurface.modelnumvertices, rsurface.modelnumtriangles));
+	newvertices = max(rsurface.modelnumvertices, rsurface.modelnumtriangles);
+	if (rsurface.array_size < newvertices)
+		R_Mesh_ResizeArrays(newvertices);
 	rsurface.matrix = *matrix;
 	rsurface.inversematrix = *inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
@@ -11292,25 +11300,6 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 			rsurface.modelsvector3f = rsurface.array_modelsvector3f;
 			rsurface.modeltvector3f = rsurface.array_modeltvector3f;
 		}
-	}
-
-	// now convert arrays into vertexmesh structs
-	for (i = 0;i < numvertices;i++)
-	{
-		VectorCopy(rsurface.modelvertex3f + 3*i, rsurface.array_modelvertexposition[i].vertex3f);
-		VectorCopy(rsurface.modelvertex3f + 3*i, rsurface.array_modelvertexmesh[i].vertex3f);
-		if (rsurface.modelsvector3f)
-			VectorCopy(rsurface.modelsvector3f + 3*i, rsurface.array_modelvertexmesh[i].svector3f);
-		if (rsurface.modeltvector3f)
-			VectorCopy(rsurface.modeltvector3f + 3*i, rsurface.array_modelvertexmesh[i].tvector3f);
-		if (rsurface.modelnormal3f)
-			VectorCopy(rsurface.modelnormal3f + 3*i, rsurface.array_modelvertexmesh[i].normal3f);
-		if (rsurface.modellightmapcolor4f)
-			Vector4Scale(rsurface.modellightmapcolor4f + 4*i, 255.0f, rsurface.array_modelvertexmesh[i].color4ub);
-		if (rsurface.modeltexcoordtexture2f)
-			Vector2Copy(rsurface.modeltexcoordtexture2f + 2*i, rsurface.array_modelvertexmesh[i].texcoordtexture2f);
-		if (rsurface.modeltexcoordlightmap2f)
-			Vector2Copy(rsurface.modeltexcoordlightmap2f + 2*i, rsurface.array_modelvertexmesh[i].texcoordlightmap2f);
 	}
 }
 
@@ -14037,9 +14026,9 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		if (decal->triangleindex >= 0 && decal->triangleindex < rsurface.modelnumtriangles)
 		{
 			e = rsurface.modelelement3i + 3*decal->triangleindex;
-			VectorCopy(rsurface.modelvertexposition[e[0]].vertex3f, v3f);
-			VectorCopy(rsurface.modelvertexposition[e[1]].vertex3f, v3f + 3);
-			VectorCopy(rsurface.modelvertexposition[e[2]].vertex3f, v3f + 6);
+			VectorCopy(rsurface.modelvertex3f + 3*e[0], v3f);
+			VectorCopy(rsurface.modelvertex3f + 3*e[1], v3f + 3);
+			VectorCopy(rsurface.modelvertex3f + 3*e[2], v3f + 6);
 		}
 		else
 		{
