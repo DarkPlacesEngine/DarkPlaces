@@ -831,7 +831,9 @@ void SV_ReadClientMessage(void)
 		switch (cmd)
 		{
 		default:
-			Con_Printf("SV_ReadClientMessage: unknown command char %i\n", cmd);
+			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", cmd, msg_readcount);
+			if (developer_networking.integer)
+				Com_HexDumpToConsole(net_message.data, net_message.cursize);
 			SV_DropClient (false);
 			return;
 
