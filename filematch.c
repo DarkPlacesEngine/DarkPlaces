@@ -1,4 +1,10 @@
 
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <dirent.h>
+#endif
+
 #include "quakedef.h"
 
 // LordHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
@@ -141,7 +147,6 @@ static void adddirentry(stringlist_t *list, const char *path, const char *name)
 	}
 }
 #ifdef WIN32
-#include <windows.h>
 void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 {
 	int i;
@@ -167,7 +172,6 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 				*c += 'a' - 'A';
 }
 #else
-#include <dirent.h>
 void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 {
 	char fullpath[MAX_OSPATH];

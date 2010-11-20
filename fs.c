@@ -1283,7 +1283,7 @@ static void FS_AddSelfPack(void)
 	if(fs_selfpack)
 	{
 		searchpath_t *search;
-		search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
+		search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 		search->next = fs_searchpaths;
 		search->pack = fs_selfpack;
 		fs_searchpaths = search;

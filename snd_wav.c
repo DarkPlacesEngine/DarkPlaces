@@ -65,7 +65,7 @@ static int GetLittleLong(void)
 	return val;
 }
 
-static void FindNextChunk(char *name)
+static void FindNextChunk(const char *name)
 {
 	while (1)
 	{
@@ -97,7 +97,7 @@ static void FindNextChunk(char *name)
 	}
 }
 
-static void FindChunk(char *name)
+static void FindChunk(const char *name)
 {
 	last_chunk = iff_data;
 	FindNextChunk (name);

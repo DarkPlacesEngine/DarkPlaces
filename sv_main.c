@@ -981,14 +981,19 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 {
 	client_t		*client;
 	int				i;
-	float			spawn_parms[NUM_SPAWN_PARMS];
 
 	client = svs.clients + clientnum;
 
 // set up the client_t
 	if (sv.loadgame)
-		memcpy (spawn_parms, client->spawn_parms, sizeof(spawn_parms));
-	memset (client, 0, sizeof(*client));
+	{
+		float backupparms[NUM_SPAWN_PARMS];
+		memcpy(backupparms, client->spawn_parms, sizeof(backupparms));
+		memset(client, 0, sizeof(*client));
+		memcpy(client->spawn_parms, backupparms, sizeof(backupparms));
+	}
+	else
+		memset(client, 0, sizeof(*client));
 	client->active = true;
 	client->netconnection = netconnection;
 
@@ -1022,9 +1027,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 		client->rate = 1000000000;
 	client->connecttime = realtime;
 
-	if (sv.loadgame)
-		memcpy (client->spawn_parms, spawn_parms, sizeof(spawn_parms));
-	else
+	if (!sv.loadgame)
 	{
 		// call the progs to get default spawn parms for the new client
 		// set self to world to intentionally cause errors with broken SetNewParms code in some mods

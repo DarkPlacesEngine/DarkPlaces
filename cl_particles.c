@@ -1687,16 +1687,15 @@ void CL_ParticleExplosion (const vec3_t org)
 			{
 				for (i = 0;i < 512 * cl_particles_quality.value;i++)
 				{
-					int k;
+					int k = 0;
 					vec3_t v, v2;
-					for (k = 0;k < 16;k++)
+					do
 					{
 						VectorRandom(v2);
 						VectorMA(org, 128, v2, v);
 						trace = CL_TraceLine(org, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
-						if (trace.fraction >= 0.1)
-							break;
 					}
+					while (k < 16 && trace.fraction < 0.1f);
 					VectorSubtract(trace.endpos, org, v2);
 					VectorScale(v2, 2.0f, v2);
 					CL_NewParticle(org, pt_spark, 0x903010, 0xFFD030, tex_particle, 1.0f, 0, lhrandom(0, 255), 512, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, true, 0, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
@@ -1943,7 +1942,7 @@ static void R_InitBloodTextures (unsigned char *particletexturedata)
 {
 	int i, j, k, m;
 	size_t datasize = PARTICLETEXTURESIZE*PARTICLETEXTURESIZE*4;
-	unsigned char *data = Mem_Alloc(tempmempool, datasize);
+	unsigned char *data = (unsigned char *)Mem_Alloc(tempmempool, datasize);
 
 	// blood particles
 	for (i = 0;i < 8;i++)
@@ -1995,7 +1994,7 @@ static void R_InitParticleTexture (void)
 	// we invert it again during the blendfunc to make it work...
 
 #ifndef DUMPPARTICLEFONT
-	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_FORCELINEAR, false);
+	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, false);
 	if (decalskinframe)
 	{
 		particlefonttexture = decalskinframe->base;
@@ -2140,7 +2139,7 @@ static void R_InitParticleTexture (void)
 		Image_WriteTGABGRA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
-		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_FORCELINEAR, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE);
+		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE);
 		particlefonttexture = decalskinframe->base;
 
 		Mem_Free(particletexturedata);
@@ -2159,7 +2158,7 @@ static void R_InitParticleTexture (void)
 	}
 
 #ifndef DUMPPARTICLEFONT
-	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR, true, r_texture_convertsRGB_particles.integer);
+	particletexture[tex_beam].texture = loadtextureimage(particletexturepool, "particles/nexbeam.tga", false, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true, r_texture_convertsRGB_particles.integer != 0);
 	if (!particletexture[tex_beam].texture)
 #endif
 	{
@@ -2182,7 +2181,7 @@ static void R_InitParticleTexture (void)
 #ifdef DUMPPARTICLEFONT
 		Image_WriteTGABGRA ("particles/nexbeam.tga", 64, 64, &data2[0][0][0]);
 #endif
-		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
+		particletexture[tex_beam].texture = R_LoadTexture2D(particletexturepool, "nexbeam", 16, 64, &data2[0][0][0], TEXTYPE_BGRA, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, -1, NULL);
 	}
 	particletexture[tex_beam].s1 = 0;
 	particletexture[tex_beam].t1 = 0;
@@ -2242,7 +2241,7 @@ static void R_InitParticleTexture (void)
 				Con_Printf("particles/particlefont.txt: texnum %i outside valid range (0 to %i)\n", i, MAX_PARTICLETEXTURES);
 				continue;
 			}
-			particletexture[i].texture = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR, false)->base;
+			particletexture[i].texture = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, false)->base;
 			particletexture[i].s1 = s1;
 			particletexture[i].t1 = t1;
 			particletexture[i].s2 = s2;
@@ -2309,15 +2308,11 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	particletexture_t *tex;
 	float right[3], up[3], size, ca;
 	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
-	float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
 
 	RSurf_ActiveWorldEntity();
 
 	r_refdef.stats.drawndecals += numsurfaces;
-	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
-	R_Mesh_ColorPointer(particle_color4f, 0, 0);
+//	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2374,7 +2369,8 @@ void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1);
-	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, particle_elements, 0, 0);
+	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
+	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, NULL, 0, particle_elements, NULL, 0);
 }
 
 void R_DrawDecals (void)
@@ -2476,10 +2472,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
 	r_refdef.stats.particles += numsurfaces;
-	R_Mesh_ResetTextureState();
-	R_Mesh_VertexPointer(particle_vertex3f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, particle_texcoord2f, 0, 0);
-	R_Mesh_ColorPointer(particle_color4f, 0, 0);
+//	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
@@ -2502,15 +2495,15 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 		palpha = p->alpha;
 		if(dofade && p->orientation != PARTICLE_VBEAM && p->orientation != PARTICLE_HBEAM)
 			palpha *= min(1, (DotProduct(p->org, r_refdef.view.forward)  - minparticledist_start) / (minparticledist_end - minparticledist_start));
+		alpha = palpha * colormultiplier[3];
+		// ensure alpha multiplier saturates properly
+		if (alpha > 1.0f)
+			alpha = 1.0f;
 
 		switch (blendmode)
 		{
 		case PBLEND_INVALID:
 		case PBLEND_INVMOD:
-			alpha = palpha * colormultiplier[3];
-			// ensure alpha multiplier saturates properly
-			if (alpha > 1.0f)
-				alpha = 1.0f;
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
 				alpha *= RSurf_FogVertex(p->org);
@@ -2519,13 +2512,9 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[0] = p->color[0] * alpha;
 			c4f[1] = p->color[1] * alpha;
 			c4f[2] = p->color[2] * alpha;
-			c4f[3] = 1;
+			c4f[3] = 0;
 			break;
 		case PBLEND_ADD:
-			alpha = palpha * colormultiplier[3];
-			// ensure alpha multiplier saturates properly
-			if (alpha > 1.0f)
-				alpha = 1.0f;
 			// additive and modulate can just fade out in fog (this is correct)
 			if (r_refdef.fogenabled)
 				alpha *= RSurf_FogVertex(p->org);
@@ -2533,13 +2522,13 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			c4f[0] = p->color[0] * colormultiplier[0] * alpha;
 			c4f[1] = p->color[1] * colormultiplier[1] * alpha;
 			c4f[2] = p->color[2] * colormultiplier[2] * alpha;
-			c4f[3] = 1;
+			c4f[3] = 0;
 			break;
 		case PBLEND_ALPHA:
 			c4f[0] = p->color[0] * colormultiplier[0];
 			c4f[1] = p->color[1] * colormultiplier[1];
 			c4f[2] = p->color[2] * colormultiplier[2];
-			c4f[3] = palpha * colormultiplier[3];
+			c4f[3] = alpha;
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
 			{
@@ -2557,6 +2546,8 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 				c4f[1] = c4f[1] * fog + r_refdef.fogcolor[1] * ifog;
 				c4f[2] = c4f[2] * fog + r_refdef.fogcolor[2] * ifog;
 			}
+			// for premultiplied alpha we have to apply the alpha to the color (after fog of course)
+			VectorScale(c4f, alpha, c4f);
 			break;
 		}
 		// copy the color into the other three vertices
@@ -2685,44 +2676,47 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	texture = NULL;
 	batchstart = 0;
 	batchcount = 0;
+	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;)
 	{
 		p = cl.particles + surfacelist[surfacelistindex];
 
-		if (blendmode != p->blendmode)
-		{
-			blendmode = (pblend_t)p->blendmode;
-			switch(blendmode)
-			{
-			case PBLEND_ALPHA:
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case PBLEND_INVALID:
-			case PBLEND_ADD:
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-				break;
-			case PBLEND_INVMOD:
-				GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-				break;
-			}
-		}
 		if (texture != particletexture[p->texnum].texture)
 		{
 			texture = particletexture[p->texnum].texture;
 			R_SetupShader_Generic(texture, NULL, GL_MODULATE, 1);
 		}
 
-		// iterate until we find a change in settings
-		batchstart = surfacelistindex++;
-		for (;surfacelistindex < numsurfaces;surfacelistindex++)
+		if (p->blendmode == PBLEND_INVMOD)
 		{
-			p = cl.particles + surfacelist[surfacelistindex];
-			if (blendmode != p->blendmode || texture != particletexture[p->texnum].texture)
-				break;
+			// inverse modulate blend - group these
+			GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+			// iterate until we find a change in settings
+			batchstart = surfacelistindex++;
+			for (;surfacelistindex < numsurfaces;surfacelistindex++)
+			{
+				p = cl.particles + surfacelist[surfacelistindex];
+				if (p->blendmode != PBLEND_INVMOD || texture != particletexture[p->texnum].texture)
+					break;
+			}
+		}
+		else
+		{
+			// additive or alpha blend - group these
+			// (we can group these because we premultiplied the texture alpha)
+			GL_BlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			// iterate until we find a change in settings
+			batchstart = surfacelistindex++;
+			for (;surfacelistindex < numsurfaces;surfacelistindex++)
+			{
+				p = cl.particles + surfacelist[surfacelistindex];
+				if (p->blendmode == PBLEND_INVMOD || texture != particletexture[p->texnum].texture)
+					break;
+			}
 		}
 
 		batchcount = surfacelistindex - batchstart;
-		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, particle_elements, 0, 0);
+		R_Mesh_Draw(batchstart * 4, batchcount * 4, batchstart * 2, batchcount * 2, NULL, NULL, 0, particle_elements, NULL, 0);
 	}
 }
 

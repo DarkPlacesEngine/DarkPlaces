@@ -222,7 +222,7 @@ typedef struct
 static int (*qov_clear) (OggVorbis_File *vf);
 static vorbis_info* (*qov_info) (OggVorbis_File *vf,int link);
 static vorbis_comment* (*qov_comment) (OggVorbis_File *vf,int link);
-static char * (*qvorbis_comment_query) (vorbis_comment *vc, char *tag, int count);
+static char * (*qvorbis_comment_query) (vorbis_comment *vc, const char *tag, int count);
 static int (*qov_open_callbacks) (void *datasource, OggVorbis_File *vf,
 								  char *initial, long ibytes,
 								  ov_callbacks callbacks);

@@ -494,12 +494,12 @@ typedef struct prvm_prog_s
 	qboolean			allowworldwrites;
 
 	// name of the prog, e.g. "Server", "Client" or "Menu" (used for text output)
-	char				*name; // [INIT]
+	const char			*name; // [INIT]
 
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
 	int				flag;
 
-	char				*extensionstring; // [INIT]
+	const char			*extensionstring; // [INIT]
 
 	qboolean			loadintoworld; // [INIT]
 
@@ -564,8 +564,8 @@ extern const int vm_sv_numbuiltins;
 extern const int vm_cl_numbuiltins;
 extern const int vm_m_numbuiltins;
 
-extern char * vm_sv_extensions; // client also uses this
-extern char * vm_m_extensions;
+extern const char * vm_sv_extensions; // client also uses this
+extern const char * vm_m_extensions;
 
 void VM_SV_Cmd_Init(void);
 void VM_SV_Cmd_Reset(void);
@@ -639,7 +639,7 @@ void PRVM_ED_ParseGlobals (const char *data);
 
 void PRVM_ED_LoadFromFile (const char *data);
 
-unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, char *filename, int fileline);
+unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, const char *filename, int fileline);
 #define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? (unsigned int)(n) : PRVM_EDICT_NUM_ERROR((unsigned int)(n), __FILE__, __LINE__))
 #define	PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
 
@@ -722,7 +722,7 @@ Load a program with LoadProgs
 */
 void PRVM_InitProg(int prognr);
 // LoadProgs expects to be called right after InitProg
-void PRVM_LoadProgs (const char *filename, int numrequiredfunc, char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, char **required_global);
+void PRVM_LoadProgs (const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, char **required_global);
 void PRVM_ResetProg(void);
 
 qboolean PRVM_ProgLoaded(int prognr);

@@ -24,8 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // disable data conversion warnings
 
 #ifdef _MSC_VER
-#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
-#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
+//#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
+//#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
+//#pragma warning(disable : 4706)		// LordHavoc: MSVC++ 2008 x86, assignment within conditional expression
+//#pragma warning(disable : 4127)		// LordHavoc: MSVC++ 2008 x86, conditional expression is constant
+//#pragma warning(disable : 4100)		// LordHavoc: MSVC++ 2008 x86, unreferenced formal parameter
+//#pragma warning(disable : 4055)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from data pointer   to function pointer
+//#pragma warning(disable : 4054)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from function pointer   to data pointer
 #endif
 
 
@@ -401,15 +406,6 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB		0x851C
 #endif
 
-#ifndef GL_TEXTURE_RECTANGLE_ARB
-#define GL_TEXTURE_RECTANGLE_ARB            0x84F5
-#define GL_TEXTURE_BINDING_RECTANGLE_ARB    0x84F6
-#define GL_PROXY_TEXTURE_RECTANGLE_ARB      0x84F7
-#define GL_MAX_RECTANGLE_TEXTURE_SIZE_ARB   0x84F8
-#define GL_SAMPLER_2D_RECT_ARB              0x8B63
-#define GL_SAMPLER_2D_RECT_SHADOW_ARB       0x8B64
-#endif
-
 #ifndef GL_DEPTH_COMPONENT16_ARB
 #define GL_DEPTH_COMPONENT16_ARB       0x81A5
 #define GL_DEPTH_COMPONENT24_ARB       0x81A6
@@ -636,12 +632,14 @@ extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean
 
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
+extern void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
 extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 extern void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
@@ -649,6 +647,7 @@ extern void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
 extern void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
+extern void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 extern void (GLAPIENTRY *qglBegin)(GLenum mode);
 extern void (GLAPIENTRY *qglEnd)(void);
 
@@ -954,9 +953,9 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 #define DEBUGGL
 
 #ifdef DEBUGGL
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError();if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError ? qglGetError() : 0;if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
 extern int errornumber;
-void GL_PrintError(int errornumber, char *filename, int linenumber);
+void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
 #define CHECKGLERROR
 #endif
