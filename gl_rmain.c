@@ -7909,7 +7909,7 @@ static void R_View_UpdateEntityLighting (void)
 			{
 				if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
 					org[2] = org[2] + r_overheadsprites_pushback.value;
-				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, ent->modellight_lightdir, org, true, true);
+				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, ent->modellight_lightdir, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 			}
 			else
 				r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
