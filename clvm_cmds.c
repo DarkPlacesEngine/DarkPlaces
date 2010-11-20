@@ -667,23 +667,24 @@ static void VM_CL_ambientsound (void)
 	S_StaticSound (s, f, PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3)*64);
 }
 
-// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
+// #92 vector(vector org[, float lpflag]) getlight (DP_QC_GETLIGHT)
 static void VM_CL_getlight (void)
 {
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
 	vec_t *p;
 
-	VM_SAFEPARMCOUNT(1, VM_CL_getlight);
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_CL_getlight);
 
 	p = PRVM_G_VECTOR(OFS_PARM0);
 	VectorClear(ambientcolor);
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
-	if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
+	if (prog->argc >= 2)
+		R_CompleteLightPoint(ambientcolor, diffusecolor, diffusenormal, p, PRVM_G_FLOAT(OFS_PARM1));
+	else if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
 		cl.worldmodel->brush.LightPoint(cl.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	VectorMA(ambientcolor, 0.5, diffusecolor, PRVM_G_VECTOR(OFS_RETURN));
 }
-
 
 //============================================================================
 //[515]: SCENE MANAGER builtins
