@@ -2532,7 +2532,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
 			{
-				R_CompleteLightPoint(ambient, diffuse, diffusenormal, p->org, true, false);
+				R_CompleteLightPoint(ambient, diffuse, diffusenormal, p->org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 				c4f[0] *= (ambient[0] + 0.5 * diffuse[0]);
 				c4f[1] *= (ambient[1] + 0.5 * diffuse[1]);
 				c4f[2] *= (ambient[2] + 0.5 * diffuse[2]);
