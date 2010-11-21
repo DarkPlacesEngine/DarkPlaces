@@ -2045,8 +2045,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			{
 			case TEXTYPE_BGRA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
 			case TEXTYPE_DXT1: case TEXTYPE_DXT1A: d3dformat = D3DFMT_DXT1;break;
-			case TEXTYPE_DXT2: case TEXTYPE_DXT3: d3dformat = D3DFMT_DXT3;break;
-			case TEXTYPE_DXT4: case TEXTYPE_DXT5: d3dformat = D3DFMT_DXT5;break;
+			case TEXTYPE_DXT3: d3dformat = D3DFMT_DXT3;break;
+			case TEXTYPE_DXT5: d3dformat = D3DFMT_DXT5;break;
 			default: d3dformat = D3DFMT_A8R8G8B8;Host_Error("R_LoadTextureDDSFile: unsupported texture type %i when picking D3DFMT", (int)textype);break;
 			}
 			d3dusage = 0;
