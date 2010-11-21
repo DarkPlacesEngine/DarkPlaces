@@ -126,8 +126,10 @@ ConBuffer_Shutdown
 void ConBuffer_Shutdown(conbuffer_t *buf)
 {
 	buf->active = false;
-	Mem_Free(buf->text);
-	Mem_Free(buf->lines);
+	if (buf->text)
+		Mem_Free(buf->text);
+	if (buf->lines)
+		Mem_Free(buf->lines);
 	buf->text = NULL;
 	buf->lines = NULL;
 }
