@@ -11843,8 +11843,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				}
 			}
 			// if we get here, BATCHNEED_ARRAY_NORMAL and BATCHNEED_ARRAY_VECTOR are in batchneed, so no need to check
-			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
-			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, r_smoothnormals_areaweighting.integer != 0);
+			Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, r_smoothnormals_areaweighting.integer != 0);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
@@ -11948,14 +11948,14 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			rsurface.batchvertex3f_bufferoffset = 0;
 			if(batchneed & (BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR)) // otherwise these can stay NULL
 			{
-				Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
+				Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, r_smoothnormals_areaweighting.integer != 0);
 				rsurface.batchnormal3f = rsurface.array_batchnormal3f;
 				rsurface.batchnormal3f_vertexbuffer = NULL;
 				rsurface.batchnormal3f_bufferoffset = 0;
 			}
 			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
 			{
-				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, r_smoothnormals_areaweighting.integer != 0);
 				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
 				rsurface.batchsvector3f_vertexbuffer = NULL;
 				rsurface.batchsvector3f_bufferoffset = 0;
@@ -11981,7 +11981,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			rsurface.batchnormal3f_bufferoffset = 0;
 			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
 			{
-				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, r_smoothnormals_areaweighting.integer != 0);
 				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
 				rsurface.batchsvector3f_vertexbuffer = NULL;
 				rsurface.batchsvector3f_bufferoffset = 0;
@@ -12012,7 +12012,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				VectorMA(rsurface.batchvertex3f + 3*j, scale, rsurface.batchnormal3f + 3*j, rsurface.array_batchvertex3f + 3*j);
 			}
 			// if we get here, BATCHNEED_ARRAY_NORMAL is in batchneed, so no need to check
-			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
+			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, r_smoothnormals_areaweighting.integer != 0);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
@@ -12021,7 +12021,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			rsurface.batchnormal3f_bufferoffset = 0;
 			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
 			{
-				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, r_smoothnormals_areaweighting.integer != 0);
 				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
 				rsurface.batchsvector3f_vertexbuffer = NULL;
 				rsurface.batchsvector3f_bufferoffset = 0;
@@ -12038,7 +12038,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				VectorMA(rsurface.batchvertex3f + 3*j, scale, rsurface.batchnormal3f + 3*j, rsurface.array_batchvertex3f + 3*j);
 			}
 			// if we get here, BATCHNEED_ARRAY_NORMAL is in batchneed, so no need to check
-			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, true);
+			Mod_BuildNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchnormal3f, r_smoothnormals_areaweighting.integer != 0);
 			rsurface.batchvertex3f = rsurface.array_batchvertex3f;
 			rsurface.batchvertex3f_vertexbuffer = NULL;
 			rsurface.batchvertex3f_bufferoffset = 0;
@@ -12047,7 +12047,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			rsurface.batchnormal3f_bufferoffset = 0;
 			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
 			{
-				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, true);
+				Mod_BuildTextureVectorsFromNormals(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.array_batchvertex3f, rsurface.batchtexcoordtexture2f, rsurface.array_batchnormal3f, rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle, rsurface.array_batchsvector3f, rsurface.array_batchtvector3f, r_smoothnormals_areaweighting.integer != 0);
 				rsurface.batchsvector3f = rsurface.array_batchsvector3f;
 				rsurface.batchsvector3f_vertexbuffer = NULL;
 				rsurface.batchsvector3f_bufferoffset = 0;
