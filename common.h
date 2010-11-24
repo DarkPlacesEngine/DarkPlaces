@@ -216,7 +216,13 @@ char	*va(const char *format, ...) DP_FUNC_PRINTF(1);
 
 
 // snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
+#ifdef snprintf
+# undef snprintf
+#endif
 #define snprintf DO_NOT_USE_SNPRINTF__USE_DPSNPRINTF
+#ifdef vsnprintf
+# undef vsnprintf
+#endif
 #define vsnprintf DO_NOT_USE_VSNPRINTF__USE_DPVSNPRINTF
 
 // dpsnprintf and dpvsnprintf
