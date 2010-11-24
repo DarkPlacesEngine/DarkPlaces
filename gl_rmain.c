@@ -9636,6 +9636,7 @@ R_RenderView
 */
 void R_RenderView(void)
 {
+	matrix4x4_t originalmatrix = r_refdef.view.matrix, offsetmatrix;
 	if (r_timereport_active)
 		R_TimeReport("start");
 	r_textureframe++; // used only by R_GetCurrentTexture
@@ -9650,6 +9651,13 @@ void R_RenderView(void)
 	R_AnimCache_ClearCache();
 	R_FrameData_NewFrame();
 
+	/* adjust for stereo display */
+	if(R_Stereo_Active())
+	{
+		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * (0.5f - r_stereo_side), 0, 0, r_stereo_angle.value * (0.5f - r_stereo_side), 0, 1);
+		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
+	}
+
 	if (r_refdef.view.isoverlay)
 	{
 		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
@@ -9663,12 +9671,17 @@ void R_RenderView(void)
 
 		R_RenderScene();
 
+		r_refdef.view.matrix = originalmatrix;
+
 		CHECKGLERROR
 		return;
 	}
 
 	if (!r_refdef.scene.entities || r_refdef.view.width * r_refdef.view.height == 0 || !r_renderview.integer || cl_videoplaying/* || !r_refdef.scene.worldmodel*/)
+	{
+		r_refdef.view.matrix = originalmatrix;
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
+	}
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value;
 
@@ -9720,6 +9733,8 @@ void R_RenderView(void)
 
 	GL_Scissor(0, 0, vid.width, vid.height);
 	GL_ScissorTest(false);
+
+	r_refdef.view.matrix = originalmatrix;
 
 	CHECKGLERROR
 }
