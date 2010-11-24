@@ -2238,11 +2238,6 @@ void CL_UpdateScreen(void)
 
 	if (R_Stereo_Active())
 	{
-		matrix4x4_t originalmatrix = r_refdef.view.matrix;
-		matrix4x4_t offsetmatrix;
-		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * 0.5f, 0, 0, r_stereo_angle.value * 0.5f, 0, 1);
-		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
-
 		r_stereo_side = 0;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
@@ -2257,9 +2252,6 @@ void CL_UpdateScreen(void)
 
 		SCR_DrawScreen();
 
-		Matrix4x4_CreateFromQuakeEntity(&offsetmatrix, 0, r_stereo_separation.value * -0.5f, 0, 0, r_stereo_angle.value * -0.5f, 0, 1);
-		Matrix4x4_Concat(&r_refdef.view.matrix, &originalmatrix, &offsetmatrix);
-
 		r_stereo_side = 1;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
@@ -2273,8 +2265,6 @@ void CL_UpdateScreen(void)
 			qglDrawBuffer(GL_BACK_LEFT);
 
 		SCR_DrawScreen();
-
-		r_refdef.view.matrix = originalmatrix;
 	}
 	else
 		SCR_DrawScreen();
