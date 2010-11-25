@@ -22,6 +22,7 @@ static cvar_t cl_curl_enabled = {CVAR_SAVE, "cl_curl_enabled","1", "whether clie
 
 typedef struct CURL_s CURL;
 typedef struct CURLM_s CURLM;
+typedef struct curl_slist curl_slist;
 typedef enum
 {
 	CURLE_OK = 0
@@ -47,13 +48,17 @@ typedef enum
 	CINIT(URL,  OBJECTPOINT, 2),
 	CINIT(ERRORBUFFER, OBJECTPOINT, 10),
 	CINIT(WRITEFUNCTION, FUNCTIONPOINT, 11),
+	CINIT(POSTFIELDS, OBJECTPOINT, 15),
 	CINIT(REFERER, OBJECTPOINT, 16),
 	CINIT(USERAGENT, OBJECTPOINT, 18),
-	CINIT(RESUME_FROM, LONG, 21),
-	CINIT(FOLLOWLOCATION, LONG, 52),  /* use Location: Luke! */
-	CINIT(PRIVATE, OBJECTPOINT, 103),
 	CINIT(LOW_SPEED_LIMIT, LONG , 19),
 	CINIT(LOW_SPEED_TIME, LONG, 20),
+	CINIT(RESUME_FROM, LONG, 21),
+	CINIT(HTTPHEADER, OBJECTPOINT, 23),
+	CINIT(POST, LONG, 47),         /* HTTP POST method */
+	CINIT(FOLLOWLOCATION, LONG, 52),  /* use Location: Luke! */
+	CINIT(POSTFIELDSIZE, LONG, 60),
+	CINIT(PRIVATE, OBJECTPOINT, 103),
 	CINIT(PROTOCOLS, LONG, 181),
 	CINIT(REDIR_PROTOCOLS, LONG, 182)
 }
@@ -149,6 +154,8 @@ static CURLMcode (*qcurl_multi_remove_handle) (CURLM *multi_handle, CURL *easy_h
 static CURLMsg * (*qcurl_multi_info_read) (CURLM *multi_handle, int *msgs_in_queue);
 static void (*qcurl_multi_cleanup) (CURLM *);
 static const char * (*qcurl_multi_strerror) (CURLcode);
+static curl_slist * (*qcurl_slist_append) (curl_slist *list, const char *string);
+static void (*qcurl_slist_free_all) (curl_slist *list);
 
 static dllfunction_t curlfuncs[] =
 {
@@ -166,6 +173,8 @@ static dllfunction_t curlfuncs[] =
 	{"curl_multi_info_read",	(void **) &qcurl_multi_info_read},
 	{"curl_multi_cleanup",		(void **) &qcurl_multi_cleanup},
 	{"curl_multi_strerror",		(void **) &qcurl_multi_strerror},
+	{"curl_slist_append",		(void **) &qcurl_slist_append},
+	{"curl_slist_free_all",		(void **) &qcurl_slist_free_all},
 	{NULL, NULL}
 };
 
@@ -183,15 +192,22 @@ typedef struct downloadinfo_s
 	CURL *curle;
 	qboolean started;
 	qboolean ispak;
-	unsigned long bytes_received;
+	unsigned long bytes_received; // for buffer
+	double bytes_received_curl; // for throttling
+	double bytes_sent_curl; // for throttling
 	struct downloadinfo_s *next, *prev;
 	qboolean forthismap;
 	double maxspeed;
+	curl_slist *slist; // http headers
 
 	unsigned char *buffer;
 	size_t buffersize;
 	curl_callback_t callback;
 	void *callback_data;
+
+	const unsigned char *postbuf;
+	size_t postbufsize;
+	const char *post_content_type;
 }
 downloadinfo;
 static downloadinfo *downloads = NULL;
@@ -358,7 +374,8 @@ static void CURL_CloseLibrary (void)
 
 
 static CURLM *curlm = NULL;
-static unsigned long bytes_received = 0; // used for bandwidth throttling
+static double bytes_received = 0; // used for bandwidth throttling
+static double bytes_sent = 0; // used for bandwidth throttling
 static double curltime = 0;
 
 /*
@@ -390,7 +407,6 @@ static size_t CURL_fwrite(void *data, size_t size, size_t nmemb, void *vdi)
 		ret = FS_Write(di->stream, data, bytes);
 	}
 
-	bytes_received += bytes;
 	di->bytes_received += bytes;
 
 	return ret; // why not ret / nmemb?
@@ -445,7 +461,7 @@ CURL_DOWNLOAD_FAILED or CURL_DOWNLOAD_ABORTED) and in the second case the error
 code from libcurl, or 0, if another error has occurred.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error)
 {
 	qboolean ok = false;
@@ -484,6 +500,8 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 	{
 		qcurl_multi_remove_handle(curlm, di->curle);
 		qcurl_easy_cleanup(di->curle);
+		if(di->slist)
+			qcurl_slist_free_all(di->slist);
 	}
 
 	if(!di->callback && ok && !di->bytes_received)
@@ -506,11 +524,11 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			di->stream = FS_OpenRealFile(di->filename, "wb", false);
 			FS_Close(di->stream);
 
-			if(di->startpos && !di->callback)
+			if(di->startpos && !di->callback && !di->post_content_type)
 			{
 				// this was a resume?
 				// then try to redownload it without reporting the error
-				Curl_Begin(di->url, di->maxspeed, di->filename, di->ispak, di->forthismap, NULL, 0, NULL, NULL);
+				Curl_Begin(di->url, di->maxspeed, di->filename, di->ispak, di->forthismap, NULL, NULL, 0, NULL, 0, NULL, NULL);
 				di->forthismap = false; // don't count the error
 			}
 		}
@@ -610,6 +628,7 @@ static void CheckPendingDownloads(void)
 				}
 
 				di->curle = qcurl_easy_init();
+				di->slist = NULL;
 				qcurl_easy_setopt(di->curle, CURLOPT_URL, di->url);
 				qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, engineversion);
 				qcurl_easy_setopt(di->curle, CURLOPT_REFERER, di->referer);
@@ -626,6 +645,14 @@ static void CheckPendingDownloads(void)
 					Con_Printf("^1WARNING:^7 for security reasons, please upgrade to libcurl 7.19.4 or above. In a later version of DarkPlaces, HTTP redirect support will be disabled for this libcurl version.\n");
 					//qcurl_easy_setopt(di->curle, CURLOPT_FOLLOWLOCATION, 0);
 				}
+				if(di->post_content_type)
+				{
+					qcurl_easy_setopt(di->curle, CURLOPT_POST, 1);
+					qcurl_easy_setopt(di->curle, CURLOPT_POSTFIELDS, di->postbuf);
+					qcurl_easy_setopt(di->curle, CURLOPT_POSTFIELDSIZE, di->postbufsize);
+					di->slist = qcurl_slist_append(di->slist, va("Content-Type: %s", di->post_content_type));
+				}
+				qcurl_easy_setopt(di->curle, CURLOPT_HTTPHEADER, di->slist);
 				
 				qcurl_multi_add_handle(curlm, di->curle);
 				di->started = true;
@@ -716,7 +743,7 @@ Starts a download of a given URL to the file name portion of this URL (or name
 if given) in the "dlcache/" folder.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	if(!curl_dll)
 	{
@@ -876,6 +903,8 @@ static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, q
 		di->ispak = (ispak && !buf);
 		di->maxspeed = maxspeed;
 		di->bytes_received = 0;
+		di->bytes_received_curl = 0;
+		di->bytes_sent_curl = 0;
 		di->next = downloads;
 		di->prev = NULL;
 		if(di->next)
@@ -894,6 +923,19 @@ static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, q
 			di->callback_data = cbdata;
 		}
 
+		if(post_content_type)
+		{
+			di->post_content_type = post_content_type;
+			di->postbuf = postbuf;
+			di->postbufsize = postbufsize;
+		}
+		else
+		{
+			di->post_content_type = NULL;
+			di->postbuf = NULL;
+			di->postbufsize = 0;
+		}
+
 		downloads = di;
 		return true;
 	}
@@ -901,11 +943,15 @@ static qboolean Curl_Begin(const char *URL, double maxspeed, const char *name, q
 
 qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap)
 {
-	return Curl_Begin(URL, maxspeed, name, ispak, forthismap, NULL, 0, NULL, NULL);
+	return Curl_Begin(URL, maxspeed, name, ispak, forthismap, NULL, NULL, 0, NULL, 0, NULL, NULL);
 }
 qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
-	return Curl_Begin(URL, maxspeed, NULL, false, false, buf, bufsize, callback, cbdata);
+	return Curl_Begin(URL, maxspeed, NULL, false, false, NULL, NULL, 0, buf, bufsize, callback, cbdata);
+}
+qboolean Curl_Begin_ToMemory_POST(const char *URL, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+{
+	return Curl_Begin(URL, maxspeed, NULL, false, false, post_content_type, postbuf, postbufsize, buf, bufsize, callback, cbdata);
 }
 
 /*
@@ -946,6 +992,17 @@ void Curl_Run(void)
 			mc = qcurl_multi_perform(curlm, &remaining);
 		}
 		while(mc == CURLM_CALL_MULTI_PERFORM);
+
+		for(di = downloads; di; di = di->next)
+		{
+			double b = 0;
+			qcurl_easy_getinfo(di->curle, CURLINFO_SIZE_UPLOAD, &b);
+			bytes_sent += (b - di->bytes_sent_curl);
+			di->bytes_sent_curl = b;
+			qcurl_easy_getinfo(di->curle, CURLINFO_SIZE_DOWNLOAD, &b);
+			bytes_sent += (b - di->bytes_received_curl);
+			di->bytes_received_curl = b;
+		}
 
 		for(;;)
 		{
@@ -997,9 +1054,10 @@ void Curl_Run(void)
 
 	if(maxspeed > 0)
 	{
-		unsigned long bytes = bytes_received; // maybe smoothen a bit?
+		double bytes = bytes_sent + bytes_received; // maybe smoothen a bit?
 		curltime = realtime + bytes / (cl_curl_maxspeed.value * 1024.0);
-		bytes_received -= bytes;
+		bytes_sent = 0;
+		bytes_received = 0;
 	}
 	else
 		curltime = realtime;

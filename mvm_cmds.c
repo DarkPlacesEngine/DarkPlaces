@@ -41,6 +41,7 @@ const char *vm_m_extensions =
 "DP_QC_UNLIMITEDTEMPSTRINGS "
 "DP_QC_URI_ESCAPE "
 "DP_QC_URI_GET "
+"DP_QC_URI_POST "
 "DP_QC_WHICHPACK "
 "FTE_STRINGS "
 ;
@@ -1385,7 +1386,7 @@ NULL,									// #509
 VM_uri_escape,					// #510 string(string in) uri_escape = #510;
 VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
 VM_etof,					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
-VM_uri_get,						// #513 float(string uril, float id) uri_get = #513; (DP_QC_URI_GET)
+VM_uri_get,						// #513 float(string uri, float id, [string post_contenttype, string post_delim, [float buf]]) uri_get = #513; (DP_QC_URI_GET, DP_QC_URI_POST)
 VM_tokenize_console,					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
 VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)

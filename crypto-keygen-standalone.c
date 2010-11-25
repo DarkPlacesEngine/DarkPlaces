@@ -91,49 +91,80 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 	return pos;
 }
 
-void file2lumps(const char *fn, unsigned long header, const char **lumps, size_t *lumpsize, size_t nlumps)
+void file2buf(const char *fn, char **data, size_t *datasize)
 {
 	FILE *f;
-	char buf[65536];
-	size_t n;
+	*data = NULL;
+	*datasize = 0;
+	size_t n = 0, dn = 0;
 	f = fopen(fn, "rb");
 	if(!f)
+	{
+		return;
+	}
+	for(;;)
+	{
+		*data = realloc(*data, *datasize += 8192);
+		if(!*data)
+		{
+			*datasize = 0;
+			return;
+		}
+		dn = fread(*data + n, 1, *datasize - n, f);
+		if(!dn)
+			break;
+		n += dn;
+	}
+	fclose(f);
+	*datasize = n;
+}
+
+int buf2file(const char *fn, const char *data, size_t n)
+{
+	FILE *f;
+	f = fopen(fn, "wb");
+	if(!f)
+		return 0;
+	n = fwrite(data, n, 1, f);
+	if(fclose(f) || !n)
+		return 0;
+	return 1;
+}
+
+void file2lumps(const char *fn, unsigned long header, const char **lumps, size_t *lumpsize, size_t nlumps)
+{
+	char *buf;
+	size_t n;
+	file2buf(fn, &buf, &n);
+	if(!buf)
 	{
 		fprintf(stderr, "could not open %s\n", fn);
 		exit(1);
 	}
-	n = fread(buf, 1, sizeof(buf), f);
-	fclose(f);
 	if(!Crypto_ParsePack(buf, n, header, lumps, lumpsize, nlumps))
 	{
 		fprintf(stderr, "could not parse %s as %c%c%c%c (%d lumps expected)\n", fn, (int) header & 0xFF, (int) (header >> 8) & 0xFF, (int) (header >> 16) & 0xFF, (int) (header >> 24) & 0xFF, (int) nlumps);
+		free(buf);
 		exit(1);
 	}
+	free(buf);
 }
 
 mode_t umask_save;
 void lumps2file(const char *fn, unsigned long header, const char *const *lumps, size_t *lumpsize, size_t nlumps, D0_BOOL private)
 {
-	FILE *f;
 	char buf[65536];
 	size_t n;
 	if(private)
 		umask(umask_save | 0077);
 	else
 		umask(umask_save);
-	f = fopen(fn, "wb");
-	if(!f)
-	{
-		fprintf(stderr, "could not open %s\n", fn);
-		exit(1);
-	}
 	if(!(n = Crypto_UnParsePack(buf, sizeof(buf), header, lumps, lumpsize, nlumps)))
 	{
 		fprintf(stderr, "could not unparse for %s\n", fn);
 		exit(1);
 	}
-	n = fwrite(buf, n, 1, f);
-	if(fclose(f) || !n)
+	if(!buf2file(fn, buf, n))
 	{
 		fprintf(stderr, "could not write %s\n", fn);
 		exit(1);
@@ -156,8 +187,11 @@ void USAGE(const char *me)
 			"%s -p public.d0pk -i id.d0pi\n"
 			"%s -p public.d0pk -I idkey.d0si\n"
 			"%s -0 -p public.d0pk -I idkey.d0si\n"
-			"%s -0 -p public.d0pk\n",
-			me, me, me, me, me, me, me, me, me, me, me, me, me, me
+			"%s -0 -p public.d0pk\n"
+			"%s -p public.d0pk -I idkey.d0si -f file-to-sign.dat -o file-signed.dat\n"
+			"%s -p public.d0pk -f file-signed.dat -o file-content.dat\n"
+			"%s -p public.d0pk -f file-signed.dat -o file-content.dat -O idkey.d0pi\n",
+			me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me
 		   );
 }
 
@@ -235,9 +269,11 @@ int main(int argc, char **argv)
 	int opt;
 	size_t lumpsize[2];
 	const char *lumps[2];
+	char *databuf_in; size_t databufsize_in;
+	char *databuf_out; size_t databufsize_out;
 	char lumps_w0[65536];
 	char lumps_w1[65536];
-	const char *pubkeyfile = NULL, *privkeyfile = NULL, *pubidfile = NULL, *prividfile = NULL, *idreqfile = NULL, *idresfile = NULL, *outfile = NULL, *outfile2 = NULL, *camouflagefile = NULL;
+	const char *pubkeyfile = NULL, *privkeyfile = NULL, *pubidfile = NULL, *prividfile = NULL, *idreqfile = NULL, *idresfile = NULL, *outfile = NULL, *outfile2 = NULL, *camouflagefile = NULL, *datafile = NULL;
 	char fp64[513]; size_t fp64size = 512;
 	int mask = 0;
 	int bits = 1024;
@@ -253,7 +289,7 @@ int main(int argc, char **argv)
 	umask_save = umask(0022);
 
 	ctx = d0_blind_id_new();
-	while((opt = getopt(argc, argv, "p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C0")) != -1)
+	while((opt = getopt(argc, argv, "f:p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C0")) != -1)
 	{
 		switch(opt)
 		{
@@ -309,6 +345,10 @@ int main(int argc, char **argv)
 			case '0':
 				// test mode
 				mask |= 0x200;
+				break;
+			case 'f':
+				datafile = optarg;
+				mask |= 0x400;
 				break;
 			case 'X':
 				infix = optarg;
@@ -421,6 +461,16 @@ int main(int argc, char **argv)
 		if(!d0_blind_id_finish_private_id_request(ctx, lumps[0], lumpsize[0]))
 		{
 			fprintf(stderr, "could not finish private ID request\n");
+			exit(1);
+		}
+	}
+
+	if(mask & 0x400)
+	{
+		file2buf(datafile, &databuf_in, &databufsize_in);
+		if(!databuf_in)
+		{
+			fprintf(stderr, "could not decode private ID\n");
 			exit(1);
 		}
 	}
@@ -552,6 +602,38 @@ int main(int argc, char **argv)
 			//   public/private ID file -> fingerprint
 			CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
 			printf("%.*s\n", (int)fp64size, fp64);
+			break;
+		case 0x449:
+			//   public key, private ID, data -> signed data
+			databufsize_out = databufsize_in + 8192;
+			databuf_out = malloc(databufsize_out);
+			CHECK(d0_blind_id_sign_with_private_id_sign(ctx, 1, 0, databuf_in, databufsize_in, databuf_out, &databufsize_out));
+			buf2file(outfile, databuf_out, databufsize_out);
+			break;
+		case 0x441:
+		case 0x4C1:
+			//   public key, data -> signed data, optional public ID
+			{
+				D0_BOOL status;
+				databufsize_out = databufsize_in;
+				databuf_out = malloc(databufsize_out);
+				CHECK(d0_blind_id_sign_with_private_id_verify(ctx, 1, 0, databuf_in, databufsize_in, databuf_out, &databufsize_out, &status));
+				CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
+				printf("%d\n", (int)status);
+				printf("%.*s\n", (int)fp64size, fp64);
+				buf2file(outfile, databuf_out, databufsize_out);
+
+				if(outfile2)
+				{
+					lumps[0] = lumps_w0;
+					lumpsize[0] = sizeof(lumps_w0);
+					lumps[1] = lumps_w1;
+					lumpsize[1] = sizeof(lumps_w1);
+					CHECK(d0_blind_id_write_public_key(ctx, lumps_w0, &lumpsize[0]));
+					CHECK(d0_blind_id_write_private_id_modulus(ctx, lumps_w1, &lumpsize[1]));
+					lumps2file(outfile2, FOURCC_D0PK, lumps, lumpsize, 2, 0);
+				}
+			}
 			break;
 /*
 		case 0x09:
