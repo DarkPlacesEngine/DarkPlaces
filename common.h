@@ -359,5 +359,7 @@ void FindFraction(double val, int *num, int *denom, int denomMax);
 // decodes XPM file to XPM array (as if #include'd)
 char **XPM_DecodeString(const char *in);
 
+size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen);
+
 #endif
 
