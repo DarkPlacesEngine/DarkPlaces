@@ -14,7 +14,7 @@ qboolean Curl_Running(void);
 qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap);
 
 qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
-qboolean Curl_Begin_ToMemory_POST(const char *URL, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+qboolean Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 	// NOTE: if these return false, the callback will NOT get called, so free your buffer then!
 void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata);
 	// removes all downloads with the given callback and cbdata (this does NOT call the callbacks!)
