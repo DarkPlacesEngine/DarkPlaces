@@ -5803,6 +5803,8 @@ typedef struct
 	char buffer[MAX_INPUTLINE];
 	unsigned char *postdata; // free when uri_to_prog_t is freed
 	size_t postlen;
+	char *sigdata; // free when uri_to_prog_t is freed
+	size_t siglen;
 }
 uri_to_prog_t;
 
@@ -5815,6 +5817,8 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 		// curl reply came too late... so just drop it
 		if(handle->postdata)
 			Z_Free(handle->postdata);
+		if(handle->sigdata)
+			Z_Free(handle->sigdata);
 		Z_Free(handle);
 		return;
 	}
@@ -5836,6 +5840,8 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 	
 	if(handle->postdata)
 		Z_Free(handle->postdata);
+	if(handle->sigdata)
+		Z_Free(handle->sigdata);
 	Z_Free(handle);
 }
 
@@ -5922,17 +5928,30 @@ void VM_uri_get (void)
 		}
 		if(postkeyid >= 0)
 		{
-			unsigned char *signed_data = (unsigned char *)Z_Malloc(handle->postlen + 8192);
-			size_t signed_size = Crypto_SignData(handle->postdata, handle->postlen, postkeyid, signed_data, handle->postlen + 8192);
-			if(!signed_size)
+			size_t ll;
+			handle->sigdata = (char *)Z_Malloc(8192);
+			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", sizeof(handle->sigdata));
+			l = strlen(handle->sigdata);
+			handle->siglen = Crypto_SignDataDetached(handle->postdata, handle->postlen, postkeyid, handle->sigdata + l, 8192 - l);
+			if(!handle->siglen)
 			{
-				VM_Warning("uri_get: could not sign with key id %i\n", postkeyid);
+				Z_Free(handle->sigdata);
+				Z_Free(handle->postdata);
+				Z_Free(handle);
 				return;
 			}
-			handle->postdata = signed_data;
-			handle->postlen = signed_size;
+			ll = base64_encode((unsigned char *) (handle->sigdata + l), handle->siglen, 8192 - l - 1);
+			if(!ll)
+			{
+				Z_Free(handle->sigdata);
+				Z_Free(handle->postdata);
+				Z_Free(handle);
+				return;
+			}
+			handle->siglen = l + ll;
+			handle->sigdata[handle->siglen] = 0;
 		}
-		ret = Curl_Begin_ToMemory_POST(url, NULL, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	else
 	{
@@ -5948,6 +5967,8 @@ void VM_uri_get (void)
 	{
 		if(handle->postdata)
 			Z_Free(handle->postdata);
+		if(handle->sigdata)
+			Z_Free(handle->sigdata);
 		Z_Free(handle);
 		PRVM_G_INT(OFS_RETURN) = 0;
 	}
