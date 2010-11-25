@@ -143,6 +143,7 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define qd0_blind_id_SHUTDOWN d0_blind_id_SHUTDOWN
 #define qd0_blind_id_util_sha256 d0_blind_id_util_sha256
 #define qd0_blind_id_sign_with_private_id_sign d0_blind_id_sign_with_private_id_sign
+#define qd0_blind_id_sign_with_private_id_sign_detached d0_blind_id_sign_with_private_id_sign_detached
 
 #else
 
@@ -191,6 +192,7 @@ static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_INITIALIZE) (void)
 static D0_EXPORT void (*qd0_blind_id_SHUTDOWN) (void);
 static D0_EXPORT void (*qd0_blind_id_util_sha256) (char *out, const char *in, size_t n);
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
+static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign_detached) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
 static dllfunction_t d0_blind_id_funcs[] =
 {
 	{"d0_blind_id_new", (void **) &qd0_blind_id_new},
@@ -227,6 +229,7 @@ static dllfunction_t d0_blind_id_funcs[] =
 	{"d0_blind_id_SHUTDOWN", (void **) &qd0_blind_id_SHUTDOWN},
 	{"d0_blind_id_util_sha256", (void **) &qd0_blind_id_util_sha256},
 	{"d0_blind_id_sign_with_private_id_sign", (void **) &qd0_blind_id_sign_with_private_id_sign},
+	{"d0_blind_id_sign_with_private_id_sign_detached", (void **) &qd0_blind_id_sign_with_private_id_sign_detached},
 	{NULL, NULL}
 };
 // end of d0_blind_id interface
@@ -2337,6 +2340,17 @@ size_t Crypto_SignData(const void *data, size_t datasize, int keyid, void *signe
 	if(!pubkeys_havepriv[keyid])
 		return 0;
 	if(qd0_blind_id_sign_with_private_id_sign(pubkeys[keyid], true, false, (const char *)data, datasize, (char *)signed_data, &signed_size))
+		return signed_size;
+	return 0;
+}
+
+size_t Crypto_SignDataDetached(const void *data, size_t datasize, int keyid, void *signed_data, size_t signed_size)
+{
+	if(keyid < 0 || keyid >= MAX_PUBKEYS)
+		return 0;
+	if(!pubkeys_havepriv[keyid])
+		return 0;
+	if(qd0_blind_id_sign_with_private_id_sign_detached(pubkeys[keyid], true, false, (const char *)data, datasize, (char *)signed_data, &signed_size))
 		return signed_size;
 	return 0;
 }

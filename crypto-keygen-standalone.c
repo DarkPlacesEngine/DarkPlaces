@@ -188,10 +188,11 @@ void USAGE(const char *me)
 			"%s -p public.d0pk -I idkey.d0si\n"
 			"%s -0 -p public.d0pk -I idkey.d0si\n"
 			"%s -0 -p public.d0pk\n"
-			"%s -p public.d0pk -I idkey.d0si -f file-to-sign.dat -o file-signed.dat\n"
-			"%s -p public.d0pk -f file-signed.dat -o file-content.dat\n"
-			"%s -p public.d0pk -f file-signed.dat -o file-content.dat -O idkey.d0pi\n",
-			me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me
+			"%s -p public.d0pk -I idkey.d0si -d file-to-sign.dat -o file-signed.dat\n"
+			"%s -p public.d0pk -s file-signed.dat -o file-content.dat [-O id.d0pi]\n"
+			"%s -p public.d0pk -I idkey.d0si -d file-to-sign.dat -O signature.dat\n"
+			"%s -p public.d0pk -d file-to-sign.dat -s signature.dat [-O id.d0pi]\n",
+			me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me, me
 		   );
 }
 
@@ -271,9 +272,10 @@ int main(int argc, char **argv)
 	const char *lumps[2];
 	char *databuf_in; size_t databufsize_in;
 	char *databuf_out; size_t databufsize_out;
+	char *databuf_sig; size_t databufsize_sig;
 	char lumps_w0[65536];
 	char lumps_w1[65536];
-	const char *pubkeyfile = NULL, *privkeyfile = NULL, *pubidfile = NULL, *prividfile = NULL, *idreqfile = NULL, *idresfile = NULL, *outfile = NULL, *outfile2 = NULL, *camouflagefile = NULL, *datafile = NULL;
+	const char *pubkeyfile = NULL, *privkeyfile = NULL, *pubidfile = NULL, *prividfile = NULL, *idreqfile = NULL, *idresfile = NULL, *outfile = NULL, *outfile2 = NULL, *camouflagefile = NULL, *datafile = NULL, *sigfile = NULL;
 	char fp64[513]; size_t fp64size = 512;
 	int mask = 0;
 	int bits = 1024;
@@ -289,7 +291,7 @@ int main(int argc, char **argv)
 	umask_save = umask(0022);
 
 	ctx = d0_blind_id_new();
-	while((opt = getopt(argc, argv, "f:p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C0")) != -1)
+	while((opt = getopt(argc, argv, "d:s:p:P:i:I:j:J:o:O:c:b:x:X:y:Fn:C0")) != -1)
 	{
 		switch(opt)
 		{
@@ -346,9 +348,13 @@ int main(int argc, char **argv)
 				// test mode
 				mask |= 0x200;
 				break;
-			case 'f':
+			case 'd':
 				datafile = optarg;
 				mask |= 0x400;
+				break;
+			case 's':
+				sigfile = optarg;
+				mask |= 0x800;
 				break;
 			case 'X':
 				infix = optarg;
@@ -470,7 +476,17 @@ int main(int argc, char **argv)
 		file2buf(datafile, &databuf_in, &databufsize_in);
 		if(!databuf_in)
 		{
-			fprintf(stderr, "could not decode private ID\n");
+			fprintf(stderr, "could not decode data\n");
+			exit(1);
+		}
+	}
+
+	if(mask & 0x800)
+	{
+		file2buf(sigfile, &databuf_sig, &databufsize_sig);
+		if(!databuf_sig)
+		{
+			fprintf(stderr, "could not decode signature\n");
 			exit(1);
 		}
 	}
@@ -610,14 +626,44 @@ int main(int argc, char **argv)
 			CHECK(d0_blind_id_sign_with_private_id_sign(ctx, 1, 0, databuf_in, databufsize_in, databuf_out, &databufsize_out));
 			buf2file(outfile, databuf_out, databufsize_out);
 			break;
-		case 0x441:
-		case 0x4C1:
-			//   public key, data -> signed data, optional public ID
+		case 0x489:
+			//   public key, private ID, data -> signature
+			databufsize_out = databufsize_in + 8192;
+			databuf_out = malloc(databufsize_out);
+			CHECK(d0_blind_id_sign_with_private_id_sign_detached(ctx, 1, 0, databuf_in, databufsize_in, databuf_out, &databufsize_out));
+			buf2file(outfile2, databuf_out, databufsize_out);
+			break;
+		case 0x841:
+		case 0x8C1:
+			//   public key, signed data -> data, optional public ID
 			{
 				D0_BOOL status;
-				databufsize_out = databufsize_in;
+				databufsize_out = databufsize_sig;
 				databuf_out = malloc(databufsize_out);
-				CHECK(d0_blind_id_sign_with_private_id_verify(ctx, 1, 0, databuf_in, databufsize_in, databuf_out, &databufsize_out, &status));
+				CHECK(d0_blind_id_sign_with_private_id_verify(ctx, 1, 0, databuf_sig, databufsize_sig, databuf_out, &databufsize_out, &status));
+				CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
+				printf("%d\n", (int)status);
+				printf("%.*s\n", (int)fp64size, fp64);
+				buf2file(outfile, databuf_out, databufsize_out);
+
+				if(outfile2)
+				{
+					lumps[0] = lumps_w0;
+					lumpsize[0] = sizeof(lumps_w0);
+					lumps[1] = lumps_w1;
+					lumpsize[1] = sizeof(lumps_w1);
+					CHECK(d0_blind_id_write_public_key(ctx, lumps_w0, &lumpsize[0]));
+					CHECK(d0_blind_id_write_private_id_modulus(ctx, lumps_w1, &lumpsize[1]));
+					lumps2file(outfile2, FOURCC_D0PK, lumps, lumpsize, 2, 0);
+				}
+			}
+			break;
+		case 0xC01:
+		case 0xC81:
+			//   public key, signature, signed data -> optional public ID
+			{
+				D0_BOOL status;
+				CHECK(d0_blind_id_sign_with_private_id_verify_detached(ctx, 1, 0, databuf_sig, databufsize_sig, databuf_in, databufsize_in, &status));
 				CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
 				printf("%d\n", (int)status);
 				printf("%.*s\n", (int)fp64size, fp64);
