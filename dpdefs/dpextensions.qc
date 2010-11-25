@@ -968,6 +968,7 @@ string(string format, ...) sprintf = #627;
 //    ouxXc take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an unsigned int
 //    eEfFgG take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to a double
 //    s takes a string
+//    vV takes a vector, and processes the three components as if it were a gG for all three components, separated by space
 //    For conversions s and c, the flag # makes precision and width interpreted
 //      as byte count, by default it is interpreted as character count in UTF-8
 //      enabled engines. No other conversions can create wide characters, and #
@@ -1138,6 +1139,15 @@ string(string in) uri_unescape = #511;
 //  the HTTP response code on server error (e.g. 404)
 //if 1 is returned by uri_get, the callback will be called in the future
 float(string url, float id) uri_get = #513;
+
+//DP_QC_URI_POST
+//idea: divVerent
+//darkplaces implementation: divVerent
+//loads text from an URL into a string after POSTing via HTTP
+//works like uri_get, but uri_post sends data with Content-Type: content_type to the server
+//and uri_post sends the string buffer buf, joined using the delimiter delim
+float(string url, float id, string content_type, string data) uri_post = #513;
+float(string url, float id, string content_type, string delim, float buf) uri_postbuf = #513;
 
 //DP_SKELETONOBJECTS
 //idea: LordHavoc
@@ -1374,6 +1384,17 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //making explosion models that face the viewer (does not work well with chase_active).  for example: float() explosion_customizeentityforclient = {self.angles = vectoangles(other.origin + other.view_ofs - self.origin);self.angles_x = 0 - self.angles_x;};
 //implementation notes:
 //entity customization is done before per-client culling (visibility for instance) because the entity may be doing setorigin to display itself in different locations on different clients, may be altering its .modelindex, .effects and other fields important to culling, so customized entities increase cpu usage (non-customized entities can use all the early culling they want however, as they are not changing on a per client basis).
+
+//DP_SV_DISCARDABLEDEMO
+//idea: parasti
+//darkplaces implementation: parasti
+//field definitions:
+.float discardabledemo;
+//description:
+//when this field is set to a non-zero value on a player entity, a possibly recorded server-side demo for the player is discarded
+//Note that this extension only works if:
+//  auto demos are enabled (the cvar sv_autodemo_perclient is set)
+//  discarding demos is enabled (the cvar sv_autodemo_perclient_discardable is set)
 
 //DP_SV_DRAWONLYTOCLIENT
 //idea: LordHavoc
@@ -1866,14 +1887,14 @@ float Q3SURFACEFLAG_LADDER = 8; // climbable surface
 float Q3SURFACEFLAG_NOIMPACT = 16; // projectiles should remove themselves on impact (this is set on sky)
 float Q3SURFACEFLAG_NOMARKS = 32; // projectiles should not leave marks, such as decals (this is set on sky)
 float Q3SURFACEFLAG_FLESH = 64; // projectiles should do a fleshy effect (blood?) on impact
-//float Q3SURFACEFLAG_NODRAW = 128; // compiler hint (not important to qc)
+float Q3SURFACEFLAG_NODRAW = 128; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_HINT = 256; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_SKIP = 512; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_NOLIGHTMAP = 1024; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_POINTLIGHT = 2048; // compiler hint (not important to qc)
 float Q3SURFACEFLAG_METALSTEPS = 4096; // walking on this surface should make metal step sounds
 float Q3SURFACEFLAG_NOSTEPS = 8192; // walking on this surface should not make footstep sounds
-//float Q3SURFACEFLAG_NONSOLID = 16384; // compiler hint (not important to qc)
+float Q3SURFACEFLAG_NONSOLID = 16384; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_LIGHTFILTER = 32768; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_ALPHASHADOW = 65536; // compiler hint (not important to qc)
 //float Q3SURFACEFLAG_NODLIGHT = 131072; // compiler hint (not important to qc)
@@ -2380,4 +2401,7 @@ float JOINTTYPE_HINGE2 = 5; // hinge2; uses origin (anchor), angles (axis1), vel
 .string crypto_encryptmethod; // the string "AES128" if encrypting, and string_null if plaintext
 .string crypto_signmethod; // the string "HMAC-SHA256" if signing, and string_null if plaintext
 // there is no field crypto_myidfp, as that info contains no additional information the QC may have a use for
+//builtin definitions: (SVQC)
+float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
 //description:
+//use -1 as buffer handle to justs end delim as postdata

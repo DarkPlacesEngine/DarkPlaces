@@ -453,9 +453,11 @@ float(string key) stringtokeynum = #341;
 //idea: divVerent
 //darkplaces implementation: divVerent
 //field definitions: (MENUQC)
-string crypto_getkeyfp(string serveraddress) = #633; // retrieves the cached host key's CA fingerprint of a server given by IP address
-string crypto_getidfp(string serveraddress) = #634; // retrieves the cached host key fingerprint of a server given by IP address
-string crypto_getencryptlevel(string serveraddress) = #635; // 0 if never encrypting, 1 supported, 2 requested, 3 required, appended by list of allowed methods in order of preference ("AES128"), preceded by a space each
-string crypto_getmykeyfp(float i) = #636; // retrieves the CA key fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
-string crypto_getmyidfp(float i) = #637; // retrieves the ID fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
+string(string serveraddress) crypto_getkeyfp = #633; // retrieves the cached host key's CA fingerprint of a server given by IP address
+string(string serveraddress) crypto_getidfp = #634; // retrieves the cached host key fingerprint of a server given by IP address
+string(string serveraddress) crypto_getencryptlevel = #635; // 0 if never encrypting, 1 supported, 2 requested, 3 required, appended by list of allowed methods in order of preference ("AES128"), preceded by a space each
+string(float i) crypto_getmykeyfp = #636; // retrieves the CA key fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
+string(float i) crypto_getmyidfp = #637; // retrieves the ID fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
+float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
 //description:
+//use -1 as buffer handle to justs end delim as postdata
