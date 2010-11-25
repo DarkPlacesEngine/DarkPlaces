@@ -354,37 +354,6 @@ static size_t Crypto_LoadFile(const char *path, char *buf, size_t nmax)
 	return (size_t) n;
 }
 
-static const char base64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-static void base64_3to4(const unsigned char *in, unsigned char *out, int bytes)
-{
-	unsigned char i0 = (bytes > 0) ? in[0] : 0;
-	unsigned char i1 = (bytes > 1) ? in[1] : 0;
-	unsigned char i2 = (bytes > 2) ? in[2] : 0;
-	unsigned char o0 = base64[i0 >> 2];
-	unsigned char o1 = base64[((i0 << 4) | (i1 >> 4)) & 077];
-	unsigned char o2 = base64[((i1 << 2) | (i2 >> 6)) & 077];
-	unsigned char o3 = base64[i2 & 077];
-	out[0] = (bytes > 0) ? o0 : '?';
-	out[1] = (bytes > 0) ? o1 : '?';
-	out[2] = (bytes > 1) ? o2 : '=';
-	out[3] = (bytes > 2) ? o3 : '=';
-}
-
-size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen)
-{
-	size_t blocks, i;
-	// expand the out-buffer
-	blocks = (buflen + 2) / 3;
-	if(blocks*4 > outbuflen)
-		return 0;
-	for(i = blocks; i > 0; )
-	{
-		--i;
-		base64_3to4(buf + 3*i, buf + 4*i, buflen - 3*i);
-	}
-	return blocks * 4;
-}
-
 static qboolean PutWithNul(char **data, size_t *len, const char *str)
 {
 	// invariant: data points to insertion point
