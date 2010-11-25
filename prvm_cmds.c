@@ -5895,7 +5895,7 @@ void VM_uri_get (void)
 				if(stringbuffer->strings[i])
 					ltotal += strlen(stringbuffer->strings[i]);
 			}
-			handle->postdata = Z_Malloc(ltotal);
+			handle->postdata = (unsigned char *)Z_Malloc(ltotal);
 			handle->postlen = ltotal;
 			ltotal = 0;
 			for(i = 0;i < stringbuffer->num_strings;i++)
@@ -5916,13 +5916,13 @@ void VM_uri_get (void)
 		}
 		else
 		{
-			handle->postdata = Z_Malloc(l);
+			handle->postdata = (unsigned char *)Z_Malloc(l);
 			handle->postlen = l;
 			memcpy(handle->postdata, postseparator, l);
 		}
 		if(postkeyid >= 0)
 		{
-			unsigned char *signed_data = Z_Malloc(handle->postlen + 8192);
+			unsigned char *signed_data = (unsigned char *)Z_Malloc(handle->postlen + 8192);
 			size_t signed_size = Crypto_SignData(handle->postdata, handle->postlen, postkeyid, signed_data, handle->postlen + 8192);
 			if(!signed_size)
 			{
