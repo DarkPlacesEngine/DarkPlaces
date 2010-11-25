@@ -5932,7 +5932,7 @@ void VM_uri_get (void)
 			handle->postdata = signed_data;
 			handle->postlen = signed_size;
 		}
-		ret = Curl_Begin_ToMemory_POST(url, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+		ret = Curl_Begin_ToMemory_POST(url, NULL, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	else
 	{
