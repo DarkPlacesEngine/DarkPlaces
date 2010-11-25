@@ -859,3 +859,11 @@ string(string command, float bindmap) findkeysforcommand = #610;
 //<already in EXT_CSQC> string(float keynum) keynumtostring = #340;
 //description: key bind setting/getting including support for switchable
 //bindmaps.
+
+//DP_CRYPTO
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions: (CSQC)
+float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
+//description:
+//use -1 as buffer handle to justs end delim as postdata

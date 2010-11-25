@@ -5801,6 +5801,8 @@ typedef struct
 	double starttime;
 	float id;
 	char buffer[MAX_INPUTLINE];
+	unsigned char *postdata; // free when uri_to_prog_t is freed
+	size_t postlen;
 }
 uri_to_prog_t;
 
@@ -5811,6 +5813,8 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 	if(!PRVM_ProgLoaded(handle->prognr))
 	{
 		// curl reply came too late... so just drop it
+		if(handle->postdata)
+			Z_Free(handle->postdata);
 		Z_Free(handle);
 		return;
 	}
@@ -5830,6 +5834,8 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 		}
 	PRVM_End;
 	
+	if(handle->postdata)
+		Z_Free(handle->postdata);
 	Z_Free(handle);
 }
 
@@ -5841,26 +5847,107 @@ void VM_uri_get (void)
 	float id;
 	qboolean ret;
 	uri_to_prog_t *handle;
+	const char *posttype = NULL;
+	const char *postseparator = NULL;
+	int poststringbuffer = -1;
+	int postkeyid = -1;
 
 	if(!prog->funcoffsets.URI_Get_Callback)
 		PRVM_ERROR("uri_get called by %s without URI_Get_Callback defined", PRVM_NAME);
 
-	VM_SAFEPARMCOUNT(2, VM_uri_get);
+	VM_SAFEPARMCOUNTRANGE(2, 6, VM_uri_get);
 
 	url = PRVM_G_STRING(OFS_PARM0);
 	id = PRVM_G_FLOAT(OFS_PARM1);
+	if(prog->argc >= 3)
+		posttype = PRVM_G_STRING(OFS_PARM2);
+	if(prog->argc >= 4)
+		postseparator = PRVM_G_STRING(OFS_PARM3);
+	if(prog->argc >= 5)
+		poststringbuffer = PRVM_G_FLOAT(OFS_PARM4);
+	if(prog->argc >= 6)
+		postkeyid = PRVM_G_FLOAT(OFS_PARM4);
 	handle = (uri_to_prog_t *) Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
 
 	handle->prognr = PRVM_GetProgNr();
 	handle->starttime = prog->starttime;
 	handle->id = id;
-	ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+	if(postseparator)
+	{
+		size_t l = strlen(postseparator);
+		if(poststringbuffer >= 0)
+		{
+			size_t ltotal;
+			int i;
+			// "implode"
+			prvm_stringbuffer_t *stringbuffer;
+			stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, poststringbuffer);
+			if(!stringbuffer)
+			{
+				VM_Warning("uri_get: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), PRVM_NAME);
+				return;
+			}
+			ltotal = 0;
+			for(i = 0;i < stringbuffer->num_strings;i++)
+			{
+				if(i > 0)
+					ltotal += l;
+				if(stringbuffer->strings[i])
+					ltotal += strlen(stringbuffer->strings[i]);
+			}
+			handle->postdata = Z_Malloc(ltotal);
+			handle->postlen = ltotal;
+			ltotal = 0;
+			for(i = 0;i < stringbuffer->num_strings;i++)
+			{
+				if(i > 0)
+				{
+					memcpy(handle->postdata + ltotal, postseparator, l);
+					ltotal += l;
+				}
+				if(stringbuffer->strings[i])
+				{
+					memcpy(handle->postdata + ltotal, stringbuffer->strings[i], strlen(stringbuffer->strings[i]));
+					ltotal += strlen(stringbuffer->strings[i]);
+				}
+			}
+			if(ltotal != handle->postlen)
+				PRVM_ERROR ("%s: string buffer content size mismatch, possible overrun", PRVM_NAME);
+		}
+		else
+		{
+			handle->postdata = Z_Malloc(l);
+			handle->postlen = l;
+			memcpy(handle->postdata, postseparator, l);
+		}
+		if(postkeyid >= 0)
+		{
+			unsigned char *signed_data = Z_Malloc(handle->postlen + 8192);
+			size_t signed_size = Crypto_SignData(handle->postdata, handle->postlen, postkeyid, signed_data, handle->postlen + 8192);
+			if(!signed_size)
+			{
+				VM_Warning("uri_get: could not sign with key id %i\n", postkeyid);
+				return;
+			}
+			handle->postdata = signed_data;
+			handle->postlen = signed_size;
+		}
+		ret = Curl_Begin_ToMemory_POST(url, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+	}
+	else
+	{
+		handle->postdata = NULL;
+		handle->postlen = 0;
+		ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+	}
 	if(ret)
 	{
 		PRVM_G_INT(OFS_RETURN) = 1;
 	}
 	else
 	{
+		if(handle->postdata)
+			Z_Free(handle->postdata);
 		Z_Free(handle);
 		PRVM_G_INT(OFS_RETURN) = 0;
 	}
