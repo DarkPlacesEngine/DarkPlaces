@@ -5872,7 +5872,7 @@ void VM_uri_get (void)
 	if(prog->argc >= 5)
 		poststringbuffer = PRVM_G_FLOAT(OFS_PARM4);
 	if(prog->argc >= 6)
-		postkeyid = PRVM_G_FLOAT(OFS_PARM4);
+		postkeyid = PRVM_G_FLOAT(OFS_PARM5);
 	handle = (uri_to_prog_t *) Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
 
 	handle->prognr = PRVM_GetProgNr();
@@ -5930,7 +5930,7 @@ void VM_uri_get (void)
 		{
 			size_t ll;
 			handle->sigdata = (char *)Z_Malloc(8192);
-			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", sizeof(handle->sigdata));
+			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
 			l = strlen(handle->sigdata);
 			handle->siglen = Crypto_SignDataDetached(handle->postdata, handle->postlen, postkeyid, handle->sigdata + l, 8192 - l);
 			if(!handle->siglen)
