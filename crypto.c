@@ -2367,7 +2367,7 @@ size_t Crypto_SignData(const void *data, size_t datasize, int keyid, void *signe
 		return 0;
 	if(!pubkeys_havepriv[keyid])
 		return 0;
-	if(qd0_blind_id_sign_with_private_id_sign(pubkeys[keyid], true, false, data, datasize, signed_data, &signed_size))
+	if(qd0_blind_id_sign_with_private_id_sign(pubkeys[keyid], true, false, (char *)data, datasize, (char *)signed_data, &signed_size))
 		return signed_size;
 	return 0;
 }
