@@ -5857,6 +5857,8 @@ void VM_uri_get (void)
 	const char *postseparator = NULL;
 	int poststringbuffer = -1;
 	int postkeyid = -1;
+	const char *query_string = NULL;
+	size_t lq;
 
 	if(!prog->funcoffsets.URI_Get_Callback)
 		PRVM_ERROR("uri_get called by %s without URI_Get_Callback defined", PRVM_NAME);
@@ -5874,6 +5876,11 @@ void VM_uri_get (void)
 	if(prog->argc >= 6)
 		postkeyid = PRVM_G_FLOAT(OFS_PARM5);
 	handle = (uri_to_prog_t *) Z_Malloc(sizeof(*handle)); // this can't be the prog's mem pool, as curl may call the callback later!
+
+	query_string = strchr(url, '?');
+	if(query_string)
+		++query_string;
+	lq = query_string ? strlen(query_string) : 0;
 
 	handle->prognr = PRVM_GetProgNr();
 	handle->starttime = prog->starttime;
@@ -5901,7 +5908,7 @@ void VM_uri_get (void)
 				if(stringbuffer->strings[i])
 					ltotal += strlen(stringbuffer->strings[i]);
 			}
-			handle->postdata = (unsigned char *)Z_Malloc(ltotal);
+			handle->postdata = (unsigned char *)Z_Malloc(ltotal + 1 + lq);
 			handle->postlen = ltotal;
 			ltotal = 0;
 			for(i = 0;i < stringbuffer->num_strings;i++)
@@ -5922,17 +5929,21 @@ void VM_uri_get (void)
 		}
 		else
 		{
-			handle->postdata = (unsigned char *)Z_Malloc(l);
+			handle->postdata = (unsigned char *)Z_Malloc(l + 1 + lq);
 			handle->postlen = l;
 			memcpy(handle->postdata, postseparator, l);
 		}
+		handle->postdata[handle->postlen] = 0;
+		if(query_string)
+			memcpy(handle->postdata + handle->postlen + 1, query_string, lq);
 		if(postkeyid >= 0)
 		{
+			// POST: we sign postdata \0 query string
 			size_t ll;
 			handle->sigdata = (char *)Z_Malloc(8192);
 			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
 			l = strlen(handle->sigdata);
-			handle->siglen = Crypto_SignDataDetached(handle->postdata, handle->postlen, postkeyid, handle->sigdata + l, 8192 - l);
+			handle->siglen = Crypto_SignDataDetached(handle->postdata, handle->postlen + 1 + lq, postkeyid, handle->sigdata + l, 8192 - l);
 			if(!handle->siglen)
 			{
 				Z_Free(handle->sigdata);
@@ -5955,6 +5966,30 @@ void VM_uri_get (void)
 	}
 	else
 	{
+		if(postkeyid >= 0 && query_string)
+		{
+			// GET: we sign JUST the query string
+			size_t l, ll;
+			handle->sigdata = (char *)Z_Malloc(8192);
+			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
+			l = strlen(handle->sigdata);
+			handle->siglen = Crypto_SignDataDetached(query_string, lq, postkeyid, handle->sigdata + l, 8192 - l);
+			if(!handle->siglen)
+			{
+				Z_Free(handle->sigdata);
+				Z_Free(handle);
+				return;
+			}
+			ll = base64_encode((unsigned char *) (handle->sigdata + l), handle->siglen, 8192 - l - 1);
+			if(!ll)
+			{
+				Z_Free(handle->sigdata);
+				Z_Free(handle);
+				return;
+			}
+			handle->siglen = l + ll;
+			handle->sigdata[handle->siglen] = 0;
+		}
 		handle->postdata = NULL;
 		handle->postlen = 0;
 		ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
