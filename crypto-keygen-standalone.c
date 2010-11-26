@@ -674,7 +674,6 @@ int main(int argc, char **argv)
 				CHECK(d0_blind_id_fingerprint64_public_id(ctx, fp64, &fp64size));
 				printf("%d\n", (int)status);
 				printf("%.*s\n", (int)fp64size, fp64);
-				buf2file(outfile, databuf_out, databufsize_out);
 
 				if(outfile2)
 				{
