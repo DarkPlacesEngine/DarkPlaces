@@ -98,7 +98,7 @@ void file2buf(const char *fn, char **data, size_t *datasize)
 	*datasize = 0;
 	size_t n = 0, dn = 0;
 	if(!strncmp(fn, "/dev/fd/", 8))
-		f = fdopen(atoi(fn + 8), "wb");
+		f = fdopen(atoi(fn + 8), "rb");
 	else
 		f = fopen(fn, "rb");
 	if(!f)
@@ -111,6 +111,7 @@ void file2buf(const char *fn, char **data, size_t *datasize)
 		if(!*data)
 		{
 			*datasize = 0;
+			fclose(f);
 			return;
 		}
 		dn = fread(*data + n, 1, *datasize - n, f);
