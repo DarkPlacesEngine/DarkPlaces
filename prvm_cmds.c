@@ -5947,21 +5947,20 @@ void VM_uri_get (void)
 			if(!handle->siglen)
 			{
 				Z_Free(handle->sigdata);
-				Z_Free(handle->postdata);
-				Z_Free(handle);
-				return;
+				handle->sigdata = NULL;
+				goto out1;
 			}
 			ll = base64_encode((unsigned char *) (handle->sigdata + l), handle->siglen, 8192 - l - 1);
 			if(!ll)
 			{
 				Z_Free(handle->sigdata);
-				Z_Free(handle->postdata);
-				Z_Free(handle);
-				return;
+				handle->sigdata = NULL;
+				goto out1;
 			}
 			handle->siglen = l + ll;
 			handle->sigdata[handle->siglen] = 0;
 		}
+out1:
 		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	else
@@ -5977,19 +5976,20 @@ void VM_uri_get (void)
 			if(!handle->siglen)
 			{
 				Z_Free(handle->sigdata);
-				Z_Free(handle);
-				return;
+				handle->sigdata = NULL;
+				goto out2;
 			}
 			ll = base64_encode((unsigned char *) (handle->sigdata + l), handle->siglen, 8192 - l - 1);
 			if(!ll)
 			{
 				Z_Free(handle->sigdata);
-				Z_Free(handle);
-				return;
+				handle->sigdata = NULL;
+				goto out2;
 			}
 			handle->siglen = l + ll;
 			handle->sigdata[handle->siglen] = 0;
 		}
+out2:
 		handle->postdata = NULL;
 		handle->postlen = 0;
 		ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
