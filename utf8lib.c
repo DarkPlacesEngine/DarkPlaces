@@ -728,6 +728,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 						++len; // the character
 						break;
 				}
+				++s;
 				continue;
 			default:
 				break;
