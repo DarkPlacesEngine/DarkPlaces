@@ -50,6 +50,9 @@ typedef struct world_physics_s
 	int ode_iterations;
 	// actual step (server frametime / ode_iterations)
 	vec_t ode_step;
+	// stats
+	int ode_numobjects; // total objects cound
+	int ode_activeovjects; // active objects count
 	// max velocity for a 1-unit radius object at current step to prevent
 	// missed collisions
 	vec_t ode_movelimit;
