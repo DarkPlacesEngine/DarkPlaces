@@ -325,19 +325,31 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 
 #ifdef USEODE
 cvar_t physics_ode_quadtree_depth = {0, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
-cvar_t physics_ode_contactsurfacelayer = {0, "physics_ode_contactsurfacelayer","0", "allows objects to overlap this many units to reduce jitter"};
-cvar_t physics_ode_worldquickstep = {0, "physics_ode_worldquickstep","1", "use dWorldQuickStep rather than dWorldStepFast1 or dWorldStep"};
-cvar_t physics_ode_worldquickstep_iterations = {0, "physics_ode_worldquickstep_iterations","20", "parameter to dWorldQuickStep"};
-cvar_t physics_ode_worldstepfast = {0, "physics_ode_worldstepfast","0", "use dWorldStepFast1 rather than dWorldStep"};
-cvar_t physics_ode_worldstepfast_iterations = {0, "physics_ode_worldstepfast_iterations","20", "parameter to dWorldStepFast1"};
+cvar_t physics_ode_contactsurfacelayer = {0, "physics_ode_contactsurfacelayer","1", "allows objects to overlap this many units to reduce jitter"};
+cvar_t physics_ode_worldstep = {0, "physics_ode_worldstep","2", "step function to use, 0 - dWorldStep, 1 - dWorldStepFast1, 2 - dWorldQuickStep"};
+cvar_t physics_ode_worldstep_iterations = {0, "physics_ode_worldstep_iterations", "20", "parameter to dWorldQuickStep and dWorldStepFast1"};
 cvar_t physics_ode_contact_mu = {0, "physics_ode_contact_mu", "1", "contact solver mu parameter - friction pyramid approximation 1 (see ODE User Guide)"};
 cvar_t physics_ode_contact_erp = {0, "physics_ode_contact_erp", "0.96", "contact solver erp parameter - Error Restitution Percent (see ODE User Guide)"};
 cvar_t physics_ode_contact_cfm = {0, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
 cvar_t physics_ode_world_erp = {0, "physics_ode_world_erp", "-1", "world solver erp parameter - Error Restitution Percent (see ODE User Guide); use defaults when set to -1"};
 cvar_t physics_ode_world_cfm = {0, "physics_ode_world_cfm", "-1", "world solver cfm parameter - Constraint Force Mixing (see ODE User Guide); not touched when -1"};
+cvar_t physics_ode_world_damping = {0, "physics_ode_world_damping", "1", "enabled damping scale (see ODE User Guide), this scales all damping values, be aware that behavior depends of step type"};
+cvar_t physics_ode_world_damping_linear = {0, "physics_ode_world_damping_linear", "0.005", "world linear damping scale (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_linear_threshold = {0, "physics_ode_world_damping_linear_threshold", "0.01", "world linear damping threshold (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_angular = {0, "physics_ode_world_damping_angular", "0.005", "world angular damping scale (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_angular_threshold = {0, "physics_ode_world_damping_angular_threshold", "0.01", "world angular damping threshold (see ODE User Guide); use defaults when set to -1"};
 cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
-cvar_t physics_ode_movelimit = {0, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls"};
+cvar_t physics_ode_constantstep = {0, "physics_ode_constantstep", "1", "use constant step (sys_ticrate value) instead of variable step which tends to increase stability"};
+cvar_t physics_ode_autodisable = {0, "physics_ode_autodisable", "1", "automatic disabling of objects which dont move for long period of time, makes object stacking a lot faster"};
+cvar_t physics_ode_autodisable_steps = {0, "physics_ode_autodisable_steps", "10", "how many steps object should be dormant to be autodisabled"};
+cvar_t physics_ode_autodisable_time = {0, "physics_ode_autodisable_time", "0", "how many seconds object should be dormant to be autodisabled"};
+cvar_t physics_ode_autodisable_threshold_linear = {0, "physics_ode_autodisable_threshold_linear", "0.2", "body will be disabled if it's linear move below this value"};
+cvar_t physics_ode_autodisable_threshold_angular = {0, "physics_ode_autodisable_threshold_angular", "0.3", "body will be disabled if it's angular move below this value"};
+cvar_t physics_ode_autodisable_threshold_samples = {0, "physics_ode_autodisable_threshold_samples", "5", "average threshold with this number of samples"};
+cvar_t physics_ode_movelimit = {0, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls, be aware that behavior depends of step type"};
 cvar_t physics_ode_spinlimit = {0, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
+cvar_t physics_ode_trick_fixnan = {0, "physics_ode_trick_fixnan", "1", "engine trick that checks and fixes NaN velocity/origin/angles on objects, a value of 2 makes console prints on each fix"};
+cvar_t physics_ode_printstats = {0, "physics_ode_printstats", "0", "print ODE stats each frame"};
 cvar_t physics_ode = {0, "physics_ode", "0", "run ODE physics (VERY experimental and potentially buggy)"};
 
 // LordHavoc: this large chunk of definitions comes from the ODE library
@@ -576,29 +588,29 @@ void            (ODE_API *dWorldStepFast1)(dWorldID, dReal stepsize, int maxiter
 //void            (ODE_API *dWorldSetAutoEnableDepthSF1)(dWorldID, int autoEnableDepth);
 //int             (ODE_API *dWorldGetAutoEnableDepthSF1)(dWorldID);
 //dReal           (ODE_API *dWorldGetAutoDisableLinearThreshold)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableLinearThreshold)(dWorldID, dReal linear_threshold);
+void            (ODE_API *dWorldSetAutoDisableLinearThreshold)(dWorldID, dReal linear_threshold);
 //dReal           (ODE_API *dWorldGetAutoDisableAngularThreshold)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableAngularThreshold)(dWorldID, dReal angular_threshold);
+void            (ODE_API *dWorldSetAutoDisableAngularThreshold)(dWorldID, dReal angular_threshold);
 //dReal           (ODE_API *dWorldGetAutoDisableLinearAverageThreshold)(dWorldID);
 //void            (ODE_API *dWorldSetAutoDisableLinearAverageThreshold)(dWorldID, dReal linear_average_threshold);
 //dReal           (ODE_API *dWorldGetAutoDisableAngularAverageThreshold)(dWorldID);
 //void            (ODE_API *dWorldSetAutoDisableAngularAverageThreshold)(dWorldID, dReal angular_average_threshold);
 //int             (ODE_API *dWorldGetAutoDisableAverageSamplesCount)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableAverageSamplesCount)(dWorldID, unsigned int average_samples_count );
+void            (ODE_API *dWorldSetAutoDisableAverageSamplesCount)(dWorldID, unsigned int average_samples_count );
 //int             (ODE_API *dWorldGetAutoDisableSteps)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableSteps)(dWorldID, int steps);
+void            (ODE_API *dWorldSetAutoDisableSteps)(dWorldID, int steps);
 //dReal           (ODE_API *dWorldGetAutoDisableTime)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableTime)(dWorldID, dReal time);
+void            (ODE_API *dWorldSetAutoDisableTime)(dWorldID, dReal time);
 //int             (ODE_API *dWorldGetAutoDisableFlag)(dWorldID);
-//void            (ODE_API *dWorldSetAutoDisableFlag)(dWorldID, int do_auto_disable);
+void            (ODE_API *dWorldSetAutoDisableFlag)(dWorldID, int do_auto_disable);
 //dReal           (ODE_API *dWorldGetLinearDampingThreshold)(dWorldID w);
-//void            (ODE_API *dWorldSetLinearDampingThreshold)(dWorldID w, dReal threshold);
+void            (ODE_API *dWorldSetLinearDampingThreshold)(dWorldID w, dReal threshold);
 //dReal           (ODE_API *dWorldGetAngularDampingThreshold)(dWorldID w);
-//void            (ODE_API *dWorldSetAngularDampingThreshold)(dWorldID w, dReal threshold);
+void            (ODE_API *dWorldSetAngularDampingThreshold)(dWorldID w, dReal threshold);
 //dReal           (ODE_API *dWorldGetLinearDamping)(dWorldID w);
-//void            (ODE_API *dWorldSetLinearDamping)(dWorldID w, dReal scale);
+void            (ODE_API *dWorldSetLinearDamping)(dWorldID w, dReal scale);
 //dReal           (ODE_API *dWorldGetAngularDamping)(dWorldID w);
-//void            (ODE_API *dWorldSetAngularDamping)(dWorldID w, dReal scale);
+void            (ODE_API *dWorldSetAngularDamping)(dWorldID w, dReal scale);
 //void            (ODE_API *dWorldSetDamping)(dWorldID w, dReal linear_scale, dReal angular_scale);
 //dReal           (ODE_API *dWorldGetMaxAngularSpeed)(dWorldID w);
 //void            (ODE_API *dWorldSetMaxAngularSpeed)(dWorldID w, dReal max_speed);
@@ -664,7 +676,7 @@ dJointID        (ODE_API *dBodyGetJoint)(dBodyID, int index);
 //int             (ODE_API *dBodyIsKinematic)(dBodyID);
 //void            (ODE_API *dBodyEnable)(dBodyID);
 //void            (ODE_API *dBodyDisable)(dBodyID);
-//int             (ODE_API *dBodyIsEnabled)(dBodyID);
+int             (ODE_API *dBodyIsEnabled)(dBodyID);
 void            (ODE_API *dBodySetGravityMode)(dBodyID b, int mode);
 int             (ODE_API *dBodyGetGravityMode)(dBodyID b);
 //void            (*dBodySetMovedCallback)(dBodyID b, void(ODE_API *callback)(dBodyID));
@@ -1041,29 +1053,29 @@ static dllfunction_t odefuncs[] =
 //	{"dWorldSetAutoEnableDepthSF1",					(void **) &dWorldSetAutoEnableDepthSF1},
 //	{"dWorldGetAutoEnableDepthSF1",					(void **) &dWorldGetAutoEnableDepthSF1},
 //	{"dWorldGetAutoDisableLinearThreshold",			(void **) &dWorldGetAutoDisableLinearThreshold},
-//	{"dWorldSetAutoDisableLinearThreshold",			(void **) &dWorldSetAutoDisableLinearThreshold},
+	{"dWorldSetAutoDisableLinearThreshold",			(void **) &dWorldSetAutoDisableLinearThreshold},
 //	{"dWorldGetAutoDisableAngularThreshold",		(void **) &dWorldGetAutoDisableAngularThreshold},
-//	{"dWorldSetAutoDisableAngularThreshold",		(void **) &dWorldSetAutoDisableAngularThreshold},
+	{"dWorldSetAutoDisableAngularThreshold",		(void **) &dWorldSetAutoDisableAngularThreshold},
 //	{"dWorldGetAutoDisableLinearAverageThreshold",	(void **) &dWorldGetAutoDisableLinearAverageThreshold},
 //	{"dWorldSetAutoDisableLinearAverageThreshold",	(void **) &dWorldSetAutoDisableLinearAverageThreshold},
 //	{"dWorldGetAutoDisableAngularAverageThreshold",	(void **) &dWorldGetAutoDisableAngularAverageThreshold},
 //	{"dWorldSetAutoDisableAngularAverageThreshold",	(void **) &dWorldSetAutoDisableAngularAverageThreshold},
 //	{"dWorldGetAutoDisableAverageSamplesCount",		(void **) &dWorldGetAutoDisableAverageSamplesCount},
-//	{"dWorldSetAutoDisableAverageSamplesCount",		(void **) &dWorldSetAutoDisableAverageSamplesCount},
+	{"dWorldSetAutoDisableAverageSamplesCount",		(void **) &dWorldSetAutoDisableAverageSamplesCount},
 //	{"dWorldGetAutoDisableSteps",					(void **) &dWorldGetAutoDisableSteps},
-//	{"dWorldSetAutoDisableSteps",					(void **) &dWorldSetAutoDisableSteps},
+	{"dWorldSetAutoDisableSteps",					(void **) &dWorldSetAutoDisableSteps},
 //	{"dWorldGetAutoDisableTime",					(void **) &dWorldGetAutoDisableTime},
-//	{"dWorldSetAutoDisableTime",					(void **) &dWorldSetAutoDisableTime},
+	{"dWorldSetAutoDisableTime",					(void **) &dWorldSetAutoDisableTime},
 //	{"dWorldGetAutoDisableFlag",					(void **) &dWorldGetAutoDisableFlag},
-//	{"dWorldSetAutoDisableFlag",					(void **) &dWorldSetAutoDisableFlag},
+	{"dWorldSetAutoDisableFlag",					(void **) &dWorldSetAutoDisableFlag},
 //	{"dWorldGetLinearDampingThreshold",				(void **) &dWorldGetLinearDampingThreshold},
-//	{"dWorldSetLinearDampingThreshold",				(void **) &dWorldSetLinearDampingThreshold},
+	{"dWorldSetLinearDampingThreshold",				(void **) &dWorldSetLinearDampingThreshold},
 //	{"dWorldGetAngularDampingThreshold",			(void **) &dWorldGetAngularDampingThreshold},
-//	{"dWorldSetAngularDampingThreshold",			(void **) &dWorldSetAngularDampingThreshold},
+	{"dWorldSetAngularDampingThreshold",			(void **) &dWorldSetAngularDampingThreshold},
 //	{"dWorldGetLinearDamping",						(void **) &dWorldGetLinearDamping},
-//	{"dWorldSetLinearDamping",						(void **) &dWorldSetLinearDamping},
+	{"dWorldSetLinearDamping",						(void **) &dWorldSetLinearDamping},
 //	{"dWorldGetAngularDamping",						(void **) &dWorldGetAngularDamping},
-//	{"dWorldSetAngularDamping",						(void **) &dWorldSetAngularDamping},
+	{"dWorldSetAngularDamping",						(void **) &dWorldSetAngularDamping},
 //	{"dWorldSetDamping",							(void **) &dWorldSetDamping},
 //	{"dWorldGetMaxAngularSpeed",					(void **) &dWorldGetMaxAngularSpeed},
 //	{"dWorldSetMaxAngularSpeed",					(void **) &dWorldSetMaxAngularSpeed},
@@ -1129,7 +1141,7 @@ static dllfunction_t odefuncs[] =
 //	{"dBodyIsKinematic",							(void **) &dBodyIsKinematic},
 //	{"dBodyEnable",									(void **) &dBodyEnable},
 //	{"dBodyDisable",								(void **) &dBodyDisable},
-//	{"dBodyIsEnabled",								(void **) &dBodyIsEnabled},
+	{"dBodyIsEnabled",								(void **) &dBodyIsEnabled},
 	{"dBodySetGravityMode",							(void **) &dBodySetGravityMode},
 	{"dBodyGetGravityMode",							(void **) &dBodyGetGravityMode},
 //	{"dBodySetMovedCallback",						(void **) &dBodySetMovedCallback},
@@ -1464,18 +1476,30 @@ static void World_Physics_Init(void)
 
 	Cvar_RegisterVariable(&physics_ode_quadtree_depth);
 	Cvar_RegisterVariable(&physics_ode_contactsurfacelayer);
-	Cvar_RegisterVariable(&physics_ode_worldquickstep);
-	Cvar_RegisterVariable(&physics_ode_worldquickstep_iterations);
-	Cvar_RegisterVariable(&physics_ode_worldstepfast);
-	Cvar_RegisterVariable(&physics_ode_worldstepfast_iterations);
+	Cvar_RegisterVariable(&physics_ode_worldstep);
+	Cvar_RegisterVariable(&physics_ode_worldstep_iterations);
 	Cvar_RegisterVariable(&physics_ode_contact_mu);
 	Cvar_RegisterVariable(&physics_ode_contact_erp);
 	Cvar_RegisterVariable(&physics_ode_contact_cfm);
 	Cvar_RegisterVariable(&physics_ode_world_erp);
 	Cvar_RegisterVariable(&physics_ode_world_cfm);
+	Cvar_RegisterVariable(&physics_ode_world_damping);
+	Cvar_RegisterVariable(&physics_ode_world_damping_linear);
+	Cvar_RegisterVariable(&physics_ode_world_damping_linear_threshold);
+	Cvar_RegisterVariable(&physics_ode_world_damping_angular);
+	Cvar_RegisterVariable(&physics_ode_world_damping_angular_threshold);
 	Cvar_RegisterVariable(&physics_ode_iterationsperframe);
+	Cvar_RegisterVariable(&physics_ode_constantstep);
 	Cvar_RegisterVariable(&physics_ode_movelimit);
 	Cvar_RegisterVariable(&physics_ode_spinlimit);
+	Cvar_RegisterVariable(&physics_ode_trick_fixnan);
+	Cvar_RegisterVariable(&physics_ode_autodisable);
+	Cvar_RegisterVariable(&physics_ode_autodisable_steps);
+	Cvar_RegisterVariable(&physics_ode_autodisable_time);
+	Cvar_RegisterVariable(&physics_ode_autodisable_threshold_linear);
+	Cvar_RegisterVariable(&physics_ode_autodisable_threshold_angular);
+	Cvar_RegisterVariable(&physics_ode_autodisable_threshold_samples);
+	Cvar_RegisterVariable(&physics_ode_printstats);
 	Cvar_RegisterVariable(&physics_ode);
 
 #ifdef ODE_DYNAMIC
@@ -1493,12 +1517,20 @@ static void World_Physics_Init(void)
 # endif
 		{
 # ifdef dSINGLE
-			Con_Printf("ode library not compiled for single precision - incompatible!  Not using ODE physics.\n");
+			Con_Printf("ODE library not compiled for single precision - incompatible!  Not using ODE physics.\n");
 # else
-			Con_Printf("ode library not compiled for double precision - incompatible!  Not using ODE physics.\n");
+			Con_Printf("ODE library not compiled for double precision - incompatible!  Not using ODE physics.\n");
 # endif
 			Sys_UnloadLibrary(&ode_dll);
 			ode_dll = NULL;
+		}
+		else
+		{
+# ifdef dSINGLE
+			Con_Printf("ODE library loaded with single precision.\n");
+# else
+			Con_Printf("ODE library loaded with double precision.\n");
+# endif
 		}
 #endif
 	}
@@ -1522,6 +1554,44 @@ static void World_Physics_Shutdown(void)
 }
 
 #ifdef USEODE
+static void World_Physics_UpdateODE(world_t *world)
+{
+	dWorldID odeworld;
+
+	odeworld = (dWorldID)world->physics.ode_world;
+
+	// ERP and CFM
+	if (physics_ode_world_erp.value >= 0)
+		dWorldSetERP(odeworld, physics_ode_world_erp.value);
+	if (physics_ode_world_cfm.value >= 0)
+		dWorldSetCFM(odeworld, physics_ode_world_cfm.value);
+	// Damping
+	if (physics_ode_world_damping.integer)
+	{
+		dWorldSetLinearDamping(odeworld, (physics_ode_world_damping_linear.value >= 0) ? (physics_ode_world_damping_linear.value * physics_ode_world_damping.value) : 0);
+		dWorldSetLinearDampingThreshold(odeworld, (physics_ode_world_damping_linear_threshold.value >= 0) ? (physics_ode_world_damping_linear_threshold.value * physics_ode_world_damping.value) : 0);
+		dWorldSetAngularDamping(odeworld, (physics_ode_world_damping_angular.value >= 0) ? (physics_ode_world_damping_angular.value * physics_ode_world_damping.value) : 0);
+		dWorldSetAngularDampingThreshold(odeworld, (physics_ode_world_damping_angular_threshold.value >= 0) ? (physics_ode_world_damping_angular_threshold.value * physics_ode_world_damping.value) : 0);
+	}
+	else
+	{
+		dWorldSetLinearDamping(odeworld, 0);
+		dWorldSetLinearDampingThreshold(odeworld, 0);
+		dWorldSetAngularDamping(odeworld, 0);
+		dWorldSetAngularDampingThreshold(odeworld, 0);
+	}
+	// Autodisable
+	dWorldSetAutoDisableFlag(odeworld, (physics_ode_autodisable.integer) ? 1 : 0);
+	if (physics_ode_autodisable.integer)
+	{
+		dWorldSetAutoDisableSteps(odeworld, bound(1, physics_ode_autodisable_steps.integer, 100)); 
+		dWorldSetAutoDisableTime(odeworld, physics_ode_autodisable_time.value);
+		dWorldSetAutoDisableAverageSamplesCount(odeworld, bound(1, physics_ode_autodisable_threshold_samples.integer, 100));
+		dWorldSetAutoDisableLinearThreshold(odeworld, physics_ode_autodisable_threshold_linear.value); 
+		dWorldSetAutoDisableAngularThreshold(odeworld, physics_ode_autodisable_threshold_angular.value); 
+	}
+}
+
 static void World_Physics_EnableODE(world_t *world)
 {
 	dVector3 center, extents;
@@ -1537,10 +1607,8 @@ static void World_Physics_EnableODE(world_t *world)
 	world->physics.ode_world = dWorldCreate();
 	world->physics.ode_space = dQuadTreeSpaceCreate(NULL, center, extents, bound(1, physics_ode_quadtree_depth.integer, 10));
 	world->physics.ode_contactgroup = dJointGroupCreate(0);
-	if(physics_ode_world_erp.value >= 0)
-		dWorldSetERP((dWorldID)world->physics.ode_world, physics_ode_world_erp.value);
-	if(physics_ode_world_cfm.value >= 0)
-		dWorldSetCFM((dWorldID)world->physics.ode_world, physics_ode_world_cfm.value);
+
+	World_Physics_UpdateODE(world);
 }
 #endif
 
@@ -2232,31 +2300,35 @@ treatasbox:
 
 
 	// we must prevent NANs...
-	test = VectorLength2(origin) + VectorLength2(forward) + VectorLength2(left) + VectorLength2(up) + VectorLength2(velocity) + VectorLength2(spinvelocity);
-	if (IS_NAN(test))
+	if (physics_ode_trick_fixnan.integer)
 	{
-		modified = true;
-		//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
-		Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
-		test = VectorLength2(origin);
-		if (IS_NAN(test))
-			VectorClear(origin);
-		test = VectorLength2(forward) * VectorLength2(left) * VectorLength2(up);
+		test = VectorLength2(origin) + VectorLength2(forward) + VectorLength2(left) + VectorLength2(up) + VectorLength2(velocity) + VectorLength2(spinvelocity);
 		if (IS_NAN(test))
 		{
-			VectorSet(angles, 0, 0, 0);
-			VectorSet(forward, 1, 0, 0);
-			VectorSet(left, 0, 1, 0);
-			VectorSet(up, 0, 0, 1);
-		}
-		test = VectorLength2(velocity);
-		if (IS_NAN(test))
-			VectorClear(velocity);
-		test = VectorLength2(spinvelocity);
-		if (IS_NAN(test))
-		{
-			VectorClear(avelocity);
-			VectorClear(spinvelocity);
+			modified = true;
+			//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+			if (physics_ode_trick_fixnan.integer >= 2)
+				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
+			test = VectorLength2(origin);
+			if (IS_NAN(test))
+				VectorClear(origin);
+			test = VectorLength2(forward) * VectorLength2(left) * VectorLength2(up);
+			if (IS_NAN(test))
+			{
+				VectorSet(angles, 0, 0, 0);
+				VectorSet(forward, 1, 0, 0);
+				VectorSet(left, 0, 1, 0);
+				VectorSet(up, 0, 0, 1);
+			}
+			test = VectorLength2(velocity);
+			if (IS_NAN(test))
+				VectorClear(velocity);
+			test = VectorLength2(spinvelocity);
+			if (IS_NAN(test))
+			{
+				VectorClear(avelocity);
+				VectorClear(spinvelocity);
+			}
 		}
 	}
 
@@ -2487,6 +2559,9 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 
 void World_Physics_Frame(world_t *world, double frametime, double gravity)
 {
+	double tdelta, tdelta2, tdelta3, simulationtime, collisiontime;
+
+	tdelta = Sys_DoubleTime();
 #ifdef USEODE
 	if (world->physics.ode && physics_ode.integer)
 	{
@@ -2494,8 +2569,12 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 		prvm_edict_t *ed;
 
 		world->physics.ode_iterations = bound(1, physics_ode_iterationsperframe.integer, 1000);
-		world->physics.ode_step = frametime / world->physics.ode_iterations;
+		if (physics_ode_constantstep.integer)
+			world->physics.ode_step = sys_ticrate.value / world->physics.ode_iterations;
+		else
+			world->physics.ode_step = frametime / world->physics.ode_iterations;
 		world->physics.ode_movelimit = physics_ode_movelimit.value / world->physics.ode_step;
+		World_Physics_UpdateODE(world);
 
 		// copy physics properties from entities to physics engine
 		if (prog)
@@ -2509,6 +2588,8 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 					World_Physics_Frame_JointFromEntity(world, ed);
 		}
 
+		tdelta2 = Sys_DoubleTime();
+		collisiontime = 0;
 		for (i = 0;i < world->physics.ode_iterations;i++)
 		{
 			// set the gravity
@@ -2517,28 +2598,54 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			dWorldSetContactSurfaceLayer((dWorldID)world->physics.ode_world, max(0, physics_ode_contactsurfacelayer.value));
 
 			// run collisions for the current world state, creating JointGroup
+			tdelta3 = Sys_DoubleTime();
 			dSpaceCollide((dSpaceID)world->physics.ode_space, (void *)world, nearCallback);
+			collisiontime += (Sys_DoubleTime() - tdelta3)*10000;
 
 			// run physics (move objects, calculate new velocities)
-			if (physics_ode_worldquickstep.integer)
+			if (physics_ode_worldstep.integer == 2)
 			{
-				dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldquickstep_iterations.integer, 200));
+				dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldstep_iterations.integer, 200));
 				dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 			}
-			else if (physics_ode_worldstepfast.integer)
-				dWorldStepFast1((dWorldID)world->physics.ode_world, world->physics.ode_step, bound(1, physics_ode_worldstepfast_iterations.integer, 200));
+			else if (physics_ode_worldstep.integer == 1)
+				dWorldStepFast1((dWorldID)world->physics.ode_world, world->physics.ode_step, bound(1, physics_ode_worldstep_iterations.integer, 200));
 			else
 				dWorldStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 
 			// clear the JointGroup now that we're done with it
 			dJointGroupEmpty((dJointGroupID)world->physics.ode_contactgroup);
 		}
+		simulationtime = (Sys_DoubleTime() - tdelta2)*10000;
 
-		// copy physics properties from physics engine to entities
+		// copy physics properties from physics engine to entities and do some stats
 		if (prog)
+		{
 			for (i = 1, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
 				if (!prog->edicts[i].priv.required->free)
 					World_Physics_Frame_BodyToEntity(world, ed);
+
+			// print stats
+			if (physics_ode_printstats.integer)
+			{
+				dBodyID body;
+
+				world->physics.ode_numobjects = 0;
+				world->physics.ode_activeovjects = 0;
+				for (i = 1, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
+				{
+					if (prog->edicts[i].priv.required->free)
+						continue;
+					body = (dBodyID)prog->edicts[i].priv.server->ode_body;
+					if (!body)
+						continue;
+					world->physics.ode_numobjects++;
+					if (dBodyIsEnabled(body))
+						world->physics.ode_activeovjects++;
+				}
+				Con_Printf("ODE Stats(%s): %3.01f (%3.01f collision) %3.01f total : %i objects %i active %i disabled\n", prog->name, simulationtime, collisiontime, (Sys_DoubleTime() - tdelta)*10000, world->physics.ode_numobjects, world->physics.ode_activeovjects, (world->physics.ode_numobjects - world->physics.ode_activeovjects));
+			}
+		}
 	}
 #endif
 }
