@@ -1677,6 +1677,7 @@ static const char *builtinshaderstring =
 "	lightnormal.x = dot(lightnormal_modelspace, myhalf3(VectorS));\n"
 "	lightnormal.y = dot(lightnormal_modelspace, myhalf3(VectorT));\n"
 "	lightnormal.z = dot(lightnormal_modelspace, myhalf3(VectorR));\n"
+"	lightnormal = normalize(lightnormal); // VectorS/T/R are not always perfectly normalized, and EXACTSPECULARMATH is very picky about this\n"
 "	// calculate directional shading (and undoing the existing angle attenuation on the lightmap by the division)\n"
 "	// note that q3map2 is too stupid to calculate proper surface normals when q3map_nonplanar\n"
 "	// is used (the lightmap and deluxemap coords correspond to virtually random coordinates\n"
