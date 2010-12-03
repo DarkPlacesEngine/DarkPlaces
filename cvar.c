@@ -756,7 +756,7 @@ void Cvar_WriteVariables (qfile_t *f)
 
 	// don't save cvars that match their default value
 	for (var = cvar_vars ; var ; var = var->next)
-		if ((var->flags & CVAR_SAVE) && (strcmp(var->string, var->defstring) || (var->flags & CVAR_ALLOCATED)))
+		if ((var->flags & CVAR_SAVE) && (strcmp(var->string, var->defstring) || !(var->flags & CVAR_DEFAULTSET)))
 		{
 			Cmd_QuoteString(buf1, sizeof(buf1), var->name, "\"\\$");
 			Cmd_QuoteString(buf2, sizeof(buf2), var->string, "\"\\$");
