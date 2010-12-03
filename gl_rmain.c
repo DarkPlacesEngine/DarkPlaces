@@ -9473,7 +9473,7 @@ void R_UpdateVariables(void)
 
 	r_refdef.scene.rtworld = r_shadow_realtime_world.integer != 0;
 	r_refdef.scene.rtworldshadows = r_shadow_realtime_world_shadows.integer && vid.stencil;
-	r_refdef.scene.rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer && r_dynamic.integer;
+	r_refdef.scene.rtdlight = r_shadow_realtime_dlight.integer != 0 && !gl_flashblend.integer && r_dynamic.integer;
 	r_refdef.scene.rtdlightshadows = r_refdef.scene.rtdlight && r_shadow_realtime_dlight_shadows.integer && vid.stencil;
 	r_refdef.lightmapintensity = r_refdef.scene.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 	if (FAKELIGHT_ENABLED)
