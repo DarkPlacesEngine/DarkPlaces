@@ -4,6 +4,12 @@
 #include "cl_video.h"
 #include "dpvsimpledecode.h"
 
+// VorteX: JAM video module used by Blood Omnicide
+//#define USEJAM
+#ifdef USEJAM
+  #include "jamdecode.c"
+#endif
+
 // cvars
 cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are presented)"};
 cvar_t cl_video_subtitles_lines = {CVAR_SAVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
@@ -38,29 +44,35 @@ static clvideo_t *FindUnusedVid( void )
 static qboolean OpenStream( clvideo_t * video )
 {
 	const char *errorstring;
-	video->stream = dpvsimpledecode_open( video->filename, &errorstring);
+	video->stream = dpvsimpledecode_open( video, video->filename, &errorstring);
 	if (!video->stream )
 	{
+#ifdef USEJAM
+		video->stream = jam_open( video, video->filename, &errorstring);
+		if (video->stream)
+			return true;
+#endif
 		Con_Printf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
 		return false;
 	}
 	return true;
 }
 
-static void VideoUpdateCallback(rtexture_t *rt, void *data) {
+static void VideoUpdateCallback(rtexture_t *rt, void *data)
+{
 	clvideo_t *video = (clvideo_t *) data;
 	R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, video->cpif.width, video->cpif.height );
 }
 
 static void LinkVideoTexture( clvideo_t *video )
 {
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT | TEXF_CLAMP, -1, NULL );
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT | TEXF_CLAMP, -1, NULL );
 	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
 	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
 }
 
-static void UnlinkVideoTexture( clvideo_t *video ) {
+static void UnlinkVideoTexture( clvideo_t *video )
+{
 	CL_UnlinkDynTexture( video->cpif.name );
 	// free the texture
 	R_FreeTexture( video->cpif.tex );
@@ -71,13 +83,13 @@ static void UnlinkVideoTexture( clvideo_t *video ) {
 
 static void SuspendVideo( clvideo_t * video )
 {
-	if( video->suspended )
+	if (video->suspended)
 		return;
 	video->suspended = true;
-	UnlinkVideoTexture( video );
+	UnlinkVideoTexture(video);
 	// if we are in firstframe mode, also close the stream
-	if( video->state == CLVIDEO_FIRSTFRAME )
-		dpvsimpledecode_close( video->stream );
+	if (video->state == CLVIDEO_FIRSTFRAME)
+		video->close(video->stream);
 }
 
 static qboolean WakeVideo( clvideo_t * video )
@@ -201,12 +213,12 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 
 	video->state = CLVIDEO_FIRSTFRAME;
 	video->framenum = -1;
-	video->framerate = dpvsimpledecode_getframerate( video->stream );
+	video->framerate = video->getframerate( video->stream );
 	video->lasttime = realtime;
 	video->subtitles = 0;
 
-	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
-	video->cpif.height = dpvsimpledecode_getheight( video->stream );
+	video->cpif.width = video->getwidth( video->stream );
+	video->cpif.height = video->getheight( video->stream );
 	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 	LinkVideoTexture( video );
 
@@ -291,7 +303,7 @@ void CL_RestartVideo(clvideo_t *video)
 	video->framenum = -1;
 
 	// reopen stream
-	dpvsimpledecode_close(video->stream);
+	video->close(video->stream);
 	if (!OpenStream(video))
 		video->state = CLVIDEO_UNUSED;
 }
@@ -306,7 +318,7 @@ void CL_CloseVideo(clvideo_t * video)
 
 	// close stream
 	if (!video->suspended || video->state != CLVIDEO_FIRSTFRAME)
-		dpvsimpledecode_close(video->stream);
+		video->close(video->stream);
 	// unlink texture
 	if (!video->suspended)
 		UnlinkVideoTexture(video);
@@ -354,7 +366,7 @@ void CL_Video_Frame(void)
 			{
 				do {
 					video->framenum++;
-					if (dpvsimpledecode_video(video->stream, video->imagedata, cl_videormask, cl_videogmask, cl_videobmask, cl_videobytesperpixel, cl_videobytesperpixel * video->cpif.width))
+					if (video->decodeframe(video->stream, video->imagedata, cl_videormask, cl_videogmask, cl_videobmask, cl_videobytesperpixel, cl_videobytesperpixel * video->cpif.width))
 					{ 
 						// finished?
 						CL_RestartVideo(video);
@@ -597,6 +609,7 @@ void CL_VideoStop(void)
 static void CL_PlayVideo_f(void)
 {
 	char name[MAX_QPATH], subtitlesfile[MAX_QPATH];
+	const char *extension;
 
 	Host_StartVideo();
 
@@ -606,7 +619,11 @@ static void CL_PlayVideo_f(void)
 		return;
 	}
 
-	dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(1));
+	extension = FS_FileExtension(Cmd_Argv(1));
+	if (extension[0])
+		dpsnprintf(name, sizeof(name), "video/%s", Cmd_Argv(1));
+	else
+		dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(1));
 	if ( Cmd_Argc() > 2)
 		CL_VideoStart(name, Cmd_Argv(2));
 	else

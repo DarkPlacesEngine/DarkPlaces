@@ -54,8 +54,14 @@ typedef struct clvideo_s
 	float	subtitle_start[CLVIDEO_MAX_SUBTITLES];
 	float	subtitle_end[CLVIDEO_MAX_SUBTITLES];
 
-	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)
+	// this functions gets filled by video format module
+	void (*close) (void *stream);
+	unsigned int (*getwidth) (void *stream);
+	unsigned int (*getheight) (void *stream);
+	double (*getframerate) (void *stream);
+	int (*decodeframe) (void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow);
 
+	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)
 	// used to determine whether the video's resources should be freed or not
     double  lasttime;
 	// when lasttime - realtime > THRESHOLD, all but the stream is freed
