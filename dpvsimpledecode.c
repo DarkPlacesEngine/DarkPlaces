@@ -1,4 +1,3 @@
-
 #include "quakedef.h"
 #include "dpvsimpledecode.h"
 
@@ -333,7 +332,7 @@ static int dpvsimpledecode_setpixelformat(dpvsimpledecodestream_t *s, unsigned i
 // opening and closing streams
 
 // opens a stream
-void *dpvsimpledecode_open(char *filename, const char **errorstring)
+void *dpvsimpledecode_open(clvideo_t *video, char *filename, const char **errorstring)
 {
 	dpvsimpledecodestream_t *s;
 	char t[8], *wavename;
@@ -385,7 +384,14 @@ void *dpvsimpledecode_open(char *filename, const char **errorstring)
 									Z_Free(wavename);
 								}
 								// all is well...
+								// set the module functions
 								s->videoframenum = -10000;
+								video->close = dpvsimpledecode_close;
+								video->getwidth = dpvsimpledecode_getwidth;
+								video->getheight = dpvsimpledecode_getheight;
+								video->getframerate = dpvsimpledecode_getframerate;
+								video->decodeframe = dpvsimpledecode_video;
+
 								return s;
 							}
 							else if (errorstring != NULL)
@@ -505,10 +511,6 @@ double dpvsimpledecode_getframerate(void *stream)
 	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	return s->info_framerate;
 }
-
-
-
-
 
 static int dpvsimpledecode_convertpixels(dpvsimpledecodestream_t *s, void *imagedata, int imagebytesperrow)
 {

@@ -2,6 +2,8 @@
 #ifndef DPVSIMPLEDECODE_H
 #define DPVSIMPLEDECODE_H
 
+#include "cl_video.h"
+
 #define DPVSIMPLEDECODEERROR_NONE 0
 #define DPVSIMPLEDECODEERROR_EOF 1
 #define DPVSIMPLEDECODEERROR_READERROR 2
@@ -16,7 +18,8 @@
 // opening and closing streams
 
 // opens a stream
-void *dpvsimpledecode_open(char *filename, const char **errorstring);
+void *dpvsimpledecode_open(clvideo_t *video, char *filename, const char **errorstring);
+
 // closes a stream
 void dpvsimpledecode_close(void *stream);
 
