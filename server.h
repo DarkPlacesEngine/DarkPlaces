@@ -228,7 +228,7 @@ typedef struct client_s
 	float spawn_parms[NUM_SPAWN_PARMS];
 
 	// properties that are sent across the network only when changed
-	char name[64], old_name[64];
+	char name[MAX_SCOREBOARDNAME], old_name[MAX_SCOREBOARDNAME];
 	int colors, old_colors;
 	int frags, old_frags;
 	char playermodel[MAX_QPATH], old_model[MAX_QPATH];
