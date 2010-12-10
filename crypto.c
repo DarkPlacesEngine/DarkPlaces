@@ -1185,7 +1185,7 @@ static void Crypto_Keys_f(void)
 		{
 			Con_Printf("%2d: public key key_%d.d0pk (fingerprint: %s)\n", i, i, pubkeys_fp64[i]);
 			if(pubkeys_havepriv[i])
-				Con_Printf("   private key key_%d.d0si (fingerprint: %s)\n", i, pubkeys_priv_fp64[i]);
+				Con_Printf("    private ID key_%d.d0si (fingerprint: %s)\n", i, pubkeys_priv_fp64[i]);
 		}
 	}
 }
