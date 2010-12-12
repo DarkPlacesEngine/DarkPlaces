@@ -669,7 +669,7 @@ FS_LoadPackPK3
 Create a package entry associated with a PK3 file
 ====================
 */
-pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle)
+pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qboolean silent)
 {
 	pk3_endOfCentralDir_t eocd;
 	pack_t *pack;
@@ -677,7 +677,8 @@ pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle)
 
 	if (! PK3_GetEndOfCentralDir (packfile, packhandle, &eocd))
 	{
-		Con_Printf ("%s is not a PK3 file\n", packfile);
+		if(!silent)
+			Con_Printf ("%s is not a PK3 file\n", packfile);
 		close(packhandle);
 		return NULL;
 	}
@@ -731,7 +732,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 #endif
 	if (packhandle < 0)
 		return NULL;
-	return FS_LoadPackPK3FromFD(packfile, packhandle);
+	return FS_LoadPackPK3FromFD(packfile, packhandle, false);
 }
 
 
@@ -1626,7 +1627,7 @@ void FS_Init_SelfPack (void)
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 	if(com_selffd >= 0)
 	{
-		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd);
+		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
 		if(fs_selfpack)
 		{
 			char *buf, *q;
