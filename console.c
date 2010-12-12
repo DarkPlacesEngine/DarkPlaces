@@ -1115,11 +1115,24 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			// send to terminal or dedicated server window
 			if (!sys_nostdout)
 			{
-				unsigned char *p;
 				if(sys_specialcharactertranslation.integer)
 				{
-					for (p = (unsigned char *) line;*p; p++)
-						*p = qfont_table[*p];
+					char *p;
+					const char *q;
+					p = line;
+					while(*p)
+					{
+						int ch = u8_getchar(p, &q);
+						if(ch >= 0xE000 && ch <= 0xE0FF)
+						{
+							*p = qfont_table[ch - 0xE000];
+							if(q > p+1)
+								memmove(p+1, q, strlen(q));
+							p = p + 1;
+						}
+						else
+							p = p + (q - p);
+					}
 				}
 
 				if(sys_colortranslation.integer == 1) // ANSI
