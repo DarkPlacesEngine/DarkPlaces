@@ -1994,7 +1994,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_SetViewport(&viewport);
 	GL_ColorMask(1,1,1,1);
 	// when starting up a new video mode, make sure the screen is cleared to black
-	if (clear)
+	if (clear || loadingscreentexture)
 		GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
 	R_Textures_Frame();
 	R_Mesh_Start();
@@ -2057,6 +2057,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 static void SCR_DrawLoadingScreen (qboolean clear)
 {
 	// we only need to draw the image if it isn't already there
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
@@ -2064,12 +2065,10 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	GL_Color(1,1,1,1);
 	if(loadingscreentexture)
 	{
-		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
 		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
 	R_SetupShader_Generic(loadingscreenpic->tex, NULL, GL_MODULATE, 1);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
@@ -2104,9 +2103,7 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	if(clear)
 	        SCR_ClearLoadingScreenTexture();
 	else if(!loadingscreendone)
-	{
 	        SCR_SetLoadingScreenTexture();
-	}
 
 	if(!loadingscreendone)
 	{
@@ -2115,6 +2112,8 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	}
 	loadingscreencleared = clear;
 
+	if (qglDrawBuffer)
+		qglDrawBuffer(GL_BACK);
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
 	{
