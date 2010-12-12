@@ -2417,7 +2417,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 			{
 				const char *value;
 				char buf[64];
-				Con_Printf("PRVM_LoadProgs: no cvar for autocvar global %s in %s, creating...\n", name, PRVM_NAME);
+				Con_DPrintf("PRVM_LoadProgs: no cvar for autocvar global %s in %s, creating...\n", name, PRVM_NAME);
 				switch(prog->globaldefs[i].type & ~DEF_SAVEGLOBAL)
 				{
 					case ev_float:
