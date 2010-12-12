@@ -35,6 +35,9 @@ cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game i
 cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
 cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
 cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
+cvar_t scr_loadingscreen_scale = {0, "scr_loadingscreen_scale","1", "scale factor of the background"};
+cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
+cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
 cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
 cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
 cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "a height loadingscreen progress bar"};
@@ -899,6 +902,9 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 	Cvar_RegisterVariable (&scr_loadingscreen_background);
+	Cvar_RegisterVariable (&scr_loadingscreen_scale);
+	Cvar_RegisterVariable (&scr_loadingscreen_scale_base);
+	Cvar_RegisterVariable (&scr_loadingscreen_scale_limit);
 	Cvar_RegisterVariable (&scr_loadingscreen_count);
 	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
 	Cvar_RegisterVariable (&scr_loadingscreen_barheight);
@@ -1978,7 +1984,7 @@ static float loadingscreenpic_texcoord2f[8];
 static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
 	r_viewport_t viewport;
-	float x, y;
+	float x, y, w, h, sw, sh, f;
 	// release mouse grab while loading
 	if (!vid.fullscreen)
 		VID_SetMouse(false, false, false);
@@ -1995,13 +2001,53 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
 	loadingscreenpic = Draw_CachePic (loadingscreenpic_number ? va("gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading");
-	x = (vid_conwidth.integer - loadingscreenpic->width)/2;
-	y = (vid_conheight.integer - loadingscreenpic->height)/2;
+
+	w = loadingscreenpic->width;
+	h = loadingscreenpic->height;
+
+	// apply scale
+	w *= scr_loadingscreen_scale.value;
+	h *= scr_loadingscreen_scale.value;
+
+	// apply scale base
+	if(scr_loadingscreen_scale_base.integer)
+	{
+		w *= vid_conwidth.integer / (float) vid.width;
+		h *= vid_conheight.integer / (float) vid.height;
+	}
+
+	// apply scale limit
+	sw = w / vid_conwidth.integer;
+	sh = h / vid_conheight.integer;
+	f = 1;
+	switch(scr_loadingscreen_scale_limit.integer)
+	{
+		case 1:
+			f = max(sw, sh);
+			break;
+		case 2:
+			f = min(sw, sh);
+			break;
+		case 3:
+			f = sw;
+			break;
+		case 4:
+			f = sh;
+			break;
+	}
+	if(f > 1)
+	{
+		w /= f;
+		h /= f;
+	}
+
+	x = (vid_conwidth.integer - w)/2;
+	y = (vid_conheight.integer - h)/2;
 	loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
 	loadingscreenpic_vertex3f[0] = loadingscreenpic_vertex3f[9] = x;
 	loadingscreenpic_vertex3f[1] = loadingscreenpic_vertex3f[4] = y;
-	loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = x + loadingscreenpic->width;
-	loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = y + loadingscreenpic->height;
+	loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = x + w;
+	loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = y + h;
 	loadingscreenpic_texcoord2f[0] = 0;loadingscreenpic_texcoord2f[1] = 0;
 	loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
 	loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
