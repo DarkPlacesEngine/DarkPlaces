@@ -281,7 +281,8 @@ void Cbuf_Execute (void)
 	char line[MAX_INPUTLINE];
 	char preprocessed[MAX_INPUTLINE];
 	char *firstchar;
-	qboolean quotes, comment;
+	qboolean quotes;
+	char *comment;
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
@@ -293,7 +294,7 @@ void Cbuf_Execute (void)
 		text = (char *)cmd_text.data;
 
 		quotes = false;
-		comment = false;
+		comment = NULL;
 		for (i=0 ; i < cmd_text.cursize ; i++)
 		{
 			if(!comment)
@@ -311,7 +312,7 @@ void Cbuf_Execute (void)
 				else
 				{
 					if(text[i] == '/' && text[i + 1] == '/' && (i == 0 || ISWHITESPACE(text[i-1])))
-						comment = true;
+						comment = &text[i];
 					if(text[i] == ';')
 						break;	// don't break if inside a quoted string or comment
 				}
@@ -329,8 +330,8 @@ void Cbuf_Execute (void)
 		}
 		else
 		{
-			memcpy (line, text, i);
-			line[i] = 0;
+			memcpy (line, text, comment ? (comment - text) : i);
+			line[comment ? (comment - text) : i] = 0;
 		}
 
 // delete the text from the command buffer and move remaining commands down
@@ -347,13 +348,15 @@ void Cbuf_Execute (void)
 		}
 
 // execute the command line
-		firstchar = line + strspn(line, " \t");
+		firstchar = line;
+		while(*firstchar && ISWHITESPACE(*firstchar))
+			++firstchar;
 		if(
-			(strncmp(firstchar, "alias", 5) || (firstchar[5] != ' ' && firstchar[5] != '\t'))
+			(strncmp(firstchar, "alias", 5) || !ISWHITESPACE(firstchar[5]))
 			&&
-			(strncmp(firstchar, "bind", 4) || (firstchar[4] != ' ' && firstchar[4] != '\t'))
+			(strncmp(firstchar, "bind", 4) || !ISWHITESPACE(firstchar[4]))
 			&&
-			(strncmp(firstchar, "in_bind", 7) || (firstchar[7] != ' ' && firstchar[7] != '\t'))
+			(strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7]))
 		)
 		{
 			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
