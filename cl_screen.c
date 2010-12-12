@@ -1793,7 +1793,7 @@ typedef struct loadingscreenstack_s
 }
 loadingscreenstack_t;
 static loadingscreenstack_t *loadingscreenstack = NULL;
-static double loadingscreentime = -1;
+static qboolean loadingscreendone = false;
 static qboolean loadingscreencleared = false;
 static float loadingscreenheight = 0;
 rtexture_t *loadingscreentexture = NULL;
@@ -1845,7 +1845,7 @@ static void SCR_SetLoadingScreenTexture(void)
 
 void SCR_UpdateLoadingScreenIfShown(void)
 {
-	if(realtime == loadingscreentime)
+	if(loadingscreendone)
 		SCR_UpdateLoadingScreen(loadingscreencleared);
 }
 
@@ -2057,7 +2057,6 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 static void SCR_DrawLoadingScreen (qboolean clear)
 {
 	// we only need to draw the image if it isn't already there
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
@@ -2065,10 +2064,12 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	GL_Color(1,1,1,1);
 	if(loadingscreentexture)
 	{
+		GL_BlendFunc(GL_ONE, GL_ZERO);
 		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
 		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
 	R_SetupShader_Generic(loadingscreenpic->tex, NULL, GL_MODULATE, 1);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
@@ -2094,20 +2095,22 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 	if(!scr_loadingscreen_background.integer)
 		clear = true;
 	
-	if(loadingscreentime == realtime)
+	if(loadingscreendone)
 		clear |= loadingscreencleared;
 
-	if(loadingscreentime != realtime)
+	if(!loadingscreendone)
 		loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
 
 	if(clear)
 	        SCR_ClearLoadingScreenTexture();
-	else if(loadingscreentime != realtime)
-	        SCR_SetLoadingScreenTexture();
-
-	if(loadingscreentime != realtime)
+	else if(!loadingscreendone)
 	{
-		loadingscreentime = realtime;
+	        SCR_SetLoadingScreenTexture();
+	}
+
+	if(!loadingscreendone)
+	{
+		loadingscreendone = true;
 		loadingscreenheight = 0;
 	}
 	loadingscreencleared = clear;
@@ -2168,6 +2171,8 @@ void CL_UpdateScreen(void)
 
 	if (!scr_initialized || !con_initialized || !scr_refresh.integer)
 		return;				// not initialized yet
+
+	loadingscreendone = false;
 
 	if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 	{
