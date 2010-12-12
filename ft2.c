@@ -387,9 +387,13 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 
 		if (!Font_LoadFile(dpfnt->fallbacks[i], dpfnt->fallback_faces[i], &dpfnt->settings, fb))
 		{
-			Con_Printf("Failed to allocate font for fallback %i of font %s\n", i, name);
+			if(!FS_FileExists(va("%s.tga", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va("%s.png", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va("%s.jpg", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va("%s.pcx", dpfnt->fallbacks[i])))
+				Con_Printf("Failed to load font %s for fallback %i of font %s\n", dpfnt->fallbacks[i], i, name);
 			Mem_Free(fb);
-			break;
+			continue;
 		}
 		count = 0;
 		for (s = 0; s < MAX_FONT_SIZES && dpfnt->req_sizes[s] >= 0; ++s)
