@@ -12650,7 +12650,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL);
 				RSurf_DrawBatch();
 			}
-			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION) && !r_waterstate.renderingscene)
+			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION))
 			{
 				// render surface with reflection texture as input
 				GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
