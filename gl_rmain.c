@@ -9168,12 +9168,17 @@ void R_HDR_RenderBloomTexture(void)
 {
 	int oldwidth, oldheight;
 	float oldcolorscale;
+	int oldwaterstate;
 
+	oldwaterstate = r_waterstate.enabled;
 	oldcolorscale = r_refdef.view.colorscale;
 	oldwidth = r_refdef.view.width;
 	oldheight = r_refdef.view.height;
 	r_refdef.view.width = r_bloomstate.bloomwidth;
 	r_refdef.view.height = r_bloomstate.bloomheight;
+
+	if(r_hdr.integer < 2)
+		r_waterstate.enabled = false;
 
 	// TODO: support GL_EXT_framebuffer_object rather than reusing the framebuffer?  it might improve SLI performance.
 	// TODO: add exposure compensation features
@@ -9194,7 +9199,7 @@ void R_HDR_RenderBloomTexture(void)
 
 	// only do secondary renders with HDR if r_hdr is 2 or higher
 	r_waterstate.numwaterplanes = 0;
-	if (r_waterstate.enabled && r_hdr.integer >= 2)
+	if (r_waterstate.enabled)
 		R_RenderWaterPlanes();
 
 	r_refdef.view.showdebug = true;
@@ -9207,6 +9212,7 @@ void R_HDR_RenderBloomTexture(void)
 	R_Bloom_MakeTexture();
 
 	// restore the view settings
+	r_waterstate.enabled = oldwaterstate;
 	r_refdef.view.width = oldwidth;
 	r_refdef.view.height = oldheight;
 	r_refdef.view.colorscale = oldcolorscale;
