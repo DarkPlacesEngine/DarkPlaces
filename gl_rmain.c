@@ -12253,13 +12253,20 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 	vec3_t vert;
 	const float *v;
 	r_waterstate_waterplane_t *p;
+	qboolean prepared = false;
 	bestd = 0;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
 	{
 		if(p->camera_entity != rsurface.texture->camera_entity)
 			continue;
 		d = 0;
-		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
+		if(!prepared)
+		{
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
+			prepared = true;
+			if(rsurface.batchnumvertices == 0)
+				break;
+		}
 		for (vertexindex = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3;vertexindex < rsurface.batchnumvertices;vertexindex++, v += 3)
 		{
 			Matrix4x4_Transform(&rsurface.matrix, v, vert);
@@ -12272,6 +12279,10 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 		}
 	}
 	return bestplaneindex;
+	// NOTE: this MAY return a totally unrelated water plane; we can ignore
+	// this situation though, as it might be better to render single larger
+	// batches with useless stuff (backface culled for example) than to
+	// render multiple smaller batches
 }
 
 static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(void)
@@ -12632,7 +12643,8 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 			startplaneindex = RSurf_FindWaterPlaneForSurface(texturesurfacelist[start]);
 			if(startplaneindex < 0)
 			{
-				Con_Printf("No matching water plane for surface with material flags 0x%08x - PLEASE DEBUG THIS\n", rsurface.texture->currentmaterialflags);
+				// this happens if the plane e.g. got backface culled and thus didn't get a water plane. We can just ignore this.
+				// Con_Printf("No matching water plane for surface with material flags 0x%08x - PLEASE DEBUG THIS\n", rsurface.texture->currentmaterialflags);
 				end = start + 1;
 				continue;
 			}
