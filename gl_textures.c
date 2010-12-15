@@ -1671,6 +1671,15 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT: ddsfourcc = "DXT3";bytesperblock = 16;break;
 	case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT: ddsfourcc = "DXT5";bytesperblock = 16;break;
 	}
+	// if premultiplied alpha, say so in the DDS file
+	if(glt->flags & TEXF_RGBMULTIPLYBYALPHA)
+	{
+		switch(internalformat)
+		{
+			case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT: ddsfourcc = "DXT2";break;
+			case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT: ddsfourcc = "DXT4";break;
+		}
+	}
 	if (!bytesperblock && skipuncompressed)
 		return -3; // skipped
 	memset(mipinfo, 0, sizeof(mipinfo));
@@ -1875,6 +1884,20 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 	else if (!memcmp(dds+84, "DXT3", 4) || !memcmp(dds+84, "DXT2", 4))
 	{
+		if(!memcmp(dds+84, "DXT2", 4))
+		{
+			if(!(flags & TEXF_RGBMULTIPLYBYALPHA))
+			{
+				Con_Printf("^1%s: expecting DXT3 image without premultiplied alpha, got DXT2 image with premultiplied alpha\n", filename);
+			}
+		}
+		else
+		{
+			if(flags & TEXF_RGBMULTIPLYBYALPHA)
+			{
+				Con_Printf("^1%s: expecting DXT2 image without premultiplied alpha, got DXT3 image without premultiplied alpha\n", filename);
+			}
+		}
 		if(!vid.support.ext_texture_compression_s3tc)
 		{
 			Mem_Free(dds);
@@ -1894,6 +1917,20 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 	else if (!memcmp(dds+84, "DXT5", 4) || !memcmp(dds+84, "DXT4", 4))
 	{
+		if(!memcmp(dds+84, "DXT4", 4))
+		{
+			if(!(flags & TEXF_RGBMULTIPLYBYALPHA))
+			{
+				Con_Printf("^1%s: expecting DXT5 image without premultiplied alpha, got DXT4 image with premultiplied alpha\n", filename);
+			}
+		}
+		else
+		{
+			if(flags & TEXF_RGBMULTIPLYBYALPHA)
+			{
+				Con_Printf("^1%s: expecting DXT4 image without premultiplied alpha, got DXT5 image without premultiplied alpha\n", filename);
+			}
+		}
 		if(!vid.support.ext_texture_compression_s3tc)
 		{
 			Mem_Free(dds);
