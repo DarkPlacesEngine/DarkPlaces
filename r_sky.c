@@ -302,7 +302,8 @@ static void R_SkyBox(void)
 	int i;
 	RSurf_ActiveCustomEntity(&skymatrix, &skyinversematrix, 0, 0, 1, 1, 1, 1, 6*4, skyboxvertex3f, skyboxtexcoord2f, NULL, NULL, NULL, NULL, 6*2, skyboxelement3i, skyboxelement3s, false, false);
 	for (i = 0;i < 6;i++)
-		R_DrawCustomSurface(skyboxskinframe[i], &identitymatrix, MATERIALFLAG_SKY | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NODEPTHTEST, i*4, 4, i*2, 2, false, false);
+		if(skyboxskinframe[i])
+			R_DrawCustomSurface(skyboxskinframe[i], &identitymatrix, MATERIALFLAG_SKY | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NODEPTHTEST, i*4, 4, i*2, 2, false, false);
 }
 
 #define skygridx 32
