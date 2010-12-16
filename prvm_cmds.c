@@ -272,7 +272,18 @@ static qboolean checkextension(const char *name)
 		while (*e && *e != ' ')
 			e++;
 		if ((e - start) == len && !strncasecmp(start, name, len))
+		{
+			// special sheck for ODE
+			if (!strncasecmp("DP_PHYSICS_ODE", name, 14))
+			{
+#ifdef USEODE
+				return ode_dll ? true : false;
+#else
+				return false;
+#endif
+			}
 			return true;
+		}
 	}
 	return false;
 }
@@ -6864,4 +6875,104 @@ void VM_getsurfacetriangle(void)
                return;
        // FIXME: implement rotation/scaling
        VectorMA(&(model->surfmesh.data_element3i + 3 * surface->num_firsttriangle)[trinum * 3], surface->num_firstvertex, d, PRVM_G_VECTOR(OFS_RETURN));
+}
+
+//
+// physics builtins
+//
+
+void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f);
+
+#define VM_physics_ApplyCmd(ed,f) if (!ed->priv.server->ode_body) VM_physics_newstackfunction(ed, f); else World_Physics_ApplyCmd(ed, f)
+
+edict_odefunc_t *VM_physics_newstackfunction(prvm_edict_t *ed, edict_odefunc_t *f)
+{
+	edict_odefunc_t *newfunc, *func;
+
+	newfunc = (edict_odefunc_t *)Mem_Alloc(prog->progs_mempool, sizeof(edict_odefunc_t));
+	memcpy(newfunc, f, sizeof(edict_odefunc_t));
+	newfunc->next = NULL;
+	if (!ed->priv.server->ode_func)
+		ed->priv.server->ode_func = newfunc;
+	else
+	{
+		for (func = ed->priv.server->ode_func; func->next; func = func->next);
+		func->next = newfunc;
+	}
+	return newfunc;
+}
+
+// void(entity e, float physics_enabled) physics_enable = #;
+void VM_physics_enable(void)
+{
+	prvm_edict_t *ed;
+	edict_odefunc_t f;
+	
+	VM_SAFEPARMCOUNT(2, VM_physics_enable);
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!ed)
+	{
+		if (developer.integer > 0)
+			VM_Warning("VM_physics_enable: null entity!\n");
+		return;
+	}
+	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
+	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	{
+		VM_Warning("VM_physics_enable: entity is not MOVETYPE_PHYSICS!\n");
+		return;
+	}
+	f.type = PRVM_G_FLOAT(OFS_PARM1) == 0 ? ODEFUNC_DISABLE : ODEFUNC_ENABLE;
+	VM_physics_ApplyCmd(ed, &f);
+}
+
+// void(entity e, vector force, vector relative_ofs) physics_addforce = #;
+void VM_physics_addforce(void)
+{
+	prvm_edict_t *ed;
+	edict_odefunc_t f;
+	
+	VM_SAFEPARMCOUNT(3, VM_physics_addforce);
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!ed)
+	{
+		if (developer.integer > 0)
+			VM_Warning("VM_physics_addforce: null entity!\n");
+		return;
+	}
+	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
+	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	{
+		VM_Warning("VM_physics_addforce: entity is not MOVETYPE_PHYSICS!\n");
+		return;
+	}
+	f.type = ODEFUNC_RELFORCEATPOS;
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
+	VectorSubtract(ed->fields.server->origin, PRVM_G_VECTOR(OFS_PARM2), f.v2);
+	VM_physics_ApplyCmd(ed, &f);
+}
+
+// void(entity e, vector torgue) physics_addtorgue = #;
+void VM_physics_addtorgue(void)
+{
+	prvm_edict_t *ed;
+	edict_odefunc_t f;
+	
+	VM_SAFEPARMCOUNT(2, VM_physics_addtorgue);
+	ed = PRVM_G_EDICT(OFS_PARM0);
+	if (!ed)
+	{
+		if (developer.integer > 0)
+			VM_Warning("VM_physics_addtorgue: null entity!\n");
+		return;
+	}
+	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
+	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	{
+		VM_Warning("VM_physics_addtorgue: entity is not MOVETYPE_PHYSICS!\n");
+		return;
+	}
+	f.type = ODEFUNC_RELTORGUE;
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
+	VM_physics_ApplyCmd(ed, &f);
 }

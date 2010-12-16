@@ -167,6 +167,7 @@ const char *vm_sv_extensions =
 "DP_SV_PING "
 "DP_SV_PING_PACKETLOSS "
 "DP_SV_PLAYERPHYSICS "
+"DP_PHYSICS_ODE "
 "DP_SV_POINTPARTICLES "
 "DP_SV_POINTSOUND "
 "DP_SV_PRECACHEANYTIME "
@@ -3679,9 +3680,9 @@ NULL,							// #536
 NULL,							// #537
 NULL,							// #538
 NULL,							// #539
-NULL,							// #540
-NULL,							// #541
-NULL,							// #542
+VM_physics_enable,				// #540 void(entity e, float physics_enabled) physics_enable = #540; (DP_PHYSICS_ODE)
+VM_physics_addforce,			// #541 void(entity e, vector force, vector relative_ofs) physics_addforce = #541; (DP_PHYSICS_ODE)
+VM_physics_addtorgue,			// #542 void(entity e, vector torgue) physics_addtorgue = #542; (DP_PHYSICS_ODE)
 NULL,							// #543
 NULL,							// #544
 NULL,							// #545
