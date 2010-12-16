@@ -297,6 +297,7 @@ void CL_ExpandEntities(int num)
 
 void CL_ExpandCSQCRenderEntities(int num)
 {
+	int i;
 	int oldmaxcsqcrenderentities;
 	entity_render_t *oldcsqcrenderentities;
 	if (num >= cl.max_csqcrenderentities)
@@ -310,6 +311,9 @@ void CL_ExpandCSQCRenderEntities(int num)
 		if (oldcsqcrenderentities)
 		{
 			memcpy(cl.csqcrenderentities, oldcsqcrenderentities, oldmaxcsqcrenderentities * sizeof(entity_render_t));
+			for (i = 0;i < r_refdef.scene.numentities;i++)
+				if(r_refdef.scene.entities[i] >= oldcsqcrenderentities && r_refdef.scene.entities[i] < (oldcsqcrenderentities + oldmaxcsqcrenderentities))
+					r_refdef.scene.entities[i] = cl.csqcrenderentities + (r_refdef.scene.entities[i] - oldcsqcrenderentities);
 			Mem_Free(oldcsqcrenderentities);
 		}
 	}
