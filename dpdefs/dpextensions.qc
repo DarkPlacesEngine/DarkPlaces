@@ -1572,6 +1572,38 @@ void(float effectnum, vector org, vector vel, float howmany) pointparticles = #3
 //description:
 //.movement vector contains the movement input from the player, allowing QC to do as it wishs with the input, and SV_PlayerPhysics will completely replace the player physics if present (works for all MOVETYPE's), see darkplaces mod source for example of this function (in playermovement.qc, adds HalfLife ladders support, as well as acceleration/deceleration while airborn (rather than the quake sudden-stop while airborn), and simplifies the physics a bit)
 
+//DP_PHYSICS_ODE
+//idea: LordHavoc
+//darkplaces implementation: LordHavoc
+//globals:
+//new movetypes:
+const float MOVETYPE_PHYSICS = 32; // need to be set before any physics_* builtins applied
+//new solid types:
+const float SOLID_PHYSICS_BOX = 32;
+const float SOLID_PHYSICS_SPHERE = 33;
+const float SOLID_PHYSICS_CAPSULE = 34;
+//SOLID_BSP;
+//joint types:
+const float JOINTTYPE_POINT = 1;
+const float JOINTTYPE_HINGE = 2;
+const float JOINTTYPE_SLIDER = 3;
+const float JOINTTYPE_UNIVERSAL = 4;
+const float JOINTTYPE_HINGE2 = 5;
+const float JOINTTYPE_FIXED = -1;
+//field definitions:
+.float mass; // ODE mass, standart value is 1
+.float bouncefactor;
+.float bouncestop;
+.float jointtype;
+//builtin definitions:
+void(entity e, float physics_enabled) physics_enable = #540; // enable or disable physics on object
+void(entity e, vector force, vector force_pos) physics_addforce = #541; // apply a force from certain origin, length of force vector is power of force
+void(entity e, vector torgue) physics_addtorgue = #542; // add relative torgue
+//description: provides Open Dynamics Engine support, requires extenal dll to be present or engine compiled with statical link option
+//be sure to checkextension for it to know if library i loaded and ready, also to enable physics set "physice_ode" cvar to 1
+//note: this extension is highly experimental and may be unstable
+//note: use SOLID_BSP on entities to get a trimesh collision models on them
+
 //DP_SV_PRINT
 //idea: id Software (QuakeWorld Server)
 //darkplaces implementation: Black, LordHavoc

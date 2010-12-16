@@ -32,6 +32,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define JOINTTYPE_HINGE2 5
 #define JOINTTYPE_FIXED -1
 
+#define ODEFUNC_ENABLE			1
+#define ODEFUNC_DISABLE			2
+#define ODEFUNC_RELFORCEATPOS	3
+#define ODEFUNC_RELTORGUE		4
+
+typedef struct edict_odefunc_s
+{
+	int type;
+	vec3_t v1;
+	vec3_t v2;
+	struct edict_odefunc_s *next;
+}edict_odefunc_t;
+
 typedef struct edict_engineprivate_s
 {
 	// true if this edict is unused
@@ -89,6 +102,7 @@ typedef struct edict_engineprivate_s
 	int *ode_element3i;
 	int ode_numvertices;
 	int ode_numtriangles;
+	edict_odefunc_t *ode_func;
 	vec3_t ode_mins;
 	vec3_t ode_maxs;
 	vec_t ode_mass;
