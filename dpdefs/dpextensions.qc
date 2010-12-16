@@ -1598,7 +1598,7 @@ const float JOINTTYPE_FIXED = -1;
 //builtin definitions:
 void(entity e, float physics_enabled) physics_enable = #540; // enable or disable physics on object
 void(entity e, vector force, vector force_pos) physics_addforce = #541; // apply a force from certain origin, length of force vector is power of force
-void(entity e, vector torgue) physics_addtorgue = #542; // add relative torgue
+void(entity e, vector torque) physics_addtorque = #542; // add relative torque
 //description: provides Open Dynamics Engine support, requires extenal dll to be present or engine compiled with statical link option
 //be sure to checkextension for it to know if library i loaded and ready, also to enable physics set "physice_ode" cvar to 1
 //note: this extension is highly experimental and may be unstable
