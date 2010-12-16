@@ -477,4 +477,4 @@ void VM_getsurfacetriangle(void);
 // physics builtins
 void VM_physics_enable(void);
 void VM_physics_addforce(void);
-void VM_physics_addtorgue(void);
+void VM_physics_addtorque(void);

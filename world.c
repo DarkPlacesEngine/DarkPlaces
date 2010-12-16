@@ -1725,7 +1725,7 @@ void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f)
 		dBodyEnable(body);
 		dBodyAddForceAtRelPos(body, f->v1[0], f->v1[1], f->v1[2], f->v2[0], f->v2[1], f->v2[2]);
 		break;
-	case ODEFUNC_RELTORGUE:
+	case ODEFUNC_RELTORQUE:
 		dBodyEnable(body);
 		dBodyAddRelTorque(body, f->v1[0], f->v1[1], f->v1[2]);
 		break;
