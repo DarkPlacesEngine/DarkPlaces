@@ -323,6 +323,9 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 #define USEODE 1
 #endif
 
+// recent ODE trunk has dWorldStepFast1 removed
+//#define ODE_USE_STEPFAST
+
 #ifdef USEODE
 cvar_t physics_ode_quadtree_depth = {0, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
 cvar_t physics_ode_contactsurfacelayer = {0, "physics_ode_contactsurfacelayer","1", "allows objects to overlap this many units to reduce jitter"};
@@ -584,7 +587,9 @@ void            (ODE_API *dWorldSetQuickStepNumIterations)(dWorldID, int num);
 //dReal           (ODE_API *dWorldGetContactMaxCorrectingVel)(dWorldID);
 void            (ODE_API *dWorldSetContactSurfaceLayer)(dWorldID, dReal depth);
 //dReal           (ODE_API *dWorldGetContactSurfaceLayer)(dWorldID);
+#ifdef ODE_USE_STEPFAST
 void            (ODE_API *dWorldStepFast1)(dWorldID, dReal stepsize, int maxiterations);
+#endif
 //void            (ODE_API *dWorldSetAutoEnableDepthSF1)(dWorldID, int autoEnableDepth);
 //int             (ODE_API *dWorldGetAutoEnableDepthSF1)(dWorldID);
 //dReal           (ODE_API *dWorldGetAutoDisableLinearThreshold)(dWorldID);
@@ -650,9 +655,9 @@ void            (ODE_API *dBodySetMass)(dBodyID, const dMass *mass);
 //void            (ODE_API *dBodyAddForce)(dBodyID, dReal fx, dReal fy, dReal fz);
 //void            (ODE_API *dBodyAddTorque)(dBodyID, dReal fx, dReal fy, dReal fz);
 //void            (ODE_API *dBodyAddRelForce)(dBodyID, dReal fx, dReal fy, dReal fz);
-//void            (ODE_API *dBodyAddRelTorque)(dBodyID, dReal fx, dReal fy, dReal fz);
+void            (ODE_API *dBodyAddRelTorque)(dBodyID, dReal fx, dReal fy, dReal fz);
 //void            (ODE_API *dBodyAddForceAtPos)(dBodyID, dReal fx, dReal fy, dReal fz, dReal px, dReal py, dReal pz);
-//void            (ODE_API *dBodyAddForceAtRelPos)(dBodyID, dReal fx, dReal fy, dReal fz, dReal px, dReal py, dReal pz);
+void            (ODE_API *dBodyAddForceAtRelPos)(dBodyID, dReal fx, dReal fy, dReal fz, dReal px, dReal py, dReal pz);
 //void            (ODE_API *dBodyAddRelForceAtPos)(dBodyID, dReal fx, dReal fy, dReal fz, dReal px, dReal py, dReal pz);
 //void            (ODE_API *dBodyAddRelForceAtRelPos)(dBodyID, dReal fx, dReal fy, dReal fz, dReal px, dReal py, dReal pz);
 //const dReal *   (ODE_API *dBodyGetForce)(dBodyID);
@@ -674,8 +679,8 @@ dJointID        (ODE_API *dBodyGetJoint)(dBodyID, int index);
 //void            (ODE_API *dBodySetDynamic)(dBodyID);
 //void            (ODE_API *dBodySetKinematic)(dBodyID);
 //int             (ODE_API *dBodyIsKinematic)(dBodyID);
-//void            (ODE_API *dBodyEnable)(dBodyID);
-//void            (ODE_API *dBodyDisable)(dBodyID);
+void            (ODE_API *dBodyEnable)(dBodyID);
+void            (ODE_API *dBodyDisable)(dBodyID);
 int             (ODE_API *dBodyIsEnabled)(dBodyID);
 void            (ODE_API *dBodySetGravityMode)(dBodyID b, int mode);
 int             (ODE_API *dBodyGetGravityMode)(dBodyID b);
@@ -1049,7 +1054,9 @@ static dllfunction_t odefuncs[] =
 //	{"dWorldGetContactMaxCorrectingVel",			(void **) &dWorldGetContactMaxCorrectingVel},
 	{"dWorldSetContactSurfaceLayer",				(void **) &dWorldSetContactSurfaceLayer},
 //	{"dWorldGetContactSurfaceLayer",				(void **) &dWorldGetContactSurfaceLayer},
+#ifdef ODE_USE_STEPFAST
 	{"dWorldStepFast1",								(void **) &dWorldStepFast1},
+#endif
 //	{"dWorldSetAutoEnableDepthSF1",					(void **) &dWorldSetAutoEnableDepthSF1},
 //	{"dWorldGetAutoEnableDepthSF1",					(void **) &dWorldGetAutoEnableDepthSF1},
 //	{"dWorldGetAutoDisableLinearThreshold",			(void **) &dWorldGetAutoDisableLinearThreshold},
@@ -1115,9 +1122,9 @@ static dllfunction_t odefuncs[] =
 //	{"dBodyAddForce",								(void **) &dBodyAddForce},
 //	{"dBodyAddTorque",								(void **) &dBodyAddTorque},
 //	{"dBodyAddRelForce",							(void **) &dBodyAddRelForce},
-//	{"dBodyAddRelTorque",							(void **) &dBodyAddRelTorque},
+	{"dBodyAddRelTorque",							(void **) &dBodyAddRelTorque},
 //	{"dBodyAddForceAtPos",							(void **) &dBodyAddForceAtPos},
-//	{"dBodyAddForceAtRelPos",						(void **) &dBodyAddForceAtRelPos},
+	{"dBodyAddForceAtRelPos",						(void **) &dBodyAddForceAtRelPos},
 //	{"dBodyAddRelForceAtPos",						(void **) &dBodyAddRelForceAtPos},
 //	{"dBodyAddRelForceAtRelPos",					(void **) &dBodyAddRelForceAtRelPos},
 //	{"dBodyGetForce",								(void **) &dBodyGetForce},
@@ -1139,8 +1146,8 @@ static dllfunction_t odefuncs[] =
 //	{"dBodySetDynamic",								(void **) &dBodySetDynamic},
 //	{"dBodySetKinematic",							(void **) &dBodySetKinematic},
 //	{"dBodyIsKinematic",							(void **) &dBodyIsKinematic},
-//	{"dBodyEnable",									(void **) &dBodyEnable},
-//	{"dBodyDisable",								(void **) &dBodyDisable},
+	{"dBodyEnable",									(void **) &dBodyEnable},
+	{"dBodyDisable",								(void **) &dBodyDisable},
 	{"dBodyIsEnabled",								(void **) &dBodyIsEnabled},
 	{"dBodySetGravityMode",							(void **) &dBodySetGravityMode},
 	{"dBodyGetGravityMode",							(void **) &dBodyGetGravityMode},
@@ -1646,6 +1653,8 @@ void World_Physics_RemoveJointFromEntity(world_t *world, prvm_edict_t *ed)
 
 void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 {
+	edict_odefunc_t *f, *nf;
+
 	// entity is not physics controlled, free any physics data
 	ed->priv.server->ode_physics = false;
 #ifdef USEODE
@@ -1690,6 +1699,40 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 	if(ed->priv.server->ode_massbuf)
 		Mem_Free(ed->priv.server->ode_massbuf);
 	ed->priv.server->ode_massbuf = NULL;
+	// clear functions stack
+	for(f = ed->priv.server->ode_func; f; f = nf)
+	{
+		nf = f->next;
+		Mem_Free(f);
+	}
+	ed->priv.server->ode_func = NULL;
+}
+
+void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f)
+{
+	dBodyID body = (dBodyID)ed->priv.server->ode_body;
+
+#ifdef USEODE
+	switch(f->type)
+	{
+	case ODEFUNC_ENABLE:
+		dBodyEnable(body);
+		break;
+	case ODEFUNC_DISABLE:
+		dBodyDisable(body);
+		break;
+	case ODEFUNC_RELFORCEATPOS:
+		dBodyEnable(body);
+		dBodyAddForceAtRelPos(body, f->v1[0], f->v1[1], f->v1[2], f->v2[0], f->v2[1], f->v2[2]);
+		break;
+	case ODEFUNC_RELTORGUE:
+		dBodyEnable(body);
+		dBodyAddRelTorque(body, f->v1[0], f->v1[1], f->v1[2]);
+		break;
+	default:
+		break;
+	}
+#endif
 }
 
 #ifdef USEODE
@@ -1986,6 +2029,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	dBodyID body = (dBodyID)ed->priv.server->ode_body;
 	dMass mass;
 	dReal test;
+	const dReal *ovelocity, *ospinvelocity;
 	void *dataID;
 	dVector3 capsulerot[3];
 	dp_model_t *model;
@@ -2022,6 +2066,8 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec_t scale = 1.0f;
 	vec_t spinlimit;
 	qboolean gravity;
+	edict_odefunc_t *func, *nextf;
+
 #ifdef ODE_DYNAMIC
 	if (!ode_dll)
 		return;
@@ -2414,9 +2460,10 @@ treatasbox:
 
 	if(body)
 	{
+
 		// limit movement speed to prevent missed collisions at high speed
-		const dReal *ovelocity = dBodyGetLinearVel(body);
-		const dReal *ospinvelocity = dBodyGetAngularVel(body);
+		ovelocity = dBodyGetLinearVel(body);
+		ospinvelocity = dBodyGetAngularVel(body);
 		movelimit = ed->priv.server->ode_movelimit * world->physics.ode_movelimit;
 		test = VectorLength2(ovelocity);
 		if (test > movelimit*movelimit)
@@ -2437,6 +2484,15 @@ treatasbox:
 		{
 			dBodySetAngularVel(body, 0, 0, 0);
 		}
+
+		// apply functions and clear stack
+		for(func = ed->priv.server->ode_func; func; func = nextf)
+		{
+			nextf = func->next;
+			World_Physics_ApplyCmd(ed, func);
+			Mem_Free(func);
+		}
+		ed->priv.server->ode_func = NULL;
 	}
 }
 
@@ -2608,8 +2664,10 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 				dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldstep_iterations.integer, 200));
 				dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 			}
+#ifdef ODE_USE_STEPFAST
 			else if (physics_ode_worldstep.integer == 1)
 				dWorldStepFast1((dWorldID)world->physics.ode_world, world->physics.ode_step, bound(1, physics_ode_worldstep_iterations.integer, 200));
+#endif
 			else
 				dWorldStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 

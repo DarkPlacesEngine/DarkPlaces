@@ -473,3 +473,8 @@ void VM_getsurfacenearpoint(void);
 void VM_getsurfaceclippedpoint(void);
 void VM_getsurfacenumtriangles(void);
 void VM_getsurfacetriangle(void);
+
+// physics builtins
+void VM_physics_enable(void);
+void VM_physics_addforce(void);
+void VM_physics_addtorgue(void);

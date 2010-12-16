@@ -118,9 +118,13 @@ void World_End(world_t *world);
 // this is called by SV_Physics
 void World_Physics_Frame(world_t *world, double frametime, double gravity);
 
+// change physics properties of entity
+struct prvm_edict_s;
+struct edict_odefunc_s;
+//void World_Physics_ApplyCmd(prvm_edict_s *ed, edict_odefunc_s *f);
+
 // remove physics data from entity
 // this is called by entity removal
-struct prvm_edict_s;
 void World_Physics_RemoveFromEntity(world_t *world, struct prvm_edict_s *ed);
 void World_Physics_RemoveJointFromEntity(world_t *world, struct prvm_edict_s *ed);
 
