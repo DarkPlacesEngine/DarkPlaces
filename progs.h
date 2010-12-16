@@ -35,7 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ODEFUNC_ENABLE			1
 #define ODEFUNC_DISABLE			2
 #define ODEFUNC_RELFORCEATPOS	3
-#define ODEFUNC_RELTORGUE		4
+#define ODEFUNC_RELTORQUE		4
 
 typedef struct edict_odefunc_s
 {

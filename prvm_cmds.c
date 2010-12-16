@@ -6952,27 +6952,27 @@ void VM_physics_addforce(void)
 	VM_physics_ApplyCmd(ed, &f);
 }
 
-// void(entity e, vector torgue) physics_addtorgue = #;
-void VM_physics_addtorgue(void)
+// void(entity e, vector torque) physics_addtorque = #;
+void VM_physics_addtorque(void)
 {
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
 	
-	VM_SAFEPARMCOUNT(2, VM_physics_addtorgue);
+	VM_SAFEPARMCOUNT(2, VM_physics_addtorque);
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
 		if (developer.integer > 0)
-			VM_Warning("VM_physics_addtorgue: null entity!\n");
+			VM_Warning("VM_physics_addtorque: null entity!\n");
 		return;
 	}
 	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
 	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
 	{
-		VM_Warning("VM_physics_addtorgue: entity is not MOVETYPE_PHYSICS!\n");
+		VM_Warning("VM_physics_addtorque: entity is not MOVETYPE_PHYSICS!\n");
 		return;
 	}
-	f.type = ODEFUNC_RELTORGUE;
+	f.type = ODEFUNC_RELTORQUE;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VM_physics_ApplyCmd(ed, &f);
 }
