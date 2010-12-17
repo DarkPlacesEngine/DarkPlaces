@@ -1983,6 +1983,7 @@ static void R_InitParticleTexture (void)
 	char *buf;
 	fs_offset_t filesize;
 	char texturename[MAX_QPATH];
+	skinframe_t *sf;
 
 	// a note: decals need to modulate (multiply) the background color to
 	// properly darken it (stain), and they need to be able to alpha fade,
@@ -2241,7 +2242,13 @@ static void R_InitParticleTexture (void)
 				Con_Printf("particles/particlefont.txt: texnum %i outside valid range (0 to %i)\n", i, MAX_PARTICLETEXTURES);
 				continue;
 			}
-			particletexture[i].texture = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, false)->base;
+			sf = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true);
+			if(!sf)
+			{
+				// R_SkinFrame_LoadExternal already complained
+				continue;
+			}
+			particletexture[i].texture = sf->base;
 			particletexture[i].s1 = s1;
 			particletexture[i].t1 = t1;
 			particletexture[i].s2 = s2;
