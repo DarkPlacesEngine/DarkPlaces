@@ -2198,7 +2198,7 @@ int IN_JoystickGetAxisNum(int ControlListType)
 	int i;
 
 	for (i = 0; i < JOY_MAX_AXES; i++)
-		if (dwAxisMap[i] == ControlListType)
+		if (dwAxisMap[i] == (DWORD) ControlListType)
 			return i;
 	return -1;
 }
