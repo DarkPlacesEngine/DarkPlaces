@@ -14242,7 +14242,7 @@ void R_DrawDebugModel(void)
 
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 
-	if (r_showtris.integer || r_shownormals.integer)
+	if (r_showtris.integer || (r_shownormals.value != 0))
 	{
 		if (r_showdisabledepthtest.integer)
 		{
@@ -14282,10 +14282,10 @@ void R_DrawDebugModel(void)
 					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
 					{
 						VectorCopy(rsurface.batchvertex3f + l * 3, v);
-						GL_Color(r_refdef.view.colorscale, 0, 0, 1);
+						GL_Color(0, 0, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
-						VectorMA(v, -r_shownormals.value, rsurface.batchsvector3f + l * 3, v);
-						GL_Color(r_refdef.view.colorscale, 1, 1, 1);
+						VectorMA(v, -r_shownormals.value, rsurface.batchnormal3f + l * 3, v);
+						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
@@ -14300,7 +14300,7 @@ void R_DrawDebugModel(void)
 						GL_Color(r_refdef.view.colorscale, 0, 0, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.batchsvector3f + l * 3, v);
-						GL_Color(r_refdef.view.colorscale, 1, 1, 1);
+						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
@@ -14312,7 +14312,7 @@ void R_DrawDebugModel(void)
 						GL_Color(0, r_refdef.view.colorscale, 0, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.batchtvector3f + l * 3, v);
-						GL_Color(r_refdef.view.colorscale, 1, 1, 1);
+						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
@@ -14324,7 +14324,7 @@ void R_DrawDebugModel(void)
 						GL_Color(0, 0, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 						VectorMA(v, r_shownormals.value, rsurface.batchnormal3f + l * 3, v);
-						GL_Color(r_refdef.view.colorscale, 1, 1, 1);
+						GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, 1);
 						qglVertex3f(v[0], v[1], v[2]);
 					}
 					qglEnd();
