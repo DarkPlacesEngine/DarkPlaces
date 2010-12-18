@@ -203,7 +203,7 @@ int CDAudio_SysUpdate (void)
 	struct cdrom_subchnl subchnl;
 	static time_t lastchk = 0;
 
-	if (cdPlaying && lastchk < time(NULL))
+	if (cdPlaying && lastchk < time(NULL) && cdfile != -1)
 	{
 		lastchk = time(NULL) + 2; //two seconds between chks
 		subchnl.cdsc_format = CDROM_MSF;
