@@ -14282,7 +14282,7 @@ void R_DrawDebugModel(void)
 				if (r_shownormals.value < 0)
 				{
 					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					for (k = 0, l = rsurface.batchfirstvertex;k < rsurface.batchnumvertices;k++, l++)
 					{
 						VectorCopy(rsurface.batchvertex3f + l * 3, v);
 						GL_Color(0, 0, r_refdef.view.colorscale, 1);
@@ -14297,7 +14297,7 @@ void R_DrawDebugModel(void)
 				if (r_shownormals.value > 0 && rsurface.batchsvector3f)
 				{
 					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					for (k = 0, l = rsurface.batchfirstvertex;k < rsurface.batchnumvertices;k++, l++)
 					{
 						VectorCopy(rsurface.batchvertex3f + l * 3, v);
 						GL_Color(r_refdef.view.colorscale, 0, 0, 1);
@@ -14309,7 +14309,7 @@ void R_DrawDebugModel(void)
 					qglEnd();
 					CHECKGLERROR
 					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					for (k = 0, l = rsurface.batchfirstvertex;k < rsurface.batchnumvertices;k++, l++)
 					{
 						VectorCopy(rsurface.batchvertex3f + l * 3, v);
 						GL_Color(0, r_refdef.view.colorscale, 0, 1);
@@ -14321,7 +14321,7 @@ void R_DrawDebugModel(void)
 					qglEnd();
 					CHECKGLERROR
 					qglBegin(GL_LINES);
-					for (k = 0, l = surface->num_firstvertex;k < surface->num_vertices;k++, l++)
+					for (k = 0, l = rsurface.batchfirstvertex;k < rsurface.batchnumvertices;k++, l++)
 					{
 						VectorCopy(rsurface.batchvertex3f + l * 3, v);
 						GL_Color(0, 0, r_refdef.view.colorscale, 1);
