@@ -7945,13 +7945,16 @@ static void R_View_UpdateEntityLighting (void)
 
 				if(r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
 				{
-					VectorMA(ent->modellight_ambient, 0.25f, ent->modellight_diffuse, avg);
-					f = 0.299f * avg[0] + 0.587f * avg[1] + 0.114f * avg[2];
+					fa = 0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2];
+					fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
+					f = fa + 0.25 * fd;
 					if(f > 0)
 					{
-						f = pow(f / r_equalize_entities_to.value, -r_equalize_entities_by.value);
-						VectorScale(ent->modellight_ambient, f, ent->modellight_ambient);
-						VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+						// adjust brightness and saturation to target
+						avg[0] = avg[1] = avg[2] = fa / f;
+						VectorLerp(ent->modellight_ambient, r_equalize_entities_by.value, avg, ent->modellight_ambient);
+						avg[0] = avg[1] = avg[2] = fd / f;
+						VectorLerp(ent->modellight_diffuse, r_equalize_entities_by.value, avg, ent->modellight_diffuse);
 					}
 				}
 			}
