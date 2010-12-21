@@ -140,7 +140,7 @@ extern char engineversion[128];
 #define	MAX_LIGHTSTYLES			256 ///< max flickering light styles in level (note: affects savegame format)
 #define	MAX_STYLESTRING			64 ///< max length of flicker pattern for light style
 #define	MAX_SCOREBOARD			255 ///< max number of players in game at once (255 protocol limit)
-#define	MAX_SCOREBOARDNAME		64 ///< max length of player name in game
+#define	MAX_SCOREBOARDNAME		128 ///< max length of player name in game
 #define	MAX_USERINFO_STRING		1280 ///< max length of infostring for PROTOCOL_QUAKEWORLD (196 in QuakeWorld)
 #define	MAX_SERVERINFO_STRING	1280 ///< max length of server infostring for PROTOCOL_QUAKEWORLD (512 in QuakeWorld)
 #define	MAX_LOCALINFO_STRING	32768 ///< max length of server-local infostring for PROTOCOL_QUAKEWORLD (32768 in QuakeWorld)
