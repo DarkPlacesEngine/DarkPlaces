@@ -100,7 +100,7 @@ typedef struct ft2_settings_s
 	float outline, blur, shadowx, shadowy, shadowz;
 } ft2_settings_t;
 
-#define MAX_FONT_SIZES 8
+#define MAX_FONT_SIZES 16
 #define MAX_FONT_FALLBACKS 3
 typedef struct dp_font_s
 {
