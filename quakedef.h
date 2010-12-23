@@ -73,7 +73,7 @@ extern char engineversion[128];
 #define	MAX_LIGHTSTYLES			64
 #define	MAX_STYLESTRING			16
 #define	MAX_SCOREBOARD			32
-#define	MAX_SCOREBOARDNAME		64
+#define	MAX_SCOREBOARDNAME		128
 #define	MAX_USERINFO_STRING		196
 #define	MAX_SERVERINFO_STRING	512
 #define	MAX_LOCALINFO_STRING	1 // not actually used by DP servers
