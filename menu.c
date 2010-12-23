@@ -1238,7 +1238,7 @@ static void M_MultiPlayer_Key (int key, int ascii)
 static int		setup_cursor = 4;
 static int		setup_cursor_table[] = {40, 64, 88, 124, 140};
 
-static char	setup_myname[32];
+static char	setup_myname[MAX_SCOREBOARDNAME];
 static int		setup_oldtop;
 static int		setup_oldbottom;
 static int		setup_top;
