@@ -160,209 +160,209 @@ void sbar_start(void)
 	}
 	else if (gamemode == GAME_SOM)
 	{
-		sb_disc = Draw_CachePic ("gfx/disc");
+		sb_disc = Draw_CachePic_Flags ("gfx/disc", CACHEPICFLAG_QUIET);
 
 		for (i = 0;i < 10;i++)
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
+			sb_nums[0][i] = Draw_CachePic_Flags (va("gfx/num_%i",i), CACHEPICFLAG_QUIET);
 
-		somsb_health = Draw_CachePic ("gfx/hud_health");
-		somsb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
-		somsb_ammo[1] = Draw_CachePic ("gfx/sb_nails");
-		somsb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
-		somsb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
-		somsb_armor[0] = Draw_CachePic ("gfx/sb_armor1");
-		somsb_armor[1] = Draw_CachePic ("gfx/sb_armor2");
-		somsb_armor[2] = Draw_CachePic ("gfx/sb_armor3");
+		somsb_health = Draw_CachePic_Flags ("gfx/hud_health", CACHEPICFLAG_QUIET);
+		somsb_ammo[0] = Draw_CachePic_Flags ("gfx/sb_shells", CACHEPICFLAG_QUIET);
+		somsb_ammo[1] = Draw_CachePic_Flags ("gfx/sb_nails", CACHEPICFLAG_QUIET);
+		somsb_ammo[2] = Draw_CachePic_Flags ("gfx/sb_rocket", CACHEPICFLAG_QUIET);
+		somsb_ammo[3] = Draw_CachePic_Flags ("gfx/sb_cells", CACHEPICFLAG_QUIET);
+		somsb_armor[0] = Draw_CachePic_Flags ("gfx/sb_armor1", CACHEPICFLAG_QUIET);
+		somsb_armor[1] = Draw_CachePic_Flags ("gfx/sb_armor2", CACHEPICFLAG_QUIET);
+		somsb_armor[2] = Draw_CachePic_Flags ("gfx/sb_armor3", CACHEPICFLAG_QUIET);
 	}
 	else if (gamemode == GAME_NEXUIZ)
 	{
 		for (i = 0;i < 10;i++)
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
-		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus");
-		sb_colon = Draw_CachePic ("gfx/num_colon");
+			sb_nums[0][i] = Draw_CachePic_Flags (va("gfx/num_%i",i), CACHEPICFLAG_QUIET);
+		sb_nums[0][10] = Draw_CachePic_Flags ("gfx/num_minus", CACHEPICFLAG_QUIET);
+		sb_colon = Draw_CachePic_Flags ("gfx/num_colon", CACHEPICFLAG_QUIET);
 
-		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
-		sb_ammo[1] = Draw_CachePic ("gfx/sb_bullets");
-		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
-		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
+		sb_ammo[0] = Draw_CachePic_Flags ("gfx/sb_shells", CACHEPICFLAG_QUIET);
+		sb_ammo[1] = Draw_CachePic_Flags ("gfx/sb_bullets", CACHEPICFLAG_QUIET);
+		sb_ammo[2] = Draw_CachePic_Flags ("gfx/sb_rocket", CACHEPICFLAG_QUIET);
+		sb_ammo[3] = Draw_CachePic_Flags ("gfx/sb_cells", CACHEPICFLAG_QUIET);
 
-		sb_armor[0] = Draw_CachePic ("gfx/sb_armor");
+		sb_armor[0] = Draw_CachePic_Flags ("gfx/sb_armor", CACHEPICFLAG_QUIET);
 		sb_armor[1] = NULL;
 		sb_armor[2] = NULL;
 
-		sb_health = Draw_CachePic ("gfx/sb_health");
+		sb_health = Draw_CachePic_Flags ("gfx/sb_health", CACHEPICFLAG_QUIET);
 
-		sb_items[2] = Draw_CachePic ("gfx/sb_slowmo");
-		sb_items[3] = Draw_CachePic ("gfx/sb_invinc");
-		sb_items[4] = Draw_CachePic ("gfx/sb_energy");
-		sb_items[5] = Draw_CachePic ("gfx/sb_str");
+		sb_items[2] = Draw_CachePic_Flags ("gfx/sb_slowmo", CACHEPICFLAG_QUIET);
+		sb_items[3] = Draw_CachePic_Flags ("gfx/sb_invinc", CACHEPICFLAG_QUIET);
+		sb_items[4] = Draw_CachePic_Flags ("gfx/sb_energy", CACHEPICFLAG_QUIET);
+		sb_items[5] = Draw_CachePic_Flags ("gfx/sb_str", CACHEPICFLAG_QUIET);
 
-		sb_items[11] = Draw_CachePic ("gfx/sb_flag_red_taken");
-		sb_items[12] = Draw_CachePic ("gfx/sb_flag_red_lost");
-		sb_items[13] = Draw_CachePic ("gfx/sb_flag_red_carrying");
-		sb_items[14] = Draw_CachePic ("gfx/sb_key_carrying");
-		sb_items[15] = Draw_CachePic ("gfx/sb_flag_blue_taken");
-		sb_items[16] = Draw_CachePic ("gfx/sb_flag_blue_lost");
-		sb_items[17] = Draw_CachePic ("gfx/sb_flag_blue_carrying");
+		sb_items[11] = Draw_CachePic_Flags ("gfx/sb_flag_red_taken", CACHEPICFLAG_QUIET);
+		sb_items[12] = Draw_CachePic_Flags ("gfx/sb_flag_red_lost", CACHEPICFLAG_QUIET);
+		sb_items[13] = Draw_CachePic_Flags ("gfx/sb_flag_red_carrying", CACHEPICFLAG_QUIET);
+		sb_items[14] = Draw_CachePic_Flags ("gfx/sb_key_carrying", CACHEPICFLAG_QUIET);
+		sb_items[15] = Draw_CachePic_Flags ("gfx/sb_flag_blue_taken", CACHEPICFLAG_QUIET);
+		sb_items[16] = Draw_CachePic_Flags ("gfx/sb_flag_blue_lost", CACHEPICFLAG_QUIET);
+		sb_items[17] = Draw_CachePic_Flags ("gfx/sb_flag_blue_carrying", CACHEPICFLAG_QUIET);
 
-		sb_sbar = Draw_CachePic ("gfx/sbar");
-		sb_sbar_minimal = Draw_CachePic ("gfx/sbar_minimal");
-		sb_sbar_overlay = Draw_CachePic ("gfx/sbar_overlay");
+		sb_sbar = Draw_CachePic_Flags ("gfx/sbar", CACHEPICFLAG_QUIET);
+		sb_sbar_minimal = Draw_CachePic_Flags ("gfx/sbar_minimal", CACHEPICFLAG_QUIET);
+		sb_sbar_overlay = Draw_CachePic_Flags ("gfx/sbar_overlay", CACHEPICFLAG_QUIET);
 
 		for(i = 0; i < 9;i++)
-			sb_weapons[0][i] = Draw_CachePic (va("gfx/inv_weapon%i",i));
+			sb_weapons[0][i] = Draw_CachePic_Flags (va("gfx/inv_weapon%i",i), CACHEPICFLAG_QUIET);
 	}
 	else if (gamemode == GAME_ZYMOTIC)
 	{
-		zymsb_crosshair_center = Draw_CachePic ("gfx/hud/crosshair_center");
-		zymsb_crosshair_line = Draw_CachePic ("gfx/hud/crosshair_line");
-		zymsb_crosshair_health = Draw_CachePic ("gfx/hud/crosshair_health");
-		zymsb_crosshair_clip = Draw_CachePic ("gfx/hud/crosshair_clip");
-		zymsb_crosshair_ammo = Draw_CachePic ("gfx/hud/crosshair_ammo");
-		zymsb_crosshair_background = Draw_CachePic ("gfx/hud/crosshair_background");
-		zymsb_crosshair_left1 = Draw_CachePic ("gfx/hud/crosshair_left1");
-		zymsb_crosshair_left2 = Draw_CachePic ("gfx/hud/crosshair_left2");
-		zymsb_crosshair_right = Draw_CachePic ("gfx/hud/crosshair_right");
+		zymsb_crosshair_center = Draw_CachePic_Flags ("gfx/hud/crosshair_center", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_line = Draw_CachePic_Flags ("gfx/hud/crosshair_line", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_health = Draw_CachePic_Flags ("gfx/hud/crosshair_health", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_clip = Draw_CachePic_Flags ("gfx/hud/crosshair_clip", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_ammo = Draw_CachePic_Flags ("gfx/hud/crosshair_ammo", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_background = Draw_CachePic_Flags ("gfx/hud/crosshair_background", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_left1 = Draw_CachePic_Flags ("gfx/hud/crosshair_left1", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_left2 = Draw_CachePic_Flags ("gfx/hud/crosshair_left2", CACHEPICFLAG_QUIET);
+		zymsb_crosshair_right = Draw_CachePic_Flags ("gfx/hud/crosshair_right", CACHEPICFLAG_QUIET);
 	}
 	else
 	{
-		sb_disc = Draw_CachePic ("gfx/disc");
+		sb_disc = Draw_CachePic_Flags ("gfx/disc", CACHEPICFLAG_QUIET);
 
 		for (i = 0;i < 10;i++)
 		{
-			sb_nums[0][i] = Draw_CachePic (va("gfx/num_%i",i));
-			sb_nums[1][i] = Draw_CachePic (va("gfx/anum_%i",i));
+			sb_nums[0][i] = Draw_CachePic_Flags (va("gfx/num_%i",i), CACHEPICFLAG_QUIET);
+			sb_nums[1][i] = Draw_CachePic_Flags (va("gfx/anum_%i",i), CACHEPICFLAG_QUIET);
 		}
 
-		sb_nums[0][10] = Draw_CachePic ("gfx/num_minus");
-		sb_nums[1][10] = Draw_CachePic ("gfx/anum_minus");
+		sb_nums[0][10] = Draw_CachePic_Flags ("gfx/num_minus", CACHEPICFLAG_QUIET);
+		sb_nums[1][10] = Draw_CachePic_Flags ("gfx/anum_minus", CACHEPICFLAG_QUIET);
 
-		sb_colon = Draw_CachePic ("gfx/num_colon");
-		sb_slash = Draw_CachePic ("gfx/num_slash");
+		sb_colon = Draw_CachePic_Flags ("gfx/num_colon", CACHEPICFLAG_QUIET);
+		sb_slash = Draw_CachePic_Flags ("gfx/num_slash", CACHEPICFLAG_QUIET);
 
-		sb_weapons[0][0] = Draw_CachePic ("gfx/inv_shotgun");
-		sb_weapons[0][1] = Draw_CachePic ("gfx/inv_sshotgun");
-		sb_weapons[0][2] = Draw_CachePic ("gfx/inv_nailgun");
-		sb_weapons[0][3] = Draw_CachePic ("gfx/inv_snailgun");
-		sb_weapons[0][4] = Draw_CachePic ("gfx/inv_rlaunch");
-		sb_weapons[0][5] = Draw_CachePic ("gfx/inv_srlaunch");
-		sb_weapons[0][6] = Draw_CachePic ("gfx/inv_lightng");
+		sb_weapons[0][0] = Draw_CachePic_Flags ("gfx/inv_shotgun", CACHEPICFLAG_QUIET);
+		sb_weapons[0][1] = Draw_CachePic_Flags ("gfx/inv_sshotgun", CACHEPICFLAG_QUIET);
+		sb_weapons[0][2] = Draw_CachePic_Flags ("gfx/inv_nailgun", CACHEPICFLAG_QUIET);
+		sb_weapons[0][3] = Draw_CachePic_Flags ("gfx/inv_snailgun", CACHEPICFLAG_QUIET);
+		sb_weapons[0][4] = Draw_CachePic_Flags ("gfx/inv_rlaunch", CACHEPICFLAG_QUIET);
+		sb_weapons[0][5] = Draw_CachePic_Flags ("gfx/inv_srlaunch", CACHEPICFLAG_QUIET);
+		sb_weapons[0][6] = Draw_CachePic_Flags ("gfx/inv_lightng", CACHEPICFLAG_QUIET);
 
-		sb_weapons[1][0] = Draw_CachePic ("gfx/inv2_shotgun");
-		sb_weapons[1][1] = Draw_CachePic ("gfx/inv2_sshotgun");
-		sb_weapons[1][2] = Draw_CachePic ("gfx/inv2_nailgun");
-		sb_weapons[1][3] = Draw_CachePic ("gfx/inv2_snailgun");
-		sb_weapons[1][4] = Draw_CachePic ("gfx/inv2_rlaunch");
-		sb_weapons[1][5] = Draw_CachePic ("gfx/inv2_srlaunch");
-		sb_weapons[1][6] = Draw_CachePic ("gfx/inv2_lightng");
+		sb_weapons[1][0] = Draw_CachePic_Flags ("gfx/inv2_shotgun", CACHEPICFLAG_QUIET);
+		sb_weapons[1][1] = Draw_CachePic_Flags ("gfx/inv2_sshotgun", CACHEPICFLAG_QUIET);
+		sb_weapons[1][2] = Draw_CachePic_Flags ("gfx/inv2_nailgun", CACHEPICFLAG_QUIET);
+		sb_weapons[1][3] = Draw_CachePic_Flags ("gfx/inv2_snailgun", CACHEPICFLAG_QUIET);
+		sb_weapons[1][4] = Draw_CachePic_Flags ("gfx/inv2_rlaunch", CACHEPICFLAG_QUIET);
+		sb_weapons[1][5] = Draw_CachePic_Flags ("gfx/inv2_srlaunch", CACHEPICFLAG_QUIET);
+		sb_weapons[1][6] = Draw_CachePic_Flags ("gfx/inv2_lightng", CACHEPICFLAG_QUIET);
 
 		for (i = 0;i < 5;i++)
 		{
-			sb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_shotgun",i+1));
-			sb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_sshotgun",i+1));
-			sb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_nailgun",i+1));
-			sb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_snailgun",i+1));
-			sb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_rlaunch",i+1));
-			sb_weapons[2+i][5] = Draw_CachePic (va("gfx/inva%i_srlaunch",i+1));
-			sb_weapons[2+i][6] = Draw_CachePic (va("gfx/inva%i_lightng",i+1));
+			sb_weapons[2+i][0] = Draw_CachePic_Flags (va("gfx/inva%i_shotgun",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][1] = Draw_CachePic_Flags (va("gfx/inva%i_sshotgun",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][2] = Draw_CachePic_Flags (va("gfx/inva%i_nailgun",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][3] = Draw_CachePic_Flags (va("gfx/inva%i_snailgun",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][4] = Draw_CachePic_Flags (va("gfx/inva%i_rlaunch",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][5] = Draw_CachePic_Flags (va("gfx/inva%i_srlaunch",i+1), CACHEPICFLAG_QUIET);
+			sb_weapons[2+i][6] = Draw_CachePic_Flags (va("gfx/inva%i_lightng",i+1), CACHEPICFLAG_QUIET);
 		}
 
-		sb_ammo[0] = Draw_CachePic ("gfx/sb_shells");
-		sb_ammo[1] = Draw_CachePic ("gfx/sb_nails");
-		sb_ammo[2] = Draw_CachePic ("gfx/sb_rocket");
-		sb_ammo[3] = Draw_CachePic ("gfx/sb_cells");
+		sb_ammo[0] = Draw_CachePic_Flags ("gfx/sb_shells", CACHEPICFLAG_QUIET);
+		sb_ammo[1] = Draw_CachePic_Flags ("gfx/sb_nails", CACHEPICFLAG_QUIET);
+		sb_ammo[2] = Draw_CachePic_Flags ("gfx/sb_rocket", CACHEPICFLAG_QUIET);
+		sb_ammo[3] = Draw_CachePic_Flags ("gfx/sb_cells", CACHEPICFLAG_QUIET);
 
-		sb_armor[0] = Draw_CachePic ("gfx/sb_armor1");
-		sb_armor[1] = Draw_CachePic ("gfx/sb_armor2");
-		sb_armor[2] = Draw_CachePic ("gfx/sb_armor3");
+		sb_armor[0] = Draw_CachePic_Flags ("gfx/sb_armor1", CACHEPICFLAG_QUIET);
+		sb_armor[1] = Draw_CachePic_Flags ("gfx/sb_armor2", CACHEPICFLAG_QUIET);
+		sb_armor[2] = Draw_CachePic_Flags ("gfx/sb_armor3", CACHEPICFLAG_QUIET);
 
-		sb_items[0] = Draw_CachePic ("gfx/sb_key1");
-		sb_items[1] = Draw_CachePic ("gfx/sb_key2");
-		sb_items[2] = Draw_CachePic ("gfx/sb_invis");
-		sb_items[3] = Draw_CachePic ("gfx/sb_invuln");
-		sb_items[4] = Draw_CachePic ("gfx/sb_suit");
-		sb_items[5] = Draw_CachePic ("gfx/sb_quad");
+		sb_items[0] = Draw_CachePic_Flags ("gfx/sb_key1", CACHEPICFLAG_QUIET);
+		sb_items[1] = Draw_CachePic_Flags ("gfx/sb_key2", CACHEPICFLAG_QUIET);
+		sb_items[2] = Draw_CachePic_Flags ("gfx/sb_invis", CACHEPICFLAG_QUIET);
+		sb_items[3] = Draw_CachePic_Flags ("gfx/sb_invuln", CACHEPICFLAG_QUIET);
+		sb_items[4] = Draw_CachePic_Flags ("gfx/sb_suit", CACHEPICFLAG_QUIET);
+		sb_items[5] = Draw_CachePic_Flags ("gfx/sb_quad", CACHEPICFLAG_QUIET);
 
-		sb_sigil[0] = Draw_CachePic ("gfx/sb_sigil1");
-		sb_sigil[1] = Draw_CachePic ("gfx/sb_sigil2");
-		sb_sigil[2] = Draw_CachePic ("gfx/sb_sigil3");
-		sb_sigil[3] = Draw_CachePic ("gfx/sb_sigil4");
+		sb_sigil[0] = Draw_CachePic_Flags ("gfx/sb_sigil1", CACHEPICFLAG_QUIET);
+		sb_sigil[1] = Draw_CachePic_Flags ("gfx/sb_sigil2", CACHEPICFLAG_QUIET);
+		sb_sigil[2] = Draw_CachePic_Flags ("gfx/sb_sigil3", CACHEPICFLAG_QUIET);
+		sb_sigil[3] = Draw_CachePic_Flags ("gfx/sb_sigil4", CACHEPICFLAG_QUIET);
 
-		sb_faces[4][0] = Draw_CachePic ("gfx/face1");
-		sb_faces[4][1] = Draw_CachePic ("gfx/face_p1");
-		sb_faces[3][0] = Draw_CachePic ("gfx/face2");
-		sb_faces[3][1] = Draw_CachePic ("gfx/face_p2");
-		sb_faces[2][0] = Draw_CachePic ("gfx/face3");
-		sb_faces[2][1] = Draw_CachePic ("gfx/face_p3");
-		sb_faces[1][0] = Draw_CachePic ("gfx/face4");
-		sb_faces[1][1] = Draw_CachePic ("gfx/face_p4");
-		sb_faces[0][0] = Draw_CachePic ("gfx/face5");
-		sb_faces[0][1] = Draw_CachePic ("gfx/face_p5");
+		sb_faces[4][0] = Draw_CachePic_Flags ("gfx/face1", CACHEPICFLAG_QUIET);
+		sb_faces[4][1] = Draw_CachePic_Flags ("gfx/face_p1", CACHEPICFLAG_QUIET);
+		sb_faces[3][0] = Draw_CachePic_Flags ("gfx/face2", CACHEPICFLAG_QUIET);
+		sb_faces[3][1] = Draw_CachePic_Flags ("gfx/face_p2", CACHEPICFLAG_QUIET);
+		sb_faces[2][0] = Draw_CachePic_Flags ("gfx/face3", CACHEPICFLAG_QUIET);
+		sb_faces[2][1] = Draw_CachePic_Flags ("gfx/face_p3", CACHEPICFLAG_QUIET);
+		sb_faces[1][0] = Draw_CachePic_Flags ("gfx/face4", CACHEPICFLAG_QUIET);
+		sb_faces[1][1] = Draw_CachePic_Flags ("gfx/face_p4", CACHEPICFLAG_QUIET);
+		sb_faces[0][0] = Draw_CachePic_Flags ("gfx/face5", CACHEPICFLAG_QUIET);
+		sb_faces[0][1] = Draw_CachePic_Flags ("gfx/face_p5", CACHEPICFLAG_QUIET);
 
-		sb_face_invis = Draw_CachePic ("gfx/face_invis");
-		sb_face_invuln = Draw_CachePic ("gfx/face_invul2");
-		sb_face_invis_invuln = Draw_CachePic ("gfx/face_inv2");
-		sb_face_quad = Draw_CachePic ("gfx/face_quad");
+		sb_face_invis = Draw_CachePic_Flags ("gfx/face_invis", CACHEPICFLAG_QUIET);
+		sb_face_invuln = Draw_CachePic_Flags ("gfx/face_invul2", CACHEPICFLAG_QUIET);
+		sb_face_invis_invuln = Draw_CachePic_Flags ("gfx/face_inv2", CACHEPICFLAG_QUIET);
+		sb_face_quad = Draw_CachePic_Flags ("gfx/face_quad", CACHEPICFLAG_QUIET);
 
-		sb_sbar = Draw_CachePic ("gfx/sbar");
-		sb_ibar = Draw_CachePic ("gfx/ibar");
-		sb_scorebar = Draw_CachePic ("gfx/scorebar");
+		sb_sbar = Draw_CachePic_Flags ("gfx/sbar", CACHEPICFLAG_QUIET);
+		sb_ibar = Draw_CachePic_Flags ("gfx/ibar", CACHEPICFLAG_QUIET);
+		sb_scorebar = Draw_CachePic_Flags ("gfx/scorebar", CACHEPICFLAG_QUIET);
 
 	//MED 01/04/97 added new hipnotic weapons
 		if (gamemode == GAME_HIPNOTIC)
 		{
-			hsb_weapons[0][0] = Draw_CachePic ("gfx/inv_laser");
-			hsb_weapons[0][1] = Draw_CachePic ("gfx/inv_mjolnir");
-			hsb_weapons[0][2] = Draw_CachePic ("gfx/inv_gren_prox");
-			hsb_weapons[0][3] = Draw_CachePic ("gfx/inv_prox_gren");
-			hsb_weapons[0][4] = Draw_CachePic ("gfx/inv_prox");
+			hsb_weapons[0][0] = Draw_CachePic_Flags ("gfx/inv_laser", CACHEPICFLAG_QUIET);
+			hsb_weapons[0][1] = Draw_CachePic_Flags ("gfx/inv_mjolnir", CACHEPICFLAG_QUIET);
+			hsb_weapons[0][2] = Draw_CachePic_Flags ("gfx/inv_gren_prox", CACHEPICFLAG_QUIET);
+			hsb_weapons[0][3] = Draw_CachePic_Flags ("gfx/inv_prox_gren", CACHEPICFLAG_QUIET);
+			hsb_weapons[0][4] = Draw_CachePic_Flags ("gfx/inv_prox", CACHEPICFLAG_QUIET);
 
-			hsb_weapons[1][0] = Draw_CachePic ("gfx/inv2_laser");
-			hsb_weapons[1][1] = Draw_CachePic ("gfx/inv2_mjolnir");
-			hsb_weapons[1][2] = Draw_CachePic ("gfx/inv2_gren_prox");
-			hsb_weapons[1][3] = Draw_CachePic ("gfx/inv2_prox_gren");
-			hsb_weapons[1][4] = Draw_CachePic ("gfx/inv2_prox");
+			hsb_weapons[1][0] = Draw_CachePic_Flags ("gfx/inv2_laser", CACHEPICFLAG_QUIET);
+			hsb_weapons[1][1] = Draw_CachePic_Flags ("gfx/inv2_mjolnir", CACHEPICFLAG_QUIET);
+			hsb_weapons[1][2] = Draw_CachePic_Flags ("gfx/inv2_gren_prox", CACHEPICFLAG_QUIET);
+			hsb_weapons[1][3] = Draw_CachePic_Flags ("gfx/inv2_prox_gren", CACHEPICFLAG_QUIET);
+			hsb_weapons[1][4] = Draw_CachePic_Flags ("gfx/inv2_prox", CACHEPICFLAG_QUIET);
 
 			for (i = 0;i < 5;i++)
 			{
-				hsb_weapons[2+i][0] = Draw_CachePic (va("gfx/inva%i_laser",i+1));
-				hsb_weapons[2+i][1] = Draw_CachePic (va("gfx/inva%i_mjolnir",i+1));
-				hsb_weapons[2+i][2] = Draw_CachePic (va("gfx/inva%i_gren_prox",i+1));
-				hsb_weapons[2+i][3] = Draw_CachePic (va("gfx/inva%i_prox_gren",i+1));
-				hsb_weapons[2+i][4] = Draw_CachePic (va("gfx/inva%i_prox",i+1));
+				hsb_weapons[2+i][0] = Draw_CachePic_Flags (va("gfx/inva%i_laser",i+1), CACHEPICFLAG_QUIET);
+				hsb_weapons[2+i][1] = Draw_CachePic_Flags (va("gfx/inva%i_mjolnir",i+1), CACHEPICFLAG_QUIET);
+				hsb_weapons[2+i][2] = Draw_CachePic_Flags (va("gfx/inva%i_gren_prox",i+1), CACHEPICFLAG_QUIET);
+				hsb_weapons[2+i][3] = Draw_CachePic_Flags (va("gfx/inva%i_prox_gren",i+1), CACHEPICFLAG_QUIET);
+				hsb_weapons[2+i][4] = Draw_CachePic_Flags (va("gfx/inva%i_prox",i+1), CACHEPICFLAG_QUIET);
 			}
 
-			hsb_items[0] = Draw_CachePic ("gfx/sb_wsuit");
-			hsb_items[1] = Draw_CachePic ("gfx/sb_eshld");
+			hsb_items[0] = Draw_CachePic_Flags ("gfx/sb_wsuit", CACHEPICFLAG_QUIET);
+			hsb_items[1] = Draw_CachePic_Flags ("gfx/sb_eshld", CACHEPICFLAG_QUIET);
 		}
 		else if (gamemode == GAME_ROGUE)
 		{
-			rsb_invbar[0] = Draw_CachePic ("gfx/r_invbar1");
-			rsb_invbar[1] = Draw_CachePic ("gfx/r_invbar2");
+			rsb_invbar[0] = Draw_CachePic_Flags ("gfx/r_invbar1", CACHEPICFLAG_QUIET);
+			rsb_invbar[1] = Draw_CachePic_Flags ("gfx/r_invbar2", CACHEPICFLAG_QUIET);
 
-			rsb_weapons[0] = Draw_CachePic ("gfx/r_lava");
-			rsb_weapons[1] = Draw_CachePic ("gfx/r_superlava");
-			rsb_weapons[2] = Draw_CachePic ("gfx/r_gren");
-			rsb_weapons[3] = Draw_CachePic ("gfx/r_multirock");
-			rsb_weapons[4] = Draw_CachePic ("gfx/r_plasma");
+			rsb_weapons[0] = Draw_CachePic_Flags ("gfx/r_lava", CACHEPICFLAG_QUIET);
+			rsb_weapons[1] = Draw_CachePic_Flags ("gfx/r_superlava", CACHEPICFLAG_QUIET);
+			rsb_weapons[2] = Draw_CachePic_Flags ("gfx/r_gren", CACHEPICFLAG_QUIET);
+			rsb_weapons[3] = Draw_CachePic_Flags ("gfx/r_multirock", CACHEPICFLAG_QUIET);
+			rsb_weapons[4] = Draw_CachePic_Flags ("gfx/r_plasma", CACHEPICFLAG_QUIET);
 
-			rsb_items[0] = Draw_CachePic ("gfx/r_shield1");
-			rsb_items[1] = Draw_CachePic ("gfx/r_agrav1");
+			rsb_items[0] = Draw_CachePic_Flags ("gfx/r_shield1", CACHEPICFLAG_QUIET);
+			rsb_items[1] = Draw_CachePic_Flags ("gfx/r_agrav1", CACHEPICFLAG_QUIET);
 
 	// PGM 01/19/97 - team color border
-			rsb_teambord = Draw_CachePic ("gfx/r_teambord");
+			rsb_teambord = Draw_CachePic_Flags ("gfx/r_teambord", CACHEPICFLAG_QUIET);
 	// PGM 01/19/97 - team color border
 
-			rsb_ammo[0] = Draw_CachePic ("gfx/r_ammolava");
-			rsb_ammo[1] = Draw_CachePic ("gfx/r_ammomulti");
-			rsb_ammo[2] = Draw_CachePic ("gfx/r_ammoplasma");
+			rsb_ammo[0] = Draw_CachePic_Flags ("gfx/r_ammolava", CACHEPICFLAG_QUIET);
+			rsb_ammo[1] = Draw_CachePic_Flags ("gfx/r_ammomulti", CACHEPICFLAG_QUIET);
+			rsb_ammo[2] = Draw_CachePic_Flags ("gfx/r_ammoplasma", CACHEPICFLAG_QUIET);
 		}
 	}
 
-	sb_ranking = Draw_CachePic ("gfx/ranking");
-	sb_complete = Draw_CachePic ("gfx/complete");
-	sb_inter = Draw_CachePic ("gfx/inter");
-	sb_finale = Draw_CachePic ("gfx/finale");
+	sb_ranking = Draw_CachePic_Flags ("gfx/ranking", CACHEPICFLAG_QUIET);
+	sb_complete = Draw_CachePic_Flags ("gfx/complete", CACHEPICFLAG_QUIET);
+	sb_inter = Draw_CachePic_Flags ("gfx/inter", CACHEPICFLAG_QUIET);
+	sb_finale = Draw_CachePic_Flags ("gfx/finale", CACHEPICFLAG_QUIET);
 }
 
 void sbar_shutdown(void)
