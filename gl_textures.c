@@ -1995,6 +1995,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			mipheight >>= 1;
 	}
 	mipsize_total = ddssize - 128 - (mippixels_start - ddspixels);
+	mipsize = bytesperblock ? ((mipwidth+3)/4)*((mipheight+3)/4)*bytesperblock : mipwidth*mipheight*bytesperpixel;
 
 	// from here on, we do not need the ddspixels and ddssize any more (apart from the statistics entry in glt)
 
