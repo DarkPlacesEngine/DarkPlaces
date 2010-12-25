@@ -1050,8 +1050,6 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 	for (;*msg;msg++)
 	{
 		Con_Rcon_AddChar(*msg);
-		if (index == 0)
-			mask |= additionalmask;
 		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
@@ -1096,6 +1094,8 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			for (;*timestamp;index++, timestamp++)
 				if (index < (int)sizeof(line) - 2)
 					line[index] = *timestamp;
+			// add the mask
+			mask |= additionalmask;
 		}
 		// append the character
 		line[index++] = *msg;
@@ -1110,10 +1110,10 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			if (con_initialized && cls.state != ca_dedicated)
 			{
 				Con_PrintToHistory(line, mask);
-				mask = 0;
 			}
 			// send to terminal or dedicated server window
 			if (!sys_nostdout)
+			if (developer.integer || !(mask & CON_MASK_DEVELOPER))
 			{
 				if(sys_specialcharactertranslation.integer)
 				{
@@ -1310,6 +1310,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			}
 			// empty the line buffer
 			index = 0;
+			mask = 0;
 		}
 	}
 }
