@@ -7139,7 +7139,7 @@ void gl_main_start(void)
 	r_texture_gammaramps = NULL;
 	r_texture_numcubemaps = 0;
 
-	r_loaddds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_load.integer;
+	r_loaddds = r_texture_dds_load.integer;
 	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
 
 	switch(vid.renderpath)
