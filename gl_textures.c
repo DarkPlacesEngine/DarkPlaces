@@ -2003,7 +2003,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	if(force_swdecode)
 	{
 		int mipsize_new = mipsize_total / bytesperblock * 4;
-		unsigned char *mipnewpixels = Mem_Alloc(tempmempool, mipsize_new);
+		unsigned char *mipnewpixels = (unsigned char *) Mem_Alloc(tempmempool, mipsize_new);
 		unsigned char *p = mipnewpixels;
 		for (i = bytesperblock == 16 ? 8 : 0;i < (int)mipsize_total;i += bytesperblock, p += 4)
 		{
