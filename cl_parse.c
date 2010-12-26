@@ -2019,6 +2019,16 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	// trigger muzzleflash effect if necessary
 	if (ent->state_current.effects & EF_MUZZLEFLASH)
 		ent->persistent.muzzleflash = 1;
+
+	// restart animation bit
+	if ((ent->state_previous.effects & EF_RESTARTANIM_BIT) != (ent->state_current.effects & EF_RESTARTANIM_BIT))
+	{
+		ent->render.framegroupblend[1] = ent->render.framegroupblend[0];
+		ent->render.framegroupblend[1].lerp = 1;
+		ent->render.framegroupblend[0].frame = ent->state_current.frame;
+		ent->render.framegroupblend[0].start = cl.time;
+		ent->render.framegroupblend[0].lerp = 0;
+	}
 }
 
 /*
