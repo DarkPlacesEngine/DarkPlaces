@@ -1127,7 +1127,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 						{
 							*p = qfont_table[ch - 0xE000];
 							if(q > p+1)
-								memmove(p+1, q, strlen(q));
+								memmove(p+1, q, strlen(q)+1);
 							p = p + 1;
 						}
 						else
