@@ -703,9 +703,10 @@ typedef struct q3mbrushside_s
 }
 q3mbrushside_t;
 
-#define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
-#define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)
-#define CLEARPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] &= ~(1 << ((b) & 7))) : false)
+// the first cast is to shut up a stupid warning by clang, the second cast is to make both sides have the same type
+#define CHECKPVSBIT(pvs,b) ((b) >= 0 ? (unsigned char) ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : (unsigned char) false)
+#define SETPVSBIT(pvs,b) ((b) >= 0 ? (unsigned char) ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : (unsigned char) false)
+#define CLEARPVSBIT(pvs,b) ((b) >= 0 ? (unsigned char) ((pvs)[(b) >> 3] &= ~(1 << ((b) & 7))) : (unsigned char) false)
 
 #endif
 
