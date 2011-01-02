@@ -189,8 +189,10 @@ cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* s
 cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accodringly, 2: Make it a continuous rotation"};
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
-cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "0.15", "fake perspective effect for SPR_OVERHEAD sprites"};
-cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "16", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
+cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "5", "fake perspective effect for SPR_OVERHEAD sprites"};
+cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "15", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
+cvar_t r_overheadsprites_scalex = {CVAR_SAVE, "r_overheadsprites_scalex", "1", "additional scale for overhead sprites for x axis"};
+cvar_t r_overheadsprites_scaley = {CVAR_SAVE, "r_overheadsprites_scaley", "1", "additional scale for overhead sprites for y axis"};
 
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
@@ -7450,6 +7452,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_track_sprites_scaleh);
 	Cvar_RegisterVariable(&r_overheadsprites_perspective);
 	Cvar_RegisterVariable(&r_overheadsprites_pushback);
+	Cvar_RegisterVariable(&r_overheadsprites_scalex);
+	Cvar_RegisterVariable(&r_overheadsprites_scaley);
 }
 
 extern void R_Textures_Init(void);
