@@ -10,6 +10,8 @@ extern cvar_t r_track_sprites_scalew;
 extern cvar_t r_track_sprites_scaleh;
 extern cvar_t r_overheadsprites_perspective;
 extern cvar_t r_overheadsprites_pushback;
+extern cvar_t r_overheadsprites_scalex;
+extern cvar_t r_overheadsprites_scaley;
 
 #define TSF_ROTATE 1
 #define TSF_ROTATE_CONTINOUSLY 2
@@ -356,20 +358,22 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		up[2] = mup[0] * r_refdef.view.forward[2] + mup[1] * r_refdef.view.left[2] + mup[2] * r_refdef.view.up[2];
 		break;
 	case SPR_OVERHEAD:
-		VectorScale(r_refdef.view.left, ent->scale, left);
-		VectorScale(r_refdef.view.up, ent->scale, up);
-		// offset
-		VectorCopy(r_refdef.view.up, up);
-		up[2] = up[2] + r_overheadsprites_perspective.value; VectorNormalize(up); // some rotation
-		VectorScale(up, ent->scale, up);
-		// offset (move nearer to player, yz is camera plane)
-		VectorSubtract(r_refdef.view.origin, org, middle);
+		// Overhead games sprites, have some special hacks to look good
+		VectorScale(r_refdef.view.left, ent->scale * r_overheadsprites_scalex.value, left);
+		VectorScale(r_refdef.view.up, ent->scale * r_overheadsprites_scaley.value, up);
+		VectorSubtract(org, r_refdef.view.origin, middle);
 		VectorNormalize(middle);
-		org[0] = org[0] + middle[0]*r_overheadsprites_pushback.value;
-		org[1] = org[1] + middle[1]*r_overheadsprites_pushback.value;
-		org[2] = org[2] + middle[2]*r_overheadsprites_pushback.value;
-		 // simlulate a bit of perspective effect
-		up[2] = up[2] + r_overheadsprites_perspective.value;
+		// offset and rotate
+		dir_angle = r_overheadsprites_perspective.value * (1 - fabs(DotProduct(middle, r_refdef.view.forward)));
+		up[2] = up[2] + dir_angle;
+		VectorNormalize(up);
+		VectorScale(up, ent->scale * r_overheadsprites_scaley.value, up);
+		// offset (move nearer to player, yz is camera plane)
+		org[0] = org[0] - middle[0]*r_overheadsprites_pushback.value;
+		org[1] = org[1] - middle[1]*r_overheadsprites_pushback.value;
+		org[2] = org[2] - middle[2]*r_overheadsprites_pushback.value;
+		// little perspective effect
+		up[2] = up[2] + dir_angle * 0.3;
 		break;
 	}
 
@@ -383,7 +387,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 			RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, ent->flags, 0, ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha * ent->frameblend[i].lerp, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
 			frame = model->sprite.sprdata_frames + ent->frameblend[i].subframe;
 			texture = R_GetCurrentTexture(model->data_textures + ent->frameblend[i].subframe);
-
+		
 			// lit sprite by lightgrid if it is not fullbright, lit only ambient
 			if (!(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 				VectorAdd(ent->modellight_ambient, ent->modellight_diffuse, rsurface.modellight_ambient); // sprites dont use lightdirection
