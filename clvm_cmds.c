@@ -1545,7 +1545,7 @@ static void VM_CL_ReadPicture (void)
 			// texture found and loaded
 			// skip over the jpeg as we don't need it
 			for(i = 0; i < size; ++i)
-				MSG_ReadByte();
+				(void) MSG_ReadByte();
 		}
 		else
 		{
