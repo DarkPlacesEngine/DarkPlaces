@@ -4092,7 +4092,7 @@ void CL_ParseServerMessage(void)
 					MSG_ReadCoord(cls.protocol);
 					MSG_ReadCoord(cls.protocol);
 					MSG_ReadCoord(cls.protocol);
-					MSG_ReadByte();
+					(void) MSG_ReadByte();
 					MSG_ReadLong();
 					MSG_ReadLong();
 					MSG_ReadString();
@@ -4107,7 +4107,7 @@ void CL_ParseServerMessage(void)
 					MSG_ReadCoord(cls.protocol);
 					MSG_ReadCoord(cls.protocol);
 					MSG_ReadCoord(cls.protocol);
-					MSG_ReadByte();
+					(void) MSG_ReadByte();
 					MSG_ReadString();
 				}
 				else

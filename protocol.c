@@ -2866,10 +2866,10 @@ void EntityStateQW_ReadPlayerUpdate(void)
 		if (bits & QW_CM_UP)
 			MSG_ReadShort(); // cmd->upmove
 		if (bits & QW_CM_BUTTONS)
-			MSG_ReadByte(); // cmd->buttons
+			(void) MSG_ReadByte(); // cmd->buttons
 		if (bits & QW_CM_IMPULSE)
-			MSG_ReadByte(); // cmd->impulse
-		MSG_ReadByte(); // cmd->msec
+			(void) MSG_ReadByte(); // cmd->impulse
+		(void) MSG_ReadByte(); // cmd->msec
 	}
 	if (playerflags & QW_PF_VELOCITY1)
 		velocity[0] = MSG_ReadShort();
