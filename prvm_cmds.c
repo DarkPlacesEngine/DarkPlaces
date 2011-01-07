@@ -3385,22 +3385,42 @@ void VM_drawstring(void)
 VM_drawcolorcodedstring
 
 float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
+/
+float	drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
 =========
 */
 void VM_drawcolorcodedstring(void)
 {
-	float *pos,*scale;
+	float *pos, *scale;
 	const char  *string;
 	int flag;
-	float sx, sy;
-	VM_SAFEPARMCOUNT(5,VM_drawstring);
+	vec3_t rgb;
+	float sx, sy, alpha;
 
-	string = PRVM_G_STRING(OFS_PARM1);
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	scale = PRVM_G_VECTOR(OFS_PARM2);
-	flag = (int)PRVM_G_FLOAT(OFS_PARM4);
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawcolorcodedstring);
 
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	if (prog->argc == 6) // full 6 parms, like normal drawstring
+	{
+		pos = PRVM_G_VECTOR(OFS_PARM0);
+		string = PRVM_G_STRING(OFS_PARM1);
+		scale = PRVM_G_VECTOR(OFS_PARM2);
+		VectorCopy(PRVM_G_VECTOR(OFS_PARM3), rgb); 
+		alpha = PRVM_G_FLOAT(OFS_PARM4);
+		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	}
+	else
+	{
+		pos = PRVM_G_VECTOR(OFS_PARM0);
+		string = PRVM_G_STRING(OFS_PARM1);
+		scale = PRVM_G_VECTOR(OFS_PARM2);
+		rgb[0] = 1.0;
+		rgb[1] = 1.0;
+		rgb[2] = 1.0;
+		alpha = PRVM_G_FLOAT(OFS_PARM3);
+		flag = (int)PRVM_G_FLOAT(OFS_PARM4);
+	}
+
+	if(flag < DRAWFLAG_NORMAL || flag >= DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
 		VM_Warning("VM_drawcolorcodedstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
@@ -3418,8 +3438,11 @@ void VM_drawcolorcodedstring(void)
 		Con_Printf("VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	getdrawfontscale(&sx, &sy);
-	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, 1, 1, 1, PRVM_G_FLOAT(OFS_PARM3), flag, NULL, false, getdrawfont());
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
+	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], alpha, flag, NULL, false, getdrawfont());
+	if (prog->argc == 6) // also return vector of last color
+		VectorCopy(DrawQ_Color, PRVM_G_VECTOR(OFS_RETURN));
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 /*
 =========

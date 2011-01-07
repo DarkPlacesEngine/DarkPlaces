@@ -1448,13 +1448,13 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	return x;
 }
 
+float DrawQ_Color[4];
 float DrawQ_String_Scale(float startx, float starty, const char *text, size_t maxlen, float w, float h, float sw, float sh, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
 {
 	int shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
 	float x = startx, y, s, t, u, v, thisw;
 	float *av, *at, *ac;
-	float color[4];
 	int batchcount;
 	static float vertex3f[QUADELEMENTS_MAXQUADS*4*3];
 	static float texcoord2f[QUADELEMENTS_MAXQUADS*4*2];
@@ -1549,7 +1549,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		else
 			colorindex = *outcolor;
 
-		DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
+		DrawQ_GetTextColor(DrawQ_Color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 
 		x = startx;
 		y = starty;
@@ -1577,7 +1577,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				if (ch <= '9' && ch >= '0') // ^[0-9] found
 				{
 					colorindex = ch - '0';
-					DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
+					DrawQ_GetTextColor(DrawQ_Color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 					++text;
 					++i;
 					continue;
@@ -1607,7 +1607,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 								colorindex = tempcolorindex | 0xf;
 								// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
 								//Con_Printf("^1colorindex:^7 %x\n", colorindex);
-								DrawQ_GetTextColor(color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
+								DrawQ_GetTextColor(DrawQ_Color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
 								i+=4;
 								text+=4;
 								continue;
@@ -1665,10 +1665,10 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				t = (ch >> 4)*0.0625f + (0.5f / th);
 				u = 0.0625f * thisw - (1.0f / tw);
 				v = 0.0625f - (1.0f / th);
-				ac[ 0] = color[0];ac[ 1] = color[1];ac[ 2] = color[2];ac[ 3] = color[3];
-				ac[ 4] = color[0];ac[ 5] = color[1];ac[ 6] = color[2];ac[ 7] = color[3];
-				ac[ 8] = color[0];ac[ 9] = color[1];ac[10] = color[2];ac[11] = color[3];
-				ac[12] = color[0];ac[13] = color[1];ac[14] = color[2];ac[15] = color[3];
+				ac[ 0] = DrawQ_Color[0];ac[ 1] = DrawQ_Color[1];ac[ 2] = DrawQ_Color[2];ac[ 3] = DrawQ_Color[3];
+				ac[ 4] = DrawQ_Color[0];ac[ 5] = DrawQ_Color[1];ac[ 6] = DrawQ_Color[2];ac[ 7] = DrawQ_Color[3];
+				ac[ 8] = DrawQ_Color[0];ac[ 9] = DrawQ_Color[1];ac[10] = DrawQ_Color[2];ac[11] = DrawQ_Color[3];
+				ac[12] = DrawQ_Color[0];ac[13] = DrawQ_Color[1];ac[14] = DrawQ_Color[2];ac[15] = DrawQ_Color[3];
 				at[ 0] = s		; at[ 1] = t	;
 				at[ 2] = s+u	; at[ 3] = t	;
 				at[ 4] = s+u	; at[ 5] = t+v	;
@@ -1736,10 +1736,10 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				}
 				else
 					kx = ky = 0;
-				ac[ 0] = color[0]; ac[ 1] = color[1]; ac[ 2] = color[2]; ac[ 3] = color[3];
-				ac[ 4] = color[0]; ac[ 5] = color[1]; ac[ 6] = color[2]; ac[ 7] = color[3];
-				ac[ 8] = color[0]; ac[ 9] = color[1]; ac[10] = color[2]; ac[11] = color[3];
-				ac[12] = color[0]; ac[13] = color[1]; ac[14] = color[2]; ac[15] = color[3];
+				ac[ 0] = DrawQ_Color[0]; ac[ 1] = DrawQ_Color[1]; ac[ 2] = DrawQ_Color[2]; ac[ 3] = DrawQ_Color[3];
+				ac[ 4] = DrawQ_Color[0]; ac[ 5] = DrawQ_Color[1]; ac[ 6] = DrawQ_Color[2]; ac[ 7] = DrawQ_Color[3];
+				ac[ 8] = DrawQ_Color[0]; ac[ 9] = DrawQ_Color[1]; ac[10] = DrawQ_Color[2]; ac[11] = DrawQ_Color[3];
+				ac[12] = DrawQ_Color[0]; ac[13] = DrawQ_Color[1]; ac[14] = DrawQ_Color[2]; ac[15] = DrawQ_Color[3];
 				at[0] = map->glyphs[mapch].txmin; at[1] = map->glyphs[mapch].tymin;
 				at[2] = map->glyphs[mapch].txmax; at[3] = map->glyphs[mapch].tymin;
 				at[4] = map->glyphs[mapch].txmax; at[5] = map->glyphs[mapch].tymax;
@@ -1785,7 +1785,7 @@ out:
 
 	if (outcolor)
 		*outcolor = colorindex;
-
+	
 	// note: this relies on the proper text (not shadow) being drawn last
 	return x;
 }
