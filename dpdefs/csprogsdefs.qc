@@ -467,6 +467,7 @@ float(vector position, vector size, vector rgb, float alpha, float flag) drawfil
 void(float x, float y, float width, float height) drawsetcliparea = #324;
 void(void) drawresetcliparea = #325;
 float(vector position, string text, vector scale, float alpha, float flag) drawcolorcodedstring = #326;
+vector(vector position, string text, vector scale, vector rgb, float alpha, float flag) drawcolorcodedstring2 = #326;
 
 float(float stnum) getstatf = #330;
 float(float stnum) getstati = #331;
