@@ -1226,7 +1226,7 @@ VM_CL_isdemo,							// #349
 NULL,									// #350
 NULL,									// #351
 NULL,									// #352
-NULL,									// #353
+VM_wasfreed,							// #353 float(entity ent) wasfreed
 NULL,									// #354
 VM_CL_videoplaying,						// #355
 VM_findfont,							// #356 float(string fontname) loadfont (DP_GFX_FONTS)

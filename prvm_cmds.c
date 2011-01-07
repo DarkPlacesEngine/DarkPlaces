@@ -4750,7 +4750,7 @@ void VM_buf_create (void)
 	for (i = 0;stringbuffer != Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);i++);
 	stringbuffer->origin = PRVM_AllocationOrigin();
 	// optional flags parm
-	if(prog->argc == 2)
+	if (prog->argc >= 2)
 		stringbuffer->flags = (int)PRVM_G_FLOAT(OFS_PARM1) & 0xFF;
 	PRVM_G_FLOAT(OFS_RETURN) = i;
 }
@@ -4964,7 +4964,7 @@ void VM_bufstr_get (void)
 	strindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	if (strindex < 0)
 	{
-		VM_Warning("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
+		// VM_Warning("VM_bufstr_get: invalid string index %i used in %s\n", strindex, PRVM_NAME);
 		return;
 	}
 	if (strindex < stringbuffer->num_strings && stringbuffer->strings[strindex])
