@@ -162,6 +162,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 // if outcolor is provided the initial color is read from it, and it is updated at the end with the new value at the end of the text (not at the end of the clipped part)
 // the color is tinted by the provided base color
 // if r_textshadow is not zero, an additional instance of the text is drawn first at an offset with an inverted shade of gray (black text produces a white shadow, brightly colored text produces a black shadow)
+extern float DrawQ_Color[4];
 float DrawQ_String(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
 float DrawQ_String_Scale(float x, float y, const char *text, size_t maxlen, float sizex, float sizey, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
 float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt);
