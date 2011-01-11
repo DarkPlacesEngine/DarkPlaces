@@ -799,8 +799,8 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 int Font_IndexForSize(ft2_font_t *font, float _fsize, float *outw, float *outh)
 {
 	int match = -1;
-	int value = 1000000;
-	int nval;
+	float value = 1000000;
+	float nval;
 	int matchsize = -10000;
 	int m;
 	float fsize_x, fsize_y;
