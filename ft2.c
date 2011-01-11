@@ -830,7 +830,7 @@ int Font_IndexForSize(ft2_font_t *font, float _fsize, float *outw, float *outh)
 		if (!maps[m])
 			continue;
 		// "round up" to the bigger size if two equally-valued matches exist
-		nval = 0.5 * (abs(maps[m]->size - fsize_x) + abs(maps[m]->size - fsize_y));
+		nval = 0.5 * (fabs(maps[m]->size - fsize_x) + fabs(maps[m]->size - fsize_y));
 		if (match == -1 || nval < value || (nval == value && matchsize < maps[m]->size))
 		{
 			value = nval;
