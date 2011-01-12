@@ -40,7 +40,8 @@ cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0
 cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
 cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
 cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
-cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "a height loadingscreen progress bar"};
+cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
+cvar_t scr_infobar_height = {0, "scr_infobar_height", "8", "the height of the infobar items"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
@@ -487,7 +488,7 @@ static int SCR_DrawQWDownload(int offset)
 	// sync with SCR_InfobarHeight
 	int len;
 	float x, y;
-	float size = 8;
+	float size = scr_infobar_height.value;
 	char temp[256];
 
 	if (!cls.qw_downloadname[0])
@@ -512,7 +513,7 @@ static int SCR_DrawQWDownload(int offset)
 	y = vid_conheight.integer - size - offset;
 	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 	DrawQ_String(x, y, temp, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
-	return 8;
+	return size;
 }
 /*
 ==============
@@ -523,14 +524,14 @@ static int SCR_DrawInfobarString(int offset)
 {
 	int len;
 	float x, y;
-	float size = 8;
+	float size = scr_infobar_height.value;
 
 	len = (int)strlen(scr_infobarstring);
 	x = (vid_conwidth.integer - DrawQ_TextWidth(scr_infobarstring, len, size, size, false, FONT_INFOBAR)) / 2;
 	y = vid_conheight.integer - size - offset;
 	DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, cls.signon == SIGNONS ? 0.5 : 1, 0);
 	DrawQ_String(x, y, scr_infobarstring, len, size, size, 1, 1, 1, 1, 0, NULL, false, FONT_INFOBAR);
-	return 8;
+	return size;
 }
 
 /*
@@ -545,7 +546,7 @@ static int SCR_DrawCurlDownload(int offset)
 	int nDownloads;
 	int i;
 	float x, y;
-	float size = 8;
+	float size = scr_infobar_height.value;
 	Curl_downloadinfo_t *downinfo;
 	char temp[256];
 	const char *addinfo;
@@ -580,7 +581,7 @@ static int SCR_DrawCurlDownload(int offset)
 
 	Z_Free(downinfo);
 
-	return 8 * (nDownloads + (addinfo ? 1 : 0));
+	return size * (nDownloads + (addinfo ? 1 : 0));
 }
 
 /*
@@ -591,10 +592,10 @@ SCR_DrawInfobar
 static void SCR_DrawInfobar(void)
 {
 	int offset = 0;
-	if(scr_infobartime_off > 0)
-		offset += SCR_DrawInfobarString(offset);
 	offset += SCR_DrawQWDownload(offset);
 	offset += SCR_DrawCurlDownload(offset);
+	if(scr_infobartime_off > 0)
+		offset += SCR_DrawInfobarString(offset);
 	if(offset != scr_con_margin_bottom)
 		Con_DPrintf("broken console margin calculation: %d != %d\n", offset, scr_con_margin_bottom);
 }
@@ -908,6 +909,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_loadingscreen_count);
 	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
 	Cvar_RegisterVariable (&scr_loadingscreen_barheight);
+	Cvar_RegisterVariable (&scr_infobar_height);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
