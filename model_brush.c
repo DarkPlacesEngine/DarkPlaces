@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
+cvar_t mod_bsp_portalize = {0, "mod_bsp_portalize", "0", "enables portal generation from BSP tree (may take several seconds per map), used by r_drawportals, r_useportalculling, r_shadow_realtime_world_compileportalculling, sv_cullentities_portal - all of which are off by default"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
@@ -62,6 +63,7 @@ static texture_t mod_q1bsp_texture_water;
 void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
+	Cvar_RegisterVariable(&mod_bsp_portalize);
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_subdivisions_tolerance);
@@ -3573,7 +3575,8 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brushq1.num_compressedpvs = 0;
 
 	Mod_Q1BSP_MakeHull0();
-	Mod_Q1BSP_MakePortals();
+	if (mod_bsp_portalize.integer)
+		Mod_Q1BSP_MakePortals();
 
 	mod->numframes = 2;		// regular and alternate animation
 	mod->numskins = 1;
@@ -7040,7 +7043,8 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.numsubmodels = loadmodel->brushq3.num_models;
 
 	// the MakePortals code works fine on the q3bsp data as well
-	Mod_Q1BSP_MakePortals();
+	if (mod_bsp_portalize.integer)
+		Mod_Q1BSP_MakePortals();
 
 	// FIXME: shader alpha should replace r_wateralpha support in q3bsp
 	loadmodel->brush.supportwateralpha = true;
