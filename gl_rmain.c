@@ -6776,7 +6776,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		Con_Printf("loading quake skin \"%s\"\n", name);
 
 	// we actually don't upload anything until the first use, because mdl skins frequently go unused, and are almost never used in both modes (colormapped and non-colormapped)
-	skinframe->qpixels = (unsigned char *)Mem_Alloc(r_main_mempool, width*height);
+	skinframe->qpixels = (unsigned char *)Mem_Alloc(r_main_mempool, width*height); // FIXME LEAK
 	memcpy(skinframe->qpixels, skindata, width*height);
 	skinframe->qwidth = width;
 	skinframe->qheight = height;
@@ -7283,6 +7283,23 @@ void gl_main_shutdown(void)
 	memset(&r_bloomstate, 0, sizeof(r_bloomstate));
 	memset(&r_waterstate, 0, sizeof(r_waterstate));
 	R_GLSL_Restart_f();
+
+	r_glsl_permutation = NULL;
+	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
+	Mem_ExpandableArray_FreeArray(&r_glsl_permutationarray);
+	glslshaderstring = NULL;
+#ifdef SUPPORTCG
+	r_cg_permutation = NULL;
+	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
+	Mem_ExpandableArray_FreeArray(&r_cg_permutationarray);
+	cgshaderstring = NULL;
+#endif
+#ifdef SUPPORTD3D
+	r_hlsl_permutation = NULL;
+	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
+	Mem_ExpandableArray_FreeArray(&r_hlsl_permutationarray);
+	hlslshaderstring = NULL;
+#endif
 }
 
 extern void CL_ParseEntityLump(char *entitystring);
