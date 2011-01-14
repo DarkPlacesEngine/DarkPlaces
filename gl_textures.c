@@ -32,6 +32,7 @@ cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambigous, 2: texture format only"};
+cvar_t r_texture_dds_load_logfailure = {0, "r_texture_dds_load_logfailure", "1", "log missing DDS textures to ddstexturefailures.log"};
 cvar_t r_texture_dds_swdecode = {0, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
 
 qboolean	gl_filter_force = false;
@@ -852,6 +853,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 	Cvar_RegisterVariable (&r_texture_dds_load_alphamode);
+	Cvar_RegisterVariable (&r_texture_dds_load_logfailure);
 	Cvar_RegisterVariable (&r_texture_dds_swdecode);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap, r_textures_devicelost, r_textures_devicerestored);
@@ -1793,7 +1795,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 
 	if (!dds)
 	{
-		Log_Printf("ddstexturefailures.log", "%s\n", filename);
+		if(r_texture_dds_load_logfailure.integer)
+			Log_Printf("ddstexturefailures.log", "%s\n", filename);
 		return NULL; // not found
 	}
 
