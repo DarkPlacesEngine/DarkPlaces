@@ -1056,6 +1056,7 @@ extern unsigned char *mod_base;
 //extern cvar_t gl_subdivide_size;
 // texture fullbrights
 extern cvar_t r_fullbrights;
+extern cvar_t r_enableshadowvolumes;
 
 void Mod_Init (void);
 void Mod_Reload (void);

@@ -1247,6 +1247,9 @@ void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigi
 	msurface_t *surface;
 	int surfacelistindex;
 	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
+	// if triangle neighbors are disabled, shadowvolumes are disabled
+	if (!model->brush.shadowmesh->neighbor3i)
+		return;
 	r_shadow_compilingrtlight->static_meshchain_shadow_zfail = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 	R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
@@ -1275,6 +1278,9 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
 	if (model->brush.shadowmesh)
 	{
+		// if triangle neighbors are disabled, shadowvolumes are disabled
+		if (!model->brush.shadowmesh->neighbor3i)
+			return;
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 		{
@@ -1287,6 +1293,9 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 	}
 	else
 	{
+		// if triangle neighbors are disabled, shadowvolumes are disabled
+		if (!model->surfmesh.data_neighbor3i)
+			return;
 		projectdistance = lightradius + model->radius*2;
 		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
 		// identify lit faces within the bounding box
