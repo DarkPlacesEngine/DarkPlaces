@@ -2350,16 +2350,16 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 		}
 		if(!strcmp(prvm_language.string, "dump"))
 		{
-			qfile_t *f = FS_OpenRealFile(va("%s.%s.po", filename, prvm_language.string), "w", false);
-			Con_Printf("Dumping to %s.%s.po\n", filename, prvm_language.string);
+			qfile_t *f = FS_OpenRealFile(va("%s.pot", filename), "w", false);
+			Con_Printf("Dumping to %s.pot\n", filename);
 			if(f)
 			{
 				for (i=0 ; i<prog->progs->numglobaldefs ; i++)
 				{
 					const char *name;
 					name = PRVM_GetString(prog->globaldefs[i].s_name);
-					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					if(deftrans ? (!name || strncmp(name, "notranslate_", 12)) : (name && !strncmp(name, "dotranslate_", 12)))
+					if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 					{
 						prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[i].ofs);
 						const char *value = PRVM_GetString(val->string);
