@@ -3440,8 +3440,8 @@ static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
 	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
 		if (surface->num_triangles > 0)
 			Mod_ShadowMesh_AddMesh(mod->mempool, mod->brush.shadowmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, true, false);
-	if (mod->brush.shadowmesh)
+	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer, false);
+	if (mod->brush.shadowmesh && mod->brush.shadowmesh->neighbor3i)
 		Mod_BuildTriangleNeighbors(mod->brush.shadowmesh->neighbor3i, mod->brush.shadowmesh->element3i, mod->brush.shadowmesh->numtriangles);
 
 	return numshadowmeshtriangles;
@@ -7579,13 +7579,14 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// allocate storage for final mesh data
 	loadmodel->num_textures = numtextures * loadmodel->numskins;
 	loadmodel->num_texturesperskin = numtextures;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? numtriangles * sizeof(int[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
 	loadmodel->brush.submodels = (dp_model_t **)data;data += loadmodel->brush.numsubmodels * sizeof(dp_model_t *);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = numvertices;
 	loadmodel->surfmesh.num_triangles = numtriangles;
-	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += numtriangles * sizeof(int[3]);
+	if (r_enableshadowvolumes.integer)
+		loadmodel->surfmesh.data_neighbor3i = (int *)data;data += numtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_vertex3f = (float *)data;data += numvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_svector3f = (float *)data;data += numvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += numvertices * sizeof(float[3]);
@@ -7631,7 +7632,8 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (!VectorLength2(loadmodel->surfmesh.data_normal3f))
 		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, r_smoothnormals_areaweighting.integer != 0);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
-	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	if (loadmodel->surfmesh.data_neighbor3i)
+		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
 	// if this is a worldmodel and has no BSP tree, create a fake one for the purpose
 	loadmodel->brush.num_visleafs = 1;
@@ -8531,14 +8533,15 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->num_surfaces = 1;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->numframes * sizeof(animscene_t) + loadmodel->numframes * sizeof(float[6]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->numframes * sizeof(animscene_t) + loadmodel->numframes * sizeof(float[6]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolume.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->sortedmodelsurfaces[0] = 0;
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	loadmodel->surfmesh.data_morphmd2framesize6f = (float *)data;data += loadmodel->numframes * sizeof(float[6]);
 	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
-	loadmodel->surfmesh.data_neighbor3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
+	if (r_enableshadowvolumes.integer)
+		loadmodel->surfmesh.data_neighbor3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
 
 	loadmodel->synctype = ST_RAND;
 
@@ -8680,7 +8683,8 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mem_Free(vertremap);
 
 	Mod_MakeSortedSurfaces(loadmodel);
-	Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	if (loadmodel->surfmesh.data_neighbor3i)
+		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_MorphMesh_CompileFrames();
 
