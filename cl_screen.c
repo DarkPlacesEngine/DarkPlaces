@@ -611,16 +611,16 @@ static int SCR_InfobarHeight(void)
 		scr_infobartime_off -= cl.time - cl.oldtime;
 	if(scr_infobartime_off > 0)
 		offset += 8;
-
 	if(cls.qw_downloadname[0])
 		offset += 8;
 
 	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
 	if(downinfo)
 	{
-		offset += 8 * (nDownloads + (addinfo ? 1 : 0));
+		offset += (nDownloads + (addinfo ? 1 : 0));
 		Z_Free(downinfo);
 	}
+	offset *= scr_infobar_height.value;
 
 	return offset;
 }
