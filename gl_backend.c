@@ -12,7 +12,6 @@ extern D3DCAPS9 vid_d3d9caps;
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
 cvar_t gl_mesh_prefer_short_elements = {CVAR_SAVE, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
-cvar_t gl_mesh_separatearrays = {0, "gl_mesh_separatearrays", "1", "use several separate vertex arrays rather than one combined stream"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -166,7 +165,6 @@ typedef struct gl_state_s
 	void *preparevertices_tempdata;
 	size_t preparevertices_tempdatamaxsize;
 	r_meshbuffer_t *preparevertices_dynamicvertexbuffer;
-	r_vertexposition_t *preparevertices_vertexposition;
 	r_vertexgeneric_t *preparevertices_vertexgeneric;
 	r_vertexmesh_t *preparevertices_vertexmesh;
 	int preparevertices_numvertices;
@@ -499,7 +497,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
 	Cvar_RegisterVariable(&gl_mesh_prefer_short_elements);
-	Cvar_RegisterVariable(&gl_mesh_separatearrays);
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -3499,13 +3496,13 @@ void R_Mesh_ResetTextureState(void)
 
 
 #ifdef SUPPORTD3D
-//#define r_vertexposition_d3d9fvf (D3DFVF_XYZ)
+//#define r_vertex3f_d3d9fvf (D3DFVF_XYZ)
 //#define r_vertexgeneric_d3d9fvf (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1)
 //#define r_vertexmesh_d3d9fvf (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX5 | D3DFVF_TEXCOORDSIZE1(3) | D3DFVF_TEXCOORDSIZE2(3) | D3DFVF_TEXCOORDSIZE3(3))
 
-D3DVERTEXELEMENT9 r_vertexposition_d3d9elements[] =
+D3DVERTEXELEMENT9 r_vertex3f_d3d9elements[] =
 {
-	{0, (int)((size_t)&((r_vertexposition_t *)0)->vertex3f), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+	{0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
 	D3DDECL_END()
 };
 
@@ -3529,7 +3526,7 @@ D3DVERTEXELEMENT9 r_vertexmesh_d3d9elements[] =
 	D3DDECL_END()
 };
 
-IDirect3DVertexDeclaration9 *r_vertexposition_d3d9decl;
+IDirect3DVertexDeclaration9 *r_vertex3f_d3d9decl;
 IDirect3DVertexDeclaration9 *r_vertexgeneric_d3d9decl;
 IDirect3DVertexDeclaration9 *r_vertexmesh_d3d9decl;
 #endif
@@ -3537,7 +3534,7 @@ IDirect3DVertexDeclaration9 *r_vertexmesh_d3d9decl;
 static void R_Mesh_InitVertexDeclarations(void)
 {
 #ifdef SUPPORTD3D
-	r_vertexposition_d3d9decl = NULL;
+	r_vertex3f_d3d9decl = NULL;
 	r_vertexgeneric_d3d9decl = NULL;
 	r_vertexmesh_d3d9decl = NULL;
 	switch(vid.renderpath)
@@ -3548,7 +3545,7 @@ static void R_Mesh_InitVertexDeclarations(void)
 	case RENDERPATH_GL11:
 		break;
 	case RENDERPATH_D3D9:
-		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9elements, &r_vertexposition_d3d9decl);
+		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertex3f_d3d9elements, &r_vertex3f_d3d9decl);
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9elements, &r_vertexgeneric_d3d9decl);
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9elements, &r_vertexmesh_d3d9decl);
 		break;
@@ -3565,9 +3562,9 @@ static void R_Mesh_InitVertexDeclarations(void)
 static void R_Mesh_DestroyVertexDeclarations(void)
 {
 #ifdef SUPPORTD3D
-	if (r_vertexposition_d3d9decl)
-		IDirect3DVertexDeclaration9_Release(r_vertexposition_d3d9decl);
-	r_vertexposition_d3d9decl = NULL;
+	if (r_vertex3f_d3d9decl)
+		IDirect3DVertexDeclaration9_Release(r_vertex3f_d3d9decl);
+	r_vertex3f_d3d9decl = NULL;
 	if (r_vertexgeneric_d3d9decl)
 		IDirect3DVertexDeclaration9_Release(r_vertexgeneric_d3d9decl);
 	r_vertexgeneric_d3d9decl = NULL;
@@ -3577,78 +3574,7 @@ static void R_Mesh_DestroyVertexDeclarations(void)
 #endif
 }
 
-r_vertexposition_t *R_Mesh_PrepareVertices_Position_Lock(int numvertices)
-{
-	size_t size;
-	size = sizeof(r_vertexposition_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
-	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-	}
-	gl_state.preparevertices_vertexposition = (r_vertexposition_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexposition;
-}
-
-qboolean R_Mesh_PrepareVertices_Position_Unlock(void)
-{
-	R_Mesh_PrepareVertices_Position(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexposition, NULL);
-	gl_state.preparevertices_vertexposition = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
-}
-
-void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex3f)
-{
-	int i;
-	r_vertexposition_t *vertex;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		return;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		if (vid.texunits >= 2)
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		if (vid.texunits >= 3)
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		return;
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-		gl_state.d3dvertexbuffer = NULL;
-		gl_state.d3dvertexdata = (void *)vertex3f;
-		gl_state.d3dvertexsize = sizeof(float[3]);
-#endif
-		return;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	}
-
-	// no quick path for this case, convert to vertex structs
-	vertex = R_Mesh_PrepareVertices_Position_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	R_Mesh_PrepareVertices_Position_Unlock();
-	R_Mesh_PrepareVertices_Position(numvertices, vertex, NULL);
-}
-
-void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *vertex, const r_meshbuffer_t *vertexbuffer)
+void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *vertexbuffer)
 {
 	// upload temporary vertexbuffer for this rendering
 	if (!gl_state.usevbo_staticvertex)
@@ -3656,9 +3582,9 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
 	{
 		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
+			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex3f, numvertices * sizeof(float[3]));
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex3f, numvertices * sizeof(float[3]), "temporary", false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	switch(vid.renderpath)
@@ -3667,7 +3593,7 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 	case RENDERPATH_CGGL:
 		if (vertexbuffer)
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
@@ -3677,7 +3603,7 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 		}
 		else
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
@@ -3689,14 +3615,14 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 	case RENDERPATH_GL13:
 		if (vertexbuffer)
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		}
 		else
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
@@ -3705,20 +3631,20 @@ void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *
 	case RENDERPATH_GL11:
 		if (vertexbuffer)
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		}
 		else
 		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
+			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 		}
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexposition_d3d9decl);
+		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertex3f_d3d9decl);
 		if (vertexbuffer)
 			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
 		else
@@ -3769,7 +3695,7 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-		if (gl_mesh_separatearrays.integer)
+		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
@@ -3783,7 +3709,7 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
-		if (gl_mesh_separatearrays.integer)
+		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
@@ -3950,7 +3876,7 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
-		if (gl_mesh_separatearrays.integer)
+		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
@@ -3964,7 +3890,7 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
-		if (gl_mesh_separatearrays.integer)
+		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);

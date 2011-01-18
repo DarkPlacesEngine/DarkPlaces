@@ -807,6 +807,7 @@ void VID_ClearExtensions(void)
 	// clear the extension flags
 	memset(&vid.support, 0, sizeof(vid.support));
 	vid.renderpath = RENDERPATH_GL11;
+	vid.useinterleavedarrays = false;
 	vid.forcevbo = false;
 	vid.maxtexturesize_2d = 0;
 	vid.maxtexturesize_3d = 0;
@@ -936,6 +937,7 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
 		Con_DPrintf("Using GL2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
 		vid.renderpath = RENDERPATH_GL20;
+		vid.useinterleavedarrays = false;
 	}
 #ifdef SUPPORTCG
 	else if (vid_cggl.integer && (vid.cgcontext = cgCreateContext()))
@@ -945,6 +947,7 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = 8;
 		Con_DPrintf("Using NVIDIA Cg rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
 		vid.renderpath = RENDERPATH_CGGL;
+		vid.useinterleavedarrays = false;
 	}
 #endif
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
@@ -955,6 +958,7 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = vid.texunits;
 		Con_DPrintf("Using GL1.3 rendering path - %i texture units, single pass rendering\n", vid.texunits);
 		vid.renderpath = RENDERPATH_GL13;
+		vid.useinterleavedarrays = false;
 	}
 	else
 	{
@@ -963,6 +967,7 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = vid.texunits;
 		Con_DPrintf("Using GL1.1 rendering path - %i texture units, two pass rendering\n", vid.texunits);
 		vid.renderpath = RENDERPATH_GL11;
+		vid.useinterleavedarrays = false;
 	}
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)

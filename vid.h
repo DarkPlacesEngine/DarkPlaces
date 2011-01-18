@@ -103,6 +103,7 @@ typedef struct viddef_s
 
 	renderpath_t renderpath;
 	qboolean forcevbo; // some renderpaths can not operate without it
+	qboolean useinterleavedarrays; // required by some renderpaths
 
 	unsigned int texunits;
 	unsigned int teximageunits;
