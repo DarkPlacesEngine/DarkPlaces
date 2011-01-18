@@ -1579,6 +1579,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
 	Con_DPrintf("Using D3D9.0 rendering path - %i texture matrix, %i texture images, %i texcoords, shadowmapping supported%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.maxdrawbuffers > 1 ? ", MRT detected (allows prepass deferred lighting)" : "");
 	vid.renderpath = RENDERPATH_D3D9;
+	vid.useinterleavedarrays = true;
 
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
 	Cvar_SetQuick(&gl_info_renderer, gl_renderer);

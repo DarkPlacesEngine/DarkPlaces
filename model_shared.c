@@ -200,9 +200,9 @@ void Mod_UnloadModel (dp_model_t *mod)
 	used = mod->used;
 	if (mod->mempool)
 	{
-		if (mod->surfmesh.vertexpositionbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vertexpositionbuffer);
-		mod->surfmesh.vertexpositionbuffer = NULL;
+		if (mod->surfmesh.vertex3fbuffer)
+			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vertex3fbuffer);
+		mod->surfmesh.vertex3fbuffer = NULL;
 		if (mod->surfmesh.vertexmeshbuffer)
 			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vertexmeshbuffer);
 		mod->surfmesh.vertexmeshbuffer = NULL;
@@ -1195,8 +1195,8 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 		return;
 
 	// build r_vertexmesh_t array
-	// (compressed interleaved array for faster rendering)
-	if (!mesh->vertexmesh && mesh->texcoord2f)
+	// (compressed interleaved array for D3D)
+	if (!mesh->vertexmesh && mesh->texcoord2f && vid.useinterleavedarrays)
 	{
 		int vertexindex;
 		int numvertices = mesh->numverts;
@@ -1212,24 +1212,13 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 		}
 	}
 
-	// build r_vertexposition_t array
-	if (!mesh->vertexposition)
-	{
-		int vertexindex;
-		int numvertices = mesh->numverts;
-		r_vertexposition_t *vertexposition;
-		mesh->vertexposition = vertexposition = (r_vertexposition_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*mesh->vertexposition));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexposition++)
-			VectorCopy(mesh->vertex3f + 3*vertexindex, vertexposition->vertex3f);
-	}
-
 	// upload r_vertexmesh_t array as a buffer
 	if (mesh->vertexmesh && !mesh->vertexmeshbuffer)
 		mesh->vertexmeshbuffer = R_Mesh_CreateMeshBuffer(mesh->vertexmesh, mesh->numverts * sizeof(*mesh->vertexmesh), loadmodel->name, false, false, false);
 
-	// upload r_vertexposition_t array as a buffer
-	if (mesh->vertexposition && !mesh->vertexpositionbuffer)
-		mesh->vertexpositionbuffer = R_Mesh_CreateMeshBuffer(mesh->vertexposition, mesh->numverts * sizeof(*mesh->vertexposition), loadmodel->name, false, false, false);
+	// upload vertex3f array as a buffer
+	if (mesh->vertex3f && !mesh->vertex3fbuffer)
+		mesh->vertex3fbuffer = R_Mesh_CreateMeshBuffer(mesh->vertex3f, mesh->numverts * sizeof(float[3]), loadmodel->name, false, false, false);
 
 	// upload short indices as a buffer
 	if (mesh->element3s && !mesh->element3s_indexbuffer)
@@ -1244,7 +1233,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 	// is this wise?  the texcoordtexture2f array is used with dynamic
 	// vertex/svector/tvector/normal when rendering animated models, on the
 	// other hand animated models don't use a lot of vertices anyway...
-	if (!mesh->vbo_vertexbuffer)
+	if (!mesh->vbo_vertexbuffer && !vid.useinterleavedarrays)
 	{
 		size_t size;
 		unsigned char *mem;
@@ -1349,8 +1338,8 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 	shadowmesh_t *nextmesh;
 	for (;mesh;mesh = nextmesh)
 	{
-		if (mesh->vertexpositionbuffer)
-			R_Mesh_DestroyMeshBuffer(mesh->vertexpositionbuffer);
+		if (mesh->vertex3fbuffer)
+			R_Mesh_DestroyMeshBuffer(mesh->vertex3fbuffer);
 		if (mesh->vertexmeshbuffer)
 			R_Mesh_DestroyMeshBuffer(mesh->vertexmeshbuffer);
 		if (mesh->element3i_indexbuffer)
@@ -2794,8 +2783,8 @@ void Mod_BuildVBOs(void)
 	}
 
 	// build r_vertexmesh_t array
-	// (compressed interleaved array for faster rendering)
-	if (!loadmodel->surfmesh.vertexmesh)
+	// (compressed interleaved array for D3D)
+	if (!loadmodel->surfmesh.vertexmesh && vid.useinterleavedarrays)
 	{
 		int vertexindex;
 		int numvertices = loadmodel->surfmesh.num_vertices;
@@ -2815,24 +2804,13 @@ void Mod_BuildVBOs(void)
 		}
 	}
 
-	// build r_vertexposition_t array
-	if (!loadmodel->surfmesh.vertexposition)
-	{
-		int vertexindex;
-		int numvertices = loadmodel->surfmesh.num_vertices;
-		r_vertexposition_t *vertexposition;
-		loadmodel->surfmesh.vertexposition = vertexposition = (r_vertexposition_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(*loadmodel->surfmesh.vertexposition));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexposition++)
-			VectorCopy(loadmodel->surfmesh.data_vertex3f + 3*vertexindex, vertexposition->vertex3f);
-	}
-
 	// upload r_vertexmesh_t array as a buffer
 	if (loadmodel->surfmesh.vertexmesh && !loadmodel->surfmesh.vertexmeshbuffer)
 		loadmodel->surfmesh.vertexmeshbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.vertexmesh, loadmodel->surfmesh.num_vertices * sizeof(*loadmodel->surfmesh.vertexmesh), loadmodel->name, false, false, false);
 
-	// upload r_vertexposition_t array as a buffer
-	if (loadmodel->surfmesh.vertexposition && !loadmodel->surfmesh.vertexpositionbuffer)
-		loadmodel->surfmesh.vertexpositionbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.vertexposition, loadmodel->surfmesh.num_vertices * sizeof(*loadmodel->surfmesh.vertexposition), loadmodel->name, false, false, false);
+	// upload vertex3f array as a buffer
+	if (loadmodel->surfmesh.data_vertex3f && !loadmodel->surfmesh.vertex3fbuffer)
+		loadmodel->surfmesh.vertex3fbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.num_vertices * sizeof(float[3]), loadmodel->name, false, false, false);
 
 	// upload short indices as a buffer
 	if (loadmodel->surfmesh.data_element3s && !loadmodel->surfmesh.data_element3s_indexbuffer)
@@ -2848,7 +2826,7 @@ void Mod_BuildVBOs(void)
 	// is this wise?  the texcoordtexture2f array is used with dynamic
 	// vertex/svector/tvector/normal when rendering animated models, on the
 	// other hand animated models don't use a lot of vertices anyway...
-	if (!loadmodel->surfmesh.vbo_vertexbuffer)
+	if (!loadmodel->surfmesh.vbo_vertexbuffer && !vid.useinterleavedarrays)
 	{
 		size_t size;
 		unsigned char *mem;
@@ -3835,15 +3813,12 @@ static void Mod_GenerateLightmaps_UnweldTriangles(dp_model_t *model)
 	if (model->surfmesh.num_vertices > 65536)
 		model->surfmesh.data_element3s = NULL;
 
-	if (model->surfmesh.vertexposition)
-		Mem_Free(model->surfmesh.vertexposition);
-	model->surfmesh.vertexposition = NULL;
 	if (model->surfmesh.vertexmesh)
 		Mem_Free(model->surfmesh.vertexmesh);
 	model->surfmesh.vertexmesh = NULL;
-	if (model->surfmesh.vertexpositionbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.vertexpositionbuffer);
-	model->surfmesh.vertexpositionbuffer = NULL;
+	if (model->surfmesh.vertex3fbuffer)
+		R_Mesh_DestroyMeshBuffer(model->surfmesh.vertex3fbuffer);
+	model->surfmesh.vertex3fbuffer = NULL;
 	if (model->surfmesh.vertexmeshbuffer)
 		R_Mesh_DestroyMeshBuffer(model->surfmesh.vertexmeshbuffer);
 	model->surfmesh.vertexmeshbuffer = NULL;

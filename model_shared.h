@@ -101,13 +101,6 @@ typedef struct blendweights_s
 }
 blendweights_t;
 
-typedef struct r_vertexposition_s
-{
-	// 12 bytes
-	float vertex3f[3];
-}
-r_vertexposition_t;
-
 typedef struct r_vertexgeneric_s
 {
 	// 24 bytes
@@ -190,9 +183,8 @@ typedef struct surfmesh_s
 	qboolean isanimated;
 
 	// vertex and index buffers for rendering
-	r_vertexposition_t *vertexposition;
 	r_vertexmesh_t *vertexmesh;
-	r_meshbuffer_t *vertexpositionbuffer;
+	r_meshbuffer_t *vertex3fbuffer;
 	r_meshbuffer_t *vertexmeshbuffer;
 }
 surfmesh_t;
@@ -244,9 +236,8 @@ typedef struct shadowmesh_s
 	size_t vbooffset_texcoord2f;
 	// vertex/index buffers for rendering
 	// (created by Mod_ShadowMesh_Finish if possible)
-	r_vertexposition_t *vertexposition;
 	r_vertexmesh_t *vertexmesh; // usually NULL
-	r_meshbuffer_t *vertexpositionbuffer;
+	r_meshbuffer_t *vertex3fbuffer;
 	r_meshbuffer_t *vertexmeshbuffer; // usually NULL
 }
 shadowmesh_t;

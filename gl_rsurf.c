@@ -1058,11 +1058,8 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 	{
 		float origin[3];
 		VectorCopy(info->relativelightorigin, origin);
-		if (!r_svbsp.nodes)
-		{
-			r_svbsp.maxnodes = max(r_svbsp.maxnodes, 1<<18);
-			r_svbsp.nodes = (svbsp_node_t*) Mem_Alloc(r_main_mempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
-		}
+		r_svbsp.maxnodes = max(r_svbsp.maxnodes, 1<<12);
+		r_svbsp.nodes = (svbsp_node_t*) R_FrameData_Alloc(r_svbsp.maxnodes * sizeof(svbsp_node_t));
 		info->svbsp_active = true;
 		info->svbsp_insertoccluder = true;
 		for (;;)
@@ -1075,9 +1072,10 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 				// an upper limit is imposed
 				if (r_svbsp.maxnodes >= 2<<22)
 					break;
-				Mem_Free(r_svbsp.nodes);
 				r_svbsp.maxnodes *= 2;
-				r_svbsp.nodes = (svbsp_node_t*) Mem_Alloc(tempmempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
+				r_svbsp.nodes = (svbsp_node_t*) R_FrameData_Alloc(r_svbsp.maxnodes * sizeof(svbsp_node_t));
+				//Mem_Free(r_svbsp.nodes);
+				//r_svbsp.nodes = (svbsp_node_t*) Mem_Alloc(tempmempool, r_svbsp.maxnodes * sizeof(svbsp_node_t));
 			}
 			else
 				break;
@@ -1131,6 +1129,8 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 	}
 	else
 		R_Q1BSP_RecursiveGetLightInfo_BSP(info, false);
+	// we're using temporary framedata memory, so this pointer will be invalid soon, clear it
+	r_svbsp.nodes = NULL;
 	if (developer_extra.integer && use_svbsp)
 	{
 		Con_DPrintf("GetLightInfo: svbsp built with %i nodes, polygon stats:\n", r_svbsp.numnodes);
@@ -1274,6 +1274,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
+	R_FrameData_SetMark();
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
 	if (model->brush.shadowmesh)
@@ -1311,6 +1312,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightor
 	}
 	if (ent->model->brush.submodel)
 		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
+	R_FrameData_ReturnToMark();
 }
 
 void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
@@ -1347,6 +1349,7 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
 		return;
+	R_FrameData_SetMark();
 	// identify lit faces within the bounding box
 	for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
 	{
@@ -1377,10 +1380,14 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		}
 		--modelsurfacelistindex;
 		GL_CullFace(rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE ? GL_NONE : r_refdef.view.cullface_back);
-		RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXPOSITION, batchnumsurfaces, batchsurfacelist);
-		R_Mesh_PrepareVertices_Position(rsurface.batchnumvertices, rsurface.batchvertexposition, rsurface.batchvertexpositionbuffer);
+		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, batchnumsurfaces, batchsurfacelist);
+		if (rsurface.batchvertex3fbuffer)
+			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
+		else
+			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer);
 		RSurf_DrawBatch();
 	}
+	R_FrameData_ReturnToMark();
 }
 
 #define BATCHSIZE 1024
@@ -1390,6 +1397,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	int i, j, endsurface;
 	texture_t *t;
 	const msurface_t *surface;
+	R_FrameData_SetMark();
 	// note: in practice this never actually receives batches
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
@@ -1411,6 +1419,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 		}
 	}
 	R_Shadow_RenderMode_End();
+	R_FrameData_ReturnToMark();
 }
 
 extern qboolean r_shadow_usingdeferredprepass;
@@ -1422,6 +1431,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 	const msurface_t **texturesurfacelist;
 	texture_t *tex;
 	CHECKGLERROR
+	R_FrameData_SetMark();
 	// this is a double loop because non-visible surface skipping has to be
 	// fast, and even if this is not the world model (and hence no visibility
 	// checking) the input surface list and batch buffer are different formats
@@ -1477,6 +1487,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			R_Shadow_RenderLighting(texturenumsurfaces, texturesurfacelist);
 		}
 	}
+	R_FrameData_ReturnToMark();
 }
 
 //Made by [515]
