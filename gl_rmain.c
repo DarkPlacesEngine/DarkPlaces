@@ -5392,8 +5392,18 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			mode = SHADERMODE_WATER;
 			if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
 				permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND;
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			if((r_wateralpha.value < 1) && (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERALPHA))
+			{
+				// this is the right thing to do for wateralpha
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+				allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
+			}
+			else
+			{
+				// this is the right thing to do for entity alpha
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			}
 		}
 		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
 		{
