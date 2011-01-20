@@ -3646,12 +3646,12 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 #ifdef SUPPORTD3D
 		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertex3f_d3d9decl);
 		if (vertexbuffer)
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
+			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(float[3]));
 		else
 			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, NULL, 0, 0);
 		gl_state.d3dvertexbuffer = (void *)vertexbuffer;
-		gl_state.d3dvertexdata = (void *)vertex;
-		gl_state.d3dvertexsize = sizeof(*vertex);
+		gl_state.d3dvertexdata = (void *)vertex3f;
+		gl_state.d3dvertexsize = sizeof(float[3]);
 #endif
 		break;
 	case RENDERPATH_D3D10:
