@@ -6402,8 +6402,11 @@ nolength:
 					if(flags & PRINTF_SPACEPOSITIVE) *f++ = ' ';
 					if(flags & PRINTF_SIGNPOSITIVE) *f++ = '+';
 					*f++ = '*';
-					*f++ = '.';
-					*f++ = '*';
+					if(precision >= 0)
+					{
+						*f++ = '.';
+						*f++ = '*';
+					}
 					*f++ = *s;
 					*f++ = 0;
 
@@ -6414,50 +6417,70 @@ nolength:
 					{
 						case 'd': case 'i':
 							if(precision < 0) // not set
-								precision = 1;
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
+							else
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
 							break;
 						case 'o': case 'u': case 'x': case 'X':
 							if(precision < 0) // not set
-								precision = 1;
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+							else
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
 							break;
 						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
 							if(precision < 0) // not set
-								precision = 6;
-							o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
+							else
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (double) GETARG_FLOAT(thisarg) : (double) GETARG_INT(thisarg)));
 							break;
 						case 'v': case 'V':
 							f[-2] += 'g' - 'v';
 							if(precision < 0) // not set
-								precision = 6;
-							o += dpsnprintf(o, end - o, va("%s %s %s", /* NESTED SPRINTF IS NESTED */ formatbuf, formatbuf, formatbuf),
-								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[0] : (double) GETARG_INTVECTOR(thisarg)[0]),
-								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[1] : (double) GETARG_INTVECTOR(thisarg)[1]),
-								width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[2] : (double) GETARG_INTVECTOR(thisarg)[2])
-							);
+								o += dpsnprintf(o, end - o, va("%s %s %s", /* NESTED SPRINTF IS NESTED */ formatbuf, formatbuf, formatbuf),
+									width, (isfloat ? (double) GETARG_VECTOR(thisarg)[0] : (double) GETARG_INTVECTOR(thisarg)[0]),
+									width, (isfloat ? (double) GETARG_VECTOR(thisarg)[1] : (double) GETARG_INTVECTOR(thisarg)[1]),
+									width, (isfloat ? (double) GETARG_VECTOR(thisarg)[2] : (double) GETARG_INTVECTOR(thisarg)[2])
+								);
+							else
+								o += dpsnprintf(o, end - o, va("%s %s %s", /* NESTED SPRINTF IS NESTED */ formatbuf, formatbuf, formatbuf),
+									width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[0] : (double) GETARG_INTVECTOR(thisarg)[0]),
+									width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[1] : (double) GETARG_INTVECTOR(thisarg)[1]),
+									width, precision, (isfloat ? (double) GETARG_VECTOR(thisarg)[2] : (double) GETARG_INTVECTOR(thisarg)[2])
+								);
 							break;
 						case 'c':
-							if(precision < 0) // not set
-								precision = end - o - 1;
 							if(flags & PRINTF_ALTERNATE)
-								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+							{
+								if(precision < 0) // not set
+									o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+								else
+									o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+							}
 							else
 							{
 								unsigned int c = (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg));
 								const char *buf = u8_encodech(c, NULL);
 								if(!buf)
 									buf = "";
+								if(precision < 0) // not set
+									precision = end - o - 1;
 								o += u8_strpad(o, end - o, buf, (flags & PRINTF_LEFT) != 0, width, precision);
 							}
 							break;
 						case 's':
-							if(precision < 0) // not set
-								precision = end - o - 1;
 							if(flags & PRINTF_ALTERNATE)
-								o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
+							{
+								if(precision < 0) // not set
+									o += dpsnprintf(o, end - o, formatbuf, width, GETARG_STRING(thisarg));
+								else
+									o += dpsnprintf(o, end - o, formatbuf, width, precision, GETARG_STRING(thisarg));
+							}
 							else
+							{
+								if(precision < 0) // not set
+									precision = end - o - 1;
 								o += u8_strpad(o, end - o, GETARG_STRING(thisarg), (flags & PRINTF_LEFT) != 0, width, precision);
+							}
 							break;
 						default:
 							VM_Warning("VM_sprintf: invalid directive in %s: %s\n", PRVM_NAME, s0);
