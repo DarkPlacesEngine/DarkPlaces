@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#include "dpsoftrast.h"
 #ifdef SUPPORTD3D
 #include <d3d9.h>
 extern LPDIRECT3DDEVICE9 vid_d3d9dev;
@@ -289,6 +290,12 @@ static void R_Mesh_SetUseVBO(void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		gl_state.usevbo_staticvertex = false;
+		gl_state.usevbo_staticindex = false;
+		gl_state.usevbo_dynamicvertex = false;
+		gl_state.usevbo_dynamicindex = false;
+		break;
 	}
 }
 
@@ -326,6 +333,8 @@ static void gl_backend_start(void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -351,6 +360,8 @@ static void gl_backend_shutdown(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 
@@ -396,6 +407,8 @@ static void gl_backend_devicelost(void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		break;
 	}
 	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
@@ -428,6 +441,8 @@ static void gl_backend_devicelost(void)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			break;
 		}
 	}
 }
@@ -452,6 +467,8 @@ static void gl_backend_devicerestored(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -664,6 +681,7 @@ qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		break;
 	}
 
@@ -746,6 +764,7 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -995,6 +1014,7 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	case RENDERPATH_CGGL:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_D3D9:
 		m[5] *= -1;
@@ -1062,6 +1082,9 @@ void R_SetViewport(const r_viewport_t *v)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_Viewport(v->x, v->y, v->width, v->height);
+		break;
 	}
 
 	// force an update of the derived matrices
@@ -1117,6 +1140,8 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 		return 1;
+	case RENDERPATH_SOFT:
+		return 1;
 	}
 	return 0;
 }
@@ -1135,6 +1160,8 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -1200,6 +1227,9 @@ void R_Mesh_ResetRenderTargets(void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
+		break;
 	}
 }
 
@@ -1258,6 +1288,21 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		if (fbo)
+		{
+			int width, height;
+			unsigned int *pointers[5];
+			memset(pointers, 0, sizeof(pointers));
+			for (i = 0;i < 5;i++)
+				pointers[i] = textures[i] ? (unsigned int *)DPSOFTRAST_Texture_GetPixelPointer(textures[i]->texnum, 0) : NULL;
+			width = DPSOFTRAST_Texture_GetWidth(textures[0] ? textures[0]->texnum : textures[4]->texnum, 0);
+			height = DPSOFTRAST_Texture_GetHeight(textures[0] ? textures[0]->texnum : textures[4]->texnum, 0);
+			DPSOFTRAST_SetRenderTargets(width, height, pointers[4], pointers[0], pointers[1], pointers[2], pointers[3]);
+		}
+		else
+			DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
 		break;
 	}
 }
@@ -1426,7 +1471,7 @@ static void GL_Backend_ResetState(void)
 
 		if (vid.support.ext_framebuffer_object)
 		{
-			qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+			//qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
 			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 		}
 
@@ -1468,6 +1513,17 @@ static void GL_Backend_ResetState(void)
 		}
 		CHECKGLERROR
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_ColorMask(1,1,1,1);
+		DPSOFTRAST_AlphaTest(gl_state.alphatest);
+		DPSOFTRAST_BlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);
+		DPSOFTRAST_CullFace(gl_state.cullface);
+		DPSOFTRAST_DepthFunc(gl_state.depthfunc);
+		DPSOFTRAST_DepthMask(gl_state.depthmask);
+		DPSOFTRAST_PolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+		DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
+		DPSOFTRAST_Viewport(0, 0, vid.width, vid.height);
+		break;
 	}
 }
 
@@ -1492,6 +1548,8 @@ void GL_ActiveTexture(unsigned int num)
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+			break;
+		case RENDERPATH_SOFT:
 			break;
 		}
 	}
@@ -1518,6 +1576,8 @@ void GL_ClientActiveTexture(unsigned int num)
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+			break;
+		case RENDERPATH_SOFT:
 			break;
 		}
 	}
@@ -1592,6 +1652,9 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_BlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);
+			break;
 		}
 	}
 }
@@ -1620,6 +1683,9 @@ void GL_DepthMask(int state)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_DepthMask(gl_state.depthmask);
 			break;
 		}
 	}
@@ -1657,6 +1723,9 @@ void GL_DepthTest(int state)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_DepthTest(gl_state.depthtest);
+			break;
 		}
 	}
 }
@@ -1685,6 +1754,9 @@ void GL_DepthFunc(int state)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_DepthFunc(gl_state.depthfunc);
 			break;
 		}
 	}
@@ -1723,6 +1795,9 @@ void GL_DepthRange(float nearfrac, float farfrac)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_DepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
 			break;
 		}
 	}
@@ -1788,6 +1863,9 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -1837,6 +1915,9 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -1865,6 +1946,9 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_PolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
 			break;
 		}
 	}
@@ -1899,6 +1983,9 @@ void GL_SetMirrorState(qboolean state)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_CullFace(gl_state.cullface);
 			break;
 		}
 	}
@@ -1973,6 +2060,9 @@ void GL_CullFace(int state)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_CullFace(gl_state.cullface);
+		break;
 	}
 }
 
@@ -2008,6 +2098,9 @@ void GL_AlphaTest(int state)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_AlphaTest(gl_state.alphatest);
+			break;
 		}
 	}
 }
@@ -2038,6 +2131,9 @@ void GL_AlphaFunc(int state, float value)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_AlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);
 			break;
 		}
 	}
@@ -2070,6 +2166,9 @@ void GL_ColorMask(int r, int g, int b, int a)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_ColorMask(r, g, b, a);
+			break;
 		}
 	}
 }
@@ -2096,6 +2195,9 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
 			// no equivalent in D3D
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_Color4f(cr, cg, cb, ca);
 			break;
 		}
 	}
@@ -2131,6 +2233,9 @@ void GL_Scissor (int x, int y, int width, int height)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_Scissor(x, y, width, height);
+		break;
 	}
 }
 
@@ -2162,6 +2267,9 @@ void GL_ScissorTest(int state)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_ScissorTest(gl_state.scissortest);
 			break;
 		}
 	}
@@ -2209,6 +2317,12 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		if (mask & GL_COLOR_BUFFER_BIT)
+			DPSOFTRAST_ClearColor(colorvalue[0], colorvalue[1], colorvalue[2], colorvalue[3]);
+		if (mask & GL_DEPTH_BUFFER_BIT)
+			DPSOFTRAST_ClearDepth(depthvalue);
 		break;
 	}
 }
@@ -2265,6 +2379,9 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_GetPixelsBGRA(x, y, width, height, outpixels);
 		break;
 	}
 }
@@ -2425,6 +2542,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 	// upload a dynamic index buffer if needed
@@ -2738,11 +2857,11 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			else
 			{
 				if (element3s)
-					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3s + firsttriangle*3, D3DFMT_INDEX16, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
+					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3s, D3DFMT_INDEX16, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
 				else if (element3i)
-					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3i + firsttriangle*3, D3DFMT_INDEX32, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
+					IDirect3DDevice9_DrawIndexedPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, firstvertex, numvertices, numtriangles, element3i, D3DFMT_INDEX32, gl_state.d3dvertexdata, gl_state.d3dvertexsize);
 				else
-					IDirect3DDevice9_DrawPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, numvertices, (void *) ((byte *) gl_state.d3dvertexdata + (numvertices * gl_state.d3dvertexsize)), gl_state.d3dvertexsize);
+					IDirect3DDevice9_DrawPrimitiveUP(vid_d3d9dev, D3DPT_TRIANGLELIST, numvertices, (void *)gl_state.d3dvertexdata, gl_state.d3dvertexsize);
 			}
 #endif
 			break;
@@ -2751,6 +2870,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_DrawTriangles(firstvertex, numvertices, numtriangles, element3i, element3s);
 			break;
 		}
 	}
@@ -2866,6 +2988,8 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -2900,6 +3024,8 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
@@ -3085,6 +3211,9 @@ void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int w
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_CopyRectangleToTexture(tex->texnum, 0, tx, ty, sx, sy, width, height);
+		break;
 	}
 }
 
@@ -3244,6 +3373,19 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		if (!tex)
+		{
+			tex = r_texture_white;
+			// not initialized enough yet...
+			if (!tex)
+				return;
+		}
+		if (unit->texture == tex)
+			return;
+		unit->texture = tex;
+		DPSOFTRAST_SetTexture(unitnum, R_GetTexture(tex));
+		break;
 	}
 }
 
@@ -3290,6 +3432,8 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -3374,6 +3518,8 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -3490,6 +3636,8 @@ void R_Mesh_ResetTextureState(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 		break;
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -3554,6 +3702,8 @@ static void R_Mesh_InitVertexDeclarations(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 #endif
@@ -3660,6 +3810,15 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetVertexPointer(vertex3f, sizeof(float[3]));
+		DPSOFTRAST_SetColorPointer(NULL, 0);
+		DPSOFTRAST_SetTexCoordPointer(0, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(1, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(2, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(3, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(float[2]), NULL);
+		break;
 	}
 }
 
@@ -3725,6 +3884,15 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetVertexPointer(vertex3f, sizeof(float[3]));
+		DPSOFTRAST_SetColorPointer(color4f, sizeof(float[4]));
+		DPSOFTRAST_SetTexCoordPointer(0, 2, sizeof(float[2]), texcoord2f);
+		DPSOFTRAST_SetTexCoordPointer(1, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(2, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(3, 2, sizeof(float[2]), NULL);
+		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(float[2]), NULL);
+		return;
 	}
 
 	// no quick path for this case, convert to vertex structs
@@ -3841,6 +4009,15 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetVertexPointer(vertex->vertex3f, sizeof(*vertex));
+		DPSOFTRAST_SetColorPointer4ub(vertex->color4ub, sizeof(*vertex));
+		DPSOFTRAST_SetTexCoordPointer(0, 2, sizeof(*vertex), vertex->texcoord2f);
+		DPSOFTRAST_SetTexCoordPointer(1, 2, sizeof(*vertex), NULL);
+		DPSOFTRAST_SetTexCoordPointer(2, 2, sizeof(*vertex), NULL);
+		DPSOFTRAST_SetTexCoordPointer(3, 2, sizeof(*vertex), NULL);
+		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(*vertex), NULL);
+		break;
 	}
 }
 
@@ -3906,6 +4083,15 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetVertexPointer(vertex3f, sizeof(float[3]));
+		DPSOFTRAST_SetColorPointer(color4f, sizeof(float[4]));
+		DPSOFTRAST_SetTexCoordPointer(0, 2, sizeof(float[2]), texcoordtexture2f);
+		DPSOFTRAST_SetTexCoordPointer(1, 3, sizeof(float[3]), svector3f);
+		DPSOFTRAST_SetTexCoordPointer(2, 3, sizeof(float[3]), tvector3f);
+		DPSOFTRAST_SetTexCoordPointer(3, 3, sizeof(float[3]), normal3f);
+		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(float[2]), texcoordlightmap2f);
+		return;
 	}
 
 	vertex = R_Mesh_PrepareVertices_Mesh_Lock(numvertices);
@@ -4032,6 +4218,15 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_SetVertexPointer(vertex->vertex3f, sizeof(*vertex));
+		DPSOFTRAST_SetColorPointer4ub(vertex->color4ub, sizeof(*vertex));
+		DPSOFTRAST_SetTexCoordPointer(0, 2, sizeof(*vertex), vertex->texcoordtexture2f);
+		DPSOFTRAST_SetTexCoordPointer(1, 3, sizeof(*vertex), vertex->svector3f);
+		DPSOFTRAST_SetTexCoordPointer(2, 3, sizeof(*vertex), vertex->tvector3f);
+		DPSOFTRAST_SetTexCoordPointer(3, 3, sizeof(*vertex), vertex->normal3f);
+		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(*vertex), vertex->texcoordlightmap2f);
 		break;
 	}
 }

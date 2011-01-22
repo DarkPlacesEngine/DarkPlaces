@@ -1546,8 +1546,6 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	memset(&vid.support, 0, sizeof(vid.support));
 	Cvar_SetQuick(&gl_info_extensions, "");
 
-	CHECKGLERROR
-
 	vid.forcevbo = false;
 	vid.support.arb_depth_texture = true;
 	vid.support.arb_draw_buffers = vid_d3d9caps.NumSimultaneousRTs > 1;

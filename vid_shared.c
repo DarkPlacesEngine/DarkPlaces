@@ -1063,6 +1063,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		if (v_glslgamma.integer)
 			wantgamma = 0;
 		break;

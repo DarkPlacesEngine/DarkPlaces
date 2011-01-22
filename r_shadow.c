@@ -139,6 +139,7 @@ demonstrated by the game Doom3.
 #include "cl_collision.h"
 #include "portals.h"
 #include "image.h"
+#include "dpsoftrast.h"
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
@@ -427,6 +428,7 @@ void R_Shadow_SetShadowMode(void)
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
 			r_shadow_shadowmapsampler = false;
 			r_shadow_shadowmappcf = 1;
 			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
@@ -1897,6 +1899,7 @@ void R_Shadow_RenderMode_Begin(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 		break;
 	case RENDERPATH_GL13:
@@ -2101,6 +2104,7 @@ init_done:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		GL_CullFace(r_refdef.view.cullface_back);
 		// OpenGL lets us scissor larger than the viewport, so go ahead and clear all views at once
 		if ((clear & ((2 << side) - 1)) == (1 << side)) // only clear if the side is the first in the mask
@@ -2116,6 +2120,8 @@ init_done:
 		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 		break;
 	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
 		Vector4Set(clearcolor, 1,1,1,1);
 		// completely different meaning than in OpenGL path
 		r_shadow_shadowmap_parameters[1] = 0;
@@ -2137,14 +2143,6 @@ init_done:
 			if (clear)
 				GL_Clear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT, clearcolor, 1.0f, 0);
 		}
-		break;
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		// D3D considers it an error to use a scissor larger than the viewport...  clear just this view
-		GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
-		GL_ColorMask(0,0,0,0);
-		if (clear)
-			GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
 		break;
 	}
 }
@@ -2692,6 +2690,9 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_BlendSubtract(true);
+			break;
 		}
 	}
 	RSurf_SetupDepthAndCulling();
@@ -2734,6 +2735,9 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_BlendSubtract(false);
 			break;
 		}
 	}
@@ -3885,6 +3889,7 @@ void R_Shadow_PrepareLights(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
@@ -4277,6 +4282,7 @@ void R_DrawModelShadowMaps(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -4478,6 +4484,9 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 	rtlight->corona_visibility = bound(0, (zdist - 32) / 32, 1);
@@ -4511,6 +4520,9 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 		//Con_Printf("%i of %i pixels\n", (int)visiblepixels, (int)allpixels);
@@ -4552,6 +4564,9 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			case RENDERPATH_D3D11:
 				Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 				break;
+			case RENDERPATH_SOFT:
+				DPSOFTRAST_BlendSubtract(true);
+				break;
 			}
 		}
 		R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
@@ -4577,6 +4592,9 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 				break;
 			case RENDERPATH_D3D11:
 				Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+				break;
+			case RENDERPATH_SOFT:
+				DPSOFTRAST_BlendSubtract(false);
 				break;
 			}
 		}
@@ -4644,6 +4662,9 @@ void R_Shadow_DrawCoronas(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)

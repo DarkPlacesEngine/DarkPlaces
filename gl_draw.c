@@ -1938,6 +1938,9 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -1976,6 +1979,9 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
@@ -2018,6 +2024,9 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 }
@@ -2074,6 +2083,8 @@ void R_DrawGamma(void)
 		if (vid_usinghwgamma)
 			return;
 		break;
+	case RENDERPATH_SOFT:
+		return;
 	}
 	// all the blends ignore depth
 //	R_Mesh_ResetTextureState();

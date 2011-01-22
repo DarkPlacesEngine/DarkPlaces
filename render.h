@@ -442,55 +442,6 @@ typedef enum rsurfacepass_e
 }
 rsurfacepass_t;
 
-typedef enum gl20_texunit_e
-{
-	// postprocess shaders, and generic shaders:
-	GL20TU_FIRST = 0,
-	GL20TU_SECOND = 1,
-	GL20TU_GAMMARAMPS = 2,
-	// standard material properties
-	GL20TU_NORMAL = 0,
-	GL20TU_COLOR = 1,
-	GL20TU_GLOSS = 2,
-	GL20TU_GLOW = 3,
-	// material properties for a second material
-	GL20TU_SECONDARY_NORMAL = 4,
-	GL20TU_SECONDARY_COLOR = 5,
-	GL20TU_SECONDARY_GLOSS = 6,
-	GL20TU_SECONDARY_GLOW = 7,
-	// material properties for a colormapped material
-	// conflicts with secondary material
-	GL20TU_PANTS = 4,
-	GL20TU_SHIRT = 7,
-	// fog fade in the distance
-	GL20TU_FOGMASK = 8,
-	// compiled ambient lightmap and deluxemap
-	GL20TU_LIGHTMAP = 9,
-	GL20TU_DELUXEMAP = 10,
-	// refraction, used by water shaders
-	GL20TU_REFRACTION = 3,
-	// reflection, used by water shaders, also with normal material rendering
-	// conflicts with secondary material
-	GL20TU_REFLECTION = 7,
-	// rtlight attenuation (distance fade) and cubemap filter (projection texturing)
-	// conflicts with lightmap/deluxemap
-	GL20TU_ATTENUATION = 9,
-	GL20TU_CUBE = 10,
-	GL20TU_SHADOWMAP2D = 15,
-	GL20TU_CUBEPROJECTION = 12,
-	// rtlight prepass data (screenspace depth and normalmap)
-	GL20TU_SCREENDEPTH = 13,
-	GL20TU_SCREENNORMALMAP = 14,
-	// lightmap prepass data (screenspace diffuse and specular from lights)
-	GL20TU_SCREENDIFFUSE = 11,
-	GL20TU_SCREENSPECULAR = 12,
-	// fake reflections
-	GL20TU_REFLECTMASK = 5,
-	GL20TU_REFLECTCUBE = 6,
-	GL20TU_FOGHEIGHTTEXTURE = 14
-}
-gl20_texunit;
-
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale);
 void R_SetupShader_DepthOrShadow(void);
 void R_SetupShader_ShowDepth(void);
