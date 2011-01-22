@@ -1401,8 +1401,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 			for (x = startx;x < endx;x++)
 			{
 				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0];
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1];
+				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
+				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
 				tci[0] = (int)floor(tc[0]);
 				tci[1] = (int)floor(tc[1]);
 				tci1[0] = tci[0] + 1;
@@ -1436,8 +1436,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 			for (x = startx;x < endx;x++)
 			{
 				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0];
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1];
+				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
+				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
 				tci[0] = (int)floor(tc[0]);
 				tci[1] = (int)floor(tc[1]);
 				tci1[0] = tci[0] + 1;
@@ -1474,8 +1474,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 			for (x = startx;x < endx;x++)
 			{
 				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0];
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1];
+				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
+				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
 				tci[0] = (int)floor(tc[0]);
 				tci[1] = (int)floor(tc[1]);
 				tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
@@ -1496,8 +1496,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 			for (x = startx;x < endx;x++)
 			{
 				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0];
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1];
+				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
+				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
 				tci[0] = (int)floor(tc[0]);
 				tci[1] = (int)floor(tc[1]);
 				tci[0] &= tciwrapmask[0];
