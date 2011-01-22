@@ -152,6 +152,7 @@ typedef enum DPSOFTRAST_BLENDMODE_e
 	DPSOFTRAST_BLENDMODE_MUL,
 	DPSOFTRAST_BLENDMODE_MUL2,
 	DPSOFTRAST_BLENDMODE_SUBALPHA,
+	DPSOFTRAST_BLENDMODE_PSEUDOALPHA,
 	DPSOFTRAST_BLENDMODE_TOTAL
 }
 DPSOFTRAST_BLENDMODE;
@@ -278,6 +279,7 @@ int blendmodetable[][4] =
 	{DPSOFTRAST_BLENDMODE_MUL, GL_ZERO, GL_SRC_COLOR, false},
 	{DPSOFTRAST_BLENDMODE_MUL, GL_DST_COLOR, GL_ZERO, false},
 	{DPSOFTRAST_BLENDMODE_MUL2, GL_DST_COLOR, GL_SRC_COLOR, false},
+	{DPSOFTRAST_BLENDMODE_PSEUDOALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, false},
 	{DPSOFTRAST_BLENDMODE_SUBALPHA, GL_SRC_COLOR, GL_ONE, true}
 };
 
@@ -1313,6 +1315,23 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const f
 			pixel[x*4+2] = d[2];
 			pixel[x*4+3] = d[3];
 		}
+	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			a = 255.0f;
+			b = 1.0f - in4f[x*4+3];
+			d[0] = (int)(in4f[x*4+2]*a+pixel[x*4+0]*b);if (d[0] > 255) d[0] = 255;
+			d[1] = (int)(in4f[x*4+1]*a+pixel[x*4+1]*b);if (d[1] > 255) d[1] = 255;
+			d[2] = (int)(in4f[x*4+0]*a+pixel[x*4+2]*b);if (d[2] > 255) d[2] = 255;
+			d[3] = (int)(in4f[x*4+3]*a+pixel[x*4+3]*b);if (d[3] > 255) d[3] = 255;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
 		break;
 	}
 }
