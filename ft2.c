@@ -152,6 +152,79 @@ typedef struct
 font_postprocess_t;
 static font_postprocess_t pp;
 
+typedef struct fontfilecache_s
+{
+	unsigned char *buf;
+	fs_offset_t len;
+	int refcount;
+	char path[MAX_QPATH];
+}
+fontfilecache_t;
+#define MAX_FONTFILES 8
+static fontfilecache_t fontfiles[MAX_FONTFILES];
+static const unsigned char *fontfilecache_LoadFile(const char *path, qboolean quiet, fs_offset_t *filesizepointer)
+{
+	int i;
+	unsigned char *buf;
+
+	for(i = 0; i < MAX_FONTFILES; ++i)
+	{
+		if(fontfiles[i].refcount > 0)
+			if(!strcmp(path, fontfiles[i].path))
+			{
+				*filesizepointer = fontfiles[i].len;
+				++fontfiles[i].refcount;
+				return fontfiles[i].buf;
+			}
+	}
+
+	buf = FS_LoadFile(path, font_mempool, quiet, filesizepointer);
+	if(buf)
+	{
+		for(i = 0; i < MAX_FONTFILES; ++i)
+			if(fontfiles[i].refcount <= 0)
+			{
+				strlcpy(fontfiles[i].path, path, sizeof(fontfiles[i].path));
+				fontfiles[i].len = *filesizepointer;
+				fontfiles[i].buf = buf;
+				fontfiles[i].refcount = 1;
+				return buf;
+			}
+	}
+
+	return buf;
+}
+static void fontfilecache_Free(const unsigned char *buf)
+{
+	int i;
+	for(i = 0; i < MAX_FONTFILES; ++i)
+	{
+		if(fontfiles[i].refcount > 0)
+			if(fontfiles[i].buf == buf)
+			{
+				if(--fontfiles[i].refcount <= 0)
+				{
+					Mem_Free(fontfiles[i].buf);
+					fontfiles[i].buf = NULL;
+				}
+				return;
+			}
+	}
+	// if we get here, it used regular allocation
+	Mem_Free((void *) buf);
+}
+static void fontfilecache_FreeAll(void)
+{
+	int i;
+	for(i = 0; i < MAX_FONTFILES; ++i)
+	{
+		if(fontfiles[i].refcount > 0)
+			Mem_Free(fontfiles[i].buf);
+		fontfiles[i].buf = NULL;
+		fontfiles[i].refcount = 0;
+	}
+}
+
 /*
 ====================
 Font_CloseLibrary
@@ -161,6 +234,7 @@ Unload the FreeType2 DLL
 */
 void Font_CloseLibrary (void)
 {
+	fontfilecache_FreeAll();
 	if (font_mempool)
 		Mem_FreePool(&font_mempool);
 	if (font_texturepool)
@@ -448,7 +522,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 	char filename[MAX_QPATH];
 	int status;
 	size_t i;
-	unsigned char *data;
+	const unsigned char *data;
 	fs_offset_t datasize;
 
 	memset(font, 0, sizeof(*font));
@@ -470,18 +544,18 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 
 	// try load direct file
 	memcpy(filename, name, namelen+1);
-	data = FS_LoadFile(filename, font_mempool, false, &datasize);
+	data = fontfilecache_LoadFile(filename, false, &datasize);
 	// try load .ttf
 	if (!data)
 	{
 		memcpy(filename + namelen, ".ttf", 5);
-		data = FS_LoadFile(filename, font_mempool, false, &datasize);
+		data = fontfilecache_LoadFile(filename, false, &datasize);
 	}
 	// try load .otf
 	if (!data)
 	{
 		memcpy(filename + namelen, ".otf", 5);
-		data = FS_LoadFile(filename, font_mempool, false, &datasize);
+		data = fontfilecache_LoadFile(filename, false, &datasize);
 	}
 	// try load .pfb/afm
 	if (!data)
@@ -489,12 +563,12 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 		ft2_attachment_t afm;
 
 		memcpy(filename + namelen, ".pfb", 5);
-		data = FS_LoadFile(filename, font_mempool, false, &datasize);
+		data = fontfilecache_LoadFile(filename, false, &datasize);
 
 		if (data)
 		{
 			memcpy(filename + namelen, ".afm", 5);
-			afm.data = FS_LoadFile(filename, font_mempool, false, &afm.size);
+			afm.data = fontfilecache_LoadFile(filename, false, &afm.size);
 
 			if (afm.data)
 				Font_Attach(font, &afm);
@@ -969,7 +1043,7 @@ void Font_UnloadFont(ft2_font_t *font)
 	{
 		for (i = 0; i < (int)font->attachmentcount; ++i) {
 			if (font->attachments[i].data)
-				Mem_Free(font->attachments[i].data);
+				fontfilecache_Free(font->attachments[i].data);
 		}
 		Mem_Free(font->attachments);
 		font->attachmentcount = 0;
@@ -992,7 +1066,7 @@ void Font_UnloadFont(ft2_font_t *font)
 		}
 	}
 	if (font->data) {
-	    Mem_Free(font->data);
+	    fontfilecache_Free(font->data);
 	    font->data = NULL;
 	}
 }
