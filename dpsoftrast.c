@@ -934,7 +934,7 @@ void DPSOFTRAST_Uniform1iARB(DPSOFTRAST_UNIFORM index, int i0)
 	dpsoftrast.uniform1i[index] = i0;
 }
 
-void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcolors, int numtexcoords)
+void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcolors)
 {
 	int i;
 	int j;
@@ -1018,7 +1018,7 @@ void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcol
 			}
 		}
 	}
-	for (j = 0;j < numtexcoords;j++)
+	for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL-2;j++)
 	{
 		if (dpsoftrast.pointer_texcoordf[j])
 		{
@@ -2419,7 +2419,7 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 	arraymask[8] = dpsoftrast.pointer_texcoordf[6] != NULL;
 	arraymask[9] = dpsoftrast.pointer_texcoordf[7] != NULL;
 	DPSOFTRAST_Validate(DPSOFTRAST_VALIDATE_DRAW);
-	DPSOFTRAST_Draw_LoadVertices(firstvertex, numvertices, true, 1);
+	DPSOFTRAST_Draw_LoadVertices(firstvertex, numvertices, true);
 	DPSOFTRAST_Draw_VertexShader();
 	DPSOFTRAST_Draw_ProjectVertices(dpsoftrast.draw.screencoord4f, dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], numvertices);
 	DPSOFTRAST_Draw_ProcessTriangles(firstvertex, numvertices, numtriangles, element3i, element3s, arraymask);
