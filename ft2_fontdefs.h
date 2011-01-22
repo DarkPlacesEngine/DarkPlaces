@@ -50,7 +50,7 @@ struct ft2_font_map_s
 
 struct ft2_attachment_s
 {
-	unsigned char *data;
+	const unsigned char *data;
 	fs_offset_t    size;
 };
 
