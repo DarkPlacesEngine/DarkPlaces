@@ -120,6 +120,7 @@ OBJ_COMMON= \
 	csprogs.o \
 	curves.o \
 	cvar.o \
+	dpsoftrast.o \
 	dpvsimpledecode.o \
 	filematch.o \
 	fractalnoise.o \

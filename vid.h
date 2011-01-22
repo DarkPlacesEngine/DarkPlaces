@@ -36,7 +36,8 @@ typedef enum renderpath_e
 	RENDERPATH_CGGL,
 	RENDERPATH_D3D9,
 	RENDERPATH_D3D10,
-	RENDERPATH_D3D11
+	RENDERPATH_D3D11,
+	RENDERPATH_SOFT
 }
 renderpath_t;
 
@@ -118,6 +119,13 @@ typedef struct viddef_s
 	unsigned int maxdrawbuffers;
 
 	viddef_support_t support;
+
+	// in RENDERPATH_SOFT this is a 32bpp native-endian ARGB framebuffer
+	// (native-endian ARGB meaning that in little endian it is BGRA bytes,
+	//  in big endian it is ARGB byte order, the format is converted during
+	//  blit to the window)
+	unsigned int *softpixels;
+	unsigned int *softdepthpixels;
 } viddef_t;
 
 // global video state

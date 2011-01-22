@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "image.h"
+#include "dpsoftrast.h"
 
 #ifdef MACOSX
 #include <Carbon/Carbon.h>
@@ -63,6 +64,7 @@ int cl_available = true;
 
 qboolean vid_supportrefreshrate = false;
 
+cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
 cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
 cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
 cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
@@ -98,6 +100,7 @@ static int win_half_height = 50;
 static int video_bpp, video_flags;
 
 static SDL_Surface *screen;
+static SDL_Surface *vid_softsurface;
 
 // joystick axes state
 #define MAX_JOYSTICK_AXES	16
@@ -606,6 +609,16 @@ void Sys_SendKeyEvents( void )
 					vid.width = event.resize.w;
 					vid.height = event.resize.h;
 					SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
+					if (vid_softsurface)
+					{
+						SDL_FreeSurface(vid_softsurface);
+						vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, vid.width, vid.height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+						vid.softpixels = vid_softsurface->pixels;
+						SDL_SetAlpha(vid_softsurface, 0, 255);
+						if (vid.softdepthpixels)
+							free(vid.softdepthpixels);
+						vid.softdepthpixels = calloc(1, vid.width * vid.height * 4);
+					}
 #ifdef SDL_R_RESTART
 					// better not call R_Modules_Restart from here directly, as this may wreak havoc...
 					// so, let's better queue it for next frame
@@ -657,6 +670,7 @@ void VID_Init (void)
 #ifdef MACOSX
 	Cvar_RegisterVariable(&apple_mouse_noaccel);
 #endif
+	Cvar_RegisterVariable(&vid_soft);
 	Cvar_RegisterVariable(&joy_detected);
 	Cvar_RegisterVariable(&joy_enable);
 	Cvar_RegisterVariable(&joy_index);
@@ -961,7 +975,7 @@ static void VID_OutputVersion(void)
 					version->major, version->minor, version->patch );
 }
 
-qboolean VID_InitMode(viddef_mode_t *mode)
+qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
 	static int notfirstvideomode = false;
@@ -1056,6 +1070,9 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 		return false;
 	}
 
+	vid_softsurface = NULL;
+	vid.softpixels = NULL;
+
 	// set window title
 	VID_SetCaption();
 	// set up an event filter to ask confirmation on close button in WIN32
@@ -1096,10 +1113,171 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	return true;
 }
 
+extern cvar_t gl_info_extensions;
+extern cvar_t gl_info_vendor;
+extern cvar_t gl_info_renderer;
+extern cvar_t gl_info_version;
+extern cvar_t gl_info_platform;
+extern cvar_t gl_info_driver;
+
+qboolean VID_InitModeSoft(viddef_mode_t *mode)
+{
+	int i;
+	int flags = SDL_HWSURFACE;
+
+	win_half_width = mode->width>>1;
+	win_half_height = mode->height>>1;
+
+	if(vid_resizable.integer)
+		flags |= SDL_RESIZABLE;
+
+	VID_OutputVersion();
+
+	vid_isfullscreen = false;
+	if (mode->fullscreen) {
+		flags |= SDL_FULLSCREEN;
+		vid_isfullscreen = true;
+	}
+
+	video_bpp = mode->bitsperpixel;
+	video_flags = flags;
+	VID_SetIcon_Pre();
+	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
+	VID_SetIcon_Post();
+
+	if (screen == NULL)
+	{
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
+		VID_Shutdown();
+		return false;
+	}
+
+	// create a framebuffer using our specific color format, we let the SDL blit function convert it in VID_Finish
+	vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, mode->width, mode->height, 32, 0x00FF0000, 0x0000FF00, 0x00000000FF, 0xFF000000);
+	if (vid_softsurface == NULL)
+	{
+		Con_Printf("Failed to setup software rasterizer framebuffer %ix%ix32bpp: %s\n", mode->width, mode->height, SDL_GetError());
+		VID_Shutdown();
+		return false;
+	}
+	SDL_SetAlpha(vid_softsurface, 0, 255);
+
+	vid.softpixels = vid_softsurface->pixels;
+	vid.softdepthpixels = calloc(1, mode->width * mode->height * 4);
+	DPSOFTRAST_Init(mode->width, mode->height, vid_softsurface->pixels, vid.softdepthpixels);
+
+	// set window title
+	VID_SetCaption();
+	// set up an event filter to ask confirmation on close button in WIN32
+	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
+	// init keyboard
+	SDL_EnableUNICODE( SDL_ENABLE );
+	// enable key repeat since everyone expects it
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+
+	gl_platform = "SDLSoft";
+	gl_platformextensions = "";
+
+	gl_renderer = "DarkPlaces-Soft";
+	gl_vendor = "Forest Hale";
+	gl_version = "0.0";
+	gl_extensions = "";
+
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+	Cvar_SetQuick(&gl_info_extensions, "");
+
+	vid.forcevbo = false;
+	vid.support.arb_depth_texture = true;
+	vid.support.arb_draw_buffers = true;
+	vid.support.arb_occlusion_query = true;
+	vid.support.arb_shadow = true;
+	vid.support.arb_texture_compression = true;
+	vid.support.arb_texture_cube_map = true;
+	vid.support.arb_texture_non_power_of_two = false;
+	vid.support.arb_vertex_buffer_object = true;
+	vid.support.ext_blend_subtract = true;
+	vid.support.ext_draw_range_elements = true;
+	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_texture_3d = true;
+	vid.support.ext_texture_compression_s3tc = true;
+	vid.support.ext_texture_filter_anisotropic = true;
+	vid.support.ati_separate_stencil = true;
+
+	vid.maxtexturesize_2d = 16384;
+	vid.maxtexturesize_3d = 512;
+	vid.maxtexturesize_cubemap = 16384;
+	vid.texunits = 4;
+	vid.teximageunits = 32;
+	vid.texarrayunits = 8;
+	vid.max_anisotropy = 1;
+	vid.maxdrawbuffers = 4;
+
+	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
+	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
+	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
+	Con_DPrintf("Using DarkPlaces Software Rasterizer rendering path\n");
+	vid.renderpath = RENDERPATH_SOFT;
+	vid.useinterleavedarrays = false;
+
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
+
+	// LordHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+
+	// clear to black (loading plaque will be seen over this)
+	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
+
+	vid_numjoysticks = SDL_NumJoysticks();
+	vid_numjoysticks = bound(0, vid_numjoysticks, MAX_JOYSTICKS);
+	Cvar_SetValueQuick(&joy_detected, vid_numjoysticks);
+	Con_Printf("%d SDL joystick(s) found:\n", vid_numjoysticks);
+	memset(vid_joysticks, 0, sizeof(vid_joysticks));
+	for (i = 0;i < vid_numjoysticks;i++)
+	{
+		SDL_Joystick *joy;
+		joy = vid_joysticks[i] = SDL_JoystickOpen(i);
+		if (!joy)
+		{
+			Con_Printf("joystick #%i: open failed: %s\n", i, SDL_GetError());
+			continue;
+		}
+		Con_Printf("joystick #%i: opened \"%s\" with %i axes, %i buttons, %i balls\n", i, SDL_JoystickName(i), (int)SDL_JoystickNumAxes(joy), (int)SDL_JoystickNumButtons(joy), (int)SDL_JoystickNumBalls(joy));
+	}
+
+	vid_hidden = false;
+	vid_activewindow = false;
+	vid_usingmouse = false;
+	vid_usinghidecursor = false;
+
+	SDL_WM_GrabInput(SDL_GRAB_OFF);
+	return true;
+}
+
+qboolean VID_InitMode(viddef_mode_t *mode)
+{
+	if (vid_soft.integer)
+		return VID_InitModeSoft(mode);
+	else
+		return VID_InitModeGL(mode);
+}
+
 void VID_Shutdown (void)
 {
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
+
+	if (vid_softsurface)
+		SDL_FreeSurface(vid_softsurface);
+	vid_softsurface = NULL;
+	vid.softpixels = NULL;
+	if (vid.softdepthpixels)
+		free(vid.softdepthpixels);
+	vid.softdepthpixels = NULL;
 
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
@@ -1137,12 +1315,28 @@ void VID_Finish (void)
 
 	if (!vid_hidden)
 	{
-		CHECKGLERROR
-		if (r_speeds.integer == 2 || gl_finish.integer)
+		switch(vid.renderpath)
 		{
-			qglFinish();CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_CGGL:
+			CHECKGLERROR
+			if (r_speeds.integer == 2 || gl_finish.integer)
+			{
+				qglFinish();CHECKGLERROR
+			}
+			SDL_GL_SwapBuffers();
+			break;
+		case RENDERPATH_SOFT:
+			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
+			SDL_Flip(screen);
+			break;
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			break;
 		}
-		SDL_GL_SwapBuffers();
 	}
 }
 

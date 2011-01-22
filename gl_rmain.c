@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "ft2.h"
 #include "csprogs.h"
 #include "cl_video.h"
+#include "dpsoftrast.h"
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
@@ -3342,40 +3343,6 @@ typedef struct shadermodeinfo_s
 }
 shadermodeinfo_t;
 
-typedef enum shaderpermutation_e
-{
-	SHADERPERMUTATION_DIFFUSE = 1<<0, ///< (lightsource) whether to use directional shading
-	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-	SHADERPERMUTATION_VIEWTINT = 1<<2, ///< view tint (postprocessing only), use vertex colors (generic only)
-	SHADERPERMUTATION_COLORMAPPING = 1<<3, ///< indicates this is a colormapped skin
-	SHADERPERMUTATION_SATURATION = 1<<4, ///< saturation (postprocessing only)
-	SHADERPERMUTATION_FOGINSIDE = 1<<5, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_FOGOUTSIDE = 1<<6, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_FOGHEIGHTTEXTURE = 1<<7, ///< fog color and density determined by texture mapped on vertical axis
-	SHADERPERMUTATION_GAMMARAMPS = 1<<8, ///< gamma (postprocessing only)
-	SHADERPERMUTATION_CUBEFILTER = 1<<9, ///< (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<10, ///< (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_BLOOM = 1<<11, ///< bloom (postprocessing only)
-	SHADERPERMUTATION_SPECULAR = 1<<12, ///< (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_POSTPROCESSING = 1<<13, ///< user defined postprocessing (postprocessing only)
-	SHADERPERMUTATION_REFLECTION = 1<<14, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<15, ///< adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<16, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_SHADOWMAP2D = 1<<17, ///< (lightsource) use shadowmap texture as light filter
-	SHADERPERMUTATION_SHADOWMAPPCF = 1<<18, ///< (lightsource) use percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<19, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
-	SHADERPERMUTATION_SHADOWSAMPLER = 1<<20, ///< (lightsource) use hardware shadowmap test
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<21, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<22, //< (lightsource) use orthographic shadowmap projection
-	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<23, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
-	SHADERPERMUTATION_ALPHAKILL = 1<<24, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
-	SHADERPERMUTATION_REFLECTCUBE = 1<<25, ///< fake reflections using global cubemap (not HDRI light probe)
-	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<26, // (water) counter-direction normalmaps scrolling
-	SHADERPERMUTATION_LIMIT = 1<<27, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 27 ///< size of shaderpermutationinfo array
-}
-shaderpermutation_t;
-
 // NOTE: MUST MATCH ORDER OF SHADERPERMUTATION_* DEFINES!
 shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 {
@@ -3407,29 +3374,6 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEREFLECTCUBE\n", " reflectcube"},
 	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 };
-
-// this enum selects which of the glslshadermodeinfo entries should be used
-typedef enum shadermode_e
-{
-	SHADERMODE_GENERIC, ///< (particles/HUD/etc) vertex color, optionally multiplied by one texture
-	SHADERMODE_POSTPROCESS, ///< postprocessing shader (r_glsl_postprocess)
-	SHADERMODE_DEPTH_OR_SHADOW, ///< (depthfirst/shadows) vertex shader only
-	SHADERMODE_FLATCOLOR, ///< (lightmap) modulate texture by uniform color (q1bsp, q3bsp)
-	SHADERMODE_VERTEXCOLOR, ///< (lightmap) modulate texture by vertex colors (q3bsp)
-	SHADERMODE_LIGHTMAP, ///< (lightmap) modulate texture by lightmap texture (q1bsp, q3bsp)
-	SHADERMODE_FAKELIGHT, ///< (fakelight) modulate texture by "fake" lighting (no lightmaps, no nothing)
-	SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE, ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
-	SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE, ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
-	SHADERMODE_LIGHTDIRECTION, ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-	SHADERMODE_LIGHTSOURCE, ///< (lightsource) use directional pixel shading from light source (rtlight)
-	SHADERMODE_REFRACTION, ///< refract background (the material is rendered normally after this pass)
-	SHADERMODE_WATER, ///< refract background and reflection (the material is rendered normally after this pass)
-	SHADERMODE_SHOWDEPTH, ///< (debugging) renders depth as color
-	SHADERMODE_DEFERREDGEOMETRY, ///< (deferred) render material properties to screenspace geometry buffers
-	SHADERMODE_DEFERREDLIGHTSOURCE, ///< (deferred) use directional pixel shading from light source (rtlight) on screenspace geometry buffers
-	SHADERMODE_COUNT
-}
-shadermode_t;
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
 shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
@@ -4990,6 +4934,14 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 }
 #endif
 
+void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutation)
+{
+	DPSOFTRAST_SetShader(mode, permutation);
+	DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
+	DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelViewMatrixM1, 1, false, gl_modelview16f);
+	DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_ClientTime, cl.time);
+}
+
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
@@ -5078,6 +5030,8 @@ void R_GLSL_Restart_f(void)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -5185,6 +5139,11 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 	case RENDERPATH_GL11:
 		R_Mesh_TexBind(0, first );
 		break;
+	case RENDERPATH_SOFT:
+		R_SetupShader_SetPermutationSoft(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		R_Mesh_TexBind(GL20TU_FIRST , first );
+		R_Mesh_TexBind(GL20TU_SECOND, second);
+		break;
 	}
 }
 
@@ -5218,6 +5177,9 @@ void R_SetupShader_DepthOrShadow(void)
 	case RENDERPATH_GL11:
 		R_Mesh_TexBind(0, 0);
 		break;
+	case RENDERPATH_SOFT:
+		R_SetupShader_SetPermutationSoft(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		break;
 	}
 }
 
@@ -5247,6 +5209,9 @@ void R_SetupShader_ShowDepth(void)
 	case RENDERPATH_GL13:
 		break;
 	case RENDERPATH_GL11:
+		break;
+	case RENDERPATH_SOFT:
+		R_SetupShader_SetPermutationSoft(SHADERMODE_SHOWDEPTH, 0);
 		break;
 	}
 }
@@ -5739,7 +5704,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		else
 		{
-			if (mode == SHADERMODE_LIGHTDIRECTION)                                   
+			if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
 				hlslVSSetParameter3f(D3DVSREGISTER_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -6195,6 +6160,138 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 		break;
+	case RENDERPATH_SOFT:
+		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
+		R_Mesh_PrepareVertices_Mesh_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchsvector3f, rsurface.batchtvector3f, rsurface.batchnormal3f, rsurface.batchlightmapcolor4f, rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordlightmap2f);
+		R_SetupShader_SetPermutationSoft(mode, permutation);
+		{Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelToReflectCubeM1, 1, false, m16f);}
+		if (mode == SHADERMODE_LIGHTSOURCE)
+		{
+			{Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelToLightM1, 1, false, m16f);}
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);
+	
+			// additive passes are only darkened by fog, not tinted
+			DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_FogColor, 0, 0, 0);
+			DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+		}
+		else
+		{
+			if (mode == SHADERMODE_FLATCOLOR)
+			{
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Ambient, colormod[0], colormod[1], colormod[2]);
+			}
+			else if (mode == SHADERMODE_LIGHTDIRECTION)
+			{
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+			}
+			else
+			{
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+			}
+			// additive passes are only darkened by fog, not tinted
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_FogColor, 0, 0, 0);
+			else
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
+			DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_ReflectOffset, rsurface.texture->reflectmin);
+			DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+			DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
+		}
+		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_TexMatrixM1, 1, false, m16f);}
+		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_BackgroundTexMatrixM1, 1, false, m16f);}
+		{Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ShadowMapMatrixM1, 1, false, m16f);}
+		DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
+		DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+
+		DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
+		DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
+		DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
+		if (DPSOFTRAST_UNIFORM_Color_Pants >= 0)
+		{
+			if (rsurface.texture->pantstexture)
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
+			else
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Pants, 0, 0, 0);
+		}
+		if (DPSOFTRAST_UNIFORM_Color_Shirt >= 0)
+		{
+			if (rsurface.texture->shirttexture)
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Shirt, rsurface.colormap_shirtcolor[0], rsurface.colormap_shirtcolor[1], rsurface.colormap_shirtcolor[2]);
+			else
+				DPSOFTRAST_Uniform3fARB(DPSOFTRAST_UNIFORM_Color_Shirt, 0, 0, 0);
+		}
+		DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
+		DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_FogPlaneViewDist, rsurface.fogplaneviewdist);
+		DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_FogRangeRecip, rsurface.fograngerecip);
+		DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_FogHeightFade, rsurface.fogheightfade);
+		DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale);
+		DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+
+	//	R_Mesh_TexBind(GL20TU_FIRST             , r_texture_white                                     );
+	//	R_Mesh_TexBind(GL20TU_SECOND            , r_texture_white                                     );
+	//	R_Mesh_TexBind(GL20TU_GAMMARAMPS        , r_texture_gammaramps                                );
+		R_Mesh_TexBind(GL20TU_NORMAL            , rsurface.texture->nmaptexture                       );
+		R_Mesh_TexBind(GL20TU_COLOR             , rsurface.texture->basetexture                       );
+		R_Mesh_TexBind(GL20TU_GLOSS             , rsurface.texture->glosstexture                      );
+		R_Mesh_TexBind(GL20TU_GLOW              , rsurface.texture->glowtexture                       );
+		R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL  , rsurface.texture->backgroundnmaptexture             );
+		R_Mesh_TexBind(GL20TU_SECONDARY_COLOR   , rsurface.texture->backgroundbasetexture             );
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS   , rsurface.texture->backgroundglosstexture            );
+		R_Mesh_TexBind(GL20TU_SECONDARY_GLOW    , rsurface.texture->backgroundglowtexture             );
+		R_Mesh_TexBind(GL20TU_PANTS             , rsurface.texture->pantstexture                      );
+		R_Mesh_TexBind(GL20TU_SHIRT             , rsurface.texture->shirttexture                      );
+		R_Mesh_TexBind(GL20TU_REFLECTMASK       , rsurface.texture->reflectmasktexture                );
+		R_Mesh_TexBind(GL20TU_REFLECTCUBE       , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);
+		R_Mesh_TexBind(GL20TU_FOGHEIGHTTEXTURE  , r_texture_fogheighttexture                          );
+		R_Mesh_TexBind(GL20TU_FOGMASK           , r_texture_fogattenuation                            );
+		R_Mesh_TexBind(GL20TU_LIGHTMAP          , rsurface.lightmaptexture ? rsurface.lightmaptexture : r_texture_white);
+		R_Mesh_TexBind(GL20TU_DELUXEMAP         , rsurface.deluxemaptexture ? rsurface.deluxemaptexture : r_texture_blanknormalmap);
+		R_Mesh_TexBind(GL20TU_ATTENUATION       , r_shadow_attenuationgradienttexture                 );
+		if (rsurfacepass == RSURFPASS_BACKGROUND)
+		{
+			if(DPSOFTRAST_UNIFORM_Texture_Refraction >= 0) R_Mesh_TexBind(GL20TU_REFRACTION        , waterplane->texture_refraction ? waterplane->texture_refraction : r_texture_black);
+			else if(DPSOFTRAST_UNIFORM_Texture_First >= 0) R_Mesh_TexBind(GL20TU_FIRST             , waterplane->texture_camera ? waterplane->texture_camera : r_texture_black);
+			if(DPSOFTRAST_UNIFORM_Texture_Reflection >= 0) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
+		}
+		else
+		{
+			if (permutation & SHADERPERMUTATION_REFLECTION        ) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
+		}
+//		R_Mesh_TexBind(GL20TU_SCREENDEPTH       , r_shadow_prepassgeometrydepthtexture                );
+//		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP   , r_shadow_prepassgeometrynormalmaptexture            );
+		R_Mesh_TexBind(GL20TU_SCREENDIFFUSE     , r_shadow_prepasslightingdiffusetexture              );
+		R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
+		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
+		{
+			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
+			if (rsurface.rtlight)
+			{
+				R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
+				R_Mesh_TexBind(GL20TU_CUBEPROJECTION    , r_shadow_shadowmapvsdcttexture                      );
+			}
+		}
+		break;
 	}
 }
 
@@ -6316,6 +6413,26 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+		break;
+	case RENDERPATH_SOFT:
+		R_SetupShader_SetPermutationGLSL(mode, permutation);
+		DPSOFTRAST_Uniform3fARB(       DPSOFTRAST_UNIFORM_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
+		DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ViewToLightM1            , 1, false, viewtolight16f);
+		DPSOFTRAST_Uniform3fARB(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
+		DPSOFTRAST_Uniform3fARB(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
+		DPSOFTRAST_Uniform3fARB(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		DPSOFTRAST_Uniform2fARB(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
+		DPSOFTRAST_Uniform4fARB(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		DPSOFTRAST_Uniform1fARB(       DPSOFTRAST_UNIFORM_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+		DPSOFTRAST_Uniform2fARB(       DPSOFTRAST_UNIFORM_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+
+		R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
+		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
+		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
+		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
+		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
+		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 		break;
 	}
 }
@@ -7160,6 +7277,7 @@ void gl_main_start(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
 		Cvar_SetValueQuick(&gl_combine, 1);
 		Cvar_SetValueQuick(&r_glsl, 1);
@@ -7259,6 +7377,8 @@ void gl_main_shutdown(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 
@@ -7881,6 +8001,8 @@ void R_AnimCache_CacheVisibleEntities(void)
 	case RENDERPATH_GL11:
 		wanttangents = false;
 		break;
+	case RENDERPATH_SOFT:
+		break;
 	}
 
 	if (r_shownormals.integer)
@@ -8200,6 +8322,7 @@ static void R_View_SetFrustum(const int *scissor)
 			case RENDERPATH_D3D9:
 			case RENDERPATH_D3D10:
 			case RENDERPATH_D3D11:
+			case RENDERPATH_SOFT:
 				// non-flipped y coordinates
 				fny = -1.0 + 2.0 * (vid.height - scissor[1] - scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
 				fpy = -1.0 + 2.0 * (vid.height - scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
@@ -8470,6 +8593,10 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 		case RENDERPATH_GL11:
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
+			DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM_ModelViewMatrixM1, 1, false, gl_modelview16f);
+			break;
 		}
 	}
 }
@@ -8507,6 +8634,7 @@ void R_ResetViewRendering2D(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		break;
 	}
 	GL_CullFace(GL_NONE);
@@ -8542,6 +8670,7 @@ void R_ResetViewRendering3D(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		break;
 	}
 	GL_CullFace(r_refdef.view.cullface_back);
@@ -8582,6 +8711,7 @@ static void R_Water_StartFrame(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
@@ -8947,6 +9077,7 @@ void R_Bloom_StartFrame(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
@@ -9047,6 +9178,7 @@ void R_Bloom_StartFrame(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -9089,6 +9221,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
 		break;
 	case RENDERPATH_D3D9:
@@ -9266,6 +9399,7 @@ static void R_BlendView(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		permutation =
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
@@ -9319,6 +9453,7 @@ static void R_BlendView(void)
 					case RENDERPATH_GL13:
 					case RENDERPATH_GL20:
 					case RENDERPATH_CGGL:
+					case RENDERPATH_SOFT:
 						R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
 						break;
 					case RENDERPATH_D3D9:
@@ -9439,6 +9574,22 @@ static void R_BlendView(void)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_bloomstate.screentexcoord2f, r_bloomstate.bloomtexcoord2f);
+			R_SetupShader_SetPermutationSoft(SHADERMODE_POSTPROCESS, permutation);
+			R_Mesh_TexBind(GL20TU_FIRST     , r_bloomstate.texture_screen);
+			R_Mesh_TexBind(GL20TU_SECOND    , r_bloomstate.texture_bloom );
+			R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
+			DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
+			DPSOFTRAST_Uniform1fARB(DPSOFTRAST_UNIFORM_Saturation        , r_glsl_saturation.value);
+			DPSOFTRAST_Uniform2fARB(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+			DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
 			break;
 		default:
 			break;
@@ -9593,6 +9744,7 @@ void R_UpdateVariables(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		if(v_glslgamma.integer && !vid_gammatables_trivial)
 		{
 			if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
@@ -13032,6 +13184,7 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 		break;
 	case RENDERPATH_GL13:
@@ -13060,6 +13213,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 		break;
 	case RENDERPATH_GL13:
@@ -13097,6 +13251,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
 			RSurf_ActiveModelEntity(ent, true, true, false);
 			break;
 		case RENDERPATH_GL13:
@@ -14131,6 +14286,9 @@ void R_DrawDebugModel(void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		return;
+	case RENDERPATH_SOFT:
+		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		return;
 	}
 
 	flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
@@ -14421,6 +14579,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
 			RSurf_ActiveModelEntity(ent, model->wantnormals, model->wanttangents, false);
 			break;
 		case RENDERPATH_GL13:
@@ -14438,6 +14597,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
 			RSurf_ActiveModelEntity(ent, true, true, false);
 			break;
 		case RENDERPATH_GL13:
