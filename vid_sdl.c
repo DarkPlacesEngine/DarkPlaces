@@ -700,7 +700,7 @@ void VID_Init (void)
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
-	vid_sdl_initjoysticksystem = SDL_Init(SDL_INIT_JOYSTICK) >= 0;
+	vid_sdl_initjoysticksystem = SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0;
 	if (vid_sdl_initjoysticksystem)
 		Con_Printf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
@@ -1260,6 +1260,8 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 qboolean VID_InitMode(viddef_mode_t *mode)
 {
+	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
+		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	if (vid_soft.integer)
 		return VID_InitModeSoft(mode);
 	else
@@ -1270,6 +1272,12 @@ void VID_Shutdown (void)
 {
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
+
+#ifndef WIN32
+	if (icon)
+		SDL_FreeSurface(icon);
+	icon = NULL;
+#endif
 
 	if (vid_softsurface)
 		SDL_FreeSurface(vid_softsurface);
