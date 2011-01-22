@@ -78,9 +78,6 @@ typedef struct DPSOFTRAST_Texture_s
 	int size;
 	unsigned char *bytes;
 	int mipmap[DPSOFTRAST_MAXMIPMAPS][5];
-	int clampmin[3];
-	int clampmax[3];
-	int wrapmask[3];
 }
 DPSOFTRAST_Texture;
 
@@ -111,6 +108,7 @@ typedef struct DPSOFTRAST_State_Draw_Span_s
 	int length; // pixel count
 	int startx; // usable range (according to pixelmask)
 	int endx; // usable range (according to pixelmask)
+	int mip; // which mipmap of the texture(s) to use on this
 	unsigned char *pixelmask; // true for pixels that passed depth test, false for others
 	// [0][n][] is start interpolant values (projected)
 	// [1][n][] is end interpolant values (projected)
@@ -451,15 +449,6 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 
 	// allocate the pixels now
 	texture->bytes = calloc(1, size);
-	texture->clampmin[0] = 0;
-	texture->clampmin[1] = 0;
-	texture->clampmin[2] = 0;
-	texture->clampmax[0] = texture->width-1;
-	texture->clampmax[1] = texture->height-1;
-	texture->clampmax[2] = texture->depth-1;
-	texture->wrapmask[0] = texture->width-1;
-	texture->wrapmask[1] = texture->height-1;
-	texture->wrapmask[2] = texture->depth-1;
 
 	return texnum;
 }
@@ -1350,6 +1339,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 	int tciwrapmask[2];
 	int tciwidth;
 	int filter;
+	int mip;
 	unsigned char *pixelbase;
 	unsigned char *pixel[4];
 	DPSOFTRAST_Texture *texture = dpsoftrast.texbound[texunitindex];
@@ -1365,8 +1355,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 		}
 		return;
 	}
-	// if texture is 1 pixel, just fill it with that color
-	if (texture->width * texture->height * texture->depth * texture->sides == 1)
+	// if this mipmap of the texture is 1 pixel, just fill it with that color
+	mip = span->mip;
+	if (mip >= texture->mipmaps)
+		mip = texture->mipmaps - 1;
+	if (texture->mipmap[mip][1] == 4)
 	{
 		c[0] = texture->bytes[2] * (1.0f/255.0f);
 		c[1] = texture->bytes[1] * (1.0f/255.0f);
@@ -1381,7 +1374,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 		}
 		return;
 	}
-	filter = dpsoftrast.texbound[texunitindex]->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR;
+	filter = texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR;
 	data[0] = span->data[0][arrayindex][0];
 	data[1] = span->data[0][arrayindex][1];
 	data[2] = span->data[0][arrayindex][2];
@@ -1390,17 +1383,17 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 	slope[1] = span->data[1][arrayindex][1];
 	slope[2] = span->data[1][arrayindex][2];
 	slope[3] = span->data[1][arrayindex][3];
-	flags = dpsoftrast.texbound[texunitindex]->flags;
-	pixelbase = (unsigned char *)dpsoftrast.texbound[texunitindex]->bytes;
-	tcscale[0] = dpsoftrast.texbound[texunitindex]->width;
-	tcscale[1] = dpsoftrast.texbound[texunitindex]->height;
-	tciwidth = dpsoftrast.texbound[texunitindex]->width;
-	tcimin[0] = dpsoftrast.texbound[texunitindex]->clampmin[0];
-	tcimin[1] = dpsoftrast.texbound[texunitindex]->clampmin[1];
-	tcimax[0] = dpsoftrast.texbound[texunitindex]->clampmax[0];
-	tcimax[1] = dpsoftrast.texbound[texunitindex]->clampmax[1];
-	tciwrapmask[0] = dpsoftrast.texbound[texunitindex]->wrapmask[0];
-	tciwrapmask[1] = dpsoftrast.texbound[texunitindex]->wrapmask[1];
+	flags = texture->flags;
+	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0];
+	tcscale[0] = texture->mipmap[mip][2];
+	tcscale[1] = texture->mipmap[mip][3];
+	tciwidth = texture->mipmap[mip][2];
+	tcimin[0] = 0;
+	tcimin[1] = 0;
+	tcimax[0] = texture->mipmap[mip][2]-1;
+	tcimax[1] = texture->mipmap[mip][3]-1;
+	tciwrapmask[0] = texture->mipmap[mip][2]-1;
+	tciwrapmask[1] = texture->mipmap[mip][3]-1;
 	if (filter)
 	{
 		if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
@@ -1880,7 +1873,7 @@ void DPSOFTRAST_Draw_ProcessSpans(void)
 	}
 }
 
-void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numtriangles, const int *element3i, const unsigned short *element3s, int numarrays)
+void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numtriangles, const int *element3i, const unsigned short *element3s, unsigned char *arraymask)
 {
 	int cullface = dpsoftrast.user.cullface;
 	int width = dpsoftrast.fb_width;
@@ -1889,6 +1882,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 	int j;
 	int k;
 	int y;
+	int mip;
 	int e[3];
 	int screenx[4];
 	int screeny[4];
@@ -1993,21 +1987,27 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 #define CLIPPEDVERTEXLERP(k,p1,p2) \
 			frac = clipdist[p1] / (clipdist[p1] - clipdist[p2]);\
 			ifrac = 1.0f - frac;\
-			for (j = 0;j < numarrays;j++)\
+			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)\
 			{\
-				clipped[j][k][0] = dpsoftrast.draw.post_array4f[j][e[p1]*4+0]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+0]*frac;\
-				clipped[j][k][1] = dpsoftrast.draw.post_array4f[j][e[p1]*4+1]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+1]*frac;\
-				clipped[j][k][2] = dpsoftrast.draw.post_array4f[j][e[p1]*4+2]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+2]*frac;\
-				clipped[j][k][3] = dpsoftrast.draw.post_array4f[j][e[p1]*4+3]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+3]*frac;\
+				if (arraymask[j])\
+				{\
+					clipped[j][k][0] = dpsoftrast.draw.post_array4f[j][e[p1]*4+0]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+0]*frac;\
+					clipped[j][k][1] = dpsoftrast.draw.post_array4f[j][e[p1]*4+1]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+1]*frac;\
+					clipped[j][k][2] = dpsoftrast.draw.post_array4f[j][e[p1]*4+2]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+2]*frac;\
+					clipped[j][k][3] = dpsoftrast.draw.post_array4f[j][e[p1]*4+3]*ifrac+dpsoftrast.draw.post_array4f[j][e[p2]*4+3]*frac;\
+				}\
 			}\
 			DPSOFTRAST_Draw_ProjectVertices(screen[k], clipped[DPSOFTRAST_ARRAY_POSITION][k], 1)
 #define CLIPPEDVERTEXCOPY(k,p1) \
-			for (j = 0;j < numarrays;j++)\
+			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)\
 			{\
-				clipped[j][k][0] = dpsoftrast.draw.post_array4f[j][e[p1]*4+0];\
-				clipped[j][k][1] = dpsoftrast.draw.post_array4f[j][e[p1]*4+1];\
-				clipped[j][k][2] = dpsoftrast.draw.post_array4f[j][e[p1]*4+2];\
-				clipped[j][k][3] = dpsoftrast.draw.post_array4f[j][e[p1]*4+3];\
+				if (arraymask[j])\
+				{\
+					clipped[j][k][0] = dpsoftrast.draw.post_array4f[j][e[p1]*4+0];\
+					clipped[j][k][1] = dpsoftrast.draw.post_array4f[j][e[p1]*4+1];\
+					clipped[j][k][2] = dpsoftrast.draw.post_array4f[j][e[p1]*4+2];\
+					clipped[j][k][3] = dpsoftrast.draw.post_array4f[j][e[p1]*4+3];\
+				}\
 			}\
 			screen[k][0] = dpsoftrast.draw.screencoord4f[e[p1]*4+0];\
 			screen[k][1] = dpsoftrast.draw.screencoord4f[e[p1]*4+1];\
@@ -2098,21 +2098,26 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 		// skip offscreen triangles
 		if (extent[2] <= extent[0] || extent[3] <= extent[1])
 			continue;
+		// TODO: adjust texture LOD by texture density
+		mip = 0;
 		// okay, this triangle is going to produce spans, we'd better project
 		// the interpolants now (this is what gives perspective texturing),
 		// this consists of simply multiplying all arrays by the W coord
 		// (which is basically 1/Z), which will be undone per-pixel
 		// (multiplying by Z again) to get the perspective-correct array
 		// values
-		for (j = 0;j < numarrays;j++)
+		for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 		{
-			for (k = 0;k < numpoints;k++)
+			if (arraymask[j])
 			{
-				w = screen[k][3];
-				proj[j][k][0] = clipped[j][k][0] * w;
-				proj[j][k][1] = clipped[j][k][1] * w;
-				proj[j][k][2] = clipped[j][k][2] * w;
-				proj[j][k][3] = clipped[j][k][3] * w;
+				for (k = 0;k < numpoints;k++)
+				{
+					w = screen[k][3];
+					proj[j][k][0] = clipped[j][k][0] * w;
+					proj[j][k][1] = clipped[j][k][1] * w;
+					proj[j][k][2] = clipped[j][k][2] * w;
+					proj[j][k][3] = clipped[j][k][3] * w;
+				}
 			}
 		}
 		// iterate potential spans
@@ -2230,6 +2235,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 			spanilength = 1.0f / (endxf - startxf);
 			startxlerp = startx - startxf;
 			span = &dpsoftrast.draw.spanqueue[dpsoftrast.draw.numspans++];
+			span->mip = mip;
 			span->start = y * width + startx;
 			span->length = endx - startx;
 			j = DPSOFTRAST_ARRAY_TOTAL;
@@ -2243,16 +2249,19 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 				span->data[1][j][1] = screen[edge1p][1] * edge1yilerp + screen[edge1n][1] * edge1ylerp;
 				span->data[1][j][2] = screen[edge1p][2] * edge1yilerp + screen[edge1n][2] * edge1ylerp;
 				span->data[1][j][3] = screen[edge1p][3] * edge1yilerp + screen[edge1n][3] * edge1ylerp;
-				for (j = 0;j < numarrays;j++)
+				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 				{
-					span->data[0][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
-					span->data[0][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
-					span->data[0][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
-					span->data[0][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
-					span->data[1][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
-					span->data[1][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
-					span->data[1][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
-					span->data[1][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
+					if (arraymask[j])
+					{
+						span->data[0][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
+						span->data[0][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
+						span->data[0][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
+						span->data[0][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
+						span->data[1][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
+						span->data[1][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
+						span->data[1][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
+						span->data[1][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
+					}
 				}
 			}
 			else
@@ -2265,16 +2274,19 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 				span->data[1][j][1] = screen[edge0p][1] * edge0yilerp + screen[edge0n][1] * edge0ylerp;
 				span->data[1][j][2] = screen[edge0p][2] * edge0yilerp + screen[edge0n][2] * edge0ylerp;
 				span->data[1][j][3] = screen[edge0p][3] * edge0yilerp + screen[edge0n][3] * edge0ylerp;
-				for (j = 0;j < numarrays;j++)
+				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 				{
-					span->data[0][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
-					span->data[0][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
-					span->data[0][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
-					span->data[0][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
-					span->data[1][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
-					span->data[1][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
-					span->data[1][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
-					span->data[1][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
+					if (arraymask[j])
+					{
+						span->data[0][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
+						span->data[0][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
+						span->data[0][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
+						span->data[0][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
+						span->data[1][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
+						span->data[1][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
+						span->data[1][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
+						span->data[1][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
+					}
 				}
 			}
 			// change data[1][n][] to be a data slope
@@ -2283,12 +2295,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 			span->data[1][j][1] = (span->data[1][j][1] - span->data[0][j][1]) * spanilength;
 			span->data[1][j][2] = (span->data[1][j][2] - span->data[0][j][2]) * spanilength;
 			span->data[1][j][3] = (span->data[1][j][3] - span->data[0][j][3]) * spanilength;
-			for (j = 0;j < numarrays;j++)
+			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 			{
-				span->data[1][j][0] = (span->data[1][j][0] - span->data[0][j][0]) * spanilength;
-				span->data[1][j][1] = (span->data[1][j][1] - span->data[0][j][1]) * spanilength;
-				span->data[1][j][2] = (span->data[1][j][2] - span->data[0][j][2]) * spanilength;
-				span->data[1][j][3] = (span->data[1][j][3] - span->data[0][j][3]) * spanilength;
+				if (arraymask[j])
+				{
+					span->data[1][j][0] = (span->data[1][j][0] - span->data[0][j][0]) * spanilength;
+					span->data[1][j][1] = (span->data[1][j][1] - span->data[0][j][1]) * spanilength;
+					span->data[1][j][2] = (span->data[1][j][2] - span->data[0][j][2]) * spanilength;
+					span->data[1][j][3] = (span->data[1][j][3] - span->data[0][j][3]) * spanilength;
+				}
 			}
 			// adjust the data[0][n][] to be correct for the pixel centers
 			// this also handles horizontal clipping where a major part of the
@@ -2298,12 +2313,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 			span->data[0][j][1] += span->data[1][j][1] * startxlerp;
 			span->data[0][j][2] += span->data[1][j][2] * startxlerp;
 			span->data[0][j][3] += span->data[1][j][3] * startxlerp;
-			for (j = 0;j < numarrays;j++)
+			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 			{
-				span->data[0][j][0] += span->data[1][j][0] * startxlerp;
-				span->data[0][j][1] += span->data[1][j][1] * startxlerp;
-				span->data[0][j][2] += span->data[1][j][2] * startxlerp;
-				span->data[0][j][3] += span->data[1][j][3] * startxlerp;
+				if (arraymask[j])
+				{
+					span->data[0][j][0] += span->data[1][j][0] * startxlerp;
+					span->data[0][j][1] += span->data[1][j][1] * startxlerp;
+					span->data[0][j][2] += span->data[1][j][2] * startxlerp;
+					span->data[0][j][3] += span->data[1][j][3] * startxlerp;
+				}
 			}
 			// to keep the shader routines from needing more than a small
 			// buffer for pixel intermediate data, we split long spans...
@@ -2326,12 +2344,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 				span->data[0][j][1] += span->data[1][j][1] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
 				span->data[0][j][2] += span->data[1][j][2] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
 				span->data[0][j][3] += span->data[1][j][3] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-				for (j = 0;j < numarrays;j++)
+				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 				{
-					span->data[0][j][0] += span->data[1][j][0] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-					span->data[0][j][1] += span->data[1][j][1] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-					span->data[0][j][2] += span->data[1][j][2] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-					span->data[0][j][3] += span->data[1][j][3] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+					if (arraymask[j])
+					{
+						span->data[0][j][0] += span->data[1][j][0] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+						span->data[0][j][1] += span->data[1][j][1] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+						span->data[0][j][2] += span->data[1][j][2] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+						span->data[0][j][3] += span->data[1][j][3] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+					}
 				}
 			}
 			// after all that, we have a span suitable for the pixel shader...
@@ -2386,11 +2407,22 @@ void DPSOFTRAST_Draw_DebugPoints(void)
 
 void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles, const int *element3i, const unsigned short *element3s)
 {
+	unsigned char arraymask[DPSOFTRAST_ARRAY_TOTAL];
+	arraymask[0] = true;
+	arraymask[1] = dpsoftrast.fb_colorpixels[0] != NULL; // TODO: optimize (decide based on shadermode)
+	arraymask[2] = dpsoftrast.pointer_texcoordf[0] != NULL;
+	arraymask[3] = dpsoftrast.pointer_texcoordf[1] != NULL;
+	arraymask[4] = dpsoftrast.pointer_texcoordf[2] != NULL;
+	arraymask[5] = dpsoftrast.pointer_texcoordf[3] != NULL;
+	arraymask[6] = dpsoftrast.pointer_texcoordf[4] != NULL;
+	arraymask[7] = dpsoftrast.pointer_texcoordf[5] != NULL;
+	arraymask[8] = dpsoftrast.pointer_texcoordf[6] != NULL;
+	arraymask[9] = dpsoftrast.pointer_texcoordf[7] != NULL;
 	DPSOFTRAST_Validate(DPSOFTRAST_VALIDATE_DRAW);
 	DPSOFTRAST_Draw_LoadVertices(firstvertex, numvertices, true, 1);
 	DPSOFTRAST_Draw_VertexShader();
 	DPSOFTRAST_Draw_ProjectVertices(dpsoftrast.draw.screencoord4f, dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], numvertices);
-	DPSOFTRAST_Draw_ProcessTriangles(firstvertex, numvertices, numtriangles, element3i, element3s, 3);
+	DPSOFTRAST_Draw_ProcessTriangles(firstvertex, numvertices, numtriangles, element3i, element3s, arraymask);
 }
 
 void DPSOFTRAST_Init(int width, int height, unsigned int *colorpixels, unsigned int *depthpixels)
