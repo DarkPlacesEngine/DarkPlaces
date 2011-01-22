@@ -1315,6 +1315,7 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const f
 			pixel[x*4+2] = d[2];
 			pixel[x*4+3] = d[3];
 		}
+		break;
 	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
 		for (x = startx;x < endx;x++)
 		{
@@ -1331,7 +1332,6 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const f
 			pixel[x*4+2] = d[2];
 			pixel[x*4+3] = d[3];
 		}
-		break;
 		break;
 	}
 }
