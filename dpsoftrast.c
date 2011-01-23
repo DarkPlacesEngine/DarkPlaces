@@ -116,7 +116,7 @@ typedef struct DPSOFTRAST_State_Draw_Span_s
 	int length; // pixel count
 	int startx; // usable range (according to pixelmask)
 	int endx; // usable range (according to pixelmask)
-	int mip; // which mipmap of the texture(s) to use on this
+	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS]; // texcoord to screen space density values (for picking mipmap of textures)
 	unsigned char *pixelmask; // true for pixels that passed depth test, false for others
 	// [0][n][] is start interpolant values (projected)
 	// [1][n][] is end interpolant values (projected)
@@ -498,18 +498,18 @@ void DPSOFTRAST_Texture_CalculateMipmaps(int index)
 				row1 = y*2+1;
 				if (row1 >= texture->mipmap[i-1][3])
 					row1 = texture->mipmap[i-1][3]-1;
-				o =  texture->bytes + texture->mipmap[i  ][0] + 4*(texture->mipmap[i  ][3] * texture->mipmap[i  ][2] * z      + texture->mipmap[i  ][2] * y   );
-				i0 = texture->bytes + texture->mipmap[i-1][0] + 4*(texture->mipmap[i-1][3] * texture->mipmap[i-1][2] * layer0 + texture->mipmap[i-1][2] * row0);
-				i1 = texture->bytes + texture->mipmap[i-1][0] + 4*(texture->mipmap[i-1][3] * texture->mipmap[i-1][2] * layer0 + texture->mipmap[i-1][2] * row1);
-				i2 = texture->bytes + texture->mipmap[i-1][0] + 4*(texture->mipmap[i-1][3] * texture->mipmap[i-1][2] * layer1 + texture->mipmap[i-1][2] * row0);
-				i3 = texture->bytes + texture->mipmap[i-1][0] + 4*(texture->mipmap[i-1][3] * texture->mipmap[i-1][2] * layer1 + texture->mipmap[i-1][2] * row1);
+				o =  texture->bytes + texture->mipmap[i  ][0] + 4*((texture->mipmap[i  ][3] * z      + y   ) * texture->mipmap[i  ][2]);
+				i0 = texture->bytes + texture->mipmap[i-1][0] + 4*((texture->mipmap[i-1][3] * layer0 + row0) * texture->mipmap[i-1][2]);
+				i1 = texture->bytes + texture->mipmap[i-1][0] + 4*((texture->mipmap[i-1][3] * layer0 + row1) * texture->mipmap[i-1][2]);
+				i2 = texture->bytes + texture->mipmap[i-1][0] + 4*((texture->mipmap[i-1][3] * layer1 + row0) * texture->mipmap[i-1][2]);
+				i3 = texture->bytes + texture->mipmap[i-1][0] + 4*((texture->mipmap[i-1][3] * layer1 + row1) * texture->mipmap[i-1][2]);
 				w = texture->mipmap[i][2];
 				if (layer1 > layer0)
 				{
 					if (texture->mipmap[i-1][2] > 1)
 					{
 						// average 3D texture
-						for (x = 0;x < w;x++)
+						for (x = 0;x < w;x++, o += 4, i0 += 8, i1 += 8, i2 += 8, i3 += 8)
 						{
 							o[0] = (i0[0] + i0[4] + i1[0] + i1[4] + i2[0] + i2[4] + i3[0] + i3[4] + 4) >> 3;
 							o[1] = (i0[1] + i0[5] + i1[1] + i1[5] + i2[1] + i2[5] + i3[1] + i3[5] + 4) >> 3;
@@ -520,7 +520,7 @@ void DPSOFTRAST_Texture_CalculateMipmaps(int index)
 					else
 					{
 						// average 3D mipmap with parent width == 1
-						for (x = 0;x < w;x++)
+						for (x = 0;x < w;x++, o += 4, i0 += 8, i1 += 8)
 						{
 							o[0] = (i0[0] + i1[0] + i2[0] + i3[0] + 2) >> 2;
 							o[1] = (i0[1] + i1[1] + i2[1] + i3[1] + 2) >> 2;
@@ -534,7 +534,7 @@ void DPSOFTRAST_Texture_CalculateMipmaps(int index)
 					if (texture->mipmap[i-1][2] > 1)
 					{
 						// average 2D texture (common case)
-						for (x = 0;x < w;x++)
+						for (x = 0;x < w;x++, o += 4, i0 += 8, i1 += 8)
 						{
 							o[0] = (i0[0] + i0[4] + i1[0] + i1[4] + 2) >> 2;
 							o[1] = (i0[1] + i0[5] + i1[1] + i1[5] + 2) >> 2;
@@ -545,13 +545,10 @@ void DPSOFTRAST_Texture_CalculateMipmaps(int index)
 					else
 					{
 						// 2D texture with parent width == 1
-						for (x = 0;x < w;x++)
-						{
-							o[0] = (i0[0] + i1[0] + 1) >> 1;
-							o[1] = (i0[1] + i1[1] + 1) >> 1;
-							o[2] = (i0[2] + i1[2] + 1) >> 1;
-							o[3] = (i0[3] + i1[3] + 1) >> 1;
-						}
+						o[0] = (i0[0] + i1[0] + 1) >> 1;
+						o[1] = (i0[1] + i1[1] + 1) >> 1;
+						o[2] = (i0[2] + i1[2] + 1) >> 1;
+						o[3] = (i0[3] + i1[3] + 1) >> 1;
 					}
 				}
 			}
@@ -1168,6 +1165,10 @@ void DPSOFTRAST_Draw_DebugEdgePoints(const float *screen0, const float *screen1)
 	}
 }
 
+void DPSOFTRAST_Draw_VertexShaderLightDirection(void)
+{
+}
+
 void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span *span, float *zf)
 {
 	int x;
@@ -1391,10 +1392,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 		}
 		return;
 	}
+	mip = span->mip[texunitindex];
 	// if this mipmap of the texture is 1 pixel, just fill it with that color
-	mip = span->mip;
-	if (mip >= texture->mipmaps)
-		mip = texture->mipmaps - 1;
 	if (texture->mipmap[mip][1] == 4)
 	{
 		c[0] = texture->bytes[2] * (1.0f/255.0f);
@@ -1796,6 +1795,8 @@ void DPSOFTRAST_Draw_VertexShader(void)
 	case SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE: ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
 		break;
 	case SHADERMODE_LIGHTDIRECTION: ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		DPSOFTRAST_Draw_VertexShaderLightDirection();
 		break;
 	case SHADERMODE_LIGHTSOURCE: ///< (lightsource) use directional pixel shading from light source (rtlight)
 		break;
@@ -1988,7 +1989,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 	int j;
 	int k;
 	int y;
-	int mip;
 	int e[3];
 	int screenx[4];
 	int screeny[4];
@@ -1999,9 +1999,19 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 	int edge0n;
 	int edge1p;
 	int edge1n;
-	int extent[4];
+	int extent[6];
 	int startx;
 	int endx;
+	float mip_edge0tc[2];
+	float mip_edge1tc[2];
+	float mip_edge0xy[2];
+	float mip_edge1xy[2];
+	float mip_edge0xymul;
+	float mip_edge1xymul;
+	float mip_edge0mip;
+	float mip_edge1mip;
+	float mipdensity;
+	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS];
 	float startxf;
 	float endxf;
 	float edge0ylerp;
@@ -2023,6 +2033,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 	float clipped[DPSOFTRAST_ARRAY_TOTAL][4][4];
 	float screen[4][4];
 	float proj[DPSOFTRAST_ARRAY_TOTAL][4][4];
+	DPSOFTRAST_Texture *texture;
 	DPSOFTRAST_State_Draw_Span *span;
 	DPSOFTRAST_State_Draw_Span *oldspan;
 	for (i = 0;i < numtriangles;i++)
@@ -2204,8 +2215,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 		// skip offscreen triangles
 		if (extent[2] <= extent[0] || extent[3] <= extent[1])
 			continue;
-		// TODO: adjust texture LOD by texture density
-		mip = 0;
 		// okay, this triangle is going to produce spans, we'd better project
 		// the interpolants now (this is what gives perspective texturing),
 		// this consists of simply multiplying all arrays by the W coord
@@ -2224,6 +2233,35 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 					proj[j][k][2] = clipped[j][k][2] * w;
 					proj[j][k][3] = clipped[j][k][3] * w;
 				}
+			}
+		}
+		// adjust texture LOD by texture density, in the simplest way possible...
+		mip_edge0xy[0] = screen[0][0] - screen[1][0];
+		mip_edge0xy[1] = screen[0][1] - screen[1][1];
+		mip_edge1xy[0] = screen[2][0] - screen[1][0];
+		mip_edge1xy[1] = screen[2][1] - screen[1][1];
+		mip_edge0xymul = 1.0f / (mip_edge0xy[0]*mip_edge0xy[0]+mip_edge0xy[1]*mip_edge0xy[1]);
+		mip_edge1xymul = 1.0f / (mip_edge1xy[0]*mip_edge1xy[0]+mip_edge1xy[1]*mip_edge1xy[1]);
+		for (j = 0;j < DPSOFTRAST_MAXTEXTUREUNITS;j++)
+		{
+			texture = dpsoftrast.texbound[j];
+			if (texture)
+			{
+				// FIXME: use appropriate array for this texture!
+				mip_edge0tc[0] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][0] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][0]) * texture->mipmap[0][2];
+				mip_edge0tc[1] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][1] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][1]) * texture->mipmap[0][3];
+				mip_edge1tc[0] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][2][0] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][0]) * texture->mipmap[0][2];
+				mip_edge1tc[1] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][2][1] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][1]) * texture->mipmap[0][3];
+				mip_edge0mip = (mip_edge0tc[0]*mip_edge0tc[0]+mip_edge0tc[1]*mip_edge0tc[1]) * mip_edge0xymul;
+				mip_edge1mip = (mip_edge1tc[0]*mip_edge1tc[0]+mip_edge1tc[1]*mip_edge1tc[1]) * mip_edge1xymul;
+				// this will be multiplied in the texturing routine by the texture resolution
+				mipdensity = mip_edge0mip < mip_edge1mip ? mip_edge0mip : mip_edge1mip;
+				y = (int)(log(mipdensity)/log(2) + 0.5f);
+				if (y < 0)
+					y = 0;
+				if (y > texture->mipmaps - 1)
+					y = texture->mipmaps - 1;
+				mip[j] = y;
 			}
 		}
 		// iterate potential spans
@@ -2341,7 +2379,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 			spanilength = 1.0f / (endxf - startxf);
 			startxlerp = startx - startxf;
 			span = &dpsoftrast.draw.spanqueue[dpsoftrast.draw.numspans++];
-			span->mip = mip;
+			memcpy(span->mip, mip, sizeof(span->mip));
 			span->start = y * width + startx;
 			span->length = endx - startx;
 			j = DPSOFTRAST_ARRAY_TOTAL;
