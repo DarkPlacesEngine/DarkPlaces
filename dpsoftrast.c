@@ -2247,6 +2247,11 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 			texture = dpsoftrast.texbound[j];
 			if (texture)
 			{
+				if (texture->filter <= DPSOFTRAST_TEXTURE_FILTER_LINEAR)
+				{
+					mip[j] = 0;
+					continue;
+				}
 				// FIXME: use appropriate array for this texture!
 				mip_edge0tc[0] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][0] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][0]) * texture->mipmap[0][2];
 				mip_edge0tc[1] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][1] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][1]) * texture->mipmap[0][3];
