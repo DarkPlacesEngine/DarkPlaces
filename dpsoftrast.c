@@ -1839,6 +1839,51 @@ void DPSOFTRAST_Draw_Span_FlatColor(const DPSOFTRAST_State_Draw_Span *span, floa
 	}
 }
 
+void DPSOFTRAST_Draw_Span_FakeLight(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_LightDirectionMap_ModelSpace(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_LightDirectionMap_TangentSpace(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_LightDirection(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_LightSource(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_Refraction(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_Water(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_DeferredGeometry(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
+void DPSOFTRAST_Draw_Span_DeferredLightSource(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *zf)
+{
+	memset(out4f, 0, span->length*sizeof(float[4]));
+}
+
 void DPSOFTRAST_Draw_VertexShader(void)
 {
 	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
@@ -1981,24 +2026,59 @@ void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
 		}
 		break;
 	case SHADERMODE_FAKELIGHT: ///< (fakelight) modulate texture by "fake" lighting (no lightmaps: no nothing)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_FakeLight(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE: ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_LightDirectionMap_ModelSpace(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE: ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_LightDirectionMap_TangentSpace(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_LIGHTDIRECTION: ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_LightDirection(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_LIGHTSOURCE: ///< (lightsource) use directional pixel shading from light source (rtlight)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_LightSource(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_REFRACTION: ///< refract background (the material is rendered normally after this pass)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_Refraction(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_WATER: ///< refract background and reflection (the material is rendered normally after this pass)
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_Water(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_SHOWDEPTH: ///< (debugging) renders depth as color
 		break;
 	case SHADERMODE_DEFERREDGEOMETRY: ///< (deferred) render material properties to screenspace geometry buffers
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_DeferredGeometry(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_DEFERREDLIGHTSOURCE: ///< (deferred) use directional pixel shading from light source (rtlight) on screenspace geometry buffers
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_DeferredLightSource(span, buffer_FragColor, buffer_z);
+		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_COUNT:
 		break;
