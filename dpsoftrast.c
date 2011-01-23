@@ -1074,10 +1074,17 @@ void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcol
 
 void DPSOFTRAST_Array_Transform(float *out4f, const float *in4f, int numitems, const float *inmatrix16f)
 {
+	static const float identitymatrix[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 	// TODO: SIMD
 	float matrix[4][4];
 	int i;
 	memcpy(matrix, inmatrix16f, sizeof(float[16]));
+	if (!memcmp(identitymatrix, matrix, sizeof(float[16])))
+	{
+		// fast case for identity matrix
+		memcpy(out4f, in4f, numitems * sizeof(float[4]));
+		return;
+	}
 	for (i = 0;i < numitems;i++, out4f += 4, in4f += 4)
 	{
 		out4f[0] = in4f[0] * matrix[0][0] + in4f[1] * matrix[1][0] + in4f[2] * matrix[2][0] + in4f[3] * matrix[3][0];
@@ -1612,6 +1619,37 @@ void DPSOFTRAST_Draw_Span_MultiplyVarying(const DPSOFTRAST_State_Draw_Span *span
 	}
 }
 
+void DPSOFTRAST_Draw_Span_Varying(const DPSOFTRAST_State_Draw_Span *span, float *out4f, int arrayindex, const float *zf)
+{
+	int x;
+	int startx = span->startx;
+	int endx = span->endx;
+	float c[4];
+	float data[4];
+	float slope[4];
+	float z;
+	data[0] = span->data[0][arrayindex][0];
+	data[1] = span->data[0][arrayindex][1];
+	data[2] = span->data[0][arrayindex][2];
+	data[3] = span->data[0][arrayindex][3];
+	slope[0] = span->data[1][arrayindex][0];
+	slope[1] = span->data[1][arrayindex][1];
+	slope[2] = span->data[1][arrayindex][2];
+	slope[3] = span->data[1][arrayindex][3];
+	for (x = startx;x < endx;x++)
+	{
+		z = zf[x];
+		c[0] = (data[0] + slope[0]*x) * z;
+		c[1] = (data[1] + slope[1]*x) * z;
+		c[2] = (data[2] + slope[2]*x) * z;
+		c[3] = (data[3] + slope[3]*x) * z;
+		out4f[x*4+0] = c[0];
+		out4f[x*4+1] = c[1];
+		out4f[x*4+2] = c[2];
+		out4f[x*4+3] = c[3];
+	}
+}
+
 void DPSOFTRAST_Draw_Span_AddBloom(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f, const float *subcolor)
 {
 	int x, startx = span->startx, endx = span->endx;
@@ -1630,6 +1668,45 @@ void DPSOFTRAST_Draw_Span_AddBloom(const DPSOFTRAST_State_Draw_Span *span, float
 		out4f[x*4+1] = ina4f[x*4+1] + c[1];
 		out4f[x*4+2] = ina4f[x*4+2] + c[2];
 		out4f[x*4+3] = ina4f[x*4+3] + c[3];
+	}
+}
+
+void DPSOFTRAST_Draw_Span_MultiplyBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+{
+	int x, startx = span->startx, endx = span->endx;
+	for (x = startx;x < endx;x++)
+	{
+		out4f[x*4+0] = ina4f[x*4+0] * inb4f[x*4+0];
+		out4f[x*4+1] = ina4f[x*4+1] * inb4f[x*4+1];
+		out4f[x*4+2] = ina4f[x*4+2] * inb4f[x*4+2];
+		out4f[x*4+3] = ina4f[x*4+3] * inb4f[x*4+3];
+	}
+}
+
+void DPSOFTRAST_Draw_Span_AddBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+{
+	int x, startx = span->startx, endx = span->endx;
+	for (x = startx;x < endx;x++)
+	{
+		out4f[x*4+0] = ina4f[x*4+0] + inb4f[x*4+0];
+		out4f[x*4+1] = ina4f[x*4+1] + inb4f[x*4+1];
+		out4f[x*4+2] = ina4f[x*4+2] + inb4f[x*4+2];
+		out4f[x*4+3] = ina4f[x*4+3] + inb4f[x*4+3];
+	}
+}
+
+void DPSOFTRAST_Draw_Span_MixBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+{
+	int x, startx = span->startx, endx = span->endx;
+	float a, b;
+	for (x = startx;x < endx;x++)
+	{
+		a = 1.0f - inb4f[x*4+3];
+		b = inb4f[x*4+3];
+		out4f[x*4+0] = ina4f[x*4+0] * a + inb4f[x*4+0] * b;
+		out4f[x*4+1] = ina4f[x*4+1] * a + inb4f[x*4+1] * b;
+		out4f[x*4+2] = ina4f[x*4+2] * a + inb4f[x*4+2] * b;
+		out4f[x*4+3] = ina4f[x*4+3] * a + inb4f[x*4+3] * b;
 	}
 }
 
@@ -1770,6 +1847,8 @@ void DPSOFTRAST_Draw_VertexShader(void)
 	case SHADERMODE_GENERIC: ///< (particles/HUD/etc) vertex color: optionally multiplied by one texture
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SPECULAR)
+			DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.numvertices);
 		break;
 	case SHADERMODE_POSTPROCESS: ///< postprocessing shader (r_glsl_postprocess)
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
@@ -1778,14 +1857,14 @@ void DPSOFTRAST_Draw_VertexShader(void)
 	case SHADERMODE_DEPTH_OR_SHADOW: ///< (depthfirst/shadows) vertex shader only
 		break;
 	case SHADERMODE_FLATCOLOR: ///< (lightmap) modulate texture by uniform color (q1bsp: q3bsp)
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 		break;
 	case SHADERMODE_VERTEXCOLOR: ///< (lightmap) modulate texture by vertex colors (q3bsp)
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 		break;
 	case SHADERMODE_LIGHTMAP: ///< (lightmap) modulate texture by lightmap texture (q1bsp: q3bsp)
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.numvertices);
 		break;
 	case SHADERMODE_FAKELIGHT: ///< (fakelight) modulate texture by "fake" lighting (no lightmaps: no nothing)
@@ -1795,7 +1874,7 @@ void DPSOFTRAST_Draw_VertexShader(void)
 	case SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE: ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
 		break;
 	case SHADERMODE_LIGHTDIRECTION: ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 		DPSOFTRAST_Draw_VertexShaderLightDirection();
 		break;
 	case SHADERMODE_LIGHTSOURCE: ///< (lightsource) use directional pixel shading from light source (rtlight)
@@ -1825,8 +1904,32 @@ void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
 	{
 	case SHADERMODE_GENERIC: ///< (particles/HUD/etc) vertex color: optionally multiplied by one texture
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_FIRST, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_MultiplyVarying(span, buffer_FragColor, buffer_texture_color, 1, buffer_z);
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_DIFFUSE)
+		{
+			DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_FIRST, 2, buffer_z);
+			DPSOFTRAST_Draw_Span_MultiplyVarying(span, buffer_FragColor, buffer_texture_color, 1, buffer_z);
+			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SPECULAR)
+			{
+				DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_lightmap, GL20TU_SECOND, 2, buffer_z);
+				if (dpsoftrast.shader_permutation & SHADERPERMUTATION_COLORMAPPING)
+				{
+					// multiply
+					DPSOFTRAST_Draw_Span_MultiplyBuffers(span, buffer_FragColor, buffer_FragColor, buffer_texture_lightmap);
+				}
+				else if (dpsoftrast.shader_permutation & SHADERPERMUTATION_COLORMAPPING)
+				{
+					// add
+					DPSOFTRAST_Draw_Span_AddBuffers(span, buffer_FragColor, buffer_FragColor, buffer_texture_lightmap);
+				}
+				else if (dpsoftrast.shader_permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				{
+					// alphablend
+					DPSOFTRAST_Draw_Span_MixBuffers(span, buffer_FragColor, buffer_FragColor, buffer_texture_lightmap);
+				}
+			}
+		}
+		else
+			DPSOFTRAST_Draw_Span_Varying(span, buffer_FragColor, 1, buffer_z);
 		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		break;
 	case SHADERMODE_POSTPROCESS: ///< postprocessing shader (r_glsl_postprocess)
