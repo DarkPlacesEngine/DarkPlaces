@@ -458,7 +458,7 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 	texture->size = size;
 
 	// allocate the pixels now
-	texture->bytes = calloc(1, size);
+	texture->bytes = (unsigned char *)calloc(1, size);
 
 	return texnum;
 }
@@ -959,7 +959,7 @@ void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcol
 			dpsoftrast.draw.maxvertices *= 2;
 		if (dpsoftrast.draw.in_array4f[0])
 			free(dpsoftrast.draw.in_array4f[0]);
-		data = calloc(1, dpsoftrast.draw.maxvertices * sizeof(float[4])*(DPSOFTRAST_ARRAY_TOTAL*2 + 1));
+		data = (float *)calloc(1, dpsoftrast.draw.maxvertices * sizeof(float[4])*(DPSOFTRAST_ARRAY_TOTAL*2 + 1));
 		for (i = 0;i < DPSOFTRAST_ARRAY_TOTAL;i++, data += dpsoftrast.draw.maxvertices * 4)
 			dpsoftrast.draw.in_array4f[i] = data;
 		for (i = 0;i < DPSOFTRAST_ARRAY_TOTAL;i++, data += dpsoftrast.draw.maxvertices * 4)
