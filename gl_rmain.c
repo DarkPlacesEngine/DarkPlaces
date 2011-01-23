@@ -7267,7 +7267,7 @@ void gl_main_start(void)
 	r_texture_gammaramps = NULL;
 	r_texture_numcubemaps = 0;
 
-	r_loaddds = r_texture_dds_load.integer;
+	r_loaddds = r_texture_dds_load.integer != 0;
 	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
 
 	switch(vid.renderpath)
@@ -9331,7 +9331,7 @@ void R_HDR_RenderBloomTexture(void)
 {
 	int oldwidth, oldheight;
 	float oldcolorscale;
-	int oldwaterstate;
+	qboolean oldwaterstate;
 
 	oldwaterstate = r_waterstate.enabled;
 	oldcolorscale = r_refdef.view.colorscale;
@@ -11186,10 +11186,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		}
 		else if (wanttangents)
 		{
-			rsurface.modelvertex3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
-			rsurface.modelsvector3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
-			rsurface.modeltvector3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
-			rsurface.modelnormal3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelvertex3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelsvector3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modeltvector3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelnormal3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.modelvertex3f, rsurface.modelnormal3f, rsurface.modelsvector3f, rsurface.modeltvector3f);
 			rsurface.modelvertexmesh = NULL;
 			rsurface.modelvertexmeshbuffer = NULL;
@@ -11197,10 +11197,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		}
 		else if (wantnormals)
 		{
-			rsurface.modelvertex3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelvertex3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
-			rsurface.modelnormal3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelnormal3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.modelvertex3f, rsurface.modelnormal3f, NULL, NULL);
 			rsurface.modelvertexmesh = NULL;
 			rsurface.modelvertexmeshbuffer = NULL;
@@ -11208,7 +11208,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		}
 		else
 		{
-			rsurface.modelvertex3f = R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
+			rsurface.modelvertex3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			rsurface.modelsvector3f = NULL;
 			rsurface.modeltvector3f = NULL;
 			rsurface.modelnormal3f = NULL;
@@ -11341,16 +11341,16 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	if (wanttangents)
 	{
 		rsurface.modelvertex3f = (float *)vertex3f;
-		rsurface.modelsvector3f = svector3f ? (float *)svector3f : R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
-		rsurface.modeltvector3f = tvector3f ? (float *)tvector3f : R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
-		rsurface.modelnormal3f = normal3f ? (float *)normal3f : R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+		rsurface.modelsvector3f = svector3f ? (float *)svector3f : (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+		rsurface.modeltvector3f = tvector3f ? (float *)tvector3f : (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+		rsurface.modelnormal3f = normal3f ? (float *)normal3f : (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
 	}
 	else if (wantnormals)
 	{
 		rsurface.modelvertex3f = (float *)vertex3f;
 		rsurface.modelsvector3f = NULL;
 		rsurface.modeltvector3f = NULL;
-		rsurface.modelnormal3f = normal3f ? (float *)normal3f : R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+		rsurface.modelnormal3f = normal3f ? (float *)normal3f : (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
 	}
 	else
 	{
@@ -11431,13 +11431,13 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	{
 		if ((wantnormals || wanttangents) && !normal3f)
 		{
-			rsurface.modelnormal3f = R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+			rsurface.modelnormal3f = (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
 			Mod_BuildNormals(0, rsurface.modelnumvertices, rsurface.modelnumtriangles, rsurface.modelvertex3f, rsurface.modelelement3i, rsurface.modelnormal3f, r_smoothnormals_areaweighting.integer != 0);
 		}
 		if (wanttangents && !svector3f)
 		{
-			rsurface.modelsvector3f = R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
-			rsurface.modeltvector3f = R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+			rsurface.modelsvector3f = (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
+			rsurface.modeltvector3f = (float *)R_FrameData_Alloc(rsurface.modelnumvertices * sizeof(float[3]));
 			Mod_BuildTextureVectorsFromNormals(0, rsurface.modelnumvertices, rsurface.modelnumtriangles, rsurface.modelvertex3f, rsurface.modeltexcoordtexture2f, rsurface.modelnormal3f, rsurface.modelelement3i, rsurface.modelsvector3f, rsurface.modeltvector3f, r_smoothnormals_areaweighting.integer != 0);
 		}
 	}
@@ -11727,7 +11727,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		if (gaps)
 		{
 			// build a new triangle elements array for this batch
-			rsurface.batchelement3i = R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
+			rsurface.batchelement3i = (int *)R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
 			rsurface.batchfirsttriangle = 0;
 			numtriangles = 0;
 			for (i = 0;i < texturenumsurfaces;i++)
@@ -11745,7 +11745,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			if (endvertex <= 65536)
 			{
 				// make a 16bit (unsigned short) index array if possible
-				rsurface.batchelement3s = R_FrameData_Alloc(batchnumtriangles * sizeof(unsigned short[3]));
+				rsurface.batchelement3s = (unsigned short *)R_FrameData_Alloc(batchnumtriangles * sizeof(unsigned short[3]));
 				for (i = 0;i < numtriangles*3;i++)
 					rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 			}
@@ -11786,7 +11786,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		rsurface.batchtexcoordlightmap2f = NULL;
 		rsurface.batchtexcoordlightmap2f_vertexbuffer = NULL;
 		rsurface.batchtexcoordlightmap2f_bufferoffset = 0;
-		rsurface.batchelement3i = R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
+		rsurface.batchelement3i = (int *)R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
 		rsurface.batchelement3i_indexbuffer = NULL;
 		rsurface.batchelement3i_bufferoffset = 0;
 		rsurface.batchelement3s = NULL;
@@ -11794,22 +11794,22 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		rsurface.batchelement3s_bufferoffset = 0;
 		// we'll only be setting up certain arrays as needed
 		if (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP))
-			rsurface.batchvertexmesh = R_FrameData_Alloc(batchnumvertices * sizeof(r_vertexmesh_t));
+			rsurface.batchvertexmesh = (r_vertexmesh_t *)R_FrameData_Alloc(batchnumvertices * sizeof(r_vertexmesh_t));
 		if (batchneed & BATCHNEED_ARRAY_VERTEX)
-			rsurface.batchvertex3f = R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
+			rsurface.batchvertex3f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
 		if (batchneed & BATCHNEED_ARRAY_NORMAL)
-			rsurface.batchnormal3f = R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
+			rsurface.batchnormal3f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
 		if (batchneed & BATCHNEED_ARRAY_VECTOR)
 		{
-			rsurface.batchsvector3f = R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
-			rsurface.batchtvector3f = R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
+			rsurface.batchsvector3f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
+			rsurface.batchtvector3f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[3]));
 		}
 		if (batchneed & BATCHNEED_ARRAY_VERTEXCOLOR)
-			rsurface.batchlightmapcolor4f = R_FrameData_Alloc(batchnumvertices * sizeof(float[4]));
+			rsurface.batchlightmapcolor4f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[4]));
 		if (batchneed & BATCHNEED_ARRAY_TEXCOORD)
-			rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+			rsurface.batchtexcoordtexture2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 		if (batchneed & BATCHNEED_ARRAY_LIGHTMAP)
-			rsurface.batchtexcoordlightmap2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+			rsurface.batchtexcoordlightmap2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 		numvertices = 0;
 		numtriangles = 0;
 		for (i = 0;i < texturenumsurfaces;i++)
@@ -11848,7 +11848,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		// (in general, dynamic batches fit)
 		if (numvertices <= 65536)
 		{
-			rsurface.batchelement3s = R_FrameData_Alloc(batchnumtriangles * sizeof(unsigned short[3]));
+			rsurface.batchelement3s = (unsigned short *)R_FrameData_Alloc(batchnumtriangles * sizeof(unsigned short[3]));
 			for (i = 0;i < numtriangles*3;i++)
 				rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 		}
@@ -11870,7 +11870,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		int size3;
 		const int *offsets;
 		const unsigned char *lm;
-		rsurface.batchlightmapcolor4f = R_FrameData_Alloc(batchnumvertices * sizeof(float[4]));
+		rsurface.batchlightmapcolor4f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[4]));
 		rsurface.batchlightmapcolor4f_vertexbuffer = NULL;
 		rsurface.batchlightmapcolor4f_bufferoffset = 0;
 		numvertices = 0;
@@ -12089,7 +12089,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			break;
 		case Q3DEFORM_NORMAL:
 			// deform the normals to make reflections wavey
-			rsurface.batchnormal3f = R_FrameData_Store(batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f);
+			rsurface.batchnormal3f = (float *)R_FrameData_Store(batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f);
 			rsurface.batchnormal3f_vertexbuffer = NULL;
 			rsurface.batchnormal3f_bufferoffset = 0;
 			for (j = 0;j < batchnumvertices;j++)
@@ -12377,7 +12377,7 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 static void RSurf_DrawBatch_GL11_MakeFullbrightLightmapColorArray(void)
 {
 	int i;
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	for (i = 0;i < rsurface.batchnumvertices;i++)
@@ -12391,7 +12391,7 @@ static void RSurf_DrawBatch_GL11_ApplyFog(void)
 	const float *v;
 	const float *c;
 	float *c2;
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	if (rsurface.passcolor4f)
@@ -12428,7 +12428,7 @@ static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(void)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c += 4, c2 += 4)
@@ -12448,7 +12448,7 @@ static void RSurf_DrawBatch_GL11_ApplyColor(float r, float g, float b, float a)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	for (i = 0, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
@@ -12467,7 +12467,7 @@ static void RSurf_DrawBatch_GL11_ApplyAmbient(void)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	for (i = 0, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
@@ -12546,7 +12546,7 @@ static void RSurf_DrawBatch_GL11_ApplyFakeLight(void)
 	//vec3_t eyedir;
 
 	// fake shading
-	rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
 	for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, n = rsurface.batchnormal3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, n += 3, c += 4)
@@ -12594,7 +12594,7 @@ static void RSurf_DrawBatch_GL11_ApplyVertexShade(float *r, float *g, float *b, 
 	if (VectorLength2(diffusecolor) > 0)
 	{
 		// q3-style directional shading
-		rsurface.passcolor4f = R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+		rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 		rsurface.passcolor4f_vertexbuffer = 0;
 		rsurface.passcolor4f_bufferoffset = 0;
 		for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, n = rsurface.batchnormal3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, n += 3, c += 4)
