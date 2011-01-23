@@ -2364,7 +2364,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 				mip_edge1mip = (mip_edge1tc[0]*mip_edge1tc[0]+mip_edge1tc[1]*mip_edge1tc[1]) * mip_edge1xymul;
 				// this will be multiplied in the texturing routine by the texture resolution
 				mipdensity = mip_edge0mip < mip_edge1mip ? mip_edge0mip : mip_edge1mip;
-				y = (int)(log(mipdensity)/log(2) + 0.5f);
+				y = (int)(log(mipdensity)/log(2.0f) + 0.5f);
 				if (y < 0)
 					y = 0;
 				if (y > texture->mipmaps - 1)
