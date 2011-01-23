@@ -7797,7 +7797,7 @@ void R_FrameData_Resize(void)
 	wantedsize = bound(65536, wantedsize, 1000*1024*1024);
 	if (!r_framedata_mem || r_framedata_mem->wantedsize != wantedsize)
 	{
-		r_framedata_mem_t *newmem = Mem_Alloc(r_main_mempool, wantedsize);
+		r_framedata_mem_t *newmem = (r_framedata_mem_t *)Mem_Alloc(r_main_mempool, wantedsize);
 		newmem->wantedsize = wantedsize;
 		newmem->data = (unsigned char *)(((size_t)(newmem+1) + 15) & ~15);
 		newmem->size = (unsigned char *)newmem + wantedsize - newmem->data;
