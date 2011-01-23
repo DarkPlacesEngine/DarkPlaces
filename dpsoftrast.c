@@ -1176,21 +1176,21 @@ void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span *span, float *z
 	float w = span->data[0][DPSOFTRAST_ARRAY_TOTAL][3];
 	float wslope = span->data[1][DPSOFTRAST_ARRAY_TOTAL][3];
 	for (x = startx;x < endx;)
-    {
-        int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
-        float z = 1.0f / (w + wslope * x), dz;
-        if (endsub >= endx)
-        {
-            endsub = endx-1;
-            dz = endsub > x ? (1.0f / (w + wslope * endsub) - z) / (endsub - x) : 0.0f;
-        }
-        else
-        {
-            dz = (1.0f / (w + wslope * endsub) - z) * (1.0f / (DPSOFTRAST_MAXSUBSPAN-1));
-        }
-        for (; x <= endsub; x++, z += dz)
-            zf[x] = z;
-    } 
+	{
+		int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
+		float z = 1.0f / (w + wslope * x), dz;
+		if (endsub >= endx)
+		{
+			endsub = endx-1;
+			dz = endsub > x ? (1.0f / (w + wslope * endsub) - z) / (endsub - x) : 0.0f;
+		}
+		else
+		{
+			dz = (1.0f / (w + wslope * endsub) - z) * (1.0f / (DPSOFTRAST_MAXSUBSPAN-1));
+		}
+		for (; x <= endsub; x++, z += dz)
+			zf[x] = z;
+	}
 }
 
 void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const float * RESTRICT in4f)
