@@ -3440,7 +3440,7 @@ static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
 	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
 		if (surface->num_triangles > 0)
 			Mod_ShadowMesh_AddMesh(mod->mempool, mod->brush.shadowmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer, false);
+	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer != 0, false);
 	if (mod->brush.shadowmesh && mod->brush.shadowmesh->neighbor3i)
 		Mod_BuildTriangleNeighbors(mod->brush.shadowmesh->neighbor3i, mod->brush.shadowmesh->element3i, mod->brush.shadowmesh->numtriangles);
 

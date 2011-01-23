@@ -1427,7 +1427,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		case GLTEXTURETYPE_CUBEMAP:
 			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 			{
-				unsigned char *combinedbuffer = Mem_Alloc(tempmempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+				unsigned char *combinedbuffer = (unsigned char *)Mem_Alloc(tempmempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 				// convert and upload each side in turn,
 				// from a continuous block of input texels
 				// copy the results into combinedbuffer
