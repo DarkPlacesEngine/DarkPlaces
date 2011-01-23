@@ -10,6 +10,12 @@
 typedef enum bool {false, true} bool;
 #endif
 
+#if defined(__GNUC__) || (defined(_MSC_VER) && _MSC_VER >= 1400)
+#define RESTRICT __restrict
+#else
+#define RESTRICT
+#endif
+
 #define GL_NONE					0
 #define GL_FRONT_LEFT			0x0400
 #define GL_FRONT_RIGHT			0x0401
@@ -101,6 +107,8 @@ typedef struct DPSOFTRAST_State_User_s
 	float color[4];
 }
 DPSOFTRAST_State_User;
+
+#define DPSOFTRAST_MAXSUBSPAN 16
 
 typedef struct DPSOFTRAST_State_Draw_Span_s
 {
@@ -1167,20 +1175,33 @@ void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span *span, float *z
 	int endx = span->endx;
 	float w = span->data[0][DPSOFTRAST_ARRAY_TOTAL][3];
 	float wslope = span->data[1][DPSOFTRAST_ARRAY_TOTAL][3];
-	// TODO: optimize by approximating every 8 pixels?
-	for (x = startx;x < endx;x++)
-		zf[x] = 1.0f / (w + wslope * x);
+	for (x = startx;x < endx;)
+    {
+        int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
+        float z = 1.0f / (w + wslope * x), dz;
+        if (endsub >= endx)
+        {
+            endsub = endx-1;
+            dz = endsub > x ? (1.0f / (w + wslope * endsub) - z) / (endsub - x) : 0.0f;
+        }
+        else
+        {
+            dz = (1.0f / (w + wslope * endsub) - z) * (1.0f / (DPSOFTRAST_MAXSUBSPAN-1));
+        }
+        for (; x <= endsub; x++, z += dz)
+            zf[x] = z;
+    } 
 }
 
-void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const float *in4f)
+void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const float * RESTRICT in4f)
 {
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
 	int d[4];
 	float a, b;
-	unsigned char *pixelmask = span->pixelmask;
-	unsigned char *pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
 	if (!pixel)
 		return;
 	pixel += span->start * 4;
@@ -1336,7 +1357,7 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const f
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *span, float *out4f, int texunitindex, int arrayindex, const float *zf)
+void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *span, float * RESTRICT out4f, int texunitindex, int arrayindex, const float * RESTRICT zf)
 {
 	int x;
 	int startx = span->startx;
@@ -1345,22 +1366,18 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 	float c[4];
 	float data[4];
 	float slope[4];
-	float z;
 	float tc[2];
-	float frac[2];
-	float ifrac[2];
-	float lerp[4];
 	float tcscale[2];
-	int tci[2];
-	int tci1[2];
-	int tcimin[2];
-	int tcimax[2];
+	unsigned int tci[2];
+	unsigned int tci1[2];
+	unsigned int tcimin[2];
+	unsigned int tcimax[2];
 	int tciwrapmask[2];
 	int tciwidth;
 	int filter;
 	int mip;
-	unsigned char *pixelbase;
-	unsigned char *pixel[4];
+	const unsigned char * RESTRICT pixelbase;
+	const unsigned char * RESTRICT pixel[4];
 	DPSOFTRAST_Texture *texture = dpsoftrast.texbound[texunitindex];
 	// if no texture is bound, just fill it with white
 	if (!texture)
@@ -1413,90 +1430,123 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 	tcimax[1] = texture->mipmap[mip][3]-1;
 	tciwrapmask[0] = texture->mipmap[mip][2]-1;
 	tciwrapmask[1] = texture->mipmap[mip][3]-1;
-	if (filter)
+	for (x = startx;x < endx;)
 	{
-		if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
+		float endtc[2];
+		unsigned int subtc[2];
+		unsigned int substep[2];
+		int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
+		float subscale = 4096.0f/(DPSOFTRAST_MAXSUBSPAN-1);
+		if (endsub >= endx)
 		{
-			for (x = startx;x < endx;x++)
+			endsub = endx-1;
+			subscale = endsub > x ? 4096.0f / (endsub - x) : 1.0f;
+		}
+		tc[0] = (data[0] + slope[0]*x) * zf[x] * tcscale[0] - 0.5f;
+		tc[1] = (data[1] + slope[1]*x) * zf[x] * tcscale[1] - 0.5f;
+		endtc[0] = (data[0] + slope[0]*endsub) * zf[endsub] * tcscale[0] - 0.5f;
+		endtc[1] = (data[1] + slope[1]*endsub) * zf[endsub] * tcscale[1] - 0.5f;
+		substep[0] = (endtc[0] - tc[0]) * subscale;
+		substep[1] = (endtc[1] - tc[1]) * subscale;
+		subtc[0] = tc[0] * (1<<12);
+		subtc[1] = tc[1] * (1<<12);
+		if (!(flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE))
+		{
+			subtc[0] &= (tciwrapmask[0]<<12)|0xFFF;
+			subtc[1] &= (tciwrapmask[1]<<12)|0xFFF;
+		}
+		if(filter)
+		{
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[0];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
+			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
 			{
-				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
-				tci[0] = (int)floor(tc[0]);
-				tci[1] = (int)floor(tc[1]);
-				tci1[0] = tci[0] + 1;
-				tci1[1] = tci[1] + 1;
-				frac[0] = tc[0] - tci[0];ifrac[0] = 1.0f - frac[0];
-				frac[1] = tc[1] - tci[1];ifrac[1] = 1.0f - frac[1];
-				lerp[0] = ifrac[0]*ifrac[1];
-				lerp[1] =  frac[0]*ifrac[1];
-				lerp[2] = ifrac[0]* frac[1];
-				lerp[3] =  frac[0]* frac[1];
-				tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
-				tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
-				tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
-				tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
-				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
-				pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
-				pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
-				pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
-				c[0] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) * (1.0f / 255.0f);
-				c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) * (1.0f / 255.0f);
-				c[2] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) * (1.0f / 255.0f);
-				c[3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) * (1.0f / 255.0f);
-				out4f[x*4+0] = c[0];
-				out4f[x*4+1] = c[1];
-				out4f[x*4+2] = c[2];
-				out4f[x*4+3] = c[3];
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixel[0] + 4 * tciwidth;
+					c[0] = (pixel[0][2]*lerp[0]+pixel[0][4+2]*lerp[1]+pixel[1][2]*lerp[2]+pixel[1][4+2]*lerp[3]) * (1.0f / 0xFF000000);
+					c[1] = (pixel[0][1]*lerp[0]+pixel[0][4+1]*lerp[1]+pixel[1][1]*lerp[2]+pixel[1][4+1]*lerp[3]) * (1.0f / 0xFF000000);
+					c[2] = (pixel[0][0]*lerp[0]+pixel[0][4+0]*lerp[1]+pixel[1][0]*lerp[2]+pixel[1][4+0]*lerp[3]) * (1.0f / 0xFF000000);
+					c[3] = (pixel[0][3]*lerp[0]+pixel[0][4+3]*lerp[1]+pixel[1][3]*lerp[2]+pixel[1][4+3]*lerp[3]) * (1.0f / 0xFF000000);
+					out4f[x*4+0] = c[0];
+					out4f[x*4+1] = c[1];
+					out4f[x*4+2] = c[2];
+					out4f[x*4+3] = c[3];
+				}
+			}
+			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
+					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
+					tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
+					tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
+					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
+					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
+					c[0] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) * (1.0f / 0xFF000000);
+					c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) * (1.0f / 0xFF000000);
+					c[2] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) * (1.0f / 0xFF000000);
+					c[3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) * (1.0f / 0xFF000000);
+					out4f[x*4+0] = c[0];
+					out4f[x*4+1] = c[1];
+					out4f[x*4+2] = c[2];
+					out4f[x*4+3] = c[3];
+				}
+			}
+			else
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] &= tciwrapmask[0];
+					tci[1] &= tciwrapmask[1];
+					tci1[0] &= tciwrapmask[0];
+					tci1[1] &= tciwrapmask[1];
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
+					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
+					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
+					c[0] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) * (1.0f / 0xFF000000);
+					c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) * (1.0f / 0xFF000000);
+					c[2] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) * (1.0f / 0xFF000000);
+					c[3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) * (1.0f / 0xFF000000);
+					out4f[x*4+0] = c[0];
+					out4f[x*4+1] = c[1];
+					out4f[x*4+2] = c[2];
+					out4f[x*4+3] = c[3];
+				}
 			}
 		}
-		else
+		else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 		{
-			for (x = startx;x < endx;x++)
+			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
-				tci[0] = (int)floor(tc[0]);
-				tci[1] = (int)floor(tc[1]);
-				tci1[0] = tci[0] + 1;
-				tci1[1] = tci[1] + 1;
-				frac[0] = tc[0] - tci[0];ifrac[0] = 1.0f - frac[0];
-				frac[1] = tc[1] - tci[1];ifrac[1] = 1.0f - frac[1];
-				lerp[0] = ifrac[0]*ifrac[1];
-				lerp[1] =  frac[0]*ifrac[1];
-				lerp[2] = ifrac[0]* frac[1];
-				lerp[3] =  frac[0]* frac[1];
-				tci[0] &= tciwrapmask[0];
-				tci[1] &= tciwrapmask[1];
-				tci1[0] &= tciwrapmask[0];
-				tci1[1] &= tciwrapmask[1];
-				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
-				pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
-				pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
-				pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
-				c[0] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) * (1.0f / 255.0f);
-				c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) * (1.0f / 255.0f);
-				c[2] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) * (1.0f / 255.0f);
-				c[3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) * (1.0f / 255.0f);
-				out4f[x*4+0] = c[0];
-				out4f[x*4+1] = c[1];
-				out4f[x*4+2] = c[2];
-				out4f[x*4+3] = c[3];
-			}
-		}
-	}
-	else
-	{
-		if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
-		{
-			for (x = startx;x < endx;x++)
-			{
-				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
-				tci[0] = (int)floor(tc[0]);
-				tci[1] = (int)floor(tc[1]);
+				tci[0] = subtc[0]>>12;
+				tci[1] = subtc[1]>>12;
 				tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
 				tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -1512,13 +1562,10 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 		}
 		else
 		{
-			for (x = startx;x < endx;x++)
+			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				z = zf[x];
-				tc[0] = (data[0] + slope[0]*x) * z * tcscale[0] - 0.5f;
-				tc[1] = (data[1] + slope[1]*x) * z * tcscale[1] - 0.5f;
-				tci[0] = (int)floor(tc[0]);
-				tci[1] = (int)floor(tc[1]);
+				tci[0] = subtc[0]>>12;
+				tci[1] = subtc[1]>>12;
 				tci[0] &= tciwrapmask[0];
 				tci[1] &= tciwrapmask[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -1606,7 +1653,7 @@ void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Draw_Span *span
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Lightmap(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *lightmap)
+void DPSOFTRAST_Draw_Span_Lightmap(const DPSOFTRAST_State_Draw_Span *span, float * RESTRICT out4f, const float * RESTRICT diffuse, const float * RESTRICT lightmap)
 {
 	int x, startx = span->startx, endx = span->endx;
 	float Color_Ambient[4], Color_Diffuse[4];
@@ -1624,6 +1671,39 @@ void DPSOFTRAST_Draw_Span_Lightmap(const DPSOFTRAST_State_Draw_Span *span, float
 		out4f[x*4+1] = diffuse[x*4+1] * (Color_Ambient[1] + lightmap[x*4+1] * Color_Diffuse[1]);
 		out4f[x*4+2] = diffuse[x*4+2] * (Color_Ambient[2] + lightmap[x*4+2] * Color_Diffuse[2]);
 		out4f[x*4+3] = diffuse[x*4+3] * (Color_Ambient[3] + lightmap[x*4+3] * Color_Diffuse[3]);
+	}
+}
+
+void DPSOFTRAST_Draw_Span_Lightmap_Finish(const DPSOFTRAST_State_Draw_Span *span, const float * RESTRICT diffuse, const float * RESTRICT lightmap)
+{
+	int x, startx = span->startx, endx = span->endx;
+	int d[4];
+	float Color_Ambient[4], Color_Diffuse[4];
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
+	if (!pixel)
+		return;
+	pixel += span->start * 4;
+	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0]*255.0f;
+	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1]*255.0f;
+	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2]*255.0f;
+	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]*255.0f;
+	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0]*255.0f;
+	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1]*255.0f;
+	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2]*255.0f;
+	Color_Diffuse[3] = 0.0f;
+	for (x = startx;x < endx;x++)
+	{
+		if (!pixelmask[x])
+			continue;
+		d[0] = diffuse[x*4+0] * (Color_Ambient[0] + lightmap[x*4+0] * Color_Diffuse[0]);if (d[0] > 255) d[0] = 255;
+		d[1] = diffuse[x*4+1] * (Color_Ambient[1] + lightmap[x*4+1] * Color_Diffuse[1]);if (d[1] > 255) d[1] = 255;
+		d[2] = diffuse[x*4+2] * (Color_Ambient[2] + lightmap[x*4+2] * Color_Diffuse[2]);if (d[2] > 255) d[2] = 255;
+		d[3] = diffuse[x*4+3] * (Color_Ambient[3] + lightmap[x*4+3] * Color_Diffuse[3]);if (d[3] > 255) d[3] = 255;
+		pixel[x*4+0] = d[2];
+		pixel[x*4+1] = d[1];
+		pixel[x*4+2] = d[0];
+		pixel[x*4+3] = d[3];
 	}
 }
 
@@ -1786,8 +1866,15 @@ void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_lightmap, GL20TU_LIGHTMAP, 6, buffer_z);
-		DPSOFTRAST_Draw_Span_Lightmap(span, buffer_FragColor, buffer_texture_color, buffer_texture_lightmap);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
+		if(!dpsoftrast.user.alphatest && dpsoftrast.fb_blendmode == DPSOFTRAST_BLENDMODE_OPAQUE)
+		{
+			DPSOFTRAST_Draw_Span_Lightmap_Finish(span, buffer_texture_color, buffer_texture_lightmap);
+		}
+		else
+		{
+			DPSOFTRAST_Draw_Span_Lightmap(span, buffer_FragColor, buffer_texture_color, buffer_texture_lightmap);
+			DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
+		}
 		break;
 	case SHADERMODE_FAKELIGHT: ///< (fakelight) modulate texture by "fake" lighting (no lightmaps: no nothing)
 		break;
