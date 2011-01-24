@@ -613,11 +613,11 @@ void Sys_SendKeyEvents( void )
 					{
 						SDL_FreeSurface(vid_softsurface);
 						vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, vid.width, vid.height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-						vid.softpixels = vid_softsurface->pixels;
+						vid.softpixels = (unsigned int *)vid_softsurface->pixels;
 						SDL_SetAlpha(vid_softsurface, 0, 255);
 						if (vid.softdepthpixels)
 							free(vid.softdepthpixels);
-						vid.softdepthpixels = calloc(1, vid.width * vid.height * 4);
+						vid.softdepthpixels = (unsigned int*)calloc(1, vid.width * vid.height * 4);
 					}
 #ifdef SDL_R_RESTART
 					// better not call R_Modules_Restart from here directly, as this may wreak havoc...
@@ -1162,9 +1162,9 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	}
 	SDL_SetAlpha(vid_softsurface, 0, 255);
 
-	vid.softpixels = vid_softsurface->pixels;
-	vid.softdepthpixels = calloc(1, mode->width * mode->height * 4);
-	DPSOFTRAST_Init(mode->width, mode->height, vid_softsurface->pixels, vid.softdepthpixels);
+	vid.softpixels = (unsigned int *)vid_softsurface->pixels;
+	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
+	DPSOFTRAST_Init(mode->width, mode->height, (unsigned int *)vid_softsurface->pixels, (unsigned int *)vid.softdepthpixels);
 
 	// set window title
 	VID_SetCaption();
