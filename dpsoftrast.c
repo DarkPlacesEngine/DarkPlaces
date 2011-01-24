@@ -222,6 +222,8 @@ DPSOFTRAST_State;
 
 DPSOFTRAST_State dpsoftrast;
 
+extern int dpsoftrast_test;
+
 #define DPSOFTRAST_DEPTHSCALE (1024.0f*1048576.0f)
 #define DPSOFTRAST_BGRA8_FROM_RGBA32F(r,g,b,a) (((int)(r * 255.0f + 0.5f) << 16) | ((int)(g * 255.0f + 0.5f) << 8) | (int)(b * 255.0f + 0.5f) | ((int)(a * 255.0f + 0.5f) << 24))
 #define DPSOFTRAST_DEPTH32_FROM_DEPTH32F(d) ((int)(DPSOFTRAST_DEPTHSCALE * (1-d)))
@@ -1813,7 +1815,80 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 			subtc[0] &= (tciwrapmask[0]<<12)|0xFFF;
 			subtc[1] &= (tciwrapmask[1]<<12)|0xFFF;
 		}
-		if(filter)
+#if 0
+// LordHavoc: an attempt at reducing number of integer multiplies, did not show any improvement in benchmarks, abandoned.
+		if (filter && dpsoftrast_test)
+		{
+			const unsigned int * RESTRICT pixeli[4];
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[0];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
+			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
+					pixeli[1] = pixeli[0] + tciwidth;
+					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[0][1] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[1][1] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
+					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[0][1]       & 0x00FF00FF) * lerp[1] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[1][1]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
+				}
+			}
+			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
+					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
+					tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
+					tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
+					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
+					pixeli[1] = pixelbasei + (tci[1]*tciwidth+tci1[0]);
+					pixeli[2] = pixelbasei + (tci1[1]*tciwidth+tci[0]);
+					pixeli[3] = pixelbasei + (tci1[1]*tciwidth+tci1[0]);
+					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[2][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[3][0] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
+					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[1] + ( pixeli[2][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[3][0]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
+				}
+			}
+			else
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] &= tciwrapmask[0];
+					tci[1] &= tciwrapmask[1];
+					tci1[0] &= tciwrapmask[0];
+					tci1[1] &= tciwrapmask[1];
+					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
+					pixeli[1] = pixelbasei + (tci[1]*tciwidth+tci1[0]);
+					pixeli[2] = pixelbasei + (tci1[1]*tciwidth+tci[0]);
+					pixeli[3] = pixelbasei + (tci1[1]*tciwidth+tci1[0]);
+					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[2][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[3][0] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
+					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[1] + ( pixeli[2][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[3][0]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
+				}
+			}
+		}
+		else
+#endif
+		if (filter)
 		{
 			tci[0] = (subtc[0]>>12) - tcimin[0];
 			tci[1] = (subtc[1]>>12) - tcimin[0];
@@ -2212,8 +2287,6 @@ void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Draw_Span 
 }
 
 
-
-extern int dpsoftrast_test;
 
 void DPSOFTRAST_VertexShader_Generic(void)
 {
