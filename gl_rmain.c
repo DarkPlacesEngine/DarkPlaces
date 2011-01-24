@@ -11909,9 +11909,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 							}
 						}
 					}
-					c[0] >>= 15;
-					c[1] >>= 15;
-					c[2] >>= 15;
+					c[0] >>= 7;
+					c[1] >>= 7;
+					c[2] >>= 7;
 					Vector4Set(rsurface.batchlightmapcolor4f + 4*numvertices, min(c[0], 255) * (1.0f / 255.0f), min(c[1], 255) * (1.0f / 255.0f), min(c[2], 255) * (1.0f / 255.0f), 1);
 					numvertices++;
 				}
