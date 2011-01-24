@@ -1172,11 +1172,7 @@ void DPSOFTRAST_Draw_DebugEdgePoints(const float *screen0, const float *screen1)
 	}
 }
 
-void DPSOFTRAST_Draw_VertexShaderLightDirection(void)
-{
-}
-
-void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span *span, float *zf)
+void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *zf)
 {
 	int x;
 	int startx = span->startx;
@@ -1201,7 +1197,7 @@ void DPSOFTRAST_Draw_Span_Begin(const DPSOFTRAST_State_Draw_Span *span, float *z
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const float * RESTRICT in4f)
+void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span * RESTRICT span, const float * RESTRICT in4f)
 {
 	int x;
 	int startx = span->startx;
@@ -1365,7 +1361,151 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span *span, const f
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *span, float * RESTRICT out4f, int texunitindex, int arrayindex, const float * RESTRICT zf)
+void DPSOFTRAST_Draw_Span_FinishBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, const unsigned char* RESTRICT in4ub)
+{
+	int x;
+	int startx = span->startx;
+	int endx = span->endx;
+	int d[4];
+	const unsigned int * RESTRICT ini = (const unsigned int *)in4ub;
+	int a, b;
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
+	unsigned int * RESTRICT pixeli = (unsigned int *)dpsoftrast.fb_colorpixels[0];
+	if (!pixel)
+		return;
+	pixel += span->start * 4;
+	pixeli += span->start;
+	// handle alphatest now (this affects depth writes too)
+	if (dpsoftrast.user.alphatest)
+		for (x = startx;x < endx;x++)
+			if (in4ub[x*4+3] < 0.5f)
+				pixelmask[x] = false;
+	// FIXME: this does not handle bigendian
+	switch(dpsoftrast.fb_blendmode)
+	{
+	case DPSOFTRAST_BLENDMODE_OPAQUE:
+		for (x = startx;x < endx;x++)
+			if (pixelmask[x])
+				pixeli[x] = ini[x];
+		break;
+	case DPSOFTRAST_BLENDMODE_ALPHA:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			a = in4ub[x*4+3];
+			b = 256 - in4ub[x*4+3];
+			pixel[x*4+0] = (in4ub[x*4+0]*a+pixel[x*4+0]*b) >> 8;
+			pixel[x*4+1] = (in4ub[x*4+1]*a+pixel[x*4+1]*b) >> 8;
+			pixel[x*4+2] = (in4ub[x*4+2]*a+pixel[x*4+2]*b) >> 8;
+			pixel[x*4+3] = (in4ub[x*4+3]*a+pixel[x*4+3]*b) >> 8;
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_ADDALPHA:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			a = in4ub[x*4+3];
+			d[0] = (((in4ub[x*4+0]*a)>>8)+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
+			d[1] = (((in4ub[x*4+1]*a)>>8)+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
+			d[2] = (((in4ub[x*4+2]*a)>>8)+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
+			d[3] = (((in4ub[x*4+3]*a)>>8)+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_ADD:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			d[0] = (in4ub[x*4+0]+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
+			d[1] = (in4ub[x*4+1]+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
+			d[2] = (in4ub[x*4+2]+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
+			d[3] = (in4ub[x*4+3]+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_INVMOD:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			pixel[x*4+0] = ((255-in4ub[x*4+0])*pixel[x*4+0])>>8;
+			pixel[x*4+1] = ((255-in4ub[x*4+1])*pixel[x*4+1])>>8;
+			pixel[x*4+2] = ((255-in4ub[x*4+2])*pixel[x*4+2])>>8;
+			pixel[x*4+3] = ((255-in4ub[x*4+3])*pixel[x*4+3])>>8;
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_MUL:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			pixel[x*4+0] = (in4ub[x*4+0]*pixel[x*4+0])>>8;
+			pixel[x*4+1] = (in4ub[x*4+1]*pixel[x*4+1])>>8;
+			pixel[x*4+2] = (in4ub[x*4+2]*pixel[x*4+2])>>8;
+			pixel[x*4+3] = (in4ub[x*4+3]*pixel[x*4+3])>>8;
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_MUL2:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			d[0] = (in4ub[x*4+0]*pixel[x*4+0])>>7;if (d[0] > 255) d[0] = 255;
+			d[1] = (in4ub[x*4+1]*pixel[x*4+1])>>7;if (d[1] > 255) d[1] = 255;
+			d[2] = (in4ub[x*4+2]*pixel[x*4+2])>>7;if (d[2] > 255) d[2] = 255;
+			d[3] = (in4ub[x*4+3]*pixel[x*4+3])>>7;if (d[3] > 255) d[3] = 255;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_SUBALPHA:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			a = in4ub[x*4+3];
+			d[0] = pixel[x*4+0]-((in4ub[x*4+0]*a)>>8);if (d[0] < 0) d[0] = 0;
+			d[1] = pixel[x*4+1]-((in4ub[x*4+1]*a)>>8);if (d[1] < 0) d[1] = 0;
+			d[2] = pixel[x*4+2]-((in4ub[x*4+2]*a)>>8);if (d[2] < 0) d[2] = 0;
+			d[3] = pixel[x*4+3]-((in4ub[x*4+3]*a)>>8);if (d[3] < 0) d[3] = 0;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
+	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
+		for (x = startx;x < endx;x++)
+		{
+			if (!pixelmask[x])
+				continue;
+			b = 255 - in4ub[x*4+3];
+			d[0] = in4ub[x*4+0]+((pixel[x*4+0]*b)>>8);if (d[0] > 255) d[0] = 255;
+			d[1] = in4ub[x*4+1]+((pixel[x*4+1]*b)>>8);if (d[1] > 255) d[1] = 255;
+			d[2] = in4ub[x*4+2]+((pixel[x*4+2]*b)>>8);if (d[2] > 255) d[2] = 255;
+			d[3] = in4ub[x*4+3]+((pixel[x*4+3]*b)>>8);if (d[3] > 255) d[3] = 255;
+			pixel[x*4+0] = d[0];
+			pixel[x*4+1] = d[1];
+			pixel[x*4+2] = d[2];
+			pixel[x*4+3] = d[3];
+		}
+		break;
+	}
+}
+
+void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float * RESTRICT out4f, int texunitindex, int arrayindex, const float * RESTRICT zf)
 {
 	int x;
 	int startx = span->startx;
@@ -1588,7 +1728,207 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span *spa
 	}
 }
 
-void DPSOFTRAST_Draw_Span_MultiplyVarying(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *in4f, int arrayindex, const float *zf)
+void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char * RESTRICT out4ub, int texunitindex, int arrayindex, const float * RESTRICT zf)
+{
+	int x;
+	int startx = span->startx;
+	int endx = span->endx;
+	int flags;
+	float data[4];
+	float slope[4];
+	float tc[2];
+	float tcscale[2];
+	unsigned int tci[2];
+	unsigned int tci1[2];
+	unsigned int tcimin[2];
+	unsigned int tcimax[2];
+	int tciwrapmask[2];
+	int tciwidth;
+	int filter;
+	int mip;
+	unsigned int k;
+	unsigned int *outi = (unsigned int *)out4ub;
+	const unsigned char * RESTRICT pixelbase;
+	const unsigned int * RESTRICT pixelbasei;
+	const unsigned char * RESTRICT pixel[4];
+	DPSOFTRAST_Texture *texture = dpsoftrast.texbound[texunitindex];
+	// if no texture is bound, just fill it with white
+	if (!texture)
+	{
+		memset(out4ub, 255, span->length*4);
+		return;
+	}
+	mip = span->mip[texunitindex];
+	// if this mipmap of the texture is 1 pixel, just fill it with that color
+	if (texture->mipmap[mip][1] == 4)
+	{
+		k = *((const unsigned int *)texture->bytes);
+		for (x = startx;x < endx;x++)
+			outi[x] = k;
+		return;
+	}
+	filter = texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR;
+	data[0] = span->data[0][arrayindex][0];
+	data[1] = span->data[0][arrayindex][1];
+	data[2] = span->data[0][arrayindex][2];
+	data[3] = span->data[0][arrayindex][3];
+	slope[0] = span->data[1][arrayindex][0];
+	slope[1] = span->data[1][arrayindex][1];
+	slope[2] = span->data[1][arrayindex][2];
+	slope[3] = span->data[1][arrayindex][3];
+	flags = texture->flags;
+	pixelbase = (const unsigned char *)texture->bytes + texture->mipmap[mip][0];
+	pixelbasei = (const unsigned int *)pixelbase;
+	tcscale[0] = texture->mipmap[mip][2];
+	tcscale[1] = texture->mipmap[mip][3];
+	tciwidth = texture->mipmap[mip][2];
+	tcimin[0] = 0;
+	tcimin[1] = 0;
+	tcimax[0] = texture->mipmap[mip][2]-1;
+	tcimax[1] = texture->mipmap[mip][3]-1;
+	tciwrapmask[0] = texture->mipmap[mip][2]-1;
+	tciwrapmask[1] = texture->mipmap[mip][3]-1;
+	for (x = startx;x < endx;)
+	{
+		float endtc[2];
+		unsigned int subtc[2];
+		unsigned int substep[2];
+		int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
+		float subscale = 4096.0f/(DPSOFTRAST_MAXSUBSPAN-1);
+		if (endsub >= endx)
+		{
+			endsub = endx-1;
+			subscale = endsub > x ? 4096.0f / (endsub - x) : 1.0f;
+		}
+		tc[0] = (data[0] + slope[0]*x) * zf[x] * tcscale[0] - 0.5f;
+		tc[1] = (data[1] + slope[1]*x) * zf[x] * tcscale[1] - 0.5f;
+		endtc[0] = (data[0] + slope[0]*endsub) * zf[endsub] * tcscale[0] - 0.5f;
+		endtc[1] = (data[1] + slope[1]*endsub) * zf[endsub] * tcscale[1] - 0.5f;
+		substep[0] = (endtc[0] - tc[0]) * subscale;
+		substep[1] = (endtc[1] - tc[1]) * subscale;
+		subtc[0] = tc[0] * (1<<12);
+		subtc[1] = tc[1] * (1<<12);
+		if (!(flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE))
+		{
+			subtc[0] &= (tciwrapmask[0]<<12)|0xFFF;
+			subtc[1] &= (tciwrapmask[1]<<12)|0xFFF;
+		}
+		if(filter)
+		{
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[0];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
+			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixel[0] + 4 * tciwidth;
+					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[0][4+0]*lerp[1]+pixel[1][0]*lerp[2]+pixel[1][4+0]*lerp[3]) >> 24;
+					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[0][4+1]*lerp[1]+pixel[1][1]*lerp[2]+pixel[1][4+1]*lerp[3]) >> 24;
+					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[0][4+2]*lerp[1]+pixel[1][2]*lerp[2]+pixel[1][4+2]*lerp[3]) >> 24;
+					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[0][4+3]*lerp[1]+pixel[1][3]*lerp[2]+pixel[1][4+3]*lerp[3]) >> 24;
+				}
+			}
+			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
+					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
+					tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
+					tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
+					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
+					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
+					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) >> 24;
+					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) >> 24;
+					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) >> 24;
+					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) >> 24;
+				}
+			}
+			else
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
+					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci1[0] = tci[0] + 1;
+					tci1[1] = tci[1] + 1;
+					tci[0] &= tciwrapmask[0];
+					tci[1] &= tciwrapmask[1];
+					tci1[0] &= tciwrapmask[0];
+					tci1[1] &= tciwrapmask[1];
+					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
+					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
+					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
+					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
+					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) >> 24;
+					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) >> 24;
+					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) >> 24;
+					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) >> 24;
+				}
+			}
+		}
+		else
+		{
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[0];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12);
+			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+				}
+			}
+			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
+					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
+					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+				}
+			}
+			else
+			{
+				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				{
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
+					tci[0] &= tciwrapmask[0];
+					tci[1] &= tciwrapmask[1];
+					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+				}
+			}
+		}
+	}
+}
+
+void DPSOFTRAST_Draw_Span_MultiplyVarying(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *in4f, int arrayindex, const float *zf)
 {
 	int x;
 	int startx = span->startx;
@@ -1619,7 +1959,7 @@ void DPSOFTRAST_Draw_Span_MultiplyVarying(const DPSOFTRAST_State_Draw_Span *span
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Varying(const DPSOFTRAST_State_Draw_Span *span, float *out4f, int arrayindex, const float *zf)
+void DPSOFTRAST_Draw_Span_Varying(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, int arrayindex, const float *zf)
 {
 	int x;
 	int startx = span->startx;
@@ -1650,7 +1990,7 @@ void DPSOFTRAST_Draw_Span_Varying(const DPSOFTRAST_State_Draw_Span *span, float 
 	}
 }
 
-void DPSOFTRAST_Draw_Span_AddBloom(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f, const float *subcolor)
+void DPSOFTRAST_Draw_Span_AddBloom(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *ina4f, const float *inb4f, const float *subcolor)
 {
 	int x, startx = span->startx, endx = span->endx;
 	float c[4], localcolor[4];
@@ -1671,7 +2011,7 @@ void DPSOFTRAST_Draw_Span_AddBloom(const DPSOFTRAST_State_Draw_Span *span, float
 	}
 }
 
-void DPSOFTRAST_Draw_Span_MultiplyBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+void DPSOFTRAST_Draw_Span_MultiplyBuffers(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *ina4f, const float *inb4f)
 {
 	int x, startx = span->startx, endx = span->endx;
 	for (x = startx;x < endx;x++)
@@ -1683,7 +2023,7 @@ void DPSOFTRAST_Draw_Span_MultiplyBuffers(const DPSOFTRAST_State_Draw_Span *span
 	}
 }
 
-void DPSOFTRAST_Draw_Span_AddBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+void DPSOFTRAST_Draw_Span_AddBuffers(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *ina4f, const float *inb4f)
 {
 	int x, startx = span->startx, endx = span->endx;
 	for (x = startx;x < endx;x++)
@@ -1695,7 +2035,7 @@ void DPSOFTRAST_Draw_Span_AddBuffers(const DPSOFTRAST_State_Draw_Span *span, flo
 	}
 }
 
-void DPSOFTRAST_Draw_Span_MixBuffers(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *ina4f, const float *inb4f)
+void DPSOFTRAST_Draw_Span_MixBuffers(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *ina4f, const float *inb4f)
 {
 	int x, startx = span->startx, endx = span->endx;
 	float a, b;
@@ -1710,7 +2050,7 @@ void DPSOFTRAST_Draw_Span_MixBuffers(const DPSOFTRAST_State_Draw_Span *span, flo
 	}
 }
 
-void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *in4f, const float *color)
+void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float *out4f, const float *in4f, const float *color)
 {
 	int x, startx = span->startx, endx = span->endx;
 	float localcolor[4], ilerp, lerp;
@@ -1729,225 +2069,204 @@ void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Draw_Span *span
 	}
 }
 
-void DPSOFTRAST_Draw_Span_Lightmap(const DPSOFTRAST_State_Draw_Span *span, float * RESTRICT out4f, const float * RESTRICT diffuse, const float * RESTRICT lightmap)
-{
-	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4], Color_Diffuse[4];
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
-	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
-	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
-	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
-	Color_Diffuse[3] = 0.0f;
-	for (x = startx;x < endx;x++)
-	{
-		out4f[x*4+0] = diffuse[x*4+0] * (Color_Ambient[0] + lightmap[x*4+0] * Color_Diffuse[0]);
-		out4f[x*4+1] = diffuse[x*4+1] * (Color_Ambient[1] + lightmap[x*4+1] * Color_Diffuse[1]);
-		out4f[x*4+2] = diffuse[x*4+2] * (Color_Ambient[2] + lightmap[x*4+2] * Color_Diffuse[2]);
-		out4f[x*4+3] = diffuse[x*4+3] * (Color_Ambient[3] + lightmap[x*4+3] * Color_Diffuse[3]);
-	}
-}
 
-void DPSOFTRAST_Draw_Span_Lightmap_Finish(const DPSOFTRAST_State_Draw_Span *span, const float * RESTRICT diffuse, const float * RESTRICT lightmap)
-{
-	int x, startx = span->startx, endx = span->endx;
-	int d[4];
-	float Color_Ambient[4], Color_Diffuse[4];
-	unsigned char * RESTRICT pixelmask = span->pixelmask;
-	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
-	if (!pixel)
-		return;
-	pixel += span->start * 4;
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0]*255.0f;
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1]*255.0f;
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2]*255.0f;
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]*255.0f;
-	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0]*255.0f;
-	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1]*255.0f;
-	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2]*255.0f;
-	Color_Diffuse[3] = 0.0f;
-	for (x = startx;x < endx;x++)
-	{
-		if (!pixelmask[x])
-			continue;
-		d[0] = diffuse[x*4+0] * (Color_Ambient[0] + lightmap[x*4+0] * Color_Diffuse[0]);if (d[0] > 255) d[0] = 255;
-		d[1] = diffuse[x*4+1] * (Color_Ambient[1] + lightmap[x*4+1] * Color_Diffuse[1]);if (d[1] > 255) d[1] = 255;
-		d[2] = diffuse[x*4+2] * (Color_Ambient[2] + lightmap[x*4+2] * Color_Diffuse[2]);if (d[2] > 255) d[2] = 255;
-		d[3] = diffuse[x*4+3] * (Color_Ambient[3] + lightmap[x*4+3] * Color_Diffuse[3]);if (d[3] > 255) d[3] = 255;
-		pixel[x*4+0] = d[2];
-		pixel[x*4+1] = d[1];
-		pixel[x*4+2] = d[0];
-		pixel[x*4+3] = d[3];
-	}
-}
 
-void DPSOFTRAST_Draw_Span_VertexColor(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, int arrayindex, const float *zf)
 {
-	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4], Color_Diffuse[4];
-	float c[4];
+	int x;
+	int startx = span->startx;
+	int endx = span->endx;
 	float data[4];
 	float slope[4];
 	float z;
-	int arrayindex = DPSOFTRAST_ARRAY_COLOR;
-	data[0] = span->data[0][arrayindex][0];
+	data[2] = span->data[0][arrayindex][0];
 	data[1] = span->data[0][arrayindex][1];
-	data[2] = span->data[0][arrayindex][2];
+	data[0] = span->data[0][arrayindex][2];
 	data[3] = span->data[0][arrayindex][3];
-	slope[0] = span->data[1][arrayindex][0];
+	slope[2] = span->data[1][arrayindex][0];
 	slope[1] = span->data[1][arrayindex][1];
-	slope[2] = span->data[1][arrayindex][2];
+	slope[0] = span->data[1][arrayindex][2];
 	slope[3] = span->data[1][arrayindex][3];
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
-	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
-	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
-	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
-	Color_Diffuse[3] = 0.0f;
 	for (x = startx;x < endx;x++)
 	{
 		z = zf[x];
-		c[0] = (data[0] + slope[0]*x) * z;
-		c[1] = (data[1] + slope[1]*x) * z;
-		c[2] = (data[2] + slope[2]*x) * z;
-		c[3] = (data[3] + slope[3]*x) * z;
-		out4f[x*4+0] = diffuse[x*4+0] * (Color_Ambient[0] + c[0] * Color_Diffuse[0]);
-		out4f[x*4+1] = diffuse[x*4+1] * (Color_Ambient[1] + c[1] * Color_Diffuse[1]);
-		out4f[x*4+2] = diffuse[x*4+2] * (Color_Ambient[2] + c[2] * Color_Diffuse[2]);
-		out4f[x*4+3] = diffuse[x*4+3] * (Color_Ambient[3] + c[3] * Color_Diffuse[3]);
+		out4ub[x*4+0] = (int)(in4ub[x*4+0] * (data[0] + slope[0]*x) * z);
+		out4ub[x*4+1] = (int)(in4ub[x*4+1] * (data[1] + slope[1]*x) * z);
+		out4ub[x*4+2] = (int)(in4ub[x*4+2] * (data[2] + slope[2]*x) * z);
+		out4ub[x*4+3] = (int)(in4ub[x*4+3] * (data[3] + slope[3]*x) * z);
 	}
 }
 
-void DPSOFTRAST_Draw_Span_FlatColor(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse)
+void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, int arrayindex, const float *zf)
 {
-	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4];
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+	int x;
+	int startx = span->startx;
+	int endx = span->endx;
+	float data[4];
+	float slope[4];
+	float z;
+	data[2] = span->data[0][arrayindex][0]*255.0f;
+	data[1] = span->data[0][arrayindex][1]*255.0f;
+	data[0] = span->data[0][arrayindex][2]*255.0f;
+	data[3] = span->data[0][arrayindex][3]*255.0f;
+	slope[2] = span->data[1][arrayindex][0]*255.0f;
+	slope[1] = span->data[1][arrayindex][1]*255.0f;
+	slope[0] = span->data[1][arrayindex][2]*255.0f;
+	slope[3] = span->data[1][arrayindex][3]*255.0f;
 	for (x = startx;x < endx;x++)
 	{
-		out4f[x*4+0] = diffuse[x*4+0] * Color_Ambient[0];
-		out4f[x*4+1] = diffuse[x*4+1] * Color_Ambient[1];
-		out4f[x*4+2] = diffuse[x*4+2] * Color_Ambient[2];
-		out4f[x*4+3] = diffuse[x*4+3] * Color_Ambient[3];
+		z = zf[x];
+		out4ub[x*4+0] = (int)((data[0] + slope[0]*x) * z);
+		out4ub[x*4+1] = (int)((data[1] + slope[1]*x) * z);
+		out4ub[x*4+2] = (int)((data[2] + slope[2]*x) * z);
+		out4ub[x*4+3] = (int)((data[3] + slope[3]*x) * z);
 	}
 }
 
-void DPSOFTRAST_Draw_Span_FakeLight(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub, const float *subcolor)
 {
-	memset(out4f, 0, span->length*sizeof(float[4]));
+	int x, startx = span->startx, endx = span->endx;
+	int c[4], localcolor[4];
+	localcolor[2] = (int)(subcolor[0] * 255.0f);
+	localcolor[1] = (int)(subcolor[1] * 255.0f);
+	localcolor[0] = (int)(subcolor[2] * 255.0f);
+	localcolor[3] = (int)(subcolor[3] * 255.0f);
+	for (x = startx;x < endx;x++)
+	{
+		c[0] = inb4ub[x*4+0] - localcolor[0];if (c[0] < 0) c[0] = 0;
+		c[1] = inb4ub[x*4+1] - localcolor[1];if (c[1] < 0) c[1] = 0;
+		c[2] = inb4ub[x*4+2] - localcolor[2];if (c[2] < 0) c[2] = 0;
+		c[3] = inb4ub[x*4+3] - localcolor[3];if (c[3] < 0) c[3] = 0;
+		c[0] += ina4ub[x*4+0];if (c[0] > 255) c[0] = 255;
+		c[1] += ina4ub[x*4+1];if (c[1] > 255) c[1] = 255;
+		c[2] += ina4ub[x*4+2];if (c[2] > 255) c[2] = 255;
+		c[3] += ina4ub[x*4+3];if (c[3] > 255) c[3] = 255;
+		out4ub[x*4+0] = c[0];
+		out4ub[x*4+1] = c[1];
+		out4ub[x*4+2] = c[2];
+		out4ub[x*4+3] = c[3];
+	}
 }
 
-void DPSOFTRAST_Draw_Span_LightDirectionMap_ModelSpace(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-	memset(out4f, 0, span->length*sizeof(float[4]));
+	int x, startx = span->startx, endx = span->endx;
+	for (x = startx;x < endx;x++)
+	{
+		out4ub[x*4+0] = (ina4ub[x*4+0] * inb4ub[x*4+0])>>8;
+		out4ub[x*4+1] = (ina4ub[x*4+1] * inb4ub[x*4+1])>>8;
+		out4ub[x*4+2] = (ina4ub[x*4+2] * inb4ub[x*4+2])>>8;
+		out4ub[x*4+3] = (ina4ub[x*4+3] * inb4ub[x*4+3])>>8;
+	}
 }
 
-void DPSOFTRAST_Draw_Span_LightDirectionMap_TangentSpace(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_AddBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-	memset(out4f, 0, span->length*sizeof(float[4]));
+	int x, startx = span->startx, endx = span->endx;
+	int d[4];
+	for (x = startx;x < endx;x++)
+	{
+		d[0] = ina4ub[x*4+0] + inb4ub[x*4+0];if (d[0] > 255) d[0] = 255;
+		d[1] = ina4ub[x*4+1] + inb4ub[x*4+1];if (d[1] > 255) d[1] = 255;
+		d[2] = ina4ub[x*4+2] + inb4ub[x*4+2];if (d[2] > 255) d[2] = 255;
+		d[3] = ina4ub[x*4+3] + inb4ub[x*4+3];if (d[3] > 255) d[3] = 255;
+		out4ub[x*4+0] = d[0];
+		out4ub[x*4+1] = d[1];
+		out4ub[x*4+2] = d[2];
+		out4ub[x*4+3] = d[3];
+	}
 }
 
-void DPSOFTRAST_Draw_Span_LightDirection(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_MixBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-	memset(out4f, 0, span->length*sizeof(float[4]));
+	int x, startx = span->startx, endx = span->endx;
+	int a, b;
+	for (x = startx;x < endx;x++)
+	{
+		a = 256 - inb4ub[x*4+3];
+		b = inb4ub[x*4+3];
+		out4ub[x*4+0] = (ina4ub[x*4+0] * a + inb4ub[x*4+0] * b)>>8;
+		out4ub[x*4+1] = (ina4ub[x*4+1] * a + inb4ub[x*4+1] * b)>>8;
+		out4ub[x*4+2] = (ina4ub[x*4+2] * a + inb4ub[x*4+2] * b)>>8;
+		out4ub[x*4+3] = (ina4ub[x*4+3] * a + inb4ub[x*4+3] * b)>>8;
+	}
 }
 
-void DPSOFTRAST_Draw_Span_LightSource(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
+void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, const float *color)
 {
-	memset(out4f, 0, span->length*sizeof(float[4]));
+	int x, startx = span->startx, endx = span->endx;
+	int localcolor[4], ilerp, lerp;
+	localcolor[2] = (int)(color[0]*255.0f);
+	localcolor[1] = (int)(color[1]*255.0f);
+	localcolor[0] = (int)(color[2]*255.0f);
+	localcolor[3] = (int)(color[3]*255.0f);
+	ilerp = 256 - localcolor[3];
+	lerp = localcolor[3];
+	for (x = startx;x < endx;x++)
+	{
+		out4ub[x*4+0] = (in4ub[x*4+0] * ilerp + localcolor[0] * lerp)>>8;
+		out4ub[x*4+1] = (in4ub[x*4+1] * ilerp + localcolor[1] * lerp)>>8;
+		out4ub[x*4+2] = (in4ub[x*4+2] * ilerp + localcolor[2] * lerp)>>8;
+		out4ub[x*4+3] = (in4ub[x*4+3] * ilerp + localcolor[3] * lerp)>>8;
+	}
 }
 
-void DPSOFTRAST_Draw_Span_Refraction(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
-{
-	memset(out4f, 0, span->length*sizeof(float[4]));
-}
 
-void DPSOFTRAST_Draw_Span_Water(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
-{
-	memset(out4f, 0, span->length*sizeof(float[4]));
-}
 
-void DPSOFTRAST_Draw_Span_DeferredGeometry(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *diffuse, const float *zf)
-{
-	memset(out4f, 0, span->length*sizeof(float[4]));
-}
+extern int dpsoftrast_test;
 
-void DPSOFTRAST_Draw_Span_DeferredLightSource(const DPSOFTRAST_State_Draw_Span *span, float *out4f, const float *zf)
-{
-	memset(out4f, 0, span->length*sizeof(float[4]));
-}
-
-void DPSOFTRAST_Draw_VertexShader(void)
+void DPSOFTRAST_VertexShader_Generic(void)
 {
 	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
-	switch(dpsoftrast.shader_mode)
-	{
-	case SHADERMODE_GENERIC: ///< (particles/HUD/etc) vertex color: optionally multiplied by one texture
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
-		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SPECULAR)
-			DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.numvertices);
-		break;
-	case SHADERMODE_POSTPROCESS: ///< postprocessing shader (r_glsl_postprocess)
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+	if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SPECULAR)
 		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.numvertices);
-		break;
-	case SHADERMODE_DEPTH_OR_SHADOW: ///< (depthfirst/shadows) vertex shader only
-		break;
-	case SHADERMODE_FLATCOLOR: ///< (lightmap) modulate texture by uniform color (q1bsp: q3bsp)
-		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
-		break;
-	case SHADERMODE_VERTEXCOLOR: ///< (lightmap) modulate texture by vertex colors (q3bsp)
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
-		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
-		break;
-	case SHADERMODE_LIGHTMAP: ///< (lightmap) modulate texture by lightmap texture (q1bsp: q3bsp)
-		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
-		DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.numvertices);
-		break;
-	case SHADERMODE_FAKELIGHT: ///< (fakelight) modulate texture by "fake" lighting (no lightmaps: no nothing)
-		break;
-	case SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE: ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
-		break;
-	case SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE: ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
-		break;
-	case SHADERMODE_LIGHTDIRECTION: ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-		DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
-		DPSOFTRAST_Draw_VertexShaderLightDirection();
-		break;
-	case SHADERMODE_LIGHTSOURCE: ///< (lightsource) use directional pixel shading from light source (rtlight)
-		break;
-	case SHADERMODE_REFRACTION: ///< refract background (the material is rendered normally after this pass)
-		break;
-	case SHADERMODE_WATER: ///< refract background and reflection (the material is rendered normally after this pass)
-		break;
-	case SHADERMODE_SHOWDEPTH: ///< (debugging) renders depth as color
-		break;
-	case SHADERMODE_DEFERREDGEOMETRY: ///< (deferred) render material properties to screenspace geometry buffers
-		break;
-	case SHADERMODE_DEFERREDLIGHTSOURCE: ///< (deferred) use directional pixel shading from light source (rtlight) on screenspace geometry buffers
-		break;
-	case SHADERMODE_COUNT:
-		break;
-	}
 }
 
-void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
+void DPSOFTRAST_PixelShader_Generic(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
 {
-	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
-	float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	float buffer_texture_lightmap[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	switch(dpsoftrast.shader_mode)
+	if (dpsoftrast_test)
 	{
-	case SHADERMODE_GENERIC: ///< (particles/HUD/etc) vertex color: optionally multiplied by one texture
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_texture_lightmapbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_DIFFUSE)
+		{
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_FIRST, 2, buffer_z);
+			DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(span, buffer_FragColorbgra8, buffer_texture_colorbgra8, 1, buffer_z);
+			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SPECULAR)
+			{
+				DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_lightmapbgra8, GL20TU_SECOND, 2, buffer_z);
+				if (dpsoftrast.shader_permutation & SHADERPERMUTATION_COLORMAPPING)
+				{
+					// multiply
+					DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(span, buffer_FragColorbgra8, buffer_FragColorbgra8, buffer_texture_lightmapbgra8);
+				}
+				else if (dpsoftrast.shader_permutation & SHADERPERMUTATION_COLORMAPPING)
+				{
+					// add
+					DPSOFTRAST_Draw_Span_AddBuffersBGRA8(span, buffer_FragColorbgra8, buffer_FragColorbgra8, buffer_texture_lightmapbgra8);
+				}
+				else if (dpsoftrast.shader_permutation & SHADERPERMUTATION_VERTEXTEXTUREBLEND)
+				{
+					// alphablend
+					DPSOFTRAST_Draw_Span_MixBuffersBGRA8(span, buffer_FragColorbgra8, buffer_FragColorbgra8, buffer_texture_lightmapbgra8);
+				}
+			}
+		}
+		else
+			DPSOFTRAST_Draw_Span_VaryingBGRA8(span, buffer_FragColorbgra8, 1, buffer_z);
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	}
+	else
+	{
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_texture_lightmap[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_DIFFUSE)
 		{
@@ -1976,9 +2295,49 @@ void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
 		else
 			DPSOFTRAST_Draw_Span_Varying(span, buffer_FragColor, 1, buffer_z);
 		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_POSTPROCESS: ///< postprocessing shader (r_glsl_postprocess)
-		// TODO: optimize!!  at the very least there is no reason to use texture sampling on the frame texture
+	}
+}
+
+
+
+void DPSOFTRAST_VertexShader_PostProcess(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD1], dpsoftrast.draw.numvertices);
+}
+
+void DPSOFTRAST_PixelShader_PostProcess(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: optimize!!  at the very least there is no reason to use texture sampling on the frame texture
+	if (dpsoftrast_test)
+	{
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_FragColorbgra8, GL20TU_FIRST, 2, buffer_z);
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_BLOOM)
+		{
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_SECOND, 3, buffer_z);
+			DPSOFTRAST_Draw_Span_AddBloomBGRA8(span, buffer_FragColorbgra8, buffer_FragColorbgra8, buffer_texture_colorbgra8, dpsoftrast.uniform4f + DPSOFTRAST_UNIFORM_BloomColorSubtract * 4);
+		}
+		DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(span, buffer_FragColorbgra8, buffer_FragColorbgra8, dpsoftrast.uniform4f + DPSOFTRAST_UNIFORM_ViewTintColor * 4);
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SATURATION)
+		{
+			// TODO: implement saturation
+		}
+		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_GAMMARAMPS)
+		{
+			// TODO: implement gammaramps
+		}
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	}
+	else
+	{
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_FragColor, GL20TU_FIRST, 2, buffer_z);
 		if (dpsoftrast.shader_permutation & SHADERPERMUTATION_BLOOM)
@@ -1996,94 +2355,497 @@ void DPSOFTRAST_Draw_PixelShaderSpan(const DPSOFTRAST_State_Draw_Span *span)
 			// TODO: implement gammaramps
 		}
 		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_DEPTH_OR_SHADOW: ///< (depthfirst/shadows) vertex shader only
-		break;
-	case SHADERMODE_FLATCOLOR: ///< (lightmap) modulate texture by uniform color (q1bsp: q3bsp)
+	}
+}
+
+
+
+void DPSOFTRAST_VertexShader_Depth_Or_Shadow(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_Depth_Or_Shadow(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// this is never called (because colormask is off when this shader is used)
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_FlatColor(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_FlatColor(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	if (dpsoftrast_test)
+	{
+		int x, startx = span->startx, endx = span->endx;
+		int Color_Ambienti[4];
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		Color_Ambienti[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0]*256.0f);
+		Color_Ambienti[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1]*256.0f);
+		Color_Ambienti[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2]*256.0f);
+		Color_Ambienti[3] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]        *256.0f);
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
+		for (x = startx;x < endx;x++)
+		{
+			buffer_FragColorbgra8[x*4+0] = (buffer_texture_colorbgra8[x*4+0] * Color_Ambienti[0])>>8;
+			buffer_FragColorbgra8[x*4+1] = (buffer_texture_colorbgra8[x*4+1] * Color_Ambienti[1])>>8;
+			buffer_FragColorbgra8[x*4+2] = (buffer_texture_colorbgra8[x*4+2] * Color_Ambienti[2])>>8;
+			buffer_FragColorbgra8[x*4+3] = (buffer_texture_colorbgra8[x*4+3] * Color_Ambienti[3])>>8;
+		}
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	}
+	else
+	{
+		int x, startx = span->startx, endx = span->endx;
+		float Color_Ambient[4];
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
+		Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
+		Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
+		Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_FlatColor(span, buffer_FragColor, buffer_texture_color);
+		for (x = startx;x < endx;x++)
+		{
+			buffer_FragColor[x*4+0] = buffer_texture_color[x*4+0] * Color_Ambient[0];
+			buffer_FragColor[x*4+1] = buffer_texture_color[x*4+1] * Color_Ambient[1];
+			buffer_FragColor[x*4+2] = buffer_texture_color[x*4+2] * Color_Ambient[2];
+			buffer_FragColor[x*4+3] = buffer_texture_color[x*4+3] * Color_Ambient[3];
+		}
 		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_VERTEXCOLOR: ///< (lightmap) modulate texture by vertex colors (q3bsp)
+	}
+}
+
+
+
+void DPSOFTRAST_VertexShader_VertexColor(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_COLOR], dpsoftrast.draw.numvertices);
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_VertexColor(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	if (dpsoftrast_test)
+	{
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		int x, startx = span->startx, endx = span->endx;
+		float Color_Ambient[4], Color_Diffuse[4];
+		float data[4];
+		float slope[4];
+		float z;
+		int arrayindex = DPSOFTRAST_ARRAY_COLOR;
+		data[2] = span->data[0][arrayindex][0];
+		data[1] = span->data[0][arrayindex][1];
+		data[0] = span->data[0][arrayindex][2];
+		data[3] = span->data[0][arrayindex][3];
+		slope[2] = span->data[1][arrayindex][0];
+		slope[1] = span->data[1][arrayindex][1];
+		slope[0] = span->data[1][arrayindex][2];
+		slope[3] = span->data[1][arrayindex][3];
+		Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
+		Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
+		Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
+		Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+		Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
+		Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
+		Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
+		Color_Diffuse[3] = 0.0f;
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
+		for (x = startx;x < endx;x++)
+		{
+			z = buffer_z[x];
+			buffer_FragColorbgra8[x*4+0] = (int)(buffer_texture_colorbgra8[x*4+0] * (Color_Ambient[0] + ((data[0] + slope[0]*x) * z) * Color_Diffuse[0]));
+			buffer_FragColorbgra8[x*4+1] = (int)(buffer_texture_colorbgra8[x*4+1] * (Color_Ambient[1] + ((data[1] + slope[1]*x) * z) * Color_Diffuse[1]));
+			buffer_FragColorbgra8[x*4+2] = (int)(buffer_texture_colorbgra8[x*4+2] * (Color_Ambient[2] + ((data[2] + slope[2]*x) * z) * Color_Diffuse[2]));
+			buffer_FragColorbgra8[x*4+3] = (int)(buffer_texture_colorbgra8[x*4+3] * (Color_Ambient[3] + ((data[3] + slope[3]*x) * z) * Color_Diffuse[3]));
+		}
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	}
+	else
+	{
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		int x, startx = span->startx, endx = span->endx;
+		float Color_Ambient[4], Color_Diffuse[4];
+		float c[4];
+		float data[4];
+		float slope[4];
+		float z;
+		int arrayindex = DPSOFTRAST_ARRAY_COLOR;
+		data[0] = span->data[0][arrayindex][0];
+		data[1] = span->data[0][arrayindex][1];
+		data[2] = span->data[0][arrayindex][2];
+		data[3] = span->data[0][arrayindex][3];
+		slope[0] = span->data[1][arrayindex][0];
+		slope[1] = span->data[1][arrayindex][1];
+		slope[2] = span->data[1][arrayindex][2];
+		slope[3] = span->data[1][arrayindex][3];
+		Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
+		Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
+		Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
+		Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+		Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
+		Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
+		Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
+		Color_Diffuse[3] = 0.0f;
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_VertexColor(span, buffer_FragColor, buffer_texture_color, buffer_z);
+		for (x = startx;x < endx;x++)
+		{
+			z = buffer_z[x];
+			c[0] = (data[0] + slope[0]*x) * z;
+			c[1] = (data[1] + slope[1]*x) * z;
+			c[2] = (data[2] + slope[2]*x) * z;
+			c[3] = (data[3] + slope[3]*x) * z;
+			buffer_FragColor[x*4+0] = buffer_texture_color[x*4+0] * (Color_Ambient[0] + c[0] * Color_Diffuse[0]);
+			buffer_FragColor[x*4+1] = buffer_texture_color[x*4+1] * (Color_Ambient[1] + c[1] * Color_Diffuse[1]);
+			buffer_FragColor[x*4+2] = buffer_texture_color[x*4+2] * (Color_Ambient[2] + c[2] * Color_Diffuse[2]);
+			buffer_FragColor[x*4+3] = buffer_texture_color[x*4+3] * (Color_Ambient[3] + c[3] * Color_Diffuse[3]);
+		}
 		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_LIGHTMAP: ///< (lightmap) modulate texture by lightmap texture (q1bsp: q3bsp)
+	}
+}
+
+
+
+void DPSOFTRAST_VertexShader_Lightmap(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
+	DPSOFTRAST_Array_Copy(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD4], dpsoftrast.draw.numvertices);
+}
+
+void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	if (dpsoftrast_test)
+	{
+		int x, startx = span->startx, endx = span->endx;
+		float Color_Ambient[4], Color_Diffuse[4];
+		int Color_Ambienti[4];
+		int Color_Diffusei[4];
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_texture_lightmapbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		unsigned int d[4];
+		//unsigned char * RESTRICT pixelmask = span->pixelmask;
+		//unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
+		Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
+		Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
+		Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
+		Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+		Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
+		Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
+		Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
+		Color_Diffuse[3] = 0.0f;
+		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+		Color_Ambienti[2] = (int)(Color_Ambient[0] * 65536.0f);
+		Color_Ambienti[1] = (int)(Color_Ambient[1] * 65536.0f);
+		Color_Ambienti[0] = (int)(Color_Ambient[2] * 65536.0f);
+		Color_Ambienti[3] = (int)(Color_Ambient[3] * 65536.0f);
+		Color_Diffusei[2] = (int)(Color_Diffuse[0] * 256.0f);
+		Color_Diffusei[1] = (int)(Color_Diffuse[1] * 256.0f);
+		Color_Diffusei[0] = (int)(Color_Diffuse[2] * 256.0f);
+		Color_Diffusei[3] = (int)(Color_Diffuse[3] * 256.0f);
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, 6, buffer_z);
+		for (x = startx;x < endx;x++)
+		{
+			d[0] = (buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
+			d[1] = (buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
+			d[2] = (buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
+			d[3] = (buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
+			buffer_FragColorbgra8[x*4+0] = d[0];
+			buffer_FragColorbgra8[x*4+1] = d[1];
+			buffer_FragColorbgra8[x*4+2] = d[2];
+			buffer_FragColorbgra8[x*4+3] = d[3];
+		}
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	}
+	else
+	{
+		int x, startx = span->startx, endx = span->endx;
+		float Color_Ambient[4], Color_Diffuse[4];
+		float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+		float buffer_texture_color[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_texture_lightmap[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		float buffer_FragColor[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+		int d[4];
+		unsigned char * RESTRICT pixelmask = span->pixelmask;
+		unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
+		Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
+		Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
+		Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
+		Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+		Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
+		Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
+		Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
+		Color_Diffuse[3] = 0.0f;
 		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
 		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_lightmap, GL20TU_LIGHTMAP, 6, buffer_z);
 		if(!dpsoftrast.user.alphatest && dpsoftrast.fb_blendmode == DPSOFTRAST_BLENDMODE_OPAQUE)
 		{
-			DPSOFTRAST_Draw_Span_Lightmap_Finish(span, buffer_texture_color, buffer_texture_lightmap);
+			Color_Ambient[0] *= 255.0f;
+			Color_Ambient[1] *= 255.0f;
+			Color_Ambient[2] *= 255.0f;
+			Color_Ambient[3] *= 255.0f;
+			Color_Diffuse[0] *= 255.0f;
+			Color_Diffuse[1] *= 255.0f;
+			Color_Diffuse[2] *= 255.0f;
+			Color_Diffuse[3] *= 255.0f;
+			for (x = startx;x < endx;x++)
+			{
+				if (!pixelmask[x])
+					continue;
+				d[0] = buffer_texture_color[x*4+0] * (Color_Ambient[0] + buffer_texture_lightmap[x*4+0] * Color_Diffuse[0]);if (d[0] > 255) d[0] = 255;
+				d[1] = buffer_texture_color[x*4+1] * (Color_Ambient[1] + buffer_texture_lightmap[x*4+1] * Color_Diffuse[1]);if (d[1] > 255) d[1] = 255;
+				d[2] = buffer_texture_color[x*4+2] * (Color_Ambient[2] + buffer_texture_lightmap[x*4+2] * Color_Diffuse[2]);if (d[2] > 255) d[2] = 255;
+				d[3] = buffer_texture_color[x*4+3] * (Color_Ambient[3] + buffer_texture_lightmap[x*4+3] * Color_Diffuse[3]);if (d[3] > 255) d[3] = 255;
+				pixel[x*4+0] = d[2];
+				pixel[x*4+1] = d[1];
+				pixel[x*4+2] = d[0];
+				pixel[x*4+3] = d[3];
+			}
 		}
 		else
 		{
-			DPSOFTRAST_Draw_Span_Lightmap(span, buffer_FragColor, buffer_texture_color, buffer_texture_lightmap);
+			for (x = startx;x < endx;x++)
+			{
+				buffer_FragColor[x*4+0] = buffer_texture_color[x*4+0] * (Color_Ambient[0] + buffer_texture_lightmap[x*4+0] * Color_Diffuse[0]);
+				buffer_FragColor[x*4+1] = buffer_texture_color[x*4+1] * (Color_Ambient[1] + buffer_texture_lightmap[x*4+1] * Color_Diffuse[1]);
+				buffer_FragColor[x*4+2] = buffer_texture_color[x*4+2] * (Color_Ambient[2] + buffer_texture_lightmap[x*4+2] * Color_Diffuse[2]);
+				buffer_FragColor[x*4+3] = buffer_texture_color[x*4+3] * (Color_Ambient[3] + buffer_texture_lightmap[x*4+3] * Color_Diffuse[3]);
+			}
 			DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
 		}
-		break;
-	case SHADERMODE_FAKELIGHT: ///< (fakelight) modulate texture by "fake" lighting (no lightmaps: no nothing)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_FakeLight(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE: ///< (lightmap) use directional pixel shading from texture containing modelspace light directions (q3bsp deluxemap)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_LightDirectionMap_ModelSpace(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE: ///< (lightmap) use directional pixel shading from texture containing tangentspace light directions (q1bsp deluxemap)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_LightDirectionMap_TangentSpace(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_LIGHTDIRECTION: ///< (lightmap) use directional pixel shading from fixed light direction (q3bsp)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_LightDirection(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_LIGHTSOURCE: ///< (lightsource) use directional pixel shading from light source (rtlight)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_LightSource(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_REFRACTION: ///< refract background (the material is rendered normally after this pass)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_Refraction(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_WATER: ///< refract background and reflection (the material is rendered normally after this pass)
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_Water(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_SHOWDEPTH: ///< (debugging) renders depth as color
-		break;
-	case SHADERMODE_DEFERREDGEOMETRY: ///< (deferred) render material properties to screenspace geometry buffers
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_Texture2DVarying(span, buffer_texture_color, GL20TU_COLOR, 2, buffer_z);
-		DPSOFTRAST_Draw_Span_DeferredGeometry(span, buffer_FragColor, buffer_texture_color, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_DEFERREDLIGHTSOURCE: ///< (deferred) use directional pixel shading from light source (rtlight) on screenspace geometry buffers
-		DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-		DPSOFTRAST_Draw_Span_DeferredLightSource(span, buffer_FragColor, buffer_z);
-		DPSOFTRAST_Draw_Span_Finish(span, buffer_FragColor);
-		break;
-	case SHADERMODE_COUNT:
-		break;
 	}
 }
+
+
+
+void DPSOFTRAST_VertexShader_FakeLight(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_FakeLight(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_LightDirectionMap_ModelSpace(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_LightDirectionMap_ModelSpace(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_LightDirection(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_TEXCOORD0], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_LightDirection(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_LightSource(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_Refraction(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_Refraction(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_Water(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+
+void DPSOFTRAST_PixelShader_Water(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_ShowDepth(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_ShowDepth(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_DeferredGeometry(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_DeferredGeometry(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+void DPSOFTRAST_VertexShader_DeferredLightSource(void)
+{
+	DPSOFTRAST_Array_Transform(dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.in_array4f[DPSOFTRAST_ARRAY_POSITION], dpsoftrast.draw.numvertices, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_DeferredLightSource(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8, 0, span->length*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+}
+
+
+
+typedef struct DPSOFTRAST_ShaderModeInfo_s
+{
+	int lodarrayindex;
+	void (*Vertex)(void);
+	void (*Span)(const DPSOFTRAST_State_Draw_Span * RESTRICT span);
+}
+DPSOFTRAST_ShaderModeInfo;
+
+DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COUNT] =
+{
+	{2, DPSOFTRAST_VertexShader_Generic,                        DPSOFTRAST_PixelShader_Generic,                      },
+	{2, DPSOFTRAST_VertexShader_PostProcess,                    DPSOFTRAST_PixelShader_PostProcess,                  },
+	{2, DPSOFTRAST_VertexShader_Depth_Or_Shadow,                DPSOFTRAST_PixelShader_Depth_Or_Shadow,              },
+	{2, DPSOFTRAST_VertexShader_FlatColor,                      DPSOFTRAST_PixelShader_FlatColor,                    },
+	{2, DPSOFTRAST_VertexShader_VertexColor,                    DPSOFTRAST_PixelShader_VertexColor,                  },
+	{2, DPSOFTRAST_VertexShader_Lightmap,                       DPSOFTRAST_PixelShader_Lightmap,                     },
+	{2, DPSOFTRAST_VertexShader_FakeLight,                      DPSOFTRAST_PixelShader_FakeLight,                    },
+	{2, DPSOFTRAST_VertexShader_LightDirectionMap_ModelSpace,   DPSOFTRAST_PixelShader_LightDirectionMap_ModelSpace, },
+	{2, DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace, DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace},
+	{2, DPSOFTRAST_VertexShader_LightDirection,                 DPSOFTRAST_PixelShader_LightDirection,               },
+	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                  },
+	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                   },
+	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                        },
+	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                    },
+	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,             },
+	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,          }
+};
+
+
 
 void DPSOFTRAST_Draw_ProcessSpans(void)
 {
@@ -2141,7 +2903,7 @@ void DPSOFTRAST_Draw_ProcessSpans(void)
 			// do this before running depthmask code, to allow the pixelshader
 			// to clear pixelmask values for alpha testing
 			if (dpsoftrast.fb_colorpixels[0] && dpsoftrast.fb_colormask)
-				DPSOFTRAST_Draw_PixelShaderSpan(span);
+				DPSOFTRAST_ShaderModeTable[dpsoftrast.shader_mode].Span(span);
 			if (dpsoftrast.user.depthmask)
 				for (x = 0, d = depth;x < span->length;x++, d += depthslope)
 					if (pixelmask[x])
@@ -2157,7 +2919,7 @@ void DPSOFTRAST_Draw_ProcessSpans(void)
 				span->pixelmask = pixelmask;
 				span->startx = 0;
 				span->endx = span->length;
-				DPSOFTRAST_Draw_PixelShaderSpan(span);
+				DPSOFTRAST_ShaderModeTable[dpsoftrast.shader_mode].Span(span);
 			}
 		}
 	}
@@ -2435,16 +3197,16 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numvertices, int numt
 					mip[j] = 0;
 					continue;
 				}
-				// FIXME: use appropriate array for this texture!
-				mip_edge0tc[0] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][0] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][0]) * texture->mipmap[0][2];
-				mip_edge0tc[1] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][0][1] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][1]) * texture->mipmap[0][3];
-				mip_edge1tc[0] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][2][0] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][0]) * texture->mipmap[0][2];
-				mip_edge1tc[1] = (clipped[DPSOFTRAST_ARRAY_TEXCOORD0][2][1] - clipped[DPSOFTRAST_ARRAY_TEXCOORD0][1][1]) * texture->mipmap[0][3];
+				k = DPSOFTRAST_ShaderModeTable[dpsoftrast.shader_mode].lodarrayindex;
+				mip_edge0tc[0] = (clipped[k][0][0] - clipped[k][1][0]) * texture->mipmap[0][2];
+				mip_edge0tc[1] = (clipped[k][0][1] - clipped[k][1][1]) * texture->mipmap[0][3];
+				mip_edge1tc[0] = (clipped[k][2][0] - clipped[k][1][0]) * texture->mipmap[0][2];
+				mip_edge1tc[1] = (clipped[k][2][1] - clipped[k][1][1]) * texture->mipmap[0][3];
 				mip_edge0mip = (mip_edge0tc[0]*mip_edge0tc[0]+mip_edge0tc[1]*mip_edge0tc[1]) * mip_edge0xymul;
 				mip_edge1mip = (mip_edge1tc[0]*mip_edge1tc[0]+mip_edge1tc[1]*mip_edge1tc[1]) * mip_edge1xymul;
 				// this will be multiplied in the texturing routine by the texture resolution
 				mipdensity = mip_edge0mip < mip_edge1mip ? mip_edge0mip : mip_edge1mip;
-				y = (int)(log(mipdensity)/log(2.0f) + 0.5f);
+				y = (int)(log(mipdensity)/log(2.0f));
 				if (y < 0)
 					y = 0;
 				if (y > texture->mipmaps - 1)
@@ -2752,7 +3514,7 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 	arraymask[9] = dpsoftrast.pointer_texcoordf[7] != NULL;
 	DPSOFTRAST_Validate(DPSOFTRAST_VALIDATE_DRAW);
 	DPSOFTRAST_Draw_LoadVertices(firstvertex, numvertices, true);
-	DPSOFTRAST_Draw_VertexShader();
+	DPSOFTRAST_ShaderModeTable[dpsoftrast.shader_mode].Vertex();
 	DPSOFTRAST_Draw_ProjectVertices(dpsoftrast.draw.screencoord4f, dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION], numvertices);
 	DPSOFTRAST_Draw_ProcessTriangles(firstvertex, numvertices, numtriangles, element3i, element3s, arraymask);
 }

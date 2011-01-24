@@ -9823,9 +9823,13 @@ r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
 R_RenderView
 ================
 */
+int dpsoftrast_test;
 void R_RenderView(void)
 {
 	matrix4x4_t originalmatrix = r_refdef.view.matrix, offsetmatrix;
+
+	dpsoftrast_test = r_test.integer;
+
 	if (r_timereport_active)
 		R_TimeReport("start");
 	r_textureframe++; // used only by R_GetCurrentTexture
