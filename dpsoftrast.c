@@ -2524,45 +2524,58 @@ void DPSOFTRAST_VertexShader_Lightmap(void)
 void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
 {
 	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4], Color_Diffuse[4];
-	int Color_Ambienti[4];
-	int Color_Diffusei[4];
+	int Color_Ambienti[4], Color_Diffusei[4], Color_Glowi[4];
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_lightmapbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	unsigned char buffer_texture_glowbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned int d[4];
 	//unsigned char * RESTRICT pixelmask = span->pixelmask;
 	//unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
-	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
-	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
-	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
-	Color_Diffuse[3] = 0.0f;
 	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-	Color_Ambienti[2] = (int)(Color_Ambient[0] * 65536.0f);
-	Color_Ambienti[1] = (int)(Color_Ambient[1] * 65536.0f);
-	Color_Ambienti[0] = (int)(Color_Ambient[2] * 65536.0f);
-	Color_Ambienti[3] = (int)(Color_Ambient[3] * 65536.0f);
-	Color_Diffusei[2] = (int)(Color_Diffuse[0] * 256.0f);
-	Color_Diffusei[1] = (int)(Color_Diffuse[1] * 256.0f);
-	Color_Diffusei[0] = (int)(Color_Diffuse[2] * 256.0f);
-	Color_Diffusei[3] = (int)(Color_Diffuse[3] * 256.0f);
-	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
-	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, 6, buffer_z);
-	for (x = startx;x < endx;x++)
+	Color_Ambienti[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0] * 65536.0f);
+	Color_Ambienti[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1] * 65536.0f);
+	Color_Ambienti[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2] * 65536.0f);
+	Color_Ambienti[3] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0] * 65536.0f);
+	Color_Diffusei[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0] * 256.0f);
+	Color_Diffusei[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1] * 256.0f);
+	Color_Diffusei[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2] * 256.0f);
+	Color_Diffusei[3] = 0;
+	Color_Glowi[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+0] * 65536.0f);
+	Color_Glowi[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+1] * 65536.0f);
+	Color_Glowi[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+2] * 65536.0f);
+	Color_Glowi[3] = 0;
+	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
+	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+	if (dpsoftrast.shader_permutation & SHADERPERMUTATION_GLOW)
 	{
-		d[0] = (buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
-		d[1] = (buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
-		d[2] = (buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
-		d[3] = (buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
-		buffer_FragColorbgra8[x*4+0] = d[0];
-		buffer_FragColorbgra8[x*4+1] = d[1];
-		buffer_FragColorbgra8[x*4+2] = d[2];
-		buffer_FragColorbgra8[x*4+3] = d[3];
+		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_glowbgra8, GL20TU_GLOW, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
+		for (x = startx;x < endx;x++)
+		{
+			d[0] = (buffer_texture_glowbgra8[x*4+0] * Color_Glowi[0] + buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
+			d[1] = (buffer_texture_glowbgra8[x*4+1] * Color_Glowi[1] + buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
+			d[2] = (buffer_texture_glowbgra8[x*4+2] * Color_Glowi[2] + buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
+			d[3] = (buffer_texture_glowbgra8[x*4+3] * Color_Glowi[3] + buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
+			buffer_FragColorbgra8[x*4+0] = d[0];
+			buffer_FragColorbgra8[x*4+1] = d[1];
+			buffer_FragColorbgra8[x*4+2] = d[2];
+			buffer_FragColorbgra8[x*4+3] = d[3];
+		}
+	}
+	else
+	{
+		for (x = startx;x < endx;x++)
+		{
+			d[0] = (buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
+			d[1] = (buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
+			d[2] = (buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
+			d[3] = (buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
+			buffer_FragColorbgra8[x*4+0] = d[0];
+			buffer_FragColorbgra8[x*4+1] = d[1];
+			buffer_FragColorbgra8[x*4+2] = d[2];
+			buffer_FragColorbgra8[x*4+3] = d[3];
+		}
 	}
 	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
 }
