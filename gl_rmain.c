@@ -12223,9 +12223,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		break;
 	case Q3TCGEN_ENVIRONMENT:
 		// make environment reflections using a spheremap
-//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
-//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
-//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
+		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
+		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
 		for (j = 0;j < batchnumvertices;j++)
 		{
 			// identical to Q3A's method, but executed in worldspace so
@@ -12452,10 +12452,11 @@ static void RSurf_DrawBatch_GL11_ApplyColor(float r, float g, float b, float a)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
+	c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;
 	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
-	for (i = 0, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
+	for (i = 0, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
 	{
 		c2[0] = c[0] * r;
 		c2[1] = c[1] * g;
