@@ -12392,12 +12392,13 @@ static void RSurf_DrawBatch_GL11_ApplyFog(void)
 	const float *v;
 	const float *c;
 	float *c2;
-	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
-	rsurface.passcolor4f_vertexbuffer = 0;
-	rsurface.passcolor4f_bufferoffset = 0;
 	if (rsurface.passcolor4f)
 	{
 		// generate color arrays
+		c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;
+		rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+		rsurface.passcolor4f_vertexbuffer = 0;
+		rsurface.passcolor4f_bufferoffset = 0;
 		for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c += 4, c2 += 4)
 		{
 			f = RSurf_FogVertex(v);
@@ -12409,6 +12410,9 @@ static void RSurf_DrawBatch_GL11_ApplyFog(void)
 	}
 	else
 	{
+		rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+		rsurface.passcolor4f_vertexbuffer = 0;
+		rsurface.passcolor4f_bufferoffset = 0;
 		for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c2 += 4)
 		{
 			f = RSurf_FogVertex(v);
@@ -12429,10 +12433,11 @@ static void RSurf_DrawBatch_GL11_ApplyFogToFinishedVertexColors(void)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
+	c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;
 	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
-	for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c += 4, c2 += 4)
+	for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c += 4, c2 += 4)
 	{
 		f = RSurf_FogVertex(v);
 		c2[0] = c[0] * f + r_refdef.fogcolor[0] * (1 - f);
@@ -12469,10 +12474,11 @@ static void RSurf_DrawBatch_GL11_ApplyAmbient(void)
 	float *c2;
 	if (!rsurface.passcolor4f)
 		return;
+	c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;
 	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 	rsurface.passcolor4f_vertexbuffer = 0;
 	rsurface.passcolor4f_bufferoffset = 0;
-	for (i = 0, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
+	for (i = 0, c2 = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, c += 4, c2 += 4)
 	{
 		c2[0] = c[0] + r_refdef.scene.ambient;
 		c2[1] = c[1] + r_refdef.scene.ambient;
