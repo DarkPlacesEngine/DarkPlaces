@@ -1605,11 +1605,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		}
 		if(filter)
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0] + 1;
-			tci[1] = (subtc[1]>>12) - tcimin[1] + 1;
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
-			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[1];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12);
+			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
@@ -1820,11 +1820,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 		if (filter && dpsoftrast_test)
 		{
 			const unsigned int * RESTRICT pixeli[4];
-			tci[0] = (subtc[0]>>12) - tcimin[0] + 1;
-			tci[1] = (subtc[1]>>12) - tcimin[1] + 1;
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
-			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[1]; 
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
+			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
@@ -1890,11 +1890,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 #endif
 		if (filter)
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0] + 1;
-			tci[1] = (subtc[1]>>12) - tcimin[1] + 1;
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12) + 1;
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12) + 1;
-			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[1]; 
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
+			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
@@ -1964,11 +1964,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 		}
 		else
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0] + 1;
-			tci[1] = (subtc[1]>>12) - tcimin[1] + 1;
+			tci[0] = (subtc[0]>>12) - tcimin[0];
+			tci[1] = (subtc[1]>>12) - tcimin[1]; 
 			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12);
-			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
+			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
