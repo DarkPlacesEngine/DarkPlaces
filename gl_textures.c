@@ -39,8 +39,8 @@ cvar_t r_texture_dds_swdecode = {0, "r_texture_dds_swdecode", "0", "0: don't sof
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
-DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_mipmap = DPSOFTRAST_TEXTURE_FILTER_NEAREST_MIPMAP_TRIANGLE;
-DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_nomipmap = DPSOFTRAST_TEXTURE_FILTER_NEAREST;
+DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_mipmap = DPSOFTRAST_TEXTURE_FILTER_LINEAR_MIPMAP_TRIANGLE;
+DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_nomipmap = DPSOFTRAST_TEXTURE_FILTER_LINEAR;
 
 #ifdef SUPPORTD3D
 int d3d_filter_flatmin = D3DTEXF_LINEAR;
