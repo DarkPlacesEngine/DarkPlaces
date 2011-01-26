@@ -3101,6 +3101,7 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 	CubeVectorslope[2] = span->data[1][DPSOFTRAST_ARRAY_TEXCOORD3][2];
 	CubeVectorslope[3] = span->data[1][DPSOFTRAST_ARRAY_TEXCOORD3][3];
 	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
+	memset(buffer_FragColorbgra8 + startx*4, 0, (endx-startx)*4); // clear first, because we skip writing black pixels, and there are a LOT of them...
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 	if (dpsoftrast.shader_permutation & SHADERPERMUTATION_COLORMAPPING)
 	{
@@ -3116,6 +3117,19 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 		for (x = startx;x < endx;x++)
 		{
 			z = buffer_z[x];
+			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
+			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
+			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
+			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);
+			if (attenuation < 0.01f)
+				continue;
+			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
+			{
+				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
+				if (attenuation < 0.01f)
+					continue;
+			}
+
 			diffusetex[0] = buffer_texture_colorbgra8[x*4+0];
 			diffusetex[1] = buffer_texture_colorbgra8[x*4+1];
 			diffusetex[2] = buffer_texture_colorbgra8[x*4+2];
@@ -3136,10 +3150,6 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 			surfacenormal[2] = buffer_texture_normalbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
 			DPSOFTRAST_Vector3Normalize(surfacenormal);
 
-			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
-			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
-			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
-
 			lightnormal[0] = (LightVectordata[0] + LightVectorslope[0]*x) * z;
 			lightnormal[1] = (LightVectordata[1] + LightVectorslope[1]*x) * z;
 			lightnormal[2] = (LightVectordata[2] + LightVectorslope[2]*x) * z;
@@ -3155,9 +3165,6 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 			specularnormal[2] = lightnormal[2] + eyenormal[2];
 			DPSOFTRAST_Vector3Normalize(specularnormal);
 
-			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);if (attenuation < 0.0f) attenuation = 0.0f;
-			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
-				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
 			diffuse = DPSOFTRAST_Vector3Dot(surfacenormal, lightnormal);if (diffuse < 0.0f) diffuse = 0.0f;
 			specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
 			specular = pow(specular, SpecularPower * glosstex[3]);
@@ -3189,6 +3196,19 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 		for (x = startx;x < endx;x++)
 		{
 			z = buffer_z[x];
+			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
+			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
+			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
+			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);
+			if (attenuation < 0.01f)
+				continue;
+			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
+			{
+				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
+				if (attenuation < 0.01f)
+					continue;
+			}
+
 			diffusetex[0] = buffer_texture_colorbgra8[x*4+0];
 			diffusetex[1] = buffer_texture_colorbgra8[x*4+1];
 			diffusetex[2] = buffer_texture_colorbgra8[x*4+2];
@@ -3200,41 +3220,32 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 				diffusetex[2] += buffer_texture_pantsbgra8[x*4+2] * Color_Pants[2] + buffer_texture_shirtbgra8[x*4+2] * Color_Shirt[2];
 				diffusetex[3] += buffer_texture_pantsbgra8[x*4+3] * Color_Pants[3] + buffer_texture_shirtbgra8[x*4+3] * Color_Shirt[3];
 			}
-			glosstex[0] = buffer_texture_glossbgra8[x*4+0];
-			glosstex[1] = buffer_texture_glossbgra8[x*4+1];
-			glosstex[2] = buffer_texture_glossbgra8[x*4+2];
-			glosstex[3] = buffer_texture_glossbgra8[x*4+3];
 			surfacenormal[0] = buffer_texture_normalbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
 			surfacenormal[1] = buffer_texture_normalbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
 			surfacenormal[2] = buffer_texture_normalbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
 			DPSOFTRAST_Vector3Normalize(surfacenormal);
-
-			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
-			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
-			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
 
 			lightnormal[0] = (LightVectordata[0] + LightVectorslope[0]*x) * z;
 			lightnormal[1] = (LightVectordata[1] + LightVectorslope[1]*x) * z;
 			lightnormal[2] = (LightVectordata[2] + LightVectorslope[2]*x) * z;
 			DPSOFTRAST_Vector3Normalize(lightnormal);
 
-			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);if (attenuation < 0.0f) attenuation = 0.0f;
-			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
-				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
 			diffuse = DPSOFTRAST_Vector3Dot(surfacenormal, lightnormal);if (diffuse < 0.0f) diffuse = 0.0f;
 			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_CUBEFILTER)
 			{
-				d[0] = (int)(diffusetex[0] * (Color_Ambient[0] + Color_Diffuse[0] * diffuse) * LightColor[0] * buffer_texture_cubebgra8[x*4+0] * attenuation);if (d[0] > 255) d[0] = 255;
-				d[1] = (int)(diffusetex[1] * (Color_Ambient[1] + Color_Diffuse[1] * diffuse) * LightColor[1] * buffer_texture_cubebgra8[x*4+1] * attenuation);if (d[1] > 255) d[1] = 255;
-				d[2] = (int)(diffusetex[2] * (Color_Ambient[2] + Color_Diffuse[2] * diffuse) * LightColor[2] * buffer_texture_cubebgra8[x*4+2] * attenuation);if (d[2] > 255) d[2] = 255;
-				d[3] = (int)(diffusetex[3]                                                                                                                  );if (d[3] > 255) d[3] = 255;
+				// scale down the attenuation to account for the cubefilter multiplying everything by 255
+				attenuation *= (1.0f / 255.0f);
+				d[0] = (int)((diffusetex[0] * (Color_Ambient[0] + Color_Diffuse[0] * diffuse)) * LightColor[0] * buffer_texture_cubebgra8[x*4+0] * attenuation);if (d[0] > 255) d[0] = 255;
+				d[1] = (int)((diffusetex[1] * (Color_Ambient[1] + Color_Diffuse[1] * diffuse)) * LightColor[1] * buffer_texture_cubebgra8[x*4+1] * attenuation);if (d[1] > 255) d[1] = 255;
+				d[2] = (int)((diffusetex[2] * (Color_Ambient[2] + Color_Diffuse[2] * diffuse)) * LightColor[2] * buffer_texture_cubebgra8[x*4+2] * attenuation);if (d[2] > 255) d[2] = 255;
+				d[3] = (int)( diffusetex[3]                                                                                                                   );if (d[3] > 255) d[3] = 255;
 			}
 			else
 			{
-				d[0] = (int)(diffusetex[0] * (Color_Ambient[0] + Color_Diffuse[0] * diffuse) * LightColor[0]                                   * attenuation);if (d[0] > 255) d[0] = 255;
-				d[1] = (int)(diffusetex[1] * (Color_Ambient[1] + Color_Diffuse[1] * diffuse) * LightColor[1]                                   * attenuation);if (d[1] > 255) d[1] = 255;
-				d[2] = (int)(diffusetex[2] * (Color_Ambient[2] + Color_Diffuse[2] * diffuse) * LightColor[2]                                   * attenuation);if (d[2] > 255) d[2] = 255;
-				d[3] = (int)(diffusetex[3]                                                                                                                                                                );if (d[3] > 255) d[3] = 255;
+				d[0] = (int)((diffusetex[0] * (Color_Ambient[0] + Color_Diffuse[0] * diffuse)) * LightColor[0]                                   * attenuation);if (d[0] > 255) d[0] = 255;
+				d[1] = (int)((diffusetex[1] * (Color_Ambient[1] + Color_Diffuse[1] * diffuse)) * LightColor[1]                                   * attenuation);if (d[1] > 255) d[1] = 255;
+				d[2] = (int)((diffusetex[2] * (Color_Ambient[2] + Color_Diffuse[2] * diffuse)) * LightColor[2]                                   * attenuation);if (d[2] > 255) d[2] = 255;
+				d[3] = (int)( diffusetex[3]                                                                                                                                                                );if (d[3] > 255) d[3] = 255;
 			}
 			buffer_FragColorbgra8[x*4+0] = d[0];
 			buffer_FragColorbgra8[x*4+1] = d[1];
@@ -3247,6 +3258,19 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 		for (x = startx;x < endx;x++)
 		{
 			z = buffer_z[x];
+			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
+			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
+			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
+			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);
+			if (attenuation < 0.01f)
+				continue;
+			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
+			{
+				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
+				if (attenuation < 0.01f)
+					continue;
+			}
+
 			diffusetex[0] = buffer_texture_colorbgra8[x*4+0];
 			diffusetex[1] = buffer_texture_colorbgra8[x*4+1];
 			diffusetex[2] = buffer_texture_colorbgra8[x*4+2];
@@ -3258,41 +3282,21 @@ void DPSOFTRAST_PixelShader_LightSource(const DPSOFTRAST_State_Draw_Span * RESTR
 				diffusetex[2] += buffer_texture_pantsbgra8[x*4+2] * Color_Pants[2] + buffer_texture_shirtbgra8[x*4+2] * Color_Shirt[2];
 				diffusetex[3] += buffer_texture_pantsbgra8[x*4+3] * Color_Pants[3] + buffer_texture_shirtbgra8[x*4+3] * Color_Shirt[3];
 			}
-			glosstex[0] = buffer_texture_glossbgra8[x*4+0];
-			glosstex[1] = buffer_texture_glossbgra8[x*4+1];
-			glosstex[2] = buffer_texture_glossbgra8[x*4+2];
-			glosstex[3] = buffer_texture_glossbgra8[x*4+3];
-			surfacenormal[0] = buffer_texture_normalbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
-			surfacenormal[1] = buffer_texture_normalbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
-			surfacenormal[2] = buffer_texture_normalbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
-			DPSOFTRAST_Vector3Normalize(surfacenormal);
-
-			CubeVector[0] = (CubeVectordata[0] + CubeVectorslope[0]*x) * z;
-			CubeVector[1] = (CubeVectordata[1] + CubeVectorslope[1]*x) * z;
-			CubeVector[2] = (CubeVectordata[2] + CubeVectorslope[2]*x) * z;
-
-			lightnormal[0] = (LightVectordata[0] + LightVectorslope[0]*x) * z;
-			lightnormal[1] = (LightVectordata[1] + LightVectorslope[1]*x) * z;
-			lightnormal[2] = (LightVectordata[2] + LightVectorslope[2]*x) * z;
-			DPSOFTRAST_Vector3Normalize(lightnormal);
-
-			attenuation = 1.0f - DPSOFTRAST_Vector3LengthSquared(CubeVector);if (attenuation < 0.0f) attenuation = 0.0f;
-			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_SHADOWMAP2D)
-				attenuation *= DPSOFTRAST_SampleShadowmap(CubeVector);
-			diffuse = DPSOFTRAST_Vector3Dot(surfacenormal, lightnormal);if (diffuse < 0.0f) diffuse = 0.0f;
 			if (dpsoftrast.shader_permutation & SHADERPERMUTATION_CUBEFILTER)
 			{
-				d[0] = (int)(diffusetex[0] * Color_Ambient[0] * LightColor[0] * buffer_texture_cubebgra8[x*4+0] * attenuation);if (d[0] > 255) d[0] = 255;
-				d[1] = (int)(diffusetex[1] * Color_Ambient[1] * LightColor[1] * buffer_texture_cubebgra8[x*4+1] * attenuation);if (d[1] > 255) d[1] = 255;
-				d[2] = (int)(diffusetex[2] * Color_Ambient[2] * LightColor[2] * buffer_texture_cubebgra8[x*4+2] * attenuation);if (d[2] > 255) d[2] = 255;
-				d[3] = (int)(diffusetex[3]                                                                                   );if (d[3] > 255) d[3] = 255;
+				// scale down the attenuation to account for the cubefilter multiplying everything by 255
+				attenuation *= (1.0f / 255.0f);
+				d[0] = (int)((diffusetex[0] * (Color_Ambient[0])) * LightColor[0] * buffer_texture_cubebgra8[x*4+0] * attenuation);if (d[0] > 255) d[0] = 255;
+				d[1] = (int)((diffusetex[1] * (Color_Ambient[1])) * LightColor[1] * buffer_texture_cubebgra8[x*4+1] * attenuation);if (d[1] > 255) d[1] = 255;
+				d[2] = (int)((diffusetex[2] * (Color_Ambient[2])) * LightColor[2] * buffer_texture_cubebgra8[x*4+2] * attenuation);if (d[2] > 255) d[2] = 255;
+				d[3] = (int)( diffusetex[3]                                                                                      );if (d[3] > 255) d[3] = 255;
 			}
 			else
 			{
-				d[0] = (int)(diffusetex[0] * Color_Ambient[0] * LightColor[0]                                   * attenuation);if (d[0] > 255) d[0] = 255;
-				d[1] = (int)(diffusetex[1] * Color_Ambient[1] * LightColor[1]                                   * attenuation);if (d[1] > 255) d[1] = 255;
-				d[2] = (int)(diffusetex[2] * Color_Ambient[2] * LightColor[2]                                   * attenuation);if (d[2] > 255) d[2] = 255;
-				d[3] = (int)(diffusetex[3]                                                                                                                                                                );if (d[3] > 255) d[3] = 255;
+				d[0] = (int)((diffusetex[0] * (Color_Ambient[0])) * LightColor[0]                                   * attenuation);if (d[0] > 255) d[0] = 255;
+				d[1] = (int)((diffusetex[1] * (Color_Ambient[1])) * LightColor[1]                                   * attenuation);if (d[1] > 255) d[1] = 255;
+				d[2] = (int)((diffusetex[2] * (Color_Ambient[2])) * LightColor[2]                                   * attenuation);if (d[2] > 255) d[2] = 255;
+				d[3] = (int)( diffusetex[3]                                                                                                                                                                );if (d[3] > 255) d[3] = 255;
 			}
 			buffer_FragColorbgra8[x*4+0] = d[0];
 			buffer_FragColorbgra8[x*4+1] = d[1];
