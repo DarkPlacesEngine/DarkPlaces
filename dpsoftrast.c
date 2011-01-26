@@ -1602,19 +1602,19 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		endtc[1] = (data[1] + slope[1]*endsub) * zf[endsub] * tcscale[1] - 0.5f;
 		substep[0] = (endtc[0] - tc[0]) * subscale;
 		substep[1] = (endtc[1] - tc[1]) * subscale;
-		subtc[0] = tc[0] * (1<<12);
-		subtc[1] = tc[1] * (1<<12);
+		subtc[0] = tc[0] * (1<<16);
+		subtc[1] = tc[1] * (1<<16);
 		if (!(flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE))
 		{
-			subtc[0] &= (tciwrapmask[0]<<12)|0xFFF;
-			subtc[1] &= (tciwrapmask[1]<<12)|0xFFF;
+			subtc[0] &= (tciwrapmask[0]<<16)|0xFFFF;
+			subtc[1] &= (tciwrapmask[1]<<16)|0xFFFF;
 		}
 		if(filter)
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0];
-			tci[1] = (subtc[1]>>12) - tcimin[1];
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12);
+			tci[0] = (subtc[0]>>16) - tcimin[0];
+			tci[1] = (subtc[1]>>16) - tcimin[1];
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>16);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>16);
 			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
@@ -1622,8 +1622,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
 					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
 					pixel[1] = pixel[0] + 4 * tciwidth;
 					c[0] = (pixel[0][2]*lerp[0]+pixel[0][4+2]*lerp[1]+pixel[1][2]*lerp[2]+pixel[1][4+2]*lerp[3]) * (1.0f / 0xFF000000);
@@ -1643,8 +1643,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
 					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					tci1[0] = tci[0] + 1;
 					tci1[1] = tci[1] + 1;
 					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
@@ -1672,8 +1672,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
 					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					tci1[0] = tci[0] + 1;
 					tci1[1] = tci[1] + 1;
 					tci[0] &= tciwrapmask[0];
@@ -1699,8 +1699,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		{
 			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				tci[0] = subtc[0]>>12;
-				tci[1] = subtc[1]>>12;
+				tci[0] = subtc[0]>>16;
+				tci[1] = subtc[1]>>16;
 				tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
 				tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -1718,8 +1718,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		{
 			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				tci[0] = subtc[0]>>12;
-				tci[1] = subtc[1]>>12;
+				tci[0] = subtc[0]>>16;
+				tci[1] = subtc[1]>>16;
 				tci[0] &= tciwrapmask[0];
 				tci[1] &= tciwrapmask[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -1738,6 +1738,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 
 void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char * RESTRICT out4ub, int texunitindex, int arrayindex, const float * RESTRICT zf)
 {
+#ifdef SSE2_PRESENT
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
@@ -1758,12 +1759,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 	unsigned int *outi = (unsigned int *)out4ub;
 	const unsigned char * RESTRICT pixelbase;
 	const unsigned int * RESTRICT pixelbasei;
-	const unsigned char * RESTRICT pixel[4];
 	DPSOFTRAST_Texture *texture = dpsoftrast.texbound[texunitindex];
 	// if no texture is bound, just fill it with white
 	if (!texture)
 	{
-		memset(out4ub, 255, span->length*4);
+		memset(out4ub + startx*4, 255, span->length*4);
 		return;
 	}
 	mip = span->mip[texunitindex];
@@ -1802,11 +1802,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 		unsigned int subtc[2];
 		unsigned int substep[2];
 		int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
-		float subscale = 4096.0f/(DPSOFTRAST_MAXSUBSPAN-1);
+		float subscale = 65536.0f/(DPSOFTRAST_MAXSUBSPAN-1);
 		if (endsub >= endx)
 		{
 			endsub = endx-1;
-			subscale = endsub > x ? 4096.0f / (endsub - x) : 1.0f;
+			subscale = endsub > x ? 65536.0f / (endsub - x) : 1.0f;
 		}
 		tc[0] = (data[0] + slope[0]*x) * zf[x] * tcscale[0] - 0.5f;
 		tc[1] = (data[1] + slope[1]*x) * zf[x] * tcscale[1] - 0.5f;
@@ -1814,172 +1814,130 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 		endtc[1] = (data[1] + slope[1]*endsub) * zf[endsub] * tcscale[1] - 0.5f;
 		substep[0] = (endtc[0] - tc[0]) * subscale;
 		substep[1] = (endtc[1] - tc[1]) * subscale;
-		subtc[0] = tc[0] * (1<<12);
-		subtc[1] = tc[1] * (1<<12);
+		subtc[0] = tc[0] * (1<<16);
+		subtc[1] = tc[1] * (1<<16);
 		if (!(flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE))
 		{
-			subtc[0] &= (tciwrapmask[0]<<12)|0xFFF;
-			subtc[1] &= (tciwrapmask[1]<<12)|0xFFF;
+			subtc[0] &= (tciwrapmask[0]<<16)|0xFFFF;
+			subtc[1] &= (tciwrapmask[1]<<16)|0xFFFF;
 		}
-#if 0
-// LordHavoc: an attempt at reducing number of integer multiplies, did not show any improvement in benchmarks, abandoned.
-		if (filter && dpsoftrast_test)
-		{
-			const unsigned int * RESTRICT pixeli[4];
-			tci[0] = (subtc[0]>>12) - tcimin[0];
-			tci[1] = (subtc[1]>>12) - tcimin[1]; 
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
-			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
-			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
-				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
-					pixeli[1] = pixeli[0] + tciwidth;
-					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[0][1] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[1][1] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
-					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[0][1]       & 0x00FF00FF) * lerp[1] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[1][1]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
-				}
-			}
-			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
-			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
-				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					tci1[0] = tci[0] + 1;
-					tci1[1] = tci[1] + 1;
-					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
-					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
-					tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
-					tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
-					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
-					pixeli[1] = pixelbasei + (tci[1]*tciwidth+tci1[0]);
-					pixeli[2] = pixelbasei + (tci1[1]*tciwidth+tci[0]);
-					pixeli[3] = pixelbasei + (tci1[1]*tciwidth+tci1[0]);
-					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[2][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[3][0] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
-					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[1] + ( pixeli[2][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[3][0]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
-				}
-			}
-			else
-			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
-				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { (ifrac[0]*ifrac[1]) >> 16, (frac[0]*ifrac[1]) >> 16, (ifrac[0]*frac[1]) >> 16, (frac[0]*frac[1]) >> 16 };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					tci1[0] = tci[0] + 1;
-					tci1[1] = tci[1] + 1;
-					tci[0] &= tciwrapmask[0];
-					tci[1] &= tciwrapmask[1];
-					tci1[0] &= tciwrapmask[0];
-					tci1[1] &= tciwrapmask[1];
-					pixeli[0] = pixelbasei + (tci[1]*tciwidth+tci[0]);
-					pixeli[1] = pixelbasei + (tci[1]*tciwidth+tci1[0]);
-					pixeli[2] = pixelbasei + (tci1[1]*tciwidth+tci[0]);
-					pixeli[3] = pixelbasei + (tci1[1]*tciwidth+tci1[0]);
-					outi[x] = ((((pixeli[0][0] >> 8) & 0x00FF00FF) * lerp[0] + ((pixeli[1][0] >> 8) & 0x00FF00FF) * lerp[1] + ((pixeli[2][0] >> 8) & 0x00FF00FF) * lerp[2] + ((pixeli[3][0] >> 8) & 0x00FF00FF) * lerp[3])     & 0xFF00FF00)
-					        | ((((pixeli[0][0]       & 0x00FF00FF) * lerp[0] + ( pixeli[1][0]       & 0x00FF00FF) * lerp[1] + ( pixeli[2][0]       & 0x00FF00FF) * lerp[2] + ( pixeli[3][0]       & 0x00FF00FF) * lerp[3])>>8) & 0x00FF00FF);
-				}
-			}
-		}
-		else
-#endif
 		if (filter)
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0];
-			tci[1] = (subtc[1]>>12) - tcimin[1]; 
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
+			tci[0] = (subtc[0]>>16) - tcimin[0];
+			tci[1] = (subtc[1]>>16) - tcimin[1]; 
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>16);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>16); 
 			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], subtc[0] + substep[0], subtc[1] + substep[1]);
+				__m128i substepm = _mm_slli_epi32(_mm_setr_epi32(substep[0], substep[1], substep[0], substep[1]), 1);
+				__m128i scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x + 1 <= endsub; x += 2, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
-					pixel[1] = pixel[0] + 4 * tciwidth;
-					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[0][4+0]*lerp[1]+pixel[1][0]*lerp[2]+pixel[1][4+0]*lerp[3]) >> 24;
-					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[0][4+1]*lerp[1]+pixel[1][1]*lerp[2]+pixel[1][4+1]*lerp[3]) >> 24;
-					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[0][4+2]*lerp[1]+pixel[1][2]*lerp[2]+pixel[1][4+2]*lerp[3]) >> 24;
-					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[0][4+3]*lerp[1]+pixel[1][3]*lerp[2]+pixel[1][4+3]*lerp[3]) >> 24;
+					__m128i tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, pix3, pix4, fracm;
+					ALIGN(int pixeloffset[4]);
+					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0x10000)), scalem);
+					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
+					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_setzero_si128());
+					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[3]]), _mm_setzero_si128());
+					fracm = _mm_srli_epi16(subtcm, 1);
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shuffle_epi32(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(2, 2, 2, 2)), _MM_SHUFFLE(1, 0, 1, 0))));
+					pix3 = _mm_add_epi16(pix3,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix4, pix3), 1),
+														 _mm_shuffle_epi32(_mm_shufflehi_epi16(fracm, _MM_SHUFFLE(2, 2, 2, 2)), _MM_SHUFFLE(3, 2, 3, 2))));
+					pix2 = _mm_unpacklo_epi64(pix1, pix3);
+					pix4 = _mm_unpackhi_epi64(pix1, pix3);
+					pix2 = _mm_add_epi16(pix2,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix4, pix2), 1),
+														 _mm_shufflehi_epi16(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(0, 0, 0, 0)), _MM_SHUFFLE(0, 0, 0, 0))));
+					_mm_storel_epi64((__m128i * RESTRICT)&outi[x], _mm_packus_epi16(pix2, _mm_shufflelo_epi16(pix2, _MM_SHUFFLE(3, 2, 3, 2))));
+				}
+				if (x <= endsub)
+				{
+					__m128i tcim = _mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, fracm;
+					ALIGN(int pixeloffset[4]);
+					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0)), scalem);
+					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
+					fracm = _mm_srli_epi16(subtcm, 1);
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shuffle_epi32(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(2, 2, 2, 2)), _MM_SHUFFLE(1, 0, 1, 0))));
+					pix2 = _mm_shuffle_epi32(pix1, _MM_SHUFFLE(3, 2, 3, 2));
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shufflelo_epi16(fracm, _MM_SHUFFLE(0, 0, 0, 0))));
+					outi[x] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+					x++;
 				}
 			}
 			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], subtc[0], subtc[1]), substepm = _mm_setr_epi32(substep[0], substep[1], substep[0], substep[1]);
+				__m128i minm = _mm_set1_epi32((tcimin[1]<<16)|tcimin[0]), maxm = _mm_set1_epi32((tcimax[1]<<16)|tcimax[0]), scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x <= endsub; x++, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					tci1[0] = tci[0] + 1;
-					tci1[1] = tci[1] + 1;
-					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
-					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
-					tci1[0] = tci1[0] >= tcimin[0] ? (tci1[0] <= tcimax[0] ? tci1[0] : tcimax[0]) : tcimin[0];
-					tci1[1] = tci1[1] >= tcimin[1] ? (tci1[1] <= tcimax[1] ? tci1[1] : tcimax[1]) : tcimin[1];
-					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
-					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
-					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
-					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
-					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) >> 24;
-					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) >> 24;
-					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) >> 24;
-					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) >> 24;
+					__m128i tcim = _mm_shuffle_epi32(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(1, 0, 1, 0)), pix1, pix2, fracm;
+					ALIGN(int pixeloffset[4]);
+					tcim = _mm_min_epi16(_mm_max_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), minm), maxm);
+					tcim = _mm_madd_epi16(tcim, scalem);
+					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					fracm = _mm_srli_epi16(subtcm, 1);
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shuffle_epi32(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(2, 2, 2, 2)), _MM_SHUFFLE(1, 0, 1, 0))));
+					pix2 = _mm_shuffle_epi32(pix1, _MM_SHUFFLE(3, 2, 3, 2));
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shufflelo_epi16(fracm, _MM_SHUFFLE(0, 0, 0, 0))));
+					outi[x] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
 				}
 			}
 			else
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], 0, 0), substepm = _mm_setr_epi32(substep[0], substep[1], 0, 0);
+				__m128i wrapm = _mm_set1_epi32((tciwrapmask[1]<<16)|tciwrapmask[0]), scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x <= endsub; x++, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
-					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
-					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
-					tci1[0] = tci[0] + 1;
-					tci1[1] = tci[1] + 1;
-					tci[0] &= tciwrapmask[0];
-					tci[1] &= tciwrapmask[1];
-					tci1[0] &= tciwrapmask[0];
-					tci1[1] &= tciwrapmask[1];
-					pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
-					pixel[1] = pixelbase + 4 * (tci[1]*tciwidth+tci1[0]);
-					pixel[2] = pixelbase + 4 * (tci1[1]*tciwidth+tci[0]);
-					pixel[3] = pixelbase + 4 * (tci1[1]*tciwidth+tci1[0]);
-					out4ub[x*4+0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3]) >> 24;
-					out4ub[x*4+1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3]) >> 24;
-					out4ub[x*4+2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3]) >> 24;
-					out4ub[x*4+3] = (pixel[0][3]*lerp[0]+pixel[1][3]*lerp[1]+pixel[2][3]*lerp[2]+pixel[3][3]*lerp[3]) >> 24;
+					__m128i tcim = _mm_shuffle_epi32(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(1, 0, 1, 0)),
+							pix1, pix2, fracm;
+					ALIGN(int pixeloffset[4]);
+					tcim = _mm_and_si128(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), wrapm);
+					tcim = _mm_madd_epi16(tcim, scalem);
+					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					fracm = _mm_srli_epi16(subtcm, 1);
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shuffle_epi32(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(2, 2, 2, 2)), _MM_SHUFFLE(1, 0, 1, 0))));
+					pix2 = _mm_shuffle_epi32(pix1, _MM_SHUFFLE(3, 2, 3, 2));
+					pix1 = _mm_add_epi16(pix1,
+										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
+														 _mm_shufflelo_epi16(fracm, _MM_SHUFFLE(0, 0, 0, 0))));
+					outi[x] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
 				}
 			}
 		}
 		else
 		{
-			tci[0] = (subtc[0]>>12) - tcimin[0];
-			tci[1] = (subtc[1]>>12) - tcimin[1]; 
-			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>12);
-			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>12); 
+			tci[0] = (subtc[0]>>16) - tcimin[0];
+			tci[1] = (subtc[1]>>16) - tcimin[1]; 
+			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>16);
+			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>16); 
 			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
 				}
 			}
@@ -1987,8 +1945,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
 					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
 					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
@@ -1998,8 +1956,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 			{
 				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 				{
-					tci[0] = subtc[0]>>12;
-					tci[1] = subtc[1]>>12;
+					tci[0] = subtc[0]>>16;
+					tci[1] = subtc[1]>>16;
 					tci[0] &= tciwrapmask[0];
 					tci[1] &= tciwrapmask[1];
 					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
@@ -2007,6 +1965,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 			}
 		}
 	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_TextureCubeVaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char * RESTRICT out4ub, int texunitindex, int arrayindex, const float * RESTRICT zf)
@@ -3495,7 +3454,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int y;
 	int e[3];
 	ALIGN(int screeny[4]);
-    int starty, endy;
+	int starty, endy;
 	int screenyless[4];
 	int numpoints;
 	int clipflags;
@@ -3561,9 +3520,9 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			e[2] = i*3+2;
 		}
 		{
-			__m128 v0 = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]);
-			triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), v0);
-			triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), v0);
+			__m128 v1 = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]);
+			triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), v1);
+			triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), v1);
 		}
 		// store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar
 		trianglenormal = _mm_sub_ps(_mm_mul_ps(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))),
