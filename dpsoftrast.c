@@ -2478,7 +2478,7 @@ void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
 	int x, startx = span->startx, endx = span->endx;
-	__m128i Color_Ambientm, Color_Diffusem, Color_Glowm;
+	__m128i Color_Ambientm, Color_Diffusem, Color_Glowm, Color_AmbientGlowm;
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_lightmapbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
@@ -2502,6 +2502,7 @@ void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT
 		Color_Glowm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
 		Color_Glowm = _mm_and_si128(Color_Glowm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
 		Color_Glowm = _mm_packs_epi32(Color_Glowm, Color_Glowm);
+		Color_AmbientGlowm = _mm_unpacklo_epi64(Color_Ambientm, Color_Glowm);
 		for (x = startx;x < endx;x++)
 		{
 			__m128i color, lightmap, glow, pix;
@@ -2526,8 +2527,8 @@ void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT
 			color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
 			lightmap = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_lightmapbgra8[x*4]));
 			glow = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_glowbgra8[x*4]));
-			pix = _mm_add_epi16(_mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, lightmap), Color_Ambientm), color),
-								_mm_mulhi_epu16(Color_Glowm, glow));
+			pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, lightmap), Color_AmbientGlowm), _mm_unpacklo_epi64(color, glow));
+			pix = _mm_add_epi16(pix, _mm_shuffle_epi32(pix, _MM_SHUFFLE(3, 2, 3, 2)));
 			*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 		}
 	}
