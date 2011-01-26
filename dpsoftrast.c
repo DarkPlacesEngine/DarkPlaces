@@ -9,45 +9,32 @@
 typedef qboolean bool;
 #endif
 
-#define GL_NONE					0
-#define GL_FRONT_LEFT			0x0400
-#define GL_FRONT_RIGHT			0x0401
-#define GL_BACK_LEFT			0x0402
-#define GL_BACK_RIGHT			0x0403
-#define GL_FRONT				0x0404
-#define GL_BACK					0x0405
-#define GL_LEFT					0x0406
-#define GL_RIGHT				0x0407
-#define GL_FRONT_AND_BACK		0x0408
-#define GL_AUX0					0x0409
-#define GL_AUX1					0x040A
-#define GL_AUX2					0x040B
-#define GL_AUX3					0x040C
+#if defined(__GNUC__)
+#define ALIGN(var) var __attribute__((__aligned__(16)))
+#elif defined(_MSC_VER)
+#define ALIGN(var) __declspec(align(16)) var
+#else
+#define ALIGN(var) var
+#endif
 
-#define GL_NEVER				0x0200
-#define GL_LESS					0x0201
-#define GL_EQUAL				0x0202
-#define GL_LEQUAL				0x0203
-#define GL_GREATER				0x0204
-#define GL_NOTEQUAL				0x0205
-#define GL_GEQUAL				0x0206
-#define GL_ALWAYS				0x0207
+#ifdef SSE2_PRESENT
+#include <emmintrin.h>
 
-#define GL_ZERO					0x0
-#define GL_ONE					0x1
-#define GL_SRC_COLOR				0x0300
-#define GL_ONE_MINUS_SRC_COLOR			0x0301
-#define GL_DST_COLOR				0x0306
-#define GL_ONE_MINUS_DST_COLOR			0x0307
-#define GL_SRC_ALPHA				0x0302
-#define GL_ONE_MINUS_SRC_ALPHA			0x0303
-#define GL_DST_ALPHA				0x0304
-#define GL_ONE_MINUS_DST_ALPHA			0x0305
-#define GL_SRC_ALPHA_SATURATE			0x0308
-#define GL_CONSTANT_COLOR			0x8001
-#define GL_ONE_MINUS_CONSTANT_COLOR		0x8002
-#define GL_CONSTANT_ALPHA			0x8003
-#define GL_ONE_MINUS_CONSTANT_ALPHA		0x8004
+#define MM_MALLOC(size) _mm_malloc(size, 16)
+
+static void *MM_CALLOC(size_t nmemb, size_t size)
+{
+	void *ptr = _mm_malloc(nmemb*size, 16);
+	if(ptr != NULL) memset(ptr, 0, nmemb*size);
+	return ptr;
+}
+
+#define MM_FREE _mm_free
+#else
+#define MM_MALLOC(size) malloc(size)
+#define MM_CALLOC(nmemb, size) calloc(nmemb, size)
+#define MM_FREE free
+#endif
 
 typedef enum DPSOFTRAST_ARRAY_e
 {
@@ -103,7 +90,7 @@ DPSOFTRAST_State_User;
 
 #define DPSOFTRAST_MAXSUBSPAN 16
 
-typedef struct DPSOFTRAST_State_Draw_Span_s
+typedef ALIGN(struct DPSOFTRAST_State_Draw_Span_s
 {
 	int start; // pixel index
 	int length; // pixel count
@@ -116,9 +103,9 @@ typedef struct DPSOFTRAST_State_Draw_Span_s
 	// [0][DPSOFTRAST_ARRAY_TOTAL][] is start screencoord4f
 	// [1][DPSOFTRAST_ARRAY_TOTAL][] is end screencoord4f
 	// NOTE: screencoord4f[3] is W (basically 1/Z), useful for depthbuffer
-	float data[2][DPSOFTRAST_ARRAY_TOTAL+1][4];
+	ALIGN(float data[2][DPSOFTRAST_ARRAY_TOTAL+1][4]);
 }
-DPSOFTRAST_State_Draw_Span;
+DPSOFTRAST_State_Draw_Span);
 
 #define DPSOFTRAST_DRAW_MAXSPANQUEUE 1024
 
@@ -453,7 +440,7 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 	texture->size = size;
 
 	// allocate the pixels now
-	texture->bytes = (unsigned char *)calloc(1, size);
+	texture->bytes = (unsigned char *)MM_CALLOC(1, size);
 
 	return texnum;
 }
@@ -462,7 +449,7 @@ void DPSOFTRAST_Texture_Free(int index)
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
 	if (texture->bytes)
-		free(texture->bytes);
+		MM_FREE(texture->bytes);
 	texture->bytes = NULL;
 	memset(texture, 0, sizeof(*texture));
 	// adjust the free range and used range
@@ -979,8 +966,8 @@ void DPSOFTRAST_Draw_LoadVertices(int firstvertex, int numvertices, bool needcol
 		while (dpsoftrast.draw.maxvertices < dpsoftrast.draw.numvertices)
 			dpsoftrast.draw.maxvertices *= 2;
 		if (dpsoftrast.draw.in_array4f[0])
-			free(dpsoftrast.draw.in_array4f[0]);
-		data = (float *)calloc(1, dpsoftrast.draw.maxvertices * sizeof(float[4])*(DPSOFTRAST_ARRAY_TOTAL*2 + 1));
+			MM_FREE(dpsoftrast.draw.in_array4f[0]);
+		data = (float *)MM_CALLOC(1, dpsoftrast.draw.maxvertices * sizeof(float[4])*(DPSOFTRAST_ARRAY_TOTAL*2 + 1));
 		for (i = 0;i < DPSOFTRAST_ARRAY_TOTAL;i++, data += dpsoftrast.draw.maxvertices * 4)
 			dpsoftrast.draw.in_array4f[i] = data;
 		for (i = 0;i < DPSOFTRAST_ARRAY_TOTAL;i++, data += dpsoftrast.draw.maxvertices * 4)
@@ -3498,6 +3485,7 @@ void DPSOFTRAST_Draw_ProcessSpans(void)
 
 void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const int *element3i, const unsigned short *element3s, unsigned char *arraymask)
 {
+#ifdef SSE2_PRESENT
 	int cullface = dpsoftrast.user.cullface;
 	int width = dpsoftrast.fb_width;
 	int height = dpsoftrast.fb_height;
@@ -3506,8 +3494,8 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int k;
 	int y;
 	int e[3];
-	int screenx[4];
-	int screeny[4];
+	ALIGN(int screeny[4]);
+    int starty, endy;
 	int screenyless[4];
 	int numpoints;
 	int clipflags;
@@ -3515,7 +3503,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int edge0n;
 	int edge1p;
 	int edge1n;
-	int extent[6];
 	int startx;
 	int endx;
 	float mip_edge0tc[2];
@@ -3539,16 +3526,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	float spanilength;
 	float startxlerp;
 	float yc;
-	float w;
 	float frac;
 	float ifrac;
-	float trianglearea2;
-	float triangleedge[2][4];
-	float trianglenormal[4];
-	float clipdist[4];
-	float clipped[DPSOFTRAST_ARRAY_TOTAL][4][4];
-	float screen[4][4];
-	float proj[DPSOFTRAST_ARRAY_TOTAL][4][4];
+	//float trianglearea2;
+	__m128 triangleedge[2];
+	__m128 trianglenormal;
+	ALIGN(float clipdist[4]);
+	ALIGN(float clipped[DPSOFTRAST_ARRAY_TOTAL][4][4]);
+	ALIGN(float screen[4][4]);
+	__m128 proj[DPSOFTRAST_ARRAY_TOTAL][4];
 	DPSOFTRAST_Texture *texture;
 	DPSOFTRAST_State_Draw_Span *span;
 	DPSOFTRAST_State_Draw_Span *oldspan;
@@ -3574,31 +3560,38 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			e[1] = i*3+1;
 			e[2] = i*3+2;
 		}
-		triangleedge[0][0] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+0] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+0];
-		triangleedge[0][1] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+1] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+1];
-		triangleedge[0][2] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+2] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+2];
-		triangleedge[1][0] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+0] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+0];
-		triangleedge[1][1] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+1] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+1];
-		triangleedge[1][2] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+2] - dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+2];
+		{
+			__m128 v0 = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]);
+			triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), v0);
+			triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), v0);
+		}
+		// store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar
+		trianglenormal = _mm_sub_ps(_mm_mul_ps(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))),
+									_mm_mul_ps(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1]));
+#if 0
+		trianglenormal[2] = triangleedge[0][0] * triangleedge[1][1] - triangleedge[0][1] * triangleedge[1][0];
 		trianglenormal[0] = triangleedge[0][1] * triangleedge[1][2] - triangleedge[0][2] * triangleedge[1][1];
 		trianglenormal[1] = triangleedge[0][2] * triangleedge[1][0] - triangleedge[0][0] * triangleedge[1][2];
-		trianglenormal[2] = triangleedge[0][0] * triangleedge[1][1] - triangleedge[0][1] * triangleedge[1][0];
-		trianglearea2 = trianglenormal[0] * trianglenormal[0] + trianglenormal[1] * trianglenormal[1] + trianglenormal[2] * trianglenormal[2];
-		// skip degenerate triangles, nothing good can come from them...
-		if (trianglearea2 == 0.0f)
-			continue;
+#endif
 		// apply current cullface mode (this culls many triangles)
 		switch(cullface)
 		{
 		case GL_BACK:
-			if (trianglenormal[2] < 0)
+			if (_mm_ucomilt_ss(trianglenormal, _mm_setzero_ps()))
 				continue;
 			break;
 		case GL_FRONT:
-			if (trianglenormal[2] > 0)
+			if (_mm_ucomigt_ss(trianglenormal, _mm_setzero_ps()))
 				continue;
 			break;
 		}
+#if 0
+		trianglearea2 = trianglenormal[0] * trianglenormal[0] + trianglenormal[1] * trianglenormal[1] + trianglenormal[2] * trianglenormal[2];
+		// skip degenerate triangles, nothing good can come from them...
+		if (trianglearea2 == 0.0f)
+			continue;
+#endif
+		
 		// calculate distance from nearplane
 		clipdist[0] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+2] + 1.0f;
 		clipdist[1] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+2] + 1.0f;
@@ -3695,42 +3688,30 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			// triangle is entirely behind nearplane
 			continue;
 		}
-		// calculate integer y coords for triangle points
-		screenx[0] = (int)(screen[0][0]);
-		screeny[0] = (int)(screen[0][1]);
-		screenx[1] = (int)(screen[1][0]);
-		screeny[1] = (int)(screen[1][1]);
-		screenx[2] = (int)(screen[2][0]);
-		screeny[2] = (int)(screen[2][1]);
-		screenx[3] = (int)(screen[3][0]);
-		screeny[3] = (int)(screen[3][1]);
-		// figure out the extents (bounding box) of the triangle
-		extent[0] = screenx[0];
-		extent[1] = screeny[0];
-		extent[2] = screenx[0];
-		extent[3] = screeny[0];
-		for (j = 1;j < numpoints;j++)
 		{
-			if (extent[0] > screenx[j]) extent[0] = screenx[j];
-			if (extent[1] > screeny[j]) extent[1] = screeny[j];
-			if (extent[2] < screenx[j]) extent[2] = screenx[j];
-			if (extent[3] < screeny[j]) extent[3] = screeny[j];
+			// calculate integer y coords for triangle points
+			__m128i screeni = _mm_packs_epi32(_mm_cvttps_epi32(_mm_shuffle_ps(_mm_load_ps(screen[0]), _mm_load_ps(screen[1]), _MM_SHUFFLE(1, 0, 1, 0))),
+										  _mm_cvttps_epi32(_mm_shuffle_ps(_mm_load_ps(screen[2]), _mm_load_ps(screen[3]), _MM_SHUFFLE(1, 0, 1, 0)))),
+					screenir, screenmin, screenmax;
+			if (numpoints <= 3) screeni = _mm_shuffle_epi32(screeni, _MM_SHUFFLE(2, 2, 1, 0));
+			screenir = _mm_shuffle_epi32(screeni, _MM_SHUFFLE(1, 0, 3, 2)),
+			screenmin = _mm_min_epi16(screeni, screenir);
+			screenmax = _mm_max_epi16(screeni, screenir);
+			screenmin = _mm_min_epi16(screenmin, _mm_shufflelo_epi16(screenmin, _MM_SHUFFLE(1, 0, 3, 2)));
+			screenmax = _mm_max_epi16(screenmax, _mm_shufflelo_epi16(screenmax, _MM_SHUFFLE(1, 0, 3, 2)));
+			screenmin = _mm_max_epi16(screenmin, _mm_setzero_si128());
+			screenmax = _mm_min_epi16(screenmax, _mm_setr_epi16(width-1, height-1, 0, 0, 0, 0, 0, 0));
+			// skip offscreen triangles
+			{
+				__m128i cc = _mm_cmplt_epi16(screenmax, screenmin);
+				if (_mm_extract_epi16(cc, 0)|_mm_extract_epi16(cc, 1))
+					continue;
+			}
+			starty = _mm_extract_epi16(screenmin, 1);
+			endy = _mm_extract_epi16(screenmax, 1)+1;
+			_mm_store_si128((__m128i *)screeny, _mm_srai_epi32(screeni, 16));
 		}
-		//extent[0]--;
-		//extent[1]--;
-		extent[2]++;
-		extent[3]++;
-		if (extent[0] < 0)
-			extent[0] = 0;
-		if (extent[1] < 0)
-			extent[1] = 0;
-		if (extent[2] > width)
-			extent[2] = width;
-		if (extent[3] > height)
-			extent[3] = height;
-		// skip offscreen triangles
-		if (extent[2] <= extent[0] || extent[3] <= extent[1])
-			continue;
+
 		// okay, this triangle is going to produce spans, we'd better project
 		// the interpolants now (this is what gives perspective texturing),
 		// this consists of simply multiplying all arrays by the W coord
@@ -3743,11 +3724,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			{
 				for (k = 0;k < numpoints;k++)
 				{
-					w = screen[k][3];
-					proj[j][k][0] = clipped[j][k][0] * w;
-					proj[j][k][1] = clipped[j][k][1] * w;
-					proj[j][k][2] = clipped[j][k][2] * w;
-					proj[j][k][3] = clipped[j][k][3] * w;
+					proj[j][k] = _mm_mul_ps(_mm_load_ps(clipped[j][k]), _mm_set1_ps(screen[k][3]));
 				}
 			}
 		}
@@ -3792,7 +3769,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		// TODO: optimize?  the edges could have data slopes calculated
 		// TODO: optimize?  the data slopes could be calculated as a plane
 		//       (2D slopes) to avoid any interpolation along edges at all
-		for (y = extent[1];y < extent[3];y++)
+		for (y = starty;y < endy;y++)
 		{
 			// get center of pixel y
 			yc = y;
@@ -3903,95 +3880,60 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			memcpy(span->mip, mip, sizeof(span->mip));
 			span->start = y * width + startx;
 			span->length = endx - startx;
-			j = DPSOFTRAST_ARRAY_TOTAL;
-			if (edge0xf < edge1xf)
 			{
-				span->data[0][j][0] = screen[edge0p][0] * edge0yilerp + screen[edge0n][0] * edge0ylerp;
-				span->data[0][j][1] = screen[edge0p][1] * edge0yilerp + screen[edge0n][1] * edge0ylerp;
-				span->data[0][j][2] = screen[edge0p][2] * edge0yilerp + screen[edge0n][2] * edge0ylerp;
-				span->data[0][j][3] = screen[edge0p][3] * edge0yilerp + screen[edge0n][3] * edge0ylerp;
-				span->data[1][j][0] = screen[edge1p][0] * edge1yilerp + screen[edge1n][0] * edge1ylerp;
-				span->data[1][j][1] = screen[edge1p][1] * edge1yilerp + screen[edge1n][1] * edge1ylerp;
-				span->data[1][j][2] = screen[edge1p][2] * edge1yilerp + screen[edge1n][2] * edge1ylerp;
-				span->data[1][j][3] = screen[edge1p][3] * edge1yilerp + screen[edge1n][3] * edge1ylerp;
-				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
+				__m128 edge0ylerpm = _mm_set1_ps(edge0ylerp), edge0yilerpm = _mm_set1_ps(edge0yilerp),
+					   edge1ylerpm = _mm_set1_ps(edge1ylerp), edge1yilerpm = _mm_set1_ps(edge1yilerp),
+					   spanilengthm = _mm_set1_ps(spanilength), startxlerpm = _mm_set1_ps(startxlerp),
+					   data0, data1;
+				j = DPSOFTRAST_ARRAY_TOTAL;
+				if (edge0xf < edge1xf)
 				{
-					//if (arraymask[j])
+					data0 = _mm_add_ps(_mm_mul_ps(_mm_load_ps(screen[edge0p]), edge0yilerpm), _mm_mul_ps(_mm_load_ps(screen[edge0n]), edge0ylerpm));
+					data1 = _mm_add_ps(_mm_mul_ps(_mm_load_ps(screen[edge1p]), edge1yilerpm), _mm_mul_ps(_mm_load_ps(screen[edge1n]), edge1ylerpm));
+					data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilengthm);
+					data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerpm));
+					_mm_store_ps(span->data[0][j], data0);
+					_mm_store_ps(span->data[1][j], data1);
+					for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 					{
-						span->data[0][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
-						span->data[0][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
-						span->data[0][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
-						span->data[0][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
-						span->data[1][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
-						span->data[1][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
-						span->data[1][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
-						span->data[1][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
+						//if (arraymask[j])
+						{
+							data0 = _mm_add_ps(_mm_mul_ps(proj[j][edge0p], edge0yilerpm), _mm_mul_ps(proj[j][edge0n], edge0ylerpm));
+							data1 = _mm_add_ps(_mm_mul_ps(proj[j][edge1p], edge1yilerpm), _mm_mul_ps(proj[j][edge1n], edge1ylerpm));
+							data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilengthm);
+							data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerpm));
+							_mm_store_ps(span->data[0][j], data0);
+							_mm_store_ps(span->data[1][j], data1);
+						}
 					}
 				}
-			}
-			else
-			{
-				span->data[0][j][0] = screen[edge1p][0] * edge1yilerp + screen[edge1n][0] * edge1ylerp;
-				span->data[0][j][1] = screen[edge1p][1] * edge1yilerp + screen[edge1n][1] * edge1ylerp;
-				span->data[0][j][2] = screen[edge1p][2] * edge1yilerp + screen[edge1n][2] * edge1ylerp;
-				span->data[0][j][3] = screen[edge1p][3] * edge1yilerp + screen[edge1n][3] * edge1ylerp;
-				span->data[1][j][0] = screen[edge0p][0] * edge0yilerp + screen[edge0n][0] * edge0ylerp;
-				span->data[1][j][1] = screen[edge0p][1] * edge0yilerp + screen[edge0n][1] * edge0ylerp;
-				span->data[1][j][2] = screen[edge0p][2] * edge0yilerp + screen[edge0n][2] * edge0ylerp;
-				span->data[1][j][3] = screen[edge0p][3] * edge0yilerp + screen[edge0n][3] * edge0ylerp;
-				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
+				else
 				{
-					//if (arraymask[j])
+					data0 = _mm_add_ps(_mm_mul_ps(_mm_load_ps(screen[edge1p]), edge1yilerpm), _mm_mul_ps(_mm_load_ps(screen[edge1n]), edge1ylerpm));
+					data1 = _mm_add_ps(_mm_mul_ps(_mm_load_ps(screen[edge0p]), edge0yilerpm), _mm_mul_ps(_mm_load_ps(screen[edge0n]), edge0ylerpm));
+					data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilengthm);
+					data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerpm));
+					_mm_store_ps(span->data[0][j], data0);
+					_mm_store_ps(span->data[1][j], data1);
+					for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 					{
-						span->data[0][j][0] = proj[j][edge1p][0] * edge1yilerp + proj[j][edge1n][0] * edge1ylerp;
-						span->data[0][j][1] = proj[j][edge1p][1] * edge1yilerp + proj[j][edge1n][1] * edge1ylerp;
-						span->data[0][j][2] = proj[j][edge1p][2] * edge1yilerp + proj[j][edge1n][2] * edge1ylerp;
-						span->data[0][j][3] = proj[j][edge1p][3] * edge1yilerp + proj[j][edge1n][3] * edge1ylerp;
-						span->data[1][j][0] = proj[j][edge0p][0] * edge0yilerp + proj[j][edge0n][0] * edge0ylerp;
-						span->data[1][j][1] = proj[j][edge0p][1] * edge0yilerp + proj[j][edge0n][1] * edge0ylerp;
-						span->data[1][j][2] = proj[j][edge0p][2] * edge0yilerp + proj[j][edge0n][2] * edge0ylerp;
-						span->data[1][j][3] = proj[j][edge0p][3] * edge0yilerp + proj[j][edge0n][3] * edge0ylerp;
+						//if (arraymask[j])
+						{
+							data0 = _mm_add_ps(_mm_mul_ps(proj[j][edge1p], edge1yilerpm), _mm_mul_ps(proj[j][edge1n], edge1ylerpm));
+							data1 = _mm_add_ps(_mm_mul_ps(proj[j][edge0p], edge0yilerpm), _mm_mul_ps(proj[j][edge0n], edge0ylerpm));
+							data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilengthm);
+							data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerpm));
+							_mm_store_ps(span->data[0][j], data0);
+							_mm_store_ps(span->data[1][j], data1);
+						}
 					}
-				}
-			}
-			// change data[1][n][] to be a data slope
-			j = DPSOFTRAST_ARRAY_TOTAL;
-			span->data[1][j][0] = (span->data[1][j][0] - span->data[0][j][0]) * spanilength;
-			span->data[1][j][1] = (span->data[1][j][1] - span->data[0][j][1]) * spanilength;
-			span->data[1][j][2] = (span->data[1][j][2] - span->data[0][j][2]) * spanilength;
-			span->data[1][j][3] = (span->data[1][j][3] - span->data[0][j][3]) * spanilength;
-			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
-			{
-				//if (arraymask[j])
-				{
-					span->data[1][j][0] = (span->data[1][j][0] - span->data[0][j][0]) * spanilength;
-					span->data[1][j][1] = (span->data[1][j][1] - span->data[0][j][1]) * spanilength;
-					span->data[1][j][2] = (span->data[1][j][2] - span->data[0][j][2]) * spanilength;
-					span->data[1][j][3] = (span->data[1][j][3] - span->data[0][j][3]) * spanilength;
-				}
-			}
-			// adjust the data[0][n][] to be correct for the pixel centers
-			// this also handles horizontal clipping where a major part of the
-			// span may be off the left side of the screen
-			j = DPSOFTRAST_ARRAY_TOTAL;
-			span->data[0][j][0] += span->data[1][j][0] * startxlerp;
-			span->data[0][j][1] += span->data[1][j][1] * startxlerp;
-			span->data[0][j][2] += span->data[1][j][2] * startxlerp;
-			span->data[0][j][3] += span->data[1][j][3] * startxlerp;
-			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
-			{
-				//if (arraymask[j])
-				{
-					span->data[0][j][0] += span->data[1][j][0] * startxlerp;
-					span->data[0][j][1] += span->data[1][j][1] * startxlerp;
-					span->data[0][j][2] += span->data[1][j][2] * startxlerp;
-					span->data[0][j][3] += span->data[1][j][3] * startxlerp;
 				}
 			}
 			// to keep the shader routines from needing more than a small
 			// buffer for pixel intermediate data, we split long spans...
 			while (span->length > DPSOFTRAST_DRAW_MAXSPANLENGTH)
 			{
+				__m128 maxspanlengthm;
 				span->length = DPSOFTRAST_DRAW_MAXSPANLENGTH;
 				if (dpsoftrast.draw.numspans >= DPSOFTRAST_DRAW_MAXSPANQUEUE)
 				{
@@ -4005,18 +3947,13 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				span->start = y * width + startx;
 				span->length = endx - startx;
 				j = DPSOFTRAST_ARRAY_TOTAL;
-				span->data[0][j][0] += span->data[1][j][0] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-				span->data[0][j][1] += span->data[1][j][1] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-				span->data[0][j][2] += span->data[1][j][2] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-				span->data[0][j][3] += span->data[1][j][3] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+				maxspanlengthm = _mm_set1_ps(DPSOFTRAST_DRAW_MAXSPANLENGTH);
+				_mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), maxspanlengthm)));
 				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 				{
 					//if (arraymask[j])
 					{
-						span->data[0][j][0] += span->data[1][j][0] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-						span->data[0][j][1] += span->data[1][j][1] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-						span->data[0][j][2] += span->data[1][j][2] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
-						span->data[0][j][3] += span->data[1][j][3] * DPSOFTRAST_DRAW_MAXSPANLENGTH;
+						 _mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), maxspanlengthm)));
 					}
 				}
 			}
@@ -4036,6 +3973,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		DPSOFTRAST_Draw_ProcessSpans();
 		dpsoftrast.draw.numspans = 0;
 	}
+#endif
 }
 
 void DPSOFTRAST_Draw_DebugPoints(void)
