@@ -145,7 +145,7 @@ typedef enum DPSOFTRAST_BLENDMODE_e
 }
 DPSOFTRAST_BLENDMODE;
 
-typedef struct DPSOFTRAST_State_s
+typedef ALIGN(struct DPSOFTRAST_State_s
 {
 	// DPSOFTRAST_VALIDATE_ flags
 	int validate;
@@ -168,7 +168,7 @@ typedef struct DPSOFTRAST_State_s
 
 	int shader_mode;
 	int shader_permutation;
-	float uniform4f[DPSOFTRAST_UNIFORM_TOTAL*4];
+	ALIGN(float uniform4f[DPSOFTRAST_UNIFORM_TOTAL*4]);
 	int uniform1i[DPSOFTRAST_UNIFORM_TOTAL];
 
 	// derived values (DPSOFTRAST_VALIDATE_FB)
@@ -198,7 +198,7 @@ typedef struct DPSOFTRAST_State_s
 
 	DPSOFTRAST_State_Draw draw;
 }
-DPSOFTRAST_State;
+DPSOFTRAST_State);
 
 DPSOFTRAST_State dpsoftrast;
 
@@ -1590,11 +1590,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		unsigned int subtc[2];
 		unsigned int substep[2];
 		int endsub = x + DPSOFTRAST_MAXSUBSPAN-1;
-		float subscale = 4096.0f/(DPSOFTRAST_MAXSUBSPAN-1);
+		float subscale = 65536.0f/(DPSOFTRAST_MAXSUBSPAN-1);
 		if (endsub >= endx)
 		{
 			endsub = endx-1;
-			subscale = endsub > x ? 4096.0f / (endsub - x) : 1.0f;
+			subscale = endsub > x ? 65536.0f / (endsub - x) : 1.0f;
 		}
 		tc[0] = (data[0] + slope[0]*x) * zf[x] * tcscale[0] - 0.5f;
 		tc[1] = (data[1] + slope[1]*x) * zf[x] * tcscale[1] - 0.5f;
@@ -1837,11 +1837,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 					__m128i tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, pix3, pix4, fracm;
 					ALIGN(int pixeloffset[4]);
 					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0x10000)), scalem);
-					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
-					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_setzero_si128());
-					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[3]]), _mm_setzero_si128());
+					_mm_store_si128((__m128i *)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
+					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[2]]), _mm_setzero_si128());
+					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[3]]), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1854,16 +1854,16 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 					pix2 = _mm_add_epi16(pix2,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix4, pix2), 1),
 														 _mm_shufflehi_epi16(_mm_shufflelo_epi16(fracm, _MM_SHUFFLE(0, 0, 0, 0)), _MM_SHUFFLE(0, 0, 0, 0))));
-					_mm_storel_epi64((__m128i * RESTRICT)&outi[x], _mm_packus_epi16(pix2, _mm_shufflelo_epi16(pix2, _MM_SHUFFLE(3, 2, 3, 2))));
+					_mm_storel_epi64((__m128i *)&outi[x], _mm_packus_epi16(pix2, _mm_shufflelo_epi16(pix2, _MM_SHUFFLE(3, 2, 3, 2))));
 				}
 				if (x <= endsub)
 				{
 					__m128i tcim = _mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, fracm;
 					ALIGN(int pixeloffset[4]);
 					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0)), scalem);
-					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i * RESTRICT)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
+					_mm_store_si128((__m128i *)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1886,9 +1886,9 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 					ALIGN(int pixeloffset[4]);
 					tcim = _mm_min_epi16(_mm_max_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), minm), maxm);
 					tcim = _mm_madd_epi16(tcim, scalem);
-					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					_mm_store_si128((__m128i *)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1911,9 +1911,9 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 					ALIGN(int pixeloffset[4]);
 					tcim = _mm_and_si128(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), wrapm);
 					tcim = _mm_madd_epi16(tcim, scalem);
-					_mm_store_si128((__m128i * RESTRICT)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int * RESTRICT)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					_mm_store_si128((__m128i *)pixeloffset, tcim);
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -2474,61 +2474,92 @@ void DPSOFTRAST_VertexShader_Lightmap(void)
 
 void DPSOFTRAST_PixelShader_Lightmap(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
 {
+#ifdef SSE2_PRESENT
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
 	int x, startx = span->startx, endx = span->endx;
-	int Color_Ambienti[4], Color_Diffusei[4], Color_Glowi[4];
+	__m128i Color_Ambientm, Color_Diffusem, Color_Glowm;
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_lightmapbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_glowbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	unsigned int d[4];
-	//unsigned char * RESTRICT pixelmask = span->pixelmask;
-	//unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
 	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
-	Color_Ambienti[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0] * 65536.0f);
-	Color_Ambienti[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1] * 65536.0f);
-	Color_Ambienti[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2] * 65536.0f);
-	Color_Ambienti[3] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0] * 65536.0f);
-	Color_Diffusei[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0] * 256.0f);
-	Color_Diffusei[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1] * 256.0f);
-	Color_Diffusei[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2] * 256.0f);
-	Color_Diffusei[3] = 0;
-	Color_Glowi[2] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+0] * 65536.0f);
-	Color_Glowi[1] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+1] * 65536.0f);
-	Color_Glowi[0] = (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+2] * 65536.0f);
-	Color_Glowi[3] = 0;
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+	if (dpsoftrast.user.alphatest || dpsoftrast.fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+		pixel = buffer_FragColorbgra8;
+	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+	Color_Ambientm = _mm_or_si128(Color_Ambientm, _mm_setr_epi32(0, 0, 0, (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]*255.0f)));
+	Color_Ambientm = _mm_packs_epi32(Color_Ambientm, Color_Ambientm);
+	Color_Diffusem = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	Color_Diffusem = _mm_and_si128(Color_Diffusem, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+	Color_Diffusem = _mm_packs_epi32(Color_Diffusem, Color_Diffusem);
 	if (dpsoftrast.shader_permutation & SHADERPERMUTATION_GLOW)
 	{
 		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_glowbgra8, GL20TU_GLOW, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
+		Color_Glowm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+		Color_Glowm = _mm_and_si128(Color_Glowm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+		Color_Glowm = _mm_packs_epi32(Color_Glowm, Color_Glowm);
 		for (x = startx;x < endx;x++)
 		{
-			d[0] = (buffer_texture_glowbgra8[x*4+0] * Color_Glowi[0] + buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
-			d[1] = (buffer_texture_glowbgra8[x*4+1] * Color_Glowi[1] + buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
-			d[2] = (buffer_texture_glowbgra8[x*4+2] * Color_Glowi[2] + buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
-			d[3] = (buffer_texture_glowbgra8[x*4+3] * Color_Glowi[3] + buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
-			buffer_FragColorbgra8[x*4+0] = d[0];
-			buffer_FragColorbgra8[x*4+1] = d[1];
-			buffer_FragColorbgra8[x*4+2] = d[2];
-			buffer_FragColorbgra8[x*4+3] = d[3];
+			__m128i color, lightmap, glow, pix;
+			if (x + 4 <= endx && *(const unsigned int *)&pixelmask[x] == 0x01010101)
+			{
+				__m128i pix2;
+				color = _mm_loadu_si128((const __m128i *)&buffer_texture_colorbgra8[x*4]);
+				lightmap = _mm_loadu_si128((const __m128i *)&buffer_texture_lightmapbgra8[x*4]);
+				glow = _mm_loadu_si128((const __m128i *)&buffer_texture_glowbgra8[x*4]);
+				pix = _mm_add_epi16(_mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, _mm_unpacklo_epi8(_mm_setzero_si128(), lightmap)), Color_Ambientm), 
+													_mm_unpacklo_epi8(_mm_setzero_si128(), color)),
+									_mm_mulhi_epu16(Color_Glowm, _mm_unpacklo_epi8(_mm_setzero_si128(), glow)));
+				pix2 = _mm_add_epi16(_mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, _mm_unpackhi_epi8(_mm_setzero_si128(), lightmap)), Color_Ambientm), 
+													_mm_unpackhi_epi8(_mm_setzero_si128(), color)),
+									_mm_mulhi_epu16(Color_Glowm, _mm_unpackhi_epi8(_mm_setzero_si128(), glow)));
+				_mm_storeu_si128((__m128i *)&pixel[x*4], _mm_packus_epi16(pix, pix2));
+				x += 3;
+				continue;
+			}
+			if(!pixelmask[x])
+				continue;
+			color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
+			lightmap = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_lightmapbgra8[x*4]));
+			glow = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_glowbgra8[x*4]));
+			pix = _mm_add_epi16(_mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, lightmap), Color_Ambientm), color),
+								_mm_mulhi_epu16(Color_Glowm, glow));
+			*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 		}
 	}
 	else
 	{
 		for (x = startx;x < endx;x++)
 		{
-			d[0] = (buffer_texture_colorbgra8[x*4+0] * (Color_Ambienti[0] + buffer_texture_lightmapbgra8[x*4+0] * Color_Diffusei[0])) >> 16;if (d[0] > 255) d[0] = 255;
-			d[1] = (buffer_texture_colorbgra8[x*4+1] * (Color_Ambienti[1] + buffer_texture_lightmapbgra8[x*4+1] * Color_Diffusei[1])) >> 16;if (d[1] > 255) d[1] = 255;
-			d[2] = (buffer_texture_colorbgra8[x*4+2] * (Color_Ambienti[2] + buffer_texture_lightmapbgra8[x*4+2] * Color_Diffusei[2])) >> 16;if (d[2] > 255) d[2] = 255;
-			d[3] = (buffer_texture_colorbgra8[x*4+3] * (Color_Ambienti[3] + buffer_texture_lightmapbgra8[x*4+3] * Color_Diffusei[3])) >> 16;if (d[3] > 255) d[3] = 255;
-			buffer_FragColorbgra8[x*4+0] = d[0];
-			buffer_FragColorbgra8[x*4+1] = d[1];
-			buffer_FragColorbgra8[x*4+2] = d[2];
-			buffer_FragColorbgra8[x*4+3] = d[3];
+			__m128i color, lightmap, pix;
+			if (x + 4 <= endx && *(const unsigned int *)&pixelmask[x] == 0x01010101)
+			{
+				__m128i pix2;
+				color = _mm_loadu_si128((const __m128i *)&buffer_texture_colorbgra8[x*4]);
+				lightmap = _mm_loadu_si128((const __m128i *)&buffer_texture_lightmapbgra8[x*4]);
+				pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, _mm_unpacklo_epi8(_mm_setzero_si128(), lightmap)), Color_Ambientm), 
+									  _mm_unpacklo_epi8(_mm_setzero_si128(), color));
+				pix2 = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, _mm_unpackhi_epi8(_mm_setzero_si128(), lightmap)), Color_Ambientm),
+									   _mm_unpackhi_epi8(_mm_setzero_si128(), color));
+				_mm_storeu_si128((__m128i *)&pixel[x*4], _mm_packus_epi16(pix, pix2));
+				x += 3;
+				continue;
+			}
+			if(!pixelmask[x]) 
+				continue;
+			color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
+			lightmap = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_lightmapbgra8[x*4]));
+			pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(lightmap, Color_Diffusem), Color_Ambientm), color);
+			*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 		}
 	}
-	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	if(pixel == buffer_FragColorbgra8)
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+#endif
 }
 
 
