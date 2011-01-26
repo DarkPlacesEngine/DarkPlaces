@@ -1,19 +1,12 @@
 
-#include <memory.h>
-#include "dpsoftrast.h"
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
+#include "quakedef.h"
+#include "dpsoftrast.h"
 
-#undef true
-#undef false
 #ifndef __cplusplus
-typedef enum bool {false, true} bool;
-#endif
-
-#if defined(__GNUC__) || (defined(_MSC_VER) && _MSC_VER >= 1400)
-#define RESTRICT __restrict
-#else
-#define RESTRICT
+typedef qboolean bool;
 #endif
 
 #define GL_NONE					0
@@ -4163,3 +4156,4 @@ void DPSOFTRAST_Shutdown(void)
 		free(dpsoftrast.texture);
 	memset(&dpsoftrast, 0, sizeof(dpsoftrast));
 }
+

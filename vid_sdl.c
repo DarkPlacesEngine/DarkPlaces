@@ -1262,9 +1262,11 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 {
 	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
+#ifdef SSE2_PRESENT
 	if (vid_soft.integer)
 		return VID_InitModeSoft(mode);
 	else
+#endif
 		return VID_InitModeGL(mode);
 }
 
