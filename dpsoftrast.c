@@ -1835,13 +1835,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 				for (; x + 1 <= endsub; x += 2, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
 					__m128i tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, pix3, pix4, fracm;
-					ALIGN(int pixeloffset[4]);
 					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0x10000)), scalem);
-					_mm_store_si128((__m128i *)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
-					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[2]]), _mm_setzero_si128());
-					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[3]]), _mm_setzero_si128());
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(tcim)]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))]), _mm_setzero_si128());
+					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(2, 2, 2, 2)))]), _mm_setzero_si128());
+					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(3, 3, 3, 3)))]), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1859,11 +1857,9 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 				if (x <= endsub)
 				{
 					__m128i tcim = _mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, fracm;
-					ALIGN(int pixeloffset[4]);
 					tcim = _mm_madd_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 0x10000, 0, 0)), scalem);
-					_mm_store_si128((__m128i *)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[0]]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[pixeloffset[1]]), _mm_setzero_si128());
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(tcim)]), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))]), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1883,12 +1879,14 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 				for (; x <= endsub; x++, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
 					__m128i tcim = _mm_shuffle_epi32(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(1, 0, 1, 0)), pix1, pix2, fracm;
-					ALIGN(int pixeloffset[4]);
 					tcim = _mm_min_epi16(_mm_max_epi16(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), minm), maxm);
 					tcim = _mm_madd_epi16(tcim, scalem);
-					_mm_store_si128((__m128i *)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)]), 
+																_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))])), 
+											_mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(2, 2, 2, 2)))]), 
+																_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(3, 3, 3, 3)))])), 
+											_mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1908,12 +1906,14 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 				{
 					__m128i tcim = _mm_shuffle_epi32(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(1, 0, 1, 0)),
 							pix1, pix2, fracm;
-					ALIGN(int pixeloffset[4]);
 					tcim = _mm_and_si128(_mm_add_epi16(tcim, _mm_setr_epi32(0, 1, 0x10000, 0x10001)), wrapm);
 					tcim = _mm_madd_epi16(tcim, scalem);
-					_mm_store_si128((__m128i *)pixeloffset, tcim);
-					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[0]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[1]])), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[2]]), _mm_cvtsi32_si128(*(const int *)&pixelbase[pixeloffset[3]])), _mm_setzero_si128());
+					pix1 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)]),											
+																_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))])),
+											_mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_unpacklo_epi32(_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(2, 2, 2, 2)))]),
+																_mm_cvtsi32_si128(*(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(3, 3, 3, 3)))])),
+											_mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtcm, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -1932,35 +1932,71 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 			tci[1] = (subtc[1]>>16) - tcimin[1]; 
 			tci1[0] = ((subtc[0] + (endsub - x)*substep[0])>>16);
 			tci1[1] = ((subtc[1] + (endsub - x)*substep[1])>>16); 
-			if (tci[0] <= tcimax[0]-1 && tci[1] <= tcimax[1]-1 && tci1[0] <= tcimax[0]-1 && tci1[1] <= tcimax[1]-1)
+			if (tci[0] <= tcimax[0] && tci[1] <= tcimax[1] && tci1[0] <= tcimax[0] && tci1[1] <= tcimax[1])
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], subtc[0] + substep[0], subtc[1] + substep[1]);
+				__m128i substepm = _mm_slli_epi32(_mm_setr_epi32(substep[0], substep[1], substep[0], substep[1]), 1);
+				__m128i scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x + 1 <= endsub; x += 2, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					tci[0] = subtc[0]>>16;
-					tci[1] = subtc[1]>>16;
-					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+					__m128i tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))];
+				}
+				if (x <= endsub)
+				{
+					__m128i tcim = _mm_shufflelo_epi16(subtcm, _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					x++;
 				}
 			}
 			else if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], subtc[0] + substep[0], subtc[1] + substep[1]);
+				__m128i substepm = _mm_slli_epi32(_mm_setr_epi32(substep[0], substep[1], substep[0], substep[1]), 1);
+				__m128i minm = _mm_slli_epi32(_mm_setr_epi32(tcimin[0], tcimin[1], tcimin[0], tcimin[1]), 16);
+				__m128i maxm = _mm_slli_epi32(_mm_setr_epi32(tcimax[0], tcimax[1], tcimax[0], tcimax[1]), 16);
+				__m128i scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x + 1 <= endsub; x += 2, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					tci[0] = subtc[0]>>16;
-					tci[1] = subtc[1]>>16;
-					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
-					tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
-					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+					__m128i tcim = _mm_min_epi16(_mm_max_epi16(subtcm, minm), maxm); 
+					tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(tcim, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))];
+				}
+				if (x <= endsub)
+				{
+					__m128i tcim = _mm_min_epi16(_mm_max_epi16(subtcm, minm), maxm);
+					tcim = _mm_shufflelo_epi16(tcim, _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					x++;
 				}
 			}
 			else
 			{
-				for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
+				__m128i subtcm = _mm_setr_epi32(subtc[0], subtc[1], subtc[0] + substep[0], subtc[1] + substep[1]);
+				__m128i substepm = _mm_slli_epi32(_mm_setr_epi32(substep[0], substep[1], substep[0], substep[1]), 1);
+				__m128i wrapm = _mm_slli_epi32(_mm_setr_epi32(tciwrapmask[0], tciwrapmask[1], tciwrapmask[0], tciwrapmask[1]), 16);
+				__m128i scalem = _mm_set1_epi32((tciwidth<<18)+4);
+				for (; x + 1 <= endsub; x += 2, subtcm = _mm_add_epi32(subtcm, substepm))
 				{
-					tci[0] = subtc[0]>>16;
-					tci[1] = subtc[1]>>16;
-					tci[0] &= tciwrapmask[0];
-					tci[1] &= tciwrapmask[1];
-					outi[x] = pixelbasei[(tci[1]*tciwidth+tci[0])];
+					__m128i tcim = _mm_and_si128(subtcm, wrapm); 
+					tcim = _mm_shufflehi_epi16(_mm_shufflelo_epi16(tcim, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tcim, _MM_SHUFFLE(1, 1, 1, 1)))];
+				}
+				if (x <= endsub)
+				{
+					__m128i tcim = _mm_and_si128(subtcm, wrapm); 
+					tcim = _mm_shufflelo_epi16(tcim, _MM_SHUFFLE(3, 1, 3, 1));
+					tcim = _mm_madd_epi16(tcim, scalem);
+					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tcim)];
+					x++;
 				}
 			}
 		}
