@@ -205,6 +205,7 @@ DPSOFTRAST_State dpsoftrast;
 extern int dpsoftrast_test;
 
 #define DPSOFTRAST_DEPTHSCALE (1024.0f*1048576.0f)
+#define DPSOFTRAST_DEPTHOFFSET (128.0f)
 #define DPSOFTRAST_BGRA8_FROM_RGBA32F(r,g,b,a) (((int)(r * 255.0f + 0.5f) << 16) | ((int)(g * 255.0f + 0.5f) << 8) | (int)(b * 255.0f + 0.5f) | ((int)(a * 255.0f + 0.5f) << 24))
 #define DPSOFTRAST_DEPTH32_FROM_DEPTH32F(d) ((int)(DPSOFTRAST_DEPTHSCALE * (1-d)))
 #define DPSOFTRAST_DRAW_MAXSPANLENGTH 256
@@ -3353,8 +3354,8 @@ void DPSOFTRAST_Draw_ProcessSpans(void)
 		wslope = span->data[1][DPSOFTRAST_ARRAY_TOTAL][3];
 		if (dpsoftrast.user.depthtest && dpsoftrast.fb_depthpixels)
 		{
-			depth = (int)(w*DPSOFTRAST_DEPTHSCALE);
 			depthslope = (int)(wslope*DPSOFTRAST_DEPTHSCALE);
+			depth = (int)(w*DPSOFTRAST_DEPTHSCALE - DPSOFTRAST_DEPTHOFFSET*(dpsoftrast.user.polygonoffset[1] + fabs(wslope)*dpsoftrast.user.polygonoffset[0]));
 			depthpixel = dpsoftrast.fb_depthpixels + span->start;
 			switch(dpsoftrast.fb_depthfunc)
 			{
@@ -3428,7 +3429,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int edge1n;
 	int startx;
 	int endx;
-	float mipdensity;
 	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS];
 	__m128 triangleedge[2], triangleorigin, trianglenormal;
 	__m128 mipedgescale;
@@ -3638,13 +3638,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				mipedgetc = _mm_add_ps(mipedgetc, _mm_shuffle_ps(mipedgetc, mipedgetc, _MM_SHUFFLE(2, 3, 0, 1)));
 				mipedgetc = _mm_mul_ps(mipedgetc, mipedgescale);
 				mipedgetc = _mm_min_ss(mipedgetc, _mm_shuffle_ps(mipedgetc, mipedgetc, _MM_SHUFFLE(2, 2, 2, 2)));	
-				_mm_store_ss(&mipdensity, mipedgetc);
 				// this will be multiplied in the texturing routine by the texture resolution
-				y = (int)(log(mipdensity)/log(2.0f));
-				if (y < 0)
-					y = 0;
-				if (y > texture->mipmaps - 1)
-					y = texture->mipmaps - 1;
+				y = _mm_cvttss_si32(mipedgetc);
+				if (y > 0) 
+				{
+					y = (int)(log(_mm_cvttss_si32(mipedgetc))/M_LN2);
+					if (y > texture->mipmaps - 1)
+						y = texture->mipmaps - 1;
+				}
+				else y = 0;
 				mip[j] = y;
 			}
 		}
