@@ -3642,7 +3642,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				y = _mm_cvttss_si32(mipedgetc);
 				if (y > 0) 
 				{
-					y = (int)(log(_mm_cvttss_si32(mipedgetc))/M_LN2);
+					y = (int)(log(y)/M_LN2);
 					if (y > texture->mipmaps - 1)
 						y = texture->mipmaps - 1;
 				}
