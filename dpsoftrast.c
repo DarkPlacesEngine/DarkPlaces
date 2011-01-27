@@ -3716,11 +3716,11 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				edge1p = tmp;
 			} 	
 			edge0lerp = _mm_shuffle_ps(screen[edge0p], screen[edge0p], _MM_SHUFFLE(1, 1, 1, 1));
-			edge0scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0lerp));
+			edge0scale = _mm_rcp_ss(_mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0lerp));
 			edge0scale = _mm_shuffle_ps(edge0scale, edge0scale, _MM_SHUFFLE(0, 0, 0, 0));
 			edge0lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge0lerp), edge0scale);
 			edge1lerp = _mm_shuffle_ps(screen[edge1p], screen[edge1p], _MM_SHUFFLE(1, 1, 1, 1));
-   			edge1scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1lerp));
+   			edge1scale = _mm_rcp_ss(_mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1lerp));
 			edge1scale = _mm_shuffle_ps(edge1scale, edge1scale, _MM_SHUFFLE(0, 0, 0, 0));
 			edge1lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge1lerp), edge1scale);
 			for(; y <= nexty; y++, edge0lerp = _mm_add_ps(edge0lerp, edge0scale), edge1lerp = _mm_add_ps(edge1lerp, edge1scale))
@@ -3771,7 +3771,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				// buffer for pixel intermediate data, we split long spans...
 				while (span->length > DPSOFTRAST_DRAW_MAXSPANLENGTH)
 				{
-					__m128 maxspanlengthm;
 					span->length = DPSOFTRAST_DRAW_MAXSPANLENGTH;
 					if (dpsoftrast.draw.numspans >= DPSOFTRAST_DRAW_MAXSPANQUEUE)
 					{
@@ -3785,13 +3784,12 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 					span->start = y * width + startx;
 					span->length = endx - startx;
 					j = DPSOFTRAST_ARRAY_TOTAL;
-					maxspanlengthm = _mm_set1_ps(DPSOFTRAST_DRAW_MAXSPANLENGTH);
-					_mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), maxspanlengthm)));
+					_mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), _mm_set1_ps(DPSOFTRAST_DRAW_MAXSPANLENGTH))));
 					for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 					{
 						//if (arraymask[j])
 						{
-							 _mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), maxspanlengthm)));
+							 _mm_store_ps(span->data[0][j], _mm_add_ps(_mm_load_ps(span->data[0][j]), _mm_mul_ps(_mm_load_ps(span->data[1][j]), _mm_set1_ps(DPSOFTRAST_DRAW_MAXSPANLENGTH))));
 						}
 					}
 				}
