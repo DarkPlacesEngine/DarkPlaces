@@ -1541,6 +1541,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 		return;
 	}
 	mip = span->mip[texunitindex];
+	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0];
 	// if this mipmap of the texture is 1 pixel, just fill it with that color
 	if (texture->mipmap[mip][1] == 4)
 	{
@@ -1567,7 +1568,6 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RE
 	slope[2] = span->data[1][arrayindex][2];
 	slope[3] = span->data[1][arrayindex][3];
 	flags = texture->flags;
-	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0];
 	tcscale[0] = texture->mipmap[mip][2];
 	tcscale[1] = texture->mipmap[mip][3];
 	tciwidth = texture->mipmap[mip][2];
@@ -1723,10 +1723,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 		return;
 	}
 	mip = span->mip[texunitindex];
+	pixelbase = (const unsigned char *)texture->bytes + texture->mipmap[mip][0];
 	// if this mipmap of the texture is 1 pixel, just fill it with that color
 	if (texture->mipmap[mip][1] == 4)
 	{
-		unsigned int k = *((const unsigned int *)texture->bytes);
+		unsigned int k = *((const unsigned int *)pixelbase);
 		for (x = startx;x < endx;x++)
 			outi[x] = k;
 		return;
@@ -1735,7 +1736,6 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(const DPSOFTRAST_State_Draw_Span
 	data = _mm_load_ps(span->data[0][arrayindex]);
 	slope = _mm_load_ps(span->data[1][arrayindex]);
 	flags = texture->flags;
-	pixelbase = (const unsigned char *)texture->bytes + texture->mipmap[mip][0];
 	tcsize = _mm_shuffle_epi32(_mm_loadu_si128((const __m128i *)&texture->mipmap[mip][0]), _MM_SHUFFLE(3, 2, 3, 2));
 	tcmask = _mm_sub_epi32(tcsize, _mm_set1_epi32(1));
 	tcscale = _mm_cvtepi32_ps(tcsize);
@@ -3592,11 +3592,8 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			screenmin = _mm_max_epi16(screenmin, _mm_setzero_si128());
 			screenmax = _mm_min_epi16(screenmax, _mm_setr_epi16(width-1, height-1, 0, 0, 0, 0, 0, 0));
 			// skip offscreen triangles
-			{
-				__m128i cc = _mm_cmplt_epi16(screenmax, screenmin);
-				if (_mm_extract_epi16(cc, 0)|_mm_extract_epi16(cc, 1))
-					continue;
-			}
+			if (_mm_cvtsi128_si32(_mm_cmplt_epi16(screenmax, screenmin)) == -1)
+				continue;
 			starty = _mm_extract_epi16(screenmin, 1);
 			endy = _mm_extract_epi16(screenmax, 1)+1;
 			screeny = _mm_srai_epi32(screeni, 16);
