@@ -1113,7 +1113,7 @@ void DPSOFTRAST_Array_Copy(float *out4f, const float *in4f, int numitems)
 }
 
 #ifdef SSE2_PRESENT
-__m128 DPSOFTRAST_Draw_ProjectVertex(__m128 v)
+static __m128 DPSOFTRAST_Draw_ProjectVertex(__m128 v)
 {
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	__m128 w = _mm_rcp_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)));
@@ -3415,6 +3415,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int cullface = dpsoftrast.user.cullface;
 	int width = dpsoftrast.fb_width;
 	int height = dpsoftrast.fb_height;
+	__m128i fbmax = _mm_sub_epi16(_mm_setr_epi16(width, height, width, height, width, height, width, height), _mm_set1_epi16(1));
 	int i;
 	int j;
 	int k;
@@ -3430,7 +3431,6 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	int startx;
 	int endx;
 	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS];
-	__m128 triangleedge[2], triangleorigin, trianglenormal;
 	__m128 mipedgescale;
 	float clipdist[4];
 	__m128 clipped[DPSOFTRAST_ARRAY_TOTAL][4];
@@ -3461,36 +3461,34 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			e[1] = i*3+1;
 			e[2] = i*3+2;
 		}
-		triangleorigin = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]);
-		triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), triangleorigin);
-		triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), triangleorigin);
-		// store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar
-		trianglenormal = _mm_sub_ps(_mm_mul_ps(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))),
-									_mm_mul_ps(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1]));
-#if 0
-		trianglenormal[2] = triangleedge[0][0] * triangleedge[1][1] - triangleedge[0][1] * triangleedge[1][0];
-		trianglenormal[0] = triangleedge[0][1] * triangleedge[1][2] - triangleedge[0][2] * triangleedge[1][1];
-		trianglenormal[1] = triangleedge[0][2] * triangleedge[1][0] - triangleedge[0][0] * triangleedge[1][2];
-#endif
-		// apply current cullface mode (this culls many triangles)
-		switch(cullface)
-		{
-		case GL_BACK:
-			if (_mm_ucomilt_ss(trianglenormal, _mm_setzero_ps()))
-				continue;
-			break;
-		case GL_FRONT:
-			if (_mm_ucomigt_ss(trianglenormal, _mm_setzero_ps()))
-				continue;
-			break;
+
+#define SKIPBACKFACE { \
+			__m128 triangleedge[2], triangleorigin, trianglenormal; \
+			triangleorigin = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]); \
+			triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), triangleorigin); \
+			triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), triangleorigin); \
+			/* store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar */ \
+			trianglenormal = _mm_sub_ss(_mm_mul_ss(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))), \
+										_mm_mul_ss(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1])); \
+			/* apply current cullface mode (this culls many triangles) */ \
+			switch(cullface) \
+			{ \
+			case GL_BACK: \
+				if (_mm_ucomilt_ss(trianglenormal, _mm_setzero_ps())) \
+					continue; \
+				break; \
+			case GL_FRONT: \
+				if (_mm_ucomigt_ss(trianglenormal, _mm_setzero_ps())) \
+					continue; \
+				break; \
+			} \
 		}
-#if 0
-		trianglearea2 = trianglenormal[0] * trianglenormal[0] + trianglenormal[1] * trianglenormal[1] + trianglenormal[2] * trianglenormal[2];
-		// skip degenerate triangles, nothing good can come from them...
-		if (trianglearea2 == 0.0f)
-			continue;
-#endif
-		
+			//trianglenormal = _mm_sub_ps(_mm_mul_ps(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))),
+			//						  _mm_mul_ps(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1]));
+			//trianglenormal[2] = triangleedge[0][0] * triangleedge[1][1] - triangleedge[0][1] * triangleedge[1][0];
+			//trianglenormal[0] = triangleedge[0][1] * triangleedge[1][2] - triangleedge[0][2] * triangleedge[1][1];
+			//trianglenormal[1] = triangleedge[0][2] * triangleedge[1][0] - triangleedge[0][0] * triangleedge[1][2];
+
 			// macros for clipping vertices
 #define CLIPPEDVERTEXLERP(k,p1,p2) { \
 			__m128 frac = _mm_set1_ps(clipdist[p1] / (clipdist[p1] - clipdist[p2]));\
@@ -3520,6 +3518,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		clipdist[2] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+2] + 1.0f;
 		if (clipdist[0] >= 0.0f)
 		{
+			SKIPBACKFACE;
 			if (clipdist[1] >= 0.0f)
 			{
 				CLIPPEDVERTEXCOPY(0,0);
@@ -3556,6 +3555,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		}			
 		else if (clipdist[1] >= 0.0f)
 		{
+			SKIPBACKFACE;
 			CLIPPEDVERTEXLERP(0,0,1);
 			CLIPPEDVERTEXCOPY(1,1);
 			if (clipdist[2] >= 0.0f)
@@ -3572,25 +3572,25 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		}
 		else if (clipdist[2] >= 0.0f)
 		{
+			SKIPBACKFACE;
 			CLIPPEDVERTEXLERP(0,1,2);
 			CLIPPEDVERTEXCOPY(1,2);
 			CLIPPEDVERTEXLERP(2,2,0);
 			numpoints = 3;
 		}
 		else continue; // triangle is entirely behind nearpla
+
 		{
 			// calculate integer y coords for triangle points
 			__m128i screeni = _mm_packs_epi32(_mm_cvttps_epi32(_mm_shuffle_ps(screen[0], screen[1], _MM_SHUFFLE(1, 0, 1, 0))),
-										  _mm_cvttps_epi32(_mm_shuffle_ps(screen[2], screen[3], _MM_SHUFFLE(1, 0, 1, 0)))),
-					screenir, screenmin, screenmax;
-			if (numpoints <= 3) screeni = _mm_shuffle_epi32(screeni, _MM_SHUFFLE(2, 2, 1, 0));
-			screenir = _mm_shuffle_epi32(screeni, _MM_SHUFFLE(1, 0, 3, 2)),
-			screenmin = _mm_min_epi16(screeni, screenir);
-			screenmax = _mm_max_epi16(screeni, screenir);
+										  _mm_cvttps_epi32(_mm_shuffle_ps(screen[2], numpoints <= 3 ? screen[2] : screen[3], _MM_SHUFFLE(1, 0, 1, 0)))),
+					screenir = _mm_shuffle_epi32(screeni, _MM_SHUFFLE(1, 0, 3, 2)), 
+					screenmin = _mm_min_epi16(screeni, screenir), 
+					screenmax = _mm_max_epi16(screeni, screenir);
 			screenmin = _mm_min_epi16(screenmin, _mm_shufflelo_epi16(screenmin, _MM_SHUFFLE(1, 0, 3, 2)));
 			screenmax = _mm_max_epi16(screenmax, _mm_shufflelo_epi16(screenmax, _MM_SHUFFLE(1, 0, 3, 2)));
 			screenmin = _mm_max_epi16(screenmin, _mm_setzero_si128());
-			screenmax = _mm_min_epi16(screenmax, _mm_setr_epi16(width-1, height-1, 0, 0, 0, 0, 0, 0));
+			screenmax = _mm_min_epi16(screenmax, fbmax);
 			// skip offscreen triangles
 			if (_mm_cvtsi128_si32(_mm_cmplt_epi16(screenmax, screenmin)) == -1)
 				continue;
