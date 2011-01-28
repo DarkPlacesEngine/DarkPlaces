@@ -2452,42 +2452,68 @@ void DPSOFTRAST_VertexShader_VertexColor(void)
 
 void DPSOFTRAST_PixelShader_VertexColor(const DPSOFTRAST_State_Draw_Span * RESTRICT span)
 {
+#ifdef SSE2_PRESENT
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + span->start * 4;
+	int x, startx = span->startx, endx = span->endx;
+	__m128i Color_Ambientm, Color_Diffusem;
+	__m128 data, slope;
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4], Color_Diffuse[4];
-	float data[4];
-	float slope[4];
-	float z;
 	int arrayindex = DPSOFTRAST_ARRAY_COLOR;
-	data[2] = span->data[0][arrayindex][0];
-	data[1] = span->data[0][arrayindex][1];
-	data[0] = span->data[0][arrayindex][2];
-	data[3] = span->data[0][arrayindex][3];
-	slope[2] = span->data[1][arrayindex][0];
-	slope[1] = span->data[1][arrayindex][1];
-	slope[0] = span->data[1][arrayindex][2];
-	slope[3] = span->data[1][arrayindex][3];
-	Color_Ambient[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
-	Color_Ambient[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
-	Color_Ambient[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
-	Color_Ambient[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
-	Color_Diffuse[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+0];
-	Color_Diffuse[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+1];
-	Color_Diffuse[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4+2];
-	Color_Diffuse[3] = 0.0f;
 	DPSOFTRAST_Draw_Span_Begin(span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
-	for (x = startx;x < endx;x++)
+	if (dpsoftrast.user.alphatest || dpsoftrast.fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+		pixel = buffer_FragColorbgra8;
+	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+	Color_Ambientm = _mm_or_si128(Color_Ambientm, _mm_setr_epi32(0, 0, 0, (int)(dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]*255.0f)));
+	Color_Ambientm = _mm_packs_epi32(Color_Ambientm, Color_Ambientm);
+	Color_Diffusem = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_Color_Diffuse*4]), _mm_set1_ps(4096.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	Color_Diffusem = _mm_and_si128(Color_Diffusem, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+	Color_Diffusem = _mm_packs_epi32(Color_Diffusem, Color_Diffusem);
+	data = _mm_load_ps(span->data[0][arrayindex]); 
+	slope = _mm_load_ps(span->data[1][arrayindex]);
+	data = _mm_shuffle_ps(data, data, _MM_SHUFFLE(3, 0, 1, 2));
+	slope = _mm_shuffle_ps(slope, slope, _MM_SHUFFLE(3, 0, 1, 2));
+	data = _mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx)));
+	data = _mm_mul_ps(data, _mm_set1_ps(4096.0f));
+	slope = _mm_mul_ps(slope, _mm_set1_ps(4096.0f));
+	for (x = startx;x < endx;x++, data = _mm_add_ps(data, slope))
 	{
-		z = buffer_z[x];
-		buffer_FragColorbgra8[x*4+0] = (int)(buffer_texture_colorbgra8[x*4+0] * (Color_Ambient[0] + ((data[0] + slope[0]*x) * z) * Color_Diffuse[0]));
-		buffer_FragColorbgra8[x*4+1] = (int)(buffer_texture_colorbgra8[x*4+1] * (Color_Ambient[1] + ((data[1] + slope[1]*x) * z) * Color_Diffuse[1]));
-		buffer_FragColorbgra8[x*4+2] = (int)(buffer_texture_colorbgra8[x*4+2] * (Color_Ambient[2] + ((data[2] + slope[2]*x) * z) * Color_Diffuse[2]));
-		buffer_FragColorbgra8[x*4+3] = (int)(buffer_texture_colorbgra8[x*4+3] * (Color_Ambient[3] + ((data[3] + slope[3]*x) * z) * Color_Diffuse[3]));
+		__m128i color, mod, pix;
+		if (x + 4 <= endx && *(const unsigned int *)&pixelmask[x] == 0x01010101)
+		{
+			__m128i pix2, mod2;
+			__m128 z = _mm_loadu_ps(&buffer_z[x]);
+			color = _mm_loadu_si128((const __m128i *)&buffer_texture_colorbgra8[x*4]);
+			mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_shuffle_ps(z, z, _MM_SHUFFLE(0, 0, 0, 0))));
+			data = _mm_add_ps(data, slope);
+			mod = _mm_packs_epi32(mod, _mm_cvtps_epi32(_mm_mul_ps(data, _mm_shuffle_ps(z, z, _MM_SHUFFLE(1, 1, 1, 1)))));
+			data = _mm_add_ps(data, slope);
+			mod2 = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_shuffle_ps(z, z, _MM_SHUFFLE(2, 2, 2, 2))));
+			data = _mm_add_ps(data, slope);
+			mod2 = _mm_packs_epi32(mod2, _mm_cvtps_epi32(_mm_mul_ps(data, _mm_shuffle_ps(z, z, _MM_SHUFFLE(3, 3, 3, 3)))));
+			pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, mod), Color_Ambientm),
+								  _mm_unpacklo_epi8(_mm_setzero_si128(), color));
+			pix2 = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(Color_Diffusem, mod2), Color_Ambientm),
+								   _mm_unpackhi_epi8(_mm_setzero_si128(), color));
+			_mm_storeu_si128((__m128i *)&pixel[x*4], _mm_packus_epi16(pix, pix2));
+			x += 3;
+			continue;
+		}
+		if(!pixelmask[x])
+			continue;
+		color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
+		mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&buffer_z[x]))); 
+		mod = _mm_packs_epi32(mod, mod);
+		pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(mod, Color_Diffusem), Color_Ambientm), color);
+		*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 	}
-	DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+	if(pixel == buffer_FragColorbgra8)
+		DPSOFTRAST_Draw_Span_FinishBGRA8(span, buffer_FragColorbgra8);
+#endif
 }
 
 
