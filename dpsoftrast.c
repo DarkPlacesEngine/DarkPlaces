@@ -1365,12 +1365,11 @@ void DPSOFTRAST_Draw_Span_Finish(const DPSOFTRAST_State_Draw_Span * RESTRICT spa
 
 void DPSOFTRAST_Draw_Span_FinishBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, const unsigned char* RESTRICT in4ub)
 {
+#ifdef SSE2_PRESENT
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
-	int d[4];
 	const unsigned int * RESTRICT ini = (const unsigned int *)in4ub;
-	int a, b;
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
 	unsigned int * RESTRICT pixeli = (unsigned int *)dpsoftrast.fb_colorpixels[0];
@@ -1387,124 +1386,116 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRIC
 	switch(dpsoftrast.fb_blendmode)
 	{
 	case DPSOFTRAST_BLENDMODE_OPAQUE:
-		for (x = startx;x < endx;x++)
+		for (x = startx;x + 4 <= endx;)
+		{
+			if (*(const unsigned int *)&pixelmask[x] == 0x01010101)
+			{
+				_mm_storeu_si128((__m128i *)&pixeli[x], _mm_loadu_si128((const __m128i *)&ini[x]));
+				x += 4;
+			}
+			else
+			{
+				if (pixelmask[x])
+					pixeli[x] = ini[x];
+				x++;
+			}
+		}
+		for (;x < endx;x++)
 			if (pixelmask[x])
 				pixeli[x] = ini[x];
 		break;
 	case DPSOFTRAST_BLENDMODE_ALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4ub[x*4+3];
-			b = 256 - in4ub[x*4+3];
-			pixel[x*4+0] = (in4ub[x*4+0]*a+pixel[x*4+0]*b) >> 8;
-			pixel[x*4+1] = (in4ub[x*4+1]*a+pixel[x*4+1]*b) >> 8;
-			pixel[x*4+2] = (in4ub[x*4+2]*a+pixel[x*4+2]*b) >> 8;
-			pixel[x*4+3] = (in4ub[x*4+3]*a+pixel[x*4+3]*b) >> 8;
+	#define FINISHBLEND(blend2, blend1) \
+		for (x = startx;x + 2 <= endx;x += 2) \
+		{ \
+			__m128i src, dst; \
+			switch (*(const unsigned short*)&pixelmask[x]) \
+			{ \
+			case 0x0101: \
+				src = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ini[x]), _mm_setzero_si128()); \
+				dst = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixeli[x]), _mm_setzero_si128()); \
+				blend2; \
+				_mm_storel_epi64((__m128i *)&pixeli[x], _mm_packus_epi16(dst, dst)); \
+				continue; \
+			case 0x0100: \
+				src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x+1]), _mm_setzero_si128()); \
+				dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x+1]), _mm_setzero_si128()); \
+				blend1; \
+				pixeli[x+1] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst));  \
+				continue; \
+			case 0x0001: \
+				src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x]), _mm_setzero_si128()); \
+				dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x]), _mm_setzero_si128()); \
+				blend1; \
+				pixeli[x] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst)); \
+				continue; \
+			} \
+			break; \
+		} \
+		for(;x < endx; x++) \
+		{ \
+			__m128i src, dst; \
+			if (!pixelmask[x]) \
+				continue; \
+			src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x]), _mm_setzero_si128()); \
+			dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x]), _mm_setzero_si128()); \
+			blend1; \
+			pixeli[x] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst)); \
 		}
+
+		FINISHBLEND({
+			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
+		}, {
+			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
+		});
 		break;
 	case DPSOFTRAST_BLENDMODE_ADDALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4ub[x*4+3];
-			d[0] = (((in4ub[x*4+0]*a)>>8)+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (((in4ub[x*4+1]*a)>>8)+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (((in4ub[x*4+2]*a)>>8)+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (((in4ub[x*4+3]*a)>>8)+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
+		FINISHBLEND({
+			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+		}, {
+			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+		});
 		break;
 	case DPSOFTRAST_BLENDMODE_ADD:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (in4ub[x*4+0]+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (in4ub[x*4+1]+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (in4ub[x*4+2]+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (in4ub[x*4+3]+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
+		FINISHBLEND({ dst = _mm_add_epi16(src, dst); }, { dst = _mm_add_epi16(src, dst); });
 		break;
 	case DPSOFTRAST_BLENDMODE_INVMOD:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			pixel[x*4+0] = ((255-in4ub[x*4+0])*pixel[x*4+0])>>8;
-			pixel[x*4+1] = ((255-in4ub[x*4+1])*pixel[x*4+1])>>8;
-			pixel[x*4+2] = ((255-in4ub[x*4+2])*pixel[x*4+2])>>8;
-			pixel[x*4+3] = ((255-in4ub[x*4+3])*pixel[x*4+3])>>8;
-		}
+		FINISHBLEND({
+			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
+		}, {
+			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
+		});
 		break;
 	case DPSOFTRAST_BLENDMODE_MUL:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			pixel[x*4+0] = (in4ub[x*4+0]*pixel[x*4+0])>>8;
-			pixel[x*4+1] = (in4ub[x*4+1]*pixel[x*4+1])>>8;
-			pixel[x*4+2] = (in4ub[x*4+2]*pixel[x*4+2])>>8;
-			pixel[x*4+3] = (in4ub[x*4+3]*pixel[x*4+3])>>8;
-		}
+		FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); });
 		break;
 	case DPSOFTRAST_BLENDMODE_MUL2:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (in4ub[x*4+0]*pixel[x*4+0])>>7;if (d[0] > 255) d[0] = 255;
-			d[1] = (in4ub[x*4+1]*pixel[x*4+1])>>7;if (d[1] > 255) d[1] = 255;
-			d[2] = (in4ub[x*4+2]*pixel[x*4+2])>>7;if (d[2] > 255) d[2] = 255;
-			d[3] = (in4ub[x*4+3]*pixel[x*4+3])>>7;if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
+		FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); });
 		break;
 	case DPSOFTRAST_BLENDMODE_SUBALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4ub[x*4+3];
-			d[0] = pixel[x*4+0]-((in4ub[x*4+0]*a)>>8);if (d[0] < 0) d[0] = 0;
-			d[1] = pixel[x*4+1]-((in4ub[x*4+1]*a)>>8);if (d[1] < 0) d[1] = 0;
-			d[2] = pixel[x*4+2]-((in4ub[x*4+2]*a)>>8);if (d[2] < 0) d[2] = 0;
-			d[3] = pixel[x*4+3]-((in4ub[x*4+3]*a)>>8);if (d[3] < 0) d[3] = 0;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
+		FINISHBLEND({
+			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+		}, {
+			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+		});
 		break;
 	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			b = 255 - in4ub[x*4+3];
-			d[0] = in4ub[x*4+0]+((pixel[x*4+0]*b)>>8);if (d[0] > 255) d[0] = 255;
-			d[1] = in4ub[x*4+1]+((pixel[x*4+1]*b)>>8);if (d[1] > 255) d[1] = 255;
-			d[2] = in4ub[x*4+2]+((pixel[x*4+2]*b)>>8);if (d[2] > 255) d[2] = 255;
-			d[3] = in4ub[x*4+3]+((pixel[x*4+3]*b)>>8);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
+		FINISHBLEND({
+			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
+		}, {
+			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+			dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
+		});
 		break;
 	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_Texture2DVarying(const DPSOFTRAST_State_Draw_Span * RESTRICT span, float * RESTRICT out4f, int texunitindex, int arrayindex, const float * RESTRICT zf)
@@ -2060,164 +2051,197 @@ void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Draw_Span * RES
 
 void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, int arrayindex, const float *zf)
 {
+#ifdef SSE2_PRESENT
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
-	float data[4];
-	float slope[4];
-	float z;
-	data[2] = span->data[0][arrayindex][0];
-	data[1] = span->data[0][arrayindex][1];
-	data[0] = span->data[0][arrayindex][2];
-	data[3] = span->data[0][arrayindex][3];
-	slope[2] = span->data[1][arrayindex][0];
-	slope[1] = span->data[1][arrayindex][1];
-	slope[0] = span->data[1][arrayindex][2];
-	slope[3] = span->data[1][arrayindex][3];
-	for (x = startx;x < endx;x++)
+	__m128 data = _mm_load_ps(span->data[0][arrayindex]), slope = _mm_load_ps(span->data[1][arrayindex]);
+	data = _mm_shuffle_ps(data, data, _MM_SHUFFLE(3, 0, 1, 2));
+	slope = _mm_shuffle_ps(slope, slope, _MM_SHUFFLE(3, 0, 1, 2));
+	data = _mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx)));
+	data = _mm_mul_ps(data, _mm_set1_ps(256.0f));
+	slope = _mm_mul_ps(slope, _mm_set1_ps(256.0f));
+	for (x = startx;x+2 <= endx;x += 2, data = _mm_add_ps(data, slope))
 	{
-		z = zf[x];
-		out4ub[x*4+0] = (int)(in4ub[x*4+0] * (data[0] + slope[0]*x) * z);
-		out4ub[x*4+1] = (int)(in4ub[x*4+1] * (data[1] + slope[1]*x) * z);
-		out4ub[x*4+2] = (int)(in4ub[x*4+2] * (data[2] + slope[2]*x) * z);
-		out4ub[x*4+3] = (int)(in4ub[x*4+3] * (data[3] + slope[3]*x) * z);
+		__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_loadl_epi64((const __m128i *)&in4ub[x*4]));
+		__m128i mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x]))), mod2;
+		data = _mm_add_ps(data, slope);
+		mod2 = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x+1])));
+		mod = _mm_unpacklo_epi64(_mm_packs_epi32(mod, mod), _mm_packs_epi32(mod2, mod2));
+		pix = _mm_mulhi_epu16(pix, mod);
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
 	}
+	for (;x < endx;x++, data = _mm_add_ps(data, slope))
+	{
+		__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&in4ub[x*4]));
+		__m128i mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x])));
+		mod = _mm_packs_epi32(mod, mod);
+		pix = _mm_mulhi_epu16(pix, mod);
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, int arrayindex, const float *zf)
 {
+#ifdef SSE2_PRESENT
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
-	float data[4];
-	float slope[4];
-	float z;
-	data[2] = span->data[0][arrayindex][0]*255.0f;
-	data[1] = span->data[0][arrayindex][1]*255.0f;
-	data[0] = span->data[0][arrayindex][2]*255.0f;
-	data[3] = span->data[0][arrayindex][3]*255.0f;
-	slope[2] = span->data[1][arrayindex][0]*255.0f;
-	slope[1] = span->data[1][arrayindex][1]*255.0f;
-	slope[0] = span->data[1][arrayindex][2]*255.0f;
-	slope[3] = span->data[1][arrayindex][3]*255.0f;
-	for (x = startx;x < endx;x++)
+	__m128 data = _mm_load_ps(span->data[0][arrayindex]), slope = _mm_load_ps(span->data[1][arrayindex]);
+	data = _mm_shuffle_ps(data, data, _MM_SHUFFLE(3, 0, 1, 2));
+	slope = _mm_shuffle_ps(slope, slope, _MM_SHUFFLE(3, 0, 1, 2));
+	data = _mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx)));
+	data = _mm_mul_ps(data, _mm_set1_ps(255.0f));
+	slope = _mm_mul_ps(slope, _mm_set1_ps(255.0f));
+	for (x = startx;x+2 <= endx;x += 2, data = _mm_add_ps(data, slope))
 	{
-		z = zf[x];
-		out4ub[x*4+0] = (int)((data[0] + slope[0]*x) * z);
-		out4ub[x*4+1] = (int)((data[1] + slope[1]*x) * z);
-		out4ub[x*4+2] = (int)((data[2] + slope[2]*x) * z);
-		out4ub[x*4+3] = (int)((data[3] + slope[3]*x) * z);
+		__m128i pix = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x]))), pix2;
+		data = _mm_add_ps(data, slope);
+		pix2 = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x+1])));
+		pix = _mm_unpacklo_epi64(_mm_packs_epi32(pix, pix), _mm_packs_epi32(pix2, pix2));
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
 	}
+	for (;x < endx;x++, data = _mm_add_ps(data, slope))
+	{
+		__m128i pix = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x])));
+		pix = _mm_packs_epi32(pix, pix);
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub, const float *subcolor)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	int c[4], localcolor[4];
-	localcolor[2] = (int)(subcolor[0] * 255.0f);
-	localcolor[1] = (int)(subcolor[1] * 255.0f);
-	localcolor[0] = (int)(subcolor[2] * 255.0f);
-	localcolor[3] = (int)(subcolor[3] * 255.0f);
-	for (x = startx;x < endx;x++)
+	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(subcolor), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	localcolor = _mm_shuffle_epi32(_mm_packs_epi32(localcolor, localcolor), _MM_SHUFFLE(1, 0, 1, 0));
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		c[0] = inb4ub[x*4+0] - localcolor[0];if (c[0] < 0) c[0] = 0;
-		c[1] = inb4ub[x*4+1] - localcolor[1];if (c[1] < 0) c[1] = 0;
-		c[2] = inb4ub[x*4+2] - localcolor[2];if (c[2] < 0) c[2] = 0;
-		c[3] = inb4ub[x*4+3] - localcolor[3];if (c[3] < 0) c[3] = 0;
-		c[0] += ina4ub[x*4+0];if (c[0] > 255) c[0] = 255;
-		c[1] += ina4ub[x*4+1];if (c[1] > 255) c[1] = 255;
-		c[2] += ina4ub[x*4+2];if (c[2] > 255) c[2] = 255;
-		c[3] += ina4ub[x*4+3];if (c[3] > 255) c[3] = 255;
-		out4ub[x*4+0] = c[0];
-		out4ub[x*4+1] = c[1];
-		out4ub[x*4+2] = c[2];
-		out4ub[x*4+3] = c[3];
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&inb4ub[x*4]), _mm_setzero_si128());
+		pix1 = _mm_add_epi16(pix1, _mm_sub_epi16(pix2, localcolor));
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
+	if(x < endx)
+	{
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
+		pix1 = _mm_add_epi16(pix1, _mm_sub_epi16(pix2, localcolor));
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	for (x = startx;x < endx;x++)
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		out4ub[x*4+0] = (ina4ub[x*4+0] * inb4ub[x*4+0])>>8;
-		out4ub[x*4+1] = (ina4ub[x*4+1] * inb4ub[x*4+1])>>8;
-		out4ub[x*4+2] = (ina4ub[x*4+2] * inb4ub[x*4+2])>>8;
-		out4ub[x*4+3] = (ina4ub[x*4+3] * inb4ub[x*4+3])>>8;
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_loadl_epi64((const __m128i *)&inb4ub[x*4]));
+		pix1 = _mm_mulhi_epu16(pix1, pix2);
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
+	if(x < endx)
+	{
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]));
+		pix1 = _mm_mulhi_epu16(pix1, pix2);
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_AddBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	int d[4];
-	for (x = startx;x < endx;x++)
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		d[0] = ina4ub[x*4+0] + inb4ub[x*4+0];if (d[0] > 255) d[0] = 255;
-		d[1] = ina4ub[x*4+1] + inb4ub[x*4+1];if (d[1] > 255) d[1] = 255;
-		d[2] = ina4ub[x*4+2] + inb4ub[x*4+2];if (d[2] > 255) d[2] = 255;
-		d[3] = ina4ub[x*4+3] + inb4ub[x*4+3];if (d[3] > 255) d[3] = 255;
-		out4ub[x*4+0] = d[0];
-		out4ub[x*4+1] = d[1];
-		out4ub[x*4+2] = d[2];
-		out4ub[x*4+3] = d[3];
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&inb4ub[x*4]), _mm_setzero_si128());
+		pix1 = _mm_add_epi16(pix1, pix2);
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
+	if(x < endx)
+	{
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
+		pix1 = _mm_add_epi16(pix1, pix2);
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_TintedAddBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub, const float *inbtintbgra)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	int d[4];
-	int b[4];
-	b[0] = (int)(inbtintbgra[0] * 256.0f);
-	b[1] = (int)(inbtintbgra[1] * 256.0f);
-	b[2] = (int)(inbtintbgra[2] * 256.0f);
-	b[3] = (int)(inbtintbgra[3] * 256.0f);
-	for (x = startx;x < endx;x++)
+	__m128i tint = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(inbtintbgra), _mm_set1_ps(256.0f)));
+	tint = _mm_shuffle_epi32(_mm_packs_epi32(tint, tint), _MM_SHUFFLE(1, 0, 1, 0));
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		d[0] = ina4ub[x*4+0] + ((inb4ub[x*4+0]*b[0])>>8);if (d[0] > 255) d[0] = 255;
-		d[1] = ina4ub[x*4+1] + ((inb4ub[x*4+1]*b[1])>>8);if (d[1] > 255) d[1] = 255;
-		d[2] = ina4ub[x*4+2] + ((inb4ub[x*4+2]*b[2])>>8);if (d[2] > 255) d[2] = 255;
-		d[3] = ina4ub[x*4+3] + ((inb4ub[x*4+3]*b[3])>>8);if (d[3] > 255) d[3] = 255;
-		out4ub[x*4+0] = d[0];
-		out4ub[x*4+1] = d[1];
-		out4ub[x*4+2] = d[2];
-		out4ub[x*4+3] = d[3];
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_loadl_epi64((const __m128i *)&inb4ub[x*4]));
+		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epu16(tint, pix2));
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
+	if(x < endx)
+	{
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]));
+		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epu16(tint, pix2));
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_MixBuffersBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	int a, b;
-	for (x = startx;x < endx;x++)
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		a = 256 - inb4ub[x*4+3];
-		b = inb4ub[x*4+3];
-		out4ub[x*4+0] = (ina4ub[x*4+0] * a + inb4ub[x*4+0] * b)>>8;
-		out4ub[x*4+1] = (ina4ub[x*4+1] * a + inb4ub[x*4+1] * b)>>8;
-		out4ub[x*4+2] = (ina4ub[x*4+2] * a + inb4ub[x*4+2] * b)>>8;
-		out4ub[x*4+3] = (ina4ub[x*4+3] * a + inb4ub[x*4+3] * b)>>8;
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&inb4ub[x*4]), _mm_setzero_si128());
+		__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(pix2, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 4), _mm_slli_epi16(blend, 4)));
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
+	if(x < endx)
+	{
+		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
+		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
+		__m128i blend = _mm_shufflelo_epi16(pix2, _MM_SHUFFLE(3, 3, 3, 3));
+		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 4), _mm_slli_epi16(blend, 4)));
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
+	}
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Draw_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, const float *color)
 {
+#ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
-	int localcolor[4], ilerp, lerp;
-	localcolor[2] = (int)(color[0]*255.0f);
-	localcolor[1] = (int)(color[1]*255.0f);
-	localcolor[0] = (int)(color[2]*255.0f);
-	localcolor[3] = (int)(color[3]*255.0f);
-	ilerp = 256 - localcolor[3];
-	lerp = localcolor[3];
-	for (x = startx;x < endx;x++)
+	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(color), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2)), blend;
+	localcolor = _mm_shuffle_epi32(_mm_packs_epi32(localcolor, localcolor), _MM_SHUFFLE(1, 0, 1, 0));
+	blend = _mm_slli_epi16(_mm_shufflehi_epi16(_mm_shufflelo_epi16(localcolor, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3)), 4);
+	for (x = startx;x+2 <= endx;x+=2)
 	{
-		out4ub[x*4+0] = (in4ub[x*4+0] * ilerp + localcolor[0] * lerp)>>8;
-		out4ub[x*4+1] = (in4ub[x*4+1] * ilerp + localcolor[1] * lerp)>>8;
-		out4ub[x*4+2] = (in4ub[x*4+2] * ilerp + localcolor[2] * lerp)>>8;
-		out4ub[x*4+3] = (in4ub[x*4+3] * ilerp + localcolor[3] * lerp)>>8;
+		__m128i pix = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&in4ub[x*4]), _mm_setzero_si128());
+		pix = _mm_add_epi16(pix, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(localcolor, pix), 4), blend));
+		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
 	}
+	if(x < endx)
+	{
+		__m128i pix = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&in4ub[x*4]), _mm_setzero_si128());
+		pix = _mm_add_epi16(pix, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(localcolor, pix), 4), blend));
+		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+	}
+#endif
 }
 
 
