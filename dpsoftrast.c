@@ -256,7 +256,7 @@ void DPSOFTRAST_RecalcFB(void)
 	dpsoftrast.fb_viewportscale[1] = 0.5f * dpsoftrast.user.viewport[2];
 	dpsoftrast.fb_viewportscale[2] = -0.5f * dpsoftrast.user.viewport[3];
 	dpsoftrast.fb_viewportscale[3] = 0.5f;
-	dpsoftrast.fb_viewportscale[0] = 0.0f;
+	dpsoftrast.fb_viewportscale[0] = 1.0f;
 }
 
 void DPSOFTRAST_RecalcDepthFunc(void)
@@ -1116,9 +1116,9 @@ void DPSOFTRAST_Array_Copy(float *out4f, const float *in4f, int numitems)
 static __m128 DPSOFTRAST_Draw_ProjectVertex(__m128 v)
 {
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
-	__m128 w = _mm_rcp_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)));
-	v = _mm_add_ps(viewportcenter, _mm_mul_ps(_mm_mul_ps(viewportscale, w), _mm_shuffle_ps(w, w, _MM_SHUFFLE(0, 0, 0, 0))));
-	v = _mm_move_ss(v, w);
+	__m128 w = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 3, 3, 3));
+	v = _mm_move_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set1_ps(1.0f));
+	v = _mm_add_ps(viewportcenter, _mm_div_ps(_mm_mul_ps(viewportscale, v), w));
 	v = _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 3, 2, 1));
 	return v;
 }
@@ -1136,9 +1136,9 @@ void DPSOFTRAST_Draw_ProjectVertices(float *out4f, const float *in4f, int numite
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	for (i = 0;i < numitems;i++)
 	{
-		__m128 v = _mm_load_ps(in4f), w = _mm_rcp_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)));
-		v = _mm_add_ps(viewportcenter, _mm_mul_ps(_mm_mul_ps(viewportscale, w), _mm_shuffle_ps(w, w, _MM_SHUFFLE(0, 0, 0, 0))));
-		v = _mm_move_ss(v, w);
+		__m128 v = _mm_load_ps(in4f), w = _mm_shuffle_ps(v, v, _MM_SHUFFLE(3, 3, 3, 3));
+		v = _mm_move_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set1_ps(1.0f));
+		v = _mm_add_ps(viewportcenter, _mm_div_ps(_mm_mul_ps(viewportscale, v), w));
 		_mm_store_ps(out4f, _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 3, 2, 1)));
 		in4f += 4;
 		out4f += 4;
@@ -3730,7 +3730,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			screenycc = _mm_min_epi16(screenycc, _mm_shuffle_epi32(screenycc, _MM_SHUFFLE(2, 3, 0, 1)));
 			nexty = _mm_extract_epi16(screenycc, 0);	
 			if(nexty >= endy) nexty = endy-1;
-			if (_mm_ucomigt_ss(_mm_max_ps(screen[edge0n], screen[edge0p]), _mm_min_ps(screen[edge1n], screen[edge1p])))
+			if (_mm_ucomigt_ss(_mm_max_ss(screen[edge0n], screen[edge0p]), _mm_min_ss(screen[edge1n], screen[edge1p])))
 			{
 				int tmp = edge0n;
 				edge0n = edge1n;
@@ -3740,11 +3740,11 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				edge1p = tmp;
 			} 	
 			edge0lerp = _mm_shuffle_ps(screen[edge0p], screen[edge0p], _MM_SHUFFLE(1, 1, 1, 1));
-			edge0scale = _mm_rcp_ss(_mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0lerp));
+			edge0scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0lerp));
 			edge0scale = _mm_shuffle_ps(edge0scale, edge0scale, _MM_SHUFFLE(0, 0, 0, 0));
 			edge0lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge0lerp), edge0scale);
 			edge1lerp = _mm_shuffle_ps(screen[edge1p], screen[edge1p], _MM_SHUFFLE(1, 1, 1, 1));
-   			edge1scale = _mm_rcp_ss(_mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1lerp));
+   			edge1scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1lerp));
 			edge1scale = _mm_shuffle_ps(edge1scale, edge1scale, _MM_SHUFFLE(0, 0, 0, 0));
 			edge1lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge1lerp), edge1scale);
 			for(; y <= nexty; y++, edge0lerp = _mm_add_ps(edge0lerp, edge0scale), edge1lerp = _mm_add_ps(edge1lerp, edge1scale))
@@ -3767,7 +3767,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				_mm_store_ss(&endxf, data1);
 				if (startxf > startx || endxf < endx-1) { printf("%s:%i X wrong (%i to %i is outside %f to %f)\n", __FILE__, __LINE__, startx, endx, startxf, endxf); }
 #endif
-				spanilength = _mm_rcp_ss(_mm_sub_ss(data1, data0));
+				spanilength = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(data1, data0));
 				spanilength = _mm_shuffle_ps(spanilength, spanilength, _MM_SHUFFLE(0, 0, 0, 0));
 				startxlerp = _mm_sub_ps(_mm_set1_ps(startx), _mm_shuffle_ps(data0, data0, _MM_SHUFFLE(0, 0, 0, 0)));
 				span = &dpsoftrast.draw.spanqueue[dpsoftrast.draw.numspans++];
