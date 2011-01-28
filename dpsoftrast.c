@@ -3642,7 +3642,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		// adjust texture LOD by texture density, in the simplest way possible...
 		mipedgescale = _mm_sub_ps(_mm_shuffle_ps(screen[0], screen[2], _MM_SHUFFLE(1, 0, 1, 0)), _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(1, 0, 1, 0)));
 		mipedgescale = _mm_mul_ps(mipedgescale, mipedgescale);
-		mipedgescale = _mm_rcp_ps(_mm_add_ps(mipedgescale, _mm_shuffle_ps(mipedgescale, mipedgescale, _MM_SHUFFLE(2, 3, 0, 1))));
+		mipedgescale = _mm_div_ps(_mm_set1_ps(1.0f), _mm_add_ps(mipedgescale, _mm_shuffle_ps(mipedgescale, mipedgescale, _MM_SHUFFLE(2, 3, 0, 1))));
 		for (j = 0;j < DPSOFTRAST_MAXTEXTUREUNITS;j++)
 		{
 			texture = dpsoftrast.texbound[j];
