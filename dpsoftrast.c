@@ -3752,7 +3752,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		for (y = starty+1;y < endy;)
 		{
 			int nexty = -1;
-			__m128 edge0lerp, edge1lerp, edge0scale, edge1scale;
+			__m128 edge0offset, edge1offset, edge0scale, edge1scale, data[DPSOFTRAST_ARRAY_TOTAL+1][2], slope[DPSOFTRAST_ARRAY_TOTAL+1][2];
 			__m128i screenycc = _mm_cmpgt_epi32(_mm_set1_epi32(y), screeny);
 			int screenymask = _mm_movemask_epi8(screenycc);
 			if (numpoints == 4)
@@ -3807,26 +3807,52 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				edge0p = edge1p;
 				edge1p = tmp;
 			} 	
-			edge0lerp = _mm_shuffle_ps(screen[edge0p], screen[edge0p], _MM_SHUFFLE(1, 1, 1, 1));
-			edge0scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0lerp));
+			edge0offset = _mm_shuffle_ps(screen[edge0p], screen[edge0p], _MM_SHUFFLE(1, 1, 1, 1));
+			edge0scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge0n], screen[edge0n], _MM_SHUFFLE(1, 1, 1, 1)), edge0offset));
 			edge0scale = _mm_shuffle_ps(edge0scale, edge0scale, _MM_SHUFFLE(0, 0, 0, 0));
-			edge0lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge0lerp), edge0scale);
-			edge1lerp = _mm_shuffle_ps(screen[edge1p], screen[edge1p], _MM_SHUFFLE(1, 1, 1, 1));
-   			edge1scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1lerp));
+			edge0offset = _mm_sub_ps(_mm_set1_ps(y), edge0offset);
+			edge1offset = _mm_shuffle_ps(screen[edge1p], screen[edge1p], _MM_SHUFFLE(1, 1, 1, 1));
+   			edge1scale = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(_mm_shuffle_ps(screen[edge1n], screen[edge1n], _MM_SHUFFLE(1, 1, 1, 1)), edge1offset));
+			edge1offset = _mm_sub_ps(_mm_set1_ps(y), edge1offset);
 			edge1scale = _mm_shuffle_ps(edge1scale, edge1scale, _MM_SHUFFLE(0, 0, 0, 0));
-			edge1lerp = _mm_mul_ps(_mm_sub_ps(_mm_set1_ps(y), edge1lerp), edge1scale);
-			for(; y <= nexty; y++, edge0lerp = _mm_add_ps(edge0lerp, edge0scale), edge1lerp = _mm_add_ps(edge1lerp, edge1scale))
+			j = DPSOFTRAST_ARRAY_TOTAL;
+			slope[j][0] = _mm_mul_ps(_mm_sub_ps(screen[edge0n], screen[edge0p]), edge0scale);
+			slope[j][1] = _mm_mul_ps(_mm_sub_ps(screen[edge1n], screen[edge1p]), edge1scale);
+			data[j][0] = _mm_add_ps(_mm_mul_ps(slope[j][0], edge0offset), screen[edge0p]);
+			data[j][1] = _mm_add_ps(_mm_mul_ps(slope[j][1], edge1offset), screen[edge1p]);
+			data[j][1] = _mm_sub_ps(data[j][1], data[j][0]);
+			slope[j][1] = _mm_sub_ps(slope[j][1], slope[j][0]);
+			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
+			{
+				//if (arraymask[j])
+				{
+					slope[j][0] = _mm_mul_ps(_mm_sub_ps(proj[j][edge0n], proj[j][edge0p]), edge0scale);
+					slope[j][1] = _mm_mul_ps(_mm_sub_ps(proj[j][edge1n], proj[j][edge1p]), edge1scale);
+					data[j][0] = _mm_add_ps(_mm_mul_ps(slope[j][0], edge0offset), proj[j][edge0p]);
+					data[j][1] = _mm_add_ps(_mm_mul_ps(slope[j][1], edge1offset), proj[j][edge1p]);
+					data[j][1] = _mm_sub_ps(data[j][1], data[j][0]);
+					slope[j][1] = _mm_sub_ps(slope[j][1], slope[j][0]);
+				}
+			}
+			goto firstspan;
+			for(; y <= nexty; y++)
 			{
 				__m128 data0, data1, spanilength, startxlerp;
-#if 0
-				if (_mm_ucomilt_ss(edge0lerp, _mm_setzero_ps()) || _mm_ucomilt_ss(edge1lerp, _mm_setzero_ps()) ||
-					_mm_ucomigt_ss(edge0lerp, _mm_set1_ps(1)) || _mm_ucomigt_ss(edge1lerp, _mm_set1_ps(1)))
-					continue;
-#endif
-				data0 = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(screen[edge0n], screen[edge0p]), edge0lerp), screen[edge0p]);
-				data1 = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(screen[edge1n], screen[edge1p]), edge1lerp), screen[edge1p]);
-				startx = _mm_cvtss_si32(_mm_add_ss(data0, _mm_set1_ps(0.5f)));
-				endx = _mm_cvtss_si32(_mm_add_ss(data1, _mm_set1_ps(0.5f)));
+				j = DPSOFTRAST_ARRAY_TOTAL;
+				data[j][0] = _mm_add_ps(data[j][0], slope[j][0]);
+				data[j][1] = _mm_add_ps(data[j][1], slope[j][1]);
+				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
+				{
+					//if (arraymask[j])
+					{
+						data[j][0] = _mm_add_ps(data[j][0], slope[j][0]);
+						data[j][1] = _mm_add_ps(data[j][1], slope[j][1]);
+					}
+				}
+
+			firstspan:
+				startx = _mm_cvtss_si32(_mm_add_ss(data[DPSOFTRAST_ARRAY_TOTAL][0], _mm_set1_ps(0.5f)));
+				endx = _mm_cvtss_si32(_mm_add_ss(_mm_add_ss(data[DPSOFTRAST_ARRAY_TOTAL][0], data[DPSOFTRAST_ARRAY_TOTAL][1]), _mm_set1_ps(0.5f)));
 				if (startx < 0) startx = 0;
 				if (endx > width) endx = width;
 				if (startx >= endx) continue;
@@ -3835,26 +3861,25 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				_mm_store_ss(&endxf, data1);
 				if (startxf > startx || endxf < endx-1) { printf("%s:%i X wrong (%i to %i is outside %f to %f)\n", __FILE__, __LINE__, startx, endx, startxf, endxf); }
 #endif
-				spanilength = _mm_div_ss(_mm_set1_ps(1.0f), _mm_sub_ss(data1, data0));
+				spanilength = _mm_div_ss(_mm_set1_ps(1.0f), data[DPSOFTRAST_ARRAY_TOTAL][1]);
 				spanilength = _mm_shuffle_ps(spanilength, spanilength, _MM_SHUFFLE(0, 0, 0, 0));
-				startxlerp = _mm_sub_ps(_mm_set1_ps(startx), _mm_shuffle_ps(data0, data0, _MM_SHUFFLE(0, 0, 0, 0)));
+				startxlerp = _mm_sub_ss(_mm_cvtsi32_ss(_mm_setzero_ps(), startx), data[DPSOFTRAST_ARRAY_TOTAL][0]);
+				startxlerp = _mm_shuffle_ps(startxlerp, startxlerp, _MM_SHUFFLE(0, 0, 0, 0));
 				span = &dpsoftrast.draw.spanqueue[dpsoftrast.draw.numspans++];
 				memcpy(span->mip, mip, sizeof(span->mip));
 				span->start = y * width + startx;
 				span->length = endx - startx;
 				j = DPSOFTRAST_ARRAY_TOTAL;
-				data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilength);
-				data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerp));
+				data1 = _mm_mul_ps(data[j][1], spanilength);
+				data0 = _mm_add_ps(data[j][0], _mm_mul_ps(data1, startxlerp));
 				_mm_store_ps(span->data[0][j], data0);
 				_mm_store_ps(span->data[1][j], data1);
 				for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)
 				{
 					//if (arraymask[j])
 					{
-						data0 = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(proj[j][edge0n], proj[j][edge0p]), edge0lerp), proj[j][edge0p]);
-						data1 = _mm_add_ps(_mm_mul_ps(_mm_sub_ps(proj[j][edge1n], proj[j][edge1p]), edge1lerp), proj[j][edge1p]);
-						data1 = _mm_mul_ps(_mm_sub_ps(data1, data0), spanilength);
-						data0 = _mm_add_ps(data0, _mm_mul_ps(data1, startxlerp));
+						data1 = _mm_mul_ps(data[j][1], spanilength);
+						data0 = _mm_add_ps(data[j][0], _mm_mul_ps(data1, startxlerp));
 						_mm_store_ps(span->data[0][j], data0);
 						_mm_store_ps(span->data[1][j], data1);
 					}
