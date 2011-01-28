@@ -904,10 +904,10 @@ void DPSOFTRAST_Uniform4fvARB(DPSOFTRAST_UNIFORM index, const float *v)
 	dpsoftrast.uniform4f[index*4+2] = v[2];
 	dpsoftrast.uniform4f[index*4+3] = v[3];
 }
-void DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM index, int arraysize, int transpose, const float *v)
+void DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM uniform, int arraysize, int transpose, const float *v)
 {
-	int i;
-	for (i = 0;i < arraysize;i++, index += 4, v += 16)
+	int i, index;
+	for (i = 0, index = (int)uniform;i < arraysize;i++, index += 4, v += 16)
 	{
 		if (transpose)
 		{
