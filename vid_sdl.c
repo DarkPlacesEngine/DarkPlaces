@@ -1192,7 +1192,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid.support.arb_draw_buffers = true;
 	vid.support.arb_occlusion_query = true;
 	vid.support.arb_shadow = true;
-	vid.support.arb_texture_compression = true;
+	//vid.support.arb_texture_compression = true;
 	vid.support.arb_texture_cube_map = true;
 	vid.support.arb_texture_non_power_of_two = false;
 	vid.support.arb_vertex_buffer_object = true;
@@ -1200,7 +1200,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid.support.ext_draw_range_elements = true;
 	vid.support.ext_framebuffer_object = true;
 	vid.support.ext_texture_3d = true;
-	vid.support.ext_texture_compression_s3tc = true;
+	//vid.support.ext_texture_compression_s3tc = true;
 	vid.support.ext_texture_filter_anisotropic = true;
 	vid.support.ati_separate_stencil = true;
 
