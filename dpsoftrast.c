@@ -3525,6 +3525,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS];
 	__m128 mipedgescale;
 	float clipdist[4];
+	__m128 clipfrac[4];
 	__m128 clipped[DPSOFTRAST_ARRAY_TOTAL][4];
 	__m128 screen[4];
 	__m128 proj[DPSOFTRAST_ARRAY_TOTAL][4];
@@ -3554,14 +3555,13 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			e[2] = i*3+2;
 		}
 
-#define SKIPBACKFACE { \
-			__m128 triangleedge[2], triangleorigin, trianglenormal; \
-			triangleorigin = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4]); \
-			triangleedge[0] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4]), triangleorigin); \
-			triangleedge[1] = _mm_sub_ps(_mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4]), triangleorigin); \
+#define SKIPBACKFACE \
+		if(cullface != GL_NONE) \
+		{ \
+			__m128 triangleedge[2] = { _mm_sub_ps(screen[0], screen[1]), _mm_sub_ps(screen[2], screen[1]) }; \
 			/* store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar */ \
-			trianglenormal = _mm_sub_ss(_mm_mul_ss(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))), \
-										_mm_mul_ss(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1])); \
+			__m128 trianglenormal = _mm_sub_ss(_mm_mul_ss(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))), \
+											_mm_mul_ss(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1])); \
 			/* apply current cullface mode (this culls many triangles) */ \
 			switch(cullface) \
 			{ \
@@ -3582,95 +3582,100 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			//trianglenormal[1] = triangleedge[0][2] * triangleedge[1][0] - triangleedge[0][0] * triangleedge[1][2];
 
 			// macros for clipping vertices
-#define CLIPPEDVERTEXLERP(k,p1,p2) { \
-			__m128 frac = _mm_set1_ps(clipdist[p1] / (clipdist[p1] - clipdist[p2]));\
-			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)\
+#define CLIPPEDVERTEXLERP(k,p1, p2) \
+			clipfrac[k] = _mm_set1_ps(clipdist[p1] / (clipdist[p1] - clipdist[p2])); \
+			{ \
+				__m128 v1 = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[p1]*4]), v2 = _mm_load_ps(&dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[p2]*4]); \
+				clipped[DPSOFTRAST_ARRAY_POSITION][k] = _mm_add_ps(v1, _mm_mul_ps(_mm_sub_ps(v2, v1), clipfrac[k])); \
+			} \
+			screen[k] = DPSOFTRAST_Draw_ProjectVertex(clipped[DPSOFTRAST_ARRAY_POSITION][k]);
+#define CLIPPEDATTRIBSLERP(k,p1,p2) \
+			for (j = DPSOFTRAST_ARRAY_POSITION+1;j < DPSOFTRAST_ARRAY_TOTAL;j++)\
 			{\
 				/*if (arraymask[j])*/\
 				{\
 					__m128 v1 = _mm_load_ps(&dpsoftrast.draw.post_array4f[j][e[p1]*4]), v2 = _mm_load_ps(&dpsoftrast.draw.post_array4f[j][e[p2]*4]); \
-					clipped[j][k] = _mm_add_ps(v1, _mm_mul_ps(_mm_sub_ps(v2, v1), frac)); \
+					clipped[j][k] = _mm_add_ps(v1, _mm_mul_ps(_mm_sub_ps(v2, v1), clipfrac[k])); \
 				}\
-			}\
-			screen[k] = DPSOFTRAST_Draw_ProjectVertex(clipped[DPSOFTRAST_ARRAY_POSITION][k]); \
-		}
+			}
 #define CLIPPEDVERTEXCOPY(k,p1) \
+			screen[k] = _mm_load_ps(&dpsoftrast.draw.screencoord4f[e[p1]*4]);
+#define CLIPPEDATTRIBSCOPY(k,p1) \
 			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL;j++)\
 			{\
 				/*if (arraymask[j])*/\
 				{\
 					clipped[j][k] = _mm_load_ps(&dpsoftrast.draw.post_array4f[j][e[p1]*4]); \
 				}\
-			}\
-			screen[k] = _mm_load_ps(&dpsoftrast.draw.screencoord4f[e[p1]*4]);
+			}
 
 		// calculate distance from nearplane
-		clipdist[0] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+2] + 1.0f;
-		clipdist[1] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+2] + 1.0f;
-		clipdist[2] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+2] + 1.0f;
+		clipdist[0] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+2] + dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[0]*4+3];
+		clipdist[1] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+2] + dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[1]*4+3];
+		clipdist[2] = dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+2] + dpsoftrast.draw.post_array4f[DPSOFTRAST_ARRAY_POSITION][e[2]*4+3];
 		if (clipdist[0] >= 0.0f)
 		{
-			SKIPBACKFACE;
 			if (clipdist[1] >= 0.0f)
 			{
-				CLIPPEDVERTEXCOPY(0,0);
-				CLIPPEDVERTEXCOPY(1,1);
 				if (clipdist[2] >= 0.0f)
 				{
 					// triangle is entirely in front of nearplane
-					CLIPPEDVERTEXCOPY(2,2);
+					CLIPPEDVERTEXCOPY(0,0); CLIPPEDVERTEXCOPY(1,1); CLIPPEDVERTEXCOPY(2,2);
 					numpoints = 3;
+					SKIPBACKFACE;
+					CLIPPEDATTRIBSCOPY(0,0); CLIPPEDATTRIBSCOPY(1,1); CLIPPEDATTRIBSCOPY(2,2);
 				}
 				else
 				{
-					CLIPPEDVERTEXLERP(2,1,2);
-					CLIPPEDVERTEXLERP(3,2,0);
+					CLIPPEDVERTEXCOPY(0,0); CLIPPEDVERTEXCOPY(1,1); CLIPPEDVERTEXLERP(2,1,2); CLIPPEDVERTEXLERP(3,2,0);
 					numpoints = 4;
+					SKIPBACKFACE;
+					CLIPPEDATTRIBSCOPY(0,0); CLIPPEDATTRIBSCOPY(1,1); CLIPPEDATTRIBSLERP(2,1,2); CLIPPEDATTRIBSLERP(3,2,0);
 				}
 			}
 			else 
 			{
-				CLIPPEDVERTEXCOPY(0,0);
-				CLIPPEDVERTEXLERP(1,0,1);
 				if (clipdist[2] >= 0.0f)
 				{
-					CLIPPEDVERTEXLERP(2,1,2);
-					CLIPPEDVERTEXCOPY(3,2);
+					CLIPPEDVERTEXCOPY(0,0); CLIPPEDVERTEXLERP(1,0,1); CLIPPEDVERTEXLERP(2,1,2);	CLIPPEDVERTEXCOPY(3,2);
 					numpoints = 4;
+					SKIPBACKFACE;
+					CLIPPEDATTRIBSCOPY(0,0); CLIPPEDATTRIBSLERP(1,0,1); CLIPPEDATTRIBSLERP(2,1,2); CLIPPEDATTRIBSCOPY(3,2);
 				}
 				else
 				{
-					CLIPPEDVERTEXLERP(2,2,0);
+					CLIPPEDVERTEXCOPY(0,0); CLIPPEDVERTEXLERP(1,0,1); CLIPPEDVERTEXLERP(2,2,0);
 		   			numpoints = 3;
+					SKIPBACKFACE;
+					CLIPPEDATTRIBSCOPY(0,0); CLIPPEDATTRIBSLERP(1,0,1); CLIPPEDATTRIBSLERP(2,2,0);
 				}
 			}
 		}			
 		else if (clipdist[1] >= 0.0f)
 		{
-			SKIPBACKFACE;
-			CLIPPEDVERTEXLERP(0,0,1);
-			CLIPPEDVERTEXCOPY(1,1);
 			if (clipdist[2] >= 0.0f)
 			{
-		   		CLIPPEDVERTEXCOPY(2,2);
-				CLIPPEDVERTEXLERP(3,2,0);
+				CLIPPEDVERTEXLERP(0,0,1); CLIPPEDVERTEXCOPY(1,1); CLIPPEDVERTEXCOPY(2,2); CLIPPEDVERTEXLERP(3,2,0);
 				numpoints = 4;
+				SKIPBACKFACE;
+				CLIPPEDATTRIBSLERP(0,0,1); CLIPPEDATTRIBSCOPY(1,1); CLIPPEDATTRIBSCOPY(2,2); CLIPPEDATTRIBSLERP(3,2,0);
 			}
 			else
 			{
-				CLIPPEDVERTEXLERP(2,1,2);
+				CLIPPEDVERTEXLERP(0,0,1); CLIPPEDVERTEXCOPY(1,1); CLIPPEDVERTEXLERP(2,1,2);
 				numpoints = 3;
+				SKIPBACKFACE;
+				CLIPPEDATTRIBSLERP(0,0,1); CLIPPEDATTRIBSCOPY(1,1); CLIPPEDATTRIBSLERP(2,1,2);
 			}
 		}
 		else if (clipdist[2] >= 0.0f)
 		{
-			SKIPBACKFACE;
-			CLIPPEDVERTEXLERP(0,1,2);
-			CLIPPEDVERTEXCOPY(1,2);
-			CLIPPEDVERTEXLERP(2,2,0);
+			CLIPPEDVERTEXLERP(0,1,2); CLIPPEDVERTEXCOPY(1,2); CLIPPEDVERTEXLERP(2,2,0);
 			numpoints = 3;
+			SKIPBACKFACE;
+			CLIPPEDATTRIBSLERP(0,1,2); CLIPPEDATTRIBSCOPY(1,2); CLIPPEDATTRIBSLERP(2,2,0);
 		}
-		else continue; // triangle is entirely behind nearpla
+		else continue; // triangle is entirely behind nearplane
 
 		{
 			// calculate integer y coords for triangle points
@@ -3684,7 +3689,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			screenmin = _mm_max_epi16(screenmin, _mm_setzero_si128());
 			screenmax = _mm_min_epi16(screenmax, fbmax);
 			// skip offscreen triangles
-			if (_mm_cvtsi128_si32(_mm_cmplt_epi16(screenmax, screenmin)) == -1)
+			if (_mm_cvtsi128_si32(_mm_cmplt_epi16(screenmax, screenmin)))
 				continue;
 			starty = _mm_extract_epi16(screenmin, 1);
 			endy = _mm_extract_epi16(screenmax, 1)+1;
@@ -3731,7 +3736,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				mipedgetc = _mm_mul_ps(mipedgetc, mipedgescale);
 				mipedgetc = _mm_min_ss(mipedgetc, _mm_shuffle_ps(mipedgetc, mipedgetc, _MM_SHUFFLE(2, 2, 2, 2)));	
 				// this will be multiplied in the texturing routine by the texture resolution
-				y = _mm_cvttss_si32(mipedgetc);
+				y = _mm_cvtss_si32(mipedgetc);
 				if (y > 0) 
 				{
 					y = (int)(log(y)/M_LN2);
