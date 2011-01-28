@@ -2061,7 +2061,12 @@ void GL_CullFace(int state)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_SOFT:
-		DPSOFTRAST_CullFace(gl_state.cullface);
+		if (gl_state.cullface != state)
+		{
+			gl_state.cullface = state;
+			gl_state.cullfaceenable = state != GL_NONE ? true : false;
+			DPSOFTRAST_CullFace(gl_state.cullface);
+		}
 		break;
 	}
 }
