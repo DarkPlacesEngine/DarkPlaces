@@ -2565,6 +2565,8 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
+	if (count == 0)
+		Host_Error("Mod_Q1BSP_LoadNodes: missing BSP tree in %s",loadmodel->name);
 	out = (mnode_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brush.data_nodes = out;
@@ -5499,6 +5501,8 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
+	if (count == 0)
+		Host_Error("Mod_Q3BSP_LoadNodes: missing BSP tree in %s",loadmodel->name);
 	out = (mnode_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_nodes = out;
