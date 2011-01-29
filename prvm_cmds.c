@@ -874,7 +874,7 @@ void VM_ftoe(void)
 	VM_SAFEPARMCOUNT(1, VM_ftoe);
 
 	ent = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (ent < 0 || ent >= MAX_EDICTS || PRVM_PROG_TO_EDICT(ent)->priv.required->free)
+	if (ent < 0 || ent >= prog->max_edicts || PRVM_PROG_TO_EDICT(ent)->priv.required->free)
 		ent = 0; // return world instead of a free or invalid entity
 
 	PRVM_G_INT(OFS_RETURN) = ent;
