@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include "quakedef.h"
 #include "dpsoftrast.h"
@@ -3765,7 +3766,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				y = _mm_cvtss_si32(mipedgetc);
 				if (y > 0) 
 				{
-					y = (int)(log(y)/M_LN2);
+					y = (int)(log((float)y)/M_LN2);
 					if (y > texture->mipmaps - 1)
 						y = texture->mipmaps - 1;
 				}
@@ -3801,7 +3802,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 				case 0xF000: /*1110*/ edge0p = 3;edge0n = 0;edge1p = 3;edge1n = 2;break;
 				case 0x0FFF: /*0001*/ edge0p = 2;edge0n = 3;edge1p = 0;edge1n = 3;break;
 				case 0x0FF0: /*1001*/ edge0p = 2;edge0n = 3;edge1p = 1;edge1n = 0;break;
-				case 0x0F0F: /*0101*/ edge0p = 2;edge0n = 3;edge1p = 1;edge1n = 2;break; // concave - nonsense
+				case 0x0F0F: /*0101*/ edge0p = 2;edge0n = 3;edge1p = 2;edge1n = 1;break; // concave - nonsense
 				case 0x0F00: /*1101*/ edge0p = 2;edge0n = 3;edge1p = 2;edge1n = 1;break;
 				case 0x00FF: /*0011*/ edge0p = 1;edge0n = 2;edge1p = 0;edge1n = 3;break;
 				case 0x00F0: /*1011*/ edge0p = 1;edge0n = 2;edge1p = 1;edge1n = 0;break;
