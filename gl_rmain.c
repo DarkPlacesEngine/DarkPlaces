@@ -171,13 +171,13 @@ cvar_t r_bloom_colorscale = {CVAR_SAVE, "r_bloom_colorscale", "1", "how bright t
 cvar_t r_bloom_brighten = {CVAR_SAVE, "r_bloom_brighten", "2", "how bright the glow is, after subtract/power"};
 cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
-cvar_t r_bloom_colorexponent = {CVAR_SAVE, "r_bloom_colorexponent", "1", "how exagerated the glow is"};
+cvar_t r_bloom_colorexponent = {CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
 cvar_t r_bloom_colorsubtract = {CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
 
 cvar_t r_hdr = {CVAR_SAVE, "r_hdr", "0", "enables High Dynamic Range bloom effect (higher quality version of r_bloom)"};
 cvar_t r_hdr_scenebrightness = {CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
 cvar_t r_hdr_glowintensity = {CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
-cvar_t r_hdr_range = {CVAR_SAVE, "r_hdr_range", "4", "how much dynamic range to render bloom with (equivilant to multiplying r_bloom_brighten by this value and dividing r_bloom_colorscale by this value)"};
+cvar_t r_hdr_range = {CVAR_SAVE, "r_hdr_range", "4", "how much dynamic range to render bloom with (equivalent to multiplying r_bloom_brighten by this value and dividing r_bloom_colorscale by this value)"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
@@ -187,7 +187,7 @@ cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* sprites by putting them as indicator at the screen border to rotate to"};
-cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accodringly, 2: Make it a continuous rotation"};
+cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accordingly, 2: Make it a continuous rotation"};
 cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
 cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
 cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "5", "fake perspective effect for SPR_OVERHEAD sprites"};
