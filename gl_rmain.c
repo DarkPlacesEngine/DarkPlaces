@@ -12220,7 +12220,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		break;
 	case Q3TCGEN_ENVIRONMENT:
 		// make environment reflections using a spheremap
-		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+		rsurface.batchtexcoordtexture2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
 		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
 		for (j = 0;j < batchnumvertices;j++)
