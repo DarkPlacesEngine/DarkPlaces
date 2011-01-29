@@ -251,7 +251,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend
 		}
 		// the yaw and pitch stored in md3 models are 8bit quantized angles
 		// (0-255), and as such a lookup table is very well suited to
-		// decoding them, and since cosine is equivilant to sine with an
+		// decoding them, and since cosine is equivalent to sine with an
 		// extra 45 degree rotation, this uses one lookup table for both
 		// sine and cosine with a +64 bias to get cosine.
 		if (normal3f)
