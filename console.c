@@ -2826,7 +2826,7 @@ void Con_CompleteCommandLine (void)
 						Con_Printf("\n%i possible filenames\n", resultbuf.numstrings + dirbuf.numstrings);
 						for(i = 0; i < dirbuf.numstrings; ++i)
 						{
-							Con_Printf("%s/\n", dirbuf.strings[i]);
+							Con_Printf("^4%s^7/\n", dirbuf.strings[i]);
 						}
 						for(i = 0; i < resultbuf.numstrings; ++i)
 						{
