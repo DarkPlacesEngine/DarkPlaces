@@ -91,6 +91,9 @@ cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparr
 static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
 static qboolean vid_isfullscreen;
+#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+static qboolean vid_usingvsync = false;
+#endif
 static int vid_numjoysticks = 0;
 #define MAX_JOYSTICKS 8
 static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
@@ -516,6 +519,7 @@ void IN_Move( void )
 // Message Handling
 ////
 
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 static int Sys_EventFilter( SDL_Event *event )
 {
 	//TODO: Add a quit query in linux, too - though linux user are more likely to know what they do
@@ -528,6 +532,7 @@ static int Sys_EventFilter( SDL_Event *event )
 	}
 	return 1;
 }
+#endif
 
 #ifdef SDL_R_RESTART
 static qboolean sdl_needs_restart;
@@ -574,6 +579,12 @@ void Sys_SendKeyEvents( void )
 	while( SDL_PollEvent( &event ) )
 		switch( event.type ) {
 			case SDL_QUIT:
+#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+#ifdef WIN32
+				if (MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO)
+					return 0;
+#endif
+#endif
 				Sys_Quit(0);
 				break;
 			case SDL_KEYDOWN:
@@ -662,7 +673,9 @@ void *GL_GetProcAddress(const char *name)
 	return p;
 }
 
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 static int Sys_EventFilter( SDL_Event *event );
+#endif
 static qboolean vid_sdl_initjoysticksystem = false;
 
 void VID_Init (void)
@@ -903,6 +916,8 @@ static void VID_SetIcon_Pre(void)
 }
 static void VID_SetIcon_Post(void)
 {
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+// LordHavoc: info.info.x11.lock_func and accompanying code do not seem to compile with SDL 1.3
 #if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
 	int j;
 	char *data;
@@ -956,6 +971,7 @@ static void VID_SetIcon_Post(void)
 		}
 	}
 #endif
+#endif
 }
 
 
@@ -978,6 +994,7 @@ static void VID_OutputVersion(void)
 qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
+// FIXME SDL_SetVideoMode
 	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
 	const char *drivername;
@@ -1047,15 +1064,19 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	}
 	if (mode->stereobuffer)
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
-	if (vid_vsync.integer)
-		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
-	else
-		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
 	if (mode->samples > 1)
 	{
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, mode->samples);
 	}
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+	if (vid_vsync.integer)
+		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
+	else
+		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
+#else
+	// TODO: SDL_GL_CONTEXT_MAJOR_VERSION, SDL_GL_CONTEXT_MINOR_VERSION
+#endif
 
 	video_bpp = mode->bitsperpixel;
 	video_flags = flags;
@@ -1075,12 +1096,19 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	// set window title
 	VID_SetCaption();
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 	// set up an event filter to ask confirmation on close button in WIN32
 	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
+#endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+
+#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+	SDL_GL_SetSwapInterval(vid_vsync.integer != 0);
+	vid_usingvsync = (vid_vsync.integer != 0);
+#endif
 
 	gl_platform = "SDL";
 	gl_platformextensions = "";
@@ -1122,6 +1150,7 @@ extern cvar_t gl_info_driver;
 
 qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
+// FIXME SDL_SetVideoMode
 	int i;
 	int flags = SDL_HWSURFACE;
 
@@ -1169,7 +1198,9 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	// set window title
 	VID_SetCaption();
 	// set up an event filter to ask confirmation on close button in WIN32
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
+#endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
@@ -1336,6 +1367,19 @@ void VID_Finish (void)
 			{
 				qglFinish();CHECKGLERROR
 			}
+#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+{
+	qboolean vid_usevsync;
+	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
+	if (vid_usingvsync != vid_usevsync)
+	{
+		if (SDL_GL_SetSwapInterval(vid_usevsync != 0) >= 0)
+			Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
+		else
+			Con_DPrintf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
+	}
+}
+#endif
 			SDL_GL_SwapBuffers();
 			break;
 		case RENDERPATH_SOFT:
