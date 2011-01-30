@@ -35,6 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t sv_public = {0, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
 cvar_t sv_public_rejectreason = {0, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
+extern cvar_t sv_status_privacy;
 
 static cvar_t sv_masters [] =
 {
@@ -3248,7 +3249,10 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteLong(&net_message, client->colors);
 					MSG_WriteLong(&net_message, client->frags);
 					MSG_WriteLong(&net_message, (int)(realtime - client->connecttime));
-					MSG_WriteString(&net_message, client->netconnection ? client->netconnection->address : "botclient");
+					if(sv_status_privacy.integer)
+						MSG_WriteString(&net_message, client->netconnection ? "hidden" : "botclient");
+					else
+						MSG_WriteString(&net_message, client->netconnection ? client->netconnection->address : "botclient");
 					StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 					SZ_Clear(&net_message);
