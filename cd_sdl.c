@@ -21,6 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "cdaudio.h"
+
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+// SDL 1.2 has CD audio
+
 #include <SDL.h>
 #include <time.h>
 
@@ -204,4 +208,76 @@ void CDAudio_SDL_CDDrive_f( void )
 
 
 
+
+#else
+// SDL 1.3 does not have CD audio
+
+void CDAudio_SysEject (void)
+{
+}
+
+
+void CDAudio_SysCloseDoor (void)
+{
+}
+
+
+int CDAudio_SysGetAudioDiskInfo (void)
+{
+	return -1;
+}
+
+
+float CDAudio_SysGetVolume (void)
+{
+	return -1.0f;
+}
+
+
+void CDAudio_SysSetVolume (float volume)
+{
+}
+
+
+int CDAudio_SysPlay (int track)
+{
+	return -1;
+}
+
+
+int CDAudio_SysStop (void)
+{
+	return -1;
+}
+
+
+int CDAudio_SysPause (void)
+{
+	return -1;
+}
+
+int CDAudio_SysResume (void)
+{
+	return -1;
+}
+
+int CDAudio_SysUpdate (void)
+{
+	return -1;
+}
+
+
+void CDAudio_SysInit (void)
+{
+}
+
+int CDAudio_SysStartup (void)
+{
+	return -1;
+}
+
+void CDAudio_SysShutdown (void)
+{
+}
+#endif
 
