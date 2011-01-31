@@ -1889,15 +1889,15 @@ void S_UpdateAmbientSounds (void)
 
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			chan->listener_volume[0] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5), 65536);
-			chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5), 65536);
+			chan->listener_volume[0] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5), 65536);
+			chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5), 65536);
 			for (i = 2;i < SND_LISTENERS;i++)
 				chan->listener_volume[i] = 0;
 		}
 		else
 		{
 			for (i = 0;i < SND_LISTENERS;i++)
-				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
+				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
 		}
 	}
 }
