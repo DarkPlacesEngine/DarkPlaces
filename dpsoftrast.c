@@ -3585,9 +3585,12 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 #define SKIPBACKFACE \
 		if(cullface != GL_NONE) \
 		{ \
-			__m128 triangleedge[2] = { _mm_sub_ps(screen[0], screen[1]), _mm_sub_ps(screen[2], screen[1]) }; \
+			__m128 triangleedge[2]; \
+			__m128 trianglenormal; \
+			triangleedge[0] = _mm_sub_ps(screen[0], screen[1]); \
+			triangleedge[1] = _mm_sub_ps(screen[2], screen[1]); \
 			/* store normal in 2, 0, 1 order instead of 0, 1, 2 as it requires fewer shuffles and leaves z component accessible as scalar */ \
-			__m128 trianglenormal = _mm_sub_ss(_mm_mul_ss(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))), \
+			trianglenormal = _mm_sub_ss(_mm_mul_ss(triangleedge[0], _mm_shuffle_ps(triangleedge[1], triangleedge[1], _MM_SHUFFLE(3, 0, 2, 1))), \
 											_mm_mul_ss(_mm_shuffle_ps(triangleedge[0], triangleedge[0], _MM_SHUFFLE(3, 0, 2, 1)), triangleedge[1])); \
 			/* apply current cullface mode (this culls many triangles) */ \
 			switch(cullface) \
