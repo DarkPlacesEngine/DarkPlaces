@@ -546,11 +546,18 @@ void DPSOFTRAST_Texture_CalculateMipmaps(int index)
 void DPSOFTRAST_Texture_UpdatePartial(int index, int mip, const unsigned char *pixels, int blockx, int blocky, int blockwidth, int blockheight)
 {
 	DPSOFTRAST_Texture *texture;
+	unsigned char *dst;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
-
-	// FIXME IMPLEMENT
-
-	dpsoftrast.errorstring = "DPSOFTRAST_Texture_UpdatePartial: Not implemented.";
+    
+	dst = texture->bytes + (blocky * texture->mipmap[0][2] + blockx) * 4;
+	while (blockheight > 0)
+	{
+		memcpy(dst, pixels, blockwidth * 4);
+		pixels += blockwidth * 4;
+		dst += texture->mipmap[0][2] * 4;
+		blockheight--;
+	}
+	DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
 void DPSOFTRAST_Texture_UpdateFull(int index, const unsigned char *pixels)
 {
