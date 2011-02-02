@@ -1,0 +1,4 @@
+To build DarkPlaces for iOS, you need to extract this zip into the source folder:
+http://ghdigital.com/~havoc/SDLiOS20110202.zip
+
+This is built from SDL 1.3, to make an updated include folder and libSDL*.a files, simply build the SDL Application template for iPhoneOS and copy the include folder and two libSDL*.a files from there.
