@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "dpsoftrast.h"
 
+#ifndef __IPHONEOS__
 #ifdef MACOSX
 #include <Carbon/Carbon.h>
 #include <IOKit/hidsystem/IOHIDLib.h>
@@ -53,6 +54,7 @@ io_connect_t IN_GetIOHandle(void)
 
 	return iohandle;
 }
+#endif
 #endif
 
 #ifdef WIN32
@@ -288,16 +290,19 @@ static int MapKey( unsigned int sdlkey )
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
+#ifndef __IPHONEOS__
 #ifdef MACOSX
 	if(relative)
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
 			VID_SetMouse(false, false, false); // ungrab first!
+#endif
 #endif
 	if (vid_usingmouse != relative)
 	{
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
 		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
+#ifndef __IPHONEOS__
 #ifdef MACOSX
 		if(relative)
 		{
@@ -349,6 +354,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 					Con_Print("Could not re-enable mouse acceleration (failed at IO_GetIOHandle).\n");
 			}
 		}
+#endif
 #endif
 	}
 	if (vid_usinghidecursor != hidecursor)
@@ -680,8 +686,10 @@ static qboolean vid_sdl_initjoysticksystem = false;
 
 void VID_Init (void)
 {
+#ifndef __IPHONEOS__
 #ifdef MACOSX
 	Cvar_RegisterVariable(&apple_mouse_noaccel);
+#endif
 #endif
 	Cvar_RegisterVariable(&vid_soft);
 	Cvar_RegisterVariable(&joy_detected);
