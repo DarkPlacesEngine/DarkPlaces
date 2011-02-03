@@ -5,8 +5,11 @@
 #include "quakedef.h"
 #include "dpsoftrast.h"
 
-//#define USETHREADS
-#ifdef USETHREADS
+#ifdef USE_SDL
+#define USE_THREADS
+#endif
+
+#ifdef USE_THREADS
 #include <SDL.h>
 #include <SDL_thread.h>
 #endif
@@ -34,7 +37,7 @@ typedef qboolean bool;
 #define MEMORY_BARRIER ((void)0)
 #endif
 
-#ifndef USETHREADS
+#if !defined(USE_THREADS) || !defined(SSE2_PRESENT)
 #undef MEMORY_BARRIER
 #define MEMORY_BARRIER ((void)0)
 #endif
@@ -198,7 +201,7 @@ DPSOFTRAST_BLENDMODE;
 
 typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 {
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_Thread *thread;
 #endif
 	int index;
@@ -243,7 +246,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	int triangleoffset;
 
 	bool waiting;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_cond *waitcond;
 #endif
 
@@ -300,7 +303,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_s
 
 	int numthreads;
 	DPSOFTRAST_State_Thread *threads;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_mutex *trianglemutex;
 	SDL_cond *trianglecond;
 #endif
@@ -718,7 +721,7 @@ void DPSOFTRAST_Draw_FreeTrianglePool(int space)
 	int usedtriangles = dpsoftrast.trianglepool.usedtriangles;
 	if (usedtriangles <= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-space)
 	    return;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_LockMutex(dpsoftrast.trianglemutex);
 #endif
 	for(;;)
@@ -740,7 +743,7 @@ void DPSOFTRAST_Draw_FreeTrianglePool(int space)
 	    }
 	    if (usedtriangles <= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-space || waitindex < 0)
 	        break;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	    thread = &dpsoftrast.threads[waitindex];
 	    thread->waiting = true;
 	    SDL_CondBroadcast(dpsoftrast.trianglecond);
@@ -748,7 +751,7 @@ void DPSOFTRAST_Draw_FreeTrianglePool(int space)
 	    thread->waiting = false;
 #endif
 	}
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_UnlockMutex(dpsoftrast.trianglemutex);
 #endif
 	dpsoftrast.trianglepool.usedtriangles = usedtriangles;
@@ -758,7 +761,7 @@ void DPSOFTRAST_Draw_SyncCommands(void)
 {
 	DPSOFTRAST_State_Triangle *triangle;
 	if (dpsoftrast.trianglepool.usedtriangles >= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-1)
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	    DPSOFTRAST_Draw_FreeTrianglePool(DPSOFTRAST_DRAW_MAXTRIANGLEPOOL/8);
 #else
 	    DPSOFTRAST_Draw_FlushThreads();
@@ -782,7 +785,7 @@ void DPSOFTRAST_Draw_FreeCommandPool(int space)
 	if (usedcommands <= DPSOFTRAST_DRAW_MAXCOMMANDPOOL-space)
 		return;
 	DPSOFTRAST_Draw_SyncCommands();
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_LockMutex(dpsoftrast.trianglemutex);
 #endif
 	for(;;)
@@ -804,7 +807,7 @@ void DPSOFTRAST_Draw_FreeCommandPool(int space)
 		}
 		if (usedcommands <= DPSOFTRAST_DRAW_MAXCOMMANDPOOL-space || waitindex < 0)
 			break;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		thread = &dpsoftrast.threads[waitindex];
 		thread->waiting = true;
 		SDL_CondBroadcast(dpsoftrast.trianglecond);
@@ -812,7 +815,7 @@ void DPSOFTRAST_Draw_FreeCommandPool(int space)
 		thread->waiting = false;
 #endif
 	}
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_UnlockMutex(dpsoftrast.trianglemutex);
 #endif
 	dpsoftrast.commandpool.usedcommands = usedcommands;
@@ -831,7 +834,7 @@ static void *DPSOFTRAST_AllocateCommand(int size)
 		extra += DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand;
 	if(usedcommands > DPSOFTRAST_DRAW_MAXCOMMANDPOOL - (size + extra))
 	{
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		DPSOFTRAST_Draw_FreeCommandPool(size + extra);
 #else
 		DPSOFTRAST_Draw_FlushThreads();
@@ -3653,6 +3656,7 @@ void DPSOFTRAST_VertexShader_LightSource(void)
 
 void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
+#ifdef SSE2_PRESENT
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
@@ -3919,6 +3923,7 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 		}
 	}
 	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
+#endif
 }
 
 
@@ -4172,6 +4177,7 @@ int DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread, int commandoff
 
 void DPSOFTRAST_Draw_GenerateSpans(DPSOFTRAST_State_Thread *thread, int freetriangle)
 {
+#ifdef SSE2_PRESENT
 	int miny = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
 	int maxy = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
 	int commandoffset = thread->commandoffset;
@@ -4303,6 +4309,7 @@ void DPSOFTRAST_Draw_GenerateSpans(DPSOFTRAST_State_Thread *thread, int freetria
 
 	thread->commandoffset = commandoffset;
 	thread->triangleoffset = triangleoffset;
+#endif
 }
 
 void DPSOFTRAST_Draw_FlushThreads(void)
@@ -4314,13 +4321,13 @@ void DPSOFTRAST_Draw_FlushThreads(void)
 		MEMORY_BARRIER;
 		dpsoftrast.drawtriangle = dpsoftrast.trianglepool.freetriangle;
 	}
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_LockMutex(dpsoftrast.trianglemutex);
 #endif
 	for (i = 0; i < dpsoftrast.numthreads; i++)
 	{
 		thread = &dpsoftrast.threads[i];
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		while (thread->triangleoffset != dpsoftrast.drawtriangle)
 		{
 			thread->waiting = true;
@@ -4333,14 +4340,14 @@ void DPSOFTRAST_Draw_FlushThreads(void)
 			DPSOFTRAST_Draw_GenerateSpans(thread, dpsoftrast.drawtriangle);
 #endif
 	}
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	SDL_UnlockMutex(dpsoftrast.trianglemutex);
 #endif
 	dpsoftrast.trianglepool.usedtriangles = 0;
 	dpsoftrast.commandpool.usedcommands = 0;
 }
 
-#ifdef USETHREADS
+#ifdef USE_THREADS
 static int DPSOFTRAST_Draw_Thread(void *data)
 {
 	DPSOFTRAST_State_Thread *thread = (DPSOFTRAST_State_Thread *)data;
@@ -4556,7 +4563,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		}
 
 		if (dpsoftrast.trianglepool.usedtriangles >= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-1)
-#ifdef USETHREADS
+#ifdef USE_THREADS
 			DPSOFTRAST_Draw_FreeTrianglePool(DPSOFTRAST_DRAW_MAXTRIANGLEPOOL/8);
 #else
 			DPSOFTRAST_Draw_FlushThreads();
@@ -4664,7 +4671,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			MEMORY_BARRIER;
 			dpsoftrast.drawtriangle = dpsoftrast.trianglepool.freetriangle;
 
-#ifdef USETHREADS
+#ifdef USE_THREADS
 			SDL_LockMutex(dpsoftrast.trianglemutex);
    			SDL_CondBroadcast(dpsoftrast.trianglecond);
 			SDL_UnlockMutex(dpsoftrast.trianglemutex);
@@ -4679,7 +4686,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		MEMORY_BARRIER;
 		dpsoftrast.drawtriangle = dpsoftrast.trianglepool.freetriangle;
 
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		SDL_LockMutex(dpsoftrast.trianglemutex);
 		SDL_CondBroadcast(dpsoftrast.trianglecond);
 		SDL_UnlockMutex(dpsoftrast.trianglemutex);
@@ -4759,7 +4766,7 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 	dpsoftrast.color[2] = 1;
 	dpsoftrast.color[3] = 1;
 	dpsoftrast.cullface = GL_BACK;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	dpsoftrast.numthreads = bound(1, numthreads, 64);
 	dpsoftrast.trianglemutex = SDL_CreateMutex();
 	dpsoftrast.trianglecond = SDL_CreateCond();
@@ -4796,13 +4803,13 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 		thread->triangleoffset = 0;
 		thread->commandoffset = 0;
 		thread->waiting = false;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		thread->waitcond = SDL_CreateCond();
 #endif
 
 		thread->validate = -1;
 		DPSOFTRAST_Validate(thread, -1);
-#ifdef USETHREADS
+#ifdef USE_THREADS
 		thread->thread = SDL_CreateThread(DPSOFTRAST_Draw_Thread, thread);
 #endif
 	}
@@ -4811,7 +4818,7 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 void DPSOFTRAST_Shutdown(void)
 {
 	int i;
-#ifdef USETHREADS
+#ifdef USE_THREADS
 	if(dpsoftrast.numthreads > 0)
 	{
 		DPSOFTRAST_State_Thread *thread;
