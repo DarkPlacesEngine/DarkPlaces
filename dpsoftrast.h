@@ -6,7 +6,7 @@
 
 #define DPSOFTRAST_MAXMIPMAPS 16
 #define DPSOFTRAST_TEXTURE_MAXSIZE (1<<(DPSOFTRAST_MAXMIPMAPS - 1))
-#define DPSOFTRAST_MAXTEXTUREUNITS 32
+#define DPSOFTRAST_MAXTEXTUREUNITS 16
 #define DPSOFTRAST_MAXTEXCOORDARRAYS 8
 
 // type of pixels in texture (some of these are converted to BGRA8 on update)
@@ -31,8 +31,9 @@ typedef enum DPSOFTRAST_TEXTURE_FILTER_e
 }
 DPSOFTRAST_TEXTURE_FILTER;
 
-void DPSOFTRAST_Init(int width, int height, unsigned int *colorpixels, unsigned int *depthpixels);
+void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorpixels, unsigned int *depthpixels);
 void DPSOFTRAST_Shutdown(void);
+void DPSOFTRAST_Flush(void);
 
 int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth);
 void DPSOFTRAST_Texture_Free(int index);
@@ -60,7 +61,7 @@ void DPSOFTRAST_DepthFunc(int comparemode);
 void DPSOFTRAST_DepthRange(float range0, float range1);
 void DPSOFTRAST_PolygonOffset(float alongnormal, float intoview);
 void DPSOFTRAST_CullFace(int mode);
-void DPSOFTRAST_AlphaTest(float enable);
+void DPSOFTRAST_AlphaTest(int enable);
 void DPSOFTRAST_AlphaFunc(int alphafunc, float alphavalue);
 void DPSOFTRAST_Color4f(float r, float g, float b, float a);
 void DPSOFTRAST_GetPixelsBGRA(int blockx, int blocky, int blockwidth, int blockheight, unsigned char *outpixels);
@@ -290,14 +291,14 @@ typedef enum DPSOFTRAST_UNIFORM_e
 }
 DPSOFTRAST_UNIFORM;
 
-void DPSOFTRAST_SetShader(unsigned int mode, unsigned int permutation);
-#define DPSOFTRAST_Uniform1fARB(index, v0) DPSOFTRAST_Uniform4fARB(index, v0, 0, 0, 0)
-#define DPSOFTRAST_Uniform2fARB(index, v0, v1) DPSOFTRAST_Uniform4fARB(index, v0, v1, 0, 0)
-#define DPSOFTRAST_Uniform3fARB(index, v0, v1, v2) DPSOFTRAST_Uniform4fARB(index, v0, v1, v2, 0)
-void DPSOFTRAST_Uniform4fARB(DPSOFTRAST_UNIFORM index, float v0, float v1, float v2, float v3);
-void DPSOFTRAST_Uniform4fvARB(DPSOFTRAST_UNIFORM index, const float *v);
-void DPSOFTRAST_UniformMatrix4fvARB(DPSOFTRAST_UNIFORM index, int arraysize, int transpose, const float *v);
-void DPSOFTRAST_Uniform1iARB(DPSOFTRAST_UNIFORM index, int i0);
+void DPSOFTRAST_SetShader(int mode, int permutation);
+#define DPSOFTRAST_Uniform1f(index, v0) DPSOFTRAST_Uniform4f(index, v0, 0, 0, 0)
+#define DPSOFTRAST_Uniform2f(index, v0, v1) DPSOFTRAST_Uniform4f(index, v0, v1, 0, 0)
+#define DPSOFTRAST_Uniform3f(index, v0, v1, v2) DPSOFTRAST_Uniform4f(index, v0, v1, v2, 0)
+void DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM index, float v0, float v1, float v2, float v3);
+void DPSOFTRAST_Uniform4fv(DPSOFTRAST_UNIFORM index, const float *v);
+void DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM index, int arraysize, int transpose, const float *v);
+void DPSOFTRAST_Uniform1i(DPSOFTRAST_UNIFORM index, int i0);
 
 void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles, const int *element3i, const unsigned short *element3s);
 
