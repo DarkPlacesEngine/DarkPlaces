@@ -1393,7 +1393,7 @@ void VID_Finish (void)
 			SDL_GL_SwapBuffers();
 			break;
 		case RENDERPATH_SOFT:
-			DPSOFTRAST_Flush();
+			DPSOFTRAST_Finish();
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
 			SDL_Flip(screen);
 			break;
