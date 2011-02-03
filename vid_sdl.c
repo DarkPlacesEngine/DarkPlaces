@@ -67,6 +67,7 @@ int cl_available = true;
 qboolean vid_supportrefreshrate = false;
 
 cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
+cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "1", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
 cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
 cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
 cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
@@ -692,6 +693,7 @@ void VID_Init (void)
 #endif
 #endif
 	Cvar_RegisterVariable(&vid_soft);
+	Cvar_RegisterVariable(&vid_soft_threads);
 	Cvar_RegisterVariable(&joy_detected);
 	Cvar_RegisterVariable(&joy_enable);
 	Cvar_RegisterVariable(&joy_index);
@@ -1201,7 +1203,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	vid.softpixels = (unsigned int *)vid_softsurface->pixels;
 	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
-	DPSOFTRAST_Init(mode->width, mode->height, (unsigned int *)vid_softsurface->pixels, (unsigned int *)vid.softdepthpixels);
+	DPSOFTRAST_Init(mode->width, mode->height, vid_soft_threads.integer, (unsigned int *)vid_softsurface->pixels, (unsigned int *)vid.softdepthpixels);
 
 	// set window title
 	VID_SetCaption();
@@ -1391,6 +1393,7 @@ void VID_Finish (void)
 			SDL_GL_SwapBuffers();
 			break;
 		case RENDERPATH_SOFT:
+			DPSOFTRAST_Flush();
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
 			SDL_Flip(screen);
 			break;
