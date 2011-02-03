@@ -120,7 +120,6 @@ OBJ_COMMON= \
 	csprogs.o \
 	curves.o \
 	cvar.o \
-	dpsoftrast.o \
 	dpvsimpledecode.o \
 	filematch.o \
 	fractalnoise.o \
@@ -186,8 +185,8 @@ OBJ_COMMON= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
+OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON) dpsoftrast.o
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON) dpsoftrast_sdl.o
 
 
 # Compilation
@@ -196,7 +195,7 @@ CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
 CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
-CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
+CFLAGS_SDL=$(SDLCONFIG_CFLAGS) -DUSE_SDL
 
 CFLAGS_SSE=-msse
 
@@ -219,7 +218,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 ##### UNIX specific variables #####
 
-OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON) dpsoftrast.o
 
 LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
@@ -522,6 +521,10 @@ snd_3dras.o: snd_3dras.c
 	$(DO_CC)
 
 cd_sdl.o: cd_sdl.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SDL)
+
+dpsoftrast_sdl.o: dpsoftrast.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 

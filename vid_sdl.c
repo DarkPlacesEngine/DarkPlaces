@@ -67,7 +67,7 @@ int cl_available = true;
 qboolean vid_supportrefreshrate = false;
 
 cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
-cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "1", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
+cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "2", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
 cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
 cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
 cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
