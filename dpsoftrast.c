@@ -21,25 +21,40 @@ typedef qboolean bool;
 #define ALIGN_SIZE 16
 #define ATOMIC_SIZE 32
 
-#if defined(__GNUC__)
-#define ALIGN(var) var __attribute__((__aligned__(16)))
-#define ATOMIC(var) var __attribute__((__aligned__(32)))
-#define MEMORY_BARRIER (_mm_sfence())
-//(__sync_synchronize())
-#elif defined(_MSC_VER)
-#define ALIGN(var) __declspec(align(16)) var
-#define ATOMIC(var) __declspec(align(32)) var
-#define MEMORY_BARRIER (_mm_sfence())
-//(MemoryBarrier())
-#else
-#define ALIGN(var) var
-#define ATOMIC(var) var
-#define MEMORY_BARRIER ((void)0)
+#ifdef SSE2_PRESENT
+	#if defined(__GNUC__)
+		#define ALIGN(var) var __attribute__((__aligned__(16)))
+		#define ATOMIC(var) var __attribute__((__aligned__(32)))
+		#ifdef USE_THREADS
+			#define MEMORY_BARRIER (_mm_sfence())
+			//(__sync_synchronize())
+			#define ATOMIC_COUNTER volatile int
+			#define ATOMIC_ADD(counter, val) (__sync_add_and_fetch(&(counter), (val)))
+		#endif
+	#elif defined(_MSC_VER)
+		#define ALIGN(var) __declspec(align(16)) var
+		#define ATOMIC(var) __declspec(align(32)) var
+		#ifdef USE_THREADS
+			#define MEMORY_BARRIER (_mm_sfence())
+			//(MemoryBarrier())
+			#define ATOMIC_COUNTER volatile LONG
+			#define ATOMIC_ADD(counter, val) (InterlockedAdd(&(counter), (val)))
+		#endif
+	#else
+		#undef USE_THREADS
+		#undef SSE2_PRESENT
+	#endif
 #endif
 
-#if !defined(USE_THREADS) || !defined(SSE2_PRESENT)
-#undef MEMORY_BARRIER
-#define MEMORY_BARRIER ((void)0)
+#ifndef SSE2_PRESENT
+	#define ALIGN(var) var
+	#define ATOMIC(var) var
+#endif
+
+#ifndef USE_THREADS
+	#define MEMORY_BARRIER ((void)0)
+	#define ATOMIC_COUNTER int
+	#define ATOMIC_ADD(counter, val) ((counter) += (val))
 #endif
 
 #ifdef SSE2_PRESENT
@@ -87,6 +102,7 @@ typedef struct DPSOFTRAST_Texture_s
 	DPSOFTRAST_TEXTURE_FILTER filter;
 	int mipmaps;
 	int size;
+	ATOMIC_COUNTER binds;
 	unsigned char *bytes;
 	int mipmap[DPSOFTRAST_MAXMIPMAPS][5];
 }
@@ -365,8 +381,8 @@ void DPSOFTRAST_RecalcBlendFunc(DPSOFTRAST_State_Thread *thread)
 	}
 	else
 	{	
-	    switch ((thread->blendfunc[0]<<16)|thread->blendfunc[1])
-	    {
+		switch ((thread->blendfunc[0]<<16)|thread->blendfunc[1])
+		{
 		BLENDFUNC(GL_ONE, GL_ZERO, DPSOFTRAST_BLENDMODE_OPAQUE)
 		BLENDFUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, DPSOFTRAST_BLENDMODE_ALPHA)
 		BLENDFUNC(GL_SRC_ALPHA, GL_ONE, DPSOFTRAST_BLENDMODE_ADDALPHA)
@@ -378,7 +394,7 @@ void DPSOFTRAST_RecalcBlendFunc(DPSOFTRAST_State_Thread *thread)
 		BLENDFUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, DPSOFTRAST_BLENDMODE_PSEUDOALPHA)
 		BLENDFUNC(GL_SRC_COLOR, GL_ONE, DPSOFTRAST_BLENDMODE_SUBALPHA)
 		default: thread->fb_blendmode = DPSOFTRAST_BLENDMODE_OPAQUE; break;
-	    }
+		}
 	}
 }
 
@@ -411,6 +427,31 @@ DPSOFTRAST_Texture *DPSOFTRAST_Texture_GetByIndex(int index)
 	if (index >= 1 && index < dpsoftrast.texture_end && dpsoftrast.texture[index].bytes)
 		return &dpsoftrast.texture[index];
 	return NULL;
+}
+
+static void DPSOFTRAST_Texture_Grow(void)
+{
+	DPSOFTRAST_Texture *oldtexture = dpsoftrast.texture;
+	DPSOFTRAST_State_Thread *thread;
+	int i;
+	int j;
+	DPSOFTRAST_Flush();
+	// expand texture array as needed
+	if (dpsoftrast.texture_max < 1024)
+		dpsoftrast.texture_max = 1024;
+	else
+		dpsoftrast.texture_max *= 2;
+	dpsoftrast.texture = (DPSOFTRAST_Texture *)realloc(dpsoftrast.texture, dpsoftrast.texture_max * sizeof(DPSOFTRAST_Texture));
+	for (i = 0; i < DPSOFTRAST_MAXTEXTUREUNITS; i++)
+		if(dpsoftrast.texbound[i])
+			dpsoftrast.texbound[i] = dpsoftrast.texture + (dpsoftrast.texbound[i] - oldtexture);
+	for (j = 0; j < dpsoftrast.numthreads; j++)
+	{
+		thread = &dpsoftrast.threads[j];
+		for (i = 0; i < DPSOFTRAST_MAXTEXTUREUNITS; i++)
+			if(thread->texbound[i])
+				thread->texbound[i] = dpsoftrast.texture + (thread->texbound[i] - oldtexture);
+	}
 }
 
 int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
@@ -484,21 +525,13 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 		dpsoftrast.errorstring = "DPSOFTRAST_Texture_New: dimensions are not power of two";
 		return 0;
 	}
-	DPSOFTRAST_Flush();
 	// find first empty slot in texture array
 	for (texnum = dpsoftrast.texture_firstfree;texnum < dpsoftrast.texture_end;texnum++)
 		if (!dpsoftrast.texture[texnum].bytes)
 			break;
 	dpsoftrast.texture_firstfree = texnum + 1;
 	if (dpsoftrast.texture_max <= texnum)
-	{
-		// expand texture array as needed
-		if (dpsoftrast.texture_max < 1024)
-			dpsoftrast.texture_max = 1024;
-		else
-			dpsoftrast.texture_max *= 2;
-		dpsoftrast.texture = (DPSOFTRAST_Texture *)realloc(dpsoftrast.texture, dpsoftrast.texture_max * sizeof(DPSOFTRAST_Texture));
-	}
+		DPSOFTRAST_Texture_Grow();
 	if (dpsoftrast.texture_end <= texnum)
 		dpsoftrast.texture_end = texnum + 1;
 	texture = &dpsoftrast.texture[texnum];
@@ -508,6 +541,7 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 	texture->height = height;
 	texture->depth = depth;
 	texture->sides = sides;
+	texture->binds = 0;
 	w = width;
 	h = height;
 	d = depth;
@@ -544,7 +578,8 @@ void DPSOFTRAST_Texture_Free(int index)
 {
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	if (texture->bytes)
 		MM_FREE(texture->bytes);
 	texture->bytes = NULL;
@@ -639,7 +674,8 @@ void DPSOFTRAST_Texture_UpdatePartial(int index, int mip, const unsigned char *p
 	DPSOFTRAST_Texture *texture;
 	unsigned char *dst;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	dst = texture->bytes + (blocky * texture->mipmap[0][2] + blockx) * 4;
 	while (blockheight > 0)
 	{
@@ -654,7 +690,8 @@ void DPSOFTRAST_Texture_UpdateFull(int index, const unsigned char *pixels)
 {
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	memcpy(texture->bytes, pixels, texture->mipmap[0][1]);
 	DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
@@ -680,7 +717,8 @@ unsigned char *DPSOFTRAST_Texture_GetPixelPointer(int index, int mip)
 {
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return 0;
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	return texture->bytes + texture->mipmap[mip][0];
 }
 void DPSOFTRAST_Texture_Filter(int index, DPSOFTRAST_TEXTURE_FILTER filter)
@@ -692,7 +730,8 @@ void DPSOFTRAST_Texture_Filter(int index, DPSOFTRAST_TEXTURE_FILTER filter)
 		dpsoftrast.errorstring = "DPSOFTRAST_Texture_Filter: requested filter mode requires mipmaps";
 		return;
 	}
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	texture->filter = filter;
 }
 
@@ -720,35 +759,35 @@ void DPSOFTRAST_Draw_FreeTrianglePool(int space)
 	int freetriangle = dpsoftrast.trianglepool.freetriangle;
 	int usedtriangles = dpsoftrast.trianglepool.usedtriangles;
 	if (usedtriangles <= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-space)
-	    return;
+		return;
 #ifdef USE_THREADS
 	SDL_LockMutex(dpsoftrast.trianglemutex);
 #endif
 	for(;;)
 	{
-	    int waitindex = -1;
-	    int triangleoffset;
-	    usedtriangles = 0;
-	    for (i = 0; i < dpsoftrast.numthreads; i++)
-	    {
-	        thread = &dpsoftrast.threads[i];
-	        triangleoffset = freetriangle - thread->triangleoffset;
-	        if (triangleoffset < 0)
-	            triangleoffset += DPSOFTRAST_DRAW_MAXTRIANGLEPOOL;
-	        if (triangleoffset > usedtriangles)
-	        {
-	            waitindex = i;
-	            usedtriangles = triangleoffset;
-	        }
-	    }
-	    if (usedtriangles <= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-space || waitindex < 0)
-	        break;
+		int waitindex = -1;
+		int triangleoffset;
+		usedtriangles = 0;
+		for (i = 0; i < dpsoftrast.numthreads; i++)
+		{
+			thread = &dpsoftrast.threads[i];
+			triangleoffset = freetriangle - thread->triangleoffset;
+			if (triangleoffset < 0)
+				triangleoffset += DPSOFTRAST_DRAW_MAXTRIANGLEPOOL;
+			if (triangleoffset > usedtriangles)
+			{
+				waitindex = i;
+				usedtriangles = triangleoffset;
+			}
+		}
+		if (usedtriangles <= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-space || waitindex < 0)
+			break;
 #ifdef USE_THREADS
-	    thread = &dpsoftrast.threads[waitindex];
-	    thread->waiting = true;
-	    SDL_CondBroadcast(dpsoftrast.trianglecond);
-	    SDL_CondWait(thread->waitcond, dpsoftrast.trianglemutex);
-	    thread->waiting = false;
+		thread = &dpsoftrast.threads[waitindex];
+		thread->waiting = true;
+		SDL_CondBroadcast(dpsoftrast.trianglecond);
+		SDL_CondWait(thread->waitcond, dpsoftrast.trianglemutex);
+		thread->waiting = false;
 #endif
 	}
 #ifdef USE_THREADS
@@ -762,9 +801,9 @@ void DPSOFTRAST_Draw_SyncCommands(void)
 	DPSOFTRAST_State_Triangle *triangle;
 	if (dpsoftrast.trianglepool.usedtriangles >= DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-1)
 #ifdef USE_THREADS
-	    DPSOFTRAST_Draw_FreeTrianglePool(DPSOFTRAST_DRAW_MAXTRIANGLEPOOL/8);
+		DPSOFTRAST_Draw_FreeTrianglePool(DPSOFTRAST_DRAW_MAXTRIANGLEPOOL/8);
 #else
-	    DPSOFTRAST_Draw_FlushThreads();
+		DPSOFTRAST_Draw_FlushThreads();
 #endif
 	triangle = &dpsoftrast.trianglepool.triangles[dpsoftrast.trianglepool.freetriangle];
 	triangle->commandoffset = dpsoftrast.commandpool.freecommand;
@@ -1226,7 +1265,8 @@ void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int s
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
 	if (mip < 0 || mip >= texture->mipmaps) return;
-	DPSOFTRAST_Flush();
+	if (texture->binds)
+		DPSOFTRAST_Flush();
 	spixels = dpsoftrast.fb_colorpixels[0];
 	swidth = dpsoftrast.fb_width;
 	sheight = dpsoftrast.fb_height;
@@ -1258,6 +1298,8 @@ void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int s
 DEFCOMMAND(17, SetTexture, int unitnum; DPSOFTRAST_Texture *texture;)
 static void DPSOFTRAST_Interpret_SetTexture(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_SetTexture *command)
 {
+	if (thread->texbound[command->unitnum])
+		ATOMIC_ADD(thread->texbound[command->unitnum]->binds, -1);
 	thread->texbound[command->unitnum] = command->texture;
 }
 void DPSOFTRAST_SetTexture(int unitnum, int index)
@@ -1282,6 +1324,7 @@ void DPSOFTRAST_SetTexture(int unitnum, int index)
 	command->texture = texture;
 
 	dpsoftrast.texbound[unitnum] = texture;
+	ATOMIC_ADD(texture->binds, dpsoftrast.numthreads);
 }
 
 void DPSOFTRAST_SetVertexPointer(const float *vertex3f, size_t stride)
@@ -1576,24 +1619,24 @@ static void DPSOFTRAST_Load4bTo4f(float *dst, const unsigned char *src, int size
 				__m128i v = _mm_loadu_si128((const __m128i *)src), v1 = _mm_unpacklo_epi8(v, _mm_setzero_si128()), v2 = _mm_unpackhi_epi8(v, _mm_setzero_si128());
 				_mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v1, _mm_setzero_si128())), scale));
 				_mm_store_ps(dst + 4, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v1, _mm_setzero_si128())), scale));
-	            _mm_store_ps(dst + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, _mm_setzero_si128())), scale));
-	            _mm_store_ps(dst + 12, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, _mm_setzero_si128())), scale));
+				_mm_store_ps(dst + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, _mm_setzero_si128())), scale));
+				_mm_store_ps(dst + 12, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, _mm_setzero_si128())), scale));
 				dst += 16;
 				src += 4*sizeof(unsigned char[4]);
 			}
 		}
 		else
 		{
-	        while (dst < end4)
-	        {
-	            __m128i v = _mm_load_si128((const __m128i *)src), v1 = _mm_unpacklo_epi8(v, _mm_setzero_si128()), v2 = _mm_unpackhi_epi8(v, _mm_setzero_si128());
-	            _mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v1, _mm_setzero_si128())), scale));
-	            _mm_store_ps(dst + 4, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v1, _mm_setzero_si128())), scale));
-	            _mm_store_ps(dst + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, _mm_setzero_si128())), scale));
-	            _mm_store_ps(dst + 12, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, _mm_setzero_si128())), scale));
-	            dst += 16;
-	            src += 4*sizeof(unsigned char[4]);
-	        }
+			while (dst < end4)
+			{
+				__m128i v = _mm_load_si128((const __m128i *)src), v1 = _mm_unpacklo_epi8(v, _mm_setzero_si128()), v2 = _mm_unpackhi_epi8(v, _mm_setzero_si128());
+				_mm_store_ps(dst, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v1, _mm_setzero_si128())), scale));
+				_mm_store_ps(dst + 4, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v1, _mm_setzero_si128())), scale));
+				_mm_store_ps(dst + 8, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, _mm_setzero_si128())), scale));
+				_mm_store_ps(dst + 12, _mm_mul_ps(_mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, _mm_setzero_si128())), scale));
+				dst += 16;
+				src += 4*sizeof(unsigned char[4]);
+			}
 		}
 	}
 	while (dst < end)
@@ -2354,7 +2397,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	__m128i subtc, substep, endsubtc;
 	int filter;
 	int mip;
-	unsigned int *outi = (unsigned int *)out4ub;
+	unsigned int * RESTRICT outi = (unsigned int *)out4ub;
 	const unsigned char * RESTRICT pixelbase;
 	DPSOFTRAST_Texture *texture = thread->texbound[texunitindex];
 	// if no texture is bound, just fill it with white
@@ -2406,14 +2449,18 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 			__m128i tcrange = _mm_srai_epi32(_mm_unpacklo_epi64(subtc, _mm_add_epi32(endsubtc, substep)), 16);
 			if (_mm_movemask_epi8(_mm_andnot_si128(_mm_cmplt_epi32(tcrange, _mm_setzero_si128()), _mm_cmplt_epi32(tcrange, tcmask))) == 0xFFFF)
 			{
+				int stride = _mm_cvtsi128_si32(tcoffset)>>16;
 				for (; x + 1 <= endsub; x += 2, subtc = _mm_add_epi32(subtc, substep))
 				{
+					const unsigned char * RESTRICT ptr1, * RESTRICT ptr2;			
 					__m128i tci = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, pix3, pix4, fracm;
-					tci = _mm_madd_epi16(_mm_add_epi16(tci, _mm_setr_epi32(0, 0x10000, 0, 0x10000)), tcoffset);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(tci)]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(1, 1, 1, 1)))]), _mm_setzero_si128());
-					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(2, 2, 2, 2)))]), _mm_setzero_si128());
-					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(3, 3, 3, 3)))]), _mm_setzero_si128());
+					tci = _mm_madd_epi16(tci, tcoffset);
+					ptr1 = pixelbase + _mm_cvtsi128_si32(tci);
+					ptr2 = pixelbase + _mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(2, 2, 2, 2)));
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)ptr1), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)(ptr1 + stride)), _mm_setzero_si128());
+					pix3 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)ptr2), _mm_setzero_si128());
+					pix4 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)(ptr2 + stride)), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtc, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -2430,10 +2477,12 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 				}
 				if (x <= endsub)
 				{
+					const unsigned char * RESTRICT ptr1;
 					__m128i tci = _mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1)), pix1, pix2, fracm;
-					tci = _mm_madd_epi16(_mm_add_epi16(tci, _mm_setr_epi32(0, 0x10000, 0, 0)), tcoffset);
-					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(tci)]), _mm_setzero_si128());
-					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(1, 1, 1, 1)))]), _mm_setzero_si128());
+					tci = _mm_madd_epi16(tci, tcoffset);
+					ptr1 = pixelbase + _mm_cvtsi128_si32(tci);
+					pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)ptr1), _mm_setzero_si128());
+					pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)(ptr1 + stride)), _mm_setzero_si128());
 					fracm = _mm_srli_epi16(subtc, 1);
 					pix1 = _mm_add_epi16(pix1,
 										 _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 1),
@@ -4590,19 +4639,19 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		{
 			__m128 attribuvslope, attribuxslope, attribuyslope, attribvxslope, attribvyslope, attriborigin, attribedge1, attribedge2, attribxslope, attribyslope, w0, w1, w2, x1, y1;
 			attribuvslope = _mm_div_ps(_mm_movelh_ps(triangleedge1, triangleedge2), _mm_shuffle_ps(trianglenormal, trianglenormal, _MM_SHUFFLE(0, 0, 0, 0)));
-	        attribuxslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(3, 3, 3, 3));
-	        attribuyslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(2, 2, 2, 2));
-	        attribvxslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(1, 1, 1, 1));
-	        attribvyslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(0, 0, 0, 0));
-	        w0 = _mm_shuffle_ps(screen[0], screen[0], _MM_SHUFFLE(3, 3, 3, 3));
-	        w1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(3, 3, 3, 3));
-	        w2 = _mm_shuffle_ps(screen[2], screen[2], _MM_SHUFFLE(3, 3, 3, 3));
+			attribuxslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(3, 3, 3, 3));
+			attribuyslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(2, 2, 2, 2));
+			attribvxslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(1, 1, 1, 1));
+			attribvyslope = _mm_shuffle_ps(attribuvslope, attribuvslope, _MM_SHUFFLE(0, 0, 0, 0));
+			w0 = _mm_shuffle_ps(screen[0], screen[0], _MM_SHUFFLE(3, 3, 3, 3));
+			w1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(3, 3, 3, 3));
+			w2 = _mm_shuffle_ps(screen[2], screen[2], _MM_SHUFFLE(3, 3, 3, 3));
 			attribedge1 = _mm_sub_ss(w0, w1);
 			attribedge2 = _mm_sub_ss(w2, w1);
 			attribxslope = _mm_sub_ss(_mm_mul_ss(attribuxslope, attribedge1), _mm_mul_ss(attribvxslope, attribedge2));
 			attribyslope = _mm_sub_ss(_mm_mul_ss(attribvyslope, attribedge2), _mm_mul_ss(attribuyslope, attribedge1));
-	        x1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(0, 0, 0, 0));
-	        y1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(1, 1, 1, 1));
+			x1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(0, 0, 0, 0));
+			y1 = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(1, 1, 1, 1));
 			attriborigin = _mm_sub_ss(w1, _mm_add_ss(_mm_mul_ss(attribxslope, x1), _mm_mul_ss(attribyslope, y1)));
 			_mm_store_ss(&triangle->w[0], attribxslope);
 			_mm_store_ss(&triangle->w[1], attribyslope);
@@ -4616,15 +4665,15 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 					attriborigin = _mm_mul_ps(attrib1, w1);
 					attribedge1 = _mm_sub_ps(_mm_mul_ps(attrib0, w0), attriborigin);
 					attribedge2 = _mm_sub_ps(_mm_mul_ps(attrib2, w2), attriborigin);
-			        attribxslope = _mm_sub_ps(_mm_mul_ps(attribuxslope, attribedge1), _mm_mul_ps(attribvxslope, attribedge2));
-			        attribyslope = _mm_sub_ps(_mm_mul_ps(attribvyslope, attribedge2), _mm_mul_ps(attribuyslope, attribedge1));
+					attribxslope = _mm_sub_ps(_mm_mul_ps(attribuxslope, attribedge1), _mm_mul_ps(attribvxslope, attribedge2));
+					attribyslope = _mm_sub_ps(_mm_mul_ps(attribvyslope, attribedge2), _mm_mul_ps(attribuyslope, attribedge1));
 					attriborigin = _mm_sub_ps(attriborigin, _mm_add_ps(_mm_mul_ps(attribxslope, x1), _mm_mul_ps(attribyslope, y1)));
 					_mm_stream_ps(triangle->attribs[j][0], attribxslope);
 					_mm_stream_ps(triangle->attribs[j][1], attribyslope);
-	    			_mm_stream_ps(triangle->attribs[j][2], attriborigin);
-		    	}
-		    }
-	    }
+					_mm_stream_ps(triangle->attribs[j][2], attriborigin);
+				}
+			}
+		}
 
 		// adjust texture LOD by texture density, in the simplest way possible...
 		{
@@ -4662,7 +4711,7 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			}
 		}
 
-	    dpsoftrast.trianglepool.freetriangle = dpsoftrast.trianglepool.freetriangle < DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-1 ? dpsoftrast.trianglepool.freetriangle + 1 : 0;
+		dpsoftrast.trianglepool.freetriangle = dpsoftrast.trianglepool.freetriangle < DPSOFTRAST_DRAW_MAXTRIANGLEPOOL-1 ? dpsoftrast.trianglepool.freetriangle + 1 : 0;
 		dpsoftrast.trianglepool.usedtriangles++;
 
 		numqueued++;
@@ -4672,9 +4721,9 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 			dpsoftrast.drawtriangle = dpsoftrast.trianglepool.freetriangle;
 
 #ifdef USE_THREADS
-			SDL_LockMutex(dpsoftrast.trianglemutex);
+			//SDL_LockMutex(dpsoftrast.trianglemutex);
    			SDL_CondBroadcast(dpsoftrast.trianglecond);
-			SDL_UnlockMutex(dpsoftrast.trianglemutex);
+			//SDL_UnlockMutex(dpsoftrast.trianglemutex);
 #else
 			DPSOFTRAST_Draw_FlushThreads();
 #endif
@@ -4687,9 +4736,9 @@ void DPSOFTRAST_Draw_ProcessTriangles(int firstvertex, int numtriangles, const i
 		dpsoftrast.drawtriangle = dpsoftrast.trianglepool.freetriangle;
 
 #ifdef USE_THREADS
-		SDL_LockMutex(dpsoftrast.trianglemutex);
+		//SDL_LockMutex(dpsoftrast.trianglemutex);
 		SDL_CondBroadcast(dpsoftrast.trianglecond);
-		SDL_UnlockMutex(dpsoftrast.trianglemutex);
+		//SDL_UnlockMutex(dpsoftrast.trianglemutex);
 #else
 		DPSOFTRAST_Draw_FlushThreads();
 #endif
@@ -4733,6 +4782,11 @@ void DPSOFTRAST_Flush(void)
 {
 	DPSOFTRAST_Draw_SyncCommands();
 	DPSOFTRAST_Draw_FlushThreads();
+}
+
+void DPSOFTRAST_Finish(void)
+{
+	DPSOFTRAST_Flush();
 }
 
 void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorpixels, unsigned int *depthpixels)

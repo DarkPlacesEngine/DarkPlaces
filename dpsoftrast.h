@@ -34,6 +34,7 @@ DPSOFTRAST_TEXTURE_FILTER;
 void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorpixels, unsigned int *depthpixels);
 void DPSOFTRAST_Shutdown(void);
 void DPSOFTRAST_Flush(void);
+void DPSOFTRAST_Finish(void);
 
 int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth);
 void DPSOFTRAST_Texture_Free(int index);
