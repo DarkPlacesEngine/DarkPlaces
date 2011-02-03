@@ -2384,7 +2384,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	endtc = _mm_sub_ps(_mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx))), _mm_load1_ps(&zf[startx])), _mm_set1_ps(0.5f));
 	endsubtc = _mm_cvtps_epi32(_mm_mul_ps(endtc, _mm_set1_ps(65536.0f)));
 	tcoffset = _mm_add_epi32(_mm_slli_epi32(_mm_shuffle_epi32(tcsize, _MM_SHUFFLE(0, 0, 0, 0)), 18), _mm_set1_epi32(4));
-	tcmax = filter ? _mm_packs_epi32(tcmask, tcmask) : _mm_slli_epi32(tcmask, 16);  
+	tcmax = _mm_packs_epi32(tcmask, tcmask);
 	for (x = startx;x < endx;)
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
@@ -2571,16 +2571,16 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 			{
 				for (; x + 1 <= endsub; x += 2, subtc = _mm_add_epi32(subtc, substep))
 				{
-					__m128i tci = _mm_min_epi16(_mm_max_epi16(subtc, _mm_setzero_si128()), tcmax); 
-					tci = _mm_shufflehi_epi16(_mm_shufflelo_epi16(tci, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					__m128i tci = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					tci = _mm_min_epi16(_mm_max_epi16(tci, _mm_setzero_si128()), tcmax); 
 					tci = _mm_madd_epi16(tci, tcoffset);
 					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tci)];
-					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(1, 1, 1, 1)))];
+					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(2, 2, 2, 2)))];
 				}
 				if (x <= endsub)
 				{
-					__m128i tci = _mm_min_epi16(_mm_max_epi16(subtc, _mm_setzero_si128()), tcmax);
-					tci = _mm_shufflelo_epi16(tci, _MM_SHUFFLE(3, 1, 3, 1));
+					__m128i tci = _mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1));
+					tci =_mm_min_epi16(_mm_max_epi16(tci, _mm_setzero_si128()), tcmax);
 					tci = _mm_madd_epi16(tci, tcoffset);
 					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tci)];
 					x++;
@@ -2590,16 +2590,16 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 			{
 				for (; x + 1 <= endsub; x += 2, subtc = _mm_add_epi32(subtc, substep))
 				{
-					__m128i tci = _mm_and_si128(subtc, tcmax); 
-					tci = _mm_shufflehi_epi16(_mm_shufflelo_epi16(tci, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					__m128i tci = _mm_shufflehi_epi16(_mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1)), _MM_SHUFFLE(3, 1, 3, 1));
+					tci = _mm_and_si128(tci, tcmax); 
 					tci = _mm_madd_epi16(tci, tcoffset);
 					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tci)];
-					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(1, 1, 1, 1)))];
+					outi[x+1] = *(const int *)&pixelbase[_mm_cvtsi128_si32(_mm_shuffle_epi32(tci, _MM_SHUFFLE(2, 2, 2, 2)))];
 				}
 				if (x <= endsub)
 				{
-					__m128i tci = _mm_and_si128(subtc, tcmax); 
-					tci = _mm_shufflelo_epi16(tci, _MM_SHUFFLE(3, 1, 3, 1));
+					__m128i tci = _mm_shufflelo_epi16(subtc, _MM_SHUFFLE(3, 1, 3, 1));
+					tci = _mm_and_si128(tci, tcmax); 
 					tci = _mm_madd_epi16(tci, tcoffset);
 					outi[x] = *(const int *)&pixelbase[_mm_cvtsi128_si32(tci)];
 					x++;
