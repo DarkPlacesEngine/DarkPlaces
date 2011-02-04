@@ -891,7 +891,7 @@ static void DPSOFTRAST_Interpret_ClearColor(DPSOFTRAST_State_Thread *thread, con
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
 	x1 = thread->fb_clearscissor[0];
 	y1 = thread->fb_clearscissor[1];
-	x2 = thread->fb_clearscissor[2];
+	x2 = thread->fb_clearscissor[0] + thread->fb_clearscissor[2];
 	y2 = thread->fb_clearscissor[1] + thread->fb_clearscissor[3];
 	t1 = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
 	t2 = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
@@ -933,7 +933,7 @@ static void DPSOFTRAST_Interpret_ClearDepth(DPSOFTRAST_State_Thread *thread, DPS
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
 	x1 = thread->fb_clearscissor[0];
 	y1 = thread->fb_clearscissor[1];
-	x2 = thread->fb_clearscissor[2];
+	x2 = thread->fb_clearscissor[0] + thread->fb_clearscissor[2];
 	y2 = thread->fb_clearscissor[1] + thread->fb_clearscissor[3];
 	t1 = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
 	t2 = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
