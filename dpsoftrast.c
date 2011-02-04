@@ -254,11 +254,14 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	// derived values (DPSOFTRAST_VALIDATE_BLENDFUNC)
 	int fb_blendmode;
 
-	ATOMIC(int commandoffset);
+	ATOMIC(volatile int commandoffset);
 
-	bool waiting;
+	volatile bool waiting;
+	volatile bool starving;
 #ifdef USE_THREADS
 	SDL_cond *waitcond;
+	SDL_cond *drawcond;
+	SDL_mutex *drawmutex;
 #endif
 
 	int numspans;
@@ -316,20 +319,14 @@ typedef ATOMIC(struct DPSOFTRAST_State_s
 
 	int numthreads;
 	DPSOFTRAST_State_Thread *threads;
-#ifdef USE_THREADS
-	SDL_mutex *drawmutex;
-	SDL_cond *drawcond;
-#endif
 
-	ATOMIC(int drawcommand);
+	ATOMIC(volatile int drawcommand);
 
 	DPSOFTRAST_State_Command_Pool commandpool;
 }
 DPSOFTRAST_State);
 
 DPSOFTRAST_State dpsoftrast;
-
-extern int dpsoftrast_test;
 
 #define DPSOFTRAST_DEPTHSCALE (1024.0f*1048576.0f)
 #define DPSOFTRAST_DEPTHOFFSET (128.0f)
@@ -778,7 +775,6 @@ static void DPSOFTRAST_Draw_FreeCommandPool(int space)
 	if (usedcommands <= DPSOFTRAST_DRAW_MAXCOMMANDPOOL-space)
 		return;
 	DPSOFTRAST_Draw_SyncCommands();
-	SDL_LockMutex(dpsoftrast.drawmutex);
 	for(;;)
 	{
 		int waitindex = -1;
@@ -799,12 +795,16 @@ static void DPSOFTRAST_Draw_FreeCommandPool(int space)
 		if (usedcommands <= DPSOFTRAST_DRAW_MAXCOMMANDPOOL-space || waitindex < 0)
 			break;
 		thread = &dpsoftrast.threads[waitindex];
-		thread->waiting = true;
-		SDL_CondBroadcast(dpsoftrast.drawcond);
-		SDL_CondWait(thread->waitcond, dpsoftrast.drawmutex);
-		thread->waiting = false;
+		SDL_LockMutex(thread->drawmutex);
+		if (thread->commandoffset != dpsoftrast.drawcommand)
+		{
+			thread->waiting = true;
+			if (thread->starving) SDL_CondSignal(thread->drawcond);
+			SDL_CondWait(thread->waitcond, thread->drawmutex);
+			thread->waiting = false;
+		}
+		SDL_UnlockMutex(thread->drawmutex);
 	}
-	SDL_UnlockMutex(dpsoftrast.drawmutex);
 	dpsoftrast.commandpool.usedcommands = usedcommands;
 #else
 	DPSOFTRAST_Draw_FlushThreads();
@@ -4719,9 +4719,18 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 
 #ifdef USE_THREADS
 	DPSOFTRAST_Draw_SyncCommands();
-	//SDL_LockMutex(dpsoftrast.drawmutex);
-	SDL_CondBroadcast(dpsoftrast.drawcond);
-	//SDL_UnlockMutex(dpsoftrast.drawmutex);
+	{
+		int i;
+		int nexty = 0;
+		for (i = 0; i < dpsoftrast.numthreads; i++)
+		{
+			DPSOFTRAST_State_Thread *thread = &dpsoftrast.threads[i];
+			int y = nexty;
+			nexty = ((i+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+			if (command->starty < nexty && command->endy > y && thread->starving)
+				SDL_CondSignal(thread->drawcond);
+		}
+	}
 #else
 	DPSOFTRAST_Draw_FlushThreads();
 #endif
@@ -4792,15 +4801,15 @@ static int DPSOFTRAST_Draw_Thread(void *data)
 		}
 		else 
 		{
-			SDL_LockMutex(dpsoftrast.drawmutex);
-			if (thread->commandoffset != dpsoftrast.drawcommand)
+			SDL_LockMutex(thread->drawmutex);
+			if (thread->commandoffset == dpsoftrast.drawcommand && thread->index >= 0)
 			{
-				SDL_UnlockMutex(dpsoftrast.drawmutex);
-				continue;
+				if (thread->waiting) SDL_CondSignal(thread->waitcond);
+				thread->starving = true;
+				SDL_CondWait(thread->drawcond, thread->drawmutex);
+				thread->starving = false;
 			}
-			if (thread->waiting) SDL_CondSignal(thread->waitcond);
-			SDL_CondWait(dpsoftrast.drawcond, dpsoftrast.drawmutex);
-			SDL_UnlockMutex(dpsoftrast.drawmutex);
+			SDL_UnlockMutex(thread->drawmutex);
 		}
 	}   
 	return 0;
@@ -4813,27 +4822,38 @@ static void DPSOFTRAST_Draw_FlushThreads(void)
 	int i;
 	DPSOFTRAST_Draw_SyncCommands();
 #ifdef USE_THREADS
-	SDL_LockMutex(dpsoftrast.drawmutex);
-#endif
+	for (i = 0; i < dpsoftrast.numthreads; i++)
+	{
+		thread = &dpsoftrast.threads[i];
+		if (thread->commandoffset != dpsoftrast.drawcommand)
+		{
+			SDL_LockMutex(thread->drawmutex);
+			if (thread->commandoffset != dpsoftrast.drawcommand && thread->starving)
+				SDL_CondSignal(thread->drawcond);
+			SDL_UnlockMutex(thread->drawmutex);
+		}
+	}
+#endif			
 	for (i = 0; i < dpsoftrast.numthreads; i++)
 	{
 		thread = &dpsoftrast.threads[i];
 #ifdef USE_THREADS
-		while (thread->commandoffset != dpsoftrast.drawcommand)
+		if (thread->commandoffset != dpsoftrast.drawcommand)
 		{
-			thread->waiting = true;
-			SDL_CondBroadcast(dpsoftrast.drawcond);
-			SDL_CondWait(thread->waitcond, dpsoftrast.drawmutex);
-			thread->waiting = false;
+			SDL_LockMutex(thread->drawmutex);
+			if (thread->commandoffset != dpsoftrast.drawcommand)
+			{
+				thread->waiting = true;
+				SDL_CondWait(thread->waitcond, thread->drawmutex);
+				thread->waiting = false;
+			}
+			SDL_UnlockMutex(thread->drawmutex);
 		}
 #else
 		if (thread->commandoffset != dpsoftrast.drawcommand)
 			DPSOFTRAST_Draw_InterpretCommands(thread, dpsoftrast.drawcommand);
 #endif
 	}
-#ifdef USE_THREADS
-	SDL_UnlockMutex(dpsoftrast.drawmutex);
-#endif
 	dpsoftrast.commandpool.usedcommands = 0;
 }
 
@@ -4880,8 +4900,6 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 	dpsoftrast.color[3] = 1;
 #ifdef USE_THREADS
 	dpsoftrast.numthreads = bound(1, numthreads, 64);
-	dpsoftrast.drawmutex = SDL_CreateMutex();
-	dpsoftrast.drawcond = SDL_CreateCond();
 #else
 	dpsoftrast.numthreads = 1;
 #endif
@@ -4920,8 +4938,11 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 		thread->numtriangles = 0;
 		thread->commandoffset = 0;
 		thread->waiting = false;
+		thread->starving = false;
 #ifdef USE_THREADS
 		thread->waitcond = SDL_CreateCond();
+		thread->drawcond = SDL_CreateCond();
+		thread->drawmutex = SDL_CreateMutex();
 #endif
 
 		thread->validate = -1;
@@ -4939,22 +4960,18 @@ void DPSOFTRAST_Shutdown(void)
 	if(dpsoftrast.numthreads > 0)
 	{
 		DPSOFTRAST_State_Thread *thread;
-		SDL_LockMutex(dpsoftrast.drawmutex);
 		for (i = 0; i < dpsoftrast.numthreads; i++)
 		{
 			thread = &dpsoftrast.threads[i];
+			SDL_LockMutex(thread->drawmutex);
 			thread->index = -1;
-		}
-		SDL_CondBroadcast(dpsoftrast.drawcond);
-		SDL_UnlockMutex(dpsoftrast.drawmutex);
-		for (i = 0; i < dpsoftrast.numthreads; i++)
-		{
-			thread = &dpsoftrast.threads[i];
+			SDL_CondSignal(thread->drawcond);
+			SDL_UnlockMutex(thread->drawmutex);
 			SDL_WaitThread(thread->thread, NULL);
 			SDL_DestroyCond(thread->waitcond);
+			SDL_DestroyCond(thread->drawcond);
+			SDL_DestroyMutex(thread->drawmutex);
 		}
-		SDL_DestroyMutex(dpsoftrast.drawmutex);
-		SDL_DestroyCond(dpsoftrast.drawcond);
 	}
 #endif
 	for (i = 0;i < dpsoftrast.texture_end;i++)
