@@ -4289,17 +4289,17 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 
 		// generate the 3 edges of this triangle
 		// generate spans for the triangle - switch based on left split or right split classification of triangle
-		if (element3i)
-		{
-			e[0] = element3i[i*3+0] - firstvertex;
-			e[1] = element3i[i*3+1] - firstvertex;
-			e[2] = element3i[i*3+2] - firstvertex;
-		}
-		else if (element3s)
+		if (element3s)
 		{
 			e[0] = element3s[i*3+0] - firstvertex;
 			e[1] = element3s[i*3+1] - firstvertex;
 			e[2] = element3s[i*3+2] - firstvertex;
+		}
+		else if (element3i)
+		{
+			e[0] = element3i[i*3+0] - firstvertex;
+			e[1] = element3i[i*3+1] - firstvertex;
+			e[2] = element3i[i*3+2] - firstvertex;
 		}
 		else
 		{
@@ -4652,10 +4652,10 @@ static DPSOFTRAST_Command_Draw *DPSOFTRAST_Draw_AllocateDrawCommand(int firstver
 			break;
 		datasize += numvertices*sizeof(float[4]);
 	}
-	if (element3i)
-		datasize += numtriangles*sizeof(int[3]);
-	else if (element3s)
+	if (element3s)
 		datasize += numtriangles*sizeof(unsigned short[3]);
+	else if (element3i)
+		datasize += numtriangles*sizeof(int[3]);
 	datasize = DPSOFTRAST_ALIGNCOMMAND(datasize);
 	if (commandsize + datasize > DPSOFTRAST_DRAW_MAXCOMMANDSIZE)
 	{
@@ -4688,15 +4688,15 @@ static DPSOFTRAST_Command_Draw *DPSOFTRAST_Draw_AllocateDrawCommand(int firstver
 	}
 	command->element3i = NULL;
 	command->element3s = NULL;
-	if (element3i)
-	{
-		command->element3i = (int *)data;
-		memcpy(command->element3i, element3i, numtriangles*sizeof(int[3]));
-	}
-	else if (element3s)
+	if (element3s)
 	{
 		command->element3s = (unsigned short *)data;
 		memcpy(command->element3s, element3s, numtriangles*sizeof(unsigned short[3]));
+	}
+	else if (element3i)
+	{
+		command->element3i = (int *)data;
+		memcpy(command->element3i, element3i, numtriangles*sizeof(int[3]));
 	}
 	return command;
 }
