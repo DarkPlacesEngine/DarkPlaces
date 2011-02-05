@@ -6,7 +6,7 @@
 #include "dpsoftrast.h"
 
 #ifdef USE_SDL
-//#define USE_THREADS
+#define USE_THREADS
 #endif
 
 #ifdef USE_THREADS
