@@ -6,12 +6,7 @@
 #include "dpsoftrast.h"
 
 #ifdef USE_SDL
-#define USE_THREADS
-#endif
-
-#ifdef USE_THREADS
-#include <SDL.h>
-#include <SDL_thread.h>
+//#define USE_THREADS
 #endif
 
 #ifndef __cplusplus
@@ -55,12 +50,18 @@ typedef qboolean bool;
 	#define ATOMIC(var) var
 #endif
 
-#ifndef USE_THREADS
+#ifdef USE_THREADS
+#include <SDL.h>
+#include <SDL_thread.h>
+#else
 	#define MEMORY_BARRIER ((void)0)
 	#define ATOMIC_COUNTER int
 	#define ATOMIC_INCREMENT(counter) (++(counter))
 	#define ATOMIC_DECREMENT(counter) (--(counter))
 	#define ATOMIC_ADD(counter, val) ((void)((counter) += (val)))
+	typedef void SDL_Thread;
+	typedef void SDL_cond;
+	typedef void SDL_mutex;
 #endif
 
 #ifdef SSE2_PRESENT
@@ -210,9 +211,7 @@ DPSOFTRAST_BLENDMODE;
 
 typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 {
-#ifdef USE_THREADS
 	SDL_Thread *thread;
-#endif
 	int index;
 	
 	int cullface;
@@ -258,11 +257,9 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 
 	volatile bool waiting;
 	volatile bool starving;
-#ifdef USE_THREADS
 	SDL_cond *waitcond;
 	SDL_cond *drawcond;
 	SDL_mutex *drawmutex;
-#endif
 
 	int numspans;
 	int numtriangles;
