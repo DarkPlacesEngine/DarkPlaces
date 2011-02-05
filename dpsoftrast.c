@@ -850,6 +850,8 @@ static void DPSOFTRAST_UndoCommand(int size)
 	int freecommand = dpsoftrast.commandpool.freecommand;
 	int usedcommands = dpsoftrast.commandpool.usedcommands;
 	freecommand -= size;
+	if (freecommand < 0)
+		freecommand += DPSOFTRAST_DRAW_MAXCOMMANDPOOL;
 	usedcommands -= size;
 	dpsoftrast.commandpool.freecommand = freecommand;
 	dpsoftrast.commandpool.usedcommands = usedcommands;
