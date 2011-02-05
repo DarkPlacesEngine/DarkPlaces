@@ -496,7 +496,7 @@ void gl_backend_init(void)
 
 	for (i = 0;i < (POLYGONELEMENTS_MAXPOINTS - 2)*3;i++)
 		polygonelement3i[i] = polygonelement3s[i];
-	for (i = 0;i < QUADELEMENTS_MAXQUADS*3;i++)
+	for (i = 0;i < QUADELEMENTS_MAXQUADS*6;i++)
 		quadelement3i[i] = quadelement3s[i];
 
 	Cvar_RegisterVariable(&r_render);
