@@ -6,7 +6,7 @@
 #include "dpsoftrast.h"
 
 #ifdef USE_SDL
-#define USE_THREADS
+//#define USE_THREADS
 #endif
 
 #ifdef USE_THREADS
@@ -2859,29 +2859,42 @@ void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Triangle *
 	int startx = span->startx;
 	int endx = span->endx;
 	__m128 data, slope;
+	__m128 mod, endmod;
+	__m128i submod, substep, endsubmod;
 	DPSOFTRAST_CALCATTRIB(triangle, span, data, slope, arrayindex);
 	data = _mm_shuffle_ps(data, data, _MM_SHUFFLE(3, 0, 1, 2));
 	slope = _mm_shuffle_ps(slope, slope, _MM_SHUFFLE(3, 0, 1, 2));
-	data = _mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx)));
-	data = _mm_mul_ps(data, _mm_set1_ps(256.0f));
-	slope = _mm_mul_ps(slope, _mm_set1_ps(256.0f));
-	for (x = startx;x+2 <= endx;x += 2, data = _mm_add_ps(data, slope))
+	endmod = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx))), _mm_load1_ps(&zf[startx]));
+	endsubmod = _mm_cvtps_epi32(_mm_mul_ps(endmod, _mm_set1_ps(256.0f)));
+	for (x = startx; x < endx;)
 	{
-		__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_loadl_epi64((const __m128i *)&in4ub[x*4]));
-		__m128i mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x]))), mod2;
-		data = _mm_add_ps(data, slope);
-		mod2 = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x+1])));
-		mod = _mm_unpacklo_epi64(_mm_packs_epi32(mod, mod), _mm_packs_epi32(mod2, mod2));
-		pix = _mm_mulhi_epu16(pix, mod);
-		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
-	}
-	for (;x < endx;x++, data = _mm_add_ps(data, slope))
-	{
-		__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&in4ub[x*4]));
-		__m128i mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x])));
-		mod = _mm_packs_epi32(mod, mod);
-		pix = _mm_mulhi_epu16(pix, mod);
-		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
+		__m128 subscale = _mm_set1_ps(256.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
+		if(nextsub >= endx)
+		{
+			nextsub = endsub = endx-1;
+			if(x < nextsub) subscale = _mm_set1_ps(256.0f / (nextsub - x));
+		}
+		mod = endmod;
+		submod = endsubmod;
+		endmod = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(nextsub))), _mm_load1_ps(&zf[nextsub]));
+		substep = _mm_cvtps_epi32(_mm_mul_ps(_mm_sub_ps(endmod, mod), subscale));
+		endsubmod = _mm_cvtps_epi32(_mm_mul_ps(endmod, _mm_set1_ps(256.0f)));
+		submod = _mm_packs_epi32(submod, _mm_add_epi32(submod, substep));
+		substep = _mm_packs_epi32(substep, substep);
+		for (; x + 1 <= endsub; x += 2, submod = _mm_add_epi16(submod, substep))
+		{
+			__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_loadl_epi64((const __m128i *)&in4ub[x*4]));
+			pix = _mm_mulhi_epu16(pix, submod);
+			_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
+		}
+		if (x <= endsub)
+		{
+			__m128i pix = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&in4ub[x*4]));
+			pix = _mm_mulhi_epu16(pix, submod);
+			*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+			x++;
+		}
 	}
 #endif
 }
@@ -2893,25 +2906,40 @@ void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Triangle * RESTRIC
 	int startx = span->startx;
 	int endx = span->endx;
 	__m128 data, slope;
+	__m128 mod, endmod;
+	__m128i submod, substep, endsubmod;
 	DPSOFTRAST_CALCATTRIB(triangle, span, data, slope, arrayindex);
 	data = _mm_shuffle_ps(data, data, _MM_SHUFFLE(3, 0, 1, 2));
 	slope = _mm_shuffle_ps(slope, slope, _MM_SHUFFLE(3, 0, 1, 2));
-	data = _mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx)));
-	data = _mm_mul_ps(data, _mm_set1_ps(255.0f));
-	slope = _mm_mul_ps(slope, _mm_set1_ps(255.0f));
-	for (x = startx;x+2 <= endx;x += 2, data = _mm_add_ps(data, slope))
+	endmod = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx))), _mm_load1_ps(&zf[startx]));
+	endsubmod = _mm_cvtps_epi32(_mm_mul_ps(endmod, _mm_set1_ps(4095.0f)));
+	for (x = startx; x < endx;)
 	{
-		__m128i pix = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x]))), pix2;
-		data = _mm_add_ps(data, slope);
-		pix2 = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x+1])));
-		pix = _mm_unpacklo_epi64(_mm_packs_epi32(pix, pix), _mm_packs_epi32(pix2, pix2));
-		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
-	}
-	for (;x < endx;x++, data = _mm_add_ps(data, slope))
-	{
-		__m128i pix = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&zf[x])));
-		pix = _mm_packs_epi32(pix, pix);
-		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
+		__m128 subscale = _mm_set1_ps(4095.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
+		if(nextsub >= endx)
+		{
+			nextsub = endsub = endx-1;
+			if(x < nextsub) subscale = _mm_set1_ps(4095.0f / (nextsub - x));
+		}
+		mod = endmod;
+		submod = endsubmod;
+		endmod = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(nextsub))), _mm_load1_ps(&zf[nextsub]));
+		substep = _mm_cvtps_epi32(_mm_mul_ps(_mm_sub_ps(endmod, mod), subscale));
+		endsubmod = _mm_cvtps_epi32(_mm_mul_ps(endmod, _mm_set1_ps(4095.0f)));
+		submod = _mm_packs_epi32(submod, _mm_add_epi32(submod, substep));
+		substep = _mm_packs_epi32(substep, substep);
+		for (; x + 1 <= endsub; x += 2, submod = _mm_add_epi16(submod, substep))
+		{
+			__m128i pix = _mm_srai_epi16(submod, 4);
+			_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
+		}
+		if (x <= endsub)
+		{
+			__m128i pix = _mm_srai_epi16(submod, 4);
+			*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
+			x++;
+		}
 	}
 #endif
 }
