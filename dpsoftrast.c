@@ -2186,7 +2186,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 		break;
 	case DPSOFTRAST_BLENDMODE_ALPHA:
 	#define FINISHBLEND(blend2, blend1) \
-		for (x = startx;x + 2 <= endx;x += 2) \
+		for (x = startx;x + 1 < endx;x += 2) \
 		{ \
 			__m128i src, dst; \
 			switch (*(const unsigned short*)&pixelmask[x]) \
@@ -2280,6 +2280,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 		}, {
 			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(_mm_set1_epi16(255), dst), 4), _mm_slli_epi16(src, 4)));
 		});
+		break;
 	}
 #endif
 }
