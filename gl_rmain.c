@@ -3747,122 +3747,122 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	if (p->program)
 	{
 		CHECKGLERROR
-		qglUseProgramObjectARB(p->program);CHECKGLERROR
+		qglUseProgram(p->program);CHECKGLERROR
 		// look up all the uniform variable names we care about, so we don't
 		// have to look them up every time we set them
 
-		p->loc_Texture_First              = qglGetUniformLocationARB(p->program, "Texture_First");
-		p->loc_Texture_Second             = qglGetUniformLocationARB(p->program, "Texture_Second");
-		p->loc_Texture_GammaRamps         = qglGetUniformLocationARB(p->program, "Texture_GammaRamps");
-		p->loc_Texture_Normal             = qglGetUniformLocationARB(p->program, "Texture_Normal");
-		p->loc_Texture_Color              = qglGetUniformLocationARB(p->program, "Texture_Color");
-		p->loc_Texture_Gloss              = qglGetUniformLocationARB(p->program, "Texture_Gloss");
-		p->loc_Texture_Glow               = qglGetUniformLocationARB(p->program, "Texture_Glow");
-		p->loc_Texture_SecondaryNormal    = qglGetUniformLocationARB(p->program, "Texture_SecondaryNormal");
-		p->loc_Texture_SecondaryColor     = qglGetUniformLocationARB(p->program, "Texture_SecondaryColor");
-		p->loc_Texture_SecondaryGloss     = qglGetUniformLocationARB(p->program, "Texture_SecondaryGloss");
-		p->loc_Texture_SecondaryGlow      = qglGetUniformLocationARB(p->program, "Texture_SecondaryGlow");
-		p->loc_Texture_Pants              = qglGetUniformLocationARB(p->program, "Texture_Pants");
-		p->loc_Texture_Shirt              = qglGetUniformLocationARB(p->program, "Texture_Shirt");
-		p->loc_Texture_FogHeightTexture   = qglGetUniformLocationARB(p->program, "Texture_FogHeightTexture");
-		p->loc_Texture_FogMask            = qglGetUniformLocationARB(p->program, "Texture_FogMask");
-		p->loc_Texture_Lightmap           = qglGetUniformLocationARB(p->program, "Texture_Lightmap");
-		p->loc_Texture_Deluxemap          = qglGetUniformLocationARB(p->program, "Texture_Deluxemap");
-		p->loc_Texture_Attenuation        = qglGetUniformLocationARB(p->program, "Texture_Attenuation");
-		p->loc_Texture_Cube               = qglGetUniformLocationARB(p->program, "Texture_Cube");
-		p->loc_Texture_Refraction         = qglGetUniformLocationARB(p->program, "Texture_Refraction");
-		p->loc_Texture_Reflection         = qglGetUniformLocationARB(p->program, "Texture_Reflection");
-		p->loc_Texture_ShadowMap2D        = qglGetUniformLocationARB(p->program, "Texture_ShadowMap2D");
-		p->loc_Texture_CubeProjection     = qglGetUniformLocationARB(p->program, "Texture_CubeProjection");
-		p->loc_Texture_ScreenDepth        = qglGetUniformLocationARB(p->program, "Texture_ScreenDepth");
-		p->loc_Texture_ScreenNormalMap    = qglGetUniformLocationARB(p->program, "Texture_ScreenNormalMap");
-		p->loc_Texture_ScreenDiffuse      = qglGetUniformLocationARB(p->program, "Texture_ScreenDiffuse");
-		p->loc_Texture_ScreenSpecular     = qglGetUniformLocationARB(p->program, "Texture_ScreenSpecular");
-		p->loc_Texture_ReflectMask        = qglGetUniformLocationARB(p->program, "Texture_ReflectMask");
-		p->loc_Texture_ReflectCube        = qglGetUniformLocationARB(p->program, "Texture_ReflectCube");
-		p->loc_Alpha                      = qglGetUniformLocationARB(p->program, "Alpha");
-		p->loc_BloomBlur_Parameters       = qglGetUniformLocationARB(p->program, "BloomBlur_Parameters");
-		p->loc_ClientTime                 = qglGetUniformLocationARB(p->program, "ClientTime");
-		p->loc_Color_Ambient              = qglGetUniformLocationARB(p->program, "Color_Ambient");
-		p->loc_Color_Diffuse              = qglGetUniformLocationARB(p->program, "Color_Diffuse");
-		p->loc_Color_Specular             = qglGetUniformLocationARB(p->program, "Color_Specular");
-		p->loc_Color_Glow                 = qglGetUniformLocationARB(p->program, "Color_Glow");
-		p->loc_Color_Pants                = qglGetUniformLocationARB(p->program, "Color_Pants");
-		p->loc_Color_Shirt                = qglGetUniformLocationARB(p->program, "Color_Shirt");
-		p->loc_DeferredColor_Ambient      = qglGetUniformLocationARB(p->program, "DeferredColor_Ambient");
-		p->loc_DeferredColor_Diffuse      = qglGetUniformLocationARB(p->program, "DeferredColor_Diffuse");
-		p->loc_DeferredColor_Specular     = qglGetUniformLocationARB(p->program, "DeferredColor_Specular");
-		p->loc_DeferredMod_Diffuse        = qglGetUniformLocationARB(p->program, "DeferredMod_Diffuse");
-		p->loc_DeferredMod_Specular       = qglGetUniformLocationARB(p->program, "DeferredMod_Specular");
-		p->loc_DistortScaleRefractReflect = qglGetUniformLocationARB(p->program, "DistortScaleRefractReflect");
-		p->loc_EyePosition                = qglGetUniformLocationARB(p->program, "EyePosition");
-		p->loc_FogColor                   = qglGetUniformLocationARB(p->program, "FogColor");
-		p->loc_FogHeightFade              = qglGetUniformLocationARB(p->program, "FogHeightFade");
-		p->loc_FogPlane                   = qglGetUniformLocationARB(p->program, "FogPlane");
-		p->loc_FogPlaneViewDist           = qglGetUniformLocationARB(p->program, "FogPlaneViewDist");
-		p->loc_FogRangeRecip              = qglGetUniformLocationARB(p->program, "FogRangeRecip");
-		p->loc_LightColor                 = qglGetUniformLocationARB(p->program, "LightColor");
-		p->loc_LightDir                   = qglGetUniformLocationARB(p->program, "LightDir");
-		p->loc_LightPosition              = qglGetUniformLocationARB(p->program, "LightPosition");
-		p->loc_OffsetMapping_Scale        = qglGetUniformLocationARB(p->program, "OffsetMapping_Scale");
-		p->loc_PixelSize                  = qglGetUniformLocationARB(p->program, "PixelSize");
-		p->loc_ReflectColor               = qglGetUniformLocationARB(p->program, "ReflectColor");
-		p->loc_ReflectFactor              = qglGetUniformLocationARB(p->program, "ReflectFactor");
-		p->loc_ReflectOffset              = qglGetUniformLocationARB(p->program, "ReflectOffset");
-		p->loc_RefractColor               = qglGetUniformLocationARB(p->program, "RefractColor");
-		p->loc_Saturation                 = qglGetUniformLocationARB(p->program, "Saturation");
-		p->loc_ScreenCenterRefractReflect = qglGetUniformLocationARB(p->program, "ScreenCenterRefractReflect");
-		p->loc_ScreenScaleRefractReflect  = qglGetUniformLocationARB(p->program, "ScreenScaleRefractReflect");
-		p->loc_ScreenToDepth              = qglGetUniformLocationARB(p->program, "ScreenToDepth");
-		p->loc_ShadowMap_Parameters       = qglGetUniformLocationARB(p->program, "ShadowMap_Parameters");
-		p->loc_ShadowMap_TextureScale     = qglGetUniformLocationARB(p->program, "ShadowMap_TextureScale");
-		p->loc_SpecularPower              = qglGetUniformLocationARB(p->program, "SpecularPower");
-		p->loc_UserVec1                   = qglGetUniformLocationARB(p->program, "UserVec1");
-		p->loc_UserVec2                   = qglGetUniformLocationARB(p->program, "UserVec2");
-		p->loc_UserVec3                   = qglGetUniformLocationARB(p->program, "UserVec3");
-		p->loc_UserVec4                   = qglGetUniformLocationARB(p->program, "UserVec4");
-		p->loc_ViewTintColor              = qglGetUniformLocationARB(p->program, "ViewTintColor");
-		p->loc_ViewToLight                = qglGetUniformLocationARB(p->program, "ViewToLight");
-		p->loc_ModelToLight               = qglGetUniformLocationARB(p->program, "ModelToLight");
-		p->loc_TexMatrix                  = qglGetUniformLocationARB(p->program, "TexMatrix");
-		p->loc_BackgroundTexMatrix        = qglGetUniformLocationARB(p->program, "BackgroundTexMatrix");
-		p->loc_ModelViewMatrix            = qglGetUniformLocationARB(p->program, "ModelViewMatrix");
-		p->loc_ModelViewProjectionMatrix  = qglGetUniformLocationARB(p->program, "ModelViewProjectionMatrix");
-		p->loc_PixelToScreenTexCoord      = qglGetUniformLocationARB(p->program, "PixelToScreenTexCoord");
-		p->loc_ModelToReflectCube         = qglGetUniformLocationARB(p->program, "ModelToReflectCube");
-		p->loc_ShadowMapMatrix            = qglGetUniformLocationARB(p->program, "ShadowMapMatrix");
-		p->loc_BloomColorSubtract         = qglGetUniformLocationARB(p->program, "BloomColorSubtract");
-		p->loc_NormalmapScrollBlend       = qglGetUniformLocationARB(p->program, "NormalmapScrollBlend");
+		p->loc_Texture_First              = qglGetUniformLocation(p->program, "Texture_First");
+		p->loc_Texture_Second             = qglGetUniformLocation(p->program, "Texture_Second");
+		p->loc_Texture_GammaRamps         = qglGetUniformLocation(p->program, "Texture_GammaRamps");
+		p->loc_Texture_Normal             = qglGetUniformLocation(p->program, "Texture_Normal");
+		p->loc_Texture_Color              = qglGetUniformLocation(p->program, "Texture_Color");
+		p->loc_Texture_Gloss              = qglGetUniformLocation(p->program, "Texture_Gloss");
+		p->loc_Texture_Glow               = qglGetUniformLocation(p->program, "Texture_Glow");
+		p->loc_Texture_SecondaryNormal    = qglGetUniformLocation(p->program, "Texture_SecondaryNormal");
+		p->loc_Texture_SecondaryColor     = qglGetUniformLocation(p->program, "Texture_SecondaryColor");
+		p->loc_Texture_SecondaryGloss     = qglGetUniformLocation(p->program, "Texture_SecondaryGloss");
+		p->loc_Texture_SecondaryGlow      = qglGetUniformLocation(p->program, "Texture_SecondaryGlow");
+		p->loc_Texture_Pants              = qglGetUniformLocation(p->program, "Texture_Pants");
+		p->loc_Texture_Shirt              = qglGetUniformLocation(p->program, "Texture_Shirt");
+		p->loc_Texture_FogHeightTexture   = qglGetUniformLocation(p->program, "Texture_FogHeightTexture");
+		p->loc_Texture_FogMask            = qglGetUniformLocation(p->program, "Texture_FogMask");
+		p->loc_Texture_Lightmap           = qglGetUniformLocation(p->program, "Texture_Lightmap");
+		p->loc_Texture_Deluxemap          = qglGetUniformLocation(p->program, "Texture_Deluxemap");
+		p->loc_Texture_Attenuation        = qglGetUniformLocation(p->program, "Texture_Attenuation");
+		p->loc_Texture_Cube               = qglGetUniformLocation(p->program, "Texture_Cube");
+		p->loc_Texture_Refraction         = qglGetUniformLocation(p->program, "Texture_Refraction");
+		p->loc_Texture_Reflection         = qglGetUniformLocation(p->program, "Texture_Reflection");
+		p->loc_Texture_ShadowMap2D        = qglGetUniformLocation(p->program, "Texture_ShadowMap2D");
+		p->loc_Texture_CubeProjection     = qglGetUniformLocation(p->program, "Texture_CubeProjection");
+		p->loc_Texture_ScreenDepth        = qglGetUniformLocation(p->program, "Texture_ScreenDepth");
+		p->loc_Texture_ScreenNormalMap    = qglGetUniformLocation(p->program, "Texture_ScreenNormalMap");
+		p->loc_Texture_ScreenDiffuse      = qglGetUniformLocation(p->program, "Texture_ScreenDiffuse");
+		p->loc_Texture_ScreenSpecular     = qglGetUniformLocation(p->program, "Texture_ScreenSpecular");
+		p->loc_Texture_ReflectMask        = qglGetUniformLocation(p->program, "Texture_ReflectMask");
+		p->loc_Texture_ReflectCube        = qglGetUniformLocation(p->program, "Texture_ReflectCube");
+		p->loc_Alpha                      = qglGetUniformLocation(p->program, "Alpha");
+		p->loc_BloomBlur_Parameters       = qglGetUniformLocation(p->program, "BloomBlur_Parameters");
+		p->loc_ClientTime                 = qglGetUniformLocation(p->program, "ClientTime");
+		p->loc_Color_Ambient              = qglGetUniformLocation(p->program, "Color_Ambient");
+		p->loc_Color_Diffuse              = qglGetUniformLocation(p->program, "Color_Diffuse");
+		p->loc_Color_Specular             = qglGetUniformLocation(p->program, "Color_Specular");
+		p->loc_Color_Glow                 = qglGetUniformLocation(p->program, "Color_Glow");
+		p->loc_Color_Pants                = qglGetUniformLocation(p->program, "Color_Pants");
+		p->loc_Color_Shirt                = qglGetUniformLocation(p->program, "Color_Shirt");
+		p->loc_DeferredColor_Ambient      = qglGetUniformLocation(p->program, "DeferredColor_Ambient");
+		p->loc_DeferredColor_Diffuse      = qglGetUniformLocation(p->program, "DeferredColor_Diffuse");
+		p->loc_DeferredColor_Specular     = qglGetUniformLocation(p->program, "DeferredColor_Specular");
+		p->loc_DeferredMod_Diffuse        = qglGetUniformLocation(p->program, "DeferredMod_Diffuse");
+		p->loc_DeferredMod_Specular       = qglGetUniformLocation(p->program, "DeferredMod_Specular");
+		p->loc_DistortScaleRefractReflect = qglGetUniformLocation(p->program, "DistortScaleRefractReflect");
+		p->loc_EyePosition                = qglGetUniformLocation(p->program, "EyePosition");
+		p->loc_FogColor                   = qglGetUniformLocation(p->program, "FogColor");
+		p->loc_FogHeightFade              = qglGetUniformLocation(p->program, "FogHeightFade");
+		p->loc_FogPlane                   = qglGetUniformLocation(p->program, "FogPlane");
+		p->loc_FogPlaneViewDist           = qglGetUniformLocation(p->program, "FogPlaneViewDist");
+		p->loc_FogRangeRecip              = qglGetUniformLocation(p->program, "FogRangeRecip");
+		p->loc_LightColor                 = qglGetUniformLocation(p->program, "LightColor");
+		p->loc_LightDir                   = qglGetUniformLocation(p->program, "LightDir");
+		p->loc_LightPosition              = qglGetUniformLocation(p->program, "LightPosition");
+		p->loc_OffsetMapping_Scale        = qglGetUniformLocation(p->program, "OffsetMapping_Scale");
+		p->loc_PixelSize                  = qglGetUniformLocation(p->program, "PixelSize");
+		p->loc_ReflectColor               = qglGetUniformLocation(p->program, "ReflectColor");
+		p->loc_ReflectFactor              = qglGetUniformLocation(p->program, "ReflectFactor");
+		p->loc_ReflectOffset              = qglGetUniformLocation(p->program, "ReflectOffset");
+		p->loc_RefractColor               = qglGetUniformLocation(p->program, "RefractColor");
+		p->loc_Saturation                 = qglGetUniformLocation(p->program, "Saturation");
+		p->loc_ScreenCenterRefractReflect = qglGetUniformLocation(p->program, "ScreenCenterRefractReflect");
+		p->loc_ScreenScaleRefractReflect  = qglGetUniformLocation(p->program, "ScreenScaleRefractReflect");
+		p->loc_ScreenToDepth              = qglGetUniformLocation(p->program, "ScreenToDepth");
+		p->loc_ShadowMap_Parameters       = qglGetUniformLocation(p->program, "ShadowMap_Parameters");
+		p->loc_ShadowMap_TextureScale     = qglGetUniformLocation(p->program, "ShadowMap_TextureScale");
+		p->loc_SpecularPower              = qglGetUniformLocation(p->program, "SpecularPower");
+		p->loc_UserVec1                   = qglGetUniformLocation(p->program, "UserVec1");
+		p->loc_UserVec2                   = qglGetUniformLocation(p->program, "UserVec2");
+		p->loc_UserVec3                   = qglGetUniformLocation(p->program, "UserVec3");
+		p->loc_UserVec4                   = qglGetUniformLocation(p->program, "UserVec4");
+		p->loc_ViewTintColor              = qglGetUniformLocation(p->program, "ViewTintColor");
+		p->loc_ViewToLight                = qglGetUniformLocation(p->program, "ViewToLight");
+		p->loc_ModelToLight               = qglGetUniformLocation(p->program, "ModelToLight");
+		p->loc_TexMatrix                  = qglGetUniformLocation(p->program, "TexMatrix");
+		p->loc_BackgroundTexMatrix        = qglGetUniformLocation(p->program, "BackgroundTexMatrix");
+		p->loc_ModelViewMatrix            = qglGetUniformLocation(p->program, "ModelViewMatrix");
+		p->loc_ModelViewProjectionMatrix  = qglGetUniformLocation(p->program, "ModelViewProjectionMatrix");
+		p->loc_PixelToScreenTexCoord      = qglGetUniformLocation(p->program, "PixelToScreenTexCoord");
+		p->loc_ModelToReflectCube         = qglGetUniformLocation(p->program, "ModelToReflectCube");
+		p->loc_ShadowMapMatrix            = qglGetUniformLocation(p->program, "ShadowMapMatrix");
+		p->loc_BloomColorSubtract         = qglGetUniformLocation(p->program, "BloomColorSubtract");
+		p->loc_NormalmapScrollBlend       = qglGetUniformLocation(p->program, "NormalmapScrollBlend");
 		// initialize the samplers to refer to the texture units we use
-		if (p->loc_Texture_First           >= 0) qglUniform1iARB(p->loc_Texture_First          , GL20TU_FIRST);
-		if (p->loc_Texture_Second          >= 0) qglUniform1iARB(p->loc_Texture_Second         , GL20TU_SECOND);
-		if (p->loc_Texture_GammaRamps      >= 0) qglUniform1iARB(p->loc_Texture_GammaRamps     , GL20TU_GAMMARAMPS);
-		if (p->loc_Texture_Normal          >= 0) qglUniform1iARB(p->loc_Texture_Normal         , GL20TU_NORMAL);
-		if (p->loc_Texture_Color           >= 0) qglUniform1iARB(p->loc_Texture_Color          , GL20TU_COLOR);
-		if (p->loc_Texture_Gloss           >= 0) qglUniform1iARB(p->loc_Texture_Gloss          , GL20TU_GLOSS);
-		if (p->loc_Texture_Glow            >= 0) qglUniform1iARB(p->loc_Texture_Glow           , GL20TU_GLOW);
-		if (p->loc_Texture_SecondaryNormal >= 0) qglUniform1iARB(p->loc_Texture_SecondaryNormal, GL20TU_SECONDARY_NORMAL);
-		if (p->loc_Texture_SecondaryColor  >= 0) qglUniform1iARB(p->loc_Texture_SecondaryColor , GL20TU_SECONDARY_COLOR);
-		if (p->loc_Texture_SecondaryGloss  >= 0) qglUniform1iARB(p->loc_Texture_SecondaryGloss , GL20TU_SECONDARY_GLOSS);
-		if (p->loc_Texture_SecondaryGlow   >= 0) qglUniform1iARB(p->loc_Texture_SecondaryGlow  , GL20TU_SECONDARY_GLOW);
-		if (p->loc_Texture_Pants           >= 0) qglUniform1iARB(p->loc_Texture_Pants          , GL20TU_PANTS);
-		if (p->loc_Texture_Shirt           >= 0) qglUniform1iARB(p->loc_Texture_Shirt          , GL20TU_SHIRT);
-		if (p->loc_Texture_FogHeightTexture>= 0) qglUniform1iARB(p->loc_Texture_FogHeightTexture, GL20TU_FOGHEIGHTTEXTURE);
-		if (p->loc_Texture_FogMask         >= 0) qglUniform1iARB(p->loc_Texture_FogMask        , GL20TU_FOGMASK);
-		if (p->loc_Texture_Lightmap        >= 0) qglUniform1iARB(p->loc_Texture_Lightmap       , GL20TU_LIGHTMAP);
-		if (p->loc_Texture_Deluxemap       >= 0) qglUniform1iARB(p->loc_Texture_Deluxemap      , GL20TU_DELUXEMAP);
-		if (p->loc_Texture_Attenuation     >= 0) qglUniform1iARB(p->loc_Texture_Attenuation    , GL20TU_ATTENUATION);
-		if (p->loc_Texture_Cube            >= 0) qglUniform1iARB(p->loc_Texture_Cube           , GL20TU_CUBE);
-		if (p->loc_Texture_Refraction      >= 0) qglUniform1iARB(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
-		if (p->loc_Texture_Reflection      >= 0) qglUniform1iARB(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
-		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1iARB(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
-		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1iARB(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
-		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1iARB(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
-		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1iARB(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
-		if (p->loc_Texture_ScreenDiffuse   >= 0) qglUniform1iARB(p->loc_Texture_ScreenDiffuse  , GL20TU_SCREENDIFFUSE);
-		if (p->loc_Texture_ScreenSpecular  >= 0) qglUniform1iARB(p->loc_Texture_ScreenSpecular , GL20TU_SCREENSPECULAR);
-		if (p->loc_Texture_ReflectMask     >= 0) qglUniform1iARB(p->loc_Texture_ReflectMask    , GL20TU_REFLECTMASK);
-		if (p->loc_Texture_ReflectCube     >= 0) qglUniform1iARB(p->loc_Texture_ReflectCube    , GL20TU_REFLECTCUBE);
+		if (p->loc_Texture_First           >= 0) qglUniform1i(p->loc_Texture_First          , GL20TU_FIRST);
+		if (p->loc_Texture_Second          >= 0) qglUniform1i(p->loc_Texture_Second         , GL20TU_SECOND);
+		if (p->loc_Texture_GammaRamps      >= 0) qglUniform1i(p->loc_Texture_GammaRamps     , GL20TU_GAMMARAMPS);
+		if (p->loc_Texture_Normal          >= 0) qglUniform1i(p->loc_Texture_Normal         , GL20TU_NORMAL);
+		if (p->loc_Texture_Color           >= 0) qglUniform1i(p->loc_Texture_Color          , GL20TU_COLOR);
+		if (p->loc_Texture_Gloss           >= 0) qglUniform1i(p->loc_Texture_Gloss          , GL20TU_GLOSS);
+		if (p->loc_Texture_Glow            >= 0) qglUniform1i(p->loc_Texture_Glow           , GL20TU_GLOW);
+		if (p->loc_Texture_SecondaryNormal >= 0) qglUniform1i(p->loc_Texture_SecondaryNormal, GL20TU_SECONDARY_NORMAL);
+		if (p->loc_Texture_SecondaryColor  >= 0) qglUniform1i(p->loc_Texture_SecondaryColor , GL20TU_SECONDARY_COLOR);
+		if (p->loc_Texture_SecondaryGloss  >= 0) qglUniform1i(p->loc_Texture_SecondaryGloss , GL20TU_SECONDARY_GLOSS);
+		if (p->loc_Texture_SecondaryGlow   >= 0) qglUniform1i(p->loc_Texture_SecondaryGlow  , GL20TU_SECONDARY_GLOW);
+		if (p->loc_Texture_Pants           >= 0) qglUniform1i(p->loc_Texture_Pants          , GL20TU_PANTS);
+		if (p->loc_Texture_Shirt           >= 0) qglUniform1i(p->loc_Texture_Shirt          , GL20TU_SHIRT);
+		if (p->loc_Texture_FogHeightTexture>= 0) qglUniform1i(p->loc_Texture_FogHeightTexture, GL20TU_FOGHEIGHTTEXTURE);
+		if (p->loc_Texture_FogMask         >= 0) qglUniform1i(p->loc_Texture_FogMask        , GL20TU_FOGMASK);
+		if (p->loc_Texture_Lightmap        >= 0) qglUniform1i(p->loc_Texture_Lightmap       , GL20TU_LIGHTMAP);
+		if (p->loc_Texture_Deluxemap       >= 0) qglUniform1i(p->loc_Texture_Deluxemap      , GL20TU_DELUXEMAP);
+		if (p->loc_Texture_Attenuation     >= 0) qglUniform1i(p->loc_Texture_Attenuation    , GL20TU_ATTENUATION);
+		if (p->loc_Texture_Cube            >= 0) qglUniform1i(p->loc_Texture_Cube           , GL20TU_CUBE);
+		if (p->loc_Texture_Refraction      >= 0) qglUniform1i(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
+		if (p->loc_Texture_Reflection      >= 0) qglUniform1i(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
+		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1i(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
+		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1i(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
+		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1i(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
+		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1i(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
+		if (p->loc_Texture_ScreenDiffuse   >= 0) qglUniform1i(p->loc_Texture_ScreenDiffuse  , GL20TU_SCREENDIFFUSE);
+		if (p->loc_Texture_ScreenSpecular  >= 0) qglUniform1i(p->loc_Texture_ScreenSpecular , GL20TU_SCREENSPECULAR);
+		if (p->loc_Texture_ReflectMask     >= 0) qglUniform1i(p->loc_Texture_ReflectMask    , GL20TU_REFLECTMASK);
+		if (p->loc_Texture_ReflectCube     >= 0) qglUniform1i(p->loc_Texture_ReflectCube    , GL20TU_REFLECTCUBE);
 		CHECKGLERROR
 		Con_DPrintf("^5GLSL shader %s compiled.\n", permutationname);
 	}
@@ -3909,17 +3909,17 @@ void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutatio
 				{
 					//Con_Printf("Could not find a working OpenGL 2.0 shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
 					r_glsl_permutation = R_GLSL_FindPermutation(mode, permutation);
-					qglUseProgramObjectARB(0);CHECKGLERROR
+					qglUseProgram(0);CHECKGLERROR
 					return; // no bit left to clear, entire mode is broken
 				}
 			}
 		}
 		CHECKGLERROR
-		qglUseProgramObjectARB(r_glsl_permutation->program);CHECKGLERROR
+		qglUseProgram(r_glsl_permutation->program);CHECKGLERROR
 	}
-	if (r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
-	if (r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
-	if (r_glsl_permutation->loc_ClientTime >= 0) qglUniform1fARB(r_glsl_permutation->loc_ClientTime, cl.time);
+	if (r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
+	if (r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
+	if (r_glsl_permutation->loc_ClientTime >= 0) qglUniform1f(r_glsl_permutation->loc_ClientTime, cl.time);
 }
 
 #ifdef SUPPORTCG
@@ -5854,93 +5854,93 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		}
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
+		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
-			if (r_glsl_permutation->loc_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelToLight, 1, false, m16f);}
-			if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
-			if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
-			if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);
-			if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
-			if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);
+			if (r_glsl_permutation->loc_ModelToLight >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ModelToLight, 1, false, m16f);}
+			if (r_glsl_permutation->loc_LightPosition >= 0) qglUniform3f(r_glsl_permutation->loc_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);
+			if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);
+			if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);
+			if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
+			if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);
 	
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
-				qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
-			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+				qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
+			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1f(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
 		}
 		else
 		{
 			if (mode == SHADERMODE_FLATCOLOR)
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, colormod[0], colormod[1], colormod[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, colormod[0], colormod[1], colormod[2]);
 			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
-				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
-				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
-				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3fARB(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
+				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
+				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
+				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
 			else
 			{
-				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
-				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
-				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3fARB(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
+				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
+				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
 			{
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
-					qglUniform3fARB(r_glsl_permutation->loc_FogColor, 0, 0, 0);
+					qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
 				else
-					qglUniform3fARB(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
+					qglUniform3f(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
 			}
-			if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
-			if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
-			if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4fARB(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
-			if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);
-			if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4fARB(r_glsl_permutation->loc_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);
-			if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
-			if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1fARB(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
-			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1fARB(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
-			if (r_glsl_permutation->loc_NormalmapScrollBlend >= 0) qglUniform2fARB(r_glsl_permutation->loc_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
+			if (r_glsl_permutation->loc_DistortScaleRefractReflect >= 0) qglUniform4f(r_glsl_permutation->loc_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);
+			if (r_glsl_permutation->loc_ScreenScaleRefractReflect >= 0) qglUniform4f(r_glsl_permutation->loc_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);
+			if (r_glsl_permutation->loc_ScreenCenterRefractReflect >= 0) qglUniform4f(r_glsl_permutation->loc_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);
+			if (r_glsl_permutation->loc_RefractColor >= 0) qglUniform4f(r_glsl_permutation->loc_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			if (r_glsl_permutation->loc_ReflectColor >= 0) qglUniform4f(r_glsl_permutation->loc_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);
+			if (r_glsl_permutation->loc_ReflectFactor >= 0) qglUniform1f(r_glsl_permutation->loc_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);
+			if (r_glsl_permutation->loc_ReflectOffset >= 0) qglUniform1f(r_glsl_permutation->loc_ReflectOffset, rsurface.texture->reflectmin);
+			if (r_glsl_permutation->loc_SpecularPower >= 0) qglUniform1f(r_glsl_permutation->loc_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+			if (r_glsl_permutation->loc_NormalmapScrollBlend >= 0) qglUniform2f(r_glsl_permutation->loc_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
-		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
-		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
-		if (r_glsl_permutation->loc_ShadowMapMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);qglUniformMatrix4fvARB(r_glsl_permutation->loc_ShadowMapMatrix, 1, false, m16f);}
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform2fARB(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4fARB(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
+		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
+		if (r_glsl_permutation->loc_ShadowMapMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ShadowMapMatrix, 1, false, m16f);}
+		if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform2f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
+		if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 
-		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3fARB(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
-		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1fARB(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
-		if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3fARB(r_glsl_permutation->loc_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
+		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
+		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1f(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
+		if (r_glsl_permutation->loc_EyePosition >= 0) qglUniform3f(r_glsl_permutation->loc_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
 		if (r_glsl_permutation->loc_Color_Pants >= 0)
 		{
 			if (rsurface.texture->pantstexture)
-				qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
+				qglUniform3f(r_glsl_permutation->loc_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
 			else
-				qglUniform3fARB(r_glsl_permutation->loc_Color_Pants, 0, 0, 0);
+				qglUniform3f(r_glsl_permutation->loc_Color_Pants, 0, 0, 0);
 		}
 		if (r_glsl_permutation->loc_Color_Shirt >= 0)
 		{
 			if (rsurface.texture->shirttexture)
-				qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, rsurface.colormap_shirtcolor[0], rsurface.colormap_shirtcolor[1], rsurface.colormap_shirtcolor[2]);
+				qglUniform3f(r_glsl_permutation->loc_Color_Shirt, rsurface.colormap_shirtcolor[0], rsurface.colormap_shirtcolor[1], rsurface.colormap_shirtcolor[2]);
 			else
-				qglUniform3fARB(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
+				qglUniform3f(r_glsl_permutation->loc_Color_Shirt, 0, 0, 0);
 		}
-		if (r_glsl_permutation->loc_FogPlane >= 0) qglUniform4fARB(r_glsl_permutation->loc_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
-		if (r_glsl_permutation->loc_FogPlaneViewDist >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogPlaneViewDist, rsurface.fogplaneviewdist);
-		if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogRangeRecip, rsurface.fograngerecip);
-		if (r_glsl_permutation->loc_FogHeightFade >= 0) qglUniform1fARB(r_glsl_permutation->loc_FogHeightFade, rsurface.fogheightfade);
-		if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1fARB(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale);
-		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2fARB(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_FogPlane >= 0) qglUniform4f(r_glsl_permutation->loc_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);
+		if (r_glsl_permutation->loc_FogPlaneViewDist >= 0) qglUniform1f(r_glsl_permutation->loc_FogPlaneViewDist, rsurface.fogplaneviewdist);
+		if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1f(r_glsl_permutation->loc_FogRangeRecip, rsurface.fograngerecip);
+		if (r_glsl_permutation->loc_FogHeightFade >= 0) qglUniform1f(r_glsl_permutation->loc_FogHeightFade, rsurface.fogheightfade);
+		if (r_glsl_permutation->loc_OffsetMapping_Scale >= 0) qglUniform1f(r_glsl_permutation->loc_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale);
+		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2f(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
 	//	if (r_glsl_permutation->loc_Texture_First           >= 0) R_Mesh_TexBind(GL20TU_FIRST             , r_texture_white                                     );
 	//	if (r_glsl_permutation->loc_Texture_Second          >= 0) R_Mesh_TexBind(GL20TU_SECOND            , r_texture_white                                     );
@@ -6368,16 +6368,16 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		break;
 	case RENDERPATH_GL20:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3fARB(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
-		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
-		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3fARB(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2fARB(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4fARB(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
-		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1fARB(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
-		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2fARB(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3f(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
+		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
+		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
+		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
+		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
+		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
+		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
 		if (r_glsl_permutation->loc_Texture_Attenuation       >= 0) R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
 		if (r_glsl_permutation->loc_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
@@ -8574,8 +8574,8 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			Con_DPrintf("FIXME D3D11 shader %s:%i\n", __FILE__, __LINE__);
 			break;
 		case RENDERPATH_GL20:
-			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
-			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fvARB(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
+			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
+			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 			break;
 		case RENDERPATH_CGGL:
@@ -9519,15 +9519,15 @@ static void R_BlendView(void)
 			if (r_glsl_permutation->loc_Texture_First      >= 0) R_Mesh_TexBind(GL20TU_FIRST     , r_bloomstate.texture_screen);
 			if (r_glsl_permutation->loc_Texture_Second     >= 0) R_Mesh_TexBind(GL20TU_SECOND    , r_bloomstate.texture_bloom );
 			if (r_glsl_permutation->loc_Texture_GammaRamps >= 0) R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
-			if (r_glsl_permutation->loc_ViewTintColor      >= 0) qglUniform4fARB(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-			if (r_glsl_permutation->loc_PixelSize          >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
-			if (r_glsl_permutation->loc_UserVec1           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
-			if (r_glsl_permutation->loc_UserVec2           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
-			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
-			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4fARB(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
-			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1fARB(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
-			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2fARB(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
-			if (r_glsl_permutation->loc_BloomColorSubtract    >= 0) qglUniform4fARB(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
+			if (r_glsl_permutation->loc_ViewTintColor      >= 0) qglUniform4f(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
+			if (r_glsl_permutation->loc_PixelSize          >= 0) qglUniform2f(r_glsl_permutation->loc_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
+			if (r_glsl_permutation->loc_UserVec1           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
+			if (r_glsl_permutation->loc_UserVec2           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
+			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
+			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
+			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
+			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+			if (r_glsl_permutation->loc_BloomColorSubtract    >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG

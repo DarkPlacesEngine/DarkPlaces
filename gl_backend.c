@@ -2409,13 +2409,13 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	int shaderobject;
 	int shadercompiled;
 	char compilelog[MAX_INPUTLINE];
-	shaderobject = qglCreateShaderObjectARB(shadertypeenum);CHECKGLERROR
+	shaderobject = qglCreateShader(shadertypeenum);CHECKGLERROR
 	if (!shaderobject)
 		return false;
-	qglShaderSourceARB(shaderobject, numstrings, strings, NULL);CHECKGLERROR
-	qglCompileShaderARB(shaderobject);CHECKGLERROR
-	qglGetObjectParameterivARB(shaderobject, GL_OBJECT_COMPILE_STATUS_ARB, &shadercompiled);CHECKGLERROR
-	qglGetInfoLogARB(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
+	qglShaderSource(shaderobject, numstrings, strings, NULL);CHECKGLERROR
+	qglCompileShader(shaderobject);CHECKGLERROR
+	qglGetShaderiv(shaderobject, GL_COMPILE_STATUS, &shadercompiled);CHECKGLERROR
+	qglGetShaderInfoLog(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
 	if (compilelog[0] && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning")))
 	{
 		int i, j, pretextlines = 0;
@@ -2427,11 +2427,11 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	}
 	if (!shadercompiled)
 	{
-		qglDeleteObjectARB(shaderobject);CHECKGLERROR
+		qglDeleteShader(shaderobject);CHECKGLERROR
 		return false;
 	}
-	qglAttachObjectARB(programobject, shaderobject);CHECKGLERROR
-	qglDeleteObjectARB(shaderobject);CHECKGLERROR
+	qglAttachShader(programobject, shaderobject);CHECKGLERROR
+	qglDeleteShader(shaderobject);CHECKGLERROR
 	return true;
 }
 
@@ -2442,24 +2442,24 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	char linklog[MAX_INPUTLINE];
 	CHECKGLERROR
 
-	programobject = qglCreateProgramObjectARB();CHECKGLERROR
+	programobject = qglCreateProgram();CHECKGLERROR
 	if (!programobject)
 		return 0;
 
-	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER_ARB, "vertex", vertexstrings_count, vertexstrings_list))
+	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER, "vertex", vertexstrings_count, vertexstrings_list))
 		goto cleanup;
 
-#ifdef GL_GEOMETRY_SHADER_ARB
-	if (geometrystrings_count && !GL_Backend_CompileShader(programobject, GL_GEOMETRY_SHADER_ARB, "geometry", geometrystrings_count, geometrystrings_list))
+#ifdef GL_GEOMETRY_SHADER
+	if (geometrystrings_count && !GL_Backend_CompileShader(programobject, GL_GEOMETRY_SHADER, "geometry", geometrystrings_count, geometrystrings_list))
 		goto cleanup;
 #endif
 
-	if (fragmentstrings_count && !GL_Backend_CompileShader(programobject, GL_FRAGMENT_SHADER_ARB, "fragment", fragmentstrings_count, fragmentstrings_list))
+	if (fragmentstrings_count && !GL_Backend_CompileShader(programobject, GL_FRAGMENT_SHADER, "fragment", fragmentstrings_count, fragmentstrings_list))
 		goto cleanup;
 
-	qglLinkProgramARB(programobject);CHECKGLERROR
-	qglGetObjectParameterivARB(programobject, GL_OBJECT_LINK_STATUS_ARB, &programlinked);CHECKGLERROR
-	qglGetInfoLogARB(programobject, sizeof(linklog), NULL, linklog);CHECKGLERROR
+	qglLinkProgram(programobject);CHECKGLERROR
+	qglGetProgramiv(programobject, GL_LINK_STATUS, &programlinked);CHECKGLERROR
+	qglGetProgramInfoLog(programobject, sizeof(linklog), NULL, linklog);CHECKGLERROR
 	if (linklog[0])
 	{
 		if (strstr(linklog, "error") || strstr(linklog, "ERROR") || strstr(linklog, "Error") || strstr(linklog, "WARNING") || strstr(linklog, "warning") || strstr(linklog, "Warning"))
@@ -2477,14 +2477,14 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 		goto cleanup;
 	return programobject;
 cleanup:
-	qglDeleteObjectARB(programobject);CHECKGLERROR
+	qglDeleteProgram(programobject);CHECKGLERROR
 	return 0;
 }
 
 void GL_Backend_FreeProgram(unsigned int prog)
 {
 	CHECKGLERROR
-	qglDeleteObjectARB(prog);
+	qglDeleteProgram(prog);
 	CHECKGLERROR
 }
 
