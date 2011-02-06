@@ -694,7 +694,7 @@ GLint wrapglGetUniformLocation(GLuint programObj, const GLchar *name) {return gl
 const GLubyte* wrapglGetString(GLenum name) {return glGetString(name);}
 //void wrapglActiveStencilFace(GLenum e) {glActiveStencilFace(e);}
 void wrapglActiveTexture(GLenum e) {glActiveTexture(e);}
-//void wrapglAlphaFunc(GLenum func, GLclampf ref) {glAlphaFunc(func, ref);}
+void wrapglAlphaFunc(GLenum func, GLclampf ref) {Con_Printf("glAlphaFunc(func, ref)\n");}
 //void wrapglArrayElement(GLint i) {glArrayElement(i);}
 void wrapglAttachShader(GLuint containerObj, GLuint obj) {glAttachShader(containerObj, obj);}
 //void wrapglBegin(GLenum mode) {glBegin(mode);}
@@ -799,7 +799,7 @@ void wrapglMultiTexCoord3f(GLenum target, GLfloat s, GLfloat t, GLfloat r) {Con_
 void wrapglMultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q) {Con_Printf("glMultiTexCoord4f(target, s, t, r, q)\n");}
 void wrapglNormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glNormalPointer(type, stride, ptr)\n");}
 void wrapglPixelStorei(GLenum pname, GLint param) {glPixelStorei(pname, param);}
-//void wrapglPointSize(GLfloat size) {glPointSize(size);}
+void wrapglPointSize(GLfloat size) {Con_Printf("glPointSize(size)\n");}
 void wrapglPolygonMode(GLenum face, GLenum mode) {Con_Printf("glPolygonMode(face, mode)\n");}
 void wrapglPolygonOffset(GLfloat factor, GLfloat units) {Con_Printf("glPolygonOffset(factor, units)\n");}
 void wrapglPolygonStipple(const GLubyte *mask) {Con_Printf("glPolygonStipple(mask)\n");}
@@ -861,9 +861,9 @@ void GLES_Init(void)
 	qglIsBufferARB = wrapglIsBuffer;
 	qglIsEnabled = wrapglIsEnabled;
 	qglIsFramebufferEXT = wrapglIsFramebuffer;
-//	qglIsQueryARB = wrapglIsQuery;
+	qglIsQueryARB = wrapglIsQuery;
 	qglIsRenderbufferEXT = wrapglIsRenderbuffer;
-//	qglUnmapBufferARB = wrapglUnmapBuffer;
+	qglUnmapBufferARB = wrapglUnmapBuffer;
 	qglCheckFramebufferStatusEXT = wrapglCheckFramebufferStatus;
 	qglGetError = wrapglGetError;
 	qglCreateProgram = wrapglCreateProgram;
@@ -871,16 +871,16 @@ void GLES_Init(void)
 //	qglGetHandleARB = wrapglGetHandle;
 	qglGetAttribLocation = wrapglGetAttribLocation;
 	qglGetUniformLocation = wrapglGetUniformLocation;
-//	qglMapBufferARB = wrapglMapBuffer;
+	qglMapBufferARB = wrapglMapBuffer;
 	qglGetString = wrapglGetString;
-//	qglActiveStencilFaceEXT = wrapglActiveStencilFace;
+	qglActiveStencilFaceEXT = wrapglActiveStencilFace;
 	qglActiveTexture = wrapglActiveTexture;
-//	qglAlphaFunc = wrapglAlphaFunc;
-//	qglArrayElement = wrapglArrayElement;
+	qglAlphaFunc = wrapglAlphaFunc;
+	qglArrayElement = wrapglArrayElement;
 	qglAttachShader = wrapglAttachShader;
-//	qglBegin = wrapglBegin;
-//	qglBeginQueryARB = wrapglBeginQuery;
-	qglBindAttribLocationARB = wrapglBindAttribLocation;
+	qglBegin = wrapglBegin;
+	qglBeginQueryARB = wrapglBeginQuery;
+	qglBindAttribLocation = wrapglBindAttribLocation;
 	qglBindBufferARB = wrapglBindBuffer;
 	qglBindFramebufferEXT = wrapglBindFramebuffer;
 	qglBindRenderbufferEXT = wrapglBindRenderbuffer;
@@ -898,20 +898,20 @@ void GLES_Init(void)
 	qglColor4ub = wrapglColor4ub;
 	qglColorMask = wrapglColorMask;
 	qglColorPointer = wrapglColorPointer;
-	qglCompileShaderARB = wrapglCompileShader;
+	qglCompileShader = wrapglCompileShader;
 	qglCompressedTexImage2DARB = wrapglCompressedTexImage2D;
-//	qglCompressedTexImage3DARB = wrapglCompressedTexImage3D;
+	qglCompressedTexImage3DARB = wrapglCompressedTexImage3D;
 	qglCompressedTexSubImage2DARB = wrapglCompressedTexSubImage2D;
-//	qglCompressedTexSubImage3DARB = wrapglCompressedTexSubImage3D;
+	qglCompressedTexSubImage3DARB = wrapglCompressedTexSubImage3D;
 	qglCopyTexImage2D = wrapglCopyTexImage2D;
 	qglCopyTexSubImage2D = wrapglCopyTexSubImage2D;
-//	qglCopyTexSubImage3D = wrapglCopyTexSubImage3D;
+	qglCopyTexSubImage3D = wrapglCopyTexSubImage3D;
 	qglCullFace = wrapglCullFace;
 	qglDeleteBuffersARB = wrapglDeleteBuffers;
 	qglDeleteFramebuffersEXT = wrapglDeleteFramebuffers;
 	qglDeleteProgram = wrapglDeleteProgram;
 	qglDeleteShader = wrapglDeleteShader;
-//	qglDeleteQueriesARB = wrapglDeleteQueries;
+	qglDeleteQueriesARB = wrapglDeleteQueries;
 	qglDeleteRenderbuffersEXT = wrapglDeleteRenderbuffers;
 	qglDeleteTextures = wrapglDeleteTextures;
 	qglDepthFunc = wrapglDepthFunc;
@@ -920,25 +920,25 @@ void GLES_Init(void)
 	qglDetachShader = wrapglDetachShader;
 	qglDisable = wrapglDisable;
 	qglDisableClientState = wrapglDisableClientState;
-	qglDisableVertexAttribArrayARB = wrapglDisableVertexAttribArray;
+	qglDisableVertexAttribArray = wrapglDisableVertexAttribArray;
 	qglDrawArrays = wrapglDrawArrays;
-//	qglDrawBuffer = wrapglDrawBuffer;
-//	qglDrawBuffersARB = wrapglDrawBuffers;
+	qglDrawBuffer = wrapglDrawBuffer;
+	qglDrawBuffersARB = wrapglDrawBuffers;
 	qglDrawElements = wrapglDrawElements;
-//	qglDrawRangeElements = wrapglDrawRangeElements;
+	qglDrawRangeElements = wrapglDrawRangeElements;
 	qglEnable = wrapglEnable;
 	qglEnableClientState = wrapglEnableClientState;
-	qglEnableVertexAttribArrayARB = wrapglEnableVertexAttribArray;
-//	qglEnd = wrapglEnd;
-//	qglEndQueryARB = wrapglEndQuery;
+	qglEnableVertexAttribArray = wrapglEnableVertexAttribArray;
+	qglEnd = wrapglEnd;
+	qglEndQueryARB = wrapglEndQuery;
 	qglFinish = wrapglFinish;
 	qglFlush = wrapglFlush;
 	qglFramebufferRenderbufferEXT = wrapglFramebufferRenderbuffer;
 	qglFramebufferTexture2DEXT = wrapglFramebufferTexture2D;
-//	qglFramebufferTexture3DEXT = wrapglFramebufferTexture3D;
+	qglFramebufferTexture3DEXT = wrapglFramebufferTexture3D;
 	qglGenBuffersARB = wrapglGenBuffers;
 	qglGenFramebuffersEXT = wrapglGenFramebuffers;
-//	qglGenQueriesARB = wrapglGenQueries;
+	qglGenQueriesARB = wrapglGenQueries;
 	qglGenRenderbuffersEXT = wrapglGenRenderbuffers;
 	qglGenTextures = wrapglGenTextures;
 	qglGenerateMipmapEXT = wrapglGenerateMipmap;
@@ -946,8 +946,8 @@ void GLES_Init(void)
 	qglGetActiveUniform = wrapglGetActiveUniform;
 	qglGetAttachedShaders = wrapglGetAttachedShaders;
 	qglGetBooleanv = wrapglGetBooleanv;
-//	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
-//	qglGetDoublev = wrapglGetDoublev;
+	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
+	qglGetDoublev = wrapglGetDoublev;
 	qglGetFloatv = wrapglGetFloatv;
 	qglGetFramebufferAttachmentParameterivEXT = wrapglGetFramebufferAttachmentParameteriv;
 	qglGetProgramInfoLog = wrapglGetProgramInfoLog;
@@ -955,14 +955,14 @@ void GLES_Init(void)
 	qglGetIntegerv = wrapglGetIntegerv;
 	qglGetShaderiv = wrapglGetShaderiv;
 	qglGetProgramiv = wrapglGetProgramiv;
-//	qglGetQueryObjectivARB = wrapglGetQueryObjectiv;
-//	qglGetQueryObjectuivARB = wrapglGetQueryObjectuiv;
-//	qglGetQueryivARB = wrapglGetQueryiv;
+	qglGetQueryObjectivARB = wrapglGetQueryObjectiv;
+	qglGetQueryObjectuivARB = wrapglGetQueryObjectuiv;
+	qglGetQueryivARB = wrapglGetQueryiv;
 	qglGetRenderbufferParameterivEXT = wrapglGetRenderbufferParameteriv;
 	qglGetShaderSource = wrapglGetShaderSource;
-//	qglGetTexImage = wrapglGetTexImage;
-//	qglGetTexLevelParameterfv = wrapglGetTexLevelParameterfv;
-//	qglGetTexLevelParameteriv = wrapglGetTexLevelParameteriv;
+	qglGetTexImage = wrapglGetTexImage;
+	qglGetTexLevelParameterfv = wrapglGetTexLevelParameterfv;
+	qglGetTexLevelParameteriv = wrapglGetTexLevelParameteriv;
 	qglGetTexParameterfv = wrapglGetTexParameterfv;
 	qglGetTexParameteriv = wrapglGetTexParameteriv;
 	qglGetUniformfv = wrapglGetUniformfv;
@@ -979,7 +979,7 @@ void GLES_Init(void)
 	qglMultiTexCoord4f = wrapglMultiTexCoord4f;
 	qglNormalPointer = wrapglNormalPointer;
 	qglPixelStorei = wrapglPixelStorei;
-//	qglPointSize = wrapglPointSize;
+	qglPointSize = wrapglPointSize;
 	qglPolygonMode = wrapglPolygonMode;
 	qglPolygonOffset = wrapglPolygonOffset;
 	qglPolygonStipple = wrapglPolygonStipple;
@@ -993,21 +993,21 @@ void GLES_Init(void)
 	qglStencilMask = wrapglStencilMask;
 	qglStencilOp = wrapglStencilOp;
 	qglStencilOpSeparate = wrapglStencilOpSeparate;
-//	qglTexCoord1f = wrapglTexCoord1f;
-//	qglTexCoord2f = wrapglTexCoord2f;
-//	qglTexCoord3f = wrapglTexCoord3f;
-//	qglTexCoord4f = wrapglTexCoord4f;
-//	qglTexCoordPointer = wrapglTexCoordPointer;
-//	qglTexEnvf = wrapglTexEnvf;
-//	qglTexEnvfv = wrapglTexEnvfv;
-//	qglTexEnvi = wrapglTexEnvi;
+	qglTexCoord1f = wrapglTexCoord1f;
+	qglTexCoord2f = wrapglTexCoord2f;
+	qglTexCoord3f = wrapglTexCoord3f;
+	qglTexCoord4f = wrapglTexCoord4f;
+	qglTexCoordPointer = wrapglTexCoordPointer;
+	qglTexEnvf = wrapglTexEnvf;
+	qglTexEnvfv = wrapglTexEnvfv;
+	qglTexEnvi = wrapglTexEnvi;
 	qglTexImage2D = wrapglTexImage2D;
-//	qglTexImage3D = wrapglTexImage3D;
+	qglTexImage3D = wrapglTexImage3D;
 	qglTexParameterf = wrapglTexParameterf;
 	qglTexParameterfv = wrapglTexParameterfv;
 	qglTexParameteri = wrapglTexParameteri;
 	qglTexSubImage2D = wrapglTexSubImage2D;
-//	qglTexSubImage3D = wrapglTexSubImage3D;
+	qglTexSubImage3D = wrapglTexSubImage3D;
 	qglUniform1f = wrapglUniform1f;
 	qglUniform1fv = wrapglUniform1fv;
 	qglUniform1i = wrapglUniform1i;
@@ -1029,29 +1029,45 @@ void GLES_Init(void)
 	qglUniformMatrix4fv = wrapglUniformMatrix4fv;
 	qglUseProgram = wrapglUseProgram;
 	qglValidateProgram = wrapglValidateProgram;
-//	qglVertex2f = wrapglVertex2f;
-//	qglVertex3f = wrapglVertex3f;
-//	qglVertex4f = wrapglVertex4f;
+	qglVertex2f = wrapglVertex2f;
+	qglVertex3f = wrapglVertex3f;
+	qglVertex4f = wrapglVertex4f;
 	qglVertexAttribPointer = wrapglVertexAttribPointer;
 	qglVertexPointer = wrapglVertexPointer;
 	qglViewport = wrapglViewport;
 
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
+	
+	if (!gl_extensions)
+		gl_extensions = "";
+	if (!gl_platformextensions)
+		gl_platformextensions = "";
+	
+	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
+	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
+	Con_Printf("GL_VERSION: %s\n", gl_version);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+	
+	// LordHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+	
+	vid.support.gl20shaders = true;
 	vid.support.amd_texture_texture4 = false;
 	vid.support.arb_depth_texture = false;
 	vid.support.arb_draw_buffers = false;
-	vid.support.arb_fragment_shader = true;
 	vid.support.arb_multitexture = false;
 	vid.support.arb_occlusion_query = false;
-	vid.support.arb_shader_objects = true;
-	vid.support.arb_shading_language_100 = true;
 	vid.support.arb_shadow = false;
 	vid.support.arb_texture_compression = false; // different (vendor-specific) formats than on desktop OpenGL...
 	vid.support.arb_texture_cube_map = true;
 	vid.support.arb_texture_env_combine = false;
 	vid.support.arb_texture_gather = false;
-	vid.support.arb_texture_non_power_of_two = SDL_GL_ExtensionSupported("GL_OES_texture_npot");
+	vid.support.arb_texture_non_power_of_two = strstr(gl_extensions, "GL_OES_texture_npot") != NULL;
 	vid.support.arb_vertex_buffer_object = true;
-	vid.support.arb_vertex_shader = true;
 	vid.support.ati_separate_stencil = false;
 	vid.support.ext_blend_minmax = false;
 	vid.support.ext_blend_subtract = true;
@@ -1078,10 +1094,9 @@ void GLES_Init(void)
 		Con_Printf("GL_OES_texture_3d reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
 	}
 
-	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
-	qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
-	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&vid.teximageunits);CHECKGLERROR
-	qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&vid.texarrayunits);CHECKGLERROR
+	vid.texunits = 4;
+	vid.teximageunits = 8;
+	vid.texarrayunits = 5;
 	vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
 	vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
 	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
@@ -1101,14 +1116,14 @@ void GLES_Init(void)
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 }
-#else
+#endif
+
 void *GL_GetProcAddress(const char *name)
 {
 	void *p = NULL;
 	p = SDL_GL_GetProcAddress(name);
 	return p;
 }
-#endif
 
 #if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 static int Sys_EventFilter( SDL_Event *event );
@@ -1469,12 +1484,14 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		return false;
 	}
 
+#ifndef __IPHONEOS__
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
 		Con_Print("Required OpenGL function glGetString not found\n");
 		return false;
 	}
+#endif
 
 	// Knghtbrd: should do platform-specific extension string function here
 
