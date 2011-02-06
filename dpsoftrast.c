@@ -72,7 +72,7 @@ typedef qboolean bool;
 static void *MM_CALLOC(size_t nmemb, size_t size)
 {
 	void *ptr = _mm_malloc(nmemb*size, ATOMIC_SIZE);
-	if(ptr != NULL) memset(ptr, 0, nmemb*size);
+	if (ptr != NULL) memset(ptr, 0, nmemb*size);
 	return ptr;
 }
 
@@ -253,6 +253,12 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	// derived values (DPSOFTRAST_VALIDATE_BLENDFUNC)
 	int fb_blendmode;
 
+	// band boundaries
+	int miny1;
+	int maxy1;
+	int miny2;
+	int maxy2;
+
 	ATOMIC(volatile int commandoffset);
 
 	volatile bool waiting;
@@ -314,6 +320,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_s
 	// error reporting
 	const char *errorstring;
 
+	int interlace;
 	int numthreads;
 	DPSOFTRAST_State_Thread *threads;
 
@@ -447,13 +454,13 @@ static void DPSOFTRAST_Texture_Grow(void)
 		dpsoftrast.texture_max *= 2;
 	dpsoftrast.texture = (DPSOFTRAST_Texture *)realloc(dpsoftrast.texture, dpsoftrast.texture_max * sizeof(DPSOFTRAST_Texture));
 	for (i = 0; i < DPSOFTRAST_MAXTEXTUREUNITS; i++)
-		if(dpsoftrast.texbound[i])
+		if (dpsoftrast.texbound[i])
 			dpsoftrast.texbound[i] = dpsoftrast.texture + (dpsoftrast.texbound[i] - oldtexture);
 	for (j = 0; j < dpsoftrast.numthreads; j++)
 	{
 		thread = &dpsoftrast.threads[j];
 		for (i = 0; i < DPSOFTRAST_MAXTEXTUREUNITS; i++)
-			if(thread->texbound[i])
+			if (thread->texbound[i])
 				thread->texbound[i] = dpsoftrast.texture + (thread->texbound[i] - oldtexture);
 	}
 }
@@ -819,15 +826,15 @@ static void *DPSOFTRAST_AllocateCommand(int opcode, int size)
 	int freecommand = dpsoftrast.commandpool.freecommand;
 	int usedcommands = dpsoftrast.commandpool.usedcommands;
 	int extra = sizeof(DPSOFTRAST_Command);
-	if(DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand < size)
+	if (DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand < size)
 		extra += DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand;
-	if(usedcommands > DPSOFTRAST_DRAW_MAXCOMMANDPOOL - (size + extra))
+	if (usedcommands > DPSOFTRAST_DRAW_MAXCOMMANDPOOL - (size + extra))
 	{
 		DPSOFTRAST_Draw_FreeCommandPool(size + extra);
 		freecommand = dpsoftrast.commandpool.freecommand;
 		usedcommands = dpsoftrast.commandpool.usedcommands;
 	}
-	if(DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand < size)
+	if (DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand < size)
 	{
 		command = (DPSOFTRAST_Command *) &dpsoftrast.commandpool.commands[freecommand];
 		command->opcode = DPSOFTRAST_OPCODE_Reset;
@@ -884,7 +891,12 @@ void DPSOFTRAST_Viewport(int x, int y, int width, int height)
 DEFCOMMAND(2, ClearColor, float r; float g; float b; float a;) 
 static void DPSOFTRAST_Interpret_ClearColor(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_Command_ClearColor *command)
 {
-	int i, x1, y1, x2, y2, w, h, x, y, t1, t2;
+	int i, x1, y1, x2, y2, w, h, x, y;
+	int miny1 = thread->miny1;
+	int maxy1 = thread->maxy1;
+	int miny2 = thread->miny2;
+	int maxy2 = thread->maxy2;
+	int bandy;
 	unsigned int *p;
 	unsigned int c;
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
@@ -892,10 +904,8 @@ static void DPSOFTRAST_Interpret_ClearColor(DPSOFTRAST_State_Thread *thread, con
 	y1 = thread->fb_clearscissor[1];
 	x2 = thread->fb_clearscissor[0] + thread->fb_clearscissor[2];
 	y2 = thread->fb_clearscissor[1] + thread->fb_clearscissor[3];
-	t1 = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-	t2 = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-	if(y1 < t1) y1 = t1;
-	if(y2 > t2) y2 = t2;
+	if (y1 < miny1) y1 = miny1;
+	if (y2 > maxy2) y2 = maxy2;
 	w = x2 - x1;
 	h = y2 - y1;
 	if (w < 1 || h < 1)
@@ -906,7 +916,8 @@ static void DPSOFTRAST_Interpret_ClearColor(DPSOFTRAST_State_Thread *thread, con
 	{
 		if (!dpsoftrast.fb_colorpixels[i])
 			continue;
-		for (y = y1;y < y2;y++)
+		for (y = y1, bandy = min(y2, maxy1); y < y2; bandy = min(y2, maxy2), y = max(y, miny2))
+		for (;y < bandy;y++)
 		{
 			p = dpsoftrast.fb_colorpixels[i] + y * dpsoftrast.fb_width;
 			for (x = x1;x < x2;x++)
@@ -926,7 +937,12 @@ void DPSOFTRAST_ClearColor(float r, float g, float b, float a)
 DEFCOMMAND(3, ClearDepth, float depth;)
 static void DPSOFTRAST_Interpret_ClearDepth(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_ClearDepth *command)
 {
-	int x1, y1, x2, y2, w, h, x, y, t1, t2;
+	int x1, y1, x2, y2, w, h, x, y;
+	int miny1 = thread->miny1;
+	int maxy1 = thread->maxy1;
+	int miny2 = thread->miny2;
+	int maxy2 = thread->maxy2;
+	int bandy;
 	unsigned int *p;
 	unsigned int c;
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
@@ -934,16 +950,15 @@ static void DPSOFTRAST_Interpret_ClearDepth(DPSOFTRAST_State_Thread *thread, DPS
 	y1 = thread->fb_clearscissor[1];
 	x2 = thread->fb_clearscissor[0] + thread->fb_clearscissor[2];
 	y2 = thread->fb_clearscissor[1] + thread->fb_clearscissor[3];
-	t1 = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-	t2 = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-	if(y1 < t1) y1 = t1;
-	if(y2 > t2) y2 = t2;
+	if (y1 < miny1) y1 = miny1;
+	if (y2 > maxy2) y2 = maxy2;
 	w = x2 - x1;
 	h = y2 - y1;
 	if (w < 1 || h < 1)
 		return;
 	c = DPSOFTRAST_DEPTH32_FROM_DEPTH32F(command->depth);
-	for (y = y1;y < y2;y++)
+	for (y = y1, bandy = min(y2, maxy1); y < y2; bandy = min(y2, maxy2), y = max(y, miny2))
+	for (;y < bandy;y++)
 	{
 		p = dpsoftrast.fb_depthpixels + y * dpsoftrast.fb_width;
 		for (x = x1;x < x2;x++)
@@ -1941,7 +1956,7 @@ void DPSOFTRAST_Draw_Span_Begin(DPSOFTRAST_State_Thread *thread, const DPSOFTRAS
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		float z = endz, dz;
-		if(nextsub >= endx) nextsub = endsub = endx-1;
+		if (nextsub >= endx) nextsub = endsub = endx-1;
 		endz = 1.0f / (w + wslope * nextsub);
 		dz = x < nextsub ? (endz - z) / (nextsub - x) : 0.0f;
 		for (; x <= endsub; x++, z += dz)
@@ -2320,10 +2335,10 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		unsigned int substep[2];
 		float subscale = 65536.0f/DPSOFTRAST_DRAW_MAXSUBSPAN;
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
-		if(nextsub >= endx)
+		if (nextsub >= endx)
 		{
 			nextsub = endsub = endx-1;	
-			if(x < nextsub) subscale = 65536.0f / (nextsub - x);
+			if (x < nextsub) subscale = 65536.0f / (nextsub - x);
 		}
 		tc[0] = endtc[0];
 		tc[1] = endtc[1];
@@ -2333,7 +2348,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		substep[1] = (endtc[1] - tc[1]) * subscale;
 		subtc[0] = tc[0] * (1<<16);
 		subtc[1] = tc[1] * (1<<16);
-		if(filter)
+		if (filter)
 		{
 			if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 			{
@@ -2483,10 +2498,10 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		__m128 subscale = _mm_set1_ps(65536.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
-		if(nextsub >= endx)
+		if (nextsub >= endx)
 		{
 			nextsub = endsub = endx-1;
-			if(x < nextsub) subscale = _mm_set1_ps(65536.0f / (nextsub - x));
+			if (x < nextsub) subscale = _mm_set1_ps(65536.0f / (nextsub - x));
 		}	
 		tc = endtc;
 		subtc = endsubtc;
@@ -2869,10 +2884,10 @@ void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Triangle *
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		__m128 subscale = _mm_set1_ps(256.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
-		if(nextsub >= endx)
+		if (nextsub >= endx)
 		{
 			nextsub = endsub = endx-1;
-			if(x < nextsub) subscale = _mm_set1_ps(256.0f / (nextsub - x));
+			if (x < nextsub) subscale = _mm_set1_ps(256.0f / (nextsub - x));
 		}
 		mod = endmod;
 		submod = endsubmod;
@@ -2916,10 +2931,10 @@ void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Triangle * RESTRIC
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		__m128 subscale = _mm_set1_ps(4095.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
-		if(nextsub >= endx)
+		if (nextsub >= endx)
 		{
 			nextsub = endsub = endx-1;
-			if(x < nextsub) subscale = _mm_set1_ps(4095.0f / (nextsub - x));
+			if (x < nextsub) subscale = _mm_set1_ps(4095.0f / (nextsub - x));
 		}
 		mod = endmod;
 		submod = endsubmod;
@@ -2956,7 +2971,7 @@ void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Triangle * RESTRI
 		pix1 = _mm_add_epi16(pix1, _mm_sub_epi16(pix2, localcolor));
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
@@ -2977,7 +2992,7 @@ void DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(const DPSOFTRAST_State_Triangle *
 		pix1 = _mm_mulhi_epu16(pix1, pix2);
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]));
@@ -2998,7 +3013,7 @@ void DPSOFTRAST_Draw_Span_AddBuffersBGRA8(const DPSOFTRAST_State_Triangle * REST
 		pix1 = _mm_add_epi16(pix1, pix2);
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
@@ -3021,7 +3036,7 @@ void DPSOFTRAST_Draw_Span_TintedAddBuffersBGRA8(const DPSOFTRAST_State_Triangle 
 		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epu16(tint, pix2));
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]));
@@ -3043,7 +3058,7 @@ void DPSOFTRAST_Draw_Span_MixBuffersBGRA8(const DPSOFTRAST_State_Triangle * REST
 		pix1 = _mm_add_epi16(pix1, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(pix2, pix1), 4), _mm_slli_epi16(blend, 4)));
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
@@ -3067,7 +3082,7 @@ void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Triangle *
 		pix = _mm_add_epi16(pix, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(localcolor, pix), 4), blend));
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix, pix));
 	}
-	if(x < endx)
+	if (x < endx)
 	{
 		__m128i pix = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&in4ub[x*4]), _mm_setzero_si128());
 		pix = _mm_add_epi16(pix, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(localcolor, pix), 4), blend));
@@ -3266,7 +3281,7 @@ void DPSOFTRAST_PixelShader_VertexColor(DPSOFTRAST_State_Thread *thread, const D
 			x += 3;
 			continue;
 		}
-		if(!pixelmask[x])
+		if (!pixelmask[x])
 			continue;
 		color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
 		mod = _mm_cvtps_epi32(_mm_mul_ps(data, _mm_load1_ps(&buffer_z[x]))); 
@@ -3274,7 +3289,7 @@ void DPSOFTRAST_PixelShader_VertexColor(DPSOFTRAST_State_Thread *thread, const D
 		pix = _mm_mulhi_epu16(_mm_add_epi16(_mm_mulhi_epu16(mod, Color_Diffusem), Color_Ambientm), color);
 		*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 	}
-	if(pixel == buffer_FragColorbgra8)
+	if (pixel == buffer_FragColorbgra8)
 		DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
 #endif
 }
@@ -3338,7 +3353,7 @@ void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSO
 				x += 3;
 				continue;
 			}
-			if(!pixelmask[x])
+			if (!pixelmask[x])
 				continue;
 			color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
 			lightmap = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_lightmapbgra8[x*4]));
@@ -3366,7 +3381,7 @@ void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSO
 				x += 3;
 				continue;
 			}
-			if(!pixelmask[x]) 
+			if (!pixelmask[x]) 
 				continue;
 			color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
 			lightmap = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_lightmapbgra8[x*4]));
@@ -3374,7 +3389,7 @@ void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSO
 			*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 		}
 	}
-	if(pixel == buffer_FragColorbgra8)
+	if (pixel == buffer_FragColorbgra8)
 		DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
 #endif
 }
@@ -4268,8 +4283,10 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 #ifdef SSE2_PRESENT
 	int cullface = thread->cullface;
 	int width = dpsoftrast.fb_width;
-	int miny = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-	int maxy = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+	int miny1 = thread->miny1;
+	int maxy1 = thread->maxy1;
+	int miny2 = thread->miny2;
+	int maxy2 = thread->maxy2;
 	__m128i fbmin, fbmax;
 	__m128 viewportcenter, viewportscale;
 	int firstvertex = command->firstvertex;
@@ -4284,7 +4301,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 	int y;
 	int e[3];
 	__m128i screeny;
-	int starty, endy;
+	int starty, endy, bandy;
 	int numpoints;
 	int clipcase;
 	float clipdist[4];
@@ -4293,7 +4310,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 	__m128 screen[4];
 	DPSOFTRAST_State_Triangle *triangle;
 	DPSOFTRAST_Texture *texture;
-	if (command->starty >= maxy || command->endy <= miny)
+	if ((command->starty >= maxy1 || command->endy <= miny1) && (command->starty >= maxy2 || command->endy <= miny2))
 	{
 		if (!ATOMIC_DECREMENT(command->refcount))
 		{
@@ -4303,8 +4320,8 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 		return;
 	}
 	DPSOFTRAST_ValidateQuick(thread, DPSOFTRAST_VALIDATE_DRAW);
-	fbmin = _mm_setr_epi16(0, miny, 0, miny, 0, miny, 0, miny);
-	fbmax = _mm_sub_epi16(_mm_setr_epi16(width, maxy, width, maxy, width, maxy, width, maxy), _mm_set1_epi16(1));
+	fbmin = _mm_setr_epi16(0, miny1, 0, miny1, 0, miny1, 0, miny1);
+	fbmax = _mm_sub_epi16(_mm_setr_epi16(width, maxy2, width, maxy2, width, maxy2, width, maxy2), _mm_set1_epi16(1));
 	viewportcenter = _mm_load_ps(thread->fb_viewportcenter);
 	viewportscale = _mm_load_ps(thread->fb_viewportscale);
 	screen[3] = _mm_setzero_ps();
@@ -4469,6 +4486,8 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				continue;
 			starty = _mm_extract_epi16(screenmin, 1);
 			endy = _mm_extract_epi16(screenmax, 1)+1;
+			if (starty >= maxy1 && endy <= miny2)
+				continue;
 			screeny = _mm_srai_epi32(screeni, 16);
 		}
 
@@ -4554,8 +4573,9 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				}
 			}
 		}
-
-		for (y = starty; y < endy;)
+	
+		for (y = starty, bandy = min(endy, maxy1); y < endy; bandy = min(endy, maxy2), y = max(y, miny2))
+		for (; y < bandy;)
 		{
 			__m128 xcoords, xslope;
 			__m128i ycc = _mm_cmpgt_epi32(_mm_set1_epi32(y), screeny);
@@ -4604,7 +4624,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			ycc = _mm_min_epi16(ycc, _mm_shuffle_epi32(ycc, _MM_SHUFFLE(1, 0, 3, 2)));
 			ycc = _mm_min_epi16(ycc, _mm_shuffle_epi32(ycc, _MM_SHUFFLE(2, 3, 0, 1)));
 			nexty = _mm_extract_epi16(ycc, 0);
-			if(nexty >= endy) nexty = endy-1;
+			if (nexty >= bandy) nexty = bandy-1;
 			if (_mm_ucomigt_ss(_mm_max_ss(screen[edge0n], screen[edge0p]), _mm_min_ss(screen[edge1n], screen[edge1p])))
 			{
 				int tmp = edge0n;
@@ -4748,13 +4768,10 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 	DPSOFTRAST_Draw_SyncCommands();
 	{
 		int i;
-		int nexty = 0;
 		for (i = 0; i < dpsoftrast.numthreads; i++)
 		{
 			DPSOFTRAST_State_Thread *thread = &dpsoftrast.threads[i];
-			int y = nexty;
-			nexty = ((i+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-			if (command->starty < nexty && command->endy > y && thread->starving)
+			if (((command->starty < thread->maxy1 && command->endy > thread->miny1) || (command->starty < thread->maxy2 && command->endy > thread->miny2)) && thread->starving)
 				SDL_CondSignal(thread->drawcond);
 		}
 	}
@@ -4894,7 +4911,7 @@ void DPSOFTRAST_Finish(void)
 	DPSOFTRAST_Flush();
 }
 
-void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorpixels, unsigned int *depthpixels)
+void DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsigned int *colorpixels, unsigned int *depthpixels)
 {
 	int i;
 	union
@@ -4925,6 +4942,7 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 	dpsoftrast.color[1] = 1;
 	dpsoftrast.color[2] = 1;
 	dpsoftrast.color[3] = 1;
+	dpsoftrast.interlace = bound(0, interlace, 1);
 #ifdef USE_THREADS
 	dpsoftrast.numthreads = bound(1, numthreads, 64);
 #else
@@ -4960,6 +4978,19 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, unsigned int *colorp
 		thread->depthrange[1] = 1;
 		thread->polygonoffset[0] = 0;
 		thread->polygonoffset[1] = 0;
+	
+		if (dpsoftrast.interlace)
+		{
+			thread->miny1 = (i*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+			thread->maxy1 = ((i+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+			thread->miny2 = ((dpsoftrast.numthreads+i)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+			thread->maxy2 = ((dpsoftrast.numthreads+i+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+		}
+		else
+		{
+			thread->miny1 = thread->miny2 = (i*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+			thread->maxy1 = thread->maxy2 = ((i+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+		}
 
 		thread->numspans = 0;
 		thread->numtriangles = 0;
@@ -4984,7 +5015,7 @@ void DPSOFTRAST_Shutdown(void)
 {
 	int i;
 #ifdef USE_THREADS
-	if(dpsoftrast.numthreads > 0)
+	if (dpsoftrast.numthreads > 0)
 	{
 		DPSOFTRAST_State_Thread *thread;
 		for (i = 0; i < dpsoftrast.numthreads; i++)
