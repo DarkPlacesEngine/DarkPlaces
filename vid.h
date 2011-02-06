@@ -43,14 +43,12 @@ renderpath_t;
 
 typedef struct viddef_support_s
 {
+	qboolean gl20shaders;
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
-	qboolean arb_fragment_shader;
 	qboolean arb_multitexture;
 	qboolean arb_occlusion_query;
-	qboolean arb_shader_objects;
-	qboolean arb_shading_language_100;
 	qboolean arb_shadow;
 	qboolean arb_texture_compression;
 	qboolean arb_texture_cube_map;
@@ -58,7 +56,6 @@ typedef struct viddef_support_s
 	qboolean arb_texture_gather;
 	qboolean arb_texture_non_power_of_two;
 	qboolean arb_vertex_buffer_object;
-	qboolean arb_vertex_shader;
 	qboolean ati_separate_stencil;
 	qboolean ext_blend_minmax;
 	qboolean ext_blend_subtract;

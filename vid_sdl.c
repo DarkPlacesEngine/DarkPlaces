@@ -673,12 +673,442 @@ void Sys_SendKeyEvents( void )
 // Video system
 ////
 
+#ifdef __IPHONEOS__
+//#include <SDL_opengles.h>
+#include <OpenGLES/ES2/gl.h>
+
+GLboolean wrapglIsBuffer(GLuint buffer) {return glIsBuffer(buffer);}
+GLboolean wrapglIsEnabled(GLenum cap) {return glIsEnabled(cap);}
+GLboolean wrapglIsFramebuffer(GLuint framebuffer) {return glIsFramebuffer(framebuffer);}
+//GLboolean wrapglIsQuery(GLuint qid) {return glIsQuery(qid);}
+GLboolean wrapglIsRenderbuffer(GLuint renderbuffer) {return glIsRenderbuffer(renderbuffer);}
+//GLboolean wrapglUnmapBuffer(GLenum target) {return glUnmapBuffer(target);}
+GLenum wrapglCheckFramebufferStatus(GLenum target) {return glCheckFramebufferStatus(target);}
+GLenum wrapglGetError(void) {return glGetError();}
+GLuint wrapglCreateProgram(void) {return glCreateProgram();}
+GLuint wrapglCreateShader(GLenum shaderType) {return glCreateShader(shaderType);}
+//GLuint wrapglGetHandle(GLenum pname) {return glGetHandle(pname);}
+GLint wrapglGetAttribLocation(GLuint programObj, const GLchar *name) {return glGetAttribLocation(programObj, name);}
+GLint wrapglGetUniformLocation(GLuint programObj, const GLchar *name) {return glGetUniformLocation(programObj, name);}
+//GLvoid* wrapglMapBuffer(GLenum target, GLenum access) {return glMapBuffer(target, access);}
+const GLubyte* wrapglGetString(GLenum name) {return glGetString(name);}
+//void wrapglActiveStencilFace(GLenum e) {glActiveStencilFace(e);}
+void wrapglActiveTexture(GLenum e) {glActiveTexture(e);}
+//void wrapglAlphaFunc(GLenum func, GLclampf ref) {glAlphaFunc(func, ref);}
+//void wrapglArrayElement(GLint i) {glArrayElement(i);}
+void wrapglAttachShader(GLuint containerObj, GLuint obj) {glAttachShader(containerObj, obj);}
+//void wrapglBegin(GLenum mode) {glBegin(mode);}
+//void wrapglBeginQuery(GLenum target, GLuint qid) {glBeginQuery(target, qid);}
+void wrapglBindAttribLocation(GLuint programObj, GLuint index, const GLchar *name) {glBindAttribLocation(programObj, index, name);}
+void wrapglBindBuffer(GLenum target, GLuint buffer) {glBindBuffer(target, buffer);}
+void wrapglBindFramebuffer(GLenum target, GLuint framebuffer) {glBindFramebuffer(target, framebuffer);}
+void wrapglBindRenderbuffer(GLenum target, GLuint renderbuffer) {glBindRenderbuffer(target, renderbuffer);}
+void wrapglBindTexture(GLenum target, GLuint texture) {glBindTexture(target, texture);}
+void wrapglBlendEquation(GLenum e) {glBlendEquation(e);}
+void wrapglBlendFunc(GLenum sfactor, GLenum dfactor) {glBlendFunc(sfactor, dfactor);}
+void wrapglBufferData(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage) {glBufferData(target, size, data, usage);}
+void wrapglBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data) {glBufferSubData(target, offset, size, data);}
+void wrapglClear(GLbitfield mask) {glClear(mask);}
+void wrapglClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) {glClearColor(red, green, blue, alpha);}
+void wrapglClearDepth(GLclampd depth) {glClearDepthf((float)depth);}
+void wrapglClearStencil(GLint s) {glClearStencil(s);}
+void wrapglClientActiveTexture(GLenum target) {Con_Printf("glClientActiveTexture(target)\n");}
+void wrapglColor4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) {Con_Printf("glColor4f(red, green, blue, alpha)\n");}
+void wrapglColor4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha) {Con_Printf("glColor4ub(red, green, blue, alpha)\n");}
+void wrapglColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) {Con_Printf("glColorMask(red, green, blue, alpha)\n");}
+void wrapglColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glColorPointer(size, type, stride, ptr)\n");}
+void wrapglCompileShader(GLuint shaderObj) {glCompileShader(shaderObj);}
+void wrapglCompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data) {glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);}
+//void wrapglCompressedTexImage3D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data) {glCompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data);}
+void wrapglCompressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data) {glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);}
+//void wrapglCompressedTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data) {glCompressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, data);}
+void wrapglCopyTexImage2D(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border) {glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);}
+void wrapglCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height) {glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);}
+//void wrapglCopyTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height) {glCopyTexSubImage3D(target, level, xoffset, yoffset, zoffset, x, y, width, height);}
+void wrapglCullFace(GLenum mode) {glCullFace(mode);}
+void wrapglDeleteBuffers(GLsizei n, const GLuint *buffers) {glDeleteBuffers(n, buffers);}
+void wrapglDeleteFramebuffers(GLsizei n, const GLuint *framebuffers) {glDeleteFramebuffers(n, framebuffers);}
+void wrapglDeleteShader(GLuint obj) {glDeleteShader(obj);}
+void wrapglDeleteProgram(GLuint obj) {glDeleteProgram(obj);}
+//void wrapglDeleteQueries(GLsizei n, const GLuint *ids) {glDeleteQueries(n, ids);}
+void wrapglDeleteRenderbuffers(GLsizei n, const GLuint *renderbuffers) {glDeleteRenderbuffers(n, renderbuffers);}
+void wrapglDeleteTextures(GLsizei n, const GLuint *textures) {glDeleteTextures(n, textures);}
+void wrapglDepthFunc(GLenum func) {glDepthFunc(func);}
+void wrapglDepthMask(GLboolean flag) {glDepthMask(flag);}
+void wrapglDepthRange(GLclampd near_val, GLclampd far_val) {glDepthRangef((float)near_val, (float)far_val);}
+void wrapglDetachShader(GLuint containerObj, GLuint attachedObj) {glDetachShader(containerObj, attachedObj);}
+void wrapglDisable(GLenum cap) {glDisable(cap);}
+void wrapglDisableClientState(GLenum cap) {Con_Printf("glDisableClientState(cap)\n");}
+void wrapglDisableVertexAttribArray(GLuint index) {glDisableVertexAttribArray(index);}
+void wrapglDrawArrays(GLenum mode, GLint first, GLsizei count) {glDrawArrays(mode, first, count);}
+//void wrapglDrawBuffer(GLenum mode) {glDrawBuffer(mode);}
+//void wrapglDrawBuffers(GLsizei n, const GLenum *bufs) {glDrawBuffers(n, bufs);}
+void wrapglDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices) {glDrawElements(mode, count, type, indices);}
+//void wrapglDrawRangeElements(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices) {glDrawRangeElements(mode, start, end, count, type, indices);}
+//void wrapglDrawRangeElementsEXT(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices) {glDrawRangeElements(mode, start, end, count, type, indices);}
+void wrapglEnable(GLenum cap) {glEnable(cap);}
+void wrapglEnableClientState(GLenum cap) {Con_Printf("glEnableClientState(cap)\n");}
+void wrapglEnableVertexAttribArray(GLuint index) {glEnableVertexAttribArray(index);}
+//void wrapglEnd(void) {glEnd();}
+//void wrapglEndQuery(GLenum target) {glEndQuery(target);}
+void wrapglFinish(void) {glFinish();}
+void wrapglFlush(void) {glFlush();}
+void wrapglFramebufferRenderbuffer(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer) {glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer);}
+void wrapglFramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level) {glFramebufferTexture2D(target, attachment, textarget, texture, level);}
+//void wrapglFramebufferTexture3D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset) {glFramebufferTexture3D();}
+void wrapglGenBuffers(GLsizei n, GLuint *buffers) {glGenBuffers(n, buffers);}
+void wrapglGenFramebuffers(GLsizei n, GLuint *framebuffers) {glGenFramebuffers(n, framebuffers);}
+//void wrapglGenQueries(GLsizei n, GLuint *ids) {glGenQueries(n, ids);}
+void wrapglGenRenderbuffers(GLsizei n, GLuint *renderbuffers) {glGenRenderbuffers(n, renderbuffers);}
+void wrapglGenTextures(GLsizei n, GLuint *textures) {glGenTextures(n, textures);}
+void wrapglGenerateMipmap(GLenum target) {glGenerateMipmap(target);}
+void wrapglGetActiveAttrib(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name) {glGetActiveAttrib(programObj, index, maxLength, length, size, type, name);}
+void wrapglGetActiveUniform(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name) {glGetActiveUniform(programObj, index, maxLength, length, size, type, name);}
+void wrapglGetAttachedShaders(GLuint containerObj, GLsizei maxCount, GLsizei *count, GLuint *obj) {glGetAttachedShaders(containerObj, maxCount, count, obj);}
+void wrapglGetBooleanv(GLenum pname, GLboolean *params) {glGetBooleanv(pname, params);}
+//void wrapglGetCompressedTexImage(GLenum target, GLint lod, void *img) {glGetCompressedTexImage(target, lod, img);}
+//void wrapglGetDoublev(GLenum pname, GLdouble *params) {glGetDoublev(pname, params);}
+void wrapglGetFloatv(GLenum pname, GLfloat *params) {glGetFloatv(pname, params);}
+void wrapglGetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLenum pname, GLint *params) {glGetFramebufferAttachmentParameteriv(target, attachment, pname, params);}
+void wrapglGetShaderInfoLog(GLuint obj, GLsizei maxLength, GLsizei *length, GLchar *infoLog) {glGetShaderInfoLog(obj, maxLength, length, infoLog);}
+void wrapglGetProgramInfoLog(GLuint obj, GLsizei maxLength, GLsizei *length, GLchar *infoLog) {glGetProgramInfoLog(obj, maxLength, length, infoLog);}
+void wrapglGetIntegerv(GLenum pname, GLint *params) {glGetIntegerv(pname, params);}
+void wrapglGetShaderiv(GLuint obj, GLenum pname, GLint *params) {glGetShaderiv(obj, pname, params);}
+void wrapglGetProgramiv(GLuint obj, GLenum pname, GLint *params) {glGetProgramiv(obj, pname, params);}
+//void wrapglGetQueryObjectiv(GLuint qid, GLenum pname, GLint *params) {glGetQueryObjectiv(qid, pname, params);}
+//void wrapglGetQueryObjectuiv(GLuint qid, GLenum pname, GLuint *params) {glGetQueryObjectuiv(qid, pname, params);}
+//void wrapglGetQueryiv(GLenum target, GLenum pname, GLint *params) {glGetQueryiv(target, pname, params);}
+void wrapglGetRenderbufferParameteriv(GLenum target, GLenum pname, GLint *params) {glGetRenderbufferParameteriv(target, pname, params);}
+void wrapglGetShaderSource(GLuint obj, GLsizei maxLength, GLsizei *length, GLchar *source) {glGetShaderSource(obj, maxLength, length, source);}
+//void wrapglGetTexImage(GLenum target, GLint level, GLenum format, GLenum type, GLvoid *pixels) {glGetTexImage(target, level, format, type, pixels);}
+//void wrapglGetTexLevelParameterfv(GLenum target, GLint level, GLenum pname, GLfloat *params) {glGetTexLevelParameterfv(target, level, pname, params);}
+//void wrapglGetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint *params) {glGetTexLevelParameteriv(target, level, pname, params);}
+void wrapglGetTexParameterfv(GLenum target, GLenum pname, GLfloat *params) {glGetTexParameterfv(target, pname, params);}
+void wrapglGetTexParameteriv(GLenum target, GLenum pname, GLint *params) {glGetTexParameteriv(target, pname, params);}
+void wrapglGetUniformfv(GLuint programObj, GLint location, GLfloat *params) {glGetUniformfv(programObj, location, params);}
+void wrapglGetUniformiv(GLuint programObj, GLint location, GLint *params) {glGetUniformiv(programObj, location, params);}
+void wrapglHint(GLenum target, GLenum mode) {glHint(target, mode);}
+void wrapglLineWidth(GLfloat width) {glLineWidth(width);}
+void wrapglLinkProgram(GLuint programObj) {glLinkProgram(programObj);}
+void wrapglLoadIdentity(void) {Con_Printf("glLoadIdentity()\n");}
+void wrapglLoadMatrixf(const GLfloat *m) {Con_Printf("glLoadMatrixf(m)\n");}
+void wrapglMatrixMode(GLenum mode) {Con_Printf("glMatrixMode(mode)\n");}
+void wrapglMultiTexCoord1f(GLenum target, GLfloat s) {Con_Printf("glMultiTexCoord1f(target, s)\n");}
+void wrapglMultiTexCoord2f(GLenum target, GLfloat s, GLfloat t) {Con_Printf("glMultiTexCoord2f(target, s, t)\n");}
+void wrapglMultiTexCoord3f(GLenum target, GLfloat s, GLfloat t, GLfloat r) {Con_Printf("glMultiTexCoord3f(target, s, t, r)\n");}
+void wrapglMultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat r, GLfloat q) {Con_Printf("glMultiTexCoord4f(target, s, t, r, q)\n");}
+void wrapglNormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glNormalPointer(type, stride, ptr)\n");}
+void wrapglPixelStorei(GLenum pname, GLint param) {glPixelStorei(pname, param);}
+//void wrapglPointSize(GLfloat size) {glPointSize(size);}
+void wrapglPolygonMode(GLenum face, GLenum mode) {Con_Printf("glPolygonMode(face, mode)\n");}
+void wrapglPolygonOffset(GLfloat factor, GLfloat units) {Con_Printf("glPolygonOffset(factor, units)\n");}
+void wrapglPolygonStipple(const GLubyte *mask) {Con_Printf("glPolygonStipple(mask)\n");}
+void wrapglReadBuffer(GLenum mode) {Con_Printf("glReadBuffer(mode)\n");}
+void wrapglReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels) {glReadPixels(x, y, width, height, format, type, pixels);}
+void wrapglRenderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, GLsizei height) {glRenderbufferStorage(target, internalformat, width, height);}
+void wrapglScissor(GLint x, GLint y, GLsizei width, GLsizei height) {glScissor(x, y, width, height);}
+void wrapglShaderSource(GLuint shaderObj, GLsizei count, const GLchar **string, const GLint *length) {glShaderSource(shaderObj, count, string, length);}
+void wrapglStencilFunc(GLenum func, GLint ref, GLuint mask) {glStencilFunc(func, ref, mask);}
+void wrapglStencilFuncSeparate(GLenum func1, GLenum func2, GLint ref, GLuint mask) {glStencilFuncSeparate(func1, func2, ref, mask);}
+void wrapglStencilMask(GLuint mask) {glStencilMask(mask);}
+void wrapglStencilOp(GLenum fail, GLenum zfail, GLenum zpass) {glStencilOp(fail, zfail, zpass);}
+void wrapglStencilOpSeparate(GLenum e1, GLenum e2, GLenum e3, GLenum e4) {glStencilOpSeparate(e1, e2, e3, e4);}
+//void wrapglTexCoord1f(GLfloat s) {glTexCoord1f(s);}
+//void wrapglTexCoord2f(GLfloat s, GLfloat t) {glTexCoord2f(s, t);}
+//void wrapglTexCoord3f(GLfloat s, GLfloat t, GLfloat r) {glTexCoord3f(s, t, r);}
+//void wrapglTexCoord4f(GLfloat s, GLfloat t, GLfloat r, GLfloat q) {glTexCoord4f(s, t, r, q);}
+//void wrapglTexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr) {glTexCoordPointer(size, type, stride, ptr);}
+//void wrapglTexEnvf(GLenum target, GLenum pname, GLfloat param) {glTexEnvf(target, pname, param);}
+//void wrapglTexEnvfv(GLenum target, GLenum pname, const GLfloat *params) {glTexEnvfv(target, pname, params);}
+//void wrapglTexEnvi(GLenum target, GLenum pname, GLint param) {glTexEnvi(target, pname, param);}
+void wrapglTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels) {glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels);}
+//void wrapglTexImage3D(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels) {glTexImage3D(target, level, internalformat, width, height, depth, border, format, type, pixels);}
+void wrapglTexParameterf(GLenum target, GLenum pname, GLfloat param) {glTexParameterf(target, pname, param);}
+void wrapglTexParameterfv(GLenum target, GLenum pname, GLfloat *params) {glTexParameterfv(target, pname, params);}
+void wrapglTexParameteri(GLenum target, GLenum pname, GLint param) {glTexParameteri(target, pname, param);}
+void wrapglTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels) {glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);}
+//void wrapglTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels) {glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);}
+void wrapglUniform1f(GLint location, GLfloat v0) {glUniform1f(location, v0);}
+void wrapglUniform1fv(GLint location, GLsizei count, const GLfloat *value) {glUniform1fv(location, count, value);}
+void wrapglUniform1i(GLint location, GLint v0) {glUniform1i(location, v0);}
+void wrapglUniform1iv(GLint location, GLsizei count, const GLint *value) {glUniform1iv(location, count, value);}
+void wrapglUniform2f(GLint location, GLfloat v0, GLfloat v1) {glUniform2f(location, v0, v1);}
+void wrapglUniform2fv(GLint location, GLsizei count, const GLfloat *value) {glUniform2fv(location, count, value);}
+void wrapglUniform2i(GLint location, GLint v0, GLint v1) {glUniform2i(location, v0, v1);}
+void wrapglUniform2iv(GLint location, GLsizei count, const GLint *value) {glUniform2iv(location, count, value);}
+void wrapglUniform3f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2) {glUniform3f(location, v0, v1, v2);}
+void wrapglUniform3fv(GLint location, GLsizei count, const GLfloat *value) {glUniform3fv(location, count, value);}
+void wrapglUniform3i(GLint location, GLint v0, GLint v1, GLint v2) {glUniform3i(location, v0, v1, v2);}
+void wrapglUniform3iv(GLint location, GLsizei count, const GLint *value) {glUniform3iv(location, count, value);}
+void wrapglUniform4f(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) {glUniform4f(location, v0, v1, v2, v3);}
+void wrapglUniform4fv(GLint location, GLsizei count, const GLfloat *value) {glUniform4fv(location, count, value);}
+void wrapglUniform4i(GLint location, GLint v0, GLint v1, GLint v2, GLint v3) {glUniform4i(location, v0, v1, v2, v3);}
+void wrapglUniform4iv(GLint location, GLsizei count, const GLint *value) {glUniform4iv(location, count, value);}
+void wrapglUniformMatrix2fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) {glUniformMatrix2fv(location, count, transpose, value);}
+void wrapglUniformMatrix3fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) {glUniformMatrix3fv(location, count, transpose, value);}
+void wrapglUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value) {glUniformMatrix4fv(location, count, transpose, value);}
+void wrapglUseProgram(GLuint programObj) {glUseProgram(programObj);}
+void wrapglValidateProgram(GLuint programObj) {glValidateProgram(programObj);}
+//void wrapglVertex2f(GLfloat x, GLfloat y) {glVertex2f(x, y);}
+//void wrapglVertex3f(GLfloat x, GLfloat y, GLfloat z) {glVertex3f(x, y, z);}
+//void wrapglVertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w) {glVertex4f(x, y, z, w);}
+void wrapglVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer) {glVertexAttribPointer(index, size, type, normalized, stride, pointer);}
+void wrapglVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glVertexPointer(size, type, stride, ptr)\n");}
+void wrapglViewport(GLint x, GLint y, GLsizei width, GLsizei height) {glViewport(x, y, width, height);}
+
+void GLES_Init(void)
+{
+	qglIsBufferARB = wrapglIsBuffer;
+	qglIsEnabled = wrapglIsEnabled;
+	qglIsFramebufferEXT = wrapglIsFramebuffer;
+//	qglIsQueryARB = wrapglIsQuery;
+	qglIsRenderbufferEXT = wrapglIsRenderbuffer;
+//	qglUnmapBufferARB = wrapglUnmapBuffer;
+	qglCheckFramebufferStatusEXT = wrapglCheckFramebufferStatus;
+	qglGetError = wrapglGetError;
+	qglCreateProgram = wrapglCreateProgram;
+	qglCreateShader = wrapglCreateShader;
+//	qglGetHandleARB = wrapglGetHandle;
+	qglGetAttribLocation = wrapglGetAttribLocation;
+	qglGetUniformLocation = wrapglGetUniformLocation;
+//	qglMapBufferARB = wrapglMapBuffer;
+	qglGetString = wrapglGetString;
+//	qglActiveStencilFaceEXT = wrapglActiveStencilFace;
+	qglActiveTexture = wrapglActiveTexture;
+//	qglAlphaFunc = wrapglAlphaFunc;
+//	qglArrayElement = wrapglArrayElement;
+	qglAttachShader = wrapglAttachShader;
+//	qglBegin = wrapglBegin;
+//	qglBeginQueryARB = wrapglBeginQuery;
+	qglBindAttribLocationARB = wrapglBindAttribLocation;
+	qglBindBufferARB = wrapglBindBuffer;
+	qglBindFramebufferEXT = wrapglBindFramebuffer;
+	qglBindRenderbufferEXT = wrapglBindRenderbuffer;
+	qglBindTexture = wrapglBindTexture;
+	qglBlendEquationEXT = wrapglBlendEquation;
+	qglBlendFunc = wrapglBlendFunc;
+	qglBufferDataARB = wrapglBufferData;
+	qglBufferSubDataARB = wrapglBufferSubData;
+	qglClear = wrapglClear;
+	qglClearColor = wrapglClearColor;
+	qglClearDepth = wrapglClearDepth;
+	qglClearStencil = wrapglClearStencil;
+	qglClientActiveTexture = wrapglClientActiveTexture;
+	qglColor4f = wrapglColor4f;
+	qglColor4ub = wrapglColor4ub;
+	qglColorMask = wrapglColorMask;
+	qglColorPointer = wrapglColorPointer;
+	qglCompileShaderARB = wrapglCompileShader;
+	qglCompressedTexImage2DARB = wrapglCompressedTexImage2D;
+//	qglCompressedTexImage3DARB = wrapglCompressedTexImage3D;
+	qglCompressedTexSubImage2DARB = wrapglCompressedTexSubImage2D;
+//	qglCompressedTexSubImage3DARB = wrapglCompressedTexSubImage3D;
+	qglCopyTexImage2D = wrapglCopyTexImage2D;
+	qglCopyTexSubImage2D = wrapglCopyTexSubImage2D;
+//	qglCopyTexSubImage3D = wrapglCopyTexSubImage3D;
+	qglCullFace = wrapglCullFace;
+	qglDeleteBuffersARB = wrapglDeleteBuffers;
+	qglDeleteFramebuffersEXT = wrapglDeleteFramebuffers;
+	qglDeleteProgram = wrapglDeleteProgram;
+	qglDeleteShader = wrapglDeleteShader;
+//	qglDeleteQueriesARB = wrapglDeleteQueries;
+	qglDeleteRenderbuffersEXT = wrapglDeleteRenderbuffers;
+	qglDeleteTextures = wrapglDeleteTextures;
+	qglDepthFunc = wrapglDepthFunc;
+	qglDepthMask = wrapglDepthMask;
+	qglDepthRange = wrapglDepthRange;
+	qglDetachShader = wrapglDetachShader;
+	qglDisable = wrapglDisable;
+	qglDisableClientState = wrapglDisableClientState;
+	qglDisableVertexAttribArrayARB = wrapglDisableVertexAttribArray;
+	qglDrawArrays = wrapglDrawArrays;
+//	qglDrawBuffer = wrapglDrawBuffer;
+//	qglDrawBuffersARB = wrapglDrawBuffers;
+	qglDrawElements = wrapglDrawElements;
+//	qglDrawRangeElements = wrapglDrawRangeElements;
+	qglEnable = wrapglEnable;
+	qglEnableClientState = wrapglEnableClientState;
+	qglEnableVertexAttribArrayARB = wrapglEnableVertexAttribArray;
+//	qglEnd = wrapglEnd;
+//	qglEndQueryARB = wrapglEndQuery;
+	qglFinish = wrapglFinish;
+	qglFlush = wrapglFlush;
+	qglFramebufferRenderbufferEXT = wrapglFramebufferRenderbuffer;
+	qglFramebufferTexture2DEXT = wrapglFramebufferTexture2D;
+//	qglFramebufferTexture3DEXT = wrapglFramebufferTexture3D;
+	qglGenBuffersARB = wrapglGenBuffers;
+	qglGenFramebuffersEXT = wrapglGenFramebuffers;
+//	qglGenQueriesARB = wrapglGenQueries;
+	qglGenRenderbuffersEXT = wrapglGenRenderbuffers;
+	qglGenTextures = wrapglGenTextures;
+	qglGenerateMipmapEXT = wrapglGenerateMipmap;
+	qglGetActiveAttrib = wrapglGetActiveAttrib;
+	qglGetActiveUniform = wrapglGetActiveUniform;
+	qglGetAttachedShaders = wrapglGetAttachedShaders;
+	qglGetBooleanv = wrapglGetBooleanv;
+//	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
+//	qglGetDoublev = wrapglGetDoublev;
+	qglGetFloatv = wrapglGetFloatv;
+	qglGetFramebufferAttachmentParameterivEXT = wrapglGetFramebufferAttachmentParameteriv;
+	qglGetProgramInfoLog = wrapglGetProgramInfoLog;
+	qglGetShaderInfoLog = wrapglGetShaderInfoLog;
+	qglGetIntegerv = wrapglGetIntegerv;
+	qglGetShaderiv = wrapglGetShaderiv;
+	qglGetProgramiv = wrapglGetProgramiv;
+//	qglGetQueryObjectivARB = wrapglGetQueryObjectiv;
+//	qglGetQueryObjectuivARB = wrapglGetQueryObjectuiv;
+//	qglGetQueryivARB = wrapglGetQueryiv;
+	qglGetRenderbufferParameterivEXT = wrapglGetRenderbufferParameteriv;
+	qglGetShaderSource = wrapglGetShaderSource;
+//	qglGetTexImage = wrapglGetTexImage;
+//	qglGetTexLevelParameterfv = wrapglGetTexLevelParameterfv;
+//	qglGetTexLevelParameteriv = wrapglGetTexLevelParameteriv;
+	qglGetTexParameterfv = wrapglGetTexParameterfv;
+	qglGetTexParameteriv = wrapglGetTexParameteriv;
+	qglGetUniformfv = wrapglGetUniformfv;
+	qglGetUniformiv = wrapglGetUniformiv;
+	qglHint = wrapglHint;
+	qglLineWidth = wrapglLineWidth;
+	qglLinkProgram = wrapglLinkProgram;
+	qglLoadIdentity = wrapglLoadIdentity;
+	qglLoadMatrixf = wrapglLoadMatrixf;
+	qglMatrixMode = wrapglMatrixMode;
+	qglMultiTexCoord1f = wrapglMultiTexCoord1f;
+	qglMultiTexCoord2f = wrapglMultiTexCoord2f;
+	qglMultiTexCoord3f = wrapglMultiTexCoord3f;
+	qglMultiTexCoord4f = wrapglMultiTexCoord4f;
+	qglNormalPointer = wrapglNormalPointer;
+	qglPixelStorei = wrapglPixelStorei;
+//	qglPointSize = wrapglPointSize;
+	qglPolygonMode = wrapglPolygonMode;
+	qglPolygonOffset = wrapglPolygonOffset;
+	qglPolygonStipple = wrapglPolygonStipple;
+	qglReadBuffer = wrapglReadBuffer;
+	qglReadPixels = wrapglReadPixels;
+	qglRenderbufferStorageEXT = wrapglRenderbufferStorage;
+	qglScissor = wrapglScissor;
+	qglShaderSource = wrapglShaderSource;
+	qglStencilFunc = wrapglStencilFunc;
+	qglStencilFuncSeparate = wrapglStencilFuncSeparate;
+	qglStencilMask = wrapglStencilMask;
+	qglStencilOp = wrapglStencilOp;
+	qglStencilOpSeparate = wrapglStencilOpSeparate;
+//	qglTexCoord1f = wrapglTexCoord1f;
+//	qglTexCoord2f = wrapglTexCoord2f;
+//	qglTexCoord3f = wrapglTexCoord3f;
+//	qglTexCoord4f = wrapglTexCoord4f;
+//	qglTexCoordPointer = wrapglTexCoordPointer;
+//	qglTexEnvf = wrapglTexEnvf;
+//	qglTexEnvfv = wrapglTexEnvfv;
+//	qglTexEnvi = wrapglTexEnvi;
+	qglTexImage2D = wrapglTexImage2D;
+//	qglTexImage3D = wrapglTexImage3D;
+	qglTexParameterf = wrapglTexParameterf;
+	qglTexParameterfv = wrapglTexParameterfv;
+	qglTexParameteri = wrapglTexParameteri;
+	qglTexSubImage2D = wrapglTexSubImage2D;
+//	qglTexSubImage3D = wrapglTexSubImage3D;
+	qglUniform1f = wrapglUniform1f;
+	qglUniform1fv = wrapglUniform1fv;
+	qglUniform1i = wrapglUniform1i;
+	qglUniform1iv = wrapglUniform1iv;
+	qglUniform2f = wrapglUniform2f;
+	qglUniform2fv = wrapglUniform2fv;
+	qglUniform2i = wrapglUniform2i;
+	qglUniform2iv = wrapglUniform2iv;
+	qglUniform3f = wrapglUniform3f;
+	qglUniform3fv = wrapglUniform3fv;
+	qglUniform3i = wrapglUniform3i;
+	qglUniform3iv = wrapglUniform3iv;
+	qglUniform4f = wrapglUniform4f;
+	qglUniform4fv = wrapglUniform4fv;
+	qglUniform4i = wrapglUniform4i;
+	qglUniform4iv = wrapglUniform4iv;
+	qglUniformMatrix2fv = wrapglUniformMatrix2fv;
+	qglUniformMatrix3fv = wrapglUniformMatrix3fv;
+	qglUniformMatrix4fv = wrapglUniformMatrix4fv;
+	qglUseProgram = wrapglUseProgram;
+	qglValidateProgram = wrapglValidateProgram;
+//	qglVertex2f = wrapglVertex2f;
+//	qglVertex3f = wrapglVertex3f;
+//	qglVertex4f = wrapglVertex4f;
+	qglVertexAttribPointer = wrapglVertexAttribPointer;
+	qglVertexPointer = wrapglVertexPointer;
+	qglViewport = wrapglViewport;
+
+	vid.support.amd_texture_texture4 = false;
+	vid.support.arb_depth_texture = false;
+	vid.support.arb_draw_buffers = false;
+	vid.support.arb_fragment_shader = true;
+	vid.support.arb_multitexture = false;
+	vid.support.arb_occlusion_query = false;
+	vid.support.arb_shader_objects = true;
+	vid.support.arb_shading_language_100 = true;
+	vid.support.arb_shadow = false;
+	vid.support.arb_texture_compression = false; // different (vendor-specific) formats than on desktop OpenGL...
+	vid.support.arb_texture_cube_map = true;
+	vid.support.arb_texture_env_combine = false;
+	vid.support.arb_texture_gather = false;
+	vid.support.arb_texture_non_power_of_two = SDL_GL_ExtensionSupported("GL_OES_texture_npot");
+	vid.support.arb_vertex_buffer_object = true;
+	vid.support.arb_vertex_shader = true;
+	vid.support.ati_separate_stencil = false;
+	vid.support.ext_blend_minmax = false;
+	vid.support.ext_blend_subtract = true;
+	vid.support.ext_draw_range_elements = true;
+	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_stencil_two_side = false;
+	vid.support.ext_texture_3d = false;//SDL_GL_ExtensionSupported("GL_OES_texture_3D"); // iPhoneOS does not support 3D textures, odd...
+	vid.support.ext_texture_compression_s3tc = false;
+	vid.support.ext_texture_edge_clamp = true;
+	vid.support.ext_texture_filter_anisotropic = false; // probably don't want to use it...
+
+	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
+	if (vid.support.ext_texture_filter_anisotropic)
+		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
+	if (vid.support.arb_texture_cube_map)
+		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_cubemap);
+	if (vid.support.ext_texture_3d)
+		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
+
+	// verify that 3d textures are really supported
+	if (vid.support.ext_texture_3d && vid.maxtexturesize_3d < 32)
+	{
+		vid.support.ext_texture_3d = false;
+		Con_Printf("GL_OES_texture_3d reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
+	}
+
+	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
+	qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, (int *)&vid.teximageunits);CHECKGLERROR
+	qglGetIntegerv(GL_MAX_TEXTURE_COORDS_ARB, (int *)&vid.texarrayunits);CHECKGLERROR
+	vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
+	vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
+	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
+	Con_DPrintf("Using GLES2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
+	vid.renderpath = RENDERPATH_GL20;
+	vid.useinterleavedarrays = false;
+
+	// VorteX: set other info (maybe place them in VID_InitMode?)
+	extern cvar_t gl_info_vendor;
+	extern cvar_t gl_info_renderer;
+	extern cvar_t gl_info_version;
+	extern cvar_t gl_info_platform;
+	extern cvar_t gl_info_driver;
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
+}
+#else
 void *GL_GetProcAddress(const char *name)
 {
 	void *p = NULL;
 	p = SDL_GL_GetProcAddress(name);
 	return p;
 }
+#endif
 
 #if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 static int Sys_EventFilter( SDL_Event *event );
@@ -1123,7 +1553,11 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	gl_platform = "SDL";
 	gl_platformextensions = "";
 
+#ifdef __IPHONEOS__
+	GLES_Init();
+#else
 	GL_Init();
+#endif
 
 	vid_numjoysticks = SDL_NumJoysticks();
 	vid_numjoysticks = bound(0, vid_numjoysticks, MAX_JOYSTICKS);
