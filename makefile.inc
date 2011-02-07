@@ -120,6 +120,7 @@ OBJ_COMMON= \
 	csprogs.o \
 	curves.o \
 	cvar.o \
+	dpsoftrast.o \
 	dpvsimpledecode.o \
 	filematch.o \
 	fractalnoise.o \
@@ -185,8 +186,8 @@ OBJ_COMMON= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON) dpsoftrast.o
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON) dpsoftrast_sdl.o
+OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
 # Compilation
@@ -195,7 +196,7 @@ CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
 CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
-CFLAGS_SDL=$(SDLCONFIG_CFLAGS) -DUSE_SDL
+CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
 
 CFLAGS_SSE=-msse
 
@@ -218,7 +219,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 ##### UNIX specific variables #####
 
-OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON) dpsoftrast.o
+OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_null.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
@@ -261,7 +262,7 @@ LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
 LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) SDLMain.m
 
-OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON) dpsoftrast.o
+OBJ_AGL= builddate.c sys_linux.o vid_agl.o thread_null.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 EXE_MACOSXCL=darkplaces-agl
 EXE_MACOSXCLNEXUIZ=nexuiz-agl
@@ -301,7 +302,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON) dpsoftrast.o
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
@@ -516,15 +517,15 @@ snd_sdl.o: snd_sdl.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
+thread_sdl.o: thread_sdl.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SDL)
+
 snd_3dras.o: snd_3dras.c
 	$(CHECKLEVEL2)
 	$(DO_CC)
 
 cd_sdl.o: cd_sdl.c
-	$(CHECKLEVEL2)
-	$(DO_CC) $(CFLAGS_SDL)
-
-dpsoftrast_sdl.o: dpsoftrast.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 
