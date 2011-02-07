@@ -3599,12 +3599,11 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 				if (!tex)
 					return;
 			}
+			// upload texture if needed
+			R_GetTexture(tex);
 			if (unit->texture == tex)
 				return;
 			unit->texture = tex;
-			// upload texture if needed
-			if (tex->dirty)
-				R_RealGetTexture(tex);
 			IDirect3DDevice9_SetTexture(vid_d3d9dev, unitnum, (IDirect3DBaseTexture9*)tex->d3dtexture);
 			//IDirect3DDevice9_SetRenderState(vid_d3d9dev, d3drswrap[unitnum], (tex->flags & TEXF_CLAMP) ? (D3DWRAPCOORD_0 | D3DWRAPCOORD_1 | D3DWRAPCOORD_2) : 0);
 			IDirect3DDevice9_SetSamplerState(vid_d3d9dev, unitnum, D3DSAMP_ADDRESSU, tex->d3daddressu);
@@ -3634,10 +3633,11 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 			if (!tex)
 				return;
 		}
+		texnum = R_GetTexture(tex);
 		if (unit->texture == tex)
 			return;
 		unit->texture = tex;
-		DPSOFTRAST_SetTexture(unitnum, R_GetTexture(tex));
+		DPSOFTRAST_SetTexture(unitnum, texnum);
 		break;
 	}
 }
