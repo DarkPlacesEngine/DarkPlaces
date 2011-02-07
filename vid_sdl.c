@@ -1108,7 +1108,7 @@ void GLES_Init(void)
 	vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
 	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
 	Con_DPrintf("Using GLES2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
-	vid.renderpath = RENDERPATH_GL20;
+	vid.renderpath = RENDERPATH_GLES2;
 	vid.useinterleavedarrays = false;
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
@@ -1831,6 +1831,7 @@ void VID_Finish (void)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (r_speeds.integer == 2 || gl_finish.integer)
 			{

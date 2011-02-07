@@ -123,6 +123,21 @@ typedef enum gl20_texunit_e
 }
 gl20_texunit;
 
+typedef enum gles2_attrib_e
+{
+	GLES2ATTRIB_POSITION = 0,
+	GLES2ATTRIB_COLOR = 1,
+	GLES2ATTRIB_TEXCOORD0 = 2,
+	GLES2ATTRIB_TEXCOORD1 = 3,
+	GLES2ATTRIB_TEXCOORD2 = 4,
+	GLES2ATTRIB_TEXCOORD3 = 5,
+	GLES2ATTRIB_TEXCOORD4 = 6,
+	GLES2ATTRIB_TEXCOORD5 = 7,
+	GLES2ATTRIB_TEXCOORD6 = 8,
+	GLES2ATTRIB_TEXCOORD7 = 9,
+}
+gles2_attrib;
+
 // this enum selects which of the glslshadermodeinfo entries should be used
 typedef enum shadermode_e
 {

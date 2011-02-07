@@ -1941,6 +1941,9 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		return;
 	}
 }
 
@@ -1983,6 +1986,9 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		return;
 	}
 }
 
@@ -2028,6 +2034,9 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		return;
 	}
 }
 
@@ -2075,6 +2084,7 @@ void R_DrawGamma(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_GLES2:
 		if (vid_usinghwgamma || v_glslgamma.integer)
 			return;
 		break;
