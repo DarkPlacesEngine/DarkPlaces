@@ -685,6 +685,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\thread_null.c"
+				>
+			</File>
+			<File
 				RelativePath=".\utf8lib.c"
 				>
 			</File>
@@ -1072,6 +1076,10 @@
 			</File>
 			<File
 				RelativePath=".\sys.h"
+				>
+			</File>
+			<File
+				RelativePath=".\thread.h"
 				>
 			</File>
 			<File
