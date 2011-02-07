@@ -437,6 +437,8 @@ void R_Shadow_SetShadowMode(void)
 			break;
 		case RENDERPATH_GL11:
 			break;
+		case RENDERPATH_GLES2:
+			break;
 		}
 	}
 }
@@ -1900,6 +1902,7 @@ void R_Shadow_RenderMode_Begin(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 		break;
 	case RENDERPATH_GL13:
@@ -2105,6 +2108,7 @@ init_done:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
 		// OpenGL lets us scissor larger than the viewport, so go ahead and clear all views at once
 		if ((clear & ((2 << side) - 1)) == (1 << side)) // only clear if the side is the first in the mask
@@ -2677,6 +2681,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 			break;
 		case RENDERPATH_D3D9:
@@ -2723,6 +2728,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 			break;
 		case RENDERPATH_D3D9:
@@ -3890,6 +3896,7 @@ void R_Shadow_PrepareLights(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
@@ -4283,6 +4290,7 @@ void R_DrawModelShadowMaps(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -4487,6 +4495,9 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_SOFT:
 			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_GLES2:
+			//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 	}
 	rtlight->corona_visibility = bound(0, (zdist - 32) / 32, 1);
@@ -4524,6 +4535,9 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		case RENDERPATH_SOFT:
 			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_GLES2:
+			//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
 		}
 		//Con_Printf("%i of %i pixels\n", (int)visiblepixels, (int)allpixels);
 		if (visiblepixels < 1 || allpixels < 1)
@@ -4551,6 +4565,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
 			case RENDERPATH_CGGL:
+			case RENDERPATH_GLES2:
 				qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 				break;
 			case RENDERPATH_D3D9:
@@ -4580,6 +4595,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
 			case RENDERPATH_CGGL:
+			case RENDERPATH_GLES2:
 				qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 				break;
 			case RENDERPATH_D3D9:
@@ -4664,7 +4680,12 @@ void R_Shadow_DrawCoronas(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_SOFT:
+		usequery = false;
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_GLES2:
+		usequery = false;
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)

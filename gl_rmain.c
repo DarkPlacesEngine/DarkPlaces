@@ -3320,6 +3320,36 @@ const char *builtincgshaderstring =
 "#endif // !MODE_DEPTH_OR_SHADOW\n"
 ;
 
+/*
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+
+
+
+=========================================================================================================================================================
+*/
+
+const char *builtingles2shaderstring = ""; // FIXME GLES2
+
 char *glslshaderstring = NULL;
 char *cgshaderstring = NULL;
 char *hlslshaderstring = NULL;
@@ -3418,7 +3448,6 @@ shadermodeinfo_t cgshadermodeinfo[SHADERMODE_COUNT] =
 };
 #endif
 
-#ifdef SUPPORTD3D
 shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 {
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_GENERIC\n", " generic"},
@@ -3438,7 +3467,26 @@ shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
 };
-#endif
+
+shadermodeinfo_t gles2shadermodeinfo[SHADERMODE_COUNT] =
+{
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_GENERIC\n", " generic"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_POSTPROCESS\n", " postprocess"},
+	{"gles2/default.glsl", NULL, NULL                , "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_FAKELIGHT\n", " fakelight"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_REFRACTION\n", " refraction"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_WATER\n", " water"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
+	{"gles2/default.glsl", NULL, "gles2/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+};
 
 struct r_glsl_permutation_s;
 typedef struct r_glsl_permutation_s
@@ -3452,6 +3500,36 @@ typedef struct r_glsl_permutation_s
 	qboolean compiled;
 	/// 0 if compilation failed
 	int program;
+	// texture units assigned to each detected uniform
+	int tex_Texture_First;
+	int tex_Texture_Second;
+	int tex_Texture_GammaRamps;
+	int tex_Texture_Normal;
+	int tex_Texture_Color;
+	int tex_Texture_Gloss;
+	int tex_Texture_Glow;
+	int tex_Texture_SecondaryNormal;
+	int tex_Texture_SecondaryColor;
+	int tex_Texture_SecondaryGloss;
+	int tex_Texture_SecondaryGlow;
+	int tex_Texture_Pants;
+	int tex_Texture_Shirt;
+	int tex_Texture_FogHeightTexture;
+	int tex_Texture_FogMask;
+	int tex_Texture_Lightmap;
+	int tex_Texture_Deluxemap;
+	int tex_Texture_Attenuation;
+	int tex_Texture_Cube;
+	int tex_Texture_Refraction;
+	int tex_Texture_Reflection;
+	int tex_Texture_ShadowMap2D;
+	int tex_Texture_CubeProjection;
+	int tex_Texture_ScreenDepth;
+	int tex_Texture_ScreenNormalMap;
+	int tex_Texture_ScreenDiffuse;
+	int tex_Texture_ScreenSpecular;
+	int tex_Texture_ReflectMask;
+	int tex_Texture_ReflectCube;
 	/// locations of detected uniforms in program object, or -1 if not found
 	int loc_Texture_First;
 	int loc_Texture_Second;
@@ -3653,6 +3731,20 @@ static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 		memcpy(shaderstring, glslshaderstring, strlen(glslshaderstring) + 1);
 		return shaderstring;
 	}
+	if (!strcmp(filename, "gles2/default.glsl"))
+	{
+		if (!glslshaderstring)
+		{
+			glslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+			if (glslshaderstring)
+				Con_DPrintf("Loading shaders from file %s...\n", filename);
+			else
+				glslshaderstring = (char *)builtingles2shaderstring;
+		}
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(glslshaderstring) + 1);
+		memcpy(shaderstring, glslshaderstring, strlen(glslshaderstring) + 1);
+		return shaderstring;
+	}
 	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
@@ -3666,7 +3758,8 @@ static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
 static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, unsigned int permutation)
 {
 	int i;
-	shadermodeinfo_t *modeinfo = glslshadermodeinfo + mode;
+	int sampler;
+	shadermodeinfo_t *modeinfo = vid.renderpath == RENDERPATH_GLES2 ? gles2shadermodeinfo + mode : glslshadermodeinfo + mode;
 	char *vertexstring, *geometrystring, *fragmentstring;
 	char permutationname[256];
 	int vertstrings_count = 0;
@@ -3834,37 +3927,80 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_BloomColorSubtract         = qglGetUniformLocation(p->program, "BloomColorSubtract");
 		p->loc_NormalmapScrollBlend       = qglGetUniformLocation(p->program, "NormalmapScrollBlend");
 		// initialize the samplers to refer to the texture units we use
-		if (p->loc_Texture_First           >= 0) qglUniform1i(p->loc_Texture_First          , GL20TU_FIRST);
-		if (p->loc_Texture_Second          >= 0) qglUniform1i(p->loc_Texture_Second         , GL20TU_SECOND);
-		if (p->loc_Texture_GammaRamps      >= 0) qglUniform1i(p->loc_Texture_GammaRamps     , GL20TU_GAMMARAMPS);
-		if (p->loc_Texture_Normal          >= 0) qglUniform1i(p->loc_Texture_Normal         , GL20TU_NORMAL);
-		if (p->loc_Texture_Color           >= 0) qglUniform1i(p->loc_Texture_Color          , GL20TU_COLOR);
-		if (p->loc_Texture_Gloss           >= 0) qglUniform1i(p->loc_Texture_Gloss          , GL20TU_GLOSS);
-		if (p->loc_Texture_Glow            >= 0) qglUniform1i(p->loc_Texture_Glow           , GL20TU_GLOW);
-		if (p->loc_Texture_SecondaryNormal >= 0) qglUniform1i(p->loc_Texture_SecondaryNormal, GL20TU_SECONDARY_NORMAL);
-		if (p->loc_Texture_SecondaryColor  >= 0) qglUniform1i(p->loc_Texture_SecondaryColor , GL20TU_SECONDARY_COLOR);
-		if (p->loc_Texture_SecondaryGloss  >= 0) qglUniform1i(p->loc_Texture_SecondaryGloss , GL20TU_SECONDARY_GLOSS);
-		if (p->loc_Texture_SecondaryGlow   >= 0) qglUniform1i(p->loc_Texture_SecondaryGlow  , GL20TU_SECONDARY_GLOW);
-		if (p->loc_Texture_Pants           >= 0) qglUniform1i(p->loc_Texture_Pants          , GL20TU_PANTS);
-		if (p->loc_Texture_Shirt           >= 0) qglUniform1i(p->loc_Texture_Shirt          , GL20TU_SHIRT);
-		if (p->loc_Texture_FogHeightTexture>= 0) qglUniform1i(p->loc_Texture_FogHeightTexture, GL20TU_FOGHEIGHTTEXTURE);
-		if (p->loc_Texture_FogMask         >= 0) qglUniform1i(p->loc_Texture_FogMask        , GL20TU_FOGMASK);
-		if (p->loc_Texture_Lightmap        >= 0) qglUniform1i(p->loc_Texture_Lightmap       , GL20TU_LIGHTMAP);
-		if (p->loc_Texture_Deluxemap       >= 0) qglUniform1i(p->loc_Texture_Deluxemap      , GL20TU_DELUXEMAP);
-		if (p->loc_Texture_Attenuation     >= 0) qglUniform1i(p->loc_Texture_Attenuation    , GL20TU_ATTENUATION);
-		if (p->loc_Texture_Cube            >= 0) qglUniform1i(p->loc_Texture_Cube           , GL20TU_CUBE);
-		if (p->loc_Texture_Refraction      >= 0) qglUniform1i(p->loc_Texture_Refraction     , GL20TU_REFRACTION);
-		if (p->loc_Texture_Reflection      >= 0) qglUniform1i(p->loc_Texture_Reflection     , GL20TU_REFLECTION);
-		if (p->loc_Texture_ShadowMap2D     >= 0) qglUniform1i(p->loc_Texture_ShadowMap2D    , GL20TU_SHADOWMAP2D);
-		if (p->loc_Texture_CubeProjection  >= 0) qglUniform1i(p->loc_Texture_CubeProjection , GL20TU_CUBEPROJECTION);
-		if (p->loc_Texture_ScreenDepth     >= 0) qglUniform1i(p->loc_Texture_ScreenDepth    , GL20TU_SCREENDEPTH);
-		if (p->loc_Texture_ScreenNormalMap >= 0) qglUniform1i(p->loc_Texture_ScreenNormalMap, GL20TU_SCREENNORMALMAP);
-		if (p->loc_Texture_ScreenDiffuse   >= 0) qglUniform1i(p->loc_Texture_ScreenDiffuse  , GL20TU_SCREENDIFFUSE);
-		if (p->loc_Texture_ScreenSpecular  >= 0) qglUniform1i(p->loc_Texture_ScreenSpecular , GL20TU_SCREENSPECULAR);
-		if (p->loc_Texture_ReflectMask     >= 0) qglUniform1i(p->loc_Texture_ReflectMask    , GL20TU_REFLECTMASK);
-		if (p->loc_Texture_ReflectCube     >= 0) qglUniform1i(p->loc_Texture_ReflectCube    , GL20TU_REFLECTCUBE);
+		p->tex_Texture_First = -1;
+		p->tex_Texture_Second = -1;
+		p->tex_Texture_GammaRamps = -1;
+		p->tex_Texture_Normal = -1;
+		p->tex_Texture_Color = -1;
+		p->tex_Texture_Gloss = -1;
+		p->tex_Texture_Glow = -1;
+		p->tex_Texture_SecondaryNormal = -1;
+		p->tex_Texture_SecondaryColor = -1;
+		p->tex_Texture_SecondaryGloss = -1;
+		p->tex_Texture_SecondaryGlow = -1;
+		p->tex_Texture_Pants = -1;
+		p->tex_Texture_Shirt = -1;
+		p->tex_Texture_FogHeightTexture = -1;
+		p->tex_Texture_FogMask = -1;
+		p->tex_Texture_Lightmap = -1;
+		p->tex_Texture_Deluxemap = -1;
+		p->tex_Texture_Attenuation = -1;
+		p->tex_Texture_Cube = -1;
+		p->tex_Texture_Refraction = -1;
+		p->tex_Texture_Reflection = -1;
+		p->tex_Texture_ShadowMap2D = -1;
+		p->tex_Texture_CubeProjection = -1;
+		p->tex_Texture_ScreenDepth = -1;
+		p->tex_Texture_ScreenNormalMap = -1;
+		p->tex_Texture_ScreenDiffuse = -1;
+		p->tex_Texture_ScreenSpecular = -1;
+		p->tex_Texture_ReflectMask = -1;
+		p->tex_Texture_ReflectCube = -1;
+		sampler = 0;
+		if (p->loc_Texture_First           >= 0) {p->tex_Texture_First            = sampler;qglUniform1i(p->loc_Texture_First           , sampler);sampler++;}
+		if (p->loc_Texture_Second          >= 0) {p->tex_Texture_Second           = sampler;qglUniform1i(p->loc_Texture_Second          , sampler);sampler++;}
+		if (p->loc_Texture_GammaRamps      >= 0) {p->tex_Texture_GammaRamps       = sampler;qglUniform1i(p->loc_Texture_GammaRamps      , sampler);sampler++;}
+		if (p->loc_Texture_Normal          >= 0) {p->tex_Texture_Normal           = sampler;qglUniform1i(p->loc_Texture_Normal          , sampler);sampler++;}
+		if (p->loc_Texture_Color           >= 0) {p->tex_Texture_Color            = sampler;qglUniform1i(p->loc_Texture_Color           , sampler);sampler++;}
+		if (p->loc_Texture_Gloss           >= 0) {p->tex_Texture_Gloss            = sampler;qglUniform1i(p->loc_Texture_Gloss           , sampler);sampler++;}
+		if (p->loc_Texture_Glow            >= 0) {p->tex_Texture_Glow             = sampler;qglUniform1i(p->loc_Texture_Glow            , sampler);sampler++;}
+		if (p->loc_Texture_SecondaryNormal >= 0) {p->tex_Texture_SecondaryNormal  = sampler;qglUniform1i(p->loc_Texture_SecondaryNormal , sampler);sampler++;}
+		if (p->loc_Texture_SecondaryColor  >= 0) {p->tex_Texture_SecondaryColor   = sampler;qglUniform1i(p->loc_Texture_SecondaryColor  , sampler);sampler++;}
+		if (p->loc_Texture_SecondaryGloss  >= 0) {p->tex_Texture_SecondaryGloss   = sampler;qglUniform1i(p->loc_Texture_SecondaryGloss  , sampler);sampler++;}
+		if (p->loc_Texture_SecondaryGlow   >= 0) {p->tex_Texture_SecondaryGlow    = sampler;qglUniform1i(p->loc_Texture_SecondaryGlow   , sampler);sampler++;}
+		if (p->loc_Texture_Pants           >= 0) {p->tex_Texture_Pants            = sampler;qglUniform1i(p->loc_Texture_Pants           , sampler);sampler++;}
+		if (p->loc_Texture_Shirt           >= 0) {p->tex_Texture_Shirt            = sampler;qglUniform1i(p->loc_Texture_Shirt           , sampler);sampler++;}
+		if (p->loc_Texture_FogHeightTexture>= 0) {p->tex_Texture_FogHeightTexture = sampler;qglUniform1i(p->loc_Texture_FogHeightTexture, sampler);sampler++;}
+		if (p->loc_Texture_FogMask         >= 0) {p->tex_Texture_FogMask          = sampler;qglUniform1i(p->loc_Texture_FogMask         , sampler);sampler++;}
+		if (p->loc_Texture_Lightmap        >= 0) {p->tex_Texture_Lightmap         = sampler;qglUniform1i(p->loc_Texture_Lightmap        , sampler);sampler++;}
+		if (p->loc_Texture_Deluxemap       >= 0) {p->tex_Texture_Deluxemap        = sampler;qglUniform1i(p->loc_Texture_Deluxemap       , sampler);sampler++;}
+		if (p->loc_Texture_Attenuation     >= 0) {p->tex_Texture_Attenuation      = sampler;qglUniform1i(p->loc_Texture_Attenuation     , sampler);sampler++;}
+		if (p->loc_Texture_Cube            >= 0) {p->tex_Texture_Cube             = sampler;qglUniform1i(p->loc_Texture_Cube            , sampler);sampler++;}
+		if (p->loc_Texture_Refraction      >= 0) {p->tex_Texture_Refraction       = sampler;qglUniform1i(p->loc_Texture_Refraction      , sampler);sampler++;}
+		if (p->loc_Texture_Reflection      >= 0) {p->tex_Texture_Reflection       = sampler;qglUniform1i(p->loc_Texture_Reflection      , sampler);sampler++;}
+		if (p->loc_Texture_ShadowMap2D     >= 0) {p->tex_Texture_ShadowMap2D      = sampler;qglUniform1i(p->loc_Texture_ShadowMap2D     , sampler);sampler++;}
+		if (p->loc_Texture_CubeProjection  >= 0) {p->tex_Texture_CubeProjection   = sampler;qglUniform1i(p->loc_Texture_CubeProjection  , sampler);sampler++;}
+		if (p->loc_Texture_ScreenDepth     >= 0) {p->tex_Texture_ScreenDepth      = sampler;qglUniform1i(p->loc_Texture_ScreenDepth     , sampler);sampler++;}
+		if (p->loc_Texture_ScreenNormalMap >= 0) {p->tex_Texture_ScreenNormalMap  = sampler;qglUniform1i(p->loc_Texture_ScreenNormalMap , sampler);sampler++;}
+		if (p->loc_Texture_ScreenDiffuse   >= 0) {p->tex_Texture_ScreenDiffuse    = sampler;qglUniform1i(p->loc_Texture_ScreenDiffuse   , sampler);sampler++;}
+		if (p->loc_Texture_ScreenSpecular  >= 0) {p->tex_Texture_ScreenSpecular   = sampler;qglUniform1i(p->loc_Texture_ScreenSpecular  , sampler);sampler++;}
+		if (p->loc_Texture_ReflectMask     >= 0) {p->tex_Texture_ReflectMask      = sampler;qglUniform1i(p->loc_Texture_ReflectMask     , sampler);sampler++;}
+		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
+		if (vid.renderpath == RENDERPATH_GLES2)
+		{
+			qglBindAttribLocation(p->program, GLES2ATTRIB_POSITION , "Attrib_Position" );
+			qglBindAttribLocation(p->program, GLES2ATTRIB_COLOR    , "Attrib_Color"    );
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD0, "Attrib_TexCoord0");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD1, "Attrib_TexCoord1");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD2, "Attrib_TexCoord2");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD3, "Attrib_TexCoord3");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD4, "Attrib_TexCoord4");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD5, "Attrib_TexCoord5");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD6, "Attrib_TexCoord6");
+			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD7, "Attrib_TexCoord7");
+		}
 		CHECKGLERROR
-		Con_DPrintf("^5GLSL shader %s compiled.\n", permutationname);
+		Con_DPrintf("^5GLSL shader %s compiled (%i textures).\n", permutationname, sampler);
 	}
 	else
 		Con_Printf("^1GLSL shader %s failed!  some features may not work properly.\n", permutationname);
@@ -4945,7 +5081,7 @@ void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutatio
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
-	if (glslshaderstring && glslshaderstring != builtinshaderstring)
+	if (glslshaderstring && glslshaderstring != builtinshaderstring && glslshaderstring != builtingles2shaderstring)
 		Mem_Free(glslshaderstring);
 	glslshaderstring = NULL;
 	if (cgshaderstring && cgshaderstring != builtincgshaderstring)
@@ -4988,6 +5124,7 @@ void R_GLSL_Restart_f(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		{
 			r_glsl_permutation_t *p;
 			r_glsl_permutation = NULL;
@@ -5058,6 +5195,23 @@ void R_GLSL_DumpShader_f(void)
 	else
 		Con_Printf("failed to write to glsl/default.glsl\n");
 
+	file = FS_OpenRealFile("gles2/default.glsl", "w", false);
+	if (file)
+	{
+		FS_Print(file, "/* The engine may define the following macros:\n");
+		FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
+		for (i = 0;i < SHADERMODE_COUNT;i++)
+			FS_Print(file, glslshadermodeinfo[i].pretext);
+		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+			FS_Print(file, shaderpermutationinfo[i].pretext);
+		FS_Print(file, "*/\n");
+		FS_Print(file, builtingles2shaderstring);
+		FS_Close(file);
+		Con_Printf("gles2/default.glsl written\n");
+	}
+	else
+		Con_Printf("failed to write to glsl/default.glsl\n");
+
 #ifdef SUPPORTCG
 	file = FS_OpenRealFile("cg/default.cg", "w", false);
 	if (file)
@@ -5077,7 +5231,6 @@ void R_GLSL_DumpShader_f(void)
 		Con_Printf("failed to write to cg/default.cg\n");
 #endif
 
-#ifdef SUPPORTD3D
 	file = FS_OpenRealFile("hlsl/default.hlsl", "w", false);
 	if (file)
 	{
@@ -5094,7 +5247,6 @@ void R_GLSL_DumpShader_f(void)
 	}
 	else
 		Con_Printf("failed to write to hlsl/default.hlsl\n");
-#endif
 }
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale)
@@ -5117,9 +5269,10 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
-		R_Mesh_TexBind(GL20TU_FIRST , first );
-		R_Mesh_TexBind(GL20TU_SECOND, second);
+		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
+		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
 		break;
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
@@ -5163,6 +5316,7 @@ void R_SetupShader_DepthOrShadow(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, 0);
 		break;
 	case RENDERPATH_CGGL:
@@ -5199,6 +5353,7 @@ void R_SetupShader_ShowDepth(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, 0);
 		break;
 	case RENDERPATH_CGGL:
@@ -5837,6 +5992,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		if (!vid.useinterleavedarrays)
 		{
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
@@ -5942,47 +6098,47 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2f(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
-	//	if (r_glsl_permutation->loc_Texture_First           >= 0) R_Mesh_TexBind(GL20TU_FIRST             , r_texture_white                                     );
-	//	if (r_glsl_permutation->loc_Texture_Second          >= 0) R_Mesh_TexBind(GL20TU_SECOND            , r_texture_white                                     );
-	//	if (r_glsl_permutation->loc_Texture_GammaRamps      >= 0) R_Mesh_TexBind(GL20TU_GAMMARAMPS        , r_texture_gammaramps                                );
-		if (r_glsl_permutation->loc_Texture_Normal          >= 0) R_Mesh_TexBind(GL20TU_NORMAL            , rsurface.texture->nmaptexture                       );
-		if (r_glsl_permutation->loc_Texture_Color           >= 0) R_Mesh_TexBind(GL20TU_COLOR             , rsurface.texture->basetexture                       );
-		if (r_glsl_permutation->loc_Texture_Gloss           >= 0) R_Mesh_TexBind(GL20TU_GLOSS             , rsurface.texture->glosstexture                      );
-		if (r_glsl_permutation->loc_Texture_Glow            >= 0) R_Mesh_TexBind(GL20TU_GLOW              , rsurface.texture->glowtexture                       );
-		if (r_glsl_permutation->loc_Texture_SecondaryNormal >= 0) R_Mesh_TexBind(GL20TU_SECONDARY_NORMAL  , rsurface.texture->backgroundnmaptexture             );
-		if (r_glsl_permutation->loc_Texture_SecondaryColor  >= 0) R_Mesh_TexBind(GL20TU_SECONDARY_COLOR   , rsurface.texture->backgroundbasetexture             );
-		if (r_glsl_permutation->loc_Texture_SecondaryGloss  >= 0) R_Mesh_TexBind(GL20TU_SECONDARY_GLOSS   , rsurface.texture->backgroundglosstexture            );
-		if (r_glsl_permutation->loc_Texture_SecondaryGlow   >= 0) R_Mesh_TexBind(GL20TU_SECONDARY_GLOW    , rsurface.texture->backgroundglowtexture             );
-		if (r_glsl_permutation->loc_Texture_Pants           >= 0) R_Mesh_TexBind(GL20TU_PANTS             , rsurface.texture->pantstexture                      );
-		if (r_glsl_permutation->loc_Texture_Shirt           >= 0) R_Mesh_TexBind(GL20TU_SHIRT             , rsurface.texture->shirttexture                      );
-		if (r_glsl_permutation->loc_Texture_ReflectMask     >= 0) R_Mesh_TexBind(GL20TU_REFLECTMASK       , rsurface.texture->reflectmasktexture                );
-		if (r_glsl_permutation->loc_Texture_ReflectCube     >= 0) R_Mesh_TexBind(GL20TU_REFLECTCUBE       , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);
-		if (r_glsl_permutation->loc_Texture_FogHeightTexture>= 0) R_Mesh_TexBind(GL20TU_FOGHEIGHTTEXTURE  , r_texture_fogheighttexture                          );
-		if (r_glsl_permutation->loc_Texture_FogMask         >= 0) R_Mesh_TexBind(GL20TU_FOGMASK           , r_texture_fogattenuation                            );
-		if (r_glsl_permutation->loc_Texture_Lightmap        >= 0) R_Mesh_TexBind(GL20TU_LIGHTMAP          , rsurface.lightmaptexture ? rsurface.lightmaptexture : r_texture_white);
-		if (r_glsl_permutation->loc_Texture_Deluxemap       >= 0) R_Mesh_TexBind(GL20TU_DELUXEMAP         , rsurface.deluxemaptexture ? rsurface.deluxemaptexture : r_texture_blanknormalmap);
-		if (r_glsl_permutation->loc_Texture_Attenuation     >= 0) R_Mesh_TexBind(GL20TU_ATTENUATION       , r_shadow_attenuationgradienttexture                 );
+		if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First            , r_texture_white                                     );
+		if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second           , r_texture_white                                     );
+		if (r_glsl_permutation->tex_Texture_GammaRamps      >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps       , r_texture_gammaramps                                );
+		if (r_glsl_permutation->tex_Texture_Normal          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Normal           , rsurface.texture->nmaptexture                       );
+		if (r_glsl_permutation->tex_Texture_Color           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Color            , rsurface.texture->basetexture                       );
+		if (r_glsl_permutation->tex_Texture_Gloss           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Gloss            , rsurface.texture->glosstexture                      );
+		if (r_glsl_permutation->tex_Texture_Glow            >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Glow             , rsurface.texture->glowtexture                       );
+		if (r_glsl_permutation->tex_Texture_SecondaryNormal >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_SecondaryNormal  , rsurface.texture->backgroundnmaptexture             );
+		if (r_glsl_permutation->tex_Texture_SecondaryColor  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_SecondaryColor   , rsurface.texture->backgroundbasetexture             );
+		if (r_glsl_permutation->tex_Texture_SecondaryGloss  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_SecondaryGloss   , rsurface.texture->backgroundglosstexture            );
+		if (r_glsl_permutation->tex_Texture_SecondaryGlow   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_SecondaryGlow    , rsurface.texture->backgroundglowtexture             );
+		if (r_glsl_permutation->tex_Texture_Pants           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Pants            , rsurface.texture->pantstexture                      );
+		if (r_glsl_permutation->tex_Texture_Shirt           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Shirt            , rsurface.texture->shirttexture                      );
+		if (r_glsl_permutation->tex_Texture_ReflectMask     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ReflectMask      , rsurface.texture->reflectmasktexture                );
+		if (r_glsl_permutation->tex_Texture_ReflectCube     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ReflectCube      , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);
+		if (r_glsl_permutation->tex_Texture_FogHeightTexture>= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_FogHeightTexture , r_texture_fogheighttexture                          );
+		if (r_glsl_permutation->tex_Texture_FogMask         >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_FogMask          , r_texture_fogattenuation                            );
+		if (r_glsl_permutation->tex_Texture_Lightmap        >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Lightmap         , rsurface.lightmaptexture ? rsurface.lightmaptexture : r_texture_white);
+		if (r_glsl_permutation->tex_Texture_Deluxemap       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Deluxemap        , rsurface.deluxemaptexture ? rsurface.deluxemaptexture : r_texture_blanknormalmap);
+		if (r_glsl_permutation->tex_Texture_Attenuation     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Attenuation      , r_shadow_attenuationgradienttexture                 );
 		if (rsurfacepass == RSURFPASS_BACKGROUND)
 		{
-			if(r_glsl_permutation->loc_Texture_Refraction >= 0) R_Mesh_TexBind(GL20TU_REFRACTION        , waterplane->texture_refraction ? waterplane->texture_refraction : r_texture_black);
-			else if(r_glsl_permutation->loc_Texture_First >= 0) R_Mesh_TexBind(GL20TU_FIRST             , waterplane->texture_camera ? waterplane->texture_camera : r_texture_black);
-			if(r_glsl_permutation->loc_Texture_Reflection >= 0) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
+			if (r_glsl_permutation->tex_Texture_Refraction  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Refraction        , waterplane->texture_refraction ? waterplane->texture_refraction : r_texture_black);
+			if (r_glsl_permutation->tex_Texture_First       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First             , waterplane->texture_camera ? waterplane->texture_camera : r_texture_black);
+			if (r_glsl_permutation->tex_Texture_Reflection  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Reflection        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
 		}
 		else
 		{
-			if (permutation & SHADERPERMUTATION_REFLECTION        ) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
+			if (r_glsl_permutation->tex_Texture_Reflection >= 0 && waterplane) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Reflection        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
 		}
-//		if (r_glsl_permutation->loc_Texture_ScreenDepth     >= 0) R_Mesh_TexBind(GL20TU_SCREENDEPTH       , r_shadow_prepassgeometrydepthtexture                );
-//		if (r_glsl_permutation->loc_Texture_ScreenNormalMap >= 0) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP   , r_shadow_prepassgeometrynormalmaptexture            );
-		if (r_glsl_permutation->loc_Texture_ScreenDiffuse   >= 0) R_Mesh_TexBind(GL20TU_SCREENDIFFUSE     , r_shadow_prepasslightingdiffusetexture              );
-		if (r_glsl_permutation->loc_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
+		if (r_glsl_permutation->tex_Texture_ScreenDepth     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDepth       , r_shadow_prepassgeometrydepthtexture                );
+		if (r_glsl_permutation->tex_Texture_ScreenNormalMap >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenNormalMap   , r_shadow_prepassgeometrynormalmaptexture            );
+		if (r_glsl_permutation->tex_Texture_ScreenDiffuse   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDiffuse     , r_shadow_prepasslightingdiffusetexture              );
+		if (r_glsl_permutation->tex_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenSpecular    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			if (r_glsl_permutation->loc_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dtexture                         );
+			if (r_glsl_permutation->tex_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D, r_shadow_shadowmap2dtexture                         );
 			if (rsurface.rtlight)
 			{
-				if (r_glsl_permutation->loc_Texture_Cube            >= 0) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
-				if (r_glsl_permutation->loc_Texture_CubeProjection  >= 0) R_Mesh_TexBind(GL20TU_CUBEPROJECTION    , r_shadow_shadowmapvsdcttexture                      );
+				if (r_glsl_permutation->tex_Texture_Cube            >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Cube              , rsurface.rtlight->currentcubemap                    );
+				if (r_glsl_permutation->tex_Texture_CubeProjection  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_CubeProjection    , r_shadow_shadowmapvsdcttexture                      );
 			}
 		}
 		CHECKGLERROR
@@ -6367,6 +6523,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3f(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
@@ -6377,14 +6534,14 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f));
 		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
 
-		if (r_glsl_permutation->loc_Texture_Attenuation       >= 0) R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
-		if (r_glsl_permutation->loc_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
-		if (r_glsl_permutation->loc_Texture_ScreenNormalMap   >= 0) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
-		if (r_glsl_permutation->loc_Texture_Cube              >= 0) R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		if (r_glsl_permutation->loc_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
-		if (r_glsl_permutation->loc_Texture_CubeProjection    >= 0) R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
+		if (r_glsl_permutation->tex_Texture_Attenuation       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Attenuation        , r_shadow_attenuationgradienttexture                 );
+		if (r_glsl_permutation->tex_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDepth        , r_shadow_prepassgeometrydepthtexture                );
+		if (r_glsl_permutation->tex_Texture_ScreenNormalMap   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenNormalMap    , r_shadow_prepassgeometrynormalmaptexture            );
+		if (r_glsl_permutation->tex_Texture_Cube              >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Cube               , rsurface.rtlight->currentcubemap                    );
+		if (r_glsl_permutation->tex_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D        , r_shadow_shadowmap2dtexture                         );
+		if (r_glsl_permutation->tex_Texture_CubeProjection    >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_CubeProjection     , r_shadow_shadowmapvsdcttexture                      );
 		break;
 	case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
@@ -7298,6 +7455,14 @@ void gl_main_start(void)
 		r_loadgloss = false;
 		r_loadfog = true;
 		break;
+	case RENDERPATH_GLES2:
+		Cvar_SetValueQuick(&r_textureunits, 1);
+		Cvar_SetValueQuick(&gl_combine, 1);
+		Cvar_SetValueQuick(&r_glsl, 1);
+		r_loadnormalmap = true;
+		r_loadgloss = false;
+		r_loadfog = false;
+		break;
 	}
 
 	R_AnimCache_Free();
@@ -7376,6 +7541,9 @@ void gl_main_shutdown(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	case RENDERPATH_SOFT:
+		break;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 
@@ -7993,6 +8161,7 @@ void R_AnimCache_CacheVisibleEntities(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
@@ -8328,6 +8497,7 @@ static void R_View_SetFrustum(const int *scissor)
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
 			case RENDERPATH_CGGL:
+			case RENDERPATH_GLES2:
 				// non-flipped y coordinates
 				fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
 				fpy = -1.0 + 2.0 * (scissor[1] + scissor[3] - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
@@ -8594,6 +8764,10 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
 			DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewMatrixM1, 1, false, gl_modelview16f);
 			break;
+		case RENDERPATH_GLES2:
+			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
+			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
+			break;
 		}
 	}
 }
@@ -8626,6 +8800,7 @@ void R_ResetViewRendering2D(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
 	case RENDERPATH_D3D9:
@@ -8662,6 +8837,7 @@ void R_ResetViewRendering3D(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
 	case RENDERPATH_D3D9:
@@ -8712,6 +8888,7 @@ static void R_Water_StartFrame(void)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+	case RENDERPATH_GLES2:
 		return;
 	}
 
@@ -9078,6 +9255,7 @@ void R_Bloom_StartFrame(void)
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+	case RENDERPATH_GLES2:
 		return;
 	}
 
@@ -9176,6 +9354,7 @@ void R_Bloom_StartFrame(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -9219,6 +9398,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
 		break;
 	case RENDERPATH_D3D9:
@@ -9397,6 +9577,7 @@ static void R_BlendView(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		permutation =
 			  (r_bloomstate.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
@@ -9451,6 +9632,7 @@ static void R_BlendView(void)
 					case RENDERPATH_GL20:
 					case RENDERPATH_CGGL:
 					case RENDERPATH_SOFT:
+					case RENDERPATH_GLES2:
 						R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
 						break;
 					case RENDERPATH_D3D9:
@@ -9514,20 +9696,21 @@ static void R_BlendView(void)
 		switch(vid.renderpath)
 		{
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
 			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_bloomstate.screentexcoord2f, r_bloomstate.bloomtexcoord2f);
 			R_SetupShader_SetPermutationGLSL(SHADERMODE_POSTPROCESS, permutation);
-			if (r_glsl_permutation->loc_Texture_First      >= 0) R_Mesh_TexBind(GL20TU_FIRST     , r_bloomstate.texture_screen);
-			if (r_glsl_permutation->loc_Texture_Second     >= 0) R_Mesh_TexBind(GL20TU_SECOND    , r_bloomstate.texture_bloom );
-			if (r_glsl_permutation->loc_Texture_GammaRamps >= 0) R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
-			if (r_glsl_permutation->loc_ViewTintColor      >= 0) qglUniform4f(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-			if (r_glsl_permutation->loc_PixelSize          >= 0) qglUniform2f(r_glsl_permutation->loc_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
-			if (r_glsl_permutation->loc_UserVec1           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
-			if (r_glsl_permutation->loc_UserVec2           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
-			if (r_glsl_permutation->loc_UserVec3           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
-			if (r_glsl_permutation->loc_UserVec4           >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
-			if (r_glsl_permutation->loc_Saturation         >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
-			if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
-			if (r_glsl_permutation->loc_BloomColorSubtract    >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
+			if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First     , r_bloomstate.texture_screen);
+			if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second    , r_bloomstate.texture_bloom );
+			if (r_glsl_permutation->tex_Texture_GammaRamps      >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps       );
+			if (r_glsl_permutation->loc_ViewTintColor           >= 0) qglUniform4f(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
+			if (r_glsl_permutation->loc_PixelSize               >= 0) qglUniform2f(r_glsl_permutation->loc_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);
+			if (r_glsl_permutation->loc_UserVec1                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
+			if (r_glsl_permutation->loc_UserVec2                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);
+			if (r_glsl_permutation->loc_UserVec3                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
+			if (r_glsl_permutation->loc_UserVec4                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
+			if (r_glsl_permutation->loc_Saturation              >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
+			if (r_glsl_permutation->loc_PixelToScreenTexCoord   >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+			if (r_glsl_permutation->loc_BloomColorSubtract      >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
 			break;
 		case RENDERPATH_CGGL:
 #ifdef SUPPORTCG
@@ -9742,6 +9925,7 @@ void R_UpdateVariables(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		if(v_glslgamma.integer && !vid_gammatables_trivial)
 		{
 			if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
@@ -13193,6 +13377,7 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 		break;
 	case RENDERPATH_GL13:
@@ -13222,6 +13407,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 		break;
 	case RENDERPATH_GL13:
@@ -13260,6 +13446,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
 		case RENDERPATH_SOFT:
+		case RENDERPATH_GLES2:
 			RSurf_ActiveModelEntity(ent, true, true, false);
 			break;
 		case RENDERPATH_GL13:
@@ -14297,6 +14484,9 @@ void R_DrawDebugModel(void)
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		return;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 
 	flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
@@ -14588,6 +14778,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
 		case RENDERPATH_SOFT:
+		case RENDERPATH_GLES2:
 			RSurf_ActiveModelEntity(ent, model->wantnormals, model->wanttangents, false);
 			break;
 		case RENDERPATH_GL13:
@@ -14606,6 +14797,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
 		case RENDERPATH_SOFT:
+		case RENDERPATH_GLES2:
 			RSurf_ActiveModelEntity(ent, true, true, false);
 			break;
 		case RENDERPATH_GL13:

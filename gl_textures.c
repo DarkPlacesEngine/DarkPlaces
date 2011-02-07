@@ -303,6 +303,7 @@ void R_FreeTexture(rtexture_t *rt)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (glt->texnum)
 		{
 			CHECKGLERROR
@@ -456,6 +457,7 @@ static void GL_TextureMode_f (void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// change all the existing mipmap texture objects
 		// FIXME: force renderer(/client/something?) restart instead?
 		CHECKGLERROR
@@ -584,6 +586,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 #if 0
@@ -701,6 +704,7 @@ static void r_textures_start(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// LordHavoc: allow any alignment
 		CHECKGLERROR
 		qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
@@ -768,6 +772,7 @@ static void r_textures_devicelost(void)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -810,6 +815,7 @@ static void r_textures_devicerestored(void)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -920,6 +926,7 @@ void R_Textures_Frame (void)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			GL_ActiveTexture(0);
 			for (pool = gltexturepoolchain;pool;pool = pool->next)
@@ -1075,6 +1082,7 @@ static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, 
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		{
 			int oldbindtexnum;
 			CHECKGLERROR
@@ -1187,6 +1195,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 
 		// we need to restore the texture binding after finishing the upload
@@ -1609,6 +1618,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 		break;
@@ -2241,6 +2251,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		GL_ActiveTexture(0);
 		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
@@ -2293,6 +2304,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			if (bytesperblock)
 			{
 				qglCompressedTexImage2DARB(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, mipsize, mippixels);CHECKGLERROR
@@ -2349,6 +2361,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (dds_miplevels >= 1 && !mipcomplete)
 		{
 			// need to set GL_TEXTURE_MAX_LEVEL

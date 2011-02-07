@@ -5628,14 +5628,27 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	int i, j, k, index[3];
-	float transformed[3], blend1, blend2, blend, stylescale;
+	float transformed[3], blend1, blend2, blend, stylescale = 1;
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	if (vid.renderpath == RENDERPATH_GL20)
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
+		// LordHavoc: FIXME: is this true?
 		stylescale = 1; // added while render
-	else
+		break;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
 		stylescale = r_refdef.scene.rtlightstylevalue[0];
+		break;
+	}
 
 	if (!model->brushq3.num_lightgrid)
 	{

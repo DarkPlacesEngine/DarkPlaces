@@ -261,7 +261,7 @@ void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
 void (GLAPIENTRY *qglDeleteShader)(GLuint obj);
 void (GLAPIENTRY *qglDeleteProgram)(GLuint obj);
-GLuint (GLAPIENTRY *qglGetHandle)(GLenum pname);
+//GLuint (GLAPIENTRY *qglGetHandle)(GLenum pname);
 void (GLAPIENTRY *qglDetachShader)(GLuint containerObj, GLuint attachedObj);
 GLuint (GLAPIENTRY *qglCreateShader)(GLenum shaderType);
 void (GLAPIENTRY *qglShaderSource)(GLuint shaderObj, GLsizei count, const GLchar **string, const GLint *length);
@@ -645,7 +645,7 @@ static dllfunction_t gl20shaderfuncs[] =
 {
 	{"glDeleteShader", (void **) &qglDeleteShader},
 	{"glDeleteProgram", (void **) &qglDeleteProgram},
-	{"glGetHandle", (void **) &qglGetHandle},
+//	{"glGetHandle", (void **) &qglGetHandle},
 	{"glDetachShader", (void **) &qglDetachShader},
 	{"glCreateShader", (void **) &qglCreateShader},
 	{"glShaderSource", (void **) &qglShaderSource},
@@ -1058,6 +1058,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		if (v_glslgamma.integer)
 			wantgamma = 0;
 		break;

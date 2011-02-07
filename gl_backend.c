@@ -147,6 +147,7 @@ typedef struct gl_state_s
 	int vertexbufferobject;
 	int elementbufferobject;
 	int framebufferobject;
+	int defaultframebufferobject; // RENDERPATH_GLES2 has a non-zero fbo provided by the OS
 	qboolean pointer_color_enabled;
 
 	int pointer_vertex_components;
@@ -296,6 +297,12 @@ static void R_Mesh_SetUseVBO(void)
 		gl_state.usevbo_dynamicvertex = false;
 		gl_state.usevbo_dynamicindex = false;
 		break;
+	case RENDERPATH_GLES2:
+		gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
+		gl_state.usevbo_staticindex = false;
+		gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
+		gl_state.usevbo_dynamicindex = false;
+		break;
 	}
 }
 
@@ -320,6 +327,10 @@ static void gl_backend_start(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
+		// fetch current fbo here (default fbo is not 0 on some GLES devices)
+		if (vid.support.ext_framebuffer_object)
+			qglGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &gl_state.defaultframebufferobject);
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -348,6 +359,8 @@ static void gl_backend_shutdown(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -360,8 +373,6 @@ static void gl_backend_shutdown(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
 		break;
 	}
 
@@ -394,6 +405,8 @@ static void gl_backend_devicelost(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -406,8 +419,6 @@ static void gl_backend_devicelost(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
 		break;
 	}
 	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
@@ -422,6 +433,8 @@ static void gl_backend_devicelost(void)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_SOFT:
+		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -441,8 +454,6 @@ static void gl_backend_devicelost(void)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
-		case RENDERPATH_SOFT:
-			break;
 		}
 	}
 }
@@ -455,6 +466,8 @@ static void gl_backend_devicerestored(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -467,8 +480,6 @@ static void gl_backend_devicerestored(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
 		break;
 	}
 }
@@ -682,6 +693,7 @@ qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	}
 
@@ -765,6 +777,7 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -1015,6 +1028,7 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 		m[5] *= -1;
@@ -1085,6 +1099,10 @@ void R_SetViewport(const r_viewport_t *v)
 	case RENDERPATH_SOFT:
 		DPSOFTRAST_Viewport(v->x, v->y, v->width, v->height);
 		break;
+	case RENDERPATH_GLES2:
+		CHECKGLERROR
+		qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
+		break;
 	}
 
 	// force an update of the derived matrices
@@ -1126,6 +1144,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (!vid.support.ext_framebuffer_object)
 			return 0;
 		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
@@ -1154,6 +1173,7 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (fbo)
 			qglDeleteFramebuffersEXT(1, (GLuint*)&fbo);
 		break;
@@ -1210,10 +1230,11 @@ void R_Mesh_ResetRenderTargets(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (gl_state.framebufferobject)
 		{
 			gl_state.framebufferobject = 0;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1253,10 +1274,11 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (gl_state.framebufferobject != fbo)
 		{
 			gl_state.framebufferobject = fbo;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1524,6 +1546,49 @@ static void GL_Backend_ResetState(void)
 		DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
 		DPSOFTRAST_Viewport(0, 0, vid.width, vid.height);
 		break;
+	case RENDERPATH_GLES2:
+		CHECKGLERROR
+		qglColorMask(1, 1, 1, 1);CHECKGLERROR
+		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
+		qglDisable(GL_BLEND);CHECKGLERROR
+		qglCullFace(gl_state.cullface);CHECKGLERROR
+		qglDisable(GL_CULL_FACE);CHECKGLERROR
+		qglDepthFunc(GL_LEQUAL);CHECKGLERROR
+		qglEnable(GL_DEPTH_TEST);CHECKGLERROR
+		qglDepthMask(gl_state.depthmask);CHECKGLERROR
+		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
+		qglEnableVertexAttribArray(GLES2ATTRIB_POSITION);
+		qglVertexAttribPointer(GLES2ATTRIB_POSITION, 3, GL_FLOAT, false, sizeof(float[3]), NULL);CHECKGLERROR
+		qglDisableVertexAttribArray(GLES2ATTRIB_COLOR);
+		qglVertexAttribPointer(GLES2ATTRIB_COLOR, 4, GL_FLOAT, false, sizeof(float[4]), NULL);CHECKGLERROR
+		qglVertexAttrib4f(GLES2ATTRIB_COLOR, 1, 1, 1, 1);
+		gl_state.unit = MAX_TEXTUREUNITS;
+		gl_state.clientunit = MAX_TEXTUREUNITS;
+		for (i = 0;i < vid.teximageunits;i++)
+		{
+			GL_ActiveTexture(i);
+			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
+			if (vid.support.ext_texture_3d)
+			{
+				qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
+			}
+			if (vid.support.arb_texture_cube_map)
+			{
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
+			}
+		}
+		for (i = 0;i < vid.texarrayunits;i++)
+		{
+			GL_BindVBO(0);
+			qglVertexAttribPointer(i+GLES2ATTRIB_TEXCOORD0, 2, GL_FLOAT, false, sizeof(float[2]), NULL);CHECKGLERROR
+			qglDisableVertexAttribArray(i+GLES2ATTRIB_TEXCOORD0);CHECKGLERROR
+		}
+		CHECKGLERROR
+		break;
 	}
 }
 
@@ -1538,6 +1603,7 @@ void GL_ActiveTexture(unsigned int num)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			if (qglActiveTexture)
 			{
 				CHECKGLERROR
@@ -1579,6 +1645,8 @@ void GL_ClientActiveTexture(unsigned int num)
 			break;
 		case RENDERPATH_SOFT:
 			break;
+		case RENDERPATH_GLES2:
+			break;
 		}
 	}
 }
@@ -1597,6 +1665,7 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 			if (gl_state.blend != blendenable)
@@ -1670,6 +1739,7 @@ void GL_DepthMask(int state)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglDepthMask(gl_state.depthmask);CHECKGLERROR
 			break;
@@ -1702,6 +1772,7 @@ void GL_DepthTest(int state)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (gl_state.depthtest)
 			{
@@ -1741,6 +1812,7 @@ void GL_DepthFunc(int state)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglDepthFunc(gl_state.depthfunc);CHECKGLERROR
 			break;
@@ -1798,6 +1870,11 @@ void GL_DepthRange(float nearfrac, float farfrac)
 			break;
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_DepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
+			break;
+		case RENDERPATH_GLES2:
+			//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			// FIXME: qglDepthRangef instead...  faster...
+			qglDepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
 			break;
 		}
 	}
@@ -1866,6 +1943,9 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES2:
+		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
 	}
 }
 
@@ -1877,6 +1957,7 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (enable)
 		{
@@ -1933,6 +2014,7 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
 			break;
 		case RENDERPATH_D3D9:
@@ -1971,6 +2053,7 @@ void GL_SetMirrorState(qboolean state)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			qglCullFace(gl_state.cullface);
 			break;
 		case RENDERPATH_D3D9:
@@ -2007,6 +2090,7 @@ void GL_CullFace(int state)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 
 		if (state != GL_NONE)
@@ -2106,6 +2190,8 @@ void GL_AlphaTest(int state)
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_AlphaTest(gl_state.alphatest);
 			break;
+		case RENDERPATH_GLES2:
+			break;
 		}
 	}
 }
@@ -2140,6 +2226,8 @@ void GL_AlphaFunc(int state, float value)
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_AlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);
 			break;
+		case RENDERPATH_GLES2:
+			break;
 		}
 	}
 }
@@ -2157,6 +2245,7 @@ void GL_ColorMask(int r, int g, int b, int a)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
 			break;
@@ -2204,6 +2293,9 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_Color4f(cr, cg, cb, ca);
 			break;
+		case RENDERPATH_GLES2:
+			qglVertexAttrib4f(GLES2ATTRIB_COLOR, cr, cg, cb, ca);
+			break;
 		}
 	}
 }
@@ -2216,6 +2308,7 @@ void GL_Scissor (int x, int y, int width, int height)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglScissor(x, y,width,height);
 		CHECKGLERROR
@@ -2255,6 +2348,7 @@ void GL_ScissorTest(int state)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if(gl_state.scissortest)
 				qglEnable(GL_SCISSOR_TEST);
@@ -2297,6 +2391,7 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (mask & GL_COLOR_BUFFER_BIT)
 		{
@@ -2340,6 +2435,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, outpixels);CHECKGLERROR
 		break;
@@ -2537,6 +2633,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// check if the user specified to ignore static index buffers
 		if (!gl_state.usevbo_staticindex || (gl_vbo.integer == 3 && !vid.forcevbo && (element3i_bufferoffset || element3s_bufferoffset)))
 		{
@@ -2879,6 +2976,26 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_DrawTriangles(firstvertex, numvertices, numtriangles, element3i, element3s);
 			break;
+		case RENDERPATH_GLES2:
+			// GLES does not have glDrawRangeElements, and generally
+			// underperforms with index buffers, so this code path is
+			// relatively straightforward...
+			if (element3s)
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
+				CHECKGLERROR
+			}
+			else if (element3i)
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
+				CHECKGLERROR
+			}
+			break;
 		}
 	}
 }
@@ -2927,6 +3044,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (!buffer->bufferobject)
 			qglGenBuffersARB(1, (GLuint *)&buffer->bufferobject);
 		if (buffer->isindexbuffer)
@@ -3008,6 +3126,7 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		qglDeleteBuffersARB(1, (GLuint *)&buffer->bufferobject);
 		break;
 	case RENDERPATH_D3D9:
@@ -3058,18 +3177,46 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 
 void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset)
 {
-	int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
-	if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
+	switch(vid.renderpath)
 	{
-		gl_state.pointer_vertex_components = components;
-		gl_state.pointer_vertex_gltype = gltype;
-		gl_state.pointer_vertex_stride = stride;
-		gl_state.pointer_vertex_pointer = pointer;
-		gl_state.pointer_vertex_vertexbuffer = vertexbuffer;
-		gl_state.pointer_vertex_offset = bufferoffset;
-		CHECKGLERROR
-		GL_BindVBO(bufferobject);
-		qglVertexPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
+		{
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			gl_state.pointer_vertex_components = components;
+			gl_state.pointer_vertex_gltype = gltype;
+			gl_state.pointer_vertex_stride = stride;
+			gl_state.pointer_vertex_pointer = pointer;
+			gl_state.pointer_vertex_vertexbuffer = vertexbuffer;
+			gl_state.pointer_vertex_offset = bufferoffset;
+			CHECKGLERROR
+			GL_BindVBO(bufferobject);
+			qglVertexPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+		}
+		break;
+	case RENDERPATH_GLES2:
+		if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
+		{
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			gl_state.pointer_vertex_components = components;
+			gl_state.pointer_vertex_gltype = gltype;
+			gl_state.pointer_vertex_stride = stride;
+			gl_state.pointer_vertex_pointer = pointer;
+			gl_state.pointer_vertex_vertexbuffer = vertexbuffer;
+			gl_state.pointer_vertex_offset = bufferoffset;
+			CHECKGLERROR
+			GL_BindVBO(bufferobject);
+			qglVertexAttribPointer(GLES2ATTRIB_POSITION, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -3077,40 +3224,92 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 {
 	// note: vertexbuffer may be non-NULL even if pointer is NULL, so check
 	// the pointer only.
-	if (pointer)
+	switch(vid.renderpath)
 	{
-		int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
-		// caller wants color array enabled
-		if (!gl_state.pointer_color_enabled)
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		if (pointer)
 		{
-			gl_state.pointer_color_enabled = true;
-			CHECKGLERROR
-			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			// caller wants color array enabled
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			if (!gl_state.pointer_color_enabled)
+			{
+				gl_state.pointer_color_enabled = true;
+				CHECKGLERROR
+				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			}
+			if (gl_state.pointer_color_components != components || gl_state.pointer_color_gltype != gltype || gl_state.pointer_color_stride != stride || gl_state.pointer_color_pointer != pointer || gl_state.pointer_color_vertexbuffer != vertexbuffer || gl_state.pointer_color_offset != bufferoffset)
+			{
+				gl_state.pointer_color_components = components;
+				gl_state.pointer_color_gltype = gltype;
+				gl_state.pointer_color_stride = stride;
+				gl_state.pointer_color_pointer = pointer;
+				gl_state.pointer_color_vertexbuffer = vertexbuffer;
+				gl_state.pointer_color_offset = bufferoffset;
+				CHECKGLERROR
+				GL_BindVBO(bufferobject);
+				qglColorPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			}
 		}
-		if (gl_state.pointer_color_components != components || gl_state.pointer_color_gltype != gltype || gl_state.pointer_color_stride != stride || gl_state.pointer_color_pointer != pointer || gl_state.pointer_color_vertexbuffer != vertexbuffer || gl_state.pointer_color_offset != bufferoffset)
+		else
 		{
-			gl_state.pointer_color_components = components;
-			gl_state.pointer_color_gltype = gltype;
-			gl_state.pointer_color_stride = stride;
-			gl_state.pointer_color_pointer = pointer;
-			gl_state.pointer_color_vertexbuffer = vertexbuffer;
-			gl_state.pointer_color_offset = bufferoffset;
-			CHECKGLERROR
-			GL_BindVBO(bufferobject);
-			qglColorPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			// caller wants color array disabled
+			if (gl_state.pointer_color_enabled)
+			{
+				gl_state.pointer_color_enabled = false;
+				CHECKGLERROR
+				qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+				// when color array is on the glColor gets trashed, set it again
+				qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
+			}
 		}
-	}
-	else
-	{
-		// caller wants color array disabled
-		if (gl_state.pointer_color_enabled)
+		break;
+	case RENDERPATH_GLES2:
+		CHECKGLERROR
+		if (pointer)
 		{
-			gl_state.pointer_color_enabled = false;
-			CHECKGLERROR
-			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-			// when color array is on the glColor gets trashed, set it again
-			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
+			// caller wants color array enabled
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			if (!gl_state.pointer_color_enabled)
+			{
+				gl_state.pointer_color_enabled = true;
+				CHECKGLERROR
+				qglEnableVertexAttribArray(GLES2ATTRIB_COLOR);CHECKGLERROR
+			}
+			if (gl_state.pointer_color_components != components || gl_state.pointer_color_gltype != gltype || gl_state.pointer_color_stride != stride || gl_state.pointer_color_pointer != pointer || gl_state.pointer_color_vertexbuffer != vertexbuffer || gl_state.pointer_color_offset != bufferoffset)
+			{
+				gl_state.pointer_color_components = components;
+				gl_state.pointer_color_gltype = gltype;
+				gl_state.pointer_color_stride = stride;
+				gl_state.pointer_color_pointer = pointer;
+				gl_state.pointer_color_vertexbuffer = vertexbuffer;
+				gl_state.pointer_color_offset = bufferoffset;
+				CHECKGLERROR
+				GL_BindVBO(bufferobject);
+				qglVertexAttribPointer(GLES2ATTRIB_COLOR, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			}
 		}
+		else
+		{
+			// caller wants color array disabled
+			if (gl_state.pointer_color_enabled)
+			{
+				gl_state.pointer_color_enabled = false;
+				CHECKGLERROR
+				qglDisableVertexAttribArray(GLES2ATTRIB_COLOR);CHECKGLERROR
+				// when color array is on the glColor gets trashed, set it again
+				qglVertexAttrib4f(GLES2ATTRIB_COLOR, gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
+			}
+		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -3118,42 +3317,89 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	// update array settings
-	CHECKGLERROR
 	// note: there is no need to check bufferobject here because all cases
 	// that involve a valid bufferobject also supply a texcoord array
-	if (pointer)
+	switch(vid.renderpath)
 	{
-		int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
-		// texture array unit is enabled, enable the array
-		if (!unit->arrayenabled)
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_CGGL:
+		CHECKGLERROR
+		if (pointer)
 		{
-			unit->arrayenabled = true;
-			GL_ClientActiveTexture(unitnum);
-			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			// texture array unit is enabled, enable the array
+			if (!unit->arrayenabled)
+			{
+				unit->arrayenabled = true;
+				GL_ClientActiveTexture(unitnum);
+				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+			// texcoord array
+			if (unit->pointer_texcoord_components != components || unit->pointer_texcoord_gltype != gltype || unit->pointer_texcoord_stride != stride || unit->pointer_texcoord_pointer != pointer || unit->pointer_texcoord_vertexbuffer != vertexbuffer || unit->pointer_texcoord_offset != bufferoffset)
+			{
+				unit->pointer_texcoord_components = components;
+				unit->pointer_texcoord_gltype = gltype;
+				unit->pointer_texcoord_stride = stride;
+				unit->pointer_texcoord_pointer = pointer;
+				unit->pointer_texcoord_vertexbuffer = vertexbuffer;
+				unit->pointer_texcoord_offset = bufferoffset;
+				GL_ClientActiveTexture(unitnum);
+				GL_BindVBO(bufferobject);
+				qglTexCoordPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			}
 		}
-		// texcoord array
-		if (unit->pointer_texcoord_components != components || unit->pointer_texcoord_gltype != gltype || unit->pointer_texcoord_stride != stride || unit->pointer_texcoord_pointer != pointer || unit->pointer_texcoord_vertexbuffer != vertexbuffer || unit->pointer_texcoord_offset != bufferoffset)
+		else
 		{
-			unit->pointer_texcoord_components = components;
-			unit->pointer_texcoord_gltype = gltype;
-			unit->pointer_texcoord_stride = stride;
-			unit->pointer_texcoord_pointer = pointer;
-			unit->pointer_texcoord_vertexbuffer = vertexbuffer;
-			unit->pointer_texcoord_offset = bufferoffset;
-			GL_ClientActiveTexture(unitnum);
-			GL_BindVBO(bufferobject);
-			qglTexCoordPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			// texture array unit is disabled, disable the array
+			if (unit->arrayenabled)
+			{
+				unit->arrayenabled = false;
+				GL_ClientActiveTexture(unitnum);
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
 		}
-	}
-	else
-	{
-		// texture array unit is disabled, disable the array
-		if (unit->arrayenabled)
+		break;
+	case RENDERPATH_GLES2:
+		CHECKGLERROR
+		if (pointer)
 		{
-			unit->arrayenabled = false;
-			GL_ClientActiveTexture(unitnum);
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			// texture array unit is enabled, enable the array
+			if (!unit->arrayenabled)
+			{
+				unit->arrayenabled = true;
+				qglEnableVertexAttribArray(unitnum+GLES2ATTRIB_TEXCOORD0);CHECKGLERROR
+			}
+			// texcoord array
+			if (unit->pointer_texcoord_components != components || unit->pointer_texcoord_gltype != gltype || unit->pointer_texcoord_stride != stride || unit->pointer_texcoord_pointer != pointer || unit->pointer_texcoord_vertexbuffer != vertexbuffer || unit->pointer_texcoord_offset != bufferoffset)
+			{
+				unit->pointer_texcoord_components = components;
+				unit->pointer_texcoord_gltype = gltype;
+				unit->pointer_texcoord_stride = stride;
+				unit->pointer_texcoord_pointer = pointer;
+				unit->pointer_texcoord_vertexbuffer = vertexbuffer;
+				unit->pointer_texcoord_offset = bufferoffset;
+				GL_BindVBO(bufferobject);
+				qglVertexAttribPointer(unitnum+GLES2ATTRIB_TEXCOORD0, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			}
 		}
+		else
+		{
+			// texture array unit is disabled, disable the array
+			if (unit->arrayenabled)
+			{
+				unit->arrayenabled = false;
+				qglDisableVertexAttribArray(unitnum+GLES2ATTRIB_TEXCOORD0);CHECKGLERROR
+			}
+		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+		break;
 	}
 }
 
@@ -3179,6 +3425,7 @@ void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int w
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		R_Mesh_TexBind(0, tex);
 		GL_ActiveTexture(0);CHECKGLERROR
 		qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, tx, ty, sx, sy, width, height);CHECKGLERROR
@@ -3238,6 +3485,7 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (!tex)
 		{
 			tex = r_texture_white;
@@ -3440,6 +3688,8 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 		break;
 	case RENDERPATH_SOFT:
 		break;
+	case RENDERPATH_GLES2:
+		break;
 	}
 }
 
@@ -3451,6 +3701,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// do nothing
 		break;
 	case RENDERPATH_GL13:
@@ -3643,6 +3894,8 @@ void R_Mesh_ResetTextureState(void)
 		break;
 	case RENDERPATH_SOFT:
 		break;
+	case RENDERPATH_GLES2:
+		break;
 	}
 }
 
@@ -3696,6 +3949,7 @@ static void R_Mesh_InitVertexDeclarations(void)
 	case RENDERPATH_CGGL:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertex3f_d3d9elements, &r_vertex3f_d3d9decl);
@@ -3746,6 +4000,7 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (vertexbuffer)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
@@ -3859,6 +4114,7 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
@@ -3945,6 +4201,7 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (vertexbuffer)
 		{
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
@@ -4058,6 +4315,7 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (!vid.useinterleavedarrays)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
@@ -4155,6 +4413,7 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (vertexbuffer)
 		{
 			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
