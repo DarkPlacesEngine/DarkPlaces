@@ -3221,25 +3221,44 @@ void DPSOFTRAST_VertexShader_FlatColor(void)
 
 void DPSOFTRAST_PixelShader_FlatColor(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
+#ifdef SSE2_PRESENT
+	unsigned char * RESTRICT pixelmask = span->pixelmask;
+	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + (span->y * dpsoftrast.fb_width + span->x) * 4;
 	int x, startx = span->startx, endx = span->endx;
-	int Color_Ambienti[4];
+	__m128i Color_Ambientm;
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	Color_Ambienti[2] = (int)(thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0]*256.0f);
-	Color_Ambienti[1] = (int)(thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1]*256.0f);
-	Color_Ambienti[0] = (int)(thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2]*256.0f);
-	Color_Ambienti[3] = (int)(thread->uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]        *256.0f);
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
+	if (thread->alphatest || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+		pixel = buffer_FragColorbgra8;
+	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
+	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
+	Color_Ambientm = _mm_or_si128(Color_Ambientm, _mm_setr_epi32(0, 0, 0, (int)(thread->uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0]*255.0f)));
+	Color_Ambientm = _mm_packs_epi32(Color_Ambientm, Color_Ambientm);
 	for (x = startx;x < endx;x++)
 	{
-		buffer_FragColorbgra8[x*4+0] = (buffer_texture_colorbgra8[x*4+0] * Color_Ambienti[0])>>8;
-		buffer_FragColorbgra8[x*4+1] = (buffer_texture_colorbgra8[x*4+1] * Color_Ambienti[1])>>8;
-		buffer_FragColorbgra8[x*4+2] = (buffer_texture_colorbgra8[x*4+2] * Color_Ambienti[2])>>8;
-		buffer_FragColorbgra8[x*4+3] = (buffer_texture_colorbgra8[x*4+3] * Color_Ambienti[3])>>8;
+		__m128i color, pix;
+		if (x + 4 <= endx && *(const unsigned int *)&pixelmask[x] == 0x01010101)
+		{
+			__m128i pix2;
+			color = _mm_loadu_si128((const __m128i *)&buffer_texture_colorbgra8[x*4]);
+			pix = _mm_mulhi_epu16(Color_Ambientm, _mm_unpacklo_epi8(_mm_setzero_si128(), color));
+			pix2 = _mm_mulhi_epu16(Color_Ambientm, _mm_unpackhi_epi8(_mm_setzero_si128(), color));
+			_mm_storeu_si128((__m128i *)&pixel[x*4], _mm_packus_epi16(pix, pix2));
+			x += 3;
+			continue;
+		}
+		if (!pixelmask[x])
+			continue;
+		color = _mm_unpacklo_epi8(_mm_setzero_si128(), _mm_cvtsi32_si128(*(const int *)&buffer_texture_colorbgra8[x*4]));
+		pix = _mm_mulhi_epu16(Color_Ambientm, color);
+		*(int *)&pixel[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix, pix));
 	}
-	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
+	if (pixel == buffer_FragColorbgra8)
+		DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
+#endif
 }
 
 
