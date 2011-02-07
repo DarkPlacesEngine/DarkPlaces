@@ -4669,20 +4669,16 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			ycc = _mm_min_epi16(ycc, _mm_shuffle_epi32(ycc, _MM_SHUFFLE(2, 3, 0, 1)));
 			nexty = _mm_extract_epi16(ycc, 0);
 			if (nexty >= bandy) nexty = bandy-1;
-			if (_mm_ucomigt_ss(_mm_max_ss(screen[edge0n], screen[edge0p]), _mm_min_ss(screen[edge1n], screen[edge1p])))
-			{
-				int tmp = edge0n;
-				edge0n = edge1n;
-				edge1n = tmp;
-				tmp = edge0p;
-				edge0p = edge1p;
-				edge1p = tmp;
-			}
 			xslope = _mm_sub_ps(_mm_movelh_ps(screen[edge0n], screen[edge1n]), _mm_movelh_ps(screen[edge0p], screen[edge1p]));
 			xslope = _mm_div_ps(xslope, _mm_shuffle_ps(xslope, xslope, _MM_SHUFFLE(3, 3, 1, 1)));
 			xcoords = _mm_add_ps(_mm_movelh_ps(screen[edge0p], screen[edge1p]),
 								_mm_mul_ps(xslope, _mm_sub_ps(_mm_set1_ps(y), _mm_shuffle_ps(screen[edge0p], screen[edge1p], _MM_SHUFFLE(1, 1, 1, 1)))));
 			xcoords = _mm_add_ps(xcoords, _mm_set1_ps(0.5f));
+			if (_mm_ucomigt_ss(xcoords, _mm_shuffle_ps(xcoords, xcoords, _MM_SHUFFLE(1, 0, 3, 2))))
+			{
+				xcoords = _mm_shuffle_ps(xcoords, xcoords, _MM_SHUFFLE(1, 0, 3, 2));
+				xslope = _mm_shuffle_ps(xslope, xslope, _MM_SHUFFLE(1, 0, 3, 2));
+			}
 			for(; y <= nexty; y++, xcoords = _mm_add_ps(xcoords, xslope))
 			{
 				int startx, endx, offset;
