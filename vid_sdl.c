@@ -716,7 +716,7 @@ void wrapglClearStencil(GLint s) {glClearStencil(s);}
 void wrapglClientActiveTexture(GLenum target) {Con_Printf("glClientActiveTexture(target)\n");}
 void wrapglColor4f(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha) {Con_Printf("glColor4f(red, green, blue, alpha)\n");}
 void wrapglColor4ub(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha) {Con_Printf("glColor4ub(red, green, blue, alpha)\n");}
-void wrapglColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) {Con_Printf("glColorMask(red, green, blue, alpha)\n");}
+void wrapglColorMask(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) {glColorMask(red, green, blue, alpha);}
 void wrapglColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glColorPointer(size, type, stride, ptr)\n");}
 void wrapglCompileShader(GLuint shaderObj) {glCompileShader(shaderObj);}
 void wrapglCompressedTexImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data) {glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);}
@@ -802,7 +802,7 @@ void wrapglNormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Pr
 void wrapglPixelStorei(GLenum pname, GLint param) {glPixelStorei(pname, param);}
 void wrapglPointSize(GLfloat size) {Con_Printf("glPointSize(size)\n");}
 void wrapglPolygonMode(GLenum face, GLenum mode) {Con_Printf("glPolygonMode(face, mode)\n");}
-void wrapglPolygonOffset(GLfloat factor, GLfloat units) {Con_Printf("glPolygonOffset(factor, units)\n");}
+void wrapglPolygonOffset(GLfloat factor, GLfloat units) {glPolygonOffset(factor, units);}
 void wrapglPolygonStipple(const GLubyte *mask) {Con_Printf("glPolygonStipple(mask)\n");}
 void wrapglReadBuffer(GLenum mode) {Con_Printf("glReadBuffer(mode)\n");}
 void wrapglReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels) {glReadPixels(x, y, width, height, format, type, pixels);}
@@ -857,42 +857,42 @@ void wrapglVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean 
 void wrapglVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glVertexPointer(size, type, stride, ptr)\n");}
 void wrapglViewport(GLint x, GLint y, GLsizei width, GLsizei height) {glViewport(x, y, width, height);}
 void wrapglVertexAttrib1f(GLuint index, GLfloat v0) {glVertexAttrib1f(index, v0);}
-void wrapglVertexAttrib1s(GLuint index, GLshort v0) {glVertexAttrib1s(index, v0);}
-void wrapglVertexAttrib1d(GLuint index, GLdouble v0) {glVertexAttrib1d(index, v0);}
+//void wrapglVertexAttrib1s(GLuint index, GLshort v0) {glVertexAttrib1s(index, v0);}
+//void wrapglVertexAttrib1d(GLuint index, GLdouble v0) {glVertexAttrib1d(index, v0);}
 void wrapglVertexAttrib2f(GLuint index, GLfloat v0, GLfloat v1) {glVertexAttrib2f(index, v0, v1);}
-void wrapglVertexAttrib2s(GLuint index, GLshort v0, GLshort v1) {glVertexAttrib2s(index, v0, v1);}
-void wrapglVertexAttrib2d(GLuint index, GLdouble v0, GLdouble v1) {glVertexAttrib2d(index, v0, v1);}
+//void wrapglVertexAttrib2s(GLuint index, GLshort v0, GLshort v1) {glVertexAttrib2s(index, v0, v1);}
+//void wrapglVertexAttrib2d(GLuint index, GLdouble v0, GLdouble v1) {glVertexAttrib2d(index, v0, v1);}
 void wrapglVertexAttrib3f(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2) {glVertexAttrib3f(index, v0, v1, v2);}
-void wrapglVertexAttrib3s(GLuint index, GLshort v0, GLshort v1, GLshort v2) {glVertexAttrib3s(index, v0, v1, v2);}
-void wrapglVertexAttrib3d(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2) {glVertexAttrib3d(index, v0, v1, v2);}
+//void wrapglVertexAttrib3s(GLuint index, GLshort v0, GLshort v1, GLshort v2) {glVertexAttrib3s(index, v0, v1, v2);}
+//void wrapglVertexAttrib3d(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2) {glVertexAttrib3d(index, v0, v1, v2);}
 void wrapglVertexAttrib4f(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) {glVertexAttrib4f(index, v0, v1, v2, v3);}
-void wrapglVertexAttrib4s(GLuint index, GLshort v0, GLshort v1, GLshort v2, GLshort v3) {glVertexAttrib4s(index, v0, v1, v2, v3);}
-void wrapglVertexAttrib4d(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2, GLdouble v3) {glVertexAttrib4d(index, v0, v1, v2, v3);}
-void wrapglVertexAttrib4Nub(GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w) {glVertexAttrib4Nub(index, x, y, z, w);}
+//void wrapglVertexAttrib4s(GLuint index, GLshort v0, GLshort v1, GLshort v2, GLshort v3) {glVertexAttrib4s(index, v0, v1, v2, v3);}
+//void wrapglVertexAttrib4d(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2, GLdouble v3) {glVertexAttrib4d(index, v0, v1, v2, v3);}
+//void wrapglVertexAttrib4Nub(GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w) {glVertexAttrib4Nub(index, x, y, z, w);}
 void wrapglVertexAttrib1fv(GLuint index, const GLfloat *v) {glVertexAttrib1fv(index, v);}
-void wrapglVertexAttrib1sv(GLuint index, const GLshort *v) {glVertexAttrib1sv(index, v);}
-void wrapglVertexAttrib1dv(GLuint index, const GLdouble *v) {glVertexAttrib1dv(index, v);}
+//void wrapglVertexAttrib1sv(GLuint index, const GLshort *v) {glVertexAttrib1sv(index, v);}
+//void wrapglVertexAttrib1dv(GLuint index, const GLdouble *v) {glVertexAttrib1dv(index, v);}
 void wrapglVertexAttrib2fv(GLuint index, const GLfloat *v) {glVertexAttrib2fv(index, v);}
-void wrapglVertexAttrib2sv(GLuint index, const GLshort *v) {glVertexAttrib2sv(index, v);}
-void wrapglVertexAttrib2dv(GLuint index, const GLdouble *v) {glVertexAttrib2dv(index, v);}
+//void wrapglVertexAttrib2sv(GLuint index, const GLshort *v) {glVertexAttrib2sv(index, v);}
+//void wrapglVertexAttrib2dv(GLuint index, const GLdouble *v) {glVertexAttrib2dv(index, v);}
 void wrapglVertexAttrib3fv(GLuint index, const GLfloat *v) {glVertexAttrib3fv(index, v);}
-void wrapglVertexAttrib3sv(GLuint index, const GLshort *v) {glVertexAttrib3sv(index, v);}
-void wrapglVertexAttrib3dv(GLuint index, const GLdouble *v) {glVertexAttrib3dv(index, v);}
+//void wrapglVertexAttrib3sv(GLuint index, const GLshort *v) {glVertexAttrib3sv(index, v);}
+//void wrapglVertexAttrib3dv(GLuint index, const GLdouble *v) {glVertexAttrib3dv(index, v);}
 void wrapglVertexAttrib4fv(GLuint index, const GLfloat *v) {glVertexAttrib4fv(index, v);}
-void wrapglVertexAttrib4sv(GLuint index, const GLshort *v) {glVertexAttrib4sv(index, v);}
-void wrapglVertexAttrib4dv(GLuint index, const GLdouble *v) {glVertexAttrib4dv(index, v);}
-void wrapglVertexAttrib4iv(GLuint index, const GLint *v) {glVertexAttrib4iv(index, v);}
-void wrapglVertexAttrib4bv(GLuint index, const GLbyte *v) {glVertexAttrib4bv(index, v);}
-void wrapglVertexAttrib4ubv(GLuint index, const GLubyte *v) {glVertexAttrib4ubv(index, v);}
-void wrapglVertexAttrib4usv(GLuint index, const GLushort *v) {glVertexAttrib4usv(index, GLushort v);}
-void wrapglVertexAttrib4uiv(GLuint index, const GLuint *v) {glVertexAttrib4uiv(index, v);}
-void wrapglVertexAttrib4Nbv(GLuint index, const GLbyte *v) {glVertexAttrib4Nbv(index, v);}
-void wrapglVertexAttrib4Nsv(GLuint index, const GLshort *v) {glVertexAttrib4Nsv(index, v);}
-void wrapglVertexAttrib4Niv(GLuint index, const GLint *v) {glVertexAttrib4Niv(index, v);}
-void wrapglVertexAttrib4Nubv(GLuint index, const GLubyte *v) {glVertexAttrib4Nubv(index, v);}
-void wrapglVertexAttrib4Nusv(GLuint index, const GLushort *v) {glVertexAttrib4Nusv(index, GLushort v);}
-void wrapglVertexAttrib4Nuiv(GLuint index, const GLuint *v) {glVertexAttrib4Nuiv(index, v);}
-void wrapglGetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params) {glGetVertexAttribdv(index, pname, params);}
+//void wrapglVertexAttrib4sv(GLuint index, const GLshort *v) {glVertexAttrib4sv(index, v);}
+//void wrapglVertexAttrib4dv(GLuint index, const GLdouble *v) {glVertexAttrib4dv(index, v);}
+//void wrapglVertexAttrib4iv(GLuint index, const GLint *v) {glVertexAttrib4iv(index, v);}
+//void wrapglVertexAttrib4bv(GLuint index, const GLbyte *v) {glVertexAttrib4bv(index, v);}
+//void wrapglVertexAttrib4ubv(GLuint index, const GLubyte *v) {glVertexAttrib4ubv(index, v);}
+//void wrapglVertexAttrib4usv(GLuint index, const GLushort *v) {glVertexAttrib4usv(index, GLushort v);}
+//void wrapglVertexAttrib4uiv(GLuint index, const GLuint *v) {glVertexAttrib4uiv(index, v);}
+//void wrapglVertexAttrib4Nbv(GLuint index, const GLbyte *v) {glVertexAttrib4Nbv(index, v);}
+//void wrapglVertexAttrib4Nsv(GLuint index, const GLshort *v) {glVertexAttrib4Nsv(index, v);}
+//void wrapglVertexAttrib4Niv(GLuint index, const GLint *v) {glVertexAttrib4Niv(index, v);}
+//void wrapglVertexAttrib4Nubv(GLuint index, const GLubyte *v) {glVertexAttrib4Nubv(index, v);}
+//void wrapglVertexAttrib4Nusv(GLuint index, const GLushort *v) {glVertexAttrib4Nusv(index, GLushort v);}
+//void wrapglVertexAttrib4Nuiv(GLuint index, const GLuint *v) {glVertexAttrib4Nuiv(index, v);}
+//void wrapglGetVertexAttribdv(GLuint index, GLenum pname, GLdouble *params) {glGetVertexAttribdv(index, pname, params);}
 void wrapglGetVertexAttribfv(GLuint index, GLenum pname, GLfloat *params) {glGetVertexAttribfv(index, pname, params);}
 void wrapglGetVertexAttribiv(GLuint index, GLenum pname, GLint *params) {glGetVertexAttribiv(index, pname, params);}
 void wrapglGetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer) {glGetVertexAttribPointerv(index, pname, pointer);}
@@ -963,8 +963,8 @@ void GLES_Init(void)
 	qglDisableClientState = wrapglDisableClientState;
 	qglDisableVertexAttribArray = wrapglDisableVertexAttribArray;
 	qglDrawArrays = wrapglDrawArrays;
-	qglDrawBuffer = wrapglDrawBuffer;
-	qglDrawBuffersARB = wrapglDrawBuffers;
+//	qglDrawBuffer = wrapglDrawBuffer;
+//	qglDrawBuffersARB = wrapglDrawBuffers;
 	qglDrawElements = wrapglDrawElements;
 //	qglDrawRangeElements = wrapglDrawRangeElements;
 	qglEnable = wrapglEnable;
@@ -1077,42 +1077,42 @@ void GLES_Init(void)
 	qglVertexPointer = wrapglVertexPointer;
 	qglViewport = wrapglViewport;
 	qglVertexAttrib1f = wrapglVertexAttrib1f;
-	qglVertexAttrib1s = wrapglVertexAttrib1s;
-	qglVertexAttrib1d = wrapglVertexAttrib1d;
+//	qglVertexAttrib1s = wrapglVertexAttrib1s;
+//	qglVertexAttrib1d = wrapglVertexAttrib1d;
 	qglVertexAttrib2f = wrapglVertexAttrib2f;
-	qglVertexAttrib2s = wrapglVertexAttrib2s;
-	qglVertexAttrib2d = wrapglVertexAttrib2d;
+//	qglVertexAttrib2s = wrapglVertexAttrib2s;
+//	qglVertexAttrib2d = wrapglVertexAttrib2d;
 	qglVertexAttrib3f = wrapglVertexAttrib3f;
-	qglVertexAttrib3s = wrapglVertexAttrib3s;
-	qglVertexAttrib3d = wrapglVertexAttrib3d;
+//	qglVertexAttrib3s = wrapglVertexAttrib3s;
+//	qglVertexAttrib3d = wrapglVertexAttrib3d;
 	qglVertexAttrib4f = wrapglVertexAttrib4f;
-	qglVertexAttrib4s = wrapglVertexAttrib4s;
-	qglVertexAttrib4d = wrapglVertexAttrib4d;
-	qglVertexAttrib4Nub = wrapglVertexAttrib4Nub;
+//	qglVertexAttrib4s = wrapglVertexAttrib4s;
+//	qglVertexAttrib4d = wrapglVertexAttrib4d;
+//	qglVertexAttrib4Nub = wrapglVertexAttrib4Nub;
 	qglVertexAttrib1fv = wrapglVertexAttrib1fv;
-	qglVertexAttrib1sv = wrapglVertexAttrib1sv;
-	qglVertexAttrib1dv = wrapglVertexAttrib1dv;
+//	qglVertexAttrib1sv = wrapglVertexAttrib1sv;
+//	qglVertexAttrib1dv = wrapglVertexAttrib1dv;
 	qglVertexAttrib2fv = wrapglVertexAttrib2fv;
-	qglVertexAttrib2sv = wrapglVertexAttrib2sv;
-	qglVertexAttrib2dv = wrapglVertexAttrib2dv;
+//	qglVertexAttrib2sv = wrapglVertexAttrib2sv;
+//	qglVertexAttrib2dv = wrapglVertexAttrib2dv;
 	qglVertexAttrib3fv = wrapglVertexAttrib3fv;
-	qglVertexAttrib3sv = wrapglVertexAttrib3sv;
-	qglVertexAttrib3dv = wrapglVertexAttrib3dv;
+//	qglVertexAttrib3sv = wrapglVertexAttrib3sv;
+//	qglVertexAttrib3dv = wrapglVertexAttrib3dv;
 	qglVertexAttrib4fv = wrapglVertexAttrib4fv;
-	qglVertexAttrib4sv = wrapglVertexAttrib4sv;
-	qglVertexAttrib4dv = wrapglVertexAttrib4dv;
-	qglVertexAttrib4iv = wrapglVertexAttrib4iv;
-	qglVertexAttrib4bv = wrapglVertexAttrib4bv;
-	qglVertexAttrib4ubv = wrapglVertexAttrib4ubv;
-	qglVertexAttrib4usv = wrapglVertexAttrib4usv;
-	qglVertexAttrib4uiv = wrapglVertexAttrib4uiv;
-	qglVertexAttrib4Nbv = wrapglVertexAttrib4Nbv;
-	qglVertexAttrib4Nsv = wrapglVertexAttrib4Nsv;
-	qglVertexAttrib4Niv = wrapglVertexAttrib4Niv;
-	qglVertexAttrib4Nubv = wrapglVertexAttrib4Nubv;
-	qglVertexAttrib4Nusv = wrapglVertexAttrib4Nusv;
-	qglVertexAttrib4Nuiv = wrapglVertexAttrib4Nuiv;
-	qglGetVertexAttribdv = wrapglGetVertexAttribdv;
+//	qglVertexAttrib4sv = wrapglVertexAttrib4sv;
+//	qglVertexAttrib4dv = wrapglVertexAttrib4dv;
+//	qglVertexAttrib4iv = wrapglVertexAttrib4iv;
+//	qglVertexAttrib4bv = wrapglVertexAttrib4bv;
+//	qglVertexAttrib4ubv = wrapglVertexAttrib4ubv;
+//	qglVertexAttrib4usv = wrapglVertexAttrib4usv;
+//	qglVertexAttrib4uiv = wrapglVertexAttrib4uiv;
+//	qglVertexAttrib4Nbv = wrapglVertexAttrib4Nbv;
+//	qglVertexAttrib4Nsv = wrapglVertexAttrib4Nsv;
+//	qglVertexAttrib4Niv = wrapglVertexAttrib4Niv;
+//	qglVertexAttrib4Nubv = wrapglVertexAttrib4Nubv;
+//	qglVertexAttrib4Nusv = wrapglVertexAttrib4Nusv;
+//	qglVertexAttrib4Nuiv = wrapglVertexAttrib4Nuiv;
+//	qglGetVertexAttribdv = wrapglGetVertexAttribdv;
 	qglGetVertexAttribfv = wrapglGetVertexAttribfv;
 	qglGetVertexAttribiv = wrapglGetVertexAttribiv;
 	qglGetVertexAttribPointerv = wrapglGetVertexAttribPointerv;
