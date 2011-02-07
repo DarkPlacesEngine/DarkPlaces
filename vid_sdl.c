@@ -1742,7 +1742,12 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	vid.softpixels = (unsigned int *)vid_softsurface->pixels;
 	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
-	DPSOFTRAST_Init(mode->width, mode->height, vid_soft_threads.integer, vid_soft_interlace.integer, (unsigned int *)vid_softsurface->pixels, (unsigned int *)vid.softdepthpixels);
+	if (DPSOFTRAST_Init(mode->width, mode->height, vid_soft_threads.integer, vid_soft_interlace.integer, (unsigned int *)vid_softsurface->pixels, (unsigned int *)vid.softdepthpixels) < 0)
+	{
+		Con_Printf("Failed to initialize software rasterizer\n");
+		VID_Shutdown();
+		return false;
+	}
 
 	// set window title
 	VID_SetCaption();

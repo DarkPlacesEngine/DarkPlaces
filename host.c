@@ -30,6 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "sv_demo.h"
 #include "snd_main.h"
+#include "thread.h"
 
 /*
 
@@ -1140,6 +1141,7 @@ static void Host_Init (void)
 		R_Modules_Init();
 		Palette_Init();
 		MR_Init_Commands();
+		Thread_Init();
 		VID_Shared_Init();
 		VID_Init();
 		Render_Init();
@@ -1287,6 +1289,7 @@ void Host_Shutdown(void)
 	{
 		R_Modules_Shutdown();
 		VID_Shutdown();
+		Thread_Shutdown();
 	}
 
 	Cmd_Shutdown();

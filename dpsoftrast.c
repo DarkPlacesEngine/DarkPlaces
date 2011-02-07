@@ -3,11 +3,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "quakedef.h"
+#include "thread.h"
 #include "dpsoftrast.h"
-
-#ifdef USE_SDL
-#define USE_THREADS
-#endif
 
 #ifndef __cplusplus
 typedef qboolean bool;
@@ -20,48 +17,44 @@ typedef qboolean bool;
 	#if defined(__GNUC__)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
 		#define ATOMIC(var) var __attribute__((__aligned__(32)))
-		#ifdef USE_THREADS
-			#define MEMORY_BARRIER (_mm_sfence())
-			//(__sync_synchronize())
-			#define ATOMIC_COUNTER volatile int
-			#define ATOMIC_INCREMENT(counter) (__sync_add_and_fetch(&(counter), 1))
-			#define ATOMIC_DECREMENT(counter) (__sync_add_and_fetch(&(counter), -1))
-			#define ATOMIC_ADD(counter, val) ((void)__sync_fetch_and_add(&(counter), (val)))
-		#endif
+		#define MEMORY_BARRIER (_mm_sfence())
+		//(__sync_synchronize())
+		#define ATOMIC_COUNTER volatile int
+		#define ATOMIC_INCREMENT(counter) (__sync_add_and_fetch(&(counter), 1))
+		#define ATOMIC_DECREMENT(counter) (__sync_add_and_fetch(&(counter), -1))
+		#define ATOMIC_ADD(counter, val) ((void)__sync_fetch_and_add(&(counter), (val)))
 	#elif defined(_MSC_VER)
 		#define ALIGN(var) __declspec(align(16)) var
 		#define ATOMIC(var) __declspec(align(32)) var
-		#ifdef USE_THREADS
-			#define MEMORY_BARRIER (_mm_sfence())
-			//(MemoryBarrier())
-			#define ATOMIC_COUNTER volatile LONG
-			#define ATOMIC_INCREMENT(counter) (InterlockedIncrement(&(counter)))
-			#define ATOMIC_DECREMENT(counter) (InterlockedDecrement(&(counter)))
-			#define ATOMIC_ADD(counter, val) (InterlockedExchangeAdd(&(counter), (val)))
-		#endif
-	#else
-		#undef USE_THREADS
-		#undef SSE2_PRESENT
+		#define MEMORY_BARRIER (_mm_sfence())
+		//(MemoryBarrier())
+		#define ATOMIC_COUNTER volatile LONG
+		#define ATOMIC_INCREMENT(counter) (InterlockedIncrement(&(counter)))
+		#define ATOMIC_DECREMENT(counter) (InterlockedDecrement(&(counter)))
+		#define ATOMIC_ADD(counter, val) (InterlockedExchangeAdd(&(counter), (val)))
 	#endif
 #endif
 
-#ifndef SSE2_PRESENT
-	#define ALIGN(var) var
-	#define ATOMIC(var) var
+#ifndef ALIGN
+#define ALIGN(var) var
 #endif
-
-#ifdef USE_THREADS
-#include <SDL.h>
-#include <SDL_thread.h>
-#else
-	#define MEMORY_BARRIER ((void)0)
-	#define ATOMIC_COUNTER int
-	#define ATOMIC_INCREMENT(counter) (++(counter))
-	#define ATOMIC_DECREMENT(counter) (--(counter))
-	#define ATOMIC_ADD(counter, val) ((void)((counter) += (val)))
-	typedef void SDL_Thread;
-	typedef void SDL_cond;
-	typedef void SDL_mutex;
+#ifndef ATOMIC
+#define ATOMIC(var) var
+#endif
+#ifndef MEMORY_BARRIER
+#define MEMORY_BARRIER ((void)0)
+#endif
+#ifndef ATOMIC_COUNTER
+#define ATOMIC_COUNTER int
+#endif
+#ifndef ATOMIC_INCREMENT
+#define ATOMIC_INCREMENT(counter) (++(counter))
+#endif
+#ifndef ATOMIC_DECREMENT
+#define ATOMIC_DECREMENT(counter) (--(counter))
+#endif
+#ifndef ATOMIC_ADD
+#define ATOMIC_ADD(counter, val) ((void)((counter) += (val)))
 #endif
 
 #ifdef SSE2_PRESENT
@@ -211,7 +204,7 @@ DPSOFTRAST_BLENDMODE;
 
 typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 {
-	SDL_Thread *thread;
+	void *thread;
 	int index;
 	
 	int cullface;
@@ -263,9 +256,9 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 
 	volatile bool waiting;
 	volatile bool starving;
-	SDL_cond *waitcond;
-	SDL_cond *drawcond;
-	SDL_mutex *drawmutex;
+	void *waitcond;
+	void *drawcond;
+	void *drawmutex;
 
 	int numspans;
 	int numtriangles;
@@ -320,6 +313,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_s
 	// error reporting
 	const char *errorstring;
 
+	bool usethreads;
 	int interlace;
 	int numthreads;
 	DPSOFTRAST_State_Thread *threads;
@@ -765,13 +759,12 @@ static void DPSOFTRAST_Draw_FlushThreads(void);
 
 static void DPSOFTRAST_Draw_SyncCommands(void)
 {
-	MEMORY_BARRIER;
+	if(dpsoftrast.usethreads) MEMORY_BARRIER;
 	dpsoftrast.drawcommand = dpsoftrast.commandpool.freecommand;
 }
 
 static void DPSOFTRAST_Draw_FreeCommandPool(int space)
 {
-#ifdef USE_THREADS
 	DPSOFTRAST_State_Thread *thread;
 	int i;
 	int freecommand = dpsoftrast.commandpool.freecommand;
@@ -799,20 +792,17 @@ static void DPSOFTRAST_Draw_FreeCommandPool(int space)
 		if (usedcommands <= DPSOFTRAST_DRAW_MAXCOMMANDPOOL-space || waitindex < 0)
 			break;
 		thread = &dpsoftrast.threads[waitindex];
-		SDL_LockMutex(thread->drawmutex);
+		Thread_LockMutex(thread->drawmutex);
 		if (thread->commandoffset != dpsoftrast.drawcommand)
 		{
 			thread->waiting = true;
-			if (thread->starving) SDL_CondSignal(thread->drawcond);
-			SDL_CondWait(thread->waitcond, thread->drawmutex);
+			if (thread->starving) Thread_CondSignal(thread->drawcond);
+			Thread_CondWait(thread->waitcond, thread->drawmutex);
 			thread->waiting = false;
 		}
-		SDL_UnlockMutex(thread->drawmutex);
+		Thread_UnlockMutex(thread->drawmutex);
 	}
 	dpsoftrast.commandpool.usedcommands = usedcommands;
-#else
-	DPSOFTRAST_Draw_FlushThreads();
-#endif
 }
 
 #define DPSOFTRAST_ALIGNCOMMAND(size) \
@@ -830,7 +820,10 @@ static void *DPSOFTRAST_AllocateCommand(int opcode, int size)
 		extra += DPSOFTRAST_DRAW_MAXCOMMANDPOOL - freecommand;
 	if (usedcommands > DPSOFTRAST_DRAW_MAXCOMMANDPOOL - (size + extra))
 	{
-		DPSOFTRAST_Draw_FreeCommandPool(size + extra);
+		if (dpsoftrast.usethreads)
+			DPSOFTRAST_Draw_FreeCommandPool(size + extra);
+		else
+			DPSOFTRAST_Draw_FlushThreads();
 		freecommand = dpsoftrast.commandpool.freecommand;
 		usedcommands = dpsoftrast.commandpool.usedcommands;
 	}
@@ -1761,11 +1754,9 @@ static int DPSOFTRAST_Vertex_BoundY(int *starty, int *endy, __m128 minpos, __m12
 	*endy = _mm_cvttss_si32(minproj)+1;
 	return clipmask;
 }
-#endif
 	
 static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems)
 {
-#ifdef SSE2_PRESENT
 	float *end = out4f + numitems*4;
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	__m128 minpos, maxpos;
@@ -1808,12 +1799,10 @@ static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty,
 					_mm_setr_ps(0.0f, 0.0f, 1.0f, 0.0f),
 					_mm_setr_ps(0.0f, 0.0f, 0.0f, 1.0f));
 	return 0;
-#endif
 }
 
 static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems, const float *inmatrix16f)
 {
-#ifdef SSE2_PRESENT
 	static const float identitymatrix[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 	__m128 m0, m1, m2, m3, viewportcenter, viewportscale, minpos, maxpos;
 	float *end;
@@ -1863,11 +1852,12 @@ static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int
 	if (starty && endy) 
 		return DPSOFTRAST_Vertex_BoundY(starty, endy, minpos, maxpos, viewportcenter, viewportscale, m0, m1, m2, m3); 
 	return 0;
-#endif
 }
+#endif
 
 static float *DPSOFTRAST_Array_Load(int outarray, int inarray)
 {
+#ifdef SSE2_PRESENT
 	float *outf = dpsoftrast.post_array4f[outarray];
 	const unsigned char *inb;
 	int firstvertex = dpsoftrast.firstvertex;
@@ -1919,6 +1909,9 @@ static float *DPSOFTRAST_Array_Load(int outarray, int inarray)
 		break;
 	}
 	return outf;
+#else
+	return NULL;
+#endif
 }
 
 static float *DPSOFTRAST_Array_Transform(int outarray, int inarray, const float *inmatrix16f)
@@ -1931,17 +1924,25 @@ static float *DPSOFTRAST_Array_Transform(int outarray, int inarray, const float 
 #if 0
 static float *DPSOFTRAST_Array_Project(int outarray, int inarray)
 {
+#ifdef SSE2_PRESENT
 	float *data = inarray >= 0 ? DPSOFTRAST_Array_Load(outarray, inarray) : dpsoftrast.post_array4f[outarray];
 	dpsoftrast.drawclipped = DPSOFTRAST_Vertex_Project(data, dpsoftrast.screencoord4f, &dpsoftrast.drawstarty, &dpsoftrast.drawendy, data, dpsoftrast.numvertices);
 	return data;
+#else
+	return NULL;
+#endif
 }
 #endif
 
 static float *DPSOFTRAST_Array_TransformProject(int outarray, int inarray, const float *inmatrix16f)
 {
+#ifdef SSE2_PRESENT
 	float *data = inarray >= 0 ? DPSOFTRAST_Array_Load(outarray, inarray) : dpsoftrast.post_array4f[outarray];
 	dpsoftrast.drawclipped = DPSOFTRAST_Vertex_TransformProject(data, dpsoftrast.screencoord4f, &dpsoftrast.drawstarty, &dpsoftrast.drawendy, data, dpsoftrast.numvertices, inmatrix16f);
 	return data;
+#else
+	return NULL;
+#endif
 }
 
 void DPSOFTRAST_Draw_Span_Begin(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, float *zf)
@@ -4808,20 +4809,21 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 	command->clipped = dpsoftrast.drawclipped;
 	command->refcount = dpsoftrast.numthreads;
 
-#ifdef USE_THREADS
-	DPSOFTRAST_Draw_SyncCommands();
+	if (dpsoftrast.usethreads)
 	{
 		int i;
+		DPSOFTRAST_Draw_SyncCommands();
 		for (i = 0; i < dpsoftrast.numthreads; i++)
 		{
 			DPSOFTRAST_State_Thread *thread = &dpsoftrast.threads[i];
 			if (((command->starty < thread->maxy1 && command->endy > thread->miny1) || (command->starty < thread->maxy2 && command->endy > thread->miny2)) && thread->starving)
-				SDL_CondSignal(thread->drawcond);
+				Thread_CondSignal(thread->drawcond);
 		}
 	}
-#else
-	DPSOFTRAST_Draw_FlushThreads();
-#endif
+	else
+	{
+		DPSOFTRAST_Draw_FlushThreads();
+	}
 }
  
 static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, int endoffset)
@@ -4877,7 +4879,6 @@ static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, i
 	thread->commandoffset = commandoffset;
 }
 
-#ifdef USE_THREADS
 static int DPSOFTRAST_Draw_Thread(void *data)
 {
 	DPSOFTRAST_State_Thread *thread = (DPSOFTRAST_State_Thread *)data;
@@ -4889,58 +4890,62 @@ static int DPSOFTRAST_Draw_Thread(void *data)
 		}
 		else 
 		{
-			SDL_LockMutex(thread->drawmutex);
+			Thread_LockMutex(thread->drawmutex);
 			if (thread->commandoffset == dpsoftrast.drawcommand && thread->index >= 0)
 			{
-				if (thread->waiting) SDL_CondSignal(thread->waitcond);
+				if (thread->waiting) Thread_CondSignal(thread->waitcond);
 				thread->starving = true;
-				SDL_CondWait(thread->drawcond, thread->drawmutex);
+				Thread_CondWait(thread->drawcond, thread->drawmutex);
 				thread->starving = false;
 			}
-			SDL_UnlockMutex(thread->drawmutex);
+			Thread_UnlockMutex(thread->drawmutex);
 		}
 	}   
 	return 0;
 }
-#endif
 
 static void DPSOFTRAST_Draw_FlushThreads(void)
 {
 	DPSOFTRAST_State_Thread *thread;
 	int i;
 	DPSOFTRAST_Draw_SyncCommands();
-#ifdef USE_THREADS
-	for (i = 0; i < dpsoftrast.numthreads; i++)
+	if (dpsoftrast.usethreads) 
 	{
-		thread = &dpsoftrast.threads[i];
-		if (thread->commandoffset != dpsoftrast.drawcommand)
+		for (i = 0; i < dpsoftrast.numthreads; i++)
 		{
-			SDL_LockMutex(thread->drawmutex);
-			if (thread->commandoffset != dpsoftrast.drawcommand && thread->starving)
-				SDL_CondSignal(thread->drawcond);
-			SDL_UnlockMutex(thread->drawmutex);
-		}
-	}
-#endif			
-	for (i = 0; i < dpsoftrast.numthreads; i++)
-	{
-		thread = &dpsoftrast.threads[i];
-#ifdef USE_THREADS
-		if (thread->commandoffset != dpsoftrast.drawcommand)
-		{
-			SDL_LockMutex(thread->drawmutex);
+			thread = &dpsoftrast.threads[i];
 			if (thread->commandoffset != dpsoftrast.drawcommand)
 			{
-				thread->waiting = true;
-				SDL_CondWait(thread->waitcond, thread->drawmutex);
-				thread->waiting = false;
+				Thread_LockMutex(thread->drawmutex);
+				if (thread->commandoffset != dpsoftrast.drawcommand && thread->starving)
+					Thread_CondSignal(thread->drawcond);
+				Thread_UnlockMutex(thread->drawmutex);
 			}
-			SDL_UnlockMutex(thread->drawmutex);
 		}
-#else
-		if (thread->commandoffset != dpsoftrast.drawcommand)
-			DPSOFTRAST_Draw_InterpretCommands(thread, dpsoftrast.drawcommand);
-#endif
+		for (i = 0; i < dpsoftrast.numthreads; i++)
+		{
+			thread = &dpsoftrast.threads[i];
+			if (thread->commandoffset != dpsoftrast.drawcommand)
+			{
+				Thread_LockMutex(thread->drawmutex);
+				if (thread->commandoffset != dpsoftrast.drawcommand)
+				{
+					thread->waiting = true;
+					Thread_CondWait(thread->waitcond, thread->drawmutex);
+					thread->waiting = false;
+				}
+				Thread_UnlockMutex(thread->drawmutex);
+			}
+		}
+	}
+	else
+	{
+		for (i = 0; i < dpsoftrast.numthreads; i++)
+		{
+			thread = &dpsoftrast.threads[i];
+			if (thread->commandoffset != dpsoftrast.drawcommand)
+				DPSOFTRAST_Draw_InterpretCommands(thread, dpsoftrast.drawcommand);
+		}
 	}
 	dpsoftrast.commandpool.usedcommands = 0;
 }
@@ -4955,7 +4960,7 @@ void DPSOFTRAST_Finish(void)
 	DPSOFTRAST_Flush();
 }
 
-void DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsigned int *colorpixels, unsigned int *depthpixels)
+int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsigned int *colorpixels, unsigned int *depthpixels)
 {
 	int i;
 	union
@@ -4986,12 +4991,9 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsig
 	dpsoftrast.color[1] = 1;
 	dpsoftrast.color[2] = 1;
 	dpsoftrast.color[3] = 1;
-	dpsoftrast.interlace = bound(0, interlace, 1);
-#ifdef USE_THREADS
-	dpsoftrast.numthreads = bound(1, numthreads, 64);
-#else
-	dpsoftrast.numthreads = 1;
-#endif
+	dpsoftrast.usethreads = numthreads > 0 && Thread_HasThreads();
+	dpsoftrast.interlace = dpsoftrast.usethreads ? bound(0, interlace, 1) : 0;
+	dpsoftrast.numthreads = dpsoftrast.usethreads ? bound(1, numthreads, 64) : 1;
 	dpsoftrast.threads = (DPSOFTRAST_State_Thread *)MM_CALLOC(dpsoftrast.numthreads, sizeof(DPSOFTRAST_State_Thread));
 	for (i = 0; i < dpsoftrast.numthreads; i++)
 	{
@@ -5041,41 +5043,40 @@ void DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsig
 		thread->commandoffset = 0;
 		thread->waiting = false;
 		thread->starving = false;
-#ifdef USE_THREADS
-		thread->waitcond = SDL_CreateCond();
-		thread->drawcond = SDL_CreateCond();
-		thread->drawmutex = SDL_CreateMutex();
-#endif
-
+	   
 		thread->validate = -1;
 		DPSOFTRAST_Validate(thread, -1);
-#ifdef USE_THREADS
-		thread->thread = SDL_CreateThread(DPSOFTRAST_Draw_Thread, thread);
-#endif
+ 
+		if (dpsoftrast.usethreads)
+		{
+			thread->waitcond = Thread_CreateCond();
+			thread->drawcond = Thread_CreateCond();
+			thread->drawmutex = Thread_CreateMutex();
+			thread->thread = Thread_CreateThread(DPSOFTRAST_Draw_Thread, thread);
+		}
 	}
+	return 0;
 }
 
 void DPSOFTRAST_Shutdown(void)
 {
 	int i;
-#ifdef USE_THREADS
-	if (dpsoftrast.numthreads > 0)
+	if (dpsoftrast.usethreads && dpsoftrast.numthreads > 0)
 	{
 		DPSOFTRAST_State_Thread *thread;
 		for (i = 0; i < dpsoftrast.numthreads; i++)
 		{
 			thread = &dpsoftrast.threads[i];
-			SDL_LockMutex(thread->drawmutex);
+			Thread_LockMutex(thread->drawmutex);
 			thread->index = -1;
-			SDL_CondSignal(thread->drawcond);
-			SDL_UnlockMutex(thread->drawmutex);
-			SDL_WaitThread(thread->thread, NULL);
-			SDL_DestroyCond(thread->waitcond);
-			SDL_DestroyCond(thread->drawcond);
-			SDL_DestroyMutex(thread->drawmutex);
+			Thread_CondSignal(thread->drawcond);
+			Thread_UnlockMutex(thread->drawmutex);
+			Thread_WaitThread(thread->thread, 0);
+			Thread_DestroyCond(thread->waitcond);
+			Thread_DestroyCond(thread->drawcond);
+			Thread_DestroyMutex(thread->drawmutex);
 		}
 	}
-#endif
 	for (i = 0;i < dpsoftrast.texture_end;i++)
 		if (dpsoftrast.texture[i].bytes)
 			MM_FREE(dpsoftrast.texture[i].bytes);

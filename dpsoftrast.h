@@ -31,7 +31,7 @@ typedef enum DPSOFTRAST_TEXTURE_FILTER_e
 }
 DPSOFTRAST_TEXTURE_FILTER;
 
-void DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsigned int *colorpixels, unsigned int *depthpixels);
+int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsigned int *colorpixels, unsigned int *depthpixels);
 void DPSOFTRAST_Shutdown(void);
 void DPSOFTRAST_Flush(void);
 void DPSOFTRAST_Finish(void);
