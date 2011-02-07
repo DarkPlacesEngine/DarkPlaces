@@ -261,7 +261,7 @@ LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
 LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) SDLMain.m
 
-OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON) dpsoftrast.o
 
 EXE_MACOSXCL=darkplaces-agl
 EXE_MACOSXCLNEXUIZ=nexuiz-agl
@@ -301,7 +301,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON) dpsoftrast.o
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
