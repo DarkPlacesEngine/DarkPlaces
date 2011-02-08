@@ -96,7 +96,7 @@ cvar_t v_centerspeed = {0, "v_centerspeed","500", "how fast the view centers its
 
 cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
 
-cvar_t cl_smoothviewheighttime = {CVAR_SAVE, "cl_smoothviewheight", "0.05", "add averaging to the viewheight value so that it creates a smooth transition, 0 for instant transition."};
+cvar_t cl_smoothviewheight = {CVAR_SAVE, "cl_smoothviewheight", "0", "add averaging to the viewheight value so that it creates a smooth transition, 0 for instant transition."};
 
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
 cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
@@ -494,7 +494,7 @@ void V_CalcRefdef (void)
 
 			// apply the viewofs (even if chasecam is used)
 			// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
-			viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheighttime.value), 1);
+			viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
 			viewheightavg = viewheightavg * (1 - viewheight) + cl.stats[STAT_VIEWHEIGHT] * viewheight;
 			vieworg[2] += viewheightavg;
 
@@ -1024,7 +1024,7 @@ void V_Init (void)
 
 	Cvar_RegisterVariable (&cl_stairsmoothspeed);
 	
-	Cvar_RegisterVariable (&cl_smoothviewheighttime);
+	Cvar_RegisterVariable (&cl_smoothviewheight);
 
 	Cvar_RegisterVariable (&chase_back);
 	Cvar_RegisterVariable (&chase_up);
