@@ -1560,7 +1560,8 @@ static void GL_Backend_ResetState(void)
 		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
 		qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-		qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
+		if (vid.support.ext_framebuffer_object)
+			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
 		qglEnableVertexAttribArray(GLES2ATTRIB_POSITION);
 		qglVertexAttribPointer(GLES2ATTRIB_POSITION, 3, GL_FLOAT, false, sizeof(float[3]), NULL);CHECKGLERROR
 		qglDisableVertexAttribArray(GLES2ATTRIB_COLOR);
@@ -2980,6 +2981,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			// GLES does not have glDrawRangeElements, and generally
 			// underperforms with index buffers, so this code path is
 			// relatively straightforward...
+			//if (qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
+			//	Con_DPrintf("fbo %i not complete (default %i)\n", gl_state.framebufferobject, gl_state.defaultframebufferobject);
 			if (element3s)
 			{
 				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);

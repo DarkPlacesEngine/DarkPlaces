@@ -400,7 +400,6 @@ void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *par
 #define sscanf sscanf_s
 #endif
 
-#ifndef __IPHONEOS__
 qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
@@ -970,7 +969,6 @@ void VID_CheckExtensions(void)
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 }
-#endif // __IPHONEOS__
 
 void Force_CenterView_f (void)
 {

@@ -987,7 +987,7 @@ void GLES_Init(void)
 	qglGetActiveUniform = wrapglGetActiveUniform;
 	qglGetAttachedShaders = wrapglGetAttachedShaders;
 	qglGetBooleanv = wrapglGetBooleanv;
-	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
+//	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
 	qglGetDoublev = wrapglGetDoublev;
 	qglGetFloatv = wrapglGetFloatv;
 	qglGetFramebufferAttachmentParameterivEXT = wrapglGetFramebufferAttachmentParameteriv;
@@ -1023,7 +1023,7 @@ void GLES_Init(void)
 	qglPointSize = wrapglPointSize;
 	qglPolygonMode = wrapglPolygonMode;
 	qglPolygonOffset = wrapglPolygonOffset;
-	qglPolygonStipple = wrapglPolygonStipple;
+//	qglPolygonStipple = wrapglPolygonStipple;
 	qglReadBuffer = wrapglReadBuffer;
 	qglReadPixels = wrapglReadPixels;
 	qglRenderbufferStorageEXT = wrapglRenderbufferStorage;
@@ -1153,7 +1153,7 @@ void GLES_Init(void)
 	vid.support.ext_blend_minmax = false;
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
-	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_framebuffer_object = false;//true;
 	vid.support.ext_stencil_two_side = false;
 	vid.support.ext_texture_3d = false;//SDL_GL_ExtensionSupported("GL_OES_texture_3D"); // iPhoneOS does not support 3D textures, odd...
 	vid.support.ext_texture_compression_s3tc = false;
@@ -1620,7 +1620,14 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	else
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
 #else
-	// TODO: SDL_GL_CONTEXT_MAJOR_VERSION, SDL_GL_CONTEXT_MINOR_VERSION
+#ifdef __IPHONEOS__
+	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute (SDL_GL_RETAINED_BACKING, 1);
+	// FIXME: get proper resolution from OS somehow (iPad for instance...)
+	mode->width = 320;
+	mode->height = 480;
+#endif
 #endif
 
 	video_bpp = mode->bitsperpixel;
@@ -1636,6 +1643,8 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		return false;
 	}
 
+	mode->width = screen->w;
+	mode->height = screen->h;
 	vid_softsurface = NULL;
 	vid.softpixels = NULL;
 
