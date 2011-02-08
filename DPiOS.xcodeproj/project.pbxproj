@@ -107,6 +107,7 @@
 		7463B7EA12F9D11E00983F6A /* mod_skeletal_animatevertices_sse.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B7E812F9D11E00983F6A /* mod_skeletal_animatevertices_sse.c */; };
 		7463B7EF12F9D17D00983F6A /* builddate.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B7ED12F9D17D00983F6A /* builddate.c */; };
 		7463B7F012F9D17D00983F6A /* clvm_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B7EE12F9D17D00983F6A /* clvm_cmds.c */; };
+		7487D481130102AA00AEE909 /* thread_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = 7487D47F130102AA00AEE909 /* thread_sdl.c */; };
 		FD779ED20E26B9B000F39101 /* libSDLSimulator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FD779ED00E26B9B000F39101 /* libSDLSimulator.a */; };
 		FD779ED30E26B9B000F39101 /* libSDLiPhoneOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FD779ED10E26B9B000F39101 /* libSDLiPhoneOS.a */; };
 		FD779EDE0E26BA1200F39101 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FD779EDD0E26BA1200F39101 /* CoreAudio.framework */; };
@@ -309,6 +310,8 @@
 		7463B7E912F9D11E00983F6A /* mod_skeletal_animatevertices_sse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mod_skeletal_animatevertices_sse.h; sourceTree = "<group>"; };
 		7463B7ED12F9D17D00983F6A /* builddate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = builddate.c; sourceTree = "<group>"; };
 		7463B7EE12F9D17D00983F6A /* clvm_cmds.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = clvm_cmds.c; sourceTree = "<group>"; };
+		7487D47F130102AA00AEE909 /* thread_sdl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = thread_sdl.c; sourceTree = "<group>"; };
+		7487D480130102AA00AEE909 /* thread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = thread.h; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FD779ED00E26B9B000F39101 /* libSDLSimulator.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libSDLSimulator.a; path = lib/libSDLSimulator.a; sourceTree = "<group>"; };
 		FD779ED10E26B9B000F39101 /* libSDLiPhoneOS.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libSDLiPhoneOS.a; path = lib/libSDLiPhoneOS.a; sourceTree = "<group>"; };
@@ -360,6 +363,8 @@
 		29B97315FDCFA39411CA2CEA /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				7487D47F130102AA00AEE909 /* thread_sdl.c */,
+				7487D480130102AA00AEE909 /* thread.h */,
 				7463B7ED12F9D17D00983F6A /* builddate.c */,
 				7463B7EE12F9D17D00983F6A /* clvm_cmds.c */,
 				7463B7E812F9D11E00983F6A /* mod_skeletal_animatevertices_sse.c */,
@@ -739,6 +744,7 @@
 				7463B7EA12F9D11E00983F6A /* mod_skeletal_animatevertices_sse.c in Sources */,
 				7463B7EF12F9D17D00983F6A /* builddate.c in Sources */,
 				7463B7F012F9D17D00983F6A /* clvm_cmds.c in Sources */,
+				7487D481130102AA00AEE909 /* thread_sdl.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
