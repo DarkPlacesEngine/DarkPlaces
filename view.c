@@ -96,7 +96,7 @@ cvar_t v_centerspeed = {0, "v_centerspeed","500", "how fast the view centers its
 
 cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
 
-cvar_t cl_smoothviewheight = {CVAR_SAVE, "cl_smoothviewheight", "0", "add averaging to the viewheight value so that it creates a smooth transition, 0 for instant transition."};
+cvar_t cl_smoothviewheight = {CVAR_SAVE, "cl_smoothviewheight", "0", "time of the averaging to the viewheight value so that it creates a smooth transition. higher values = longer transition, 0 for instant transition."};
 
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
 cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
