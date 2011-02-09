@@ -1844,7 +1844,7 @@ static const char *builtinshaderstring =
 =========================================================================================================================================================
 */
 
-const char *builtincgshaderstring =
+const char *builtinhlslshaderstring =
 "// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
 "// written by Forest 'LordHavoc' Hale\n"
 "// shadowmapping enhancements by Lee 'eihrul' Salzman\n"
@@ -3339,7 +3339,6 @@ const char *builtincgshaderstring =
 ;
 
 char *glslshaderstring = NULL;
-char *cgshaderstring = NULL;
 char *hlslshaderstring = NULL;
 
 //=======================================================================================================================================================
@@ -3413,28 +3412,6 @@ shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
 };
-
-#ifdef SUPPORTCG
-shadermodeinfo_t cgshadermodeinfo[SHADERMODE_COUNT] =
-{
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_GENERIC\n", " generic"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTMAP\n", " lightmap"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_FAKELIGHT\n", " fakelight"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_REFRACTION\n", " refraction"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_WATER\n", " water"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_SHOWDEPTH\n", " showdepth"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
-	{"cg/default.cg", NULL, "cg/default.cg", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
-};
-#endif
 
 shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 {
@@ -4144,18 +4121,18 @@ static char *R_CG_GetText(const char *filename, qboolean printfromdisknotice)
 	char *shaderstring;
 	if (!filename || !filename[0])
 		return NULL;
-	if (!strcmp(filename, "cg/default.cg"))
+	if (!strcmp(filename, "hlsl/default.hlsl"))
 	{
-		if (!cgshaderstring)
+		if (!hlslshaderstring)
 		{
-			cgshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-			if (cgshaderstring)
+			hlslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+			if (hlslshaderstring)
 				Con_DPrintf("Loading shaders from file %s...\n", filename);
 			else
-				cgshaderstring = (char *)builtincgshaderstring;
+				hlslshaderstring = (char *)builtinhlslshaderstring;
 		}
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(cgshaderstring) + 1);
-		memcpy(shaderstring, cgshaderstring, strlen(cgshaderstring) + 1);
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
+		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
 		return shaderstring;
 	}
 	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
@@ -4176,7 +4153,7 @@ static void R_CG_CacheShader(r_cg_permutation_t *p, const char *cachename, const
 static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, unsigned int permutation)
 {
 	int i;
-	shadermodeinfo_t *modeinfo = cgshadermodeinfo + mode;
+	shadermodeinfo_t *modeinfo = hlslshadermodeinfo + mode;
 	int vertstring_length = 0;
 	int geomstring_length = 0;
 	int fragstring_length = 0;
@@ -4207,7 +4184,7 @@ static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, un
 	fragmentstring = R_CG_GetText(modeinfo->fragmentfilename, false);
 
 	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
-	strlcat(cachename, "cg/", sizeof(cachename));
+	strlcat(cachename, "cggl/", sizeof(cachename));
 
 	// the first pretext is which type of shader to compile as
 	// (later these will all be bound together as a program object)
@@ -4648,7 +4625,7 @@ static char *R_HLSL_GetText(const char *filename, qboolean printfromdisknotice)
 			if (hlslshaderstring)
 				Con_DPrintf("Loading shaders from file %s...\n", filename);
 			else
-				hlslshaderstring = (char *)builtincgshaderstring;
+				hlslshaderstring = (char *)builtinhlslshaderstring;
 		}
 		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
 		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
@@ -5025,10 +5002,7 @@ void R_GLSL_Restart_f(void)
 	if (glslshaderstring && glslshaderstring != builtinshaderstring)
 		Mem_Free(glslshaderstring);
 	glslshaderstring = NULL;
-	if (cgshaderstring && cgshaderstring != builtincgshaderstring)
-		Mem_Free(cgshaderstring);
-	cgshaderstring = NULL;
-	if (hlslshaderstring && hlslshaderstring != builtincgshaderstring)
+	if (hlslshaderstring && hlslshaderstring != builtinhlslshaderstring)
 		Mem_Free(hlslshaderstring);
 	hlslshaderstring = NULL;
 	switch(vid.renderpath)
@@ -5136,25 +5110,6 @@ void R_GLSL_DumpShader_f(void)
 	else
 		Con_Printf("failed to write to glsl/default.glsl\n");
 
-#ifdef SUPPORTCG
-	file = FS_OpenRealFile("cg/default.cg", "w", false);
-	if (file)
-	{
-		FS_Print(file, "/* The engine may define the following macros:\n");
-		FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
-		for (i = 0;i < SHADERMODE_COUNT;i++)
-			FS_Print(file, cgshadermodeinfo[i].pretext);
-		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-			FS_Print(file, shaderpermutationinfo[i].pretext);
-		FS_Print(file, "*/\n");
-		FS_Print(file, builtincgshaderstring);
-		FS_Close(file);
-		Con_Printf("cg/default.cg written\n");
-	}
-	else
-		Con_Printf("failed to write to cg/default.cg\n");
-#endif
-
 	file = FS_OpenRealFile("hlsl/default.hlsl", "w", false);
 	if (file)
 	{
@@ -5165,7 +5120,7 @@ void R_GLSL_DumpShader_f(void)
 		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 			FS_Print(file, shaderpermutationinfo[i].pretext);
 		FS_Print(file, "*/\n");
-		FS_Print(file, builtincgshaderstring);
+		FS_Print(file, builtinhlslshaderstring);
 		FS_Close(file);
 		Con_Printf("hlsl/default.hlsl written\n");
 	}
@@ -7419,14 +7374,13 @@ void gl_main_start(void)
 	r_cg_permutation = NULL;
 	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_cg_permutationarray, r_main_mempool, sizeof(r_cg_permutation_t), 256);
-	cgshaderstring = NULL;
 #endif
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_hlsl_permutationarray, r_main_mempool, sizeof(r_hlsl_permutation_t), 256);
-	hlslshaderstring = NULL;
 #endif
+	hlslshaderstring = NULL;
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 
 	r_refdef.fogmasktable_density = 0;
@@ -7501,14 +7455,13 @@ void gl_main_shutdown(void)
 	r_cg_permutation = NULL;
 	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
 	Mem_ExpandableArray_FreeArray(&r_cg_permutationarray);
-	cgshaderstring = NULL;
 #endif
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
 	Mem_ExpandableArray_FreeArray(&r_hlsl_permutationarray);
-	hlslshaderstring = NULL;
 #endif
+	hlslshaderstring = NULL;
 }
 
 extern void CL_ParseEntityLump(char *entitystring);
@@ -8663,7 +8616,6 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 			CHECKCGERROR
 			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
 			if (r_cg_permutation && r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
-			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
 #endif
 			break;
 		case RENDERPATH_GL13:
