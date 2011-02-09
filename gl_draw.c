@@ -1026,7 +1026,6 @@ static void _DrawQ_Setup(void)
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
 	GL_Color(1,1,1,1);
-	GL_AlphaTest(false);
 }
 
 qboolean r_draw2d_force = false;

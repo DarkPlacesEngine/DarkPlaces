@@ -3244,7 +3244,6 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 {
 	// set up properties for rendering light onto this entity
 	RSurf_ActiveModelEntity(ent, true, true, false);
-	GL_AlphaTest(false);
 	Matrix4x4_Concat(&rsurface.entitytolight, &rsurface.rtlight->matrix_worldtolight, &ent->matrix);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
@@ -3258,7 +3257,6 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 
 	// set up properties for rendering light onto this entity
 	RSurf_ActiveWorldEntity();
-	GL_AlphaTest(false);
 	rsurface.entitytolight = rsurface.rtlight->matrix_worldtolight;
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
@@ -3794,7 +3792,6 @@ void R_Shadow_DrawPrepass(void)
 	entity_render_t *ent;
 	float clearcolor[4];
 
-	GL_AlphaTest(false);
 	R_Mesh_ResetTextureState();
 	GL_DepthMask(true);
 	GL_ColorMask(1,1,1,1);
@@ -4467,6 +4464,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			// NOTE: GL_DEPTH_TEST must be enabled or ATI won't count samples, so use GL_DepthFunc instead
 			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
@@ -4495,9 +4493,6 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_SOFT:
 			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
-		case RENDERPATH_GLES2:
-			//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
 		}
 	}
 	rtlight->corona_visibility = bound(0, (zdist - 32) / 32, 1);
@@ -4518,6 +4513,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
 		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
@@ -4534,9 +4530,6 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			break;
 		case RENDERPATH_SOFT:
 			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_GLES2:
-			//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 		//Con_Printf("%i of %i pixels\n", (int)visiblepixels, (int)allpixels);
@@ -4644,6 +4637,7 @@ void R_Shadow_DrawCoronas(void)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
 		if (usequery)
 		{
@@ -4682,10 +4676,6 @@ void R_Shadow_DrawCoronas(void)
 	case RENDERPATH_SOFT:
 		usequery = false;
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_GLES2:
-		usequery = false;
-		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)
