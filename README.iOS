@@ -1,11 +1,6 @@
 To build DarkPlaces for iOS, you need to extract this zip into the source folder:
-http://ghdigital.com/~havoc/SDLiOS20110205.zip
+http://ghdigital.com/~havoc/SDLiOS20110208.zip
 
-This is built from a personally-modified SDL 1.3, to make an updated include folder and libSDL*.a files, you need to get the SDL 1.3 source (from hg or a nightly build or whatever), then modify this line:
-src/video/uikit/SDL_uikitopenglview.m:        context = [[EAGLContext alloc] initWithAPI: kEAGLRenderingAPIOpenGLES1];
-to:
-src/video/uikit/SDL_uikitopenglview.m:        context = [[EAGLContext alloc] initWithAPI: kEAGLRenderingAPIOpenGLES2];
-
-Then simply open Xcode-iPhoneOS/SDL/SDLiPhoneOS.xcodeproj and build libSDL for both simulator and device and then the SDL Application xcode template.
+This is built from the in-development version of SDL 1.3, to make an updated include folder and libSDL*.a files, you need to get the SDL 1.3 source (from hg or a nightly build or whatever), then simply open Xcode-iPhoneOS/SDL/SDLiPhoneOS.xcodeproj and build libSDL for both simulator and device and then the SDL Application xcode template.
 
 Then copy the include folder and two libSDL*.a files from the Xcode-iPhoneOS/SDL/build/Debug-template (or Release-template) into the darkplaces source folder, and it will build with your updated files.
