@@ -2,10 +2,6 @@
 #include "quakedef.h"
 #include "cdaudio.h"
 
-#ifdef SUPPORTCG
-#include <Cg/cgGL.h>
-#endif
-
 #ifdef SUPPORTD3D
 #include <d3d9.h>
 #ifdef _MSC_VER
@@ -69,9 +65,6 @@ cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is accept
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.3 features (such as GL_ARB_texture_env_combine extension)"};
 cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
-#ifdef SUPPORTCG
-cvar_t vid_cggl = {0, "vid_glcg", "1", "enables faster rendering using the Cg shader library"};
-#endif
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
@@ -931,17 +924,6 @@ void VID_CheckExtensions(void)
 		vid.renderpath = RENDERPATH_GL20;
 		vid.useinterleavedarrays = false;
 	}
-#ifdef SUPPORTCG
-	else if (vid_cggl.integer && (vid.cgcontext = cgCreateContext()))
-	{
-		vid.texunits = 4;
-		vid.teximageunits = 16;
-		vid.texarrayunits = 8;
-		Con_DPrintf("Using NVIDIA Cg rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
-		vid.renderpath = RENDERPATH_CGGL;
-		vid.useinterleavedarrays = false;
-	}
-#endif
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
@@ -1051,7 +1033,6 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -1236,9 +1217,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&vid_gl13);
 	Cvar_RegisterVariable(&vid_gl20);
-#ifdef SUPPORTCG
-	Cvar_RegisterVariable(&vid_cggl);
-#endif
 	Cvar_RegisterVariable(&gl_finish);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");

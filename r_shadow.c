@@ -420,11 +420,7 @@ void R_Shadow_SetShadowMode(void)
 				}
 			}
 			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			// Cg has very little choice in depth texture sampling
-			if (vid.cgcontext)
-				r_shadow_shadowmapsampler = false;
 			break;
-		case RENDERPATH_CGGL:
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
@@ -1897,7 +1893,6 @@ void R_Shadow_RenderMode_Begin(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -2106,7 +2101,6 @@ init_done:
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
@@ -2680,7 +2674,6 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 			break;
@@ -2727,7 +2720,6 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 			break;
@@ -3888,7 +3880,6 @@ void R_Shadow_PrepareLights(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -4285,7 +4276,6 @@ void R_DrawModelShadowMaps(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
 		break;
@@ -4463,7 +4453,6 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			// NOTE: GL_DEPTH_TEST must be enabled or ATI won't count samples, so use GL_DepthFunc instead
@@ -4512,7 +4501,6 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
@@ -4557,7 +4545,6 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			case RENDERPATH_GL11:
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
-			case RENDERPATH_CGGL:
 			case RENDERPATH_GLES2:
 				qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
 				break;
@@ -4587,7 +4574,6 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			case RENDERPATH_GL11:
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
-			case RENDERPATH_CGGL:
 			case RENDERPATH_GLES2:
 				qglBlendEquationEXT(GL_FUNC_ADD_EXT);
 				break;
@@ -4636,7 +4622,6 @@ void R_Shadow_DrawCoronas(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_GLES2:
 		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
 		if (usequery)
