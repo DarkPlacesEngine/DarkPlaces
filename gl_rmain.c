@@ -5207,19 +5207,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ScreenSpecular  >= 0) {p->tex_Texture_ScreenSpecular   = sampler;qglUniform1i(p->loc_Texture_ScreenSpecular  , sampler);sampler++;}
 		if (p->loc_Texture_ReflectMask     >= 0) {p->tex_Texture_ReflectMask      = sampler;qglUniform1i(p->loc_Texture_ReflectMask     , sampler);sampler++;}
 		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
-		if (vid.renderpath == RENDERPATH_GLES2)
-		{
-			qglBindAttribLocation(p->program, GLES2ATTRIB_POSITION , "Attrib_Position" );
-			qglBindAttribLocation(p->program, GLES2ATTRIB_COLOR    , "Attrib_Color"    );
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD0, "Attrib_TexCoord0");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD1, "Attrib_TexCoord1");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD2, "Attrib_TexCoord2");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD3, "Attrib_TexCoord3");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD4, "Attrib_TexCoord4");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD5, "Attrib_TexCoord5");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD6, "Attrib_TexCoord6");
-			qglBindAttribLocation(p->program, GLES2ATTRIB_TEXCOORD7, "Attrib_TexCoord7");
-		}
 		CHECKGLERROR
 		Con_DPrintf("^5GLSL shader %s compiled (%i textures).\n", permutationname, sampler);
 	}
