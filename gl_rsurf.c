@@ -609,7 +609,6 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_DepthTest(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
-	GL_AlphaTest(false);
 //	R_Mesh_ResetTextureState();
 	R_SetupShader_DepthOrShadow();
 	if (ent == r_refdef.scene.worldentity)
