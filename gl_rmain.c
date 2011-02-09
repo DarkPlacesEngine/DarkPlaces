@@ -3976,518 +3976,6 @@ void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutatio
 	if (r_glsl_permutation->loc_ClientTime >= 0) qglUniform1f(r_glsl_permutation->loc_ClientTime, cl.time);
 }
 
-#ifdef SUPPORTCG
-#include <Cg/cgGL.h>
-struct r_cg_permutation_s;
-typedef struct r_cg_permutation_s
-{
-	/// hash lookup data
-	struct r_cg_permutation_s *hashnext;
-	unsigned int mode;
-	unsigned int permutation;
-
-	/// indicates if we have tried compiling this permutation already
-	qboolean compiled;
-	/// 0 if compilation failed
-	CGprogram vprogram;
-	CGprogram fprogram;
-	/// locations of detected parameters in programs, or NULL if not found
-	CGparameter vp_EyePosition;
-	CGparameter vp_FogPlane;
-	CGparameter vp_LightDir;
-	CGparameter vp_LightPosition;
-	CGparameter vp_ModelToLight;
-	CGparameter vp_TexMatrix;
-	CGparameter vp_BackgroundTexMatrix;
-	CGparameter vp_ModelViewProjectionMatrix;
-	CGparameter vp_ModelViewMatrix;
-	CGparameter vp_ShadowMapMatrix;
-
-	CGparameter fp_Texture_First;
-	CGparameter fp_Texture_Second;
-	CGparameter fp_Texture_GammaRamps;
-	CGparameter fp_Texture_Normal;
-	CGparameter fp_Texture_Color;
-	CGparameter fp_Texture_Gloss;
-	CGparameter fp_Texture_Glow;
-	CGparameter fp_Texture_SecondaryNormal;
-	CGparameter fp_Texture_SecondaryColor;
-	CGparameter fp_Texture_SecondaryGloss;
-	CGparameter fp_Texture_SecondaryGlow;
-	CGparameter fp_Texture_Pants;
-	CGparameter fp_Texture_Shirt;
-	CGparameter fp_Texture_FogHeightTexture;
-	CGparameter fp_Texture_FogMask;
-	CGparameter fp_Texture_Lightmap;
-	CGparameter fp_Texture_Deluxemap;
-	CGparameter fp_Texture_Attenuation;
-	CGparameter fp_Texture_Cube;
-	CGparameter fp_Texture_Refraction;
-	CGparameter fp_Texture_Reflection;
-	CGparameter fp_Texture_ShadowMap2D;
-	CGparameter fp_Texture_CubeProjection;
-	CGparameter fp_Texture_ScreenDepth;
-	CGparameter fp_Texture_ScreenNormalMap;
-	CGparameter fp_Texture_ScreenDiffuse;
-	CGparameter fp_Texture_ScreenSpecular;
-	CGparameter fp_Texture_ReflectMask;
-	CGparameter fp_Texture_ReflectCube;
-	CGparameter fp_Alpha;
-	CGparameter fp_BloomBlur_Parameters;
-	CGparameter fp_ClientTime;
-	CGparameter fp_Color_Ambient;
-	CGparameter fp_Color_Diffuse;
-	CGparameter fp_Color_Specular;
-	CGparameter fp_Color_Glow;
-	CGparameter fp_Color_Pants;
-	CGparameter fp_Color_Shirt;
-	CGparameter fp_DeferredColor_Ambient;
-	CGparameter fp_DeferredColor_Diffuse;
-	CGparameter fp_DeferredColor_Specular;
-	CGparameter fp_DeferredMod_Diffuse;
-	CGparameter fp_DeferredMod_Specular;
-	CGparameter fp_DistortScaleRefractReflect;
-	CGparameter fp_EyePosition;
-	CGparameter fp_FogColor;
-	CGparameter fp_FogHeightFade;
-	CGparameter fp_FogPlane;
-	CGparameter fp_FogPlaneViewDist;
-	CGparameter fp_FogRangeRecip;
-	CGparameter fp_LightColor;
-	CGparameter fp_LightDir;
-	CGparameter fp_LightPosition;
-	CGparameter fp_OffsetMapping_Scale;
-	CGparameter fp_PixelSize;
-	CGparameter fp_ReflectColor;
-	CGparameter fp_ReflectFactor;
-	CGparameter fp_ReflectOffset;
-	CGparameter fp_RefractColor;
-	CGparameter fp_Saturation;
-	CGparameter fp_ScreenCenterRefractReflect;
-	CGparameter fp_ScreenScaleRefractReflect;
-	CGparameter fp_ScreenToDepth;
-	CGparameter fp_ShadowMap_Parameters;
-	CGparameter fp_ShadowMap_TextureScale;
-	CGparameter fp_SpecularPower;
-	CGparameter fp_UserVec1;
-	CGparameter fp_UserVec2;
-	CGparameter fp_UserVec3;
-	CGparameter fp_UserVec4;
-	CGparameter fp_ViewTintColor;
-	CGparameter fp_ViewToLight;
-	CGparameter fp_PixelToScreenTexCoord;
-	CGparameter fp_ModelToReflectCube;
-	CGparameter fp_BloomColorSubtract;
-	CGparameter fp_NormalmapScrollBlend;
-}
-r_cg_permutation_t;
-
-/// information about each possible shader permutation
-r_cg_permutation_t *r_cg_permutationhash[SHADERMODE_COUNT][SHADERPERMUTATION_HASHSIZE];
-/// currently selected permutation
-r_cg_permutation_t *r_cg_permutation;
-/// storage for permutations linked in the hash table
-memexpandablearray_t r_cg_permutationarray;
-
-#define CHECKCGERROR {CGerror err = cgGetError(), err2 = err;if (err){Con_Printf("%s:%i CG error %i: %s : %s\n", __FILE__, __LINE__, err, cgGetErrorString(err), cgGetLastErrorString(&err2));if (err == 1) Con_Printf("last listing:\n%s\n", cgGetLastListing(vid.cgcontext));}}
-
-static r_cg_permutation_t *R_CG_FindPermutation(unsigned int mode, unsigned int permutation)
-{
-	//unsigned int hashdepth = 0;
-	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
-	r_cg_permutation_t *p;
-	for (p = r_cg_permutationhash[mode][hashindex];p;p = p->hashnext)
-	{
-		if (p->mode == mode && p->permutation == permutation)
-		{
-			//if (hashdepth > 10)
-			//	Con_Printf("R_CG_FindPermutation: Warning: %i:%i has hashdepth %i\n", mode, permutation, hashdepth);
-			return p;
-		}
-		//hashdepth++;
-	}
-	p = (r_cg_permutation_t*)Mem_ExpandableArray_AllocRecord(&r_cg_permutationarray);
-	p->mode = mode;
-	p->permutation = permutation;
-	p->hashnext = r_cg_permutationhash[mode][hashindex];
-	r_cg_permutationhash[mode][hashindex] = p;
-	//if (hashdepth > 10)
-	//	Con_Printf("R_CG_FindPermutation: Warning: %i:%i has hashdepth %i\n", mode, permutation, hashdepth);
-	return p;
-}
-
-static char *R_CG_GetText(const char *filename, qboolean printfromdisknotice)
-{
-	char *shaderstring;
-	if (!filename || !filename[0])
-		return NULL;
-	if (!strcmp(filename, "hlsl/default.hlsl"))
-	{
-		if (!hlslshaderstring)
-		{
-			hlslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-			if (hlslshaderstring)
-				Con_DPrintf("Loading shaders from file %s...\n", filename);
-			else
-				hlslshaderstring = (char *)builtinhlslshaderstring;
-		}
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
-		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
-		return shaderstring;
-	}
-	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-	if (shaderstring)
-	{
-		if (printfromdisknotice)
-			Con_DPrintf("from disk %s... ", filename);
-		return shaderstring;
-	}
-	return shaderstring;
-}
-
-static void R_CG_CacheShader(r_cg_permutation_t *p, const char *cachename, const char *vertstring, const char *fragstring)
-{
-	// TODO: load or create .fp and .vp shader files
-}
-
-static void R_CG_CompilePermutation(r_cg_permutation_t *p, unsigned int mode, unsigned int permutation)
-{
-	int i;
-	shadermodeinfo_t *modeinfo = hlslshadermodeinfo + mode;
-	int vertstring_length = 0;
-	int geomstring_length = 0;
-	int fragstring_length = 0;
-	char *t;
-	char *vertexstring, *geometrystring, *fragmentstring;
-	char *vertstring, *geomstring, *fragstring;
-	char permutationname[256];
-	char cachename[256];
-	CGprofile vertexProfile;
-	CGprofile fragmentProfile;
-	int vertstrings_count = 0;
-	int geomstrings_count = 0;
-	int fragstrings_count = 0;
-	const char *vertstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *geomstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *fragstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-
-	if (p->compiled)
-		return;
-	p->compiled = true;
-	p->vprogram = NULL;
-	p->fprogram = NULL;
-
-	permutationname[0] = 0;
-	cachename[0] = 0;
-	vertexstring   = R_CG_GetText(modeinfo->vertexfilename, true);
-	geometrystring = R_CG_GetText(modeinfo->geometryfilename, false);
-	fragmentstring = R_CG_GetText(modeinfo->fragmentfilename, false);
-
-	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
-	strlcat(cachename, "cggl/", sizeof(cachename));
-
-	// the first pretext is which type of shader to compile as
-	// (later these will all be bound together as a program object)
-	vertstrings_list[vertstrings_count++] = "#define VERTEX_SHADER\n";
-	geomstrings_list[geomstrings_count++] = "#define GEOMETRY_SHADER\n";
-	fragstrings_list[fragstrings_count++] = "#define FRAGMENT_SHADER\n";
-
-	// the second pretext is the mode (for example a light source)
-	vertstrings_list[vertstrings_count++] = modeinfo->pretext;
-	geomstrings_list[geomstrings_count++] = modeinfo->pretext;
-	fragstrings_list[fragstrings_count++] = modeinfo->pretext;
-	strlcat(permutationname, modeinfo->name, sizeof(permutationname));
-	strlcat(cachename, modeinfo->name, sizeof(cachename));
-
-	// now add all the permutation pretexts
-	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-	{
-		if (permutation & (1<<i))
-		{
-			vertstrings_list[vertstrings_count++] = shaderpermutationinfo[i].pretext;
-			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i].pretext;
-			fragstrings_list[fragstrings_count++] = shaderpermutationinfo[i].pretext;
-			strlcat(permutationname, shaderpermutationinfo[i].name, sizeof(permutationname));
-			strlcat(cachename, shaderpermutationinfo[i].name, sizeof(cachename));
-		}
-		else
-		{
-			// keep line numbers correct
-			vertstrings_list[vertstrings_count++] = "\n";
-			geomstrings_list[geomstrings_count++] = "\n";
-			fragstrings_list[fragstrings_count++] = "\n";
-		}
-	}
-
-	// add static parms
-	R_CompileShader_AddStaticParms(mode, permutation);
-	memcpy(vertstrings_list + vertstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
-	vertstrings_count += shaderstaticparms_count;
-	memcpy(geomstrings_list + geomstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
-	geomstrings_count += shaderstaticparms_count;
-	memcpy(fragstrings_list + fragstrings_count, shaderstaticparmstrings_list, sizeof(*vertstrings_list) * shaderstaticparms_count);
-	fragstrings_count += shaderstaticparms_count;
-
-	// replace spaces in the cachename with _ characters
-	for (i = 0;cachename[i];i++)
-		if (cachename[i] == ' ')
-			cachename[i] = '_';
-
-	// now append the shader text itself
-	vertstrings_list[vertstrings_count++] = vertexstring;
-	geomstrings_list[geomstrings_count++] = geometrystring;
-	fragstrings_list[fragstrings_count++] = fragmentstring;
-
-	// if any sources were NULL, clear the respective list
-	if (!vertexstring)
-		vertstrings_count = 0;
-	if (!geometrystring)
-		geomstrings_count = 0;
-	if (!fragmentstring)
-		fragstrings_count = 0;
-
-	vertstring_length = 0;
-	for (i = 0;i < vertstrings_count;i++)
-		vertstring_length += strlen(vertstrings_list[i]);
-	vertstring = t = Mem_Alloc(tempmempool, vertstring_length + 1);
-	for (i = 0;i < vertstrings_count;t += strlen(vertstrings_list[i]), i++)
-		memcpy(t, vertstrings_list[i], strlen(vertstrings_list[i]));
-
-	geomstring_length = 0;
-	for (i = 0;i < geomstrings_count;i++)
-		geomstring_length += strlen(geomstrings_list[i]);
-	geomstring = t = Mem_Alloc(tempmempool, geomstring_length + 1);
-	for (i = 0;i < geomstrings_count;t += strlen(geomstrings_list[i]), i++)
-		memcpy(t, geomstrings_list[i], strlen(geomstrings_list[i]));
-
-	fragstring_length = 0;
-	for (i = 0;i < fragstrings_count;i++)
-		fragstring_length += strlen(fragstrings_list[i]);
-	fragstring = t = Mem_Alloc(tempmempool, fragstring_length + 1);
-	for (i = 0;i < fragstrings_count;t += strlen(fragstrings_list[i]), i++)
-		memcpy(t, fragstrings_list[i], strlen(fragstrings_list[i]));
-
-	CHECKGLERROR
-	CHECKCGERROR
-	//vertexProfile = CG_PROFILE_ARBVP1;
-	//fragmentProfile = CG_PROFILE_ARBFP1;
-	vertexProfile = cgGLGetLatestProfile(CG_GL_VERTEX);CHECKCGERROR
-	fragmentProfile = cgGLGetLatestProfile(CG_GL_FRAGMENT);CHECKCGERROR
-	//cgGLSetOptimalOptions(vertexProfile);CHECKCGERROR
-	//cgGLSetOptimalOptions(fragmentProfile);CHECKCGERROR
-	//cgSetAutoCompile(vid.cgcontext, CG_COMPILE_MANUAL);CHECKCGERROR
-	CHECKGLERROR
-
-	// try to load the cached shader, or generate one
-	R_CG_CacheShader(p, cachename, vertstring, fragstring);
-
-	// if caching failed, do a dynamic compile for now
-	CHECKCGERROR
-	if (vertstring[0] && !p->vprogram)
-		p->vprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, vertstring, vertexProfile, NULL, NULL);
-	CHECKCGERROR
-	if (fragstring[0] && !p->fprogram)
-		p->fprogram = cgCreateProgram(vid.cgcontext, CG_SOURCE, fragstring, fragmentProfile, NULL, NULL);
-	CHECKCGERROR
-
-	// look up all the uniform variable names we care about, so we don't
-	// have to look them up every time we set them
-	if (p->vprogram)
-	{
-		CHECKCGERROR
-		cgGLLoadProgram(p->vprogram);CHECKCGERROR CHECKGLERROR
-		cgGLEnableProfile(vertexProfile);CHECKCGERROR CHECKGLERROR
-		p->vp_EyePosition                = cgGetNamedParameter(p->vprogram, "EyePosition");
-		p->vp_FogPlane                   = cgGetNamedParameter(p->vprogram, "FogPlane");
-		p->vp_LightDir                   = cgGetNamedParameter(p->vprogram, "LightDir");
-		p->vp_LightPosition              = cgGetNamedParameter(p->vprogram, "LightPosition");
-		p->vp_ModelToLight               = cgGetNamedParameter(p->vprogram, "ModelToLight");
-		p->vp_TexMatrix                  = cgGetNamedParameter(p->vprogram, "TexMatrix");
-		p->vp_BackgroundTexMatrix        = cgGetNamedParameter(p->vprogram, "BackgroundTexMatrix");
-		p->vp_ModelViewProjectionMatrix  = cgGetNamedParameter(p->vprogram, "ModelViewProjectionMatrix");
-		p->vp_ModelViewMatrix            = cgGetNamedParameter(p->vprogram, "ModelViewMatrix");
-		p->vp_ShadowMapMatrix            = cgGetNamedParameter(p->vprogram, "ShadowMapMatrix");
-		CHECKCGERROR
-	}
-	if (p->fprogram)
-	{
-		CHECKCGERROR
-		cgGLLoadProgram(p->fprogram);CHECKCGERROR CHECKGLERROR
-		cgGLEnableProfile(fragmentProfile);CHECKCGERROR CHECKGLERROR
-		p->fp_Texture_First              = cgGetNamedParameter(p->fprogram, "Texture_First");
-		p->fp_Texture_Second             = cgGetNamedParameter(p->fprogram, "Texture_Second");
-		p->fp_Texture_GammaRamps         = cgGetNamedParameter(p->fprogram, "Texture_GammaRamps");
-		p->fp_Texture_Normal             = cgGetNamedParameter(p->fprogram, "Texture_Normal");
-		p->fp_Texture_Color              = cgGetNamedParameter(p->fprogram, "Texture_Color");
-		p->fp_Texture_Gloss              = cgGetNamedParameter(p->fprogram, "Texture_Gloss");
-		p->fp_Texture_Glow               = cgGetNamedParameter(p->fprogram, "Texture_Glow");
-		p->fp_Texture_SecondaryNormal    = cgGetNamedParameter(p->fprogram, "Texture_SecondaryNormal");
-		p->fp_Texture_SecondaryColor     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryColor");
-		p->fp_Texture_SecondaryGloss     = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGloss");
-		p->fp_Texture_SecondaryGlow      = cgGetNamedParameter(p->fprogram, "Texture_SecondaryGlow");
-		p->fp_Texture_Pants              = cgGetNamedParameter(p->fprogram, "Texture_Pants");
-		p->fp_Texture_Shirt              = cgGetNamedParameter(p->fprogram, "Texture_Shirt");
-		p->fp_Texture_FogHeightTexture   = cgGetNamedParameter(p->fprogram, "Texture_FogHeightTexture");
-		p->fp_Texture_FogMask            = cgGetNamedParameter(p->fprogram, "Texture_FogMask");
-		p->fp_Texture_Lightmap           = cgGetNamedParameter(p->fprogram, "Texture_Lightmap");
-		p->fp_Texture_Deluxemap          = cgGetNamedParameter(p->fprogram, "Texture_Deluxemap");
-		p->fp_Texture_Attenuation        = cgGetNamedParameter(p->fprogram, "Texture_Attenuation");
-		p->fp_Texture_Cube               = cgGetNamedParameter(p->fprogram, "Texture_Cube");
-		p->fp_Texture_Refraction         = cgGetNamedParameter(p->fprogram, "Texture_Refraction");
-		p->fp_Texture_Reflection         = cgGetNamedParameter(p->fprogram, "Texture_Reflection");
-		p->fp_Texture_ShadowMap2D        = cgGetNamedParameter(p->fprogram, "Texture_ShadowMap2D");
-		p->fp_Texture_CubeProjection     = cgGetNamedParameter(p->fprogram, "Texture_CubeProjection");
-		p->fp_Texture_ScreenDepth        = cgGetNamedParameter(p->fprogram, "Texture_ScreenDepth");
-		p->fp_Texture_ScreenNormalMap    = cgGetNamedParameter(p->fprogram, "Texture_ScreenNormalMap");
-		p->fp_Texture_ScreenDiffuse      = cgGetNamedParameter(p->fprogram, "Texture_ScreenDiffuse");
-		p->fp_Texture_ScreenSpecular     = cgGetNamedParameter(p->fprogram, "Texture_ScreenSpecular");
-		p->fp_Texture_ReflectMask        = cgGetNamedParameter(p->fprogram, "Texture_ReflectMask");
-		p->fp_Texture_ReflectCube        = cgGetNamedParameter(p->fprogram, "Texture_ReflectCube");
-		p->fp_Alpha                      = cgGetNamedParameter(p->fprogram, "Alpha");
-		p->fp_BloomBlur_Parameters       = cgGetNamedParameter(p->fprogram, "BloomBlur_Parameters");
-		p->fp_ClientTime                 = cgGetNamedParameter(p->fprogram, "ClientTime");
-		p->fp_Color_Ambient              = cgGetNamedParameter(p->fprogram, "Color_Ambient");
-		p->fp_Color_Diffuse              = cgGetNamedParameter(p->fprogram, "Color_Diffuse");
-		p->fp_Color_Specular             = cgGetNamedParameter(p->fprogram, "Color_Specular");
-		p->fp_Color_Glow                 = cgGetNamedParameter(p->fprogram, "Color_Glow");
-		p->fp_Color_Pants                = cgGetNamedParameter(p->fprogram, "Color_Pants");
-		p->fp_Color_Shirt                = cgGetNamedParameter(p->fprogram, "Color_Shirt");
-		p->fp_DeferredColor_Ambient      = cgGetNamedParameter(p->fprogram, "DeferredColor_Ambient");
-		p->fp_DeferredColor_Diffuse      = cgGetNamedParameter(p->fprogram, "DeferredColor_Diffuse");
-		p->fp_DeferredColor_Specular     = cgGetNamedParameter(p->fprogram, "DeferredColor_Specular");
-		p->fp_DeferredMod_Diffuse        = cgGetNamedParameter(p->fprogram, "DeferredMod_Diffuse");
-		p->fp_DeferredMod_Specular       = cgGetNamedParameter(p->fprogram, "DeferredMod_Specular");
-		p->fp_DistortScaleRefractReflect = cgGetNamedParameter(p->fprogram, "DistortScaleRefractReflect");
-		p->fp_EyePosition                = cgGetNamedParameter(p->fprogram, "EyePosition");
-		p->fp_FogColor                   = cgGetNamedParameter(p->fprogram, "FogColor");
-		p->fp_FogHeightFade              = cgGetNamedParameter(p->fprogram, "FogHeightFade");
-		p->fp_FogPlane                   = cgGetNamedParameter(p->fprogram, "FogPlane");
-		p->fp_FogPlaneViewDist           = cgGetNamedParameter(p->fprogram, "FogPlaneViewDist");
-		p->fp_FogRangeRecip              = cgGetNamedParameter(p->fprogram, "FogRangeRecip");
-		p->fp_LightColor                 = cgGetNamedParameter(p->fprogram, "LightColor");
-		p->fp_LightDir                   = cgGetNamedParameter(p->fprogram, "LightDir");
-		p->fp_LightPosition              = cgGetNamedParameter(p->fprogram, "LightPosition");
-		p->fp_OffsetMapping_Scale        = cgGetNamedParameter(p->fprogram, "OffsetMapping_Scale");
-		p->fp_PixelSize                  = cgGetNamedParameter(p->fprogram, "PixelSize");
-		p->fp_ReflectColor               = cgGetNamedParameter(p->fprogram, "ReflectColor");
-		p->fp_ReflectFactor              = cgGetNamedParameter(p->fprogram, "ReflectFactor");
-		p->fp_ReflectOffset              = cgGetNamedParameter(p->fprogram, "ReflectOffset");
-		p->fp_RefractColor               = cgGetNamedParameter(p->fprogram, "RefractColor");
-		p->fp_Saturation                 = cgGetNamedParameter(p->fprogram, "Saturation");
-		p->fp_ScreenCenterRefractReflect = cgGetNamedParameter(p->fprogram, "ScreenCenterRefractReflect");
-		p->fp_ScreenScaleRefractReflect  = cgGetNamedParameter(p->fprogram, "ScreenScaleRefractReflect");
-		p->fp_ScreenToDepth              = cgGetNamedParameter(p->fprogram, "ScreenToDepth");
-		p->fp_ShadowMap_Parameters       = cgGetNamedParameter(p->fprogram, "ShadowMap_Parameters");
-		p->fp_ShadowMap_TextureScale     = cgGetNamedParameter(p->fprogram, "ShadowMap_TextureScale");
-		p->fp_SpecularPower              = cgGetNamedParameter(p->fprogram, "SpecularPower");
-		p->fp_UserVec1                   = cgGetNamedParameter(p->fprogram, "UserVec1");
-		p->fp_UserVec2                   = cgGetNamedParameter(p->fprogram, "UserVec2");
-		p->fp_UserVec3                   = cgGetNamedParameter(p->fprogram, "UserVec3");
-		p->fp_UserVec4                   = cgGetNamedParameter(p->fprogram, "UserVec4");
-		p->fp_ViewTintColor              = cgGetNamedParameter(p->fprogram, "ViewTintColor");
-		p->fp_ViewToLight                = cgGetNamedParameter(p->fprogram, "ViewToLight");
-		p->fp_PixelToScreenTexCoord      = cgGetNamedParameter(p->fprogram, "PixelToScreenTexCoord");
-		p->fp_ModelToReflectCube         = cgGetNamedParameter(p->fprogram, "ModelToReflectCube");
-		p->fp_BloomColorSubtract         = cgGetNamedParameter(p->fprogram, "BloomColorSubtract");
-		p->fp_NormalmapScrollBlend       = cgGetNamedParameter(p->fprogram, "NormalmapScrollBlend");
-		CHECKCGERROR
-	}
-
-	if ((p->vprogram || !vertstring[0]) && (p->fprogram || !fragstring[0]))
-		Con_DPrintf("^5CG shader %s compiled.\n", permutationname);
-	else
-		Con_Printf("^1CG shader %s failed!  some features may not work properly.\n", permutationname);
-
-	// free the strings
-	if (vertstring)
-		Mem_Free(vertstring);
-	if (geomstring)
-		Mem_Free(geomstring);
-	if (fragstring)
-		Mem_Free(fragstring);
-	if (vertexstring)
-		Mem_Free(vertexstring);
-	if (geometrystring)
-		Mem_Free(geometrystring);
-	if (fragmentstring)
-		Mem_Free(fragmentstring);
-}
-
-void R_SetupShader_SetPermutationCG(unsigned int mode, unsigned int permutation)
-{
-	r_cg_permutation_t *perm = R_CG_FindPermutation(mode, permutation);
-	CHECKGLERROR
-	CHECKCGERROR
-	if (r_cg_permutation != perm)
-	{
-		r_cg_permutation = perm;
-		if (!r_cg_permutation->vprogram && !r_cg_permutation->fprogram)
-		{
-			if (!r_cg_permutation->compiled)
-				R_CG_CompilePermutation(perm, mode, permutation);
-			if (!r_cg_permutation->vprogram && !r_cg_permutation->fprogram)
-			{
-				// remove features until we find a valid permutation
-				int i;
-				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-				{
-					// reduce i more quickly whenever it would not remove any bits
-					int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
-					if (!(permutation & j))
-						continue;
-					permutation -= j;
-					r_cg_permutation = R_CG_FindPermutation(mode, permutation);
-					if (!r_cg_permutation->compiled)
-						R_CG_CompilePermutation(perm, mode, permutation);
-					if (r_cg_permutation->vprogram || r_cg_permutation->fprogram)
-						break;
-				}
-				if (i >= SHADERPERMUTATION_COUNT)
-				{
-					//Con_Printf("Could not find a working Cg shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
-					r_cg_permutation = R_CG_FindPermutation(mode, permutation);
-					return; // no bit left to clear, entire mode is broken
-				}
-			}
-		}
-		CHECKGLERROR
-		CHECKCGERROR
-		if (r_cg_permutation->vprogram)
-		{
-			cgGLLoadProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
-			cgGLBindProgram(r_cg_permutation->vprogram);CHECKCGERROR CHECKGLERROR
-			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-		}
-		else
-		{
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-		}
-		if (r_cg_permutation->fprogram)
-		{
-			cgGLLoadProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
-			cgGLBindProgram(r_cg_permutation->fprogram);CHECKCGERROR CHECKGLERROR
-			cgGLEnableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-		}
-		else
-		{
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-		}
-	}
-	CHECKCGERROR
-	if (r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
-	if (r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
-	if (r_cg_permutation->fp_ClientTime) cgGLSetParameter1f(r_cg_permutation->fp_ClientTime, cl.time);CHECKCGERROR
-}
-
-void CG_BindTexture(CGparameter param, rtexture_t *tex)
-{
-	cgGLSetTextureParameter(param, R_GetTexture(tex));
-	cgGLEnableTextureParameter(param);
-}
-#endif
-
 #ifdef SUPPORTD3D
 
 #ifdef SUPPORTD3D
@@ -4973,7 +4461,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 				}
 				if (i >= SHADERPERMUTATION_COUNT)
 				{
-					//Con_Printf("Could not find a working Cg shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
+					//Con_Printf("Could not find a working HLSL shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
 					r_hlsl_permutation = R_HLSL_FindPermutation(mode, permutation);
 					return; // no bit left to clear, entire mode is broken
 				}
@@ -5012,10 +4500,6 @@ void R_GLSL_Restart_f(void)
 		{
 			r_hlsl_permutation_t *p;
 			r_hlsl_permutation = NULL;
-//			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-//			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-//			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-//			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
 			limit = Mem_ExpandableArray_IndexRange(&r_hlsl_permutationarray);
 			for (i = 0;i < limit;i++)
 			{
@@ -5054,31 +4538,6 @@ void R_GLSL_Restart_f(void)
 			}
 			memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 		}
-		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		{
-			r_cg_permutation_t *p;
-			r_cg_permutation = NULL;
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_VERTEX));CHECKCGERROR CHECKGLERROR
-			cgGLDisableProfile(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-			cgGLUnbindProgram(cgGLGetLatestProfile(CG_GL_FRAGMENT));CHECKCGERROR CHECKGLERROR
-			limit = Mem_ExpandableArray_IndexRange(&r_cg_permutationarray);
-			for (i = 0;i < limit;i++)
-			{
-				if ((p = (r_cg_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_cg_permutationarray, i)))
-				{
-					if (p->vprogram)
-						cgDestroyProgram(p->vprogram);
-					if (p->fprogram)
-						cgDestroyProgram(p->fprogram);
-					Mem_ExpandableArray_FreeRecord(&r_cg_permutationarray, (void*)p);
-				}
-			}
-			memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
-		}
-#endif
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
@@ -5153,14 +4612,6 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
 		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
 		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		CHECKCGERROR
-		R_SetupShader_SetPermutationCG(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
-		if (r_cg_permutation->fp_Texture_First ) CG_BindTexture(r_cg_permutation->fp_Texture_First , first );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Second) CG_BindTexture(r_cg_permutation->fp_Texture_Second, second);CHECKCGERROR
-#endif
-		break;
 	case RENDERPATH_GL13:
 		R_Mesh_TexBind(0, first );
 		R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
@@ -5198,11 +4649,6 @@ void R_SetupShader_DepthOrShadow(void)
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, 0);
 		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		R_SetupShader_SetPermutationCG(SHADERMODE_DEPTH_OR_SHADOW, 0);
-#endif
-		break;
 	case RENDERPATH_GL13:
 		R_Mesh_TexBind(0, 0);
 		R_Mesh_TexBind(1, 0);
@@ -5234,11 +4680,6 @@ void R_SetupShader_ShowDepth(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, 0);
-		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		R_SetupShader_SetPermutationCG(SHADERMODE_SHOWDEPTH, 0);
-#endif
 		break;
 	case RENDERPATH_GL13:
 		break;
@@ -6015,176 +5456,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		CHECKGLERROR
 		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		if (!vid.useinterleavedarrays)
-		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
-			R_Mesh_VertexPointer(     3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
-			R_Mesh_ColorPointer(      4, GL_FLOAT, sizeof(float[4]), rsurface.batchlightmapcolor4f, rsurface.batchlightmapcolor4f_vertexbuffer, rsurface.batchlightmapcolor4f_bufferoffset);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordtexture2f_vertexbuffer, rsurface.batchtexcoordtexture2f_bufferoffset);
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchsvector3f, rsurface.batchsvector3f_vertexbuffer, rsurface.batchsvector3f_bufferoffset);
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchtvector3f, rsurface.batchtvector3f_vertexbuffer, rsurface.batchtvector3f_bufferoffset);
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchnormal3f, rsurface.batchnormal3f_vertexbuffer, rsurface.batchnormal3f_bufferoffset);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordlightmap2f, rsurface.batchtexcoordlightmap2f_vertexbuffer, rsurface.batchtexcoordlightmap2f_bufferoffset);
-		}
-		else
-		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
-			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
-		}
-		R_SetupShader_SetPermutationCG(mode, permutation);
-		if (r_cg_permutation->fp_ModelToReflectCube) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->fp_ModelToReflectCube, m16f);}CHECKCGERROR
-		if (mode == SHADERMODE_LIGHTSOURCE)
-		{
-			if (r_cg_permutation->vp_ModelToLight) {Matrix4x4_ToArrayFloatGL(&rsurface.entitytolight, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelToLight, m16f);}CHECKCGERROR
-			if (r_cg_permutation->vp_LightPosition) cgGLSetParameter3f(r_cg_permutation->vp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);CHECKCGERROR
-		}
-		else
-		{
-			if (mode == SHADERMODE_LIGHTDIRECTION)
-			{
-				if (r_cg_permutation->vp_LightDir) cgGLSetParameter3f(r_cg_permutation->vp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
-			}
-		}
-		if (r_cg_permutation->vp_TexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_TexMatrix, m16f);}CHECKCGERROR
-		if (r_cg_permutation->vp_BackgroundTexMatrix) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_BackgroundTexMatrix, m16f);}CHECKCGERROR
-		if (r_cg_permutation->vp_ShadowMapMatrix) {Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);cgGLSetMatrixParameterfc(r_cg_permutation->vp_ShadowMapMatrix, m16f);}CHECKGLERROR
-		if (r_cg_permutation->vp_EyePosition) cgGLSetParameter3f(r_cg_permutation->vp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
-		if (r_cg_permutation->vp_FogPlane) cgGLSetParameter4f(r_cg_permutation->vp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);CHECKCGERROR
-		CHECKGLERROR
-
-		if (mode == SHADERMODE_LIGHTSOURCE)
-		{
-			if (r_cg_permutation->fp_LightPosition) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, rsurface.entitylightorigin[0], rsurface.entitylightorigin[1], rsurface.entitylightorigin[2]);CHECKCGERROR
-			if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, lightcolorbase[0], lightcolorbase[1], lightcolorbase[2]);CHECKCGERROR
-			if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, colormod[0] * ambientscale, colormod[1] * ambientscale, colormod[2] * ambientscale);CHECKCGERROR
-			if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);CHECKCGERROR
-			if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale, r_refdef.view.colorscale * specularscale);CHECKCGERROR
-
-			// additive passes are only darkened by fog, not tinted
-			if (r_cg_permutation->fp_FogColor) cgGLSetParameter3f(r_cg_permutation->fp_FogColor, 0, 0, 0);CHECKCGERROR
-			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));CHECKCGERROR
-		}
-		else
-		{
-			if (mode == SHADERMODE_FLATCOLOR)
-			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, colormod[0], colormod[1], colormod[2]);CHECKCGERROR
-			}
-			else if (mode == SHADERMODE_LIGHTDIRECTION)
-			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
-				if (r_cg_permutation->fp_LightColor) cgGLSetParameter3f(r_cg_permutation->fp_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_LightDir) cgGLSetParameter3f(r_cg_permutation->fp_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);CHECKCGERROR
-			}
-			else
-			{
-				if (r_cg_permutation->fp_Color_Ambient) cgGLSetParameter3f(r_cg_permutation->fp_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_Color_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);CHECKCGERROR
-				if (r_cg_permutation->fp_Color_Specular) cgGLSetParameter3f(r_cg_permutation->fp_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Diffuse) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
-				if (r_cg_permutation->fp_DeferredMod_Specular) cgGLSetParameter3f(r_cg_permutation->fp_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);CHECKCGERROR
-			}
-			// additive passes are only darkened by fog, not tinted
-			if (r_cg_permutation->fp_FogColor)
-			{
-				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
-					cgGLSetParameter3f(r_cg_permutation->fp_FogColor, 0, 0, 0);
-				else
-					cgGLSetParameter3f(r_cg_permutation->fp_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
-				CHECKCGERROR
-			}
-			if (r_cg_permutation->fp_DistortScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_DistortScaleRefractReflect, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_refractdistort.value * rsurface.texture->refractfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor, r_water_reflectdistort.value * rsurface.texture->reflectfactor);CHECKCGERROR
-			if (r_cg_permutation->fp_ScreenScaleRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenScaleRefractReflect, r_waterstate.screenscale[0], r_waterstate.screenscale[1], r_waterstate.screenscale[0], r_waterstate.screenscale[1]);CHECKCGERROR
-			if (r_cg_permutation->fp_ScreenCenterRefractReflect) cgGLSetParameter4f(r_cg_permutation->fp_ScreenCenterRefractReflect, r_waterstate.screencenter[0], r_waterstate.screencenter[1], r_waterstate.screencenter[0], r_waterstate.screencenter[1]);CHECKCGERROR
-			if (r_cg_permutation->fp_RefractColor) cgGLSetParameter4f(r_cg_permutation->fp_RefractColor, rsurface.texture->refractcolor4f[0], rsurface.texture->refractcolor4f[1], rsurface.texture->refractcolor4f[2], rsurface.texture->refractcolor4f[3] * rsurface.texture->lightmapcolor[3]);CHECKCGERROR
-			if (r_cg_permutation->fp_ReflectColor) cgGLSetParameter4f(r_cg_permutation->fp_ReflectColor, rsurface.texture->reflectcolor4f[0], rsurface.texture->reflectcolor4f[1], rsurface.texture->reflectcolor4f[2], rsurface.texture->reflectcolor4f[3] * rsurface.texture->lightmapcolor[3]);CHECKCGERROR
-			if (r_cg_permutation->fp_ReflectFactor) cgGLSetParameter1f(r_cg_permutation->fp_ReflectFactor, rsurface.texture->reflectmax - rsurface.texture->reflectmin);CHECKCGERROR
-			if (r_cg_permutation->fp_ReflectOffset) cgGLSetParameter1f(r_cg_permutation->fp_ReflectOffset, rsurface.texture->reflectmin);CHECKCGERROR
-			if (r_cg_permutation->fp_SpecularPower) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, rsurface.texture->specularpower * (r_shadow_glossexact.integer ? 0.25f : 1.0f));CHECKCGERROR
-			if (r_cg_permutation->fp_NormalmapScrollBlend) cgGLSetParameter2f(r_cg_permutation->fp_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
-		}
-		if (r_cg_permutation->fp_ShadowMap_TextureScale) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
-		if (r_cg_permutation->fp_ShadowMap_Parameters) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
-		if (r_cg_permutation->fp_Color_Glow) cgGLSetParameter3f(r_cg_permutation->fp_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);CHECKCGERROR
-		if (r_cg_permutation->fp_Alpha) cgGLSetParameter1f(r_cg_permutation->fp_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));CHECKCGERROR
-		if (r_cg_permutation->fp_EyePosition) cgGLSetParameter3f(r_cg_permutation->fp_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);CHECKCGERROR
-		if (r_cg_permutation->fp_Color_Pants)
-		{
-			if (rsurface.texture->pantstexture)
-				cgGLSetParameter3f(r_cg_permutation->fp_Color_Pants, rsurface.colormap_pantscolor[0], rsurface.colormap_pantscolor[1], rsurface.colormap_pantscolor[2]);
-			else
-				cgGLSetParameter3f(r_cg_permutation->fp_Color_Pants, 0, 0, 0);
-			CHECKCGERROR
-		}
-		if (r_cg_permutation->fp_Color_Shirt)
-		{
-			if (rsurface.texture->shirttexture)
-				cgGLSetParameter3f(r_cg_permutation->fp_Color_Shirt, rsurface.colormap_shirtcolor[0], rsurface.colormap_shirtcolor[1], rsurface.colormap_shirtcolor[2]);
-			else
-				cgGLSetParameter3f(r_cg_permutation->fp_Color_Shirt, 0, 0, 0);
-			CHECKCGERROR
-		}
-		if (r_cg_permutation->fp_FogPlane) cgGLSetParameter4f(r_cg_permutation->fp_FogPlane, rsurface.fogplane[0], rsurface.fogplane[1], rsurface.fogplane[2], rsurface.fogplane[3]);CHECKCGERROR
-		if (r_cg_permutation->fp_FogPlaneViewDist) cgGLSetParameter1f(r_cg_permutation->fp_FogPlaneViewDist, rsurface.fogplaneviewdist);CHECKCGERROR
-		if (r_cg_permutation->fp_FogRangeRecip) cgGLSetParameter1f(r_cg_permutation->fp_FogRangeRecip, rsurface.fograngerecip);CHECKCGERROR
-		if (r_cg_permutation->fp_FogHeightFade) cgGLSetParameter1f(r_cg_permutation->fp_FogHeightFade, rsurface.fogheightfade);CHECKCGERROR
-		if (r_cg_permutation->fp_OffsetMapping_Scale) cgGLSetParameter1f(r_cg_permutation->fp_OffsetMapping_Scale, r_glsl_offsetmapping_scale.value);CHECKCGERROR
-		if (r_cg_permutation->fp_ScreenToDepth) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
-		if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
-
-	//	if (r_cg_permutation->fp_Texture_First          ) CG_BindTexture(r_cg_permutation->fp_Texture_First          , r_texture_white                                     );CHECKCGERROR
-	//	if (r_cg_permutation->fp_Texture_Second         ) CG_BindTexture(r_cg_permutation->fp_Texture_Second         , r_texture_white                                     );CHECKCGERROR
-	//	if (r_cg_permutation->fp_Texture_GammaRamps     ) CG_BindTexture(r_cg_permutation->fp_Texture_GammaRamps     , r_texture_gammaramps                                );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Normal         ) CG_BindTexture(r_cg_permutation->fp_Texture_Normal         , rsurface.texture->nmaptexture                       );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Color          ) CG_BindTexture(r_cg_permutation->fp_Texture_Color          , rsurface.texture->basetexture                       );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Gloss          ) CG_BindTexture(r_cg_permutation->fp_Texture_Gloss          , rsurface.texture->glosstexture                      );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Glow           ) CG_BindTexture(r_cg_permutation->fp_Texture_Glow           , rsurface.texture->glowtexture                       );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_SecondaryNormal) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryNormal, rsurface.texture->backgroundnmaptexture             );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_SecondaryColor ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryColor , rsurface.texture->backgroundbasetexture             );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_SecondaryGloss ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryGloss , rsurface.texture->backgroundglosstexture            );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_SecondaryGlow  ) CG_BindTexture(r_cg_permutation->fp_Texture_SecondaryGlow  , rsurface.texture->backgroundglowtexture             );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Pants          ) CG_BindTexture(r_cg_permutation->fp_Texture_Pants          , rsurface.texture->pantstexture                      );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Shirt          ) CG_BindTexture(r_cg_permutation->fp_Texture_Shirt          , rsurface.texture->shirttexture                      );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ReflectMask    ) CG_BindTexture(r_cg_permutation->fp_Texture_ReflectMask    , rsurface.texture->reflectmasktexture                );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ReflectCube    ) CG_BindTexture(r_cg_permutation->fp_Texture_ReflectCube    , rsurface.texture->reflectcubetexture ? rsurface.texture->reflectcubetexture : r_texture_whitecube);CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_FogHeightTexture) CG_BindTexture(r_cg_permutation->fp_Texture_FogHeightTexture, r_texture_fogheighttexture                         );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_FogMask        ) CG_BindTexture(r_cg_permutation->fp_Texture_FogMask        , r_texture_fogattenuation                            );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Lightmap       ) CG_BindTexture(r_cg_permutation->fp_Texture_Lightmap       , rsurface.lightmaptexture ? rsurface.lightmaptexture : r_texture_white);CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Deluxemap      ) CG_BindTexture(r_cg_permutation->fp_Texture_Deluxemap      , rsurface.deluxemaptexture ? rsurface.deluxemaptexture : r_texture_blanknormalmap);CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Attenuation    ) CG_BindTexture(r_cg_permutation->fp_Texture_Attenuation    , r_shadow_attenuationgradienttexture                 );CHECKCGERROR
-		if (rsurfacepass == RSURFPASS_BACKGROUND)
-		{
-			if (r_cg_permutation->fp_Texture_Refraction     ) CG_BindTexture(r_cg_permutation->fp_Texture_Refraction     , waterplane->texture_refraction ? waterplane->texture_refraction : r_texture_black);CHECKCGERROR
-			else if (r_cg_permutation->fp_Texture_First     ) CG_BindTexture(r_cg_permutation->fp_Texture_First          , waterplane->texture_camera ? waterplane->texture_camera : r_texture_black);CHECKCGERROR
-			if (r_cg_permutation->fp_Texture_Reflection     ) CG_BindTexture(r_cg_permutation->fp_Texture_Reflection     , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);CHECKCGERROR
-		}
-		else
-		{
-			if (r_cg_permutation->fp_Texture_Reflection     ) CG_BindTexture(r_cg_permutation->fp_Texture_Reflection     , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);CHECKCGERROR
-		}
-		if (r_cg_permutation->fp_Texture_ScreenDepth    ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , r_shadow_prepassgeometrydepthtexture                );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ScreenNormalMap) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, r_shadow_prepassgeometrynormalmaptexture            );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ScreenDiffuse  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDiffuse  , r_shadow_prepasslightingdiffusetexture              );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ScreenSpecular ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenSpecular , r_shadow_prepasslightingspeculartexture             );CHECKCGERROR
-		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
-		{
-			if (r_cg_permutation->fp_Texture_ShadowMap2D    ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , r_shadow_shadowmap2dtexture                         );CHECKCGERROR
-			if (rsurface.rtlight)
-			{
-				if (r_cg_permutation->fp_Texture_Cube           ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , rsurface.rtlight->currentcubemap                    );CHECKCGERROR
-				if (r_cg_permutation->fp_Texture_CubeProjection ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , r_shadow_shadowmapvsdcttexture                      );CHECKCGERROR
-			}
-		}
-
-		CHECKGLERROR
-#endif
-		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 		break;
@@ -6414,28 +5685,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->tex_Texture_Cube              >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Cube               , rsurface.rtlight->currentcubemap                    );
 		if (r_glsl_permutation->tex_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D        , r_shadow_shadowmap2dtexture                         );
 		if (r_glsl_permutation->tex_Texture_CubeProjection    >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_CubeProjection     , r_shadow_shadowmapvsdcttexture                      );
-		break;
-	case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-		R_SetupShader_SetPermutationCG(mode, permutation);
-		if (r_cg_permutation->fp_LightPosition            ) cgGLSetParameter3f(r_cg_permutation->fp_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);CHECKCGERROR
-		if (r_cg_permutation->fp_ViewToLight              ) cgGLSetMatrixParameterfc(r_cg_permutation->fp_ViewToLight, viewtolight16f);CHECKCGERROR
-		if (r_cg_permutation->fp_DeferredColor_Ambient    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);CHECKCGERROR
-		if (r_cg_permutation->fp_DeferredColor_Diffuse    ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);CHECKCGERROR
-		if (r_cg_permutation->fp_DeferredColor_Specular   ) cgGLSetParameter3f(r_cg_permutation->fp_DeferredColor_Specular, lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);CHECKCGERROR
-		if (r_cg_permutation->fp_ShadowMap_TextureScale   ) cgGLSetParameter2f(r_cg_permutation->fp_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);CHECKCGERROR
-		if (r_cg_permutation->fp_ShadowMap_Parameters     ) cgGLSetParameter4f(r_cg_permutation->fp_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);CHECKCGERROR
-		if (r_cg_permutation->fp_SpecularPower            ) cgGLSetParameter1f(r_cg_permutation->fp_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f));CHECKCGERROR
-		if (r_cg_permutation->fp_ScreenToDepth            ) cgGLSetParameter2f(r_cg_permutation->fp_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);CHECKCGERROR
-		if (r_cg_permutation->fp_PixelToScreenTexCoord    ) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
-
-		if (r_cg_permutation->fp_Texture_Attenuation      ) CG_BindTexture(r_cg_permutation->fp_Texture_Attenuation    , r_shadow_attenuationgradienttexture                 );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ScreenDepth      ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenDepth    , r_shadow_prepassgeometrydepthtexture                );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ScreenNormalMap  ) CG_BindTexture(r_cg_permutation->fp_Texture_ScreenNormalMap, r_shadow_prepassgeometrynormalmaptexture            );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_Cube             ) CG_BindTexture(r_cg_permutation->fp_Texture_Cube           , rsurface.rtlight->currentcubemap                    );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_ShadowMap2D      ) CG_BindTexture(r_cg_permutation->fp_Texture_ShadowMap2D    , r_shadow_shadowmap2dtexture                         );CHECKCGERROR
-		if (r_cg_permutation->fp_Texture_CubeProjection   ) CG_BindTexture(r_cg_permutation->fp_Texture_CubeProjection , r_shadow_shadowmapvsdcttexture                      );CHECKCGERROR
-#endif
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
@@ -7299,7 +6548,6 @@ void gl_main_start(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -7370,11 +6618,6 @@ void gl_main_start(void)
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_glsl_permutationarray, r_main_mempool, sizeof(r_glsl_permutation_t), 256);
 	glslshaderstring = NULL;
-#ifdef SUPPORTCG
-	r_cg_permutation = NULL;
-	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
-	Mem_ExpandableArray_NewArray(&r_cg_permutationarray, r_main_mempool, sizeof(r_cg_permutation_t), 256);
-#endif
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
@@ -7398,7 +6641,6 @@ void gl_main_shutdown(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_GLES2:
 		if (r_maxqueries)
 			qglDeleteQueriesARB(r_maxqueries, r_queries);
@@ -7451,11 +6693,6 @@ void gl_main_shutdown(void)
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_FreeArray(&r_glsl_permutationarray);
 	glslshaderstring = NULL;
-#ifdef SUPPORTCG
-	r_cg_permutation = NULL;
-	memset(r_cg_permutationhash, 0, sizeof(r_cg_permutationhash));
-	Mem_ExpandableArray_FreeArray(&r_cg_permutationarray);
-#endif
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
@@ -8025,7 +7262,6 @@ void R_AnimCache_CacheVisibleEntities(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -8364,7 +7600,6 @@ static void R_View_SetFrustum(const int *scissor)
 			case RENDERPATH_GL11:
 			case RENDERPATH_GL13:
 			case RENDERPATH_GL20:
-			case RENDERPATH_CGGL:
 			case RENDERPATH_GLES2:
 				// non-flipped y coordinates
 				fny = -1.0 + 2.0 * (scissor[1]              - r_refdef.view.viewport.y) / (double) (r_refdef.view.viewport.height);
@@ -8611,13 +7846,6 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 shader %s:%i\n", __FILE__, __LINE__);
 			break;
-		case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-			CHECKCGERROR
-			if (r_cg_permutation && r_cg_permutation->vp_ModelViewProjectionMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewProjectionMatrix, gl_modelviewprojection16f);CHECKCGERROR
-			if (r_cg_permutation && r_cg_permutation->vp_ModelViewMatrix) cgGLSetMatrixParameterfc(r_cg_permutation->vp_ModelViewMatrix, gl_modelview16f);CHECKCGERROR
-#endif
-			break;
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL11:
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
@@ -8661,7 +7889,6 @@ void R_ResetViewRendering2D(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
@@ -8697,7 +7924,6 @@ void R_ResetViewRendering3D(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
@@ -8741,7 +7967,6 @@ static void R_Water_StartFrame(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -9108,7 +8333,6 @@ void R_Bloom_StartFrame(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -9213,7 +8437,6 @@ void R_Bloom_StartFrame(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
 		break;
@@ -9257,7 +8480,6 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
@@ -9433,7 +8655,6 @@ static void R_BlendView(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -9491,7 +8712,6 @@ static void R_BlendView(void)
 					case RENDERPATH_GL11:
 					case RENDERPATH_GL13:
 					case RENDERPATH_GL20:
-					case RENDERPATH_CGGL:
 					case RENDERPATH_SOFT:
 					case RENDERPATH_GLES2:
 						R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.screentexcoord2f);
@@ -9572,24 +8792,6 @@ static void R_BlendView(void)
 			if (r_glsl_permutation->loc_Saturation              >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
 			if (r_glsl_permutation->loc_PixelToScreenTexCoord   >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 			if (r_glsl_permutation->loc_BloomColorSubtract      >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
-			break;
-		case RENDERPATH_CGGL:
-#ifdef SUPPORTCG
-			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_bloomstate.screentexcoord2f, r_bloomstate.bloomtexcoord2f);
-			R_SetupShader_SetPermutationCG(SHADERMODE_POSTPROCESS, permutation);
-			if (r_cg_permutation->fp_Texture_First     ) CG_BindTexture(r_cg_permutation->fp_Texture_First     , r_bloomstate.texture_screen);CHECKCGERROR
-			if (r_cg_permutation->fp_Texture_Second    ) CG_BindTexture(r_cg_permutation->fp_Texture_Second    , r_bloomstate.texture_bloom );CHECKCGERROR
-			if (r_cg_permutation->fp_Texture_GammaRamps) CG_BindTexture(r_cg_permutation->fp_Texture_GammaRamps, r_texture_gammaramps       );CHECKCGERROR
-			if (r_cg_permutation->fp_ViewTintColor     ) cgGLSetParameter4f(     r_cg_permutation->fp_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);CHECKCGERROR
-			if (r_cg_permutation->fp_PixelSize         ) cgGLSetParameter2f(     r_cg_permutation->fp_PixelSize         , 1.0/r_bloomstate.screentexturewidth, 1.0/r_bloomstate.screentextureheight);CHECKCGERROR
-			if (r_cg_permutation->fp_UserVec1          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);CHECKCGERROR
-			if (r_cg_permutation->fp_UserVec2          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec2          , uservecs[1][0], uservecs[1][1], uservecs[1][2], uservecs[1][3]);CHECKCGERROR
-			if (r_cg_permutation->fp_UserVec3          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);CHECKCGERROR
-			if (r_cg_permutation->fp_UserVec4          ) cgGLSetParameter4f(     r_cg_permutation->fp_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);CHECKCGERROR
-			if (r_cg_permutation->fp_Saturation        ) cgGLSetParameter1f(     r_cg_permutation->fp_Saturation        , r_glsl_saturation.value);CHECKCGERROR
-			if (r_cg_permutation->fp_PixelToScreenTexCoord) cgGLSetParameter2f(r_cg_permutation->fp_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);CHECKCGERROR
-			if (r_cg_permutation->fp_BloomColorSubtract   ) cgGLSetParameter4f(r_cg_permutation->fp_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
-#endif
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -9781,7 +8983,6 @@ void R_UpdateVariables(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -13232,7 +12433,6 @@ static void R_DrawWorldTextureSurfaceList(int texturenumsurfaces, const msurface
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -13262,7 +12462,6 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -13301,7 +12500,6 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		switch (vid.renderpath)
 		{
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
@@ -14328,7 +13526,6 @@ void R_DrawDebugModel(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 		break;
 	case RENDERPATH_D3D9:
 		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
@@ -14630,7 +13827,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		switch (vid.renderpath)
 		{
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
@@ -14649,7 +13845,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		switch (vid.renderpath)
 		{
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:

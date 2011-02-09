@@ -1916,7 +1916,6 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 		CHECKGLERROR
 		qglBegin(GL_LINE_LOOP);
 		for (num = 0;num < mesh->num_vertices;num++)
@@ -1960,7 +1959,6 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 		CHECKGLERROR
 
 		//qglLineWidth(width);CHECKGLERROR
@@ -2009,7 +2007,6 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 		CHECKGLERROR
 
 		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
@@ -2079,7 +2076,6 @@ void R_DrawGamma(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
