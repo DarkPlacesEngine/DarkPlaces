@@ -1710,7 +1710,9 @@ void FS_Init (void)
 	*fs_gamedir = 0;
 
 #ifdef __IPHONEOS__
-	// FIXME: set fs_userdir to the documents folder
+	// fs_basedir is "" by default, to utilize this you can simply add your gamedir to the Resources in xcode
+	// fs_userdir stores configurations to the Documents folder of the app
+	strlcpy(fs_userdir, "../Documents/", sizeof(fs_userdir));
 #else
 	// Add the personal game directory
 	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
