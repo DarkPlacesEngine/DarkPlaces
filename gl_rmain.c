@@ -2043,7 +2043,7 @@ const char *builtincgshaderstring =
 "	// 'vampire sight' effect, wheres red is compensated\n"
 "	#ifdef SATURATION_REDCOMPENSATE\n"
 "		float rboost = max(0.0, (gl_FragColor.r - max(gl_FragColor.g, gl_FragColor.b))*(1.0 - Saturation));\n"
-"		gl_FragColor.rgb = mix(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
+"		gl_FragColor.rgb = lerp(float3(y,y,y), gl_FragColor.rgb, Saturation);\n"
 "		gl_FragColor.r += r;\n"
 "	#else\n"
 "		// normal desaturation\n"
