@@ -1375,7 +1375,7 @@ static void GL_Backend_ResetState(void)
 	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
 	gl_state.lockrange_first = 0;
 	gl_state.lockrange_count = 0;
-	gl_state.cullface = GL_NONE;
+	gl_state.cullface = GL_FRONT;
 	gl_state.cullfaceenable = false;
 	gl_state.polygonoffset[0] = 0;
 	gl_state.polygonoffset[1] = 0;
@@ -2055,7 +2055,7 @@ void GL_SetMirrorState(qboolean state)
 		case RENDERPATH_GL20:
 		case RENDERPATH_CGGL:
 		case RENDERPATH_GLES2:
-			qglCullFace(gl_state.cullface);
+			qglCullFace(gl_state.cullface);CHECKGLERROR
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -2543,6 +2543,20 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	if (!programobject)
 		return 0;
 
+	if (vid.renderpath == RENDERPATH_GLES2)
+	{
+		qglBindAttribLocation(programobject, GLES2ATTRIB_POSITION , "Attrib_Position" );
+		qglBindAttribLocation(programobject, GLES2ATTRIB_COLOR    , "Attrib_Color"    );
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD0, "Attrib_TexCoord0");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD1, "Attrib_TexCoord1");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD2, "Attrib_TexCoord2");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD3, "Attrib_TexCoord3");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD4, "Attrib_TexCoord4");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD5, "Attrib_TexCoord5");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD6, "Attrib_TexCoord6");
+		qglBindAttribLocation(programobject, GLES2ATTRIB_TEXCOORD7, "Attrib_TexCoord7");
+	}
+
 	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER, "vertex", vertexstrings_count, vertexstrings_list))
 		goto cleanup;
 
@@ -2981,8 +2995,34 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			// GLES does not have glDrawRangeElements, and generally
 			// underperforms with index buffers, so this code path is
 			// relatively straightforward...
-			//if (qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT)
-			//	Con_DPrintf("fbo %i not complete (default %i)\n", gl_state.framebufferobject, gl_state.defaultframebufferobject);
+#if 0
+			if (gl_paranoid.integer)
+			{
+				int r, prog, enabled, i;
+				GLsizei 	attriblength;
+				GLint 		attribsize;
+				GLenum		attribtype;
+				GLchar		attribname[1024];
+				r = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
+				if (r != GL_FRAMEBUFFER_COMPLETE_EXT)
+					Con_DPrintf("fbo %i not complete (default %i)\n", gl_state.framebufferobject, gl_state.defaultframebufferobject);
+#ifndef GL_CURRENT_PROGRAM
+#define GL_CURRENT_PROGRAM 0x8B8D
+#endif
+				qglGetIntegerv(GL_CURRENT_PROGRAM, &r);CHECKGLERROR
+				if (r < 0 || r > 10000)
+					Con_DPrintf("GL_CURRENT_PROGRAM = %i\n", r);
+				prog = r;
+				for (i = 0;i < 8;i++)
+				{
+					qglGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &r);CHECKGLERROR
+					if (!r)
+						continue;
+					qglGetActiveAttrib(prog, i, sizeof(attribname), &attriblength, &attribsize, &attribtype, attribname);CHECKGLERROR
+					Con_DPrintf("prog %i position %i length %i size %04X type %i name \"%s\"\n", prog, i, (int)attriblength, (int)attribsize, (int)attribtype, (char *)attribname);
+				}
+			}
+#endif
 			if (element3s)
 			{
 				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
