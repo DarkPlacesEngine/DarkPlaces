@@ -401,6 +401,8 @@ rsurfacestate_t;
 
 extern rsurfacestate_t rsurface;
 
+void R_HDR_UpdateIrisAdaptation(const vec3_t point);
+
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass);
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
