@@ -1216,8 +1216,7 @@ void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int s
 	DPSOFTRAST_Texture *texture;
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
 	if (mip < 0 || mip >= texture->mipmaps) return;
-	if (texture->binds)
-		DPSOFTRAST_Flush();
+	DPSOFTRAST_Flush();
 	spixels = dpsoftrast.fb_colorpixels[0];
 	swidth = dpsoftrast.fb_width;
 	sheight = dpsoftrast.fb_height;
