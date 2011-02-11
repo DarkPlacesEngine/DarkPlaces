@@ -6032,26 +6032,60 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, const int flags)
+void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const vec3_t p, const int flags)
 {
 	int i, numlights, flag;
-	float f, relativepoint[3], dist, dist2, lightradius2;
 	rtlight_t *light;
 	dlight_t *dlight;
+	float relativepoint[3];
+	float color[3];
+	float dir[3];
+	float dist;
+	float dist2;
+	float intensity;
+	float sample[5*3];
+	float lightradius2;
 
-	VectorClear(diffusecolor);
-	VectorClear(diffusenormal);
+	if (r_fullbright.integer)
+	{
+		VectorSet(ambient, 1, 1, 1);
+		VectorClear(diffuse);
+		VectorClear(lightdir);
+		return;
+	}
 
 	if (flags & LP_LIGHTMAP)
 	{
-		if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
-		{
-			ambientcolor[0] = ambientcolor[1] = ambientcolor[2] = r_refdef.scene.ambient;
-			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
-		}
-		else
-			VectorSet(ambientcolor, 1, 1, 1);
+		VectorSet(ambient, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
+		VectorClear(diffuse);
+		VectorClear(lightdir);
+		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambient, diffuse, lightdir);
+		return;
 	}
+
+	memset(sample, 0, sizeof(sample));
+	VectorSet(sample, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
+
+	if ((flags & LP_LIGHTMAP) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+	{
+		vec3_t tempambient;
+		VectorClear(tempambient);
+		VectorClear(color);
+		VectorClear(relativepoint);
+		r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, tempambient, color, relativepoint);
+		VectorScale(tempambient, r_refdef.lightmapintensity, tempambient);
+		VectorScale(color, r_refdef.lightmapintensity, color);
+		VectorAdd(sample, tempambient, sample);
+		VectorMA(sample    , 0.5f            , color, sample    );
+		VectorMA(sample + 3, relativepoint[0], color, sample + 3);
+		VectorMA(sample + 6, relativepoint[1], color, sample + 6);
+		VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+		// calculate a weighted average light direction as well
+		intensity = VectorLength(color);
+		VectorMA(sample + 12, intensity, relativepoint, sample + 12);
+	}
+
 	if (flags & LP_RTWORLD)
 	{
 		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
@@ -6071,14 +6105,25 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			if (dist2 >= lightradius2)
 				continue;
 			dist = sqrt(dist2) / light->radius;
-			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
-			if (f <= 0)
+			intensity = min(1.0f, (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) * r_shadow_lightintensityscale.value;
+			if (intensity <= 0.0f)
 				continue;
-			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
-				VectorMA(ambientcolor, f, light->currentcolor, ambientcolor);
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+				continue;
+			// scale down intensity to add to both ambient and diffuse
+			//intensity *= 0.5f;
+			VectorNormalize(relativepoint);
+			VectorScale(light->currentcolor, intensity, color);
+			VectorMA(sample    , 0.5f            , color, sample    );
+			VectorMA(sample + 3, relativepoint[0], color, sample + 3);
+			VectorMA(sample + 6, relativepoint[1], color, sample + 6);
+			VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+			// calculate a weighted average light direction as well
+			intensity *= VectorLength(color);
+			VectorMA(sample + 12, intensity, relativepoint, sample + 12);
 		}
 	}
+
 	if (flags & LP_DYNLIGHT)
 	{
 		// sample dlights
@@ -6092,12 +6137,35 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 			if (dist2 >= lightradius2)
 				continue;
 			dist = sqrt(dist2) / light->radius;
-			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
-			if (f <= 0)
+			intensity = (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist) * r_shadow_lightintensityscale.value;
+			if (intensity <= 0.0f)
 				continue;
-			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1)
-				VectorMA(ambientcolor, f, light->color, ambientcolor);
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+				continue;
+			// scale down intensity to add to both ambient and diffuse
+			//intensity *= 0.5f;
+			VectorNormalize(relativepoint);
+			VectorScale(light->currentcolor, intensity, color);
+			VectorMA(sample    , 0.5f            , color, sample    );
+			VectorMA(sample + 3, relativepoint[0], color, sample + 3);
+			VectorMA(sample + 6, relativepoint[1], color, sample + 6);
+			VectorMA(sample + 9, relativepoint[2], color, sample + 9);
+			// calculate a weighted average light direction as well
+			intensity *= VectorLength(color);
+			VectorMA(sample + 12, intensity, relativepoint, sample + 12);
 		}
 	}
+
+	// calculate the direction we'll use to reduce the sample to a directional light source
+	VectorCopy(sample + 12, dir);
+	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
+	VectorNormalize(dir);
+	// extract the diffuse color along the chosen direction and scale it
+	diffuse[0] = (dir[0]*sample[3] + dir[1]*sample[6] + dir[2]*sample[ 9] + sample[ 0]);
+	diffuse[1] = (dir[0]*sample[4] + dir[1]*sample[7] + dir[2]*sample[10] + sample[ 1]);
+	diffuse[2] = (dir[0]*sample[5] + dir[1]*sample[8] + dir[2]*sample[11] + sample[ 2]);
+	// subtract some of diffuse from ambient
+	VectorMA(sample, -0.333f, diffuse, ambient);
+	// store the normalized lightdir
+	VectorCopy(dir, lightdir);
 }

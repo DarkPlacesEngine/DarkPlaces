@@ -178,6 +178,12 @@ cvar_t r_hdr = {CVAR_SAVE, "r_hdr", "0", "enables High Dynamic Range bloom effec
 cvar_t r_hdr_scenebrightness = {CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
 cvar_t r_hdr_glowintensity = {CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
 cvar_t r_hdr_range = {CVAR_SAVE, "r_hdr_range", "4", "how much dynamic range to render bloom with (equivalent to multiplying r_bloom_brighten by this value and dividing r_bloom_colorscale by this value)"};
+cvar_t r_hdr_irisadaptation = {CVAR_SAVE, "r_hdr_irisadaptation", "0", "adjust scene brightness according to light intensity at player location"};
+cvar_t r_hdr_irisadaptation_multiplier = {CVAR_SAVE, "r_hdr_irisadaptation_multiplier", "2", "brightness at which value will be 1.0"};
+cvar_t r_hdr_irisadaptation_minvalue = {CVAR_SAVE, "r_hdr_irisadaptation_minvalue", "0.5", "minimum value that can result from multiplier / brightness"};
+cvar_t r_hdr_irisadaptation_maxvalue = {CVAR_SAVE, "r_hdr_irisadaptation_maxvalue", "4", "maximum value that can result from multiplier / brightness"};
+cvar_t r_hdr_irisadaptation_value = {0, "r_hdr_irisadaptation_value", "1", "current value as scenebrightness multiplier, changes continuously when irisadaptation is active"};
+cvar_t r_hdr_irisadaptation_fade = {CVAR_SAVE, "r_hdr_irisadaptation_fade", "1", "fade rate at which value adjusts"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
@@ -6851,6 +6857,12 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
 	Cvar_RegisterVariable(&r_hdr_range);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_multiplier);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_minvalue);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_maxvalue);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_value);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
@@ -7329,10 +7341,10 @@ static void R_View_UpdateEntityLighting (void)
 			{
 				if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
 					org[2] = org[2] + r_overheadsprites_pushback.value;
-				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, ent->modellight_lightdir, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 			}
 			else
-				r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, org, ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP);
 
 			if(ent->flags & RENDER_EQUALIZE)
 			{
@@ -7572,6 +7584,35 @@ static void R_DrawModelsAddWaterPlanes(void)
 		if (ent->model && ent->model->DrawAddWaterPlanes != NULL)
 			ent->model->DrawAddWaterPlanes(ent);
 	}
+}
+
+void R_HDR_UpdateIrisAdaptation(const vec3_t point)
+{
+	if (r_hdr_irisadaptation.integer)
+	{
+		vec3_t ambient;
+		vec3_t diffuse;
+		vec3_t diffusenormal;
+		vec_t brightness;
+		vec_t goal;
+		vec_t adjust;
+		vec_t current;
+		R_CompleteLightPoint(ambient, diffuse, diffusenormal, point, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+		brightness = (ambient[0] + ambient[1] + ambient[2] + diffuse[0] + diffuse[1] + diffuse[2]) * (1.0f / 3.0f);
+		brightness = max(0.0000001f, brightness);
+		goal = r_hdr_irisadaptation_multiplier.value / brightness;
+		goal = bound(r_hdr_irisadaptation_minvalue.value, goal, r_hdr_irisadaptation_maxvalue.value);
+		adjust = r_hdr_irisadaptation_fade.value * cl.realframetime;
+		current = r_hdr_irisadaptation_value.value;
+		if (current < goal)
+			current = min(current + adjust, goal);
+		else if (current > goal)
+			current = max(current - adjust, goal);
+		if (fabs(r_hdr_irisadaptation_value.value - current) > 0.0001f)
+			Cvar_SetValueQuick(&r_hdr_irisadaptation_value, current);
+	}
+	else if (r_hdr_irisadaptation_value.value != 1.0f)
+		Cvar_SetValueQuick(&r_hdr_irisadaptation_value, 1.0f);
 }
 
 static void R_View_SetFrustum(const int *scissor)
@@ -9119,7 +9160,7 @@ void R_RenderView(void)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 	}
 
-	r_refdef.view.colorscale = r_hdr_scenebrightness.value;
+	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
 
 	R_RenderView_UpdateViewVectors();
 

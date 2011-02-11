@@ -2163,6 +2163,7 @@ static double cl_updatescreen_quality = 1;
 extern void Sbar_ShowFPS_Update(void);
 void CL_UpdateScreen(void)
 {
+	vec3_t vieworigin;
 	double rendertime1;
 	float conwidth, conheight;
 	float f;
@@ -2227,6 +2228,9 @@ void CL_UpdateScreen(void)
 		else
 			sb_lines = 24+16+8;
 	}
+
+	Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, vieworigin);
+	R_HDR_UpdateIrisAdaptation(vieworigin);
 
 	r_refdef.view.colormask[0] = 1;
 	r_refdef.view.colormask[1] = 1;

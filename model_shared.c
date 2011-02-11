@@ -3428,8 +3428,8 @@ static void Mod_GenerateLightmaps_LightPoint(dp_model_t *model, const vec3_t pos
 			continue;
 		lightiradius = 1.0f / lightradius;
 		dist = sqrt(dist2) * lightiradius;
-		intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
-		if (intensity <= 0)
+		intensity = (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist);
+		if (intensity <= 0.0f)
 			continue;
 		if (model && model->TraceLine)
 		{
