@@ -29,10 +29,6 @@ CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-sig
 LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --libs` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -lstdc++`
 CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --cflags || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -DODE_STATIC`
 
-# Additional stuff for libCg
-LIB_CG= `[ -n "$(DP_CG_LIBDIR)" ] && echo \ -lCg\ -lCgGL -lGL`
-CFLAGS_CG= `[ -n "$(DP_CG_LIBDIR)" ] && echo \ -DSUPPORTCG`
-
 
 SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
@@ -120,6 +116,7 @@ OBJ_COMMON= \
 	csprogs.o \
 	curves.o \
 	cvar.o \
+	dpsoftrast.o \
 	dpvsimpledecode.o \
 	filematch.o \
 	fractalnoise.o \
@@ -185,12 +182,12 @@ OBJ_COMMON= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
+OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_CG) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D)
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D)
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -218,9 +215,9 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`test -d .svn && svnversion || ec
 
 ##### UNIX specific variables #####
 
-OBJ_GLX= builddate.c sys_linux.o vid_glx.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_null.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_CG) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
@@ -261,7 +258,7 @@ LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
 LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) SDLMain.m
 
-OBJ_AGL= builddate.c sys_linux.o vid_agl.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_AGL= builddate.c sys_linux.o vid_agl.o thread_null.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 EXE_MACOSXCL=darkplaces-agl
 EXE_MACOSXCLNEXUIZ=nexuiz-agl
@@ -301,7 +298,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
@@ -513,6 +510,10 @@ sys_sdl.o: sys_sdl.c
 	$(DO_CC) $(CFLAGS_SDL)
 
 snd_sdl.o: snd_sdl.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SDL)
+
+thread_sdl.o: thread_sdl.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SDL)
 

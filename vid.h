@@ -33,23 +33,22 @@ typedef enum renderpath_e
 	RENDERPATH_GL11,
 	RENDERPATH_GL13,
 	RENDERPATH_GL20,
-	RENDERPATH_CGGL,
 	RENDERPATH_D3D9,
 	RENDERPATH_D3D10,
-	RENDERPATH_D3D11
+	RENDERPATH_D3D11,
+	RENDERPATH_SOFT,
+	RENDERPATH_GLES2
 }
 renderpath_t;
 
 typedef struct viddef_support_s
 {
+	qboolean gl20shaders;
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
-	qboolean arb_fragment_shader;
 	qboolean arb_multitexture;
 	qboolean arb_occlusion_query;
-	qboolean arb_shader_objects;
-	qboolean arb_shading_language_100;
 	qboolean arb_shadow;
 	qboolean arb_texture_compression;
 	qboolean arb_texture_cube_map;
@@ -57,7 +56,6 @@ typedef struct viddef_support_s
 	qboolean arb_texture_gather;
 	qboolean arb_texture_non_power_of_two;
 	qboolean arb_vertex_buffer_object;
-	qboolean arb_vertex_shader;
 	qboolean ati_separate_stencil;
 	qboolean ext_blend_minmax;
 	qboolean ext_blend_subtract;
@@ -99,10 +97,9 @@ typedef struct viddef_s
 	int samples;
 	qboolean stencil;
 
-	void *cgcontext;
-
 	renderpath_t renderpath;
 	qboolean forcevbo; // some renderpaths can not operate without it
+	qboolean useinterleavedarrays; // required by some renderpaths
 
 	unsigned int texunits;
 	unsigned int teximageunits;
@@ -117,6 +114,13 @@ typedef struct viddef_s
 	unsigned int maxdrawbuffers;
 
 	viddef_support_t support;
+
+	// in RENDERPATH_SOFT this is a 32bpp native-endian ARGB framebuffer
+	// (native-endian ARGB meaning that in little endian it is BGRA bytes,
+	//  in big endian it is ARGB byte order, the format is converted during
+	//  blit to the window)
+	unsigned int *softpixels;
+	unsigned int *softdepthpixels;
 } viddef_t;
 
 // global video state

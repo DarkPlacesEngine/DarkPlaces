@@ -227,7 +227,7 @@ static cvar_t snd_show = {0, "snd_show", "0", "shows some statistics about sound
 // (48KHz because a lot of onboard sound cards sucks at any other speed)
 static cvar_t snd_speed = {CVAR_SAVE, "snd_speed", "48000", "sound output frequency, in hertz"};
 static cvar_t snd_width = {CVAR_SAVE, "snd_width", "2", "sound output precision, in bytes (1 and 2 supported)"};
-static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channels for the sound ouput (2 for stereo; up to 8 supported for 3D sound)"};
+static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
 
 // Ambient sounds
 static sfx_t* ambient_sfxs [2] = { NULL, NULL };
@@ -1889,15 +1889,15 @@ void S_UpdateAmbientSounds (void)
 
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			chan->listener_volume[0] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5), 65536);
-			chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5), 65536);
+			chan->listener_volume[0] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5), 65536);
+			chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5), 65536);
 			for (i = 2;i < SND_LISTENERS;i++)
 				chan->listener_volume[i] = 0;
 		}
 		else
 		{
 			for (i = 0;i < SND_LISTENERS;i++)
-				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
+				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
 		}
 	}
 }

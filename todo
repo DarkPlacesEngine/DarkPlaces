@@ -1,4 +1,10 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 bug darkplaces d3d9: drawsetcliparea not working right (VorteX)
+0 bug darkplaces d3d9: shadowmaps are clipped - does this mean r_shadows 2 or light shadowmaps? (VorteX)
+0 bug darkplaces d3d9: overbright particles get weird colors (VorteX)
+0 bug darkplaces d3d9: gamma not working (VorteX)
+0 bug darkplaces d3d9: alphatest not working (VorteX)
+0 bug darkplaces renderer: sprites with ! in the filename are supposed to receive lighting (Asaki)
 0 bug darkplaces client csqc: CSQC_InputEvent is supposed to handle mouse movement, compare to FTEQW code (avirox)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)

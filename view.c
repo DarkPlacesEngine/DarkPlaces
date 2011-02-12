@@ -96,6 +96,8 @@ cvar_t v_centerspeed = {0, "v_centerspeed","500", "how fast the view centers its
 
 cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
 
+cvar_t cl_smoothviewheight = {CVAR_SAVE, "cl_smoothviewheight", "0", "time of the averaging to the viewheight value so that it creates a smooth transition. higher values = longer transition, 0 for instant transition."};
+
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
 cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
 cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
@@ -431,6 +433,9 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
+	
+	static float viewheightavg;
+	float viewheight;	
 #if 0
 // begin of chase camera bounding box size for proper collisions by Alexander Zubov
 	vec3_t camboxmins = {-3, -3, -3};
@@ -488,7 +493,10 @@ void V_CalcRefdef (void)
 			viewangles[PITCH] += cl.qw_weaponkick;
 
 			// apply the viewofs (even if chasecam is used)
-			vieworg[2] += cl.stats[STAT_VIEWHEIGHT];
+			// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
+			viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
+			viewheightavg = viewheightavg * (1 - viewheight) + cl.stats[STAT_VIEWHEIGHT] * viewheight;
+			vieworg[2] += viewheightavg;
 
 			if (chase_active.value)
 			{
@@ -1015,6 +1023,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kickpitch);
 
 	Cvar_RegisterVariable (&cl_stairsmoothspeed);
+	
+	Cvar_RegisterVariable (&cl_smoothviewheight);
 
 	Cvar_RegisterVariable (&chase_back);
 	Cvar_RegisterVariable (&chase_up);

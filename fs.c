@@ -22,6 +22,14 @@
 		Boston, MA  02111-1307, USA
 */
 
+#ifdef __APPLE__
+// include SDL for IPHONEOS code
+# include <TargetConditionals.h>
+# if TARGET_OS_IPHONE
+#  include <SDL.h>
+# endif
+#endif
+
 #include <limits.h>
 #include <fcntl.h>
 
@@ -1683,7 +1691,9 @@ void FS_Init (void)
 	size_t homedirlen;
 #endif
 #endif
+#ifndef __IPHONEOS__
 	char *homedir;
+#endif
 
 #ifdef WIN32
 	const char* dllnames [] =
@@ -1695,6 +1705,15 @@ void FS_Init (void)
 	// don't care for the result; if it fails, %USERPROFILE% will be used instead
 #endif
 
+	*fs_basedir = 0;
+	*fs_userdir = 0;
+	*fs_gamedir = 0;
+
+#ifdef __IPHONEOS__
+	// fs_basedir is "" by default, to utilize this you can simply add your gamedir to the Resources in xcode
+	// fs_userdir stores configurations to the Documents folder of the app
+	strlcpy(fs_userdir, "../Documents/", sizeof(fs_userdir));
+#else
 	// Add the personal game directory
 	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
 	{
@@ -1780,6 +1799,7 @@ void FS_Init (void)
 		strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
 		fs_basedir[split - com_argv[0]] = 0;
 	}
+#endif
 #endif
 #endif
 

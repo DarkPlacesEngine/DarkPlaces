@@ -11,14 +11,14 @@
 #endif
 
 // cvars
-cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are presented)"};
+cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are present)"};
 cvar_t cl_video_subtitles_lines = {CVAR_SAVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
 cvar_t cl_video_subtitles_textsize = {CVAR_SAVE, "cl_video_subtitles_textsize", "16", "textsize for subtitles"};
 cvar_t cl_video_scale = {CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = fullscreen, 0.75 - 3/4 of screen etc."};
-cvar_t cl_video_scale_vpos = {CVAR_SAVE, "cl_video_scale_vpos", "0", "vertial align of scaled video, -1 is top, 1 is bottom"};
+cvar_t cl_video_scale_vpos = {CVAR_SAVE, "cl_video_scale_vpos", "0", "vertical align of scaled video, -1 is top, 1 is bottom"};
 cvar_t cl_video_stipple = {CVAR_SAVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
 cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
-cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with to & bottom being sliced out"};
+cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with top & bottom being sliced out"};
 cvar_t cl_video_fadein = {CVAR_SAVE, "cl_video_fadein", "0", "fading-from-black effect once video is started, in seconds"};
 cvar_t cl_video_fadeout = {CVAR_SAVE, "cl_video_fadeout", "0", "fading-to-black effect once video is ended, in seconds"};
 

@@ -369,8 +369,7 @@ typedef struct entity_render_s
 	float *animcache_svector3f;
 	float *animcache_tvector3f;
 	// interleaved arrays for rendering and dynamic vertex buffers for them
-	r_vertexposition_t *animcache_vertexposition;
-	r_meshbuffer_t *animcache_vertexpositionbuffer;
+	r_meshbuffer_t *animcache_vertex3fbuffer;
 	r_vertexmesh_t *animcache_vertexmesh;
 	r_meshbuffer_t *animcache_vertexmeshbuffer;
 
@@ -1569,6 +1568,8 @@ typedef struct r_refdef_stats_s
 	int indexbufferuploadsize;
 	int vertexbufferuploadcount;
 	int vertexbufferuploadsize;
+	int framedatacurrent;
+	int framedatasize;
 }
 r_refdef_stats_t;
 

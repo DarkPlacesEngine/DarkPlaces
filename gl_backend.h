@@ -39,7 +39,6 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
 void GL_AlphaTest(int state);
-void GL_AlphaFunc(int state, float value);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ActiveTexture(unsigned int num);
@@ -76,10 +75,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer);
 void GL_Mesh_ListVBOs(qboolean printeach);
 
-r_vertexposition_t *R_Mesh_PrepareVertices_Position_Lock(int numvertices);
-qboolean R_Mesh_PrepareVertices_Position_Unlock(void); // if this returns false, you need to prepare the mesh again!
-void R_Mesh_PrepareVertices_Position_Arrays(int numvertices, const float *vertex3f);
-void R_Mesh_PrepareVertices_Position(int numvertices, const r_vertexposition_t *vertex, const r_meshbuffer_t *buffer);
+void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *buffer);
 
 r_vertexgeneric_t *R_Mesh_PrepareVertices_Generic_Lock(int numvertices);
 qboolean R_Mesh_PrepareVertices_Generic_Unlock(void);

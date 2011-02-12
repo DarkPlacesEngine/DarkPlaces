@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128", "how large water polygons should be (smaller values produce more polygons which give better warping effects)"};
-cvar_t mod_bsp_portalize = {0, "mod_bsp_portalize", "0", "enables portal generation from BSP tree (may take several seconds per map), used by r_drawportals, r_useportalculling, r_shadow_realtime_world_compileportalculling, sv_cullentities_portal - all of which are off by default"};
+cvar_t mod_bsp_portalize = {0, "mod_bsp_portalize", "1", "enables portal generation from BSP tree (may take several seconds per map), used by r_drawportals, r_useportalculling, r_shadow_realtime_world_compileportalculling, sv_cullentities_portal"};
 cvar_t r_novis = {0, "r_novis", "0", "draws whole level, see also sv_cullentities_pvs 0"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0", "pretends there was no texture lump found in the q1bsp/hlbsp loading (useful for debugging this rare case)"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4", "maximum error tolerance on curve subdivision for rendering purposes (in other words, the curves will be given as many polygons as necessary to represent curves at this quality)"};
@@ -3442,7 +3442,7 @@ static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
 	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
 		if (surface->num_triangles > 0)
 			Mod_ShadowMesh_AddMesh(mod->mempool, mod->brush.shadowmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer, false);
+	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer != 0, false);
 	if (mod->brush.shadowmesh && mod->brush.shadowmesh->neighbor3i)
 		Mod_BuildTriangleNeighbors(mod->brush.shadowmesh->neighbor3i, mod->brush.shadowmesh->element3i, mod->brush.shadowmesh->numtriangles);
 
@@ -5628,14 +5628,26 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	int i, j, k, index[3];
-	float transformed[3], blend1, blend2, blend, stylescale;
+	float transformed[3], blend1, blend2, blend, stylescale = 1;
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	if (vid.renderpath == RENDERPATH_GL20)
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
+		// LordHavoc: FIXME: is this true?
 		stylescale = 1; // added while render
-	else
+		break;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
 		stylescale = r_refdef.scene.rtlightstylevalue[0];
+		break;
+	}
 
 	if (!model->brushq3.num_lightgrid)
 	{

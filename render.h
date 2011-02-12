@@ -165,11 +165,12 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 #include "meshqueue.h"
 
-extern qboolean r_framedata_failed;
 void R_FrameData_Reset(void);
 void R_FrameData_NewFrame(void);
 void *R_FrameData_Alloc(size_t size);
 void *R_FrameData_Store(size_t size, void *data);
+void R_FrameData_SetMark(void);
+void R_FrameData_ReturnToMark(void);
 
 void R_AnimCache_Free(void);
 void R_AnimCache_ClearCache(void);
@@ -232,28 +233,6 @@ extern mempool_t *r_main_mempool;
 
 typedef struct rsurfacestate_s
 {
-	// software processing buffers
-	int                         array_size;
-	unsigned char              *array_base;
-	r_vertexmesh_t             *array_modelvertexmesh;
-	r_vertexmesh_t             *array_batchvertexmesh;
-	r_vertexposition_t         *array_modelvertexposition;
-	r_vertexposition_t         *array_batchvertexposition;
-	float                      *array_modelvertex3f;
-	float                      *array_modelsvector3f;
-	float                      *array_modeltvector3f;
-	float                      *array_modelnormal3f;
-	float                      *array_batchvertex3f;
-	float                      *array_batchsvector3f;
-	float                      *array_batchtvector3f;
-	float                      *array_batchnormal3f;
-	float                      *array_batchlightmapcolor4f;
-	float                      *array_batchtexcoordtexture2f;
-	float                      *array_batchtexcoordlightmap2f;
-	float                      *array_passcolor4f;
-	int                        *array_batchelement3i;
-	unsigned short             *array_batchelement3s;
-
 	// current model array pointers
 	// these may point to processing buffers if model is animated,
 	// otherwise they point to static data.
@@ -269,38 +248,37 @@ typedef struct rsurfacestate_s
 	// this indicates the model* arrays are pointed at array_model* buffers
 	// (in other words, the model has been animated in software)
 	qboolean                    modelgeneratedvertex;
-	const float                *modelvertex3f;
+	float                      *modelvertex3f;
 	const r_meshbuffer_t       *modelvertex3f_vertexbuffer;
 	size_t                      modelvertex3f_bufferoffset;
-	const float                *modelsvector3f;
+	float                      *modelsvector3f;
 	const r_meshbuffer_t       *modelsvector3f_vertexbuffer;
 	size_t                      modelsvector3f_bufferoffset;
-	const float                *modeltvector3f;
+	float                      *modeltvector3f;
 	const r_meshbuffer_t       *modeltvector3f_vertexbuffer;
 	size_t                      modeltvector3f_bufferoffset;
-	const float                *modelnormal3f;
+	float                      *modelnormal3f;
 	const r_meshbuffer_t       *modelnormal3f_vertexbuffer;
 	size_t                      modelnormal3f_bufferoffset;
-	const float                *modellightmapcolor4f;
+	float                      *modellightmapcolor4f;
 	const r_meshbuffer_t       *modellightmapcolor4f_vertexbuffer;
 	size_t                      modellightmapcolor4f_bufferoffset;
-	const float                *modeltexcoordtexture2f;
+	float                      *modeltexcoordtexture2f;
 	const r_meshbuffer_t       *modeltexcoordtexture2f_vertexbuffer;
 	size_t                      modeltexcoordtexture2f_bufferoffset;
-	const float                *modeltexcoordlightmap2f;
+	float                      *modeltexcoordlightmap2f;
 	const r_meshbuffer_t       *modeltexcoordlightmap2f_vertexbuffer;
 	size_t                      modeltexcoordlightmap2f_bufferoffset;
-	const r_vertexmesh_t       *modelvertexmesh;
+	r_vertexmesh_t             *modelvertexmesh;
 	const r_meshbuffer_t       *modelvertexmeshbuffer;
-	const r_vertexposition_t   *modelvertexposition;
-	const r_meshbuffer_t       *modelvertexpositionbuffer;
-	const int                  *modelelement3i;
+	const r_meshbuffer_t       *modelvertex3fbuffer;
+	int                        *modelelement3i;
 	const r_meshbuffer_t       *modelelement3i_indexbuffer;
 	size_t                      modelelement3i_bufferoffset;
-	const unsigned short       *modelelement3s;
+	unsigned short             *modelelement3s;
 	const r_meshbuffer_t       *modelelement3s_indexbuffer;
 	size_t                      modelelement3s_bufferoffset;
-	const int                  *modellightmapoffsets;
+	int                        *modellightmapoffsets;
 	int                         modelnumvertices;
 	int                         modelnumtriangles;
 	const msurface_t           *modelsurfaces;
@@ -315,39 +293,38 @@ typedef struct rsurfacestate_s
 	int                         batchnumvertices;
 	int                         batchfirsttriangle;
 	int                         batchnumtriangles;
-	const r_vertexmesh_t       *batchvertexmesh;
+	r_vertexmesh_t             *batchvertexmesh;
 	const r_meshbuffer_t       *batchvertexmeshbuffer;
-	const r_vertexposition_t   *batchvertexposition;
-	const r_meshbuffer_t       *batchvertexpositionbuffer;
-	const float                *batchvertex3f;
+	const r_meshbuffer_t       *batchvertex3fbuffer;
+	float                      *batchvertex3f;
 	const r_meshbuffer_t       *batchvertex3f_vertexbuffer;
 	size_t                      batchvertex3f_bufferoffset;
-	const float                *batchsvector3f;
+	float                      *batchsvector3f;
 	const r_meshbuffer_t       *batchsvector3f_vertexbuffer;
 	size_t                      batchsvector3f_bufferoffset;
-	const float                *batchtvector3f;
+	float                      *batchtvector3f;
 	const r_meshbuffer_t       *batchtvector3f_vertexbuffer;
 	size_t                      batchtvector3f_bufferoffset;
-	const float                *batchnormal3f;
+	float                      *batchnormal3f;
 	const r_meshbuffer_t       *batchnormal3f_vertexbuffer;
 	size_t                      batchnormal3f_bufferoffset;
-	const float                *batchlightmapcolor4f;
+	float                      *batchlightmapcolor4f;
 	const r_meshbuffer_t       *batchlightmapcolor4f_vertexbuffer;
 	size_t                      batchlightmapcolor4f_bufferoffset;
-	const float                *batchtexcoordtexture2f;
+	float                      *batchtexcoordtexture2f;
 	const r_meshbuffer_t       *batchtexcoordtexture2f_vertexbuffer;
 	size_t                      batchtexcoordtexture2f_bufferoffset;
-	const float                *batchtexcoordlightmap2f;
+	float                      *batchtexcoordlightmap2f;
 	const r_meshbuffer_t       *batchtexcoordlightmap2f_vertexbuffer;
 	size_t                      batchtexcoordlightmap2f_bufferoffset;
-	const int                  *batchelement3i;
+	int                        *batchelement3i;
 	const r_meshbuffer_t       *batchelement3i_indexbuffer;
 	size_t                      batchelement3i_bufferoffset;
-	const unsigned short       *batchelement3s;
+	unsigned short             *batchelement3s;
 	const r_meshbuffer_t       *batchelement3s_indexbuffer;
 	size_t                      batchelement3s_bufferoffset;
 	// rendering pass processing arrays in GL11 and GL13 paths
-	const float                *passcolor4f;
+	float                      *passcolor4f;
 	const r_meshbuffer_t       *passcolor4f_vertexbuffer;
 	size_t                      passcolor4f_bufferoffset;
 
@@ -424,6 +401,8 @@ rsurfacestate_t;
 
 extern rsurfacestate_t rsurface;
 
+void R_HDR_UpdateIrisAdaptation(const vec3_t point);
+
 void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass);
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
@@ -438,7 +417,6 @@ void R_AddWaterPlanes(entity_render_t *ent);
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 
-#define BATCHNEED_VERTEXPOSITION         (1<< 0) // set up rsurface.batchvertexposition
 #define BATCHNEED_VERTEXMESH_VERTEX      (1<< 1) // set up rsurface.batchvertexmesh
 #define BATCHNEED_VERTEXMESH_NORMAL      (1<< 2) // set up normals in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchnormal3f if BATCHNEED_ARRAYS
 #define BATCHNEED_VERTEXMESH_VECTOR      (1<< 3) // set up vectors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchsvector3f and rsurface.batchtvector3f if BATCHNEED_ARRAYS
@@ -465,55 +443,6 @@ typedef enum rsurfacepass_e
 	RSURFPASS_DEFERREDGEOMETRY
 }
 rsurfacepass_t;
-
-typedef enum gl20_texunit_e
-{
-	// postprocess shaders, and generic shaders:
-	GL20TU_FIRST = 0,
-	GL20TU_SECOND = 1,
-	GL20TU_GAMMARAMPS = 2,
-	// standard material properties
-	GL20TU_NORMAL = 0,
-	GL20TU_COLOR = 1,
-	GL20TU_GLOSS = 2,
-	GL20TU_GLOW = 3,
-	// material properties for a second material
-	GL20TU_SECONDARY_NORMAL = 4,
-	GL20TU_SECONDARY_COLOR = 5,
-	GL20TU_SECONDARY_GLOSS = 6,
-	GL20TU_SECONDARY_GLOW = 7,
-	// material properties for a colormapped material
-	// conflicts with secondary material
-	GL20TU_PANTS = 4,
-	GL20TU_SHIRT = 7,
-	// fog fade in the distance
-	GL20TU_FOGMASK = 8,
-	// compiled ambient lightmap and deluxemap
-	GL20TU_LIGHTMAP = 9,
-	GL20TU_DELUXEMAP = 10,
-	// refraction, used by water shaders
-	GL20TU_REFRACTION = 3,
-	// reflection, used by water shaders, also with normal material rendering
-	// conflicts with secondary material
-	GL20TU_REFLECTION = 7,
-	// rtlight attenuation (distance fade) and cubemap filter (projection texturing)
-	// conflicts with lightmap/deluxemap
-	GL20TU_ATTENUATION = 9,
-	GL20TU_CUBE = 10,
-	GL20TU_SHADOWMAP2D = 15,
-	GL20TU_CUBEPROJECTION = 12,
-	// rtlight prepass data (screenspace depth and normalmap)
-	GL20TU_SCREENDEPTH = 13,
-	GL20TU_SCREENNORMALMAP = 14,
-	// lightmap prepass data (screenspace diffuse and specular from lights)
-	GL20TU_SCREENDIFFUSE = 11,
-	GL20TU_SCREENSPECULAR = 12,
-	// fake reflections
-	GL20TU_REFLECTMASK = 5,
-	GL20TU_REFLECTCUBE = 6,
-	GL20TU_FOGHEIGHTTEXTURE = 14
-}
-gl20_texunit;
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale);
 void R_SetupShader_DepthOrShadow(void);

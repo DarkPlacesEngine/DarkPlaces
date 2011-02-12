@@ -901,7 +901,7 @@ void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean 
 		rcon_redirect_buffer[2] = 0;
 		rcon_redirect_buffer[3] = 0;
 		// this is a reply to a CCREQ_RCON
-		rcon_redirect_buffer[4] = CCREP_RCON;
+		rcon_redirect_buffer[4] = (char)CCREP_RCON;
 	}
 	else
 		memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
@@ -2826,7 +2826,7 @@ void Con_CompleteCommandLine (void)
 						Con_Printf("\n%i possible filenames\n", resultbuf.numstrings + dirbuf.numstrings);
 						for(i = 0; i < dirbuf.numstrings; ++i)
 						{
-							Con_Printf("%s/\n", dirbuf.strings[i]);
+							Con_Printf("^4%s^7/\n", dirbuf.strings[i]);
 						}
 						for(i = 0; i < resultbuf.numstrings; ++i)
 						{

@@ -8,6 +8,7 @@ extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 #include "jpeg.h"
 #include "image_png.h"
 #include "intoverflow.h"
+#include "dpsoftrast.h"
 
 cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
 cvar_t gl_max_lightmapsize = {CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
@@ -30,14 +31,16 @@ cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_SAVE, "gl_texturecompressio
 cvar_t gl_texturecompression_sky = {CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
 cvar_t gl_texturecompression_lightcubemaps = {CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
-cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
-cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambigous, 2: texture format only"};
+cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
+cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
 cvar_t r_texture_dds_load_logfailure = {0, "r_texture_dds_load_logfailure", "1", "log missing DDS textures to ddstexturefailures.log"};
 cvar_t r_texture_dds_swdecode = {0, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
 
 qboolean	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
+DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_mipmap = DPSOFTRAST_TEXTURE_FILTER_LINEAR_MIPMAP_TRIANGLE;
+DPSOFTRAST_TEXTURE_FILTER dpsoftrast_filter_nomipmap = DPSOFTRAST_TEXTURE_FILTER_LINEAR;
 
 #ifdef SUPPORTD3D
 int d3d_filter_flatmin = D3DTEXF_LINEAR;
@@ -72,14 +75,14 @@ typedef struct textypeinfo_s
 textypeinfo_t;
 
 
-static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE    , 1, 4, 4.0f, 3                               , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE    , 1, 4, 4.0f, 4                               , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA       , 4, 4, 4.0f, 3                               , GL_RGBA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA       , 4, 4, 4.0f, 4                               , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE    , 1, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE    , 1, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA       , 4, 4, 4.0f, GL_RGBA                         , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA       , 4, 4, 4.0f, GL_RGBA                         , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA       , 4, 4, 0.5f, GL_COMPRESSED_RGB_S3TC_DXT1_EXT , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA       , 4, 4, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_RGBA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA       , 4, 4, 4.0f, 3                               , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA       , 4, 4, 4.0f, 4                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA       , 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA       , 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA       , 4, 4, 0.5f, GL_COMPRESSED_RGB_S3TC_DXT1_EXT , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA       , 4, 4, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_shadowmap16            = {TEXTYPE_SHADOWMAP  , 2, 2, 2.0f, GL_DEPTH_COMPONENT16_ARB        , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
@@ -89,7 +92,7 @@ static textypeinfo_t textype_dxt1                   = {TEXTYPE_DXT1       , 4, 0
 static textypeinfo_t textype_dxt1a                  = {TEXTYPE_DXT1A      , 4, 0, 0.5f, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, 0                 , 0                };
 static textypeinfo_t textype_dxt3                   = {TEXTYPE_DXT3       , 4, 0, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, 0                 , 0                };
 static textypeinfo_t textype_dxt5                   = {TEXTYPE_DXT5       , 4, 0, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 0                 , 0                };
-static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, 4                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
 
 
 typedef enum gltexturetype_e
@@ -299,7 +302,7 @@ void R_FreeTexture(rtexture_t *rt)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (glt->texnum)
 		{
 			CHECKGLERROR
@@ -324,6 +327,10 @@ void R_FreeTexture(rtexture_t *rt)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		if (glt->texnum)
+			DPSOFTRAST_Texture_Free(glt->texnum);
 		break;
 	}
 
@@ -372,17 +379,18 @@ typedef struct glmode_s
 {
 	const char *name;
 	int minification, magnification;
+	DPSOFTRAST_TEXTURE_FILTER dpsoftrastfilter_mipmap, dpsoftrastfilter_nomipmap;
 }
 glmode_t;
 
 static glmode_t modes[6] =
 {
-	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
-	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
-	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
-	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
-	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
-	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
+	{"GL_NEAREST", GL_NEAREST, GL_NEAREST, DPSOFTRAST_TEXTURE_FILTER_NEAREST, DPSOFTRAST_TEXTURE_FILTER_NEAREST},
+	{"GL_LINEAR", GL_LINEAR, GL_LINEAR, DPSOFTRAST_TEXTURE_FILTER_LINEAR, DPSOFTRAST_TEXTURE_FILTER_LINEAR},
+	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST, DPSOFTRAST_TEXTURE_FILTER_NEAREST_MIPMAP_TRIANGLE, DPSOFTRAST_TEXTURE_FILTER_NEAREST},
+	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR, DPSOFTRAST_TEXTURE_FILTER_LINEAR_MIPMAP_TRIANGLE, DPSOFTRAST_TEXTURE_FILTER_LINEAR},
+	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST, DPSOFTRAST_TEXTURE_FILTER_NEAREST_MIPMAP_TRIANGLE, DPSOFTRAST_TEXTURE_FILTER_NEAREST},
+	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, DPSOFTRAST_TEXTURE_FILTER_LINEAR_MIPMAP_TRIANGLE, DPSOFTRAST_TEXTURE_FILTER_LINEAR}
 };
 
 #ifdef SUPPORTD3D
@@ -439,12 +447,15 @@ static void GL_TextureMode_f (void)
 	gl_filter_mag = modes[i].magnification;
 	gl_filter_force = ((Cmd_Argc() > 2) && !strcasecmp(Cmd_Argv(2), "force"));
 
+	dpsoftrast_filter_mipmap = modes[i].dpsoftrastfilter_mipmap;
+	dpsoftrast_filter_nomipmap = modes[i].dpsoftrastfilter_nomipmap;
+
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// change all the existing mipmap texture objects
 		// FIXME: force renderer(/client/something?) restart instead?
 		CHECKGLERROR
@@ -515,6 +526,13 @@ static void GL_TextureMode_f (void)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		// change all the existing texture objects
+		for (pool = gltexturepoolchain;pool;pool = pool->next)
+			for (glt = pool->gltchain;glt;glt = glt->chain)
+				if (glt->texnum && (gl_filter_force || !(glt->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR))))
+					DPSOFTRAST_Texture_Filter(glt->texnum, (glt->flags & TEXF_MIPMAP) ? dpsoftrast_filter_mipmap : dpsoftrast_filter_nomipmap);
+		break;
 	}
 }
 
@@ -562,9 +580,10 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
 #if 0
@@ -681,7 +700,7 @@ static void r_textures_start(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		// LordHavoc: allow any alignment
 		CHECKGLERROR
 		qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
@@ -694,6 +713,8 @@ static void r_textures_start(void)
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
 		break;
 	}
 
@@ -746,7 +767,7 @@ static void r_textures_devicelost(void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -767,6 +788,8 @@ static void r_textures_devicelost(void)
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			break;
 		}
 	}
 }
@@ -786,7 +809,7 @@ static void r_textures_devicerestored(void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -820,6 +843,8 @@ static void r_textures_devicerestored(void)
 			break;
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
 			break;
 		}
 	}
@@ -894,7 +919,7 @@ void R_Textures_Frame (void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			GL_ActiveTexture(0);
 			for (pool = gltexturepoolchain;pool;pool = pool->next)
@@ -917,6 +942,7 @@ void R_Textures_Frame (void)
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
 			break;
 		}
 	}
@@ -1048,7 +1074,7 @@ static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, 
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		{
 			int oldbindtexnum;
 			CHECKGLERROR
@@ -1085,6 +1111,9 @@ static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, 
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_Texture_UpdatePartial(glt->texnum, 0, data, fragx, fragy, fragwidth, fragheight);
 		break;
 	}
 }
@@ -1157,7 +1186,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 
 		// we need to restore the texture binding after finishing the upload
@@ -1386,6 +1415,56 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		switch(glt->texturetype)
+		{
+		case GLTEXTURETYPE_2D:
+			DPSOFTRAST_Texture_UpdateFull(glt->texnum, prevbuffer);
+			break;
+		case GLTEXTURETYPE_3D:
+			DPSOFTRAST_Texture_UpdateFull(glt->texnum, prevbuffer);
+			break;
+		case GLTEXTURETYPE_CUBEMAP:
+			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+			{
+				unsigned char *combinedbuffer = (unsigned char *)Mem_Alloc(tempmempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+				// convert and upload each side in turn,
+				// from a continuous block of input texels
+				// copy the results into combinedbuffer
+				texturebuffer = (unsigned char *)prevbuffer;
+				for (i = 0;i < 6;i++)
+				{
+					prevbuffer = texturebuffer;
+					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
+					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+					{
+						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+						prevbuffer = resizebuffer;
+					}
+					// picmip/max_size
+					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+					{
+						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+						prevbuffer = resizebuffer;
+					}
+					memcpy(combinedbuffer + i*glt->tilewidth*glt->tileheight*glt->tiledepth*glt->bytesperpixel, prevbuffer, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->bytesperpixel);
+				}
+				DPSOFTRAST_Texture_UpdateFull(glt->texnum, combinedbuffer);
+				Mem_Free(combinedbuffer);
+			}
+			else
+				DPSOFTRAST_Texture_UpdateFull(glt->texnum, prevbuffer);
+			break;
+		}
+		if (glt->flags & TEXF_FORCELINEAR)
+			DPSOFTRAST_Texture_Filter(glt->texnum, DPSOFTRAST_TEXTURE_FILTER_LINEAR);
+		else if (glt->flags & TEXF_FORCENEAREST)
+			DPSOFTRAST_Texture_Filter(glt->texnum, DPSOFTRAST_TEXTURE_FILTER_NEAREST);
+		else if (glt->flags & TEXF_MIPMAP)
+			DPSOFTRAST_Texture_Filter(glt->texnum, dpsoftrast_filter_mipmap);
+		else
+			DPSOFTRAST_Texture_Filter(glt->texnum, dpsoftrast_filter_nomipmap);
+		break;
 	}
 }
 
@@ -1529,7 +1608,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
 		break;
@@ -1589,6 +1668,26 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		break;
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		{
+			int tflags = 0;
+			switch(textype)
+			{
+			case TEXTYPE_PALETTE: tflags = DPSOFTRAST_TEXTURE_FORMAT_BGRA8;break;
+			case TEXTYPE_RGBA: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA8;break;
+			case TEXTYPE_BGRA: tflags = DPSOFTRAST_TEXTURE_FORMAT_BGRA8;break;
+			case TEXTYPE_COLORBUFFER: tflags = DPSOFTRAST_TEXTURE_FORMAT_BGRA8;break;
+			case TEXTYPE_SHADOWMAP: tflags = DPSOFTRAST_TEXTURE_FORMAT_DEPTH;break;
+			case TEXTYPE_ALPHA: tflags = DPSOFTRAST_TEXTURE_FORMAT_ALPHA8;break;
+			default: Sys_Error("R_LoadTexture: unsupported texture type %i when picking DPSOFTRAST_TEXTURE_FLAGS", (int)textype);
+			}
+			if (glt->miplevels > 1) tflags |= DPSOFTRAST_TEXTURE_FLAG_MIPMAP;
+			if (flags & TEXF_ALPHA) tflags |= DPSOFTRAST_TEXTURE_FLAG_USEALPHA;
+			if (glt->sides == 6) tflags |= DPSOFTRAST_TEXTURE_FLAG_CUBEMAP;
+			if (glt->flags & TEXF_CLAMP) tflags |= DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE;
+			glt->texnum = DPSOFTRAST_Texture_New(tflags, glt->tilewidth, glt->tileheight, glt->tiledepth);
+		}
 		break;
 	}
 
@@ -2141,7 +2240,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		GL_ActiveTexture(0);
 		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
@@ -2174,6 +2273,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		glt->texnum = DPSOFTRAST_Texture_New(((glt->flags & TEXF_CLAMP) ? DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE : 0) | (dds_miplevels > 1 ? DPSOFTRAST_TEXTURE_FLAG_MIPMAP : 0), glt->tilewidth, glt->tileheight, glt->tiledepth);
+		break;
 	}
 
 	// upload the texture
@@ -2190,7 +2292,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_CGGL:
+		case RENDERPATH_GLES2:
 			if (bytesperblock)
 			{
 				qglCompressedTexImage2DARB(GL_TEXTURE_2D, mip, glt->glinternalformat, mipwidth, mipheight, 0, mipsize, mippixels);CHECKGLERROR
@@ -2219,6 +2321,14 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		case RENDERPATH_D3D11:
 			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
+		case RENDERPATH_SOFT:
+			if (bytesperblock)
+				Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			else
+				DPSOFTRAST_Texture_UpdateFull(glt->texnum, mippixels);
+			// DPSOFTRAST calculates its own mipmaps
+			mip = dds_miplevels;
+			break;
 		}
 		mippixels += mipsize;
 		if (mipwidth <= 1 && mipheight <= 1)
@@ -2238,7 +2348,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_CGGL:
+	case RENDERPATH_GLES2:
 		if (dds_miplevels >= 1 && !mipcomplete)
 		{
 			// need to set GL_TEXTURE_MAX_LEVEL
@@ -2287,6 +2397,16 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_D3D11:
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_SOFT:
+		if (glt->flags & TEXF_FORCELINEAR)
+			DPSOFTRAST_Texture_Filter(glt->texnum, DPSOFTRAST_TEXTURE_FILTER_LINEAR);
+		else if (glt->flags & TEXF_FORCENEAREST)
+			DPSOFTRAST_Texture_Filter(glt->texnum, DPSOFTRAST_TEXTURE_FILTER_NEAREST);
+		else if (glt->flags & TEXF_MIPMAP)
+			DPSOFTRAST_Texture_Filter(glt->texnum, dpsoftrast_filter_mipmap);
+		else
+			DPSOFTRAST_Texture_Filter(glt->texnum, dpsoftrast_filter_nomipmap);
+		break;
 	}
 
 	Mem_Free(dds);
@@ -2314,7 +2434,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		Host_Error("R_UpdateTexture: no texture supplied");
 	if (!glt->texnum && !glt->d3dtexture)
 	{
-		Con_Printf("R_UpdateTexture: texture %p \"%s\" in pool %p has not been uploaded yet", (void *)glt, glt->identifier, (void *)glt->pool);
+		Con_DPrintf("R_UpdateTexture: texture %p \"%s\" in pool %p has not been uploaded yet\n", (void *)glt, glt->identifier, (void *)glt->pool);
 		return;
 	}
 	// update part of the texture
