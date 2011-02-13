@@ -1357,7 +1357,7 @@ void DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM uniform, int arraysize, int 
 	{
 		__m128 m0, m1, m2, m3;
 		DPSOFTRAST_Command_UniformMatrix4f *command = DPSOFTRAST_ALLOCATECOMMAND(UniformMatrix4f);
-		command->index = index;
+		command->index = (DPSOFTRAST_UNIFORM)index;
 		if (((size_t)v)&(ALIGN_SIZE-1))
 		{
 			m0 = _mm_loadu_ps(v);
