@@ -603,8 +603,9 @@ void V_CalcRefdef (void)
 					float cycle;
 					vec_t frametime;
 
-					frametime = cl.realframetime * cl.movevars_timescale;
-
+					//frametime = cl.realframetime * cl.movevars_timescale;
+					frametime = (cl.time - cl.oldtime) * cl.movevars_timescale;
+					
 					// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
 					if(!ent->persistent.trail_allowed) // FIXME improve this check
 					{
