@@ -596,6 +596,8 @@ float(float a) tan = #475; // returns tangent value (which is simply sin(a)/cos(
 //equivalent to the NULL value of the given data type, that is, the empty
 //string, 0, or '0 0 0'. However, when automatic cvar creation took place, a
 //warning is printed to the game console.
+//NOTE: to prevent an ambiguity with float names for vector types, autocvar
+//names MUST NOT end with _x, _y or _z!
 
 //DP_QC_CHANGEPITCH
 //idea: id Software
