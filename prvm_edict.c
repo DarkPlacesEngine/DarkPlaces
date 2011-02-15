@@ -648,7 +648,7 @@ void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname)
 	{
 		d = &prog->fielddefs[i];
 		name = PRVM_GetString(d->s_name);
-		if (name[strlen(name)-2] == '_')
+		if(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z')
 			continue;	// skip _x, _y, _z vars
 
 		// Check Field Name Wildcard
@@ -732,7 +732,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 		if(developer_entityparsing.integer)
 			Con_Printf("PRVM_ED_Write: at entity %d field %s\n", PRVM_NUM_FOR_EDICT(ed), name);
 
-		if (name[strlen(name)-2] == '_')
+		if(strlen(name) > 1 && name[strlen(name)-2] == '_' && (name[strlen(name)-1] == 'x' || name[strlen(name)-1] == 'y' || name[strlen(name)-1] == 'z')
 			continue;	// skip _x, _y, _z vars
 
 		v = (int *)(ed->fields.vp + d->ofs);
