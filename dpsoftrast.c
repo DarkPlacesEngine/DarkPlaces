@@ -1150,7 +1150,6 @@ void DPSOFTRAST_GetPixelsBGRA(int blockx, int blocky, int blockwidth, int blockh
 	int bx2 = blockx + blockwidth;
 	int by2 = blocky + blockheight;
 	int bw;
-	int bh;
 	int x;
 	int y;
 	unsigned char *inpixels;
@@ -1162,7 +1161,6 @@ void DPSOFTRAST_GetPixelsBGRA(int blockx, int blocky, int blockwidth, int blockh
 	if (bx2 > dpsoftrast.fb_width) bx2 = dpsoftrast.fb_width;
 	if (by2 > dpsoftrast.fb_height) by2 = dpsoftrast.fb_height;
 	bw = bx2 - bx1;
-	bh = by2 - by1;
 	inpixels = (unsigned char *)dpsoftrast.fb_colorpixels[0];
 	if (dpsoftrast.bigendian)
 	{
