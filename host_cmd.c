@@ -114,9 +114,9 @@ void Host_Status_f (void)
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 
 	if (in == 1)
-		print ("^2IP                   %%pl ping  time   frags  no   name\n");
+		print ("^2IP                                             %%pl ping  time   frags  no   name\n");
 	else if (in == 2)
-		print ("^5IP                    no   name\n");
+		print ("^5IP                                              no   name\n");
 
 	for (i = 0, k = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
@@ -149,9 +149,9 @@ void Host_Status_f (void)
 		}
 
 		if(sv_status_privacy.integer && cmd_source != src_command)
-			strlcpy(ip, client->netconnection ? "hidden" : "botclient" , 22);
+			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
-			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 22);
+			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 48);
 
 		frags = client->frags;
 
