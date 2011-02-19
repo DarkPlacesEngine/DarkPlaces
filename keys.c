@@ -1472,7 +1472,7 @@ Key_PrintBindList(int j)
 		p = keybindings[j][i];
 		if (p)
 		{
-			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\");
+			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false);
 			if (j == 0)
 				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i), bindbuf);
 			else
@@ -1565,7 +1565,7 @@ Key_WriteBindings (qfile_t *f)
 			p = keybindings[j][i];
 			if (p)
 			{
-				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\"); // don't need to escape $ because cvars are not expanded inside bind
+				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false); // don't need to escape $ because cvars are not expanded inside bind
 				if (j == 0)
 					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i), bindbuf);
 				else
