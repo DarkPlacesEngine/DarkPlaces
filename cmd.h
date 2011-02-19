@@ -156,8 +156,9 @@ void Cmd_Print(const char *text);
 /// quoteset is a string that contains one or more of ", \, $ and specifies
 /// the characters to be quoted (you usually want to either pass "\"\\" or
 /// "\"\\$"). Returns true on success, and false on overrun (in which case out
-/// will contain a part of the quoted string).
-qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset);
+/// will contain a part of the quoted string). If putquotes is set, the
+/// enclosing quote marks are also put.
+qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
 
 #endif
 
