@@ -311,6 +311,11 @@ void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
 	static int recoversendflags[MAX_EDICTS];
 	csqcentityframedb_t *d;
 
+	if(client->csqcentityframe_lastreset < 0)
+		return;
+	if(framenum < client->csqcentityframe_lastreset)
+		return; // no action required, as we resent that data anyway
+
 	// is our frame out of history?
 	ringfirst = client->csqcentityframehistory_next; // oldest entry
 	ringlast = (ringfirst + NUM_CSQCENTITYDB_FRAMES - 1) % NUM_CSQCENTITYDB_FRAMES; // most recently added entry
@@ -341,6 +346,7 @@ void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
 			Con_DPrintf("Lost frame = %d\n", framenum);
 			Con_DPrintf("Entity DB = %d to %d\n", client->csqcentityframehistory[ringfirst].framenum, client->csqcentityframehistory[ringlast].framenum);
 			EntityFrameCSQC_LostAllFrames(client);
+			client->csqcentityframe_lastreset = -1;
 		}
 		return;
 	}
@@ -445,6 +451,9 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;
 	int dbframe = EntityFrameCSQC_AllocFrame(client, framenum);
 	csqcentityframedb_t *db = &client->csqcentityframehistory[dbframe];
+
+	if(client->csqcentityframe_lastreset < 0)
+		client->csqcentityframe_lastreset = framenum;
 
 	maxsize -= 24; // always fit in an empty svc_entities message (for packet loss detection!)
 
