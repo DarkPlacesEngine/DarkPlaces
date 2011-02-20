@@ -251,6 +251,7 @@ typedef struct client_s
 	unsigned char csqcentityglobalhistory[MAX_EDICTS]; // set to 1 if the entity was ever csqc networked to the client, and never reset back to 0
 	csqcentityframedb_t csqcentityframehistory[NUM_CSQCENTITYDB_FRAMES];
 	int csqcentityframehistory_next;
+	int csqcentityframe_lastreset;
 
 	/// prevent animated names
 	float nametime;
