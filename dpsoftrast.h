@@ -157,6 +157,7 @@ typedef enum shadermode_e
 	SHADERMODE_SHOWDEPTH, ///< (debugging) renders depth as color
 	SHADERMODE_DEFERREDGEOMETRY, ///< (deferred) render material properties to screenspace geometry buffers
 	SHADERMODE_DEFERREDLIGHTSOURCE, ///< (deferred) use directional pixel shading from light source (rtlight) on screenspace geometry buffers
+	SHADERMODE_DEFERREDBOUNCELIGHT, ///< (deferred) simple area light deferred particles using geometry buffers for Global Illumination purposes
 	SHADERMODE_COUNT
 }
 shadermode_t;

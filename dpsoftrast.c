@@ -4204,6 +4204,23 @@ void DPSOFTRAST_PixelShader_DeferredLightSource(DPSOFTRAST_State_Thread *thread,
 
 
 
+void DPSOFTRAST_VertexShader_DeferredBounceLight(void)
+{
+	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+}
+
+void DPSOFTRAST_PixelShader_DeferredBounceLight(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
+{
+	// TODO: IMPLEMENT
+	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
+	memset(buffer_FragColorbgra8 + span->startx*4, 0, (span->endx - span->startx)*4);
+	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
+}
+
+
+
 typedef struct DPSOFTRAST_ShaderModeInfo_s
 {
 	int lodarrayindex;
@@ -4231,7 +4248,8 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {~0}},
 	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
-	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}}
+	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}},
+	{2, DPSOFTRAST_VertexShader_DeferredBounceLight,        DPSOFTRAST_PixelShader_DeferredBounceLight,        {~0}}
 };
 
 void DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread)
