@@ -89,6 +89,13 @@ typedef struct beam_s
 }
 beam_t;
 
+typedef struct rtlight_particle_s
+{
+	float origin[3];
+	float color[3];
+}
+rtlight_particle_t;
+
 typedef struct rtlight_s
 {
 	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...  they just use the origin
@@ -202,6 +209,11 @@ typedef struct rtlight_s
 	/// masks of all shadowmap sides that have any potential static receivers or casters
 	int static_shadowmap_receivers;
 	int static_shadowmap_casters;
+	/// particle-tracing cache for global illumination
+	int particlecache_numparticles;
+	int particlecache_maxparticles;
+	int particlecache_updateparticle;
+	rtlight_particle_t *particlecache_particles;
 }
 rtlight_t;
 
@@ -1561,6 +1573,9 @@ typedef struct r_refdef_stats_s
 	int lights_lighttriangles;
 	int lights_shadowtriangles;
 	int lights_dynamicshadowtriangles;
+	int lights_bouncelightscounted;
+	int lights_bouncelightsdrawn;
+	int lights_bouncelightsupdated;
 	int bloom;
 	int bloom_copypixels;
 	int bloom_drawpixels;

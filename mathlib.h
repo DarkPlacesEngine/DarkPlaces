@@ -175,6 +175,10 @@ int PointInfrontOfTriangle(const float *p, const float *a, const float *b, const
 }
 #endif
 
+#define lhcheeserand() (seed = (seed * 987211u) ^ (seed >> 13u) ^ 914867)
+#define lhcheeserandom(MIN,MAX) ((double)(lhcheeserand() + 0.5) / ((double)4096.0*1024.0*1024.0) * ((MAX)-(MIN)) + (MIN))
+#define VectorCheeseRandom(v) do{(v)[0] = lhcheeserandom(-1, 1);(v)[1] = lhcheeserandom(-1, 1);(v)[2] = lhcheeserandom(-1, 1);}while(DotProduct(v, v) > 1)
+
 /*
 // LordHavoc: quaternion math, untested, don't know if these are correct,
 // need to add conversion to/from matrices
