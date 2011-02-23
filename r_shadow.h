@@ -37,6 +37,11 @@ extern cvar_t r_shadow_texture3d;
 extern cvar_t gl_ext_separatestencil;
 extern cvar_t gl_ext_stenciltwoside;
 
+// used by shader for bouncegrid feature
+extern rtexture_t *r_shadow_bouncegridtexture;
+extern matrix4x4_t r_shadow_bouncegridmatrix;
+extern vec_t r_shadow_bouncegridintensity;
+
 void R_Shadow_Init(void);
 qboolean R_Shadow_ShadowMappingEnabled(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs);

@@ -516,7 +516,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	{
 		if (pic->tex && pic->width == width && pic->height == height)
 		{
-			R_UpdateTexture(pic->tex, pixels_bgra, 0, 0, width, height);
+			R_UpdateTexture(pic->tex, pixels_bgra, 0, 0, 0, width, height, 1);
 			return pic;
 		}
 	}
