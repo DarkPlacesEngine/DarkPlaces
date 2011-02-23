@@ -435,7 +435,7 @@ static void cl_gecko_updatecallback( rtexture_t *texture, void* callbackData ) {
 	if( instance->browser ) {
 		// TODO: OSGK only supports BGRA right now
 		TIMING_TIMESTATEMENT(data = osgk_browser_lock_data( instance->browser, NULL ));
-		R_UpdateTexture( texture, data, 0, 0, instance->width, instance->height );
+		R_UpdateTexture( texture, data, 0, 0, 0, instance->width, instance->height, 1 );
 		osgk_browser_unlock_data( instance->browser, data );
 	}
 }

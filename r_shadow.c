@@ -327,6 +327,23 @@ cvar_t r_shadow_particletrace_maxbounce = {CVAR_SAVE, "r_shadow_particletrace_ma
 cvar_t r_shadow_particletrace_bounceintensity = {CVAR_SAVE, "r_shadow_particletrace_bounceintensity", "1", "amount of energy carried over after each bounce"};
 cvar_t r_shadow_particletrace_particlespacing = {CVAR_SAVE, "r_shadow_particletrace_particlespacing", "0.25", "overlap setting in terms of particle size, this affects how many particles are used"};
 cvar_t r_shadow_particletrace_updatepercentage = {CVAR_SAVE, "r_shadow_particletrace_updatepercentage", "0.01", "update this fraction of the particles of a light each frame (0 = best performance)"};
+cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, requires r_shadow_realtime_world 1"};
+cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dlightparticlemultiplier", "0", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
+cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
+cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "1", "overall brightness of bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "16", "maximum number of bounces for a particle (minimum is 1)"};
+cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce"};
+cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "16", "brightness of particles contributing to bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_particlespacing = {CVAR_SAVE, "r_shadow_bouncegrid_particlespacing", "32", "emit one particle per this many units (squared) of radius (squared)"};
+cvar_t r_shadow_bouncegrid_spacingx = {CVAR_SAVE, "r_shadow_bouncegrid_spacingx", "64", "unit size of bouncegrid pixel on X axis"};
+cvar_t r_shadow_bouncegrid_spacingy = {CVAR_SAVE, "r_shadow_bouncegrid_spacingy", "64", "unit size of bouncegrid pixel on Y axis"};
+cvar_t r_shadow_bouncegrid_spacingz = {CVAR_SAVE, "r_shadow_bouncegrid_spacingz", "64", "unit size of bouncegrid pixel on Z axis"};
+cvar_t r_shadow_bouncegrid_stablerandom = {CVAR_SAVE, "r_shadow_bouncegrid_stablerandom", "1", "make particle distribution consistent from frame to frame"};
+cvar_t r_shadow_bouncegrid_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
+cvar_t r_shadow_bouncegrid_x = {CVAR_SAVE, "r_shadow_bouncegrid_x", "128", "maximum texture size of bouncegrid on X axis"};
+cvar_t r_shadow_bouncegrid_y = {CVAR_SAVE, "r_shadow_bouncegrid_y", "128", "maximum texture size of bouncegrid on Y axis"};
+cvar_t r_shadow_bouncegrid_z = {CVAR_SAVE, "r_shadow_bouncegrid_z", "64", "maximum texture size of bouncegrid on Z axis"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "1", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility)"};
@@ -339,6 +356,12 @@ cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0", "ho
 cvar_t r_editlights_cursorpushoff = {0, "r_editlights_cursorpushoff", "4", "how far to push the cursor off the impacted surface"};
 cvar_t r_editlights_cursorgrid = {0, "r_editlights_cursorgrid", "4", "snaps cursor to this grid size"};
 cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "1", "changes size of light entities loaded from a map"};
+
+rtexture_t *r_shadow_bouncegridtexture;
+matrix4x4_t r_shadow_bouncegridmatrix;
+vec_t r_shadow_bouncegridintensity;
+static double r_shadow_bouncegridtime;
+static int r_shadow_bouncegridresolution[3];
 
 // note the table actually includes one more value, just to avoid the need to clamp the distance index due to minor math error
 #define ATTENTABLESIZE 256
@@ -483,6 +506,7 @@ void R_Shadow_FreeShadowMaps(void)
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
+	r_shadow_bouncegridtexture = NULL;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -554,6 +578,7 @@ void r_shadow_shutdown(void)
 	r_shadow_prepass_width = r_shadow_prepass_height = 0;
 
 	CHECKGLERROR
+	r_shadow_bouncegridtexture = NULL;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -621,6 +646,7 @@ void r_shadow_shutdown(void)
 
 void r_shadow_newmap(void)
 {
+	if (r_shadow_bouncegridtexture) R_FreeTexture(r_shadow_bouncegridtexture);r_shadow_bouncegridtexture = NULL;
 	if (r_shadow_lightcorona)                 R_SkinFrame_MarkUsed(r_shadow_lightcorona);
 	if (r_editlights_sprcursor)               R_SkinFrame_MarkUsed(r_editlights_sprcursor);
 	if (r_editlights_sprlight)                R_SkinFrame_MarkUsed(r_editlights_sprlight);
@@ -692,6 +718,23 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_particletrace_bounceintensity);
 	Cvar_RegisterVariable(&r_shadow_particletrace_particlespacing);
 	Cvar_RegisterVariable(&r_shadow_particletrace_updatepercentage);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dlightparticlemultiplier);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_hitmodels);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensity);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_lightradiusscale);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_maxbounce);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlespacing);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingx);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingy);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingz);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_stablerandom);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_updateinterval);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_x);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_y);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_z);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
@@ -2242,6 +2285,232 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	GL_CullFace(r_refdef.view.cullface_back);
 	R_Mesh_PrepareVertices_Vertex3f(8, vertex3f, NULL);
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
+}
+
+static void R_Shadow_UpdateBounceGridTexture(void)
+{
+#define MAXBOUNCEGRIDPARTICLESPERLIGHT 1048576
+	dlight_t *light;
+	int flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	int bouncecount;
+	int bouncelimit;
+	int c[3];
+	int hitsupercontentsmask;
+	int maxbounce;
+	int numpixels;
+	int resolution[3];
+	int shootparticles;
+	int shotparticles;
+	int tex[3];
+	trace_t cliptrace;
+	unsigned char *pixel;
+	unsigned char *pixels;
+	unsigned int lightindex;
+	unsigned int range;
+	unsigned int range1;
+	unsigned int range2;
+	unsigned int seed = (unsigned int)(realtime * 1000.0f);
+	vec3_t shotcolor;
+	vec3_t baseshotcolor;
+	vec3_t clipend;
+	vec3_t clipstart;
+	vec3_t ispacing;
+	vec3_t maxs;
+	vec3_t mins;
+	vec3_t size;
+	vec3_t spacing;
+	vec3_t lightcolor;
+	vec_t radius;
+	vec_t s;
+	vec_t lightintensity;
+	float m[16];
+	qboolean isstatic = r_shadow_bouncegrid_updateinterval.value > 1.0f;
+	rtlight_t *rtlight;
+	if (!r_shadow_bouncegrid.integer || !vid.support.ext_texture_3d)
+	{
+		if (r_shadow_bouncegridtexture)
+		{
+			R_FreeTexture(r_shadow_bouncegridtexture);
+			r_shadow_bouncegridtexture = NULL;
+		}
+		return;
+	}
+	if (r_refdef.scene.worldmodel)
+	{
+		VectorSet(spacing, bound(1, r_shadow_bouncegrid_spacingx.value, 512), bound(1, r_shadow_bouncegrid_spacingy.value, 512), bound(1, r_shadow_bouncegrid_spacingz.value, 512));
+		VectorMA(r_refdef.scene.worldmodel->normalmins, -2.0f, spacing, mins);
+		VectorMA(r_refdef.scene.worldmodel->normalmaxs, 2.0f, spacing, maxs);
+		VectorSubtract(maxs, mins, size);
+		resolution[0] = (int)floor(size[0] / spacing[0] + 0.5f);
+		resolution[1] = (int)floor(size[1] / spacing[1] + 0.5f);
+		resolution[2] = (int)floor(size[2] / spacing[2] + 0.5f);
+		resolution[0] = min(resolution[0], bound(4, r_shadow_bouncegrid_x.integer, (int)vid.maxtexturesize_3d));
+		resolution[1] = min(resolution[1], bound(4, r_shadow_bouncegrid_y.integer, (int)vid.maxtexturesize_3d));
+		resolution[2] = min(resolution[2], bound(4, r_shadow_bouncegrid_z.integer, (int)vid.maxtexturesize_3d));
+		spacing[0] = size[0] / resolution[0];
+		spacing[1] = size[1] / resolution[1];
+		spacing[2] = size[2] / resolution[2];
+		ispacing[0] = 1.0f / spacing[0];
+		ispacing[1] = 1.0f / spacing[1];
+		ispacing[2] = 1.0f / spacing[2];
+	}
+	else
+	{
+		VectorSet(resolution, bound(4, r_shadow_bouncegrid_x.integer, (int)vid.maxtexturesize_3d), bound(4, r_shadow_bouncegrid_y.integer, (int)vid.maxtexturesize_3d), bound(4, r_shadow_bouncegrid_z.integer, (int)vid.maxtexturesize_3d));
+		VectorSet(spacing, bound(1, r_shadow_bouncegrid_spacingx.value, 512), bound(1, r_shadow_bouncegrid_spacingy.value, 512), bound(1, r_shadow_bouncegrid_spacingz.value, 512));
+		VectorMultiply(resolution, spacing, size);
+		ispacing[0] = 1.0f / spacing[0];
+		ispacing[1] = 1.0f / spacing[1];
+		ispacing[2] = 1.0f / spacing[2];
+		mins[0] = floor(r_refdef.view.origin[0] * ispacing[0] + 0.5f) * spacing[0] - 0.5f * size[0];
+		mins[1] = floor(r_refdef.view.origin[1] * ispacing[1] + 0.5f) * spacing[1] - 0.5f * size[1];
+		mins[2] = floor(r_refdef.view.origin[2] * ispacing[2] + 0.5f) * spacing[2] - 0.5f * size[2];
+		VectorAdd(mins, size, maxs);
+	}
+	memset(m, 0, sizeof(m));
+	m[0] = 1.0f / size[0];
+	m[3] = -mins[0] * m[0];
+	m[5] = 1.0f / size[1];
+	m[7] = -mins[1] * m[5];
+	m[10] = 1.0f / size[2];
+	m[11] = -mins[2] * m[10];
+	m[15] = 1.0f;
+	Matrix4x4_FromArrayFloatD3D(&r_shadow_bouncegridmatrix, m);
+	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
+	if (r_shadow_bouncegridtexture && realtime < r_shadow_bouncegridtime + r_shadow_bouncegrid_updateinterval.value && resolution[0] == r_shadow_bouncegridresolution[0] && resolution[1] == r_shadow_bouncegridresolution[1] && resolution[2] == r_shadow_bouncegridresolution[2])
+		return;
+	numpixels = resolution[0]*resolution[1]*resolution[2];
+	// allocate pixels for this update...
+	pixels = Mem_Alloc(r_main_mempool, numpixels * sizeof(unsigned char[4]));
+	// figure out what we want to interact with
+	if (r_shadow_bouncegrid_hitmodels.integer)
+		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK;
+	else
+		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK;
+	// iterate world rtlights
+	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	range1 = isstatic ? 0 : r_refdef.scene.numlights;
+	range2 = range + range1;
+	for (lightindex = 0;lightindex < range2;lightindex++)
+	{
+		if (isstatic)
+		{
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (!light || !(light->flags & flag))
+				continue;
+			rtlight = &light->rtlight;
+			// when static, we skip styled lights because they tend to change...
+			if (rtlight->style > 0)
+				continue;
+			VectorScale(rtlight->color, (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale) * (rtlight->style >= 0 ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1), lightcolor);
+		}
+		else
+		{
+			if (lightindex < range)
+			{
+				light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+				rtlight = &light->rtlight;
+			}
+			else
+				rtlight = r_refdef.scene.lights[lightindex - range];
+			// draw only visible lights (major speedup)
+			if (!rtlight->draw)
+				continue;
+			VectorScale(rtlight->currentcolor, rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale, lightcolor);
+		}
+		if (!VectorLength2(lightcolor))
+			continue;
+		// shoot particles from this light
+		// use a calculation for the number of particles that will not
+		// vary with lightstyle, otherwise we get randomized particle
+		// distribution, the seeded random is only consistent for a
+		// consistent number of particles on this light...
+		radius = rtlight->radius * bound(0.0001f, r_shadow_bouncegrid_lightradiusscale.value, 1024.0f);
+		s = rtlight->radius / bound(1.0f, r_shadow_bouncegrid_particlespacing.value, 1048576.0f);
+		lightintensity = VectorLength(rtlight->color) * rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale;
+		if (lightindex >= range)
+			lightintensity *= r_shadow_bouncegrid_dlightparticlemultiplier.value;
+		shootparticles = (int)bound(0, lightintensity * s *s, MAXBOUNCEGRIDPARTICLESPERLIGHT);
+		if (!shootparticles)
+			continue;
+		s = 255.0f * r_shadow_bouncegrid_particleintensity.value / shootparticles;
+		VectorScale(lightcolor, s, baseshotcolor);
+		maxbounce = bound(1, r_shadow_bouncegrid_maxbounce.integer, 16);
+		for (shotparticles = 0;shotparticles < shootparticles;shotparticles++)
+		{
+			if (r_shadow_bouncegrid_stablerandom.integer > 0)
+				seed = lightindex * 11937 + shotparticles;
+			VectorCopy(baseshotcolor, shotcolor);
+			VectorCopy(rtlight->shadoworigin, clipstart);
+			if (r_shadow_bouncegrid_stablerandom.integer < 0)
+				VectorRandom(clipend);
+			else
+				VectorCheeseRandom(clipend);
+			VectorMA(clipstart, radius, clipend, clipend);
+			bouncelimit = 1 + (rtlight->particlecache_updateparticle % maxbounce);
+			for (bouncecount = 0;;bouncecount++)
+			{
+				cliptrace = CL_TraceLine(clipstart, clipend, r_shadow_bouncegrid_hitmodels.integer ? MOVE_HITMODEL : MOVE_NOMONSTERS, NULL, hitsupercontentsmask, true, false, NULL, true);
+				//Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask);
+				if (cliptrace.fraction >= 1.0f)
+					break;
+				if (VectorLength2(shotcolor) < 1.0f)
+					break;
+				if (bouncecount > 0)
+				{
+					// figure out which texture pixel this is in
+					tex[0] = (int)((cliptrace.endpos[0] - mins[0]) * ispacing[0]);
+					tex[1] = (int)((cliptrace.endpos[1] - mins[1]) * ispacing[1]);
+					tex[2] = (int)((cliptrace.endpos[2] - mins[2]) * ispacing[2]);
+					if (tex[0] >= 1 && tex[1] >= 1 && tex[2] >= 1 && tex[0] < resolution[0] - 1 && tex[1] < resolution[1] - 1 && tex[2] < resolution[2] - 1)
+					{
+						// it is within bounds...
+						pixel = pixels + 4 * ((tex[2]*resolution[1]+tex[1])*resolution[0]+tex[0]);
+						// add to the pixel color
+						c[0] = pixel[0] + (int)shotcolor[2];
+						c[1] = pixel[1] + (int)shotcolor[1];
+						c[2] = pixel[2] + (int)shotcolor[0];
+						pixel[0] = (unsigned char)min(c[0], 255);
+						pixel[1] = (unsigned char)min(c[1], 255);
+						pixel[2] = (unsigned char)min(c[2], 255);
+						pixel[3] = 255;
+					}
+				}
+				if (bouncecount >= bouncelimit)
+					break;
+				// scale down shot color by bounce intensity and texture color
+				VectorScale(shotcolor, r_shadow_bouncegrid_particlebounceintensity.value, shotcolor);
+				if (cliptrace.hittexture && cliptrace.hittexture->currentskinframe)
+					VectorMultiply(shotcolor, rsurface.texture->currentskinframe->avgcolor, shotcolor);
+				// reflect the remaining portion of the line across plane normal
+				//VectorSubtract(clipend, cliptrace.endpos, clipdiff);
+				//VectorReflect(clipdiff, 1.0, cliptrace.plane.normal, clipend);
+				// random direction, primarily along plane normal
+				s = VectorDistance(cliptrace.endpos, clipend);
+				if (r_shadow_bouncegrid_stablerandom.integer < 0)
+					VectorRandom(clipend);
+				else
+					VectorCheeseRandom(clipend);
+				VectorMA(cliptrace.plane.normal, 0.95f, clipend, clipend);
+				VectorNormalize(clipend);
+				VectorScale(clipend, s, clipend);
+				// calculate the new line start and end
+				VectorCopy(cliptrace.endpos, clipstart);
+				VectorAdd(clipstart, clipend, clipend);
+			}
+		}
+	}
+	if (r_shadow_bouncegridtexture && r_shadow_bouncegridresolution[0] == resolution[0] && r_shadow_bouncegridresolution[1] == resolution[1] && r_shadow_bouncegridresolution[2] == resolution[2])
+		R_UpdateTexture(r_shadow_bouncegridtexture, pixels, 0, 0, 0, resolution[0], resolution[1], resolution[2]);
+	else
+	{
+		VectorCopy(resolution, r_shadow_bouncegridresolution);
+		if (r_shadow_bouncegridtexture)
+			R_FreeTexture(r_shadow_bouncegridtexture);
+		r_shadow_bouncegridtexture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2], pixels, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
+	}
+	Mem_Free(pixels);
+	r_shadow_bouncegridtime = realtime;
 }
 
 #define MAXPARTICLESPERLIGHT 262144
@@ -4261,6 +4530,8 @@ void R_Shadow_PrepareLights(void)
 
 	if (r_editlights.integer)
 		R_Shadow_DrawLightSprites();
+
+	R_Shadow_UpdateBounceGridTexture();
 }
 
 void R_Shadow_DrawLights(void)

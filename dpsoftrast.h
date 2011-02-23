@@ -186,13 +186,14 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAPPCF2 = 1<<19, ///< (lightsource) use higher quality percentage closer filtering on shadowmap test results
 	SHADERPERMUTATION_SHADOWSAMPLER = 1<<20, ///< (lightsource) use hardware shadowmap test
 	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<21, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<22, //< (lightsource) use orthographic shadowmap projection
+	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<22, ///< (lightsource) use orthographic shadowmap projection
 	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<23, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
 	SHADERPERMUTATION_ALPHAKILL = 1<<24, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
 	SHADERPERMUTATION_REFLECTCUBE = 1<<25, ///< fake reflections using global cubemap (not HDRI light probe)
-	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<26, // (water) counter-direction normalmaps scrolling
-	SHADERPERMUTATION_LIMIT = 1<<27, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 27 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<26, ///< (water) counter-direction normalmaps scrolling
+	SHADERPERMUTATION_BOUNCEGRID = 1<<27, ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
+	SHADERPERMUTATION_LIMIT = 1<<28, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 28 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
