@@ -2384,7 +2384,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 		return;
 	numpixels = resolution[0]*resolution[1]*resolution[2];
 	// allocate pixels for this update...
-	pixels = Mem_Alloc(r_main_mempool, numpixels * sizeof(unsigned char[4]));
+	pixels = (unsigned char *)Mem_Alloc(r_main_mempool, numpixels * sizeof(unsigned char[4]));
 	// figure out what we want to interact with
 	if (r_shadow_bouncegrid_hitmodels.integer)
 		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK;
@@ -2591,7 +2591,7 @@ static void R_Shadow_RenderParticlesForLight(rtlight_t *rtlight)
 		rtlight->particlecache_maxparticles = n;
 		rtlight->particlecache_updateparticle = 0;
 		if (rtlight->particlecache_maxparticles)
-			rtlight->particlecache_particles = Mem_Alloc(r_main_mempool, rtlight->particlecache_maxparticles * sizeof(*rtlight->particlecache_particles));
+			rtlight->particlecache_particles = (rtlight_particle_t *)Mem_Alloc(r_main_mempool, rtlight->particlecache_maxparticles * sizeof(*rtlight->particlecache_particles));
 		shootparticles = n * 16;
 	}
 
