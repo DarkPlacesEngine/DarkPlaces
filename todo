@@ -1,4 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+0 bug darkplaces renderer: rtworld seems to mess up player pants/shirt colors
 0 bug darkplaces d3d9: drawsetcliparea not working right (VorteX)
 0 bug darkplaces d3d9: shadowmaps are clipped - does this mean r_shadows 2 or light shadowmaps? (VorteX)
 0 bug darkplaces d3d9: overbright particles get weird colors (VorteX)
