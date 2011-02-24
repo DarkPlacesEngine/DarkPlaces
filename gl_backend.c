@@ -3740,9 +3740,9 @@ D3DVERTEXELEMENT9 r_vertexmesh_d3d9elements[] =
 
 D3DVERTEXELEMENT9 r_vertexbouncelight_d3d9elements[] =
 {
-	{0, (int)((size_t)&((r_vertexmesh_t *)0)->vertex3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-	{0, (int)((size_t)&((r_vertexmesh_t *)0)->color4ub          ), D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
-	{0, (int)((size_t)&((r_vertexmesh_t *)0)->texcoord4f        ), D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->vertex3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->color4ub          ), D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
+	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->texcoord4f        ), D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
 	D3DDECL_END()
 };
 
