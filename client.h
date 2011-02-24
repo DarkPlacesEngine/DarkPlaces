@@ -1573,9 +1573,12 @@ typedef struct r_refdef_stats_s
 	int lights_lighttriangles;
 	int lights_shadowtriangles;
 	int lights_dynamicshadowtriangles;
-	int lights_bouncelightscounted;
-	int lights_bouncelightsdrawn;
-	int lights_bouncelightsupdated;
+	int bouncegrid_lights;
+	int bouncegrid_particles;
+	int bouncegrid_traces;
+	int bouncegrid_hits;
+	int bouncegrid_splats;
+	int bouncegrid_bounces;
 	int bloom;
 	int bloom_copypixels;
 	int bloom_drawpixels;
