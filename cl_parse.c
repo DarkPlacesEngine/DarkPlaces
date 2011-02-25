@@ -166,7 +166,6 @@ cvar_t cl_worldname = {CVAR_READONLY, "cl_worldname", "", "name of current world
 cvar_t cl_worldnamenoextension = {CVAR_READONLY, "cl_worldnamenoextension", "", "name of current worldmodel without extension"};
 cvar_t cl_worldbasename = {CVAR_READONLY, "cl_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
 
-cvar_t demo_nehahra = {0, "demo_nehahra", "0", "reads all quake demos as nehahra movie protocol"};
 cvar_t developer_networkentities = {0, "developer_networkentities", "0", "prints received entities, value is 0-4 (higher for more info)"};
 cvar_t cl_gameplayfix_soundsmovewithentities = {0, "cl_gameplayfix_soundsmovewithentities", "1", "causes sounds made by lifts, players, projectiles, and any other entities, to move with the entity, so for example a rocket noise follows the rocket rather than staying at the starting position"};
 cvar_t cl_sound_wizardhit = {0, "cl_sound_wizardhit", "wizard/hit.wav", "sound to play during TE_WIZSPIKE (empty cvar disables sound)"};
@@ -1651,7 +1650,7 @@ void CL_ParseServerInfo (void)
 		return;
 	}
 	// hack for unmarked Nehahra movie demos which had a custom protocol
-	if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
+	if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && gamemode == GAME_NEHAHRA)
 		protocol = PROTOCOL_NEHAHRAMOVIE;
 	cls.protocol = protocol;
 	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
@@ -3782,7 +3781,7 @@ void CL_ParseServerMessage(void)
 				if (protocol == PROTOCOL_UNKNOWN)
 					Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)", i);
 				// hack for unmarked Nehahra movie demos which had a custom protocol
-				if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && demo_nehahra.integer)
+				if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && gamemode == GAME_NEHAHRA)
 					protocol = PROTOCOL_NEHAHRAMOVIE;
 				cls.protocol = protocol;
 				break;
@@ -4193,10 +4192,6 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_worldnamenoextension);
 	Cvar_RegisterVariable(&cl_worldbasename);
 
-	// LordHavoc: added demo_nehahra cvar
-	Cvar_RegisterVariable (&demo_nehahra);
-	if (gamemode == GAME_NEHAHRA)
-		Cvar_SetValue("demo_nehahra", 1);
 	Cvar_RegisterVariable(&developer_networkentities);
 	Cvar_RegisterVariable(&cl_gameplayfix_soundsmovewithentities);
 

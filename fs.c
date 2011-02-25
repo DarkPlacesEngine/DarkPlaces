@@ -1309,9 +1309,16 @@ void FS_Rescan (void)
 {
 	int i;
 	qboolean fs_modified = false;
+	qboolean reset = false;
 	char gamedirbuf[MAX_INPUTLINE];
 
+	if (fs_searchpaths)
+		reset = true;
 	FS_ClearSearchPath();
+
+	// automatically activate gamemode for the gamedirs specified
+	if (reset)
+		COM_ChangeGameTypeForGameDirs();
 
 	// add the game-specific paths
 	// gamedirname1 (typically id1)
@@ -1406,6 +1413,8 @@ FS_ChangeGameDirs
 */
 extern void Host_SaveConfig (void);
 extern void Host_LoadConfig_f (void);
+extern qboolean vid_opened;
+extern void VID_Stop(void);
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
 {
 	int i;
@@ -1454,14 +1463,21 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	// reinitialize filesystem to detect the new paks
 	FS_Rescan();
 
-	// exec the new config
-	Host_LoadConfig_f();
+	if (cls.demoplayback)
+	{
+		CL_Disconnect_f();
+		cls.demonum = 0;
+	}
 
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f();
 
-	// reinitialize renderer (this reloads hud/console background/etc)
-	R_Modules_Restart();
+	// close down the video subsystem, it will start up again when the config finishes...
+	VID_Stop();
+	vid_opened = false;
+
+	// restart the video subsystem after the config is executed
+	Cbuf_InsertText("\nloadconfig\nvid_restart\n\n");
 
 	return true;
 }

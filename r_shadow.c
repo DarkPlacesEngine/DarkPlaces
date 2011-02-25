@@ -743,11 +743,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&gl_flashblend);
 	Cvar_RegisterVariable(&gl_ext_separatestencil);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
-	if (gamemode == GAME_TENEBRAE)
-	{
-		Cvar_SetValue("r_shadow_gloss", 2);
-		Cvar_SetValue("r_shadow_bumpscale_basetexture", 4);
-	}
 	R_Shadow_EditLights_Init();
 	Mem_ExpandableArray_NewArray(&r_shadow_worldlightsarray, r_main_mempool, sizeof(dlight_t), 128);
 	maxshadowtriangles = 0;
