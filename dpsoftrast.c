@@ -20,8 +20,8 @@ typedef qboolean bool;
 		#define ATOMIC(var) var __attribute__((__aligned__(32)))
 		#define MEMORY_BARRIER (_mm_sfence())
 		#define ATOMIC_COUNTER volatile int32_t 
-		#define ATOMIC_INCREMENT(counter) (OSAtomicIncrement32Barrier(&(counter))
-		#define ATOMIC_DECREMENT(counter) (OSAtomicDecrement32Barrier(&(counter))
+		#define ATOMIC_INCREMENT(counter) (OSAtomicIncrement32Barrier(&(counter)))
+		#define ATOMIC_DECREMENT(counter) (OSAtomicDecrement32Barrier(&(counter)))
 		#define ATOMIC_ADD(counter, val) ((void)OSAtomicAdd32Barrier((val), &(counter)))
 	#elif defined(__GNUC__)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
