@@ -844,8 +844,10 @@ void MemStats_f(void)
 char* Mem_strdup (mempool_t *pool, const char* s)
 {
 	char* p;
-	size_t sz = strlen (s) + 1;
-	if (s == NULL) return NULL;
+	size_t sz;
+	if (s == NULL)
+		return NULL;
+	sz = strlen (s) + 1;
 	p = (char*)Mem_Alloc (pool, sz);
 	strlcpy (p, s, sz);
 	return p;

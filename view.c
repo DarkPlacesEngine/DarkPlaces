@@ -103,7 +103,7 @@ cvar_t chase_up = {CVAR_SAVE, "chase_up", "24", "chase cam distance from the pla
 cvar_t chase_active = {CVAR_SAVE, "chase_active", "0", "enables chase cam"};
 cvar_t chase_overhead = {CVAR_SAVE, "chase_overhead", "0", "chase cam looks straight down if this is not zero"};
 // GAME_GOODVSBAD2
-cvar_t chase_stevie = {0, "chase_stevie", "0", "chase cam view from above (used only by GoodVsBad2)"};
+cvar_t chase_stevie = {0, "chase_stevie", "0", "(GOODVSBAD2 only) chase cam view from above"};
 
 cvar_t v_deathtilt = {0, "v_deathtilt", "1", "whether to use sideways view when dead"};
 cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use when tilting the view while dead"};
@@ -1032,8 +1032,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&chase_active);
 	Cvar_RegisterVariable (&chase_overhead);
 	Cvar_RegisterVariable (&chase_pitchangle);
-	if (gamemode == GAME_GOODVSBAD2)
-		Cvar_RegisterVariable (&chase_stevie);
+	Cvar_RegisterVariable (&chase_stevie);
 
 	Cvar_RegisterVariable (&v_deathtilt);
 	Cvar_RegisterVariable (&v_deathtiltangle);

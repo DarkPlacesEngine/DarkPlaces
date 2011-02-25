@@ -124,6 +124,16 @@ typedef struct cvar_s
 
 	const char *defstring;
 
+	// values at init (for Cvar_RestoreInitState)
+	qboolean initstate; // indicates this existed at init
+	int initflags;
+	const char *initstring;
+	const char *initdescription;
+	int initinteger;
+	float initvalue;
+	float initvector[3];
+	const char *initdefstring;
+
 	unsigned int globaldefindex_progid[3];
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];
@@ -177,6 +187,9 @@ qboolean Cvar_Command (void);
 // called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
+
+void Cvar_SaveInitState(void);
+void Cvar_RestoreInitState(void);
 
 void Cvar_UnlockDefaults (void);
 void Cvar_LockDefaults_f (void);

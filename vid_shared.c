@@ -1279,12 +1279,19 @@ static void VID_CloseSystems(void)
 }
 
 qboolean vid_commandlinecheck = true;
+extern qboolean vid_opened;
 
 void VID_Restart_f(void)
 {
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
+
+	if (!vid_opened)
+	{
+		SCR_BeginLoadingPlaque();
+		return;
+	}
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
 		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va("x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(" (%ix AA)", vid.mode.samples) : "",
@@ -1311,7 +1318,7 @@ const char *vidfallbacks[][2] =
 	{NULL, NULL}
 };
 
-// this is only called once by Host_StartVideo
+// this is only called once by Host_StartVideo and again on each FS_GameDir_f
 void VID_Start(void)
 {
 	int i, width, height, success;
@@ -1359,6 +1366,12 @@ void VID_Start(void)
 			Sys_Error("Video modes failed");
 	}
 	VID_OpenSystems();
+}
+
+void VID_Stop(void)
+{
+	VID_CloseSystems();
+	VID_Shutdown();
 }
 
 int VID_SortModes_Compare(const void *a_, const void *b_)

@@ -2910,22 +2910,11 @@ void Host_InitCommands (void)
 
 	Cmd_AddCommand_WithClientCommand ("status", Host_Status_f, Host_Status_f, "print server status information");
 	Cmd_AddCommand ("quit", Host_Quit_f, "quit the game");
-	if (gamemode == GAME_NEHAHRA)
-	{
-		Cmd_AddCommand_WithClientCommand ("max", NULL, Host_God_f, "god mode (invulnerability)");
-		Cmd_AddCommand_WithClientCommand ("monster", NULL, Host_Notarget_f, "notarget mode (monsters do not see you)");
-		Cmd_AddCommand_WithClientCommand ("scrag", NULL, Host_Fly_f, "fly mode (flight)");
-		Cmd_AddCommand_WithClientCommand ("wraith", NULL, Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-		Cmd_AddCommand_WithClientCommand ("gimme", NULL, Host_Give_f, "alter inventory");
-	}
-	else
-	{
-		Cmd_AddCommand_WithClientCommand ("god", NULL, Host_God_f, "god mode (invulnerability)");
-		Cmd_AddCommand_WithClientCommand ("notarget", NULL, Host_Notarget_f, "notarget mode (monsters do not see you)");
-		Cmd_AddCommand_WithClientCommand ("fly", NULL, Host_Fly_f, "fly mode (flight)");
-		Cmd_AddCommand_WithClientCommand ("noclip", NULL, Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-		Cmd_AddCommand_WithClientCommand ("give", NULL, Host_Give_f, "alter inventory");
-	}
+	Cmd_AddCommand_WithClientCommand ("god", NULL, Host_God_f, "god mode (invulnerability)");
+	Cmd_AddCommand_WithClientCommand ("notarget", NULL, Host_Notarget_f, "notarget mode (monsters do not see you)");
+	Cmd_AddCommand_WithClientCommand ("fly", NULL, Host_Fly_f, "fly mode (flight)");
+	Cmd_AddCommand_WithClientCommand ("noclip", NULL, Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+	Cmd_AddCommand_WithClientCommand ("give", NULL, Host_Give_f, "alter inventory");
 	Cmd_AddCommand ("map", Host_Map_f, "kick everyone off the server and start a new level");
 	Cmd_AddCommand ("restart", Host_Restart_f, "restart current level");
 	Cmd_AddCommand ("changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
@@ -2957,11 +2946,8 @@ void Host_InitCommands (void)
 	Cmd_AddCommand_WithClientCommand ("color", Host_Color_f, Host_Color_f, "change your player shirt and pants colors");
 	Cvar_RegisterVariable (&cl_rate);
 	Cmd_AddCommand_WithClientCommand ("rate", Host_Rate_f, Host_Rate_f, "change your network connection speed");
-	if (gamemode == GAME_NEHAHRA)
-	{
-		Cvar_RegisterVariable (&cl_pmodel);
-		Cmd_AddCommand_WithClientCommand ("pmodel", Host_PModel_f, Host_PModel_f, "change your player model choice (Nehahra specific)");
-	}
+	Cvar_RegisterVariable (&cl_pmodel);
+	Cmd_AddCommand_WithClientCommand ("pmodel", Host_PModel_f, Host_PModel_f, "(Nehahra-only) change your player model choice");
 
 	// BLACK: This isnt game specific anymore (it was GAME_NEXUIZ at first)
 	Cvar_RegisterVariable (&cl_playermodel);

@@ -26,6 +26,8 @@ typedef struct cmdalias_s
 	struct cmdalias_s *next;
 	char name[MAX_ALIAS_NAME];
 	char *value;
+	qboolean initstate; // indicates this command existed at init
+	char *initialvalue; // backup copy of value at init
 } cmdalias_t;
 
 static cmdalias_t *cmd_alias;
@@ -492,6 +494,24 @@ static void Cmd_Exec_f (void)
 	Cbuf_InsertText ("\n");
 	Cbuf_InsertText (f);
 	Mem_Free(f);
+
+	// special defaults for specific games go here, these execute before default.cfg
+	// Nehahra pushable crates malfunction in some levels if this is on
+	// Nehahra NPC AI is confused by blowupfallenzombies
+	if (gamemode == GAME_NEHAHRA)
+		Cbuf_InsertText("\nsv_gameplayfix_upwardvelocityclearsongroundflag 0\nsv_gameplayfix_blowupfallenzombies 0\n\n");
+	// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
+	// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
+	// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
+	if (gamemode == GAME_HIPNOTIC)
+		Cbuf_InsertText("\nsv_gameplayfix_blowupfallenzombies 0\nsys_ticrate 0.02\nsv_gameplayfix_slidemoveprojectiles 0\n\n");
+	// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
+	if (gamemode == GAME_ROGUE)
+		Cbuf_InsertText("\nsv_gameplayfix_findradiusdistancetobox 0\n\n");
+	if (gamemode == GAME_NEXUIZ)
+		Cbuf_InsertText("\nsv_gameplayfix_q2airaccelerate 1\nsv_gameplayfix_stepmultipletimes 1\n\n");
+	if (gamemode == GAME_TENEBRAE)
+		Cbuf_InsertText("\nr_shadow_gloss 2\nr_shadow_bumpscale_basetexture 4\n\n");
 }
 
 
@@ -694,6 +714,8 @@ static void Cmd_UnAlias_f (void)
 		{
 			if(!strcmp(s, a->name))
 			{
+				if (a->initstate) // we can not remove init aliases
+					continue;
 				if(a == cmd_alias)
 					cmd_alias = a->next;
 				if(p)
@@ -724,6 +746,7 @@ typedef struct cmd_function_s
 	xcommand_t consolefunction;
 	xcommand_t clientfunction;
 	qboolean csqcfunc;
+	qboolean initstate; // indicates this command existed at init
 } cmd_function_t;
 
 static int cmd_argc;
@@ -1874,3 +1897,61 @@ int Cmd_CheckParm (const char *parm)
 	return 0;
 }
 
+
+
+void Cmd_SaveInitState(void)
+{
+	cmd_function_t *f;
+	cmdalias_t *a;
+	for (f = cmd_functions;f;f = f->next)
+		f->initstate = true;
+	for (a = cmd_alias;a;a = a->next)
+	{
+		a->initstate = true;
+		a->initialvalue = Mem_strdup(zonemempool, a->value);
+	}
+	Cvar_SaveInitState();
+}
+
+void Cmd_RestoreInitState(void)
+{
+	cmd_function_t *f, **fp;
+	cmdalias_t *a, **ap;
+	for (fp = &cmd_functions;(f = *fp);)
+	{
+		if (f->initstate)
+			fp = &f->next;
+		else
+		{
+			// destroy this command, it didn't exist at init
+			Con_DPrintf("Cmd_RestoreInitState: Destroying command %s\n", f->name);
+			*fp = f->next;
+			Z_Free(f);
+		}
+	}
+	for (ap = &cmd_alias;(a = *ap);)
+	{
+		if (a->initstate)
+		{
+			// restore this alias, it existed at init
+			if (strcmp(a->value ? a->value : "", a->initialvalue ? a->initialvalue : ""))
+			{
+				Con_DPrintf("Cmd_RestoreInitState: Restoring alias %s\n", a->name);
+				if (a->value)
+					Z_Free(a->value);
+				a->value = Mem_strdup(zonemempool, a->initialvalue);
+			}
+			ap = &a->next;
+		}
+		else
+		{
+			// free this alias, it didn't exist at init...
+			Con_DPrintf("Cmd_RestoreInitState: Destroying alias %s\n", a->name);
+			*ap = a->next;
+			if (a->value)
+				Z_Free(a->value);
+			Z_Free(a);
+		}
+	}
+	Cvar_RestoreInitState();
+}
