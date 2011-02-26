@@ -92,10 +92,25 @@ cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier
 cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
 cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
 
+#ifdef __IPHONEOS__
+# define SETVIDEOMODE 0
+#else
+# if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#  define SETVIDEOMODE 1
+# else
+// LordHavoc: SDL 1.3's SDL_CreateWindow API is not finished enough to use yet, but you can set this to 0 if you want to try it...
+#  ifndef SETVIDEOMODE
+#   define SETVIDEOMODE 1
+#  endif
+# endif
+#endif
+
 static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
+static qboolean vid_hasfocus = false;
 static qboolean vid_isfullscreen;
-#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#else
 static qboolean vid_usingvsync = false;
 #endif
 static int vid_numjoysticks = 0;
@@ -104,9 +119,16 @@ static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
 
 static int win_half_width = 50;
 static int win_half_height = 50;
-static int video_bpp, video_flags;
+static int video_bpp;
 
+#if SETVIDEOMODE
 static SDL_Surface *screen;
+static int video_flags;
+#else
+static SDL_GLContext *context;
+static SDL_Window *window;
+static int window_flags;
+#endif
 static SDL_Surface *vid_softsurface;
 
 // joystick axes state
@@ -125,186 +147,295 @@ static joy_axiscache_t joy_axescache[MAX_JOYSTICK_AXES];
 //TODO: Add joystick support
 //TODO: Add error checking
 
-
-//keysym to quake keysym mapping
-#define tenoh	0,0,0,0,0, 0,0,0,0,0
-#define fiftyoh tenoh, tenoh, tenoh, tenoh, tenoh
-#define hundredoh fiftyoh, fiftyoh
-static unsigned int tbl_sdltoquake[] =
-{
-	0,0,0,0,		//SDLK_UNKNOWN		= 0,
-	0,0,0,0,		//SDLK_FIRST		= 0,
-	K_BACKSPACE,	//SDLK_BACKSPACE	= 8,
-	K_TAB,			//SDLK_TAB			= 9,
-	0,0,
-	0,				//SDLK_CLEAR		= 12,
-	K_ENTER,		//SDLK_RETURN		= 13,
-    0,0,0,0,0,
-	K_PAUSE,		//SDLK_PAUSE		= 19,
-	0,0,0,0,0,0,0,
-	K_ESCAPE,		//SDLK_ESCAPE		= 27,
-	0,0,0,0,
-	K_SPACE,		//SDLK_SPACE		= 32,
-	'!',			//SDLK_EXCLAIM		= 33,
-	'"',			//SDLK_QUOTEDBL		= 34,
-	'#',			//SDLK_HASH			= 35,
-	'$',			//SDLK_DOLLAR		= 36,
-	0,
-	'&',			//SDLK_AMPERSAND	= 38,
-	'\'',			//SDLK_QUOTE		= 39,
-	'(',			//SDLK_LEFTPAREN	= 40,
-	')',			//SDLK_RIGHTPAREN	= 41,
-	'*',			//SDLK_ASTERISK		= 42,
-	'+',			//SDLK_PLUS			= 43,
-	',',			//SDLK_COMMA		= 44,
-	'-',			//SDLK_MINUS		= 45,
-	'.',			//SDLK_PERIOD		= 46,
-	'/',			//SDLK_SLASH		= 47,
-	'0',			//SDLK_0			= 48,
-	'1',			//SDLK_1			= 49,
-	'2',			//SDLK_2			= 50,
-	'3',			//SDLK_3			= 51,
-	'4',			//SDLK_4			= 52,
-	'5',			//SDLK_5			= 53,
-	'6',			//SDLK_6			= 54,
-	'7',			//SDLK_7			= 55,
-	'8',			//SDLK_8			= 56,
-	'9',			//SDLK_9			= 57,
-	':',			//SDLK_COLON		= 58,
-	';',			//SDLK_SEMICOLON	= 59,
-	'<',			//SDLK_LESS			= 60,
-	'=',			//SDLK_EQUALS		= 61,
-	'>',			//SDLK_GREATER		= 62,
-	'?',			//SDLK_QUESTION		= 63,
-	'@',			//SDLK_AT			= 64,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	'[',		//SDLK_LEFTBRACKET	= 91,
-	'\\',		//SDLK_BACKSLASH	= 92,
-	']',		//SDLK_RIGHTBRACKET	= 93,
-	'^',		//SDLK_CARET		= 94,
-	'_',		//SDLK_UNDERSCORE	= 95,
-	'`',		//SDLK_BACKQUOTE	= 96,
-	'a',		//SDLK_a			= 97,
-	'b',		//SDLK_b			= 98,
-	'c',		//SDLK_c			= 99,
-	'd',		//SDLK_d			= 100,
-	'e',		//SDLK_e			= 101,
-	'f',		//SDLK_f			= 102,
-	'g',		//SDLK_g			= 103,
-	'h',		//SDLK_h			= 104,
-	'i',		//SDLK_i			= 105,
-	'j',		//SDLK_j			= 106,
-	'k',		//SDLK_k			= 107,
-	'l',		//SDLK_l			= 108,
-	'm',		//SDLK_m			= 109,
-	'n',		//SDLK_n			= 110,
-	'o',		//SDLK_o			= 111,
-	'p',		//SDLK_p			= 112,
-	'q',		//SDLK_q			= 113,
-	'r',		//SDLK_r			= 114,
-	's',		//SDLK_s			= 115,
-	't',		//SDLK_t			= 116,
-	'u',		//SDLK_u			= 117,
-	'v',		//SDLK_v			= 118,
-	'w',		//SDLK_w			= 119,
-	'x',		//SDLK_x			= 120,
-	'y',		//SDLK_y			= 121,
-	'z',		//SDLK_z			= 122,
-	0,0,0,0,
-	K_DEL, 		//SDLK_DELETE		= 127,
-	hundredoh /*227*/, tenoh, tenoh, 0,0,0,0,0,0,0,0,
-	K_KP_0,		//SDLK_KP0		= 256,
-	K_KP_1,		//SDLK_KP1		= 257,
-	K_KP_2,		//SDLK_KP2		= 258,
-	K_KP_3,		//SDLK_KP3		= 259,
-	K_KP_4,		//SDLK_KP4		= 260,
-	K_KP_5,		//SDLK_KP5		= 261,
-	K_KP_6,		//SDLK_KP6		= 262,
-	K_KP_7,		//SDLK_KP7		= 263,
-	K_KP_8,		//SDLK_KP8		= 264,
-	K_KP_9,		//SDLK_KP9		= 265,
-	K_KP_PERIOD,//SDLK_KP_PERIOD	= 266,
-	K_KP_DIVIDE,//SDLK_KP_DIVIDE	= 267,
-	K_KP_MULTIPLY,//SDLK_KP_MULTIPLY= 268,
-	K_KP_MINUS,	//SDLK_KP_MINUS		= 269,
-	K_KP_PLUS,	//SDLK_KP_PLUS		= 270,
-	K_KP_ENTER,	//SDLK_KP_ENTER		= 271,
-	K_KP_EQUALS,//SDLK_KP_EQUALS	= 272,
-	K_UPARROW,	//SDLK_UP		= 273,
-	K_DOWNARROW,//SDLK_DOWN		= 274,
-	K_RIGHTARROW,//SDLK_RIGHT	= 275,
-	K_LEFTARROW,//SDLK_LEFT		= 276,
-	K_INS,		//SDLK_INSERT	= 277,
-	K_HOME,		//SDLK_HOME		= 278,
-	K_END,		//SDLK_END		= 279,
-	K_PGUP, 	//SDLK_PAGEUP	= 280,
-	K_PGDN,		//SDLK_PAGEDOWN	= 281,
-	K_F1,		//SDLK_F1		= 282,
-	K_F2,		//SDLK_F2		= 283,
-	K_F3,		//SDLK_F3		= 284,
-	K_F4,		//SDLK_F4		= 285,
-	K_F5,		//SDLK_F5		= 286,
-	K_F6,		//SDLK_F6		= 287,
-	K_F7,		//SDLK_F7		= 288,
-	K_F8,		//SDLK_F8		= 289,
-	K_F9,		//SDLK_F9		= 290,
-	K_F10,		//SDLK_F10		= 291,
-	K_F11,		//SDLK_F11		= 292,
-	K_F12,		//SDLK_F12		= 293,
-	0,			//SDLK_F13		= 294,
-	0,			//SDLK_F14		= 295,
-	0,			//SDLK_F15		= 296,
-	0,0,0,
-	K_NUMLOCK,	//SDLK_NUMLOCK	= 300,
-	K_CAPSLOCK,	//SDLK_CAPSLOCK	= 301,
-	K_SCROLLOCK,//SDLK_SCROLLOCK= 302,
-	K_SHIFT,	//SDLK_RSHIFT	= 303,
-	K_SHIFT,	//SDLK_LSHIFT	= 304,
-	K_CTRL,		//SDLK_RCTRL	= 305,
-	K_CTRL,		//SDLK_LCTRL	= 306,
-	K_ALT,		//SDLK_RALT		= 307,
-	K_ALT,		//SDLK_LALT		= 308,
-	0,			//SDLK_RMETA	= 309,
-	0,			//SDLK_LMETA	= 310,
-	0,			//SDLK_LSUPER	= 311,		/* Left "Windows" key */
-	0,			//SDLK_RSUPER	= 312,		/* Right "Windows" key */
-	K_ALT,			//SDLK_MODE		= 313,		/* "Alt Gr" key */
-	0,			//SDLK_COMPOSE	= 314,		/* Multi-key compose key */
-	0,			//SDLK_HELP		= 315,
-	0,			//SDLK_PRINT	= 316,
-	0,			//SDLK_SYSREQ	= 317,
-	K_PAUSE,	//SDLK_BREAK	= 318,
-	0,			//SDLK_MENU		= 319,
-	0,			//SDLK_POWER	= 320,		/* Power Macintosh power key */
-	'e',		//SDLK_EURO		= 321,		/* Some european keyboards */
-	0			//SDLK_UNDO		= 322,		/* Atari keyboard has Undo */
-};
-#undef tenoh
-#undef fiftyoh
-#undef hundredoh
+#ifndef SDLK_PERCENT
+#define SDLK_PERCENT '%'
+#define SDLK_PRINTSCREEN SDLK_PRINT
+#define SDLK_SCROLLLOCK SDLK_SCROLLOCK
+#define SDLK_NUMLOCKCLEAR SDLK_NUMLOCK
+#define SDLK_KP_1 SDLK_KP1
+#define SDLK_KP_2 SDLK_KP2
+#define SDLK_KP_3 SDLK_KP3
+#define SDLK_KP_4 SDLK_KP4
+#define SDLK_KP_5 SDLK_KP5
+#define SDLK_KP_6 SDLK_KP6
+#define SDLK_KP_7 SDLK_KP7
+#define SDLK_KP_8 SDLK_KP8
+#define SDLK_KP_9 SDLK_KP9
+#define SDLK_KP_0 SDLK_KP0
+#endif
 
 static int MapKey( unsigned int sdlkey )
 {
-	if( sdlkey > sizeof(tbl_sdltoquake)/ sizeof(int) )
-		return 0;
-    return tbl_sdltoquake[ sdlkey ];
+	switch(sdlkey)
+	{
+	default: return 0;
+//	case SDLK_UNKNOWN:            return K_UNKNOWN;
+	case SDLK_RETURN:             return K_ENTER;
+	case SDLK_ESCAPE:             return K_ESCAPE;
+	case SDLK_BACKSPACE:          return K_BACKSPACE;
+	case SDLK_TAB:                return K_TAB;
+	case SDLK_SPACE:              return K_SPACE;
+	case SDLK_EXCLAIM:            return '!';
+	case SDLK_QUOTEDBL:           return '"';
+	case SDLK_HASH:               return '#';
+	case SDLK_PERCENT:            return '%';
+	case SDLK_DOLLAR:             return '$';
+	case SDLK_AMPERSAND:          return '&';
+	case SDLK_QUOTE:              return '\'';
+	case SDLK_LEFTPAREN:          return '(';
+	case SDLK_RIGHTPAREN:         return ')';
+	case SDLK_ASTERISK:           return '*';
+	case SDLK_PLUS:               return '+';
+	case SDLK_COMMA:              return ',';
+	case SDLK_MINUS:              return '-';
+	case SDLK_PERIOD:             return '.';
+	case SDLK_SLASH:              return '/';
+	case SDLK_0:                  return '0';
+	case SDLK_1:                  return '1';
+	case SDLK_2:                  return '2';
+	case SDLK_3:                  return '3';
+	case SDLK_4:                  return '4';
+	case SDLK_5:                  return '5';
+	case SDLK_6:                  return '6';
+	case SDLK_7:                  return '7';
+	case SDLK_8:                  return '8';
+	case SDLK_9:                  return '9';
+	case SDLK_COLON:              return ':';
+	case SDLK_SEMICOLON:          return ';';
+	case SDLK_LESS:               return '<';
+	case SDLK_EQUALS:             return '=';
+	case SDLK_GREATER:            return '>';
+	case SDLK_QUESTION:           return '?';
+	case SDLK_AT:                 return '@';
+	case SDLK_LEFTBRACKET:        return '[';
+	case SDLK_BACKSLASH:          return '\\';
+	case SDLK_RIGHTBRACKET:       return ']';
+	case SDLK_CARET:              return '^';
+	case SDLK_UNDERSCORE:         return '_';
+	case SDLK_BACKQUOTE:          return '`';
+	case SDLK_a:                  return 'a';
+	case SDLK_b:                  return 'b';
+	case SDLK_c:                  return 'c';
+	case SDLK_d:                  return 'd';
+	case SDLK_e:                  return 'e';
+	case SDLK_f:                  return 'f';
+	case SDLK_g:                  return 'g';
+	case SDLK_h:                  return 'h';
+	case SDLK_i:                  return 'i';
+	case SDLK_j:                  return 'j';
+	case SDLK_k:                  return 'k';
+	case SDLK_l:                  return 'l';
+	case SDLK_m:                  return 'm';
+	case SDLK_n:                  return 'n';
+	case SDLK_o:                  return 'o';
+	case SDLK_p:                  return 'p';
+	case SDLK_q:                  return 'q';
+	case SDLK_r:                  return 'r';
+	case SDLK_s:                  return 's';
+	case SDLK_t:                  return 't';
+	case SDLK_u:                  return 'u';
+	case SDLK_v:                  return 'v';
+	case SDLK_w:                  return 'w';
+	case SDLK_x:                  return 'x';
+	case SDLK_y:                  return 'y';
+	case SDLK_z:                  return 'z';
+	case SDLK_CAPSLOCK:           return K_CAPSLOCK;
+	case SDLK_F1:                 return K_F1;
+	case SDLK_F2:                 return K_F2;
+	case SDLK_F3:                 return K_F3;
+	case SDLK_F4:                 return K_F4;
+	case SDLK_F5:                 return K_F5;
+	case SDLK_F6:                 return K_F6;
+	case SDLK_F7:                 return K_F7;
+	case SDLK_F8:                 return K_F8;
+	case SDLK_F9:                 return K_F9;
+	case SDLK_F10:                return K_F10;
+	case SDLK_F11:                return K_F11;
+	case SDLK_F12:                return K_F12;
+	case SDLK_PRINTSCREEN:        return K_PRINTSCREEN;
+	case SDLK_SCROLLLOCK:         return K_SCROLLOCK;
+	case SDLK_PAUSE:              return K_PAUSE;
+	case SDLK_INSERT:             return K_INS;
+	case SDLK_HOME:               return K_HOME;
+	case SDLK_PAGEUP:             return K_PGUP;
+	case SDLK_DELETE:             return K_DEL;
+	case SDLK_END:                return K_END;
+	case SDLK_PAGEDOWN:           return K_PGDN;
+	case SDLK_RIGHT:              return K_RIGHTARROW;
+	case SDLK_LEFT:               return K_LEFTARROW;
+	case SDLK_DOWN:               return K_DOWNARROW;
+	case SDLK_UP:                 return K_UPARROW;
+	case SDLK_NUMLOCKCLEAR:       return K_NUMLOCK;
+	case SDLK_KP_DIVIDE:          return K_KP_DIVIDE;
+	case SDLK_KP_MULTIPLY:        return K_KP_MULTIPLY;
+	case SDLK_KP_MINUS:           return K_KP_MINUS;
+	case SDLK_KP_PLUS:            return K_KP_PLUS;
+	case SDLK_KP_ENTER:           return K_KP_ENTER;
+	case SDLK_KP_1:               return K_KP_1;
+	case SDLK_KP_2:               return K_KP_2;
+	case SDLK_KP_3:               return K_KP_3;
+	case SDLK_KP_4:               return K_KP_4;
+	case SDLK_KP_5:               return K_KP_5;
+	case SDLK_KP_6:               return K_KP_6;
+	case SDLK_KP_7:               return K_KP_7;
+	case SDLK_KP_8:               return K_KP_8;
+	case SDLK_KP_9:               return K_KP_9;
+	case SDLK_KP_0:               return K_KP_0;
+	case SDLK_KP_PERIOD:          return K_KP_PERIOD;
+//	case SDLK_APPLICATION:        return K_APPLICATION;
+//	case SDLK_POWER:              return K_POWER;
+	case SDLK_KP_EQUALS:          return K_KP_EQUALS;
+//	case SDLK_F13:                return K_F13;
+//	case SDLK_F14:                return K_F14;
+//	case SDLK_F15:                return K_F15;
+//	case SDLK_F16:                return K_F16;
+//	case SDLK_F17:                return K_F17;
+//	case SDLK_F18:                return K_F18;
+//	case SDLK_F19:                return K_F19;
+//	case SDLK_F20:                return K_F20;
+//	case SDLK_F21:                return K_F21;
+//	case SDLK_F22:                return K_F22;
+//	case SDLK_F23:                return K_F23;
+//	case SDLK_F24:                return K_F24;
+//	case SDLK_EXECUTE:            return K_EXECUTE;
+//	case SDLK_HELP:               return K_HELP;
+//	case SDLK_MENU:               return K_MENU;
+//	case SDLK_SELECT:             return K_SELECT;
+//	case SDLK_STOP:               return K_STOP;
+//	case SDLK_AGAIN:              return K_AGAIN;
+//	case SDLK_UNDO:               return K_UNDO;
+//	case SDLK_CUT:                return K_CUT;
+//	case SDLK_COPY:               return K_COPY;
+//	case SDLK_PASTE:              return K_PASTE;
+//	case SDLK_FIND:               return K_FIND;
+//	case SDLK_MUTE:               return K_MUTE;
+//	case SDLK_VOLUMEUP:           return K_VOLUMEUP;
+//	case SDLK_VOLUMEDOWN:         return K_VOLUMEDOWN;
+//	case SDLK_KP_COMMA:           return K_KP_COMMA;
+//	case SDLK_KP_EQUALSAS400:     return K_KP_EQUALSAS400;
+//	case SDLK_ALTERASE:           return K_ALTERASE;
+//	case SDLK_SYSREQ:             return K_SYSREQ;
+//	case SDLK_CANCEL:             return K_CANCEL;
+//	case SDLK_CLEAR:              return K_CLEAR;
+//	case SDLK_PRIOR:              return K_PRIOR;
+//	case SDLK_RETURN2:            return K_RETURN2;
+//	case SDLK_SEPARATOR:          return K_SEPARATOR;
+//	case SDLK_OUT:                return K_OUT;
+//	case SDLK_OPER:               return K_OPER;
+//	case SDLK_CLEARAGAIN:         return K_CLEARAGAIN;
+//	case SDLK_CRSEL:              return K_CRSEL;
+//	case SDLK_EXSEL:              return K_EXSEL;
+//	case SDLK_KP_00:              return K_KP_00;
+//	case SDLK_KP_000:             return K_KP_000;
+//	case SDLK_THOUSANDSSEPARATOR: return K_THOUSANDSSEPARATOR;
+//	case SDLK_DECIMALSEPARATOR:   return K_DECIMALSEPARATOR;
+//	case SDLK_CURRENCYUNIT:       return K_CURRENCYUNIT;
+//	case SDLK_CURRENCYSUBUNIT:    return K_CURRENCYSUBUNIT;
+//	case SDLK_KP_LEFTPAREN:       return K_KP_LEFTPAREN;
+//	case SDLK_KP_RIGHTPAREN:      return K_KP_RIGHTPAREN;
+//	case SDLK_KP_LEFTBRACE:       return K_KP_LEFTBRACE;
+//	case SDLK_KP_RIGHTBRACE:      return K_KP_RIGHTBRACE;
+//	case SDLK_KP_TAB:             return K_KP_TAB;
+//	case SDLK_KP_BACKSPACE:       return K_KP_BACKSPACE;
+//	case SDLK_KP_A:               return K_KP_A;
+//	case SDLK_KP_B:               return K_KP_B;
+//	case SDLK_KP_C:               return K_KP_C;
+//	case SDLK_KP_D:               return K_KP_D;
+//	case SDLK_KP_E:               return K_KP_E;
+//	case SDLK_KP_F:               return K_KP_F;
+//	case SDLK_KP_XOR:             return K_KP_XOR;
+//	case SDLK_KP_POWER:           return K_KP_POWER;
+//	case SDLK_KP_PERCENT:         return K_KP_PERCENT;
+//	case SDLK_KP_LESS:            return K_KP_LESS;
+//	case SDLK_KP_GREATER:         return K_KP_GREATER;
+//	case SDLK_KP_AMPERSAND:       return K_KP_AMPERSAND;
+//	case SDLK_KP_DBLAMPERSAND:    return K_KP_DBLAMPERSAND;
+//	case SDLK_KP_VERTICALBAR:     return K_KP_VERTICALBAR;
+//	case SDLK_KP_DBLVERTICALBAR:  return K_KP_DBLVERTICALBAR;
+//	case SDLK_KP_COLON:           return K_KP_COLON;
+//	case SDLK_KP_HASH:            return K_KP_HASH;
+//	case SDLK_KP_SPACE:           return K_KP_SPACE;
+//	case SDLK_KP_AT:              return K_KP_AT;
+//	case SDLK_KP_EXCLAM:          return K_KP_EXCLAM;
+//	case SDLK_KP_MEMSTORE:        return K_KP_MEMSTORE;
+//	case SDLK_KP_MEMRECALL:       return K_KP_MEMRECALL;
+//	case SDLK_KP_MEMCLEAR:        return K_KP_MEMCLEAR;
+//	case SDLK_KP_MEMADD:          return K_KP_MEMADD;
+//	case SDLK_KP_MEMSUBTRACT:     return K_KP_MEMSUBTRACT;
+//	case SDLK_KP_MEMMULTIPLY:     return K_KP_MEMMULTIPLY;
+//	case SDLK_KP_MEMDIVIDE:       return K_KP_MEMDIVIDE;
+//	case SDLK_KP_PLUSMINUS:       return K_KP_PLUSMINUS;
+//	case SDLK_KP_CLEAR:           return K_KP_CLEAR;
+//	case SDLK_KP_CLEARENTRY:      return K_KP_CLEARENTRY;
+//	case SDLK_KP_BINARY:          return K_KP_BINARY;
+//	case SDLK_KP_OCTAL:           return K_KP_OCTAL;
+//	case SDLK_KP_DECIMAL:         return K_KP_DECIMAL;
+//	case SDLK_KP_HEXADECIMAL:     return K_KP_HEXADECIMAL;
+	case SDLK_LCTRL:              return K_CTRL;
+	case SDLK_LSHIFT:             return K_SHIFT;
+	case SDLK_LALT:               return K_ALT;
+//	case SDLK_LGUI:               return K_LGUI;
+	case SDLK_RCTRL:              return K_CTRL;
+	case SDLK_RSHIFT:             return K_SHIFT;
+	case SDLK_RALT:               return K_ALT;
+//	case SDLK_RGUI:               return K_RGUI;
+//	case SDLK_MODE:               return K_MODE;
+//	case SDLK_AUDIONEXT:          return K_AUDIONEXT;
+//	case SDLK_AUDIOPREV:          return K_AUDIOPREV;
+//	case SDLK_AUDIOSTOP:          return K_AUDIOSTOP;
+//	case SDLK_AUDIOPLAY:          return K_AUDIOPLAY;
+//	case SDLK_AUDIOMUTE:          return K_AUDIOMUTE;
+//	case SDLK_MEDIASELECT:        return K_MEDIASELECT;
+//	case SDLK_WWW:                return K_WWW;
+//	case SDLK_MAIL:               return K_MAIL;
+//	case SDLK_CALCULATOR:         return K_CALCULATOR;
+//	case SDLK_COMPUTER:           return K_COMPUTER;
+//	case SDLK_AC_SEARCH:          return K_AC_SEARCH;
+//	case SDLK_AC_HOME:            return K_AC_HOME;
+//	case SDLK_AC_BACK:            return K_AC_BACK;
+//	case SDLK_AC_FORWARD:         return K_AC_FORWARD;
+//	case SDLK_AC_STOP:            return K_AC_STOP;
+//	case SDLK_AC_REFRESH:         return K_AC_REFRESH;
+//	case SDLK_AC_BOOKMARKS:       return K_AC_BOOKMARKS;
+//	case SDLK_BRIGHTNESSDOWN:     return K_BRIGHTNESSDOWN;
+//	case SDLK_BRIGHTNESSUP:       return K_BRIGHTNESSUP;
+//	case SDLK_DISPLAYSWITCH:      return K_DISPLAYSWITCH;
+//	case SDLK_KBDILLUMTOGGLE:     return K_KBDILLUMTOGGLE;
+//	case SDLK_KBDILLUMDOWN:       return K_KBDILLUMDOWN;
+//	case SDLK_KBDILLUMUP:         return K_KBDILLUMUP;
+//	case SDLK_EJECT:              return K_EJECT;
+//	case SDLK_SLEEP:              return K_SLEEP;
+	}
 }
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
-#ifndef __IPHONEOS__
+#ifdef __IPHONEOS__
+	if (key_consoleactive || key_dest != key_game)
+	{
+		if (!SDL_iPhoneKeyboardIsShown(window))
+			SDL_iPhoneKeyboardShow(window);
+	}
+	else
+	{
+		if (SDL_iPhoneKeyboardIsShown(window))
+			SDL_iPhoneKeyboardHide(window);
+	}
+#else
 #ifdef MACOSX
 	if(relative)
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
 			VID_SetMouse(false, false, false); // ungrab first!
 #endif
-#endif
 	if (vid_usingmouse != relative)
 	{
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
+#if SETVIDEOMODE
 		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
-#ifndef __IPHONEOS__
+#else
+		SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE);
+#endif
 #ifdef MACOSX
 		if(relative)
 		{
@@ -357,13 +488,13 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 			}
 		}
 #endif
-#endif
 	}
 	if (vid_usinghidecursor != hidecursor)
 	{
 		vid_usinghidecursor = hidecursor;
 		SDL_ShowCursor( hidecursor ? SDL_DISABLE : SDL_ENABLE);
 	}
+#endif
 }
 
 static double IN_JoystickGetAxis(SDL_Joystick *joy, int axis, double sensitivity, double deadzone)
@@ -453,7 +584,21 @@ void IN_Move( void )
 
 	if (vid_usingmouse)
 	{
-		if(vid_stick_mouse.integer)
+		if (vid_touchscreen.integer)
+		{
+			// touchscreen controls...
+			if (SDL_GetRelativeMouseState(&x,&y))
+			{
+				in_mouse_x = x;
+				in_mouse_y = y;
+			}
+			else
+			{
+				in_mouse_x = 0;
+				in_mouse_y = 0;
+			}
+		}
+		else if (vid_stick_mouse.integer)
 		{
 			// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 			// window grabbing. --blub
@@ -461,7 +606,11 @@ void IN_Move( void )
 			// we need 2 frames to initialize the center position
 			if(!stuck)
 			{
+#if SETVIDEOMODE
 				SDL_WarpMouse(win_half_width, win_half_height);
+#else
+				SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
+#endif
 				SDL_GetMouseState(&x, &y);
 				SDL_GetRelativeMouseState(&x, &y);
 				++stuck;
@@ -472,7 +621,11 @@ void IN_Move( void )
 				SDL_GetMouseState(&x, &y);
 				old_x = x - win_half_width;
 				old_y = y - win_half_height;
+#if SETVIDEOMODE
 				SDL_WarpMouse(win_half_width, win_half_height);
+#else
+				SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
+#endif
 			}
 		} else {
 			SDL_GetRelativeMouseState( &x, &y );
@@ -527,21 +680,6 @@ void IN_Move( void )
 // Message Handling
 ////
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-static int Sys_EventFilter( SDL_Event *event )
-{
-	//TODO: Add a quit query in linux, too - though linux user are more likely to know what they do
-	if (event->type == SDL_QUIT)
-	{
-#ifdef WIN32
-		if (MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO)
-			return 0;
-#endif
-	}
-	return 1;
-}
-#endif
-
 #ifdef SDL_R_RESTART
 static qboolean sdl_needs_restart;
 static void sdl_start(void)
@@ -578,6 +716,8 @@ static keynum_t buttonremap[18] =
 	K_MOUSE16,
 };
 
+#if SETVIDEOMODE
+// SDL 1.2
 void Sys_SendKeyEvents( void )
 {
 	static qboolean sound_active = true;
@@ -587,12 +727,6 @@ void Sys_SendKeyEvents( void )
 	while( SDL_PollEvent( &event ) )
 		switch( event.type ) {
 			case SDL_QUIT:
-#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
-#ifdef WIN32
-				if (MessageBox( NULL, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION ) == IDNO)
-					return 0;
-#endif
-#endif
 				Sys_Quit(0);
 				break;
 			case SDL_KEYDOWN:
@@ -627,7 +761,7 @@ void Sys_SendKeyEvents( void )
 				{
 					vid.width = event.resize.w;
 					vid.height = event.resize.h;
-					SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
+					screen = SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
 					if (vid_softsurface)
 					{
 						SDL_FreeSurface(vid_softsurface);
@@ -649,6 +783,17 @@ void Sys_SendKeyEvents( void )
 #endif
 				}
 				break;
+			case SDL_TEXTEDITING:
+				// unused when SETVIDEOMODE API is used
+				break;
+			case SDL_TEXTINPUT:
+				// this occurs with SETVIDEOMODE but we are not using it
+				break;
+			case SDL_MOUSEMOTION:
+				break;
+			default:
+				Con_DPrintf("Received unrecognized SDL_Event type 0x%x\n", event.type);
+				break;
 		}
 
 	// enable/disable sound on focus gain/loss
@@ -669,6 +814,159 @@ void Sys_SendKeyEvents( void )
 		}
 	}
 }
+
+#else
+
+// SDL 1.3
+void Sys_SendKeyEvents( void )
+{
+	static qboolean sound_active = true;
+	int keycode;
+	SDL_Event event;
+
+	while( SDL_PollEvent( &event ) )
+		switch( event.type ) {
+			case SDL_QUIT:
+				Sys_Quit(0);
+				break;
+			case SDL_KEYDOWN:
+			case SDL_KEYUP:
+				keycode = MapKey(event.key.keysym.sym);
+				if (!IN_JoystickBlockDoubledKeyEvents(keycode))
+					Key_Event(keycode, 0, (event.key.state == SDL_PRESSED));
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+				if (event.button.button <= 18)
+					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
+				break;
+			case SDL_JOYBUTTONDOWN:
+				if (!joy_enable.integer)
+					break; // ignore down events if joystick has been disabled
+			case SDL_JOYBUTTONUP:
+				if (event.jbutton.button < 48)
+					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
+				break;
+			case SDL_WINDOWEVENT:
+				//if (event.window.windowID == window) // how to compare?
+				{
+					switch(event.window.event)
+					{
+					case SDL_WINDOWEVENT_SHOWN:
+						vid_hidden = false;
+						break;
+					case  SDL_WINDOWEVENT_HIDDEN:
+						vid_hidden = true;
+						break;
+					case SDL_WINDOWEVENT_EXPOSED:
+						break;
+					case SDL_WINDOWEVENT_MOVED:
+						break;
+					case SDL_WINDOWEVENT_RESIZED:
+						if(vid_resizable.integer < 2)
+						{
+							vid.width = event.window.data1;
+							vid.height = event.window.data2;
+							if (vid_softsurface)
+							{
+								SDL_FreeSurface(vid_softsurface);
+								vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, vid.width, vid.height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+								vid.softpixels = (unsigned int *)vid_softsurface->pixels;
+								SDL_SetAlpha(vid_softsurface, 0, 255);
+								if (vid.softdepthpixels)
+									free(vid.softdepthpixels);
+								vid.softdepthpixels = (unsigned int*)calloc(1, vid.width * vid.height * 4);
+							}
+#ifdef SDL_R_RESTART
+							// better not call R_Modules_Restart from here directly, as this may wreak havoc...
+							// so, let's better queue it for next frame
+							if(!sdl_needs_restart)
+							{
+								Cbuf_AddText("\nr_restart\n");
+								sdl_needs_restart = true;
+							}
+#endif
+						}
+						break;
+					case SDL_WINDOWEVENT_MINIMIZED:
+						break;
+					case SDL_WINDOWEVENT_MAXIMIZED:
+						break;
+					case SDL_WINDOWEVENT_RESTORED:
+						break;
+					case SDL_WINDOWEVENT_ENTER:
+						break;
+					case SDL_WINDOWEVENT_LEAVE:
+						break;
+					case SDL_WINDOWEVENT_FOCUS_GAINED:
+						vid_hasfocus = true;
+						break;
+					case SDL_WINDOWEVENT_FOCUS_LOST:
+						vid_hasfocus = false;
+						break;
+					case SDL_WINDOWEVENT_CLOSE:
+						Sys_Quit(0);
+						break;
+					}
+				}
+				break;
+			case SDL_TEXTEDITING:
+				// FIXME!  this is where composition gets supported
+				break;
+			case SDL_TEXTINPUT:
+				// we have some characters to parse
+				{
+					int unicode;
+					int i;
+					int j;
+					unicode = 0;
+					for (i = 0;event.text.text[i];)
+					{
+						unicode = event.text.text[i++];
+						if (unicode & 0x80)
+						{
+							// UTF-8 character
+							// strip high bits (we could count these to validate character length but we don't)
+							for (j = 0x80;unicode & j;j >>= 1)
+								unicode ^= j;
+							for (;(event.text.text[i] & 0xC0) == 0x80;i++)
+								unicode = (unicode << 6) | (event.text.text[i] & 0x3F);
+							// low characters are invalid and could be bad, so replace them
+							if (unicode < 0x80)
+								unicode = '?'; // we could use 0xFFFD instead, the unicode substitute character
+						}
+						//Con_DPrintf("SDL_TEXTINPUT: K_TEXT %i \n", unicode);
+						Key_Event(K_TEXT, unicode, true);
+						Key_Event(K_TEXT, unicode, false);
+					}
+				}
+				break;
+			case SDL_MOUSEMOTION:
+				break;
+			default:
+				Con_DPrintf("Received unrecognized SDL_Event type 0x%x\n", event.type);
+				break;
+		}
+
+	// enable/disable sound on focus gain/loss
+	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
+	{
+		if (!sound_active)
+		{
+			S_UnblockSound ();
+			sound_active = true;
+		}
+	}
+	else
+	{
+		if (sound_active)
+		{
+			S_BlockSound ();
+			sound_active = false;
+		}
+	}
+}
+#endif
 
 /////////////////
 // Video system
@@ -1212,9 +1510,6 @@ void *GL_GetProcAddress(const char *name)
 	return p;
 }
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-static int Sys_EventFilter( SDL_Event *event );
-#endif
 static qboolean vid_sdl_initjoysticksystem = false;
 
 void VID_Init (void)
@@ -1249,7 +1544,10 @@ void VID_Init (void)
 	Cvar_RegisterVariable(&joy_sensitivityyaw);
 	//Cvar_RegisterVariable(&joy_sensitivityroll);
 	Cvar_RegisterVariable(&joy_axiskeyevents);
-	
+#ifdef __IPHONEOS__
+	Cvar_SetValueQuick(&vid_touchscreen, 1);
+#endif
+
 #ifdef SDL_R_RESTART
 	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
 #endif
@@ -1262,6 +1560,7 @@ void VID_Init (void)
 	vid_isfullscreen = false;
 }
 
+#if SETVIDEOMODE
 // set the icon (we dont use SDL here since it would be too much a PITA)
 #ifdef WIN32
 #include "resource.h"
@@ -1523,6 +1822,7 @@ static void VID_SetCaption(void)
 	SDL_WM_SetCaption( gamename, NULL );
 }
 #endif
+#endif
 
 static void VID_OutputVersion(void)
 {
@@ -1537,27 +1837,36 @@ static void VID_OutputVersion(void)
 qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
-// FIXME SDL_SetVideoMode
+#if SETVIDEOMODE
 	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
+#else
+	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+#endif
 	const char *drivername;
 
 	win_half_width = mode->width>>1;
 	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
+#if SETVIDEOMODE
 		flags |= SDL_RESIZABLE;
+#else
+		windowflags |= SDL_WINDOW_RESIZABLE;
+#endif
 
 	VID_OutputVersion();
 
+#if SETVIDEOMODE
 	/*
-	SDL Hack
+	SDL 1.2 Hack
 		We cant switch from one OpenGL video mode to another.
 		Thus we first switch to some stupid 2D mode and then back to OpenGL.
 	*/
 	if (notfirstvideomode)
 		SDL_SetVideoMode( 0, 0, 0, 0 );
 	notfirstvideomode = true;
+#endif
 
 	// SDL usually knows best
 	drivername = NULL;
@@ -1572,7 +1881,12 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		return false;
 	}
 
-#ifndef __IPHONEOS__
+#ifdef __IPHONEOS__
+	// mobile platforms are always fullscreen, we'll get the resolution after opening the window
+	mode->fullscreen = true;
+	// hide the menu with SDL_WINDOW_BORDERLESS
+	windowflags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
+#else
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
@@ -1585,7 +1899,11 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	vid_isfullscreen = false;
 	if (mode->fullscreen) {
+#if SETVIDEOMODE
 		flags |= SDL_FULLSCREEN;
+#else
+		windowflags |= SDL_WINDOW_FULLSCREEN;
+#endif
 		vid_isfullscreen = true;
 	}
 	//flags |= SDL_HWSURFACE;
@@ -1631,28 +1949,44 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 #endif
 
 	video_bpp = mode->bitsperpixel;
+#if SETVIDEOMODE
 	video_flags = flags;
 	VID_SetIcon_Pre();
 	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	VID_SetIcon_Post();
-
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
-
 	mode->width = screen->w;
 	mode->height = screen->h;
+#else
+	window_flags = windowflags;
+	window = SDL_CreateWindow(gamename, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mode->width, mode->height, windowflags);
+	if (window == NULL)
+	{
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
+		VID_Shutdown();
+		return false;
+	}
+	SDL_GetWindowSize(window, &mode->width, &mode->height);
+	context = SDL_GL_CreateContext(window);
+	if (context == NULL)
+	{
+		Con_Printf("Failed to initialize OpenGL context: %s\n", SDL_GetError());
+		VID_Shutdown();
+		return false;
+	}
+#endif
+
 	vid_softsurface = NULL;
 	vid.softpixels = NULL;
 
+#if SETVIDEOMODE
 	// set window title
 	VID_SetCaption();
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-	// set up an event filter to ask confirmation on close button in WIN32
-	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
 #endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
@@ -1695,7 +2029,9 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 
+#if SETVIDEOMODE
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
+#endif
 	return true;
 }
 
@@ -1708,36 +2044,60 @@ extern cvar_t gl_info_driver;
 
 qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
-// FIXME SDL_SetVideoMode
 	int i;
+#if SETVIDEOMODE
 	int flags = SDL_HWSURFACE;
+#else
+	int windowflags = SDL_WINDOW_SHOWN;
+#endif
 
 	win_half_width = mode->width>>1;
 	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
+#if SETVIDEOMODE
 		flags |= SDL_RESIZABLE;
+#else
+		windowflags |= SDL_WINDOW_RESIZABLE;
+#endif
 
 	VID_OutputVersion();
 
 	vid_isfullscreen = false;
 	if (mode->fullscreen) {
+#if SETVIDEOMODE
 		flags |= SDL_FULLSCREEN;
+#else
+		windowflags |= SDL_WINDOW_FULLSCREEN;
+#endif
 		vid_isfullscreen = true;
 	}
 
 	video_bpp = mode->bitsperpixel;
+#if SETVIDEOMODE
 	video_flags = flags;
 	VID_SetIcon_Pre();
 	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	VID_SetIcon_Post();
-
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
+	mode->width = screen->w;
+	mode->height = screen->h;
+#else
+	window_flags = windowflags;
+	window = SDL_CreateWindow(gamename, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mode->width, mode->height, windowflags);
+	if (window == NULL)
+	{
+		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
+		VID_Shutdown();
+		return false;
+	}
+	SDL_GetWindowSize(window, &mode->width, &mode->height);
+#endif
 
 	// create a framebuffer using our specific color format, we let the SDL blit function convert it in VID_Finish
 	vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, mode->width, mode->height, 32, 0x00FF0000, 0x0000FF00, 0x00000000FF, 0xFF000000);
@@ -1758,11 +2118,9 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 		return false;
 	}
 
+#if SETVIDEOMODE
 	// set window title
 	VID_SetCaption();
-	// set up an event filter to ask confirmation on close button in WIN32
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-	SDL_SetEventFilter( (SDL_EventFilter) Sys_EventFilter );
 #endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
@@ -1848,7 +2206,9 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 
+#if SETVIDEOMODE
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
+#endif
 	return true;
 }
 
@@ -1869,10 +2229,12 @@ void VID_Shutdown (void)
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
+#if SETVIDEOMODE
 #ifndef WIN32
 	if (icon)
 		SDL_FreeSurface(icon);
 	icon = NULL;
+#endif
 #endif
 
 	if (vid_softsurface)
@@ -1882,6 +2244,12 @@ void VID_Shutdown (void)
 	if (vid.softdepthpixels)
 		free(vid.softdepthpixels);
 	vid.softdepthpixels = NULL;
+
+#if SETVIDEOMODE
+#else
+	SDL_DestroyWindow(window);
+	window = NULL;
+#endif
 
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
@@ -1903,17 +2271,16 @@ int VID_GetGamma (unsigned short *ramps, int rampsize)
 
 void VID_Finish (void)
 {
+#if SETVIDEOMODE
 	Uint8 appstate;
 
 	//react on appstate changes
 	appstate = SDL_GetAppState();
 
 	vid_hidden = !(appstate & SDL_APPACTIVE);
-
-	if( vid_hidden || !( appstate & SDL_APPMOUSEFOCUS ) || !( appstate & SDL_APPINPUTFOCUS ) )
-		vid_activewindow = false;
-	else
-		vid_activewindow = true;
+	vid_hasfocus = (appstate & SDL_APPMOUSEFOCUS) && (appstate & SDL_APPINPUTFOCUS);
+#endif
+	vid_activewindow = !vid_hidden && vid_hasfocus;
 
 	VID_UpdateGamma(false, 256);
 
@@ -1930,7 +2297,8 @@ void VID_Finish (void)
 			{
 				qglFinish();CHECKGLERROR
 			}
-#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#else
 {
 	qboolean vid_usevsync;
 	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
@@ -1943,12 +2311,24 @@ void VID_Finish (void)
 	}
 }
 #endif
+#if SETVIDEOMODE
 			SDL_GL_SwapBuffers();
+#else
+			SDL_GL_SwapWindow(window);
+#endif
 			break;
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_Finish();
+#if SETVIDEOMODE
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
 			SDL_Flip(screen);
+#else
+			{
+				SDL_Surface *screen = SDL_GetWindowSurface(window);
+				SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
+				SDL_UpdateWindowSurface(window);
+			}
+#endif
 			break;
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:

@@ -34,6 +34,7 @@
 //
 typedef enum keynum_e
 {
+	K_TEXT			= 1, // used only for unicode character input
 	K_TAB			= 9,
 	K_ENTER			= 13,
 	K_ESCAPE		= 27,
