@@ -1156,7 +1156,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	{
 		// multiply RGB channels by A channel before uploading
 		int alpha;
-		for (i = 0;i < width*height*depth*4;i += 4)
+		for (i = 0;i < glt->inputwidth*glt->inputheight*glt->inputdepth*4;i += 4)
 		{
 			alpha = prevbuffer[i+3];
 			colorconvertbuffer[i] = (prevbuffer[i] * alpha) >> 8;
