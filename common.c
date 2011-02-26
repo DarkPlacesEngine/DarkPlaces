@@ -1479,7 +1479,7 @@ void COM_InitGameType (void)
 
 	// check executable filename for keywords
 	for (i = 1;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
-		if (strstr (name, gamemode_info[i].prog_name))
+		if (gamemode_info[i].prog_name && gamemode_info[i].prog_name[0] && strstr (name, gamemode_info[i].prog_name))
 		{
 			index = i;
 			break;
