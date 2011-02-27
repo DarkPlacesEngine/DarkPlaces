@@ -71,5 +71,16 @@ extern cvar_t r_stereo_angle;
 qboolean R_Stereo_Active(void);
 extern int r_stereo_side;
 
+typedef struct scr_touchscreenarea_s
+{
+	const char *pic;
+	float rect[4];
+	float active;
+}
+scr_touchscreenarea_t;
+
+extern int scr_numtouchscreenareas;
+extern scr_touchscreenarea_t scr_touchscreenareas[16];
+
 #endif
 
