@@ -258,7 +258,11 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_INSERT:             return K_INS;
 	case SDLK_HOME:               return K_HOME;
 	case SDLK_PAGEUP:             return K_PGUP;
+#ifdef __IPHONEOS__
+	case SDLK_DELETE:             return K_BACKSPACE;
+#else
 	case SDLK_DELETE:             return K_DEL;
+#endif
 	case SDLK_END:                return K_END;
 	case SDLK_PAGEDOWN:           return K_PGDN;
 	case SDLK_RIGHT:              return K_RIGHTARROW;
@@ -408,10 +412,17 @@ static int MapKey( unsigned int sdlkey )
 	}
 }
 
-void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
+#ifdef __IPHONEOS__
+int SDL_iPhoneKeyboardShow(SDL_Window * window);  // reveals the onscreen keyboard.  Returns 0 on success and -1 on error.
+int SDL_iPhoneKeyboardHide(SDL_Window * window);  // hides the onscreen keyboard.  Returns 0 on success and -1 on error.
+SDL_bool SDL_iPhoneKeyboardIsShown(SDL_Window * window);  // returns whether or not the onscreen keyboard is currently visible.
+int SDL_iPhoneKeyboardToggle(SDL_Window * window); // toggles the visibility of the onscreen keyboard.  Returns 0 on success and -1 on error.
+#endif
+
+void VID_ShowKeyboard(qboolean show)
 {
 #ifdef __IPHONEOS__
-	if (key_consoleactive || key_dest != key_game)
+	if (show)
 	{
 		if (!SDL_iPhoneKeyboardIsShown(window))
 			SDL_iPhoneKeyboardShow(window);
@@ -421,7 +432,19 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 		if (SDL_iPhoneKeyboardIsShown(window))
 			SDL_iPhoneKeyboardHide(window);
 	}
-#else
+#endif
+}
+
+qboolean VID_ShowingKeyboard(void)
+{
+#ifdef __IPHONEOS__
+	return SDL_iPhoneKeyboardIsShown(window);
+#endif
+}
+
+void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
+{
+#ifndef __IPHONEOS__
 #ifdef MACOSX
 	if(relative)
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
@@ -571,6 +594,61 @@ static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
 	return false;
 }
 
+// multitouch[10][] represents the mouse pointer
+// X and Y coordinates are 0-32767 as per SDL spec
+#define MAXFINGERS 11
+int multitouch[MAXFINGERS][3];
+
+qboolean VID_TouchscreenArea(float x, float y, float width, float height, const char *icon, float *resultmove, qboolean *resultbutton, keynum_t key)
+{
+	int finger;
+	float rel[3];
+	qboolean button = false;
+	VectorClear(rel);
+	if (width > 0 && height > 0 && (key == '`' || key == K_ESCAPE || !VID_ShowingKeyboard()))
+	{
+		x *= 32768.0f / 320.0f;
+		y *= 32768.0f / 480.0f;
+		width *= 32768.0f / 320.0f;
+		height *= 32768.0f / 480.0f;
+		for (finger = 0;finger < MAXFINGERS;finger++)
+		{
+			if (multitouch[finger][0] && multitouch[finger][1] >= x && multitouch[finger][2] >= y && multitouch[finger][1] < x + width && multitouch[finger][2] < y + height)
+			{
+				rel[0] = (multitouch[finger][1] - (x + 0.5f * width)) * (2.0f / width);
+				rel[1] = (multitouch[finger][2] - (y + 0.5f * height)) * (2.0f / height);
+				rel[2] = 0;
+				button = true;
+				break;
+			}
+		}
+		if (scr_numtouchscreenareas < 16)
+		{
+			scr_touchscreenareas[scr_numtouchscreenareas].pic = icon;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[0] = x * vid_conwidth.value / 32768.0f;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[1] = y * vid_conheight.value / 32768.0f;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[2] = width * vid_conwidth.value / 32768.0f;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[3] = height * vid_conheight.value / 32768.0f;
+			scr_touchscreenareas[scr_numtouchscreenareas].active = button;
+			scr_numtouchscreenareas++;
+		}
+	}
+	if (resultmove)
+	{
+		if (button)
+			VectorCopy(rel, resultmove);
+		else
+			VectorClear(resultmove);
+	}
+	if (resultbutton)
+	{
+		if (*resultbutton != button && (int)key > 0)
+			Key_Event(key, 0, button);
+		*resultbutton = button;
+	}
+	return button;
+}
+
 /////////////////////
 // Movement handling
 ////
@@ -582,61 +660,113 @@ void IN_Move( void )
 	static int stuck = 0;
 	int x, y, numaxes, numballs;
 
-	if (vid_usingmouse)
+	scr_numtouchscreenareas = 0;
+	if (vid_touchscreen.integer)
 	{
-		if (vid_touchscreen.integer)
+		vec3_t move, aim, click;
+		static qboolean buttons[16];
+		static int oldkeydest;
+		keydest_t keydest = (key_consoleactive & KEY_CONSOLEACTIVE_USER) ? key_console : key_dest;
+		multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
+		multitouch[MAXFINGERS-1][1] = x * 32768 / vid.width;
+		multitouch[MAXFINGERS-1][2] = y * 32768 / vid.height;
+		if (oldkeydest != keydest)
 		{
-			// touchscreen controls...
-			if (SDL_GetRelativeMouseState(&x,&y))
+			switch(keydest)
 			{
+			case key_game: VID_ShowKeyboard(false);break;
+			case key_console: VID_ShowKeyboard(true);break;
+			case key_message: VID_ShowKeyboard(true);break;
+			default: break;
+			}
+		}
+		oldkeydest = keydest;
+		// top of screen is toggleconsole and K_ESCAPE
+			VID_TouchscreenArea(  0,   0,  50,  50, NULL                         , NULL, &buttons[13], '`');
+			VID_TouchscreenArea( 50,   0, 270,  50, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
+		switch(keydest)
+		{
+		case key_console:
+			if (!VID_ShowingKeyboard())
+			{
+				// user entered a command, close the console now
+				Con_ToggleConsole_f();
+			}
+			break;
+		case key_game:
+			VID_TouchscreenArea(  0, 380, 100, 100, "gfx/touch_movebutton.tga"   , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea(220, 380, 100, 100, "gfx/touch_aimbutton.tga"    , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea(110, 380, 100, 100, "gfx/touch_attackbutton.tga" , NULL, &buttons[2], K_MOUSE1);
+			VID_TouchscreenArea(  0, 330, 100,  50, "gfx/touch_jumpbutton.tga"   , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea(220, 330, 100,  50, "gfx/touch_attack2button.tga", NULL, &buttons[4], K_MOUSE2);
+			buttons[15] = false;
+			break;
+		default:
+			// in menus, an icon in the corner activates keyboard
+			VID_TouchscreenArea(  0, 430,  50,  50, "gfx/touch_keyboard.tga"     , NULL, &buttons[15], 0);
+			if (buttons[15])
+				VID_ShowKeyboard(true);
+			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea(-320,-480,640, 960, NULL                         , click,&buttons[2], K_MOUSE1);
+			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , NULL, &buttons[4], K_MOUSE2);
+			if (buttons[2])
+			{
+				in_windowmouse_x = x;
+				in_windowmouse_y = y;
+			}
+			break;
+		}
+		cl.cmd.forwardmove -= move[1] * cl_forwardspeed.value;
+		cl.cmd.sidemove += move[0] * cl_sidespeed.value;
+		cl.viewangles[0] += aim[1] * cl_pitchspeed.value * cl.realframetime;
+		cl.viewangles[1] -= aim[0] * cl_yawspeed.value * cl.realframetime;
+	}
+	else
+	{
+		if (vid_usingmouse)
+		{
+			if (vid_stick_mouse.integer)
+			{
+				// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
+				// window grabbing. --blub
+	
+				// we need 2 frames to initialize the center position
+				if(!stuck)
+				{
+#if SETVIDEOMODE
+					SDL_WarpMouse(win_half_width, win_half_height);
+#else
+					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
+#endif
+					SDL_GetMouseState(&x, &y);
+					SDL_GetRelativeMouseState(&x, &y);
+					++stuck;
+				} else {
+					SDL_GetRelativeMouseState(&x, &y);
+					in_mouse_x = x + old_x;
+					in_mouse_y = y + old_y;
+					SDL_GetMouseState(&x, &y);
+					old_x = x - win_half_width;
+					old_y = y - win_half_height;
+#if SETVIDEOMODE
+					SDL_WarpMouse(win_half_width, win_half_height);
+#else
+					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
+#endif
+				}
+			} else {
+				SDL_GetRelativeMouseState( &x, &y );
 				in_mouse_x = x;
 				in_mouse_y = y;
 			}
-			else
-			{
-				in_mouse_x = 0;
-				in_mouse_y = 0;
-			}
 		}
-		else if (vid_stick_mouse.integer)
-		{
-			// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
-			// window grabbing. --blub
 
-			// we need 2 frames to initialize the center position
-			if(!stuck)
-			{
-#if SETVIDEOMODE
-				SDL_WarpMouse(win_half_width, win_half_height);
-#else
-				SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
-#endif
-				SDL_GetMouseState(&x, &y);
-				SDL_GetRelativeMouseState(&x, &y);
-				++stuck;
-			} else {
-				SDL_GetRelativeMouseState(&x, &y);
-				in_mouse_x = x + old_x;
-				in_mouse_y = y + old_y;
-				SDL_GetMouseState(&x, &y);
-				old_x = x - win_half_width;
-				old_y = y - win_half_height;
-#if SETVIDEOMODE
-				SDL_WarpMouse(win_half_width, win_half_height);
-#else
-				SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
-#endif
-			}
-		} else {
-			SDL_GetRelativeMouseState( &x, &y );
-			in_mouse_x = x;
-			in_mouse_y = y;
-		}
+		SDL_GetMouseState(&x, &y);
+		in_windowmouse_x = x;
+		in_windowmouse_y = y;
 	}
-
-	SDL_GetMouseState(&x, &y);
-	in_windowmouse_x = x;
-	in_windowmouse_y = y;
 
 	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
 	{
@@ -821,7 +951,11 @@ void Sys_SendKeyEvents( void )
 void Sys_SendKeyEvents( void )
 {
 	static qboolean sound_active = true;
+	static qboolean missingunicodehack = true;
 	int keycode;
+	int i;
+	int j;
+	int unicode;
 	SDL_Event event;
 
 	while( SDL_PollEvent( &event ) )
@@ -833,12 +967,23 @@ void Sys_SendKeyEvents( void )
 			case SDL_KEYUP:
 				keycode = MapKey(event.key.keysym.sym);
 				if (!IN_JoystickBlockDoubledKeyEvents(keycode))
+#ifdef __IPHONEOS__
+				// the virtual keyboard seems to produce no unicode values...
+				if (missingunicodehack && keycode >= ' ' && keycode < 0x7F && event.key.keysym.unicode == 0)
+				{
+					Con_DPrintf("SDL hack: no unicode value reported, substituting ascii value %i\n", keycode);
+					Key_Event(keycode, keycode, (event.key.state == SDL_PRESSED));
+				}
+				else
+#endif
 					Key_Event(keycode, 0, (event.key.state == SDL_PRESSED));
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
+#ifndef __IPHONEOS__
 				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
+#endif
 				break;
 			case SDL_JOYBUTTONDOWN:
 				if (!joy_enable.integer)
@@ -915,10 +1060,8 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_TEXTINPUT:
 				// we have some characters to parse
+				missingunicodehack = false;
 				{
-					int unicode;
-					int i;
-					int j;
 					unicode = 0;
 					for (i = 0;event.text.text[i];)
 					{
@@ -942,6 +1085,64 @@ void Sys_SendKeyEvents( void )
 				}
 				break;
 			case SDL_MOUSEMOTION:
+				break;
+			case SDL_FINGERDOWN:
+				Con_DPrintf("SDL_FINGERDOWN for finger %i\n", (int)event.tfinger.fingerId);
+				for (i = 0;i < MAXFINGERS-1;i++)
+				{
+					if (!multitouch[i][0])
+					{
+						multitouch[i][0] = event.tfinger.fingerId;
+						multitouch[i][1] = event.tfinger.x;
+						multitouch[i][2] = event.tfinger.y;
+						// TODO: use event.tfinger.pressure?
+						break;
+					}
+				}
+				if (i == MAXFINGERS-1)
+					Con_DPrintf("Too many fingers at once!\n");
+				break;
+			case SDL_FINGERUP:
+				Con_DPrintf("SDL_FINGERUP for finger %i\n", (int)event.tfinger.fingerId);
+				for (i = 0;i < MAXFINGERS-1;i++)
+				{
+					if (multitouch[i][0] == event.tfinger.fingerId)
+					{
+						multitouch[i][0] = 0;
+						break;
+					}
+				}
+				if (i == MAXFINGERS-1)
+					Con_DPrintf("No SDL_FINGERDOWN event matches this SDL_FINGERMOTION event\n");
+				break;
+			case SDL_FINGERMOTION:
+				Con_DPrintf("SDL_FINGERMOTION for finger %i\n", (int)event.tfinger.fingerId);
+				for (i = 0;i < MAXFINGERS-1;i++)
+				{
+					if (multitouch[i][0] == event.tfinger.fingerId)
+					{
+						multitouch[i][1] = event.tfinger.x;
+						multitouch[i][2] = event.tfinger.y;
+						break;
+					}
+				}
+				if (i == MAXFINGERS-1)
+					Con_DPrintf("No SDL_FINGERDOWN event matches this SDL_FINGERMOTION event\n");
+				break;
+			case SDL_TOUCHBUTTONDOWN:
+				// not sure what to do with this...
+				break;
+			case SDL_TOUCHBUTTONUP:
+				// not sure what to do with this...
+				break;
+			case SDL_JOYAXISMOTION:
+				// we poll the joystick instead
+				break;
+			case SDL_JOYBALLMOTION:
+				// we poll the joystick instead
+				break;
+			case SDL_JOYHATMOTION:
+				// we poll the joystick instead
 				break;
 			default:
 				Con_DPrintf("Received unrecognized SDL_Event type 0x%x\n", event.type);
@@ -2026,6 +2227,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	vid_hidden = false;
 	vid_activewindow = false;
+	vid_hasfocus = true;
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 
@@ -2203,6 +2405,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	vid_hidden = false;
 	vid_activewindow = false;
+	vid_hasfocus = true;
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 

@@ -81,6 +81,8 @@ cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdi
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 cvar_t timedemo_screenshotframelist = {0, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
+cvar_t vid_touchscreen_outlinealpha = {0, "vid_touchscreen_outlinealpha", "0.25", "opacity of touchscreen area outlines"};
+cvar_t vid_touchscreen_overlayalpha = {0, "vid_touchscreen_overlayalpha", "0.25", "opacity of touchscreen area icons"};
 
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
@@ -956,6 +958,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&shownetgraph);
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
 	Cvar_RegisterVariable(&timedemo_screenshotframelist);
+	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);
+	Cvar_RegisterVariable(&vid_touchscreen_overlayalpha);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1574,6 +1578,31 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 //=============================================================================
 
+int scr_numtouchscreenareas;
+scr_touchscreenarea_t scr_touchscreenareas[16];
+
+static void SCR_DrawTouchscreenOverlay(void)
+{
+	int i;
+	scr_touchscreenarea_t *a;
+	cachepic_t *pic;
+	for (i = 0, a = scr_touchscreenareas;i < scr_numtouchscreenareas;i++, a++)
+	{
+		if (vid_touchscreen_outlinealpha.value > 0 && a->rect[0] >= 0 && a->rect[1] >= 0 && a->rect[2] >= 4 && a->rect[3] >= 4)
+		{
+			DrawQ_Fill(a->rect[0] +              2, a->rect[1]                 , a->rect[2] - 4,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              1, a->rect[1] +              1, a->rect[2] - 2,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0]                 , a->rect[1] +              2,          2    , a->rect[3] - 2, 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] + a->rect[2] - 2, a->rect[1] +              2,          2    , a->rect[3] - 2, 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              1, a->rect[1] + a->rect[3] - 2, a->rect[2] - 2,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              2, a->rect[1] + a->rect[3] - 1, a->rect[2] - 4,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+		}
+		pic = a->pic ? Draw_CachePic(a->pic) : NULL;
+		if (pic && pic->tex != r_texture_notexture)
+			DrawQ_Pic(a->rect[0], a->rect[1], Draw_CachePic(a->pic), a->rect[2], a->rect[3], 1, 1, 1, vid_touchscreen_overlayalpha.value * (0.5f + 0.5f * a->active), 0);
+	}
+}
+
 extern void R_UpdateFogColor(void);
 void R_ClearScreen(qboolean fogcolor)
 {
@@ -1770,6 +1799,8 @@ void SCR_DrawScreen (void)
 	SCR_DrawBrand();
 
 	SCR_DrawInfobar();
+
+	SCR_DrawTouchscreenOverlay();
 
 	if (r_timereport_active)
 		R_TimeReport("2d");
