@@ -2365,6 +2365,10 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 		mins[2] = floor(r_refdef.view.origin[2] * ispacing[2] + 0.5f) * spacing[2] - 0.5f * size[2];
 		VectorAdd(mins, size, maxs);
 	}
+	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
+	if (r_shadow_bouncegridtexture && realtime < r_shadow_bouncegridtime + r_shadow_bouncegrid_updateinterval.value && resolution[0] == r_shadow_bouncegridresolution[0] && resolution[1] == r_shadow_bouncegridresolution[1] && resolution[2] == r_shadow_bouncegridresolution[2])
+		return;
+	// we're going to update the bouncegrid, update the matrix...
 	memset(m, 0, sizeof(m));
 	m[0] = 1.0f / size[0];
 	m[3] = -mins[0] * m[0];
@@ -2374,9 +2378,6 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	m[11] = -mins[2] * m[10];
 	m[15] = 1.0f;
 	Matrix4x4_FromArrayFloatD3D(&r_shadow_bouncegridmatrix, m);
-	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
-	if (r_shadow_bouncegridtexture && realtime < r_shadow_bouncegridtime + r_shadow_bouncegrid_updateinterval.value && resolution[0] == r_shadow_bouncegridresolution[0] && resolution[1] == r_shadow_bouncegridresolution[1] && resolution[2] == r_shadow_bouncegridresolution[2])
-		return;
 	numpixels = resolution[0]*resolution[1]*resolution[2];
 	// allocate pixels for this update...
 	pixels = (unsigned char *)Mem_Alloc(r_main_mempool, numpixels * sizeof(unsigned char[4]));
