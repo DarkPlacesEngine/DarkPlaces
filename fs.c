@@ -22,6 +22,8 @@
 		Boston, MA  02111-1307, USA
 */
 
+#define _LARGEFILE64_SOURCE 1
+
 #ifdef __APPLE__
 // include SDL for IPHONEOS code
 # include <TargetConditionals.h>
@@ -61,6 +63,12 @@
 // largefile support for Win32
 #ifdef WIN32
 # define lseek _lseeki64
+#elif defined(O_LARGEFILE)
+# define lseek lseek64
+#endif
+
+#ifndef O_LARGEFILE
+#define O_LARGEFILE 0
 #endif
 
 #if _MSC_VER >= 1400
@@ -636,9 +644,9 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 					flags = PACKFILE_FLAG_DEFLATED;
 				else
 					flags = 0;
-				offset = BuffLittleLong (&ptr[42]) + eocd->prepended_garbage;
-				packsize = BuffLittleLong (&ptr[20]);
-				realsize = BuffLittleLong (&ptr[24]);
+				offset = (unsigned int)(BuffLittleLong (&ptr[42]) + eocd->prepended_garbage);
+				packsize = (unsigned int)BuffLittleLong (&ptr[20]);
+				realsize = (unsigned int)BuffLittleLong (&ptr[24]);
 
 				switch(ptr[5]) // C_VERSION_MADE_BY_1
 				{
@@ -736,7 +744,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 #if _MSC_VER >= 1400
 	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 #else
-	packhandle = open (packfile, O_RDONLY | O_BINARY);
+	packhandle = open (packfile, O_RDONLY | O_BINARY | O_LARGEFILE);
 #endif
 	if (packhandle < 0)
 		return NULL;
@@ -910,7 +918,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 #if _MSC_VER >= 1400
 	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 #else
-	packhandle = open (packfile, O_RDONLY | O_BINARY);
+	packhandle = open (packfile, O_RDONLY | O_BINARY | O_LARGEFILE);
 #endif
 	if (packhandle < 0)
 		return NULL;
@@ -965,8 +973,8 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
 	{
-		fs_offset_t offset = LittleLong (info[i].filepos);
-		fs_offset_t size = LittleLong (info[i].filelen);
+		fs_offset_t offset = (unsigned int)LittleLong (info[i].filepos);
+		fs_offset_t size = (unsigned int)LittleLong (info[i].filelen);
 
 		FS_AddFileToPack (info[i].name, pack, offset, size, size, PACKFILE_FLAG_TRUEOFFS);
 	}
@@ -1949,6 +1957,8 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
+	opt |= O_LARGEFILE;
+
 #if _MSC_VER >= 1400
 	_sopen_s(&handle, filepath, mod | opt, _SH_DENYNO, _S_IREAD | _S_IWRITE);
 #else
@@ -2026,8 +2036,8 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	// the dup() call to avoid having to close the dup_handle on error here
 	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
-		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)\n",
-					pfile->name, pack->filename, (int) pfile->offset);
+		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %08x%08x)\n",
+					pfile->name, pack->filename, (unsigned int)(pfile->offset >> 32), (unsigned int)(pfile->offset));
 		return NULL;
 	}
 
