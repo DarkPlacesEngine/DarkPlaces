@@ -435,12 +435,12 @@ void VID_ShowKeyboard(qboolean show)
 #endif
 }
 
+#ifdef __IPHONEOS__
 qboolean VID_ShowingKeyboard(void)
 {
-#ifdef __IPHONEOS__
 	return SDL_iPhoneKeyboardIsShown(window);
-#endif
 }
+#endif
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
 {
@@ -605,7 +605,11 @@ qboolean VID_TouchscreenArea(float x, float y, float width, float height, const 
 	float rel[3];
 	qboolean button = false;
 	VectorClear(rel);
+#ifdef __IPHONEOS__
 	if (width > 0 && height > 0 && (key == '`' || key == K_ESCAPE || !VID_ShowingKeyboard()))
+#else
+	if (width > 0 && height > 0 && (key == '`' || key == K_ESCAPE))
+#endif
 	{
 		x *= 32768.0f / 320.0f;
 		y *= 32768.0f / 480.0f;
@@ -665,7 +669,7 @@ void IN_Move( void )
 	{
 		vec3_t move, aim, click;
 		static qboolean buttons[16];
-		static int oldkeydest;
+		static keydest_t oldkeydest;
 		keydest_t keydest = (key_consoleactive & KEY_CONSOLEACTIVE_USER) ? key_console : key_dest;
 		multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
 		multitouch[MAXFINGERS-1][1] = x * 32768 / vid.width;
@@ -687,11 +691,13 @@ void IN_Move( void )
 		switch(keydest)
 		{
 		case key_console:
+#ifdef __IPHONEOS__
 			if (!VID_ShowingKeyboard())
 			{
 				// user entered a command, close the console now
 				Con_ToggleConsole_f();
 			}
+#endif
 			break;
 		case key_game:
 			VID_TouchscreenArea(  0, 380, 100, 100, "gfx/touch_movebutton.tga"   , move, &buttons[0], K_MOUSE4);
@@ -913,12 +919,15 @@ void Sys_SendKeyEvents( void )
 #endif
 				}
 				break;
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#else
 			case SDL_TEXTEDITING:
 				// unused when SETVIDEOMODE API is used
 				break;
 			case SDL_TEXTINPUT:
 				// this occurs with SETVIDEOMODE but we are not using it
 				break;
+#endif
 			case SDL_MOUSEMOTION:
 				break;
 			default:
