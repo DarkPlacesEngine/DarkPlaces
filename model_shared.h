@@ -123,15 +123,6 @@ typedef struct r_vertexmesh_s
 }
 r_vertexmesh_t;
 
-typedef struct r_vertexbouncelight_s
-{
-	// 32 bytes
-	float vertex3f[3];
-	unsigned char color4ub[4];
-	float texcoord4f[4];
-}
-r_vertexbouncelight_t;
-
 typedef struct r_meshbuffer_s
 {
 	int bufferobject; // OpenGL

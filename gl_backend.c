@@ -169,7 +169,6 @@ typedef struct gl_state_s
 	r_meshbuffer_t *preparevertices_dynamicvertexbuffer;
 	r_vertexgeneric_t *preparevertices_vertexgeneric;
 	r_vertexmesh_t *preparevertices_vertexmesh;
-	r_vertexbouncelight_t *preparevertices_vertexbouncelight;
 	int preparevertices_numvertices;
 
 	r_meshbuffer_t *draw_dynamicindexbuffer;
@@ -3738,18 +3737,9 @@ D3DVERTEXELEMENT9 r_vertexmesh_d3d9elements[] =
 	D3DDECL_END()
 };
 
-D3DVERTEXELEMENT9 r_vertexbouncelight_d3d9elements[] =
-{
-	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->vertex3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->color4ub          ), D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
-	{0, (int)((size_t)&((r_vertexbouncelight_t *)0)->texcoord4f        ), D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
-	D3DDECL_END()
-};
-
 IDirect3DVertexDeclaration9 *r_vertex3f_d3d9decl;
 IDirect3DVertexDeclaration9 *r_vertexgeneric_d3d9decl;
 IDirect3DVertexDeclaration9 *r_vertexmesh_d3d9decl;
-IDirect3DVertexDeclaration9 *r_vertexbouncelight_d3d9decl;
 #endif
 
 static void R_Mesh_InitVertexDeclarations(void)
@@ -3758,7 +3748,6 @@ static void R_Mesh_InitVertexDeclarations(void)
 	r_vertex3f_d3d9decl = NULL;
 	r_vertexgeneric_d3d9decl = NULL;
 	r_vertexmesh_d3d9decl = NULL;
-	r_vertexbouncelight_d3d9decl = NULL;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -3770,7 +3759,6 @@ static void R_Mesh_InitVertexDeclarations(void)
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertex3f_d3d9elements, &r_vertex3f_d3d9decl);
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexgeneric_d3d9elements, &r_vertexgeneric_d3d9decl);
 		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexmesh_d3d9elements, &r_vertexmesh_d3d9decl);
-		IDirect3DDevice9_CreateVertexDeclaration(vid_d3d9dev, r_vertexbouncelight_d3d9elements, &r_vertexbouncelight_d3d9decl);
 		break;
 	case RENDERPATH_D3D10:
 		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
@@ -3796,9 +3784,6 @@ static void R_Mesh_DestroyVertexDeclarations(void)
 	if (r_vertexmesh_d3d9decl)
 		IDirect3DVertexDeclaration9_Release(r_vertexmesh_d3d9decl);
 	r_vertexmesh_d3d9decl = NULL;
-	if (r_vertexbouncelight_d3d9decl)
-		IDirect3DVertexDeclaration9_Release(r_vertexbouncelight_d3d9decl);
-	r_vertexbouncelight_d3d9decl = NULL;
 #endif
 }
 
@@ -4305,205 +4290,6 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 		DPSOFTRAST_SetTexCoordPointer(2, 3, sizeof(*vertex), vertex->tvector3f);
 		DPSOFTRAST_SetTexCoordPointer(3, 3, sizeof(*vertex), vertex->normal3f);
 		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(*vertex), vertex->texcoordlightmap2f);
-		break;
-	}
-}
-
-
-
-r_vertexbouncelight_t *R_Mesh_PrepareVertices_BounceLight_Lock(int numvertices)
-{
-	size_t size;
-	size = sizeof(r_vertexbouncelight_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
-	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-	}
-	gl_state.preparevertices_vertexbouncelight = (r_vertexbouncelight_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexbouncelight;
-}
-
-qboolean R_Mesh_PrepareVertices_BounceLight_Unlock(void)
-{
-	R_Mesh_PrepareVertices_BounceLight(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexbouncelight, NULL);
-	gl_state.preparevertices_vertexbouncelight = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
-}
-
-void R_Mesh_PrepareVertices_BounceLight_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord4f)
-{
-	int i;
-	r_vertexbouncelight_t *vertex;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (!vid.useinterleavedarrays)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT, sizeof(float[4]), texcoord4f, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		if (!vid.useinterleavedarrays)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT, sizeof(float[4]), texcoord4f, NULL, 0);
-			if (vid.texunits >= 2)
-				R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			if (vid.texunits >= 3)
-				R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		break;
-	case RENDERPATH_SOFT:
-		DPSOFTRAST_SetVertexPointer(vertex3f, sizeof(float[3]));
-		DPSOFTRAST_SetColorPointer(color4f, sizeof(float[4]));
-		DPSOFTRAST_SetTexCoordPointer(0, 4, sizeof(float[4]), texcoord4f);
-		DPSOFTRAST_SetTexCoordPointer(1, 2, sizeof(float[2]), NULL);
-		DPSOFTRAST_SetTexCoordPointer(2, 2, sizeof(float[2]), NULL);
-		DPSOFTRAST_SetTexCoordPointer(3, 2, sizeof(float[2]), NULL);
-		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(float[2]), NULL);
-		return;
-	}
-
-	// no quick path for this case, convert to vertex structs
-	vertex = R_Mesh_PrepareVertices_BounceLight_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	if (color4f)
-	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Scale(color4f + 4*i, 255.0f, vertex[i].color4ub);
-	}
-	else
-	{
-		float tempcolor4f[4];
-		unsigned char tempcolor4ub[4];
-		Vector4Scale(gl_state.color4f, 255.0f, tempcolor4f);
-		tempcolor4ub[0] = (unsigned char)bound(0.0f, tempcolor4f[0], 255.0f);
-		tempcolor4ub[1] = (unsigned char)bound(0.0f, tempcolor4f[1], 255.0f);
-		tempcolor4ub[2] = (unsigned char)bound(0.0f, tempcolor4f[2], 255.0f);
-		tempcolor4ub[3] = (unsigned char)bound(0.0f, tempcolor4f[3], 255.0f);
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(tempcolor4ub, vertex[i].color4ub);
-	}
-	if (texcoord4f)
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(texcoord4f + 4*i, vertex[i].texcoord4f);
-	R_Mesh_PrepareVertices_BounceLight_Unlock();
-	R_Mesh_PrepareVertices_BounceLight(numvertices, vertex, NULL);
-}
-
-void R_Mesh_PrepareVertices_BounceLight(int numvertices, const r_vertexbouncelight_t *vertex, const r_meshbuffer_t *vertexbuffer)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord4f         - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		}
-		else
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		}
-		break;
-	case RENDERPATH_GL13:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord4f         - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		}
-		else
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		}
-		break;
-	case RENDERPATH_GL11:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , vertexbuffer, (int)((unsigned char *)vertex->color4ub           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , vertexbuffer, (int)((unsigned char *)vertex->texcoord4f         - (unsigned char *)vertex));
-		}
-		else
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-			R_Mesh_ColorPointer(      4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->color4ub          , NULL, 0);
-			R_Mesh_TexCoordPointer(0, 4, GL_FLOAT        , sizeof(*vertex), vertex->texcoord4f        , NULL, 0);
-		}
-		break;
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-		IDirect3DDevice9_SetVertexDeclaration(vid_d3d9dev, r_vertexbouncelight_d3d9decl);
-		if (vertexbuffer)
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, (IDirect3DVertexBuffer9*)vertexbuffer->devicebuffer, 0, sizeof(*vertex));
-		else
-			IDirect3DDevice9_SetStreamSource(vid_d3d9dev, 0, NULL, 0, 0);
-		gl_state.d3dvertexbuffer = (void *)vertexbuffer;
-		gl_state.d3dvertexdata = (void *)vertex;
-		gl_state.d3dvertexsize = sizeof(*vertex);
-#endif
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
-		DPSOFTRAST_SetVertexPointer(vertex->vertex3f, sizeof(*vertex));
-		DPSOFTRAST_SetColorPointer4ub(vertex->color4ub, sizeof(*vertex));
-		DPSOFTRAST_SetTexCoordPointer(0, 4, sizeof(*vertex), vertex->texcoord4f);
-		DPSOFTRAST_SetTexCoordPointer(1, 2, sizeof(*vertex), NULL);
-		DPSOFTRAST_SetTexCoordPointer(2, 2, sizeof(*vertex), NULL);
-		DPSOFTRAST_SetTexCoordPointer(3, 2, sizeof(*vertex), NULL);
-		DPSOFTRAST_SetTexCoordPointer(4, 2, sizeof(*vertex), NULL);
 		break;
 	}
 }

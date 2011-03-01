@@ -87,11 +87,6 @@ qboolean R_Mesh_PrepareVertices_Mesh_Unlock(void); // if this returns false, you
 void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f);
 void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, const r_meshbuffer_t *buffer);
 
-r_vertexbouncelight_t *R_Mesh_PrepareVertices_BounceLight_Lock(int numvertices);
-qboolean R_Mesh_PrepareVertices_BounceLight_Unlock(void);
-void R_Mesh_PrepareVertices_BounceLight_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord4f);
-void R_Mesh_PrepareVertices_BounceLight(int numvertices, const r_vertexbouncelight_t *vertex, const r_meshbuffer_t *vertexbuffer);
-
 // sets up the requested vertex transform matrix
 void R_EntityMatrix(const matrix4x4_t *matrix);
 // sets the vertex array pointer
