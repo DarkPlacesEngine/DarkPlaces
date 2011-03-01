@@ -1022,6 +1022,8 @@ typedef struct model_s
 	void (*TracePoint)(struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask);
 	// find the supercontents value at a point in this model
 	int (*PointSuperContents)(struct model_s *model, int frame, const vec3_t point);
+	// trace a line against geometry in this model and report correct texture (used by r_shadow_bouncegrid)
+	void (*TraceLineAgainstSurfaces)(struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
 	// fields belonging to some types of model
 	model_sprite_t	sprite;
 	model_brush_t	brush;

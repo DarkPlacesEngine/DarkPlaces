@@ -150,11 +150,11 @@ void Collision_TraceBrushTriangleFloat(trace_t *trace, const colbrushf_t *thisbr
 struct frameblend_s;
 struct skeleton_s;
 void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask);
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, qboolean hitsurfaces);
 void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask);
 // like above but does not do a transform and does nothing if model is NULL
 void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents);
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents);
+void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, qboolean hitsurfaces);
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents);
 // combines data from two traces:
 // merges contents flags, startsolid, allsolid, inwater

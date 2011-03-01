@@ -5005,8 +5005,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTION;
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (r_shadow_bouncegridtexture)
-			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
