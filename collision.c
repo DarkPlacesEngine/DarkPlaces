@@ -1717,7 +1717,7 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 }
 
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, qboolean hitsurfaces)
 {
 	float starttransformed[3], endtransformed[3];
 
@@ -1730,7 +1730,9 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const 
 	Con_Printf("trans(%f %f %f -> %f %f %f, %f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2], end[0], end[1], end[2], endtransformed[0], endtransformed[1], endtransformed[2]);
 #endif
 
-	if (model && model->TraceLine)
+	if (model && model->TraceLineAgainstSurfaces && hitsurfaces)
+		model->TraceLineAgainstSurfaces(model, frameblend, skeleton, trace, starttransformed, endtransformed, hitsupercontentsmask);
+	else if (model && model->TraceLine)
 		model->TraceLine(model, frameblend, skeleton, trace, starttransformed, endtransformed, hitsupercontentsmask);
 	else
 		Collision_ClipTrace_Box(trace, bodymins, bodymaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, hitsupercontentsmask, bodysupercontents, 0, NULL);
@@ -1743,11 +1745,13 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const 
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
 }
 
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents)
+void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, qboolean hitsurfaces)
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = trace->realfraction = 1;
-	if (model && model->TraceLine)
+	if (model && model->TraceLineAgainstSurfaces && hitsurfaces)
+		model->TraceLineAgainstSurfaces(model, NULL, NULL, trace, start, end, hitsupercontents);
+	else if (model && model->TraceLine)
 		model->TraceLine(model, NULL, NULL, trace, start, end, hitsupercontents);
 	trace->fraction = bound(0, trace->fraction, 1);
 	trace->realfraction = bound(0, trace->realfraction, 1);

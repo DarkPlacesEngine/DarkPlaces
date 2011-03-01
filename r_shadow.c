@@ -323,11 +323,11 @@ cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform pa
 cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
 cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dlightparticlemultiplier", "0", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
 cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
-cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "1", "overall brightness of bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1)"};
 cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "3", "maximum number of bounces for a particle (minimum is 1)"};
-cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce"};
-cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "4", "brightness of particles contributing to bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
+cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "2", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_particlespacing = {CVAR_SAVE, "r_shadow_bouncegrid_particlespacing", "32", "emit one particle per this many units (squared) of radius (squared)"};
 cvar_t r_shadow_bouncegrid_spacingx = {CVAR_SAVE, "r_shadow_bouncegrid_spacingx", "64", "unit size of bouncegrid pixel on X axis"};
 cvar_t r_shadow_bouncegrid_spacingy = {CVAR_SAVE, "r_shadow_bouncegrid_spacingy", "64", "unit size of bouncegrid pixel on Y axis"};
@@ -2293,6 +2293,8 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	int shotparticles;
 	int tex[3];
 	trace_t cliptrace;
+	//trace_t cliptrace2;
+	//trace_t cliptrace3;
 	unsigned char *pixel;
 	unsigned char *pixels;
 	unsigned short *highpixel;
@@ -2304,6 +2306,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	unsigned int seed = (unsigned int)(realtime * 1000.0f);
 	vec3_t shotcolor;
 	vec3_t baseshotcolor;
+	vec3_t surfcolor;
 	vec3_t clipend;
 	vec3_t clipstart;
 	vec3_t clipdiff;
@@ -2464,7 +2467,9 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 			for (bouncecount = 0;;bouncecount++)
 			{
 				r_refdef.stats.bouncegrid_traces++;
-				cliptrace = CL_TraceLine(clipstart, clipend, r_shadow_bouncegrid_hitmodels.integer ? MOVE_HITMODEL : MOVE_NOMONSTERS, NULL, hitsupercontentsmask, true, false, NULL, true);
+				//r_refdef.scene.worldmodel->TraceLineAgainstSurfaces(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace, clipstart, clipend, hitsupercontentsmask);
+				//r_refdef.scene.worldmodel->TraceLine(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace2, clipstart, clipend, hitsupercontentsmask);
+				cliptrace = CL_TraceLine(clipstart, clipend, r_shadow_bouncegrid_hitmodels.integer ? MOVE_HITMODEL : MOVE_NOMONSTERS, NULL, hitsupercontentsmask, true, false, NULL, true, true);
 				//Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask);
 				if (cliptrace.fraction >= 1.0f)
 					break;
@@ -2499,11 +2504,16 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 				if (bouncecount >= maxbounce)
 					break;
 				// scale down shot color by bounce intensity and texture color (or 50% if no texture reported)
-				VectorScale(shotcolor, r_shadow_bouncegrid_particlebounceintensity.value, shotcolor);
+				// also clamp the resulting color to never add energy, even if the user requests extreme values
 				if (cliptrace.hittexture && cliptrace.hittexture->currentskinframe)
-					VectorMultiply(shotcolor, cliptrace.hittexture->currentskinframe->avgcolor, shotcolor);
+					VectorCopy(cliptrace.hittexture->currentskinframe->avgcolor, surfcolor);
 				else
-					VectorScale(shotcolor, 0.5f, shotcolor);
+					VectorSet(surfcolor, 0.5f, 0.5f, 0.5f);
+				VectorScale(surfcolor, r_shadow_bouncegrid_particlebounceintensity.value, surfcolor);
+				surfcolor[0] = min(surfcolor[0], 1.0f);
+				surfcolor[1] = min(surfcolor[1], 1.0f);
+				surfcolor[2] = min(surfcolor[2], 1.0f);
+				VectorMultiply(shotcolor, surfcolor, shotcolor);
 				if (VectorLength2(shotcolor) < 3.0f)
 					break;
 				r_refdef.stats.bouncegrid_bounces++;
@@ -4869,7 +4879,7 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	else
 	{
 		// FIXME: these traces should scan all render entities instead of cl.world
-		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
 			return;
 	}
 	VectorScale(rtlight->currentcolor, cscale, color);
@@ -5247,7 +5257,7 @@ void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction == 1.0f)
+			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -5696,7 +5706,7 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec3_t dest, endpos;
 	trace_t trace;
 	VectorMA(r_refdef.view.origin, r_editlights_cursordistance.value, r_refdef.view.forward, dest);
-	trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false);
+	trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;
@@ -6448,7 +6458,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 			intensity = min(1.0f, (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) * r_shadow_lightintensityscale.value;
 			if (intensity <= 0.0f)
 				continue;
-			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
 				continue;
 			// scale down intensity to add to both ambient and diffuse
 			//intensity *= 0.5f;
@@ -6480,7 +6490,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 			intensity = (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist) * r_shadow_lightintensityscale.value;
 			if (intensity <= 0.0f)
 				continue;
-			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false).fraction < 1)
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
 				continue;
 			// scale down intensity to add to both ambient and diffuse
 			//intensity *= 0.5f;
