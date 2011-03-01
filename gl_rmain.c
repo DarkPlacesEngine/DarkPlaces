@@ -1058,11 +1058,6 @@ static const char *builtinshaderstring =
 "uniform highp vec3 LightPosition;\n"
 "varying highp vec4 ModelViewPosition;\n"
 "#endif\n"
-"#ifdef MODE_DEFERREDBOUNCELIGHT\n"
-"varying highp vec4 ModelViewPosition;\n"
-"varying highp vec4 LightOriginInvRadius;\n"
-"varying mediump vec4 LightColor;\n"
-"#endif\n"
 "\n"
 "#ifdef MODE_LIGHTSOURCE\n"
 "uniform highp vec3 LightPosition;\n"
@@ -1132,9 +1127,6 @@ static const char *builtinshaderstring =
 "#ifdef USEDEFERREDLIGHTMAP\n"
 "uniform sampler2D Texture_ScreenDiffuse;\n"
 "uniform sampler2D Texture_ScreenSpecular;\n"
-"#endif\n"
-"#ifdef MODE_DEFERREDBOUNCELIGHT\n"
-"uniform sampler2D Texture_ScreenDepth;\n"
 "#endif\n"
 "\n"
 "uniform lowp vec3 Color_Pants;\n"
@@ -1498,39 +1490,6 @@ static const char *builtinshaderstring =
 "\n"
 "\n"
 "\n"
-"#ifdef MODE_DEFERREDBOUNCELIGHT\n"
-"#ifdef VERTEX_SHADER\n"
-"uniform highp mat4 ModelViewMatrix;\n"
-"void main(void)\n"
-"{\n"
-"	ModelViewPosition = ModelViewMatrix * Attrib_Position;\n"
-"	LightOriginInvRadius.xyz = (ModelViewMatrix * vec4(Attrib_TexCoord0.xyz, 1.0)).xyz;\n"
-"	LightOriginInvRadius.w = Attrib_TexCoord0.w;\n"
-"	LightColor = Attrib_Color;\n"
-"	gl_Position = ModelViewProjectionMatrix * Attrib_Position;\n"
-"}\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"// ScreenToDepth = vec2(Far / (Far - Near), Far * Near / (Near - Far));\n"
-"uniform highp vec2 ScreenToDepth;\n"
-"uniform myhalf2 PixelToScreenTexCoord;\n"
-"void main(void)\n"
-"{\n"
-"	// calculate viewspace pixel position\n"
-"	vec2 ScreenTexCoord = gl_FragCoord.xy * PixelToScreenTexCoord;\n"
-"	vec3 position;\n"
-"	position.z = ScreenToDepth.y / (texture2D(Texture_ScreenDepth, ScreenTexCoord).r + ScreenToDepth.x);\n"
-"	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n"
-"	vec3 CubeVector = (position - LightOriginInvRadius.xyz) * LightOriginInvRadius.w;\n"
-"	gl_FragData[0] = vec4(LightColor.rgb * max(0.0, 1.0 - length(CubeVector)), 1.0);\n"
-"}\n"
-"#endif // FRAGMENT_SHADER\n"
-"#else // !MODE_DEFERREDBOUNCELIGHT\n"
-"\n"
-"\n"
-"\n"
-"\n"
 "#ifdef VERTEX_SHADER\n"
 "uniform highp mat4 TexMatrix;\n"
 "#ifdef USEVERTEXTEXTUREBLEND\n"
@@ -1869,7 +1828,6 @@ static const char *builtinshaderstring =
 "}\n"
 "#endif // FRAGMENT_SHADER\n"
 "\n"
-"#endif // !MODE_DEFERREDBOUNCELIGHT\n"
 "#endif // !MODE_DEFERREDLIGHTSOURCE\n"
 "#endif // !MODE_DEFERREDGEOMETRY\n"
 "#endif // !MODE_WATER\n"
@@ -3473,7 +3431,6 @@ shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
 	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDBOUNCELIGHT\n", " deferredbouncelight"},
 };
 
 shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
@@ -3494,7 +3451,6 @@ shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDBOUNCELIGHT\n", " deferredbouncelight"},
 };
 
 struct r_glsl_permutation_s;
@@ -5793,50 +5749,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
 		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
-		break;
-	}
-}
-
-void R_SetupShader_DeferredBounceLight(void)
-{
-	// array of particle lights that contribute only ambient color
-	unsigned int permutation = 0;
-	unsigned int mode = 0;
-	mode = SHADERMODE_DEFERREDBOUNCELIGHT;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-		R_SetupShader_SetPermutationHLSL(mode, permutation);
-		hlslPSSetParameter2f(D3DPSREGISTER_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
-
-		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthcolortexture           );
-#endif
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
-
-		if (r_glsl_permutation->tex_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDepth        , r_shadow_prepassgeometrydepthtexture                );
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL11:
-		break;
-	case RENDERPATH_SOFT:
-		R_SetupShader_SetPermutationGLSL(mode, permutation);
-		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
-
-		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
 		break;
 	}
 }
