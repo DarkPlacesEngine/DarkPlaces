@@ -686,7 +686,7 @@ void IN_Move( void )
 		}
 		oldkeydest = keydest;
 		// top of screen is toggleconsole and K_ESCAPE
-			VID_TouchscreenArea(  0,   0,  50,  50, NULL                         , NULL, &buttons[13], '`');
+			VID_TouchscreenArea(  0,   0,  50,  50, NULL                         , NULL, &buttons[13], (keynum_t)'`');
 			VID_TouchscreenArea( 50,   0, 270,  50, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
 		switch(keydest)
 		{
@@ -709,7 +709,7 @@ void IN_Move( void )
 			break;
 		default:
 			// in menus, an icon in the corner activates keyboard
-			VID_TouchscreenArea(  0, 430,  50,  50, "gfx/touch_keyboard.tga"     , NULL, &buttons[15], 0);
+			VID_TouchscreenArea(  0, 430,  50,  50, "gfx/touch_keyboard.tga"     , NULL, &buttons[15], (keynum_t)0);
 			if (buttons[15])
 				VID_ShowKeyboard(true);
 			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
