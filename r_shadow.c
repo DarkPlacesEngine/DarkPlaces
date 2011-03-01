@@ -2514,10 +2514,12 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 				}
 				if (bouncecount >= maxbounce)
 					break;
-				// scale down shot color by bounce intensity and texture color
+				// scale down shot color by bounce intensity and texture color (or 50% if no texture reported)
 				VectorScale(shotcolor, r_shadow_bouncegrid_particlebounceintensity.value, shotcolor);
 				if (cliptrace.hittexture && cliptrace.hittexture->currentskinframe)
 					VectorMultiply(shotcolor, rsurface.texture->currentskinframe->avgcolor, shotcolor);
+				else
+					VectorScale(shotcolor, 0.5f->avgcolor, shotcolor);
 				if (VectorLength2(shotcolor) < 3.0f)
 					break;
 				r_refdef.stats.bouncegrid_bounces++;
