@@ -333,9 +333,9 @@ cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_boun
 cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
 cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "1", "overall brightness of bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "16", "maximum number of bounces for a particle (minimum is 1)"};
+cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "3", "maximum number of bounces for a particle (minimum is 1)"};
 cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce"};
-cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "16", "brightness of particles contributing to bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "4", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_particlespacing = {CVAR_SAVE, "r_shadow_bouncegrid_particlespacing", "32", "emit one particle per this many units (squared) of radius (squared)"};
 cvar_t r_shadow_bouncegrid_spacingx = {CVAR_SAVE, "r_shadow_bouncegrid_spacingx", "64", "unit size of bouncegrid pixel on X axis"};
 cvar_t r_shadow_bouncegrid_spacingy = {CVAR_SAVE, "r_shadow_bouncegrid_spacingy", "64", "unit size of bouncegrid pixel on Y axis"};
@@ -363,6 +363,9 @@ matrix4x4_t r_shadow_bouncegridmatrix;
 vec_t r_shadow_bouncegridintensity;
 static double r_shadow_bouncegridtime;
 static int r_shadow_bouncegridresolution[3];
+static int r_shadow_bouncegridnumpixels;
+static unsigned char *r_shadow_bouncegridpixels;
+static unsigned short *r_shadow_bouncegridhighpixels;
 
 // note the table actually includes one more value, just to avoid the need to clamp the distance index due to minor math error
 #define ATTENTABLESIZE 256
@@ -507,6 +510,9 @@ void R_Shadow_FreeShadowMaps(void)
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
+	r_shadow_bouncegridpixels = NULL;
+	r_shadow_bouncegridhighpixels = NULL;
+	r_shadow_bouncegridnumpixels = 0;
 	r_shadow_bouncegridtexture = NULL;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
@@ -580,6 +586,9 @@ void r_shadow_shutdown(void)
 
 	CHECKGLERROR
 	r_shadow_bouncegridtexture = NULL;
+	r_shadow_bouncegridpixels = NULL;
+	r_shadow_bouncegridhighpixels = NULL;
+	r_shadow_bouncegridnumpixels = 0;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -2290,11 +2299,11 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	dlight_t *light;
 	int flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	int bouncecount;
-	int bouncelimit;
 	int c[3];
 	int hitsupercontentsmask;
 	int maxbounce;
 	int numpixels;
+	int pixelindex;
 	int resolution[3];
 	int shootparticles;
 	int shotparticles;
@@ -2302,6 +2311,8 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	trace_t cliptrace;
 	unsigned char *pixel;
 	unsigned char *pixels;
+	unsigned short *highpixel;
+	unsigned short *highpixels;
 	unsigned int lightindex;
 	unsigned int range;
 	unsigned int range1;
@@ -2331,6 +2342,13 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 			R_FreeTexture(r_shadow_bouncegridtexture);
 			r_shadow_bouncegridtexture = NULL;
 		}
+		if (r_shadow_bouncegridpixels)
+			Mem_Free(r_shadow_bouncegridpixels);
+		r_shadow_bouncegridpixels = NULL;
+		if (r_shadow_bouncegridhighpixels)
+			Mem_Free(r_shadow_bouncegridhighpixels);
+		r_shadow_bouncegridhighpixels = NULL;
+		r_shadow_bouncegridnumpixels = 0;
 		return;
 	}
 	if (r_refdef.scene.worldmodel && isstatic)
@@ -2379,13 +2397,23 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	m[15] = 1.0f;
 	Matrix4x4_FromArrayFloatD3D(&r_shadow_bouncegridmatrix, m);
 	numpixels = resolution[0]*resolution[1]*resolution[2];
-	// allocate pixels for this update...
-	pixels = (unsigned char *)Mem_Alloc(r_main_mempool, numpixels * sizeof(unsigned char[4]));
+	// reallocate pixels for this update if needed...
+	if (r_shadow_bouncegridnumpixels != numpixels || !r_shadow_bouncegridpixels || !r_shadow_bouncegridhighpixels)
+	{
+		r_shadow_bouncegridpixels = (unsigned char *)Mem_Realloc(r_main_mempool, r_shadow_bouncegridpixels, numpixels * sizeof(unsigned char[4]));
+		r_shadow_bouncegridhighpixels = (unsigned short *)Mem_Realloc(r_main_mempool, r_shadow_bouncegridhighpixels, numpixels * sizeof(unsigned short[4]));
+	}
+	r_shadow_bouncegridnumpixels = numpixels;
+	pixels = r_shadow_bouncegridpixels;
+	highpixels = r_shadow_bouncegridhighpixels;
+	memset(pixels, 0, numpixels * sizeof(unsigned char[4]));
+	memset(highpixels, 0, numpixels * sizeof(unsigned short[3]));
 	// figure out what we want to interact with
 	if (r_shadow_bouncegrid_hitmodels.integer)
 		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK;
 	else
 		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK;
+	maxbounce = bound(1, r_shadow_bouncegrid_maxbounce.integer, 16);
 	// iterate world rtlights
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	range1 = isstatic ? 0 : r_refdef.scene.numlights;
@@ -2432,9 +2460,8 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 		shootparticles = (int)bound(0, lightintensity * s *s, MAXBOUNCEGRIDPARTICLESPERLIGHT);
 		if (!shootparticles)
 			continue;
-		s = 255.0f * r_shadow_bouncegrid_particleintensity.value / shootparticles;
+		s = 65535.0f * r_shadow_bouncegrid_particleintensity.value / shootparticles;
 		VectorScale(lightcolor, s, baseshotcolor);
-		maxbounce = bound(1, r_shadow_bouncegrid_maxbounce.integer, 16);
 		if (VectorLength2(baseshotcolor) < 3.0f)
 			break;
 		r_refdef.stats.bouncegrid_lights++;
@@ -2450,7 +2477,6 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 			else
 				VectorCheeseRandom(clipend);
 			VectorMA(clipstart, radius, clipend, clipend);
-			bouncelimit = 1 + (rtlight->particlecache_updateparticle % maxbounce);
 			for (bouncecount = 0;;bouncecount++)
 			{
 				r_refdef.stats.bouncegrid_traces++;
@@ -2469,18 +2495,24 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 					if (tex[0] >= 1 && tex[1] >= 1 && tex[2] >= 1 && tex[0] < resolution[0] - 1 && tex[1] < resolution[1] - 1 && tex[2] < resolution[2] - 1)
 					{
 						// it is within bounds...
-						pixel = pixels + 4 * ((tex[2]*resolution[1]+tex[1])*resolution[0]+tex[0]);
-						// add to the pixel color
-						c[0] = pixel[0] + (int)shotcolor[2];
-						c[1] = pixel[1] + (int)shotcolor[1];
-						c[2] = pixel[2] + (int)shotcolor[0];
-						pixel[0] = (unsigned char)min(c[0], 255);
-						pixel[1] = (unsigned char)min(c[1], 255);
-						pixel[2] = (unsigned char)min(c[2], 255);
+						pixelindex = ((tex[2]*resolution[1]+tex[1])*resolution[0]+tex[0]);
+						pixel = pixels + 4 * pixelindex;
+						highpixel = highpixels + 3 * pixelindex;
+						// add to the high precision pixel color
+						c[0] = highpixel[0] + (int)shotcolor[2];
+						c[1] = highpixel[1] + (int)shotcolor[1];
+						c[2] = highpixel[2] + (int)shotcolor[0];
+						highpixel[0] = (unsigned short)min(c[0], 65535);
+						highpixel[1] = (unsigned short)min(c[1], 65535);
+						highpixel[2] = (unsigned short)min(c[2], 65535);
+						// update the low precision pixel color
+						pixel[0] = highpixel[0] >> 8;
+						pixel[1] = highpixel[1] >> 8;
+						pixel[2] = highpixel[2] >> 8;
 						pixel[3] = 255;
 					}
 				}
-				if (bouncecount >= bouncelimit)
+				if (bouncecount >= maxbounce)
 					break;
 				// scale down shot color by bounce intensity and texture color
 				VectorScale(shotcolor, r_shadow_bouncegrid_particlebounceintensity.value, shotcolor);
@@ -2522,7 +2554,6 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 			R_FreeTexture(r_shadow_bouncegridtexture);
 		r_shadow_bouncegridtexture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2], pixels, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 	}
-	Mem_Free(pixels);
 	r_shadow_bouncegridtime = realtime;
 }
 
