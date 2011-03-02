@@ -1293,7 +1293,7 @@ void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor
 	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
-static texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
+static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
 {
 	int i;
 	int j;
@@ -1305,8 +1305,12 @@ static texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveH
 	float v1[3];
 	float edgedir[3];
 	float edgenormal[3];
-	float p[3];
+	float p[4];
+	float midf;
+	float t1;
+	float t2;
 	VectorCopy(mid, p);
+	p[3] = 1;
 	surface = model->data_surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
@@ -1323,6 +1327,7 @@ static texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveH
 		if (!(t->trace->hitsupercontentsmask & surface->texture->supercontents))
 			continue;
 		VectorCopy(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex, normal);
+		//VectorCopy(node->plane->normal, normal);
 		for (j = 0, k = surface->num_vertices - 1;j < surface->num_vertices;k = j, j++)
 		{
 			VectorCopy(model->surfmesh.data_vertex3f + 3 * (surface->num_firstvertex + k), v0);
@@ -1332,11 +1337,30 @@ static texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveH
 			if (DotProduct(edgenormal, p) > DotProduct(edgenormal, v0))
 				break;
 		}
-		if (j == surface->num_vertices)
-		{
-			// hit this surface
-			return surface->texture->currentframe;
-		}
+		if (j < surface->num_vertices)
+			continue;
+
+		// we hit a surface, this is the impact point...
+		VectorCopy(normal, t->trace->plane.normal);
+		t->trace->plane.dist = DotProduct(normal, p);
+
+		// calculate the true fraction
+		t1 = DotProduct(t->start, t->trace->plane.normal) - t->trace->plane.dist;
+		t2 = DotProduct(t->end, t->trace->plane.normal) - t->trace->plane.dist;
+		midf = t1 / (t1 - t2);
+		t->trace->realfraction = midf;
+
+		// calculate the return fraction which is nudged off the surface a bit
+		midf = (t1 - DIST_EPSILON) / (t1 - t2);
+		t->trace->fraction = bound(0, midf, 1);
+
+		if (collision_prefernudgedfraction.integer)
+			t->trace->realfraction = t->trace->fraction;
+
+		t->trace->hittexture = surface->texture->currentframe;
+		t->trace->hitq3surfaceflags = t->trace->hittexture->surfaceflags;
+		t->trace->hitsupercontents = t->trace->hittexture->supercontents;
+		return surface->texture->currentframe;
 	}
 	return NULL;
 }
@@ -1401,36 +1425,13 @@ static int Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(RecursiveHullCheck
 		if (Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side], p1, mid) == HULLCHECKSTATE_DONE)
 			return HULLCHECKSTATE_DONE;
 
-		t->trace->hittexture = Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(t, model, node, mid);
-		if (!t->trace->hittexture)
-			return Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side ^ 1], mid, p2);
+		// test each surface on the node
+		Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(t, model, node, mid);
+		if (t->trace->hittexture)
+			return HULLCHECKSTATE_DONE;
 
-		// we hit a surface, this is the impact point...
-		if (side)
-		{
-			t->trace->plane.dist = -plane->dist;
-			VectorNegate (plane->normal, t->trace->plane.normal);
-		}
-		else
-		{
-			t->trace->plane.dist = plane->dist;
-			VectorCopy (plane->normal, t->trace->plane.normal);
-		}
-	
-		// calculate the true fraction
-		t->trace->realfraction = midf;
-	
-		// calculate the return fraction which is nudged off the surface a bit
-		midf = (t1 - DIST_EPSILON) / (t1 - t2);
-		t->trace->fraction = bound(0, midf, 1);
-	
-		if (collision_prefernudgedfraction.integer)
-			t->trace->realfraction = t->trace->fraction;
-
-		t->trace->hitq3surfaceflags = t->trace->hittexture->surfaceflags;
-		t->trace->hitsupercontents = t->trace->hittexture->supercontents;
-
-		return HULLCHECKSTATE_DONE;
+		// recurse back side
+		return Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side ^ 1], mid, p2);
 	}
 	leaf = (const mleaf_t *)node;
 	side = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, leaf->contents);
