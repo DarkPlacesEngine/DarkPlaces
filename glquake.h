@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // disable data conversion warnings
 
 #ifdef _MSC_VER
+#pragma warning(disable : 4310) // LordHavoc: MSVC++ 2008 x86: cast truncates constant value
+#pragma warning(disable : 4245) // LordHavoc: MSVC++ 2008 x86: 'initializing' : conversion from 'int' to 'unsigned char', signed/unsigned mismatch
+#pragma warning(disable : 4204) // LordHavoc: MSVC++ 2008 x86: nonstandard extension used : non-constant aggregate initializer
+#pragma warning(disable : 4267) // LordHavoc: MSVC++ 2008 x64, conversion from 'size_t' to 'int', possible loss of data
 //#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
 //#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
 //#pragma warning(disable : 4706)		// LordHavoc: MSVC++ 2008 x86, assignment within conditional expression

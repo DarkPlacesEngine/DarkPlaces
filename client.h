@@ -34,7 +34,7 @@ typedef struct tridecal_s
 	// color and initial alpha value
 	float			texcoord2f[3][2];
 	float			vertex3f[3][3];
-	unsigned char	color4ub[3][4];
+	float			color4f[3][4];
 	// how long this decal has lived so far (the actual fade begins at cl_decals_time)
 	float			lived;
 	// if >= 0 this indicates the decal should follow an animated triangle

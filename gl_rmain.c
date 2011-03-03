@@ -11610,7 +11610,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		}
 		if ((batchneed & BATCHNEED_VERTEXMESH_VERTEXCOLOR) && rsurface.batchlightmapcolor4f)
 			for (j = 0, vertexmesh = rsurface.batchvertexmesh;j < batchnumvertices;j++, vertexmesh++)
-				Vector4Scale(rsurface.batchlightmapcolor4f + 4*j, 255.0f, vertexmesh->color4ub);
+				Vector4Copy(rsurface.batchlightmapcolor4f + 4*j, vertexmesh->color4f);
 		if (batchneed & BATCHNEED_VERTEXMESH_TEXCOORD)
 			for (j = 0, vertexmesh = rsurface.batchvertexmesh;j < batchnumvertices;j++, vertexmesh++)
 				Vector2Copy(rsurface.batchtexcoordtexture2f + 2*j, vertexmesh->texcoordtexture2f);
@@ -12433,7 +12433,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		for (j = 0, vi = rsurface.batchfirstvertex;j < rsurface.batchnumvertices;j++, vi++)
 		{
 			VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
-			Vector4Set(batchvertex[vi].color4ub, 0, 0, 0, 255);
+			Vector4Set(batchvertex[vi].color4f, 0, 0, 0, 1);
 		}
 		R_Mesh_PrepareVertices_Generic_Unlock();
 		RSurf_DrawBatch();
@@ -12444,9 +12444,9 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(rsurface.batchnumvertices);
 		for (j = 0, vi = rsurface.batchfirstvertex;j < rsurface.batchnumvertices;j++, vi++)
 		{
-			unsigned char c = vi << 3;
+			unsigned char c = (vi << 3) * (1.0f / 256.0f);
 			VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
-			Vector4Set(batchvertex[vi].color4ub, c, c, c, 255);
+			Vector4Set(batchvertex[vi].color4f, c, c, c, 1);
 		}
 		R_Mesh_PrepareVertices_Generic_Unlock();
 		RSurf_DrawBatch();
@@ -12458,13 +12458,13 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(3*rsurface.batchnumtriangles);
 		for (j = 0, e = rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle;j < rsurface.batchnumtriangles;j++, e += 3)
 		{
-			unsigned char c = (j + rsurface.batchfirsttriangle) << 3;
+			unsigned char c = ((j + rsurface.batchfirsttriangle) << 3) * (1.0f / 256.0f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[0], batchvertex[j*3+0].vertex3f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[1], batchvertex[j*3+1].vertex3f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[2], batchvertex[j*3+2].vertex3f);
-			Vector4Set(batchvertex[j*3+0].color4ub, c, c, c, 255);
-			Vector4Set(batchvertex[j*3+1].color4ub, c, c, c, 255);
-			Vector4Set(batchvertex[j*3+2].color4ub, c, c, c, 255);
+			Vector4Set(batchvertex[j*3+0].color4f, c, c, c, 1);
+			Vector4Set(batchvertex[j*3+1].color4f, c, c, c, 1);
+			Vector4Set(batchvertex[j*3+2].color4f, c, c, c, 1);
 		}
 		R_Mesh_PrepareVertices_Generic_Unlock();
 		R_Mesh_Draw(0, rsurface.batchnumtriangles*3, 0, rsurface.batchnumtriangles, NULL, NULL, 0, NULL, NULL, 0);
@@ -12474,7 +12474,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		int texturesurfaceindex;
 		int k;
 		const msurface_t *surface;
-		unsigned char surfacecolor4ub[4];
+		float surfacecolor4f[4];
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(rsurface.batchfirstvertex + rsurface.batchnumvertices);
 		vi = 0;
@@ -12482,11 +12482,11 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
 			k = (int)(((size_t)surface) / sizeof(msurface_t));
-			Vector4Set(surfacecolor4ub, (k & 0xF) << 4, (k & 0xF0), (k & 0xF00) >> 4, 255);
+			Vector4Set(surfacecolor4f, (k & 0xF) * (1.0f / 16.0f), (k & 0xF0) * (1.0f / 256.0f), (k & 0xF00) * (1.0f / 4096.0f), 1);
 			for (j = 0;j < surface->num_vertices;j++)
 			{
 				VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
-				Vector4Copy(surfacecolor4ub, batchvertex[vi].color4ub);
+				Vector4Copy(surfacecolor4f, batchvertex[vi].color4f);
 				vi++;
 			}
 		}
@@ -12993,7 +12993,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	// grab a decal and search for another free slot for the next one
 	decals = decalsystem->decals;
 	decal = decalsystem->decals + (i = decalsystem->freedecal++);
-	for (i = decalsystem->freedecal;i < decalsystem->numdecals && decals[i].color4ub[0][3];i++)
+	for (i = decalsystem->freedecal;i < decalsystem->numdecals && decals[i].color4f[0][3];i++)
 		;
 	decalsystem->freedecal = i;
 	if (decalsystem->numdecals <= i)
@@ -13004,18 +13004,18 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	decal->triangleindex = triangleindex;
 	decal->surfaceindex = surfaceindex;
 	decal->decalsequence = decalsequence;
-	decal->color4ub[0][0] = (unsigned char)(c0[0]*255.0f);
-	decal->color4ub[0][1] = (unsigned char)(c0[1]*255.0f);
-	decal->color4ub[0][2] = (unsigned char)(c0[2]*255.0f);
-	decal->color4ub[0][3] = 255;
-	decal->color4ub[1][0] = (unsigned char)(c1[0]*255.0f);
-	decal->color4ub[1][1] = (unsigned char)(c1[1]*255.0f);
-	decal->color4ub[1][2] = (unsigned char)(c1[2]*255.0f);
-	decal->color4ub[1][3] = 255;
-	decal->color4ub[2][0] = (unsigned char)(c2[0]*255.0f);
-	decal->color4ub[2][1] = (unsigned char)(c2[1]*255.0f);
-	decal->color4ub[2][2] = (unsigned char)(c2[2]*255.0f);
-	decal->color4ub[2][3] = 255;
+	decal->color4f[0][0] = c0[0];
+	decal->color4f[0][1] = c0[1];
+	decal->color4f[0][2] = c0[2];
+	decal->color4f[0][3] = 1;
+	decal->color4f[1][0] = c1[0];
+	decal->color4f[1][1] = c1[1];
+	decal->color4f[1][2] = c1[2];
+	decal->color4f[1][3] = 1;
+	decal->color4f[2][0] = c2[0];
+	decal->color4f[2][1] = c2[1];
+	decal->color4f[2][2] = c2[2];
+	decal->color4f[2][3] = 1;
 	decal->vertex3f[0][0] = v0[0];
 	decal->vertex3f[0][1] = v0[1];
 	decal->vertex3f[0][2] = v0[2];
@@ -13382,7 +13382,7 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 
 	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
 	{
-		if (decal->color4ub[0][3])
+		if (decal->color4f[0][3])
 		{
 			decal->lived += frametime;
 			if (killsequence - decal->decalsequence > 0 || decal->lived >= lifetime)
@@ -13394,13 +13394,13 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 		}
 	}
 	decal = decalsystem->decals;
-	while (numdecals > 0 && !decal[numdecals-1].color4ub[0][3])
+	while (numdecals > 0 && !decal[numdecals-1].color4f[0][3])
 		numdecals--;
 
 	// collapse the array by shuffling the tail decals into the gaps
 	for (;;)
 	{
-		while (decalsystem->freedecal < numdecals && decal[decalsystem->freedecal].color4ub[0][3])
+		while (decalsystem->freedecal < numdecals && decal[decalsystem->freedecal].color4f[0][3])
 			decalsystem->freedecal++;
 		if (decalsystem->freedecal == numdecals)
 			break;
@@ -13464,7 +13464,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	t2f = decalsystem->texcoord2f;
 	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
 	{
-		if (!decal->color4ub[0][3])
+		if (!decal->color4f[0][3])
 			continue;
 
 		if (surfacevisible && !surfacevisible[decal->surfaceindex])
@@ -13472,24 +13472,21 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 
 		// update color values for fading decals
 		if (decal->lived >= cl_decals_time.value)
-		{
 			alpha = 1 - faderate * (decal->lived - cl_decals_time.value);
-			alpha *= (1.0f/255.0f);
-		}
 		else
-			alpha = 1.0f/255.0f;
+			alpha = 1.0f;
 
-		c4f[ 0] = decal->color4ub[0][0] * alpha;
-		c4f[ 1] = decal->color4ub[0][1] * alpha;
-		c4f[ 2] = decal->color4ub[0][2] * alpha;
+		c4f[ 0] = decal->color4f[0][0] * alpha;
+		c4f[ 1] = decal->color4f[0][1] * alpha;
+		c4f[ 2] = decal->color4f[0][2] * alpha;
 		c4f[ 3] = 1;
-		c4f[ 4] = decal->color4ub[1][0] * alpha;
-		c4f[ 5] = decal->color4ub[1][1] * alpha;
-		c4f[ 6] = decal->color4ub[1][2] * alpha;
+		c4f[ 4] = decal->color4f[1][0] * alpha;
+		c4f[ 5] = decal->color4f[1][1] * alpha;
+		c4f[ 6] = decal->color4f[1][2] * alpha;
 		c4f[ 7] = 1;
-		c4f[ 8] = decal->color4ub[2][0] * alpha;
-		c4f[ 9] = decal->color4ub[2][1] * alpha;
-		c4f[10] = decal->color4ub[2][2] * alpha;
+		c4f[ 8] = decal->color4f[2][0] * alpha;
+		c4f[ 9] = decal->color4f[2][1] * alpha;
+		c4f[10] = decal->color4f[2][2] * alpha;
 		c4f[11] = 1;
 
 		t2f[0] = decal->texcoord2f[0][0];
