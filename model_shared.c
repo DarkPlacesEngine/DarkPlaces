@@ -2797,7 +2797,7 @@ void Mod_BuildVBOs(void)
 			VectorScale(loadmodel->surfmesh.data_tvector3f + 3*vertexindex, 1.0f, vertexmesh->tvector3f);
 			VectorScale(loadmodel->surfmesh.data_normal3f + 3*vertexindex, 1.0f, vertexmesh->normal3f);
 			if (loadmodel->surfmesh.data_lightmapcolor4f)
-				Vector4Scale(loadmodel->surfmesh.data_lightmapcolor4f + 4*vertexindex, 255.0f, vertexmesh->color4ub);
+				Vector4Copy(loadmodel->surfmesh.data_lightmapcolor4f + 4*vertexindex, vertexmesh->color4f);
 			Vector2Copy(loadmodel->surfmesh.data_texcoordtexture2f + 2*vertexindex, vertexmesh->texcoordtexture2f);
 			if (loadmodel->surfmesh.data_texcoordlightmap2f)
 				Vector2Scale(loadmodel->surfmesh.data_texcoordlightmap2f + 2*vertexindex, 1.0f, vertexmesh->texcoordlightmap2f);

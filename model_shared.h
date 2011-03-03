@@ -103,18 +103,18 @@ blendweights_t;
 
 typedef struct r_vertexgeneric_s
 {
-	// 24 bytes
+	// 36 bytes
 	float vertex3f[3];
-	unsigned char color4ub[4];
+	float color4f[4];
 	float texcoord2f[2];
 }
 r_vertexgeneric_t;
 
 typedef struct r_vertexmesh_s
 {
-	// 68 bytes
+	// 80 bytes
 	float vertex3f[3];
-	unsigned char color4ub[4];
+	float color4f[4];
 	float texcoordtexture2f[2];
 	float texcoordlightmap2f[2];
 	float svector3f[3];
