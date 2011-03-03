@@ -1314,6 +1314,7 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	surface = model->data_surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
+		// skip surfaces whose bounding box does not include the point
 		if (axis < 3)
 		{
 			if (mid[axis] < surface->mins[axis] || mid[axis] > surface->maxs[axis])
@@ -1324,10 +1325,15 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 			if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
 				continue;
 		}
+		// skip faces with contents we don't care about
 		if (!(t->trace->hitsupercontentsmask & surface->texture->supercontents))
 			continue;
+		// get the surface normal - since it is flat we know any vertex normal will suffice
 		VectorCopy(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex, normal);
-		//VectorCopy(node->plane->normal, normal);
+		// skip backfaces
+		if (DotProduct(t->dist, normal) > 0)
+			continue;
+		// iterate edges and see if the point is outside one of them
 		for (j = 0, k = surface->num_vertices - 1;j < surface->num_vertices;k = j, j++)
 		{
 			VectorCopy(model->surfmesh.data_vertex3f + 3 * (surface->num_firstvertex + k), v0);
@@ -1337,6 +1343,7 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 			if (DotProduct(edgenormal, p) > DotProduct(edgenormal, v0))
 				break;
 		}
+		// if the point is outside one of the edges, it is not within the surface
 		if (j < surface->num_vertices)
 			continue;
 
