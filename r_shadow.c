@@ -328,7 +328,7 @@ cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_l
 cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "3", "maximum number of bounces for a particle (minimum is 1)"};
 cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
 cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "2", "brightness of particles contributing to bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_particlespacing = {CVAR_SAVE, "r_shadow_bouncegrid_particlespacing", "32", "emit one particle per this many units (squared) of radius (squared)"};
+cvar_t r_shadow_bouncegrid_photons = {CVAR_SAVE, "r_shadow_bouncegrid_photons", "2000", "total photons to shoot per update, divided proportionately between lights"};
 cvar_t r_shadow_bouncegrid_spacingx = {CVAR_SAVE, "r_shadow_bouncegrid_spacingx", "64", "unit size of bouncegrid pixel on X axis"};
 cvar_t r_shadow_bouncegrid_spacingy = {CVAR_SAVE, "r_shadow_bouncegrid_spacingy", "64", "unit size of bouncegrid pixel on Y axis"};
 cvar_t r_shadow_bouncegrid_spacingz = {CVAR_SAVE, "r_shadow_bouncegrid_spacingz", "64", "unit size of bouncegrid pixel on Z axis"};
@@ -721,7 +721,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_maxbounce);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlespacing);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_photons);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingx);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingy);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacingz);
@@ -2291,6 +2291,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	int resolution[3];
 	int shootparticles;
 	int shotparticles;
+	int photoncount;
 	int tex[3];
 	trace_t cliptrace;
 	//trace_t cliptrace2;
@@ -2319,6 +2320,8 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	vec_t radius;
 	vec_t s;
 	vec_t lightintensity;
+	vec_t photonscaling;
+	vec_t photonresidual;
 	float m[16];
 	qboolean isstatic = r_shadow_bouncegrid_updateinterval.value > 1.0f;
 	rtlight_t *rtlight;
@@ -2405,6 +2408,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	range1 = isstatic ? 0 : r_refdef.scene.numlights;
 	range2 = range + range1;
+	photoncount = 0;
 	for (lightindex = 0;lightindex < range2;lightindex++)
 	{
 		if (isstatic)
@@ -2440,13 +2444,58 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 		// distribution, the seeded random is only consistent for a
 		// consistent number of particles on this light...
 		radius = rtlight->radius * bound(0.0001f, r_shadow_bouncegrid_lightradiusscale.value, 1024.0f);
-		s = rtlight->radius / bound(1.0f, r_shadow_bouncegrid_particlespacing.value, 1048576.0f);
-		lightintensity = VectorLength(rtlight->color) * rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale;
+		s = rtlight->radius;
+		lightintensity = VectorLength(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
 		if (lightindex >= range)
 			lightintensity *= r_shadow_bouncegrid_dlightparticlemultiplier.value;
-		shootparticles = (int)bound(0, lightintensity * s *s, MAXBOUNCEGRIDPARTICLESPERLIGHT);
+		photoncount += max(0.0f, lightintensity * s * s);
+	}
+	photonscaling = bound(1, r_shadow_bouncegrid_photons.value, 1048576) / max(1, photoncount);
+	photonresidual = 0.0f;
+	for (lightindex = 0;lightindex < range2;lightindex++)
+	{
+		if (isstatic)
+		{
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (!light || !(light->flags & flag))
+				continue;
+			rtlight = &light->rtlight;
+			// when static, we skip styled lights because they tend to change...
+			if (rtlight->style > 0)
+				continue;
+			VectorScale(rtlight->color, (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale) * (rtlight->style >= 0 ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1), lightcolor);
+		}
+		else
+		{
+			if (lightindex < range)
+			{
+				light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+				rtlight = &light->rtlight;
+			}
+			else
+				rtlight = r_refdef.scene.lights[lightindex - range];
+			// draw only visible lights (major speedup)
+			if (!rtlight->draw)
+				continue;
+			VectorScale(rtlight->currentcolor, rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale, lightcolor);
+		}
+		if (!VectorLength2(lightcolor))
+			continue;
+		// shoot particles from this light
+		// use a calculation for the number of particles that will not
+		// vary with lightstyle, otherwise we get randomized particle
+		// distribution, the seeded random is only consistent for a
+		// consistent number of particles on this light...
+		radius = rtlight->radius * bound(0.0001f, r_shadow_bouncegrid_lightradiusscale.value, 1024.0f);
+		s = rtlight->radius;
+		lightintensity = VectorLength(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
+		if (lightindex >= range)
+			lightintensity *= r_shadow_bouncegrid_dlightparticlemultiplier.value;
+		photonresidual += lightintensity * s * s * photonscaling;
+		shootparticles = (int)bound(0, photonresidual, MAXBOUNCEGRIDPARTICLESPERLIGHT);
 		if (!shootparticles)
 			continue;
+		photonresidual -= shootparticles;
 		s = 65535.0f * r_shadow_bouncegrid_particleintensity.value / shootparticles;
 		VectorScale(lightcolor, s, baseshotcolor);
 		if (VectorLength2(baseshotcolor) < 3.0f)
