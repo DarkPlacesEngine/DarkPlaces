@@ -22,6 +22,10 @@
 		Boston, MA  02111-1307, USA
 */
 
+// we MUST include "quakedef.h" before anything that may include IO functions
+// to get _FILE_OFFSET_BITS
+#include "quakedef.h"
+
 #ifdef __APPLE__
 // include SDL for IPHONEOS code
 # include <TargetConditionals.h>
@@ -42,8 +46,6 @@
 # include <sys/stat.h>
 # include <unistd.h>
 #endif
-
-#include "quakedef.h"
 
 #include "fs.h"
 #include "wad.h"
