@@ -22,8 +22,14 @@
 		Boston, MA  02111-1307, USA
 */
 
-// we MUST include "quakedef.h" before anything that may include IO functions
-// to get _FILE_OFFSET_BITS
+#ifdef WIN32
+# include <direct.h>
+# include <io.h>
+# include <shlobj.h>
+#endif
+
+// on *x, we MUST include "quakedef.h" before anything that may include IO
+// functions to get _FILE_OFFSET_BITS
 #include "quakedef.h"
 
 #ifdef __APPLE__
@@ -37,11 +43,7 @@
 #include <limits.h>
 #include <fcntl.h>
 
-#ifdef WIN32
-# include <direct.h>
-# include <io.h>
-# include <shlobj.h>
-#else
+#ifndef WIN32
 # include <pwd.h>
 # include <sys/stat.h>
 # include <unistd.h>
