@@ -42,8 +42,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release-Dedicated"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /Ox /Ot /Og /Oi /Op /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_FILE_OFFSET_BITS=64" /D "__KERNEL_STRICT_NAMES" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /Ox /Ot /Og /Oi /Op /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /D "_FILE_OFFSET_BITS=64" /D "__KERNEL_STRICT_NAMES" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x40c /d "NDEBUG"
@@ -69,8 +69,8 @@ LINK32=link.exe
 # PROP Intermediate_Dir "Debug-Dedicated"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_FILE_OFFSET_BITS=64" /D "__KERNEL_STRICT_NAMES" /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /D "_FILE_OFFSET_BITS=64" /D "__KERNEL_STRICT_NAMES" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x40c /d "_DEBUG"
