@@ -2539,6 +2539,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	if(!allow_colormod)
 		colormod = dummy_colormod;
+	if(rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+		allow_fog = allow_colormod; // we actually implement fog by colormodding with a color (f,f,f) for some f
 	if(!allow_fog)
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
 	switch(vid.renderpath)
