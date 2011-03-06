@@ -1043,6 +1043,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\shader_glsl.h"
+				>
+			</File>
+			<File
+				RelativePath=".\shader_hlsl.h"
+				>
+			</File>
+			<File
 				RelativePath=".\snd_main.h"
 				>
 			</File>
