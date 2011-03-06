@@ -47,7 +47,7 @@ sub isfogfriendly($$$$$)
 	# 1. blend(fog(s), sa, fog(d), da)
 	# 2. fog(blend(s, sa, d, da))
 
-	my ($out1, $out1a) = evalblend $fs, $fd, $s + ((defined $foghack ? $foghack < 0 ? $s : $foghack : $fogcolor) - $s) * $fogamount, $sa, $d + ($fogcolor - $d) * $fogamount, $da;
+	my ($out1, $out1a) = evalblend $fs, $fd, $s + ((defined $foghack ? $foghack eq 'ALPHA' ? $fogcolor*$sa : $foghack : $fogcolor) - $s) * $fogamount, $sa, $d + ($fogcolor - $d) * $fogamount, $da;
 	my ($out2, $out2a) = evalblend $fs, $fd, $s, $sa, $d, $da;
 		$out2 = $out2 + ($fogcolor - $out2) * $fogamount;
 
@@ -82,7 +82,7 @@ sub willitfog($$)
 	my ($fs, $fd) = @_;
 
 	FOGHACK:
-	for my $foghack(undef, 0, 1, -1)
+	for my $foghack(undef, 0, 'ALPHA')
 	{
 		for my $s(0, 0.25, 0.5, 0.75, 1)
 		{
