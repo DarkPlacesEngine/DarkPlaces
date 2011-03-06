@@ -31,17 +31,17 @@ sub evalblend($$$$$$)
 sub isinvariant($$$$)
 {
 	my ($fs, $fd, $s, $sa) = @_;
-	my ($d, $da) = (0.7823, 0.3289);
+	my ($d, $da) = (rand, rand);
 	my ($out, $outa) = evalblend $fs, $fd, $s, $sa, $d, $da;
-	return abs($out - $d) < 0.001 && abs($outa - $da) < 0.001;
+	return abs($out - $d) < 0.0001 && abs($outa - $da) < 0.0001;
 }
 
 sub isfogfriendly($$$$$)
 {
 	my ($fs, $fd, $s, $sa, $foghack) = @_;
-	my ($d, $da) = (0.7823, 0.3289);
-	my $fogamount = 0.3237;
-	my $fogcolor = 0.8612;
+	my ($d, $da) = (rand, rand);
+	my $fogamount = rand;
+	my $fogcolor = rand;
 
 	# compare:
 	# 1. blend(fog(s), sa, fog(d), da)
@@ -51,7 +51,28 @@ sub isfogfriendly($$$$$)
 	my ($out2, $out2a) = evalblend $fs, $fd, $s, $sa, $d, $da;
 		$out2 = $out2 + ($fogcolor - $out2) * $fogamount;
 
-	return abs($out1 - $out2) < 0.001 && abs($out1a - $out2a) < 0.001;
+	return abs($out1 - $out2) < 0.0001 && abs($out1a - $out2a) < 0.0001;
+}
+
+use Carp;
+sub decide(&)
+{
+	my ($sub) = @_;
+	my $good = 0;
+	my $bad = 0;
+	for(;;)
+	{
+		for(1..200)
+		{
+			my $r = $sub->();
+			++$good if $r;
+			++$bad if not $r;
+		}
+		#print STDERR "decide: $good vs $bad\n";
+		return 1 if $good > $bad + 150;
+		return 0 if $bad > $good + 150;
+		warn "No clear decision, continuing to test ($good : $bad)";
+	}
 }
 
 #die isfogfriendly $blendfuncs{GL_ONE}, $blendfuncs{GL_ONE}, 1, 0, 0;
@@ -65,9 +86,9 @@ sub willitblend($$)
 	{
 		for my $sa(0, 0.25, 0.5, 0.75, 1)
 		{
-			if(isinvariant($fs, $fd, $s, $sa))
+			if(decide { isinvariant($fs, $fd, $s, $sa); })
 			{
-				if(!isinvariant($fs, $fd, 0, $sa))
+				if(!decide { isinvariant($fs, $fd, 0, $sa); })
 				{
 					return 0; # no colormod possible
 				}
@@ -88,7 +109,7 @@ sub willitfog($$)
 		{
 			for my $sa(0, 0.25, 0.5, 0.75, 1)
 			{
-				if(!isfogfriendly($fs, $fd, $s, $sa, $foghack))
+				if(!decide { isfogfriendly($fs, $fd, $s, $sa, $foghack); })
 				{
 					next FOGHACK;
 				}
@@ -104,6 +125,7 @@ for my $s(sort keys %blendfuncs)
 {
 	for my $d(sort keys %blendfuncs)
 	{
+		#print STDERR "$s $d\n";
 		if(!willitblend $blendfuncs{$s}, $blendfuncs{$d})
 		{
 			print "\tif(src == $s && dst == $d) r &= ~BLENDFUNC_ALLOWS_COLORMOD;\n";
