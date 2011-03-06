@@ -1987,193 +1987,51 @@ extern rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
 extern rtexture_t *r_shadow_prepassgeometrydepthcolortexture;
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
-static qboolean R_BlendFuncAllowsColormod(int src, int dst)
+
+#define BLENDFUNC_ALLOWS_COLORMOD     1
+#define BLENDFUNC_ALLOWS_FOG          2
+#define BLENDFUNC_ALLOWS_FOG_HACK0    4
+#define BLENDFUNC_ALLOWS_ANYFOG       6
+static int R_BlendFuncFlags(int src, int dst)
 {
+	int r = 0;
+
 	// a blendfunc allows colormod if:
 	// a) it can never keep the destination pixel invariant, or
 	// b) it can keep the destination pixel invariant, and still can do so if colormodded
 	// this is to prevent unintended side effects from colormod
 
-	// in formulas:
-	// IF there is a (s, sa) for which for all (d, da),
-	//   s * src(s, d, sa, da) + d * dst(s, d, sa, da) == d
-	// THEN, for this (s, sa) and all (colormod, d, da):
-	//   s*colormod * src(s*colormod, d, sa, da) + d * dst(s*colormod, d, sa, da) == d
-	// OBVIOUSLY, this means that
-	//   s*colormod * src(s*colormod, d, sa, da) = 0
-	//   dst(s*colormod, d, sa, da)              = 1
-
-	// note: not caring about GL_SRC_ALPHA_SATURATE and following here, these are unused in DP code
-
-	// main condition to leave dst color invariant:
-	//   s * src(s, d, sa, da) + d * dst(s, d, sa, da) == d
-	//   src == GL_ZERO:
-	//     s * 0 + d * dst(s, d, sa, da) == d
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is a problem for GL_SRC_COLOR only
-	//   src == GL_ONE:
-	//     s + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//   src == GL_SRC_COLOR:
-	//     s*s + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//   src == GL_ONE_MINUS_SRC_COLOR:
-	//     s*(1-s) + d * dst(s, d, sa, da) == d
-	//       => s == 0 or s == 1
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is a problem for GL_SRC_COLOR only
-	//   src == GL_DST_COLOR
-	//     s*d + d * dst(s, d, sa, da) == d
-	//       => s == 1
-	//       => dst == GL_ZERO/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is always a problem
-	//     or
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//       => BUT, we do not know s! We must assume it is problematic
-	//       then... except in GL_ONE case, where we know all invariant
-	//       cases are fine
-	//   src == GL_ONE_MINUS_DST_COLOR
-	//     s*(1-d) + d * dst(s, d, sa, da) == d
-	//       => s == 0 (1-d is impossible to handle for our desired result)
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//   src == GL_SRC_ALPHA
-	//     s*sa + d * dst(s, d, sa, da) == d
-	//       => s == 0, or sa == 0
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod breaks in the case GL_SRC_COLOR only
-	//   src == GL_ONE_MINUS_SRC_ALPHA
-	//     s*(1-sa) + d * dst(s, d, sa, da) == d
-	//       => s == 0, or sa == 1
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod breaks in the case GL_SRC_COLOR only
-	//   src == GL_DST_ALPHA
-	//     s*da + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-
-	switch(src)
-	{
-		case GL_ZERO:
-		case GL_ONE_MINUS_SRC_COLOR:
-		case GL_SRC_ALPHA:
-		case GL_ONE_MINUS_SRC_ALPHA:
-			if(dst == GL_SRC_COLOR)
-				return false;
-			return true;
-		case GL_ONE:
-		case GL_SRC_COLOR:
-		case GL_ONE_MINUS_DST_COLOR:
-		case GL_DST_ALPHA:
-		case GL_ONE_MINUS_DST_ALPHA:
-			return true;
-		case GL_DST_COLOR:
-			if(dst == GL_ONE)
-				return true;
-			return false;
-		default:
-			return false;
-	}
-}
-static qboolean R_BlendFuncAllowsFog(int src, int dst)
-{
 	// a blendfunc allows fog if:
-	// a) it can never keep the destination pixel invariant, or
-	// b) it can keep the destination pixel invariant, and still can do so if fogged
-	// this is to prevent unintended side effects from colormod
+	// blend(fog(src), fog(dst)) == fog(blend(src, dst))
+	// this is to prevent unintended side effects from fog
 
-	// main condition to leave dst color invariant:
-	//   s * src(s, d, sa, da) + d * dst(s, d, sa, da) == d
-	//   src == GL_ZERO:
-	//     s * 0 + d * dst(s, d, sa, da) == d
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR only
-	//   src == GL_ONE:
-	//     s + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for all of them, because we require s == 0
-	//   src == GL_SRC_COLOR:
-	//     s*s + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for all of them, because we require s == 0
-	//   src == GL_ONE_MINUS_SRC_COLOR:
-	//     s*(1-s) + d * dst(s, d, sa, da) == d
-	//       => s == 0 or s == 1
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for all of them, because we require s == 0 or s == 1
-	//   src == GL_DST_COLOR
-	//     s*d + d * dst(s, d, sa, da) == d
-	//       => s == 1
-	//       => dst == GL_ZERO/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for all of them, because we require s == 1
-	//     or
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//       => BUT, we do not know s! We must assume it is problematic
-	//       then... except in GL_ONE case, where we know all invariant
-	//       cases are fine
-	//       => fog is a problem for all of them, because we require s == 0 or s == 1
-	//   src == GL_ONE_MINUS_DST_COLOR
-	//     s*(1-d) + d * dst(s, d, sa, da) == d
-	//       => s == 0 (1-d is impossible to handle for our desired result)
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod is never problematic for these
-	//       => fog is a problem for all of them, because we require s == 0
-	//   src == GL_SRC_ALPHA
-	//     s*sa + d * dst(s, d, sa, da) == d
-	//       => s == 0, or sa == 0
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog breaks in the case GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR only
-	//   src == GL_ONE_MINUS_SRC_ALPHA
-	//     s*(1-sa) + d * dst(s, d, sa, da) == d
-	//       => s == 0, or sa == 1
-	//       => dst == GL_ONE/GL_SRC_COLOR/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => colormod breaks in the case GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR only
-	//   src == GL_DST_ALPHA
-	//     s*da + d * dst(s, d, sa, da) == d
-	//       => s == 0
-	//       => dst == GL_ONE/GL_ONE_MINUS_SRC_COLOR/GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA
-	//       => fog is a problem for all of them, because we require s == 0
+	// these checks are the output of fogeval.pl
 
-	switch(src)
-	{
-		case GL_ZERO:
-		case GL_SRC_ALPHA:
-		case GL_ONE_MINUS_SRC_ALPHA:
-			if(dst == GL_SRC_COLOR || dst == GL_ONE_MINUS_SRC_COLOR)
-				return false;
-			return true;
-		case GL_ONE_MINUS_SRC_COLOR:
-		case GL_ONE_MINUS_DST_COLOR:
-			if(dst == GL_ONE || dst == GL_SRC_COLOR || dst == GL_ONE_MINUS_SRC_COLOR || dst == GL_SRC_ALPHA || dst == GL_ONE_MINUS_SRC_ALPHA)
-				return false;
-			return true;
-		case GL_ONE:
-		case GL_SRC_COLOR:
-		case GL_DST_ALPHA:
-			if(dst == GL_ONE || dst == GL_ONE_MINUS_SRC_COLOR || dst == GL_SRC_ALPHA || dst == GL_ONE_MINUS_SRC_ALPHA)
-				return false;
-			return true;
-		case GL_DST_COLOR:
-			if(dst == GL_ZERO || dst == GL_ONE_MINUS_SRC_COLOR || dst == GL_SRC_ALPHA || dst == GL_ONE_MINUS_SRC_ALPHA)
-				return false;
-			return true;
-		case GL_ONE_MINUS_DST_ALPHA:
-			return true;
-		default:
-			return false;
-	}
+	r |= BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_DST_ALPHA && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_DST_ALPHA && dst == GL_ONE_MINUS_DST_ALPHA) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_DST_COLOR && dst == GL_ONE_MINUS_SRC_ALPHA) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_DST_COLOR && dst == GL_ONE_MINUS_SRC_COLOR) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_DST_COLOR && dst == GL_SRC_ALPHA) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_DST_COLOR && dst == GL_SRC_COLOR) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_DST_COLOR && dst == GL_ZERO) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_ONE && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_ONE && dst == GL_ZERO) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ONE_MINUS_DST_ALPHA && dst == GL_DST_ALPHA) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ONE_MINUS_DST_ALPHA && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_ONE_MINUS_DST_COLOR && dst == GL_SRC_COLOR) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ONE_MINUS_SRC_ALPHA && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_ONE_MINUS_SRC_ALPHA && dst == GL_SRC_ALPHA) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ONE_MINUS_SRC_ALPHA && dst == GL_SRC_COLOR) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_ONE_MINUS_SRC_COLOR && dst == GL_SRC_COLOR) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+	if(src == GL_SRC_ALPHA && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_SRC_ALPHA && dst == GL_ONE_MINUS_SRC_ALPHA) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ZERO && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG;
+	if(src == GL_ZERO && dst == GL_SRC_COLOR) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
+
+	return r;
 }
+
 void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane)
 {
 	// select a permutation of the lighting shader appropriate to this
@@ -2182,8 +2040,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	// fragment shader on features that are not being used
 	unsigned int permutation = 0;
 	unsigned int mode = 0;
-	qboolean allow_colormod;
-	qboolean allow_fog;
+	int blendfuncflags;
 	static float dummy_colormod[3] = {1, 1, 1};
 	float *colormod = rsurface.colormod;
 	float m16f[16];
@@ -2203,31 +2060,27 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			{
 				// this is the right thing to do for wateralpha
 				GL_BlendFunc(GL_ONE, GL_ZERO);
-				allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
-				allow_fog = R_BlendFuncAllowsFog(GL_ONE, GL_ZERO);
+				blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
 			}
 			else
 			{
 				// this is the right thing to do for entity alpha
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				allow_fog = R_BlendFuncAllowsFog(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			}
 		}
 		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
 		{
 			mode = SHADERMODE_REFRACTION;
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			allow_fog = R_BlendFuncAllowsFog(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		else
 		{
 			mode = SHADERMODE_GENERIC;
 			permutation |= SHADERPERMUTATION_DIFFUSE;
 			GL_BlendFunc(GL_ONE, GL_ZERO);
-			allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
-			allow_fog = R_BlendFuncAllowsFog(GL_ONE, GL_ZERO);
+			blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
 		}
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
@@ -2252,8 +2105,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		allow_colormod = R_BlendFuncAllowsColormod(GL_ONE, GL_ZERO);
-		allow_fog = R_BlendFuncAllowsFog(GL_ONE, GL_ZERO);
+		blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
 	}
 	else if (rsurfacepass == RSURFPASS_RTLIGHT)
 	{
@@ -2302,8 +2154,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		allow_colormod = R_BlendFuncAllowsColormod(GL_SRC_ALPHA, GL_ONE);
-		allow_fog = R_BlendFuncAllowsFog(GL_SRC_ALPHA, GL_ONE);
+		blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
@@ -2348,8 +2199,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_fog = R_BlendFuncAllowsFog(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT_DIRECTIONAL)
 	{
@@ -2400,8 +2250,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_bouncegridtexture)
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_fog = R_BlendFuncAllowsFog(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
@@ -2449,8 +2298,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_bouncegridtexture)
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_fog = R_BlendFuncAllowsFog(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
 	else
 	{
@@ -2534,14 +2382,11 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_shadow_bouncegridtexture)
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_colormod = R_BlendFuncAllowsColormod(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
-		allow_fog = R_BlendFuncAllowsFog(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
-	if(!allow_colormod)
+	if(!(blendfuncflags & BLENDFUNC_ALLOWS_COLORMOD))
 		colormod = dummy_colormod;
-	if(rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
-		allow_fog = allow_colormod; // we actually implement fog by colormodding with a color (f,f,f) for some f
-	if(!allow_fog)
+	if(!(blendfuncflags & BLENDFUNC_ALLOWS_ANYFOG))
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
 	switch(vid.renderpath)
 	{
@@ -2606,7 +2451,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 				hlslPSSetParameter3f(D3DPSREGISTER_FogColor, 0, 0, 0);
 			else
 				hlslPSSetParameter3f(D3DPSREGISTER_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
@@ -2751,7 +2596,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
 			{
-				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+				if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 					qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
 				else
 					qglUniform3f(r_glsl_permutation->loc_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
@@ -2891,7 +2736,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ADD)
+			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_FogColor, 0, 0, 0);
 			else
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_FogColor, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2]);
@@ -7623,7 +7468,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			blendfunc2 = GL_ZERO;
 		}
 		// don't colormod evilblend textures
-		if(!R_BlendFuncAllowsColormod(blendfunc1, blendfunc2))
+		if(!R_BlendFuncFlags(blendfunc1, blendfunc2) & BLENDFUNC_ALLOWS_COLORMOD)
 			VectorSet(t->lightmapcolor, 1, 1, 1);
 		depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
 		if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
