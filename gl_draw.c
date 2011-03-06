@@ -2047,7 +2047,25 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	iy = (int)(0.5 + y * ((float) vid.height / vid_conheight.integer));
 	iw = (int)(0.5 + (x+width) * ((float)vid.width / vid_conwidth.integer)) - ix;
 	ih = (int)(0.5 + (y+height) * ((float) vid.height / vid_conheight.integer)) - iy;
-	GL_Scissor(ix, vid.height - iy - ih, iw, ih);
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
+	case RENDERPATH_SOFT:
+		GL_Scissor(ix, vid.height - iy - ih, iw, ih);
+		break;
+	case RENDERPATH_D3D9:
+		GL_Scissor(ix, iy, iw, ih);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	}
 
 	GL_ScissorTest(true);
 }
