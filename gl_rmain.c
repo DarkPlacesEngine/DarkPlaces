@@ -633,6 +633,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEFOGINSIDE\n", " foginside"},
 	{"#define USEFOGOUTSIDE\n", " fogoutside"},
 	{"#define USEFOGHEIGHTTEXTURE\n", " fogheighttexture"},
+	{"#define USEFOGALPHAHACK\n", " fogalphahack"},
 	{"#define USEGAMMARAMPS\n", " gammaramps"},
 	{"#define USECUBEFILTER\n", " cubefilter"},
 	{"#define USEGLOW\n", " glow"},
@@ -1988,10 +1989,11 @@ extern rtexture_t *r_shadow_prepassgeometrydepthcolortexture;
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 
-#define BLENDFUNC_ALLOWS_COLORMOD     1
-#define BLENDFUNC_ALLOWS_FOG          2
-#define BLENDFUNC_ALLOWS_FOG_HACK0    4
-#define BLENDFUNC_ALLOWS_ANYFOG       6
+#define BLENDFUNC_ALLOWS_COLORMOD      1
+#define BLENDFUNC_ALLOWS_FOG           2
+#define BLENDFUNC_ALLOWS_FOG_HACK0     4
+#define BLENDFUNC_ALLOWS_FOG_HACKALPHA 8
+#define BLENDFUNC_ALLOWS_ANYFOG        (BLENDFUNC_ALLOWS_FOG | BLENDFUNC_ALLOWS_FOG_HACK0 | BLENDFUNC_ALLOWS_FOG_HACKALPHA)
 static int R_BlendFuncFlags(int src, int dst)
 {
 	int r = 0;
@@ -2016,6 +2018,7 @@ static int R_BlendFuncFlags(int src, int dst)
 	if(src == GL_DST_COLOR && dst == GL_SRC_COLOR) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
 	if(src == GL_DST_COLOR && dst == GL_ZERO) r &= ~BLENDFUNC_ALLOWS_COLORMOD;
 	if(src == GL_ONE && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
+	if(src == GL_ONE && dst == GL_ONE_MINUS_SRC_ALPHA) r |= BLENDFUNC_ALLOWS_FOG_HACKALPHA;
 	if(src == GL_ONE && dst == GL_ZERO) r |= BLENDFUNC_ALLOWS_FOG;
 	if(src == GL_ONE_MINUS_DST_ALPHA && dst == GL_DST_ALPHA) r |= BLENDFUNC_ALLOWS_FOG;
 	if(src == GL_ONE_MINUS_DST_ALPHA && dst == GL_ONE) r |= BLENDFUNC_ALLOWS_FOG_HACK0;
@@ -2388,6 +2391,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		colormod = dummy_colormod;
 	if(!(blendfuncflags & BLENDFUNC_ALLOWS_ANYFOG))
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
+	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA)
+		permutation |= SHADERPERMUTATION_FOGALPHAHACK;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
