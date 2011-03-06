@@ -830,6 +830,7 @@ static void sdl_newmap(void)
 }
 #endif
 
+#ifndef __IPHONEOS__
 static keynum_t buttonremap[18] =
 {
 	K_MOUSE1,
@@ -851,6 +852,7 @@ static keynum_t buttonremap[18] =
 	K_MOUSE15,
 	K_MOUSE16,
 };
+#endif
 
 #if SETVIDEOMODE
 // SDL 1.2
