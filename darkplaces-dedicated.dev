@@ -10,7 +10,7 @@ Libs=
 PrivateResource=darkplaces-dedicated_private.rc
 ResourceIncludes=
 MakeIncludes=
-Compiler=-Wall -O2 -fno-strict-aliasing -ffast-math -funroll-loops_@@_
+Compiler=-Wall -O2 -fno-strict-aliasing -ffast-math -funroll-loops -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES_@@_
 CppCompiler=
 Linker=-lwinmm -lws2_32_@@_
 IsCpp=0

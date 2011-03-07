@@ -84,7 +84,7 @@ snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sa
 	size_t newsampleframes, memsize;
 	snd_buffer_t* sb;
 
-	newsampleframes = (size_t) ((double)sampleframes * (double)sb_speed / (double)in_format->speed);
+	newsampleframes = (size_t) ceil((double)sampleframes * (double)sb_speed / (double)in_format->speed);
 
 	memsize = newsampleframes * in_format->channels * in_format->width;
 	memsize += sizeof (*sb) - sizeof (sb->samples);

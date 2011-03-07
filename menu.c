@@ -362,8 +362,35 @@ void M_Menu_Main_f (void)
 {
 	const char *s;
 	s = "gfx/mainmenu";
+
 	if (gamemode == GAME_NEHAHRA)
 	{
+		if (FS_FileExists("maps/neh1m4.bsp"))
+		{
+			if (FS_FileExists("hearing.dem"))
+			{
+				Con_DPrint("Main menu: Nehahra movie and game detected.\n");
+				NehGameType = TYPE_BOTH;
+			}
+			else
+			{
+				Con_DPrint("Nehahra game detected.\n");
+				NehGameType = TYPE_GAME;
+			}
+		}
+		else
+		{
+			if (FS_FileExists("hearing.dem"))
+			{
+				Con_DPrint("Nehahra movie detected.\n");
+				NehGameType = TYPE_DEMO;
+			}
+			else
+			{
+				Con_DPrint("Nehahra not found.\n");
+				NehGameType = TYPE_GAME; // could just complain, but...
+			}
+		}
 		if (NehGameType == TYPE_DEMO)
 			MAIN_ITEMS = 4;
 		else if (NehGameType == TYPE_GAME)
@@ -2521,6 +2548,33 @@ void M_Menu_Keys_f (void)
 	key_dest = key_menu_grabbed;
 	m_state = m_keys;
 	m_entersound = true;
+
+	if (gamemode == GAME_TRANSFUSION)
+	{
+		numcommands = sizeof(transfusionbindnames) / sizeof(transfusionbindnames[0]);
+		bindnames = transfusionbindnames;
+	}
+	else if (gamemode == GAME_GOODVSBAD2)
+	{
+		numcommands = sizeof(goodvsbad2bindnames) / sizeof(goodvsbad2bindnames[0]);
+		bindnames = goodvsbad2bindnames;
+	}
+	else
+	{
+		numcommands = sizeof(quakebindnames) / sizeof(quakebindnames[0]);
+		bindnames = quakebindnames;
+	}
+
+	// Make sure "keys_cursor" doesn't start on a section in the binding list
+	keys_cursor = 0;
+	while (bindnames[keys_cursor][0][0] == '\0')
+	{
+		keys_cursor++;
+
+		// Only sections? There may be a problem somewhere...
+		if (keys_cursor >= numcommands)
+			Sys_Error ("M_Init: The key binding list only contains sections");
+	}
 }
 
 #define NUMKEYS 5
@@ -3879,26 +3933,9 @@ static gameinfo_t gamelist[] =
 	{GAME_OPENQUARTZ, &openquartzgame, &openquartzgame},
 	{GAME_DEFEATINDETAIL2, &defeatindetail2game, &defeatindetail2game},
 	{GAME_PRYDON, &prydongame, &prydongame},
-	{GAME_NORMAL, NULL, NULL} // terminator
 };
 
-static gamelevels_t *lookupgameinfo(void)
-{
-	int i = 0;
-	while (gamelist[i].gameid != gamemode)
-	{
-		if (gamelist[i].notregistered == NULL)
-		{
-			i = 0;
-			break;
-		}
-		i++;
-	}
-	if (registered.integer)
-		return gamelist[i].registered;
-	else
-		return gamelist[i].notregistered;
-}
+static gamelevels_t *gameoptions_levels  = NULL;
 
 static int	startepisode;
 static int	startlevel;
@@ -3908,6 +3945,7 @@ static double m_serverInfoMessageTime;
 
 void M_Menu_GameOptions_f (void)
 {
+	int i;
 	key_dest = key_menu;
 	m_state = m_gameoptions;
 	m_entersound = true;
@@ -3915,6 +3953,11 @@ void M_Menu_GameOptions_f (void)
 		maxplayers = svs.maxclients;
 	if (maxplayers < 2)
 		maxplayers = min(8, MAX_SCOREBOARD);
+	// pick game level list based on gamemode (use GAME_NORMAL if no matches)
+	gameoptions_levels = registered.integer ? gamelist[0].registered : gamelist[0].notregistered;
+	for (i = 0;i < (int)(sizeof(gamelist)/sizeof(gamelist[0]));i++)
+		if (gamelist[i].gameid == gamemode)
+			gameoptions_levels = registered.integer ? gamelist[i].registered : gamelist[i].notregistered;
 }
 
 
@@ -3926,7 +3969,6 @@ void M_GameOptions_Draw (void)
 {
 	cachepic_t	*p;
 	int		x;
-	gamelevels_t *g;
 
 	M_Background(320, 200);
 
@@ -4050,17 +4092,15 @@ void M_GameOptions_Draw (void)
 	M_DrawTextBox (0, 132, 38, 1);
 	M_Print(8, 140, hostname.string);
 
-	g = lookupgameinfo();
-
 	if (gamemode != GAME_GOODVSBAD2)
 	{
 		M_Print(0, 160, "         Episode");
-		M_Print(160, 160, g->episodes[startepisode].description);
+		M_Print(160, 160, gameoptions_levels->episodes[startepisode].description);
 	}
 
 	M_Print(0, 168, "           Level");
-	M_Print(160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
-	M_Print(160, 176, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
+	M_Print(160, 168, gameoptions_levels->levels[gameoptions_levels->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print(160, 176, gameoptions_levels->levels[gameoptions_levels->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
 	if (gameoptions_cursor == 9)
@@ -4088,7 +4128,6 @@ void M_GameOptions_Draw (void)
 
 static void M_NetStart_Change (int dir)
 {
-	gamelevels_t *g;
 	int count;
 
 	switch (gameoptions_cursor)
@@ -4225,12 +4264,11 @@ static void M_NetStart_Change (int dir)
 		if (gamemode == GAME_GOODVSBAD2)
 			break;
 		startepisode += dir;
-		g = lookupgameinfo();
 
 		if (startepisode < 0)
-			startepisode = g->numepisodes - 1;
+			startepisode = gameoptions_levels->numepisodes - 1;
 
-		if (startepisode >= g->numepisodes)
+		if (startepisode >= gameoptions_levels->numepisodes)
 			startepisode = 0;
 
 		startlevel = 0;
@@ -4238,12 +4276,11 @@ static void M_NetStart_Change (int dir)
 
 	case 11:
 		startlevel += dir;
-		g = lookupgameinfo();
 
 		if (startlevel < 0)
-			startlevel = g->episodes[startepisode].levels - 1;
+			startlevel = gameoptions_levels->episodes[startepisode].levels - 1;
 
-		if (startlevel >= g->episodes[startepisode].levels)
+		if (startlevel >= gameoptions_levels->episodes[startepisode].levels)
 			startlevel = 0;
 		break;
 	}
@@ -4251,7 +4288,6 @@ static void M_NetStart_Change (int dir)
 
 static void M_GameOptions_Key (int key, int ascii)
 {
-	gamelevels_t *g;
 	int l;
 	char hostnamebuf[128];
 
@@ -4297,8 +4333,7 @@ static void M_GameOptions_Key (int key, int ascii)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
 
-			g = lookupgameinfo();
-			Cbuf_AddText ( va ("map %s\n", g->levels[g->episodes[startepisode].firstLevel + startlevel].name) );
+			Cbuf_AddText ( va ("map %s\n", gameoptions_levels->levels[gameoptions_levels->episodes[startepisode].firstLevel + startlevel].name) );
 			return;
 		}
 
@@ -4488,9 +4523,8 @@ void ModList_RebuildList(void)
 		if (modlist_count >= MODLIST_TOTALSIZE)	break;
 		// check all dirs to see if they "appear" to be mods
 		// reject any dirs that are part of the base game
-		// (such as "id1" and "hipnotic" when in GAME_HIPNOTIC mode)
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
-		if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
+		//if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
 		if (FS_CheckNastyPath (list.strings[i], true)) continue;
 		if (!FS_CheckGameDir(list.strings[i])) continue;
 
@@ -4704,64 +4738,6 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
 	Cmd_AddCommand ("menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
 	Cmd_AddCommand ("menu_credits", M_Menu_Credits_f, "open the credits menu");
-
-	if (gamemode == GAME_TRANSFUSION)
-	{
-		numcommands = sizeof(transfusionbindnames) / sizeof(transfusionbindnames[0]);
-		bindnames = transfusionbindnames;
-	}
-	else if (gamemode == GAME_GOODVSBAD2)
-	{
-		numcommands = sizeof(goodvsbad2bindnames) / sizeof(goodvsbad2bindnames[0]);
-		bindnames = goodvsbad2bindnames;
-	}
-	else
-	{
-		numcommands = sizeof(quakebindnames) / sizeof(quakebindnames[0]);
-		bindnames = quakebindnames;
-	}
-
-	// Make sure "keys_cursor" doesn't start on a section in the binding list
-	keys_cursor = 0;
-	while (bindnames[keys_cursor][0][0] == '\0')
-	{
-		keys_cursor++;
-
-		// Only sections? There may be a problem somewhere...
-		if (keys_cursor >= numcommands)
-			Sys_Error ("M_Init: The key binding list only contains sections");
-	}
-
-
-	if (gamemode == GAME_NEHAHRA)
-	{
-		if (FS_FileExists("maps/neh1m4.bsp"))
-		{
-			if (FS_FileExists("hearing.dem"))
-			{
-				Con_Print("Nehahra movie and game detected.\n");
-				NehGameType = TYPE_BOTH;
-			}
-			else
-			{
-				Con_Print("Nehahra game detected.\n");
-				NehGameType = TYPE_GAME;
-			}
-		}
-		else
-		{
-			if (FS_FileExists("hearing.dem"))
-			{
-				Con_Print("Nehahra movie detected.\n");
-				NehGameType = TYPE_DEMO;
-			}
-			else
-			{
-				Con_Print("Nehahra not found.\n");
-				NehGameType = TYPE_GAME; // could just complain, but...
-			}
-		}
-	}
 }
 
 void M_Draw (void)
@@ -5026,10 +5002,6 @@ void M_Shutdown(void)
 	key_dest = key_game;
 }
 
-void M_Restart(void)
-{
-}
-
 //============================================================================
 // Menu prog handling
 
@@ -5199,11 +5171,6 @@ void MP_Init (void)
 	PRVM_End;
 }
 
-void MP_Restart(void)
-{
-	MP_Init();
-}
-
 //============================================================================
 // Menu router
 
@@ -5215,8 +5182,6 @@ void (*MR_NewMap) (void);
 
 void MR_SetRouting(qboolean forceold)
 {
-	static qboolean m_init = FALSE, mp_init = FALSE;
-
 	// if the menu prog isnt available or forceqmenu ist set, use the old menu
 	if(!FS_FileExists(M_PROG_FILENAME) || forceqmenu.integer || forceold)
 	{
@@ -5226,15 +5191,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_ToggleMenu = M_ToggleMenu;
 		MR_Shutdown = M_Shutdown;
 		MR_NewMap = M_NewMap;
-
-		// init
-		if(!m_init)
-		{
-			M_Init();
-			m_init = TRUE;
-		}
-		else
-			M_Restart();
+		M_Init();
 	}
 	else
 	{
@@ -5244,14 +5201,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_ToggleMenu = MP_ToggleMenu;
 		MR_Shutdown = MP_Shutdown;
 		MR_NewMap = MP_NewMap;
-
-		if(!mp_init)
-		{
-			MP_Init();
-			mp_init = TRUE;
-		}
-		else
-			MP_Restart();
+		MP_Init();
 	}
 }
 

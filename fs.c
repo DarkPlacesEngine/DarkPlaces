@@ -636,9 +636,9 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 					flags = PACKFILE_FLAG_DEFLATED;
 				else
 					flags = 0;
-				offset = BuffLittleLong (&ptr[42]) + eocd->prepended_garbage;
-				packsize = BuffLittleLong (&ptr[20]);
-				realsize = BuffLittleLong (&ptr[24]);
+				offset = (unsigned int)(BuffLittleLong (&ptr[42]) + eocd->prepended_garbage);
+				packsize = (unsigned int)BuffLittleLong (&ptr[20]);
+				realsize = (unsigned int)BuffLittleLong (&ptr[24]);
 
 				switch(ptr[5]) // C_VERSION_MADE_BY_1
 				{
@@ -965,8 +965,8 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
 	{
-		fs_offset_t offset = LittleLong (info[i].filepos);
-		fs_offset_t size = LittleLong (info[i].filelen);
+		fs_offset_t offset = (unsigned int)LittleLong (info[i].filepos);
+		fs_offset_t size = (unsigned int)LittleLong (info[i].filelen);
 
 		FS_AddFileToPack (info[i].name, pack, offset, size, size, PACKFILE_FLAG_TRUEOFFS);
 	}
@@ -1309,9 +1309,16 @@ void FS_Rescan (void)
 {
 	int i;
 	qboolean fs_modified = false;
+	qboolean reset = false;
 	char gamedirbuf[MAX_INPUTLINE];
 
+	if (fs_searchpaths)
+		reset = true;
 	FS_ClearSearchPath();
+
+	// automatically activate gamemode for the gamedirs specified
+	if (reset)
+		COM_ChangeGameTypeForGameDirs();
 
 	// add the game-specific paths
 	// gamedirname1 (typically id1)
@@ -1406,6 +1413,8 @@ FS_ChangeGameDirs
 */
 extern void Host_SaveConfig (void);
 extern void Host_LoadConfig_f (void);
+extern qboolean vid_opened;
+extern void VID_Stop(void);
 qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
 {
 	int i;
@@ -1454,14 +1463,21 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	// reinitialize filesystem to detect the new paks
 	FS_Rescan();
 
-	// exec the new config
-	Host_LoadConfig_f();
+	if (cls.demoplayback)
+	{
+		CL_Disconnect_f();
+		cls.demonum = 0;
+	}
 
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f();
 
-	// reinitialize renderer (this reloads hud/console background/etc)
-	R_Modules_Restart();
+	// close down the video subsystem, it will start up again when the config finishes...
+	VID_Stop();
+	vid_opened = false;
+
+	// restart the video subsystem after the config is executed
+	Cbuf_InsertText("\nloadconfig\nvid_restart\n\n");
 
 	return true;
 }
@@ -2010,8 +2026,8 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	// the dup() call to avoid having to close the dup_handle on error here
 	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
-		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)\n",
-					pfile->name, pack->filename, (int) pfile->offset);
+		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %08x%08x)\n",
+					pfile->name, pack->filename, (unsigned int)(pfile->offset >> 32), (unsigned int)(pfile->offset));
 		return NULL;
 	}
 

@@ -10,7 +10,7 @@ Libs=C:\Dev-Cpp\SDL\lib
 PrivateResource=darkplaces_private.rc
 ResourceIncludes=
 MakeIncludes=
-Compiler=-Wall -O2 -fno-strict-aliasing -ffast-math -funroll-loops -D_GNU_SOURCE=1 -Dmain=SDL_main_@@__@@_
+Compiler=-Wall -O2 -fno-strict-aliasing -ffast-math -funroll-loops -D_GNU_SOURCE=1 -Dmain=SDL_main -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES_@@__@@_
 CppCompiler=
 Linker=-lwinmm -lws2_32 -luser32 -lgdi32 -lcomctl32 -Wl,--large-address-aware -lmingw32 -lSDLmain -lSDL  -mwindows_@@__@@_
 IsCpp=0

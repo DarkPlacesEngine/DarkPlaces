@@ -487,29 +487,26 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&temp1);
 
 	// LordHavoc: Nehahra uses these to pass data around cutscene demos
-	if (gamemode == GAME_NEHAHRA)
-	{
-		Cvar_RegisterVariable (&nehx00);
-		Cvar_RegisterVariable (&nehx01);
-		Cvar_RegisterVariable (&nehx02);
-		Cvar_RegisterVariable (&nehx03);
-		Cvar_RegisterVariable (&nehx04);
-		Cvar_RegisterVariable (&nehx05);
-		Cvar_RegisterVariable (&nehx06);
-		Cvar_RegisterVariable (&nehx07);
-		Cvar_RegisterVariable (&nehx08);
-		Cvar_RegisterVariable (&nehx09);
-		Cvar_RegisterVariable (&nehx10);
-		Cvar_RegisterVariable (&nehx11);
-		Cvar_RegisterVariable (&nehx12);
-		Cvar_RegisterVariable (&nehx13);
-		Cvar_RegisterVariable (&nehx14);
-		Cvar_RegisterVariable (&nehx15);
-		Cvar_RegisterVariable (&nehx16);
-		Cvar_RegisterVariable (&nehx17);
-		Cvar_RegisterVariable (&nehx18);
-		Cvar_RegisterVariable (&nehx19);
-	}
+	Cvar_RegisterVariable (&nehx00);
+	Cvar_RegisterVariable (&nehx01);
+	Cvar_RegisterVariable (&nehx02);
+	Cvar_RegisterVariable (&nehx03);
+	Cvar_RegisterVariable (&nehx04);
+	Cvar_RegisterVariable (&nehx05);
+	Cvar_RegisterVariable (&nehx06);
+	Cvar_RegisterVariable (&nehx07);
+	Cvar_RegisterVariable (&nehx08);
+	Cvar_RegisterVariable (&nehx09);
+	Cvar_RegisterVariable (&nehx10);
+	Cvar_RegisterVariable (&nehx11);
+	Cvar_RegisterVariable (&nehx12);
+	Cvar_RegisterVariable (&nehx13);
+	Cvar_RegisterVariable (&nehx14);
+	Cvar_RegisterVariable (&nehx15);
+	Cvar_RegisterVariable (&nehx16);
+	Cvar_RegisterVariable (&nehx17);
+	Cvar_RegisterVariable (&nehx18);
+	Cvar_RegisterVariable (&nehx19);
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 
 	Cvar_RegisterVariable (&sv_autodemo_perclient);
@@ -517,34 +514,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_autodemo_perclient_discardable);
 
 	Cvar_RegisterVariable (&halflifebsp);
-
-	// any special defaults for gamemodes go here
-	if (gamemode == GAME_NEHAHRA)
-	{
-		// Nehahra pushable crates malfunction in some levels if this is on
-		Cvar_SetValueQuick (&sv_gameplayfix_upwardvelocityclearsongroundflag, 0);
-		// Nehahra NPC AI is confused by this feature
-		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
-	}
-	if (gamemode == GAME_HIPNOTIC)
-	{
-		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
-		Cvar_SetValueQuick (&sv_gameplayfix_blowupfallenzombies, 0);
-		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
-		Cvar_SetValueQuick (&sys_ticrate, 0.02);
-		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
-		Cvar_SetValueQuick (&sv_gameplayfix_slidemoveprojectiles, 0);
-	}
-	if (gamemode == GAME_ROGUE)
-	{
-		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
-		Cvar_SetValueQuick (&sv_gameplayfix_findradiusdistancetobox, 0);
-	}
-	if (gamemode == GAME_NEXUIZ)
-	{
-		Cvar_SetValueQuick (&sv_gameplayfix_q2airaccelerate, 1);
-		Cvar_SetValueQuick (&sv_gameplayfix_stepmultipletimes, 1);
-	}
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }

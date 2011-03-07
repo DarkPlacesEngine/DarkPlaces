@@ -1293,6 +1293,197 @@ void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor
 	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
+static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
+{
+	int i;
+	int j;
+	int k;
+	int axis = node->plane->type;
+	const msurface_t *surface;
+	float normal[3];
+	float v0[3];
+	float v1[3];
+	float edgedir[3];
+	float edgenormal[3];
+	float p[4];
+	float midf;
+	float t1;
+	float t2;
+	VectorCopy(mid, p);
+	p[3] = 1;
+	surface = model->data_surfaces + node->firstsurface;
+	for (i = 0;i < node->numsurfaces;i++, surface++)
+	{
+		// skip surfaces whose bounding box does not include the point
+		if (axis < 3)
+		{
+			if (mid[axis] < surface->mins[axis] || mid[axis] > surface->maxs[axis])
+				continue;
+		}
+		else
+		{
+			if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
+				continue;
+		}
+		// skip faces with contents we don't care about
+		if (!(t->trace->hitsupercontentsmask & surface->texture->supercontents))
+			continue;
+		// get the surface normal - since it is flat we know any vertex normal will suffice
+		VectorCopy(model->surfmesh.data_normal3f + 3 * surface->num_firstvertex, normal);
+		// skip backfaces
+		if (DotProduct(t->dist, normal) > 0)
+			continue;
+		// iterate edges and see if the point is outside one of them
+		for (j = 0, k = surface->num_vertices - 1;j < surface->num_vertices;k = j, j++)
+		{
+			VectorCopy(model->surfmesh.data_vertex3f + 3 * (surface->num_firstvertex + k), v0);
+			VectorCopy(model->surfmesh.data_vertex3f + 3 * (surface->num_firstvertex + j), v1);
+			VectorSubtract(v0, v1, edgedir);
+			CrossProduct(edgedir, normal, edgenormal);
+			if (DotProduct(edgenormal, p) > DotProduct(edgenormal, v0))
+				break;
+		}
+		// if the point is outside one of the edges, it is not within the surface
+		if (j < surface->num_vertices)
+			continue;
+
+		// we hit a surface, this is the impact point...
+		VectorCopy(normal, t->trace->plane.normal);
+		t->trace->plane.dist = DotProduct(normal, p);
+
+		// calculate the true fraction
+		t1 = DotProduct(t->start, t->trace->plane.normal) - t->trace->plane.dist;
+		t2 = DotProduct(t->end, t->trace->plane.normal) - t->trace->plane.dist;
+		midf = t1 / (t1 - t2);
+		t->trace->realfraction = midf;
+
+		// calculate the return fraction which is nudged off the surface a bit
+		midf = (t1 - DIST_EPSILON) / (t1 - t2);
+		t->trace->fraction = bound(0, midf, 1);
+
+		if (collision_prefernudgedfraction.integer)
+			t->trace->realfraction = t->trace->fraction;
+
+		t->trace->hittexture = surface->texture->currentframe;
+		t->trace->hitq3surfaceflags = t->trace->hittexture->surfaceflags;
+		t->trace->hitsupercontents = t->trace->hittexture->supercontents;
+		return surface->texture->currentframe;
+	}
+	return NULL;
+}
+
+static int Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, const double p1[3], const double p2[3])
+{
+	const mplane_t *plane;
+	double t1, t2;
+	int side;
+	double midf, mid[3];
+	const mleaf_t *leaf;
+
+	while (node->plane)
+	{
+		plane = node->plane;
+		if (plane->type < 3)
+		{
+			t1 = p1[plane->type] - plane->dist;
+			t2 = p2[plane->type] - plane->dist;
+		}
+		else
+		{
+			t1 = DotProduct (plane->normal, p1) - plane->dist;
+			t2 = DotProduct (plane->normal, p2) - plane->dist;
+		}
+		if (t1 < 0)
+		{
+			if (t2 < 0)
+			{
+				node = node->children[1];
+				continue;
+			}
+			side = 1;
+		}
+		else
+		{
+			if (t2 >= 0)
+			{
+				node = node->children[0];
+				continue;
+			}
+			side = 0;
+		}
+
+		// the line intersects, find intersection point
+		// LordHavoc: this uses the original trace for maximum accuracy
+		if (plane->type < 3)
+		{
+			t1 = t->start[plane->type] - plane->dist;
+			t2 = t->end[plane->type] - plane->dist;
+		}
+		else
+		{
+			t1 = DotProduct (plane->normal, t->start) - plane->dist;
+			t2 = DotProduct (plane->normal, t->end) - plane->dist;
+		}
+	
+		midf = t1 / (t1 - t2);
+		VectorMA(t->start, midf, t->dist, mid);
+
+		// recurse both sides, front side first, return if we hit a surface
+		if (Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side], p1, mid) == HULLCHECKSTATE_DONE)
+			return HULLCHECKSTATE_DONE;
+
+		// test each surface on the node
+		Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(t, model, node, mid);
+		if (t->trace->hittexture)
+			return HULLCHECKSTATE_DONE;
+
+		// recurse back side
+		return Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side ^ 1], mid, p2);
+	}
+	leaf = (const mleaf_t *)node;
+	side = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, leaf->contents);
+	if (!t->trace->startfound)
+	{
+		t->trace->startfound = true;
+		t->trace->startsupercontents |= side;
+	}
+	if (side & SUPERCONTENTS_LIQUIDSMASK)
+		t->trace->inwater = true;
+	if (side == 0)
+		t->trace->inopen = true;
+	if (side & t->trace->hitsupercontentsmask)
+	{
+		// if the first leaf is solid, set startsolid
+		if (t->trace->allsolid)
+			t->trace->startsolid = true;
+		return HULLCHECKSTATE_SOLID;
+	}
+	else
+	{
+		t->trace->allsolid = false;
+		return HULLCHECKSTATE_EMPTY;
+	}
+}
+
+static void Mod_Q1BSP_TraceLineAgainstSurfaces(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+{
+	RecursiveHullCheckTraceInfo_t rhc;
+
+	memset(&rhc, 0, sizeof(rhc));
+	memset(trace, 0, sizeof(trace_t));
+	rhc.trace = trace;
+	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
+	rhc.trace->fraction = 1;
+	rhc.trace->realfraction = 1;
+	rhc.trace->allsolid = true;
+	rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
+	VectorCopy(start, rhc.start);
+	VectorCopy(end, rhc.end);
+	VectorSubtract(rhc.end, rhc.start, rhc.dist);
+	Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(&rhc, model, model->brush.data_nodes + rhc.hull->firstclipnode, rhc.start, rhc.end);
+	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
+}
+
 static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
 {
 	int c;
@@ -3449,6 +3640,8 @@ static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
 	return numshadowmeshtriangles;
 }
 
+void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
@@ -3506,9 +3699,10 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
-	mod->TraceLine = Mod_Q1BSP_TraceLine;
+	mod->TraceLine = Mod_Q1BSP_TraceLineAgainstSurfaces; // LordHavoc: use the surface-hitting version of TraceLine in all cases
 	mod->TracePoint = Mod_Q1BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q1BSP_PointSuperContents;
+	mod->TraceLineAgainstSurfaces = Mod_Q1BSP_TraceLineAgainstSurfaces;
 	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
@@ -3770,6 +3964,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			mod->TraceLine = Mod_CollisionBIH_TraceLine;
 			mod->TraceBox = Mod_CollisionBIH_TraceBox;
 			mod->TraceBrush = Mod_CollisionBIH_TraceBrush;
+			mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLineAgainstSurfaces;
 		}
 
 		// generate VBOs and other shared data before cloning submodels
@@ -5822,7 +6017,7 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 	}
 }
 
-static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model_t *model, int nodenum, const vec3_t start, const vec3_t end, const vec3_t linestart, const vec3_t lineend)
+static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model_t *model, bih_t *bih, int nodenum, const vec3_t start, const vec3_t end, const vec3_t linestart, const vec3_t lineend)
 {
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
@@ -5851,7 +6046,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 	segmentmaxs[2] = max(start[2], end[2]);
 	while (nodenum >= 0)
 	{
-		node = model->collision_bih.nodes + nodenum;
+		node = bih->nodes + nodenum;
 #if 0
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
@@ -5861,7 +6056,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		if (segmentmins[axis] <= node->backmax)
 		{
 			if (segmentmaxs[axis] >= node->frontmin)
-				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 			nodenum = node->back;
 		}
 		else if (segmentmaxs[axis] >= node->frontmin)
@@ -5886,7 +6081,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		if (sideflags & 12)
 		{
 			if ((sideflags & 3) != 3)
-				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 			nodenum = node->back;
 		}
 		else if ((sideflags & 3) != 3)
@@ -5933,7 +6128,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			return; // line falls in gap between children
 		case 4:
 			// start end start END
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newend); end = newend;
@@ -5951,7 +6146,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newend); end = newend;
 			segmentmins[0] = min(start[0], end[0]);
@@ -5961,7 +6156,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -5970,7 +6165,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newend); end = newend;
 			segmentmins[0] = min(start[0], end[0]);
@@ -5980,7 +6175,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -6000,7 +6195,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			break;
 		case 8:
 			// start end START end
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #ifdef BIHLINECLIP
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newstart); start = newstart;
@@ -6018,7 +6213,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newstart); start = newstart;
 			segmentmins[0] = min(start[0], end[0]);
@@ -6028,7 +6223,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -6037,7 +6232,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
 			backfrac = backdist1 / (backdist1 - backdist2);
 			VectorLerp(start, backfrac, end, newstart); start = newstart;
 			segmentmins[0] = min(start[0], end[0]);
@@ -6047,7 +6242,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			segmentmaxs[1] = max(start[1], end[1]);
 			segmentmaxs[2] = max(start[2], end[2]);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -6067,7 +6262,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 			break;
 		case 12:
 			// start end start end
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 			nodenum = node->back;
 			break;
 		case 13:
@@ -6075,9 +6270,9 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, clipped, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -6086,9 +6281,9 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #ifdef BIHLINECLIP
 			frontfrac = frontdist1 / (frontdist1 - frontdist2);
 			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, clipped, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
 #else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, node->front, start, end, linestart, lineend);
+			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
 #endif
 			nodenum = node->back;
 			break;
@@ -6100,9 +6295,9 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 #endif
 #endif
 	}
-	if (!model->collision_bih.leafs)
+	if (!bih->leafs)
 		return;
-	leaf = model->collision_bih.leafs + (-1-nodenum);
+	leaf = bih->leafs + (-1-nodenum);
 #if 1
 	if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
 		return;
@@ -6209,7 +6404,7 @@ void Mod_CollisionBIH_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, start, end);
+	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->collision_bih, model->collision_bih.rootnode, start, end, start, end);
 }
 
 void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
@@ -6584,7 +6779,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	segmentmaxs[1] = max(start[1], end[1]) + 1;
 	segmentmaxs[2] = max(start[2], end[2]) + 1;
 	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, start, end);
+		Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->collision_bih, model->collision_bih.rootnode, start, end, start, end);
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -6733,6 +6928,16 @@ static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const 
 	}
 	return supercontents;
 }
+
+void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+{
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->render_bih, model->render_bih.rootnode, start, end, start, end);
+}
+
 
 bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t *out)
 {
@@ -6968,6 +7173,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->TraceLine = Mod_Q3BSP_TraceLine;
 	mod->TracePoint = Mod_Q3BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q3BSP_PointSuperContents;
+	mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLineAgainstSurfaces;
 	mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
@@ -7266,6 +7472,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 	loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 	loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
+	loadmodel->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLineAgainstSurfaces;
 	loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	loadmodel->brush.TraceLineOfSight = NULL;
 	loadmodel->brush.SuperContentsFromNativeContents = NULL;
@@ -8256,6 +8463,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceLine = Mod_OBJ_TraceLine;
 	loadmodel->TracePoint = Mod_OBJ_TracePoint;
 	loadmodel->PointSuperContents = Mod_OBJ_PointSuperContents;
+	loadmodel->TraceLineAgainstSurfaces = Mod_OBJ_TraceLineAgainstSurfaces;
 	loadmodel->brush.TraceLineOfSight = Mod_OBJ_TraceLineOfSight;
 	loadmodel->brush.SuperContentsFromNativeContents = Mod_OBJ_SuperContentsFromNativeContents;
 	loadmodel->brush.NativeContentsFromSuperContents = Mod_OBJ_NativeContentsFromSuperContents;

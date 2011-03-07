@@ -14,7 +14,16 @@ typedef qboolean bool;
 #define ATOMIC_SIZE 32
 
 #ifdef SSE2_PRESENT
-	#if defined(__GNUC__)
+	#if defined(__APPLE__)
+		#include <libkern/OSAtomic.h>
+		#define ALIGN(var) var __attribute__((__aligned__(16)))
+		#define ATOMIC(var) var __attribute__((__aligned__(32)))
+		#define MEMORY_BARRIER (_mm_sfence())
+		#define ATOMIC_COUNTER volatile int32_t 
+		#define ATOMIC_INCREMENT(counter) (OSAtomicIncrement32Barrier(&(counter)))
+		#define ATOMIC_DECREMENT(counter) (OSAtomicDecrement32Barrier(&(counter)))
+		#define ATOMIC_ADD(counter, val) ((void)OSAtomicAdd32Barrier((val), &(counter)))
+	#elif defined(__GNUC__)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
 		#define ATOMIC(var) var __attribute__((__aligned__(32)))
 		#define MEMORY_BARRIER (_mm_sfence())
@@ -31,7 +40,7 @@ typedef qboolean bool;
 		#define ATOMIC_COUNTER volatile LONG
 		#define ATOMIC_INCREMENT(counter) (InterlockedIncrement(&(counter)))
 		#define ATOMIC_DECREMENT(counter) (InterlockedDecrement(&(counter)))
-		#define ATOMIC_ADD(counter, val) (InterlockedExchangeAdd(&(counter), (val)))
+		#define ATOMIC_ADD(counter, val) ((void)InterlockedExchangeAdd(&(counter), (val)))
 	#endif
 #endif
 
@@ -4231,7 +4240,7 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {~0}},
 	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
-	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}}
+	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}},
 };
 
 void DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread)

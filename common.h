@@ -293,6 +293,8 @@ extern const char *gamescreenshotname;
 extern const char *gameuserdirname;
 extern char com_modname[MAX_OSPATH];
 
+void COM_ChangeGameTypeForGameDirs(void);
+
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 int COM_StringBeginsWith(const char *s, const char *match);

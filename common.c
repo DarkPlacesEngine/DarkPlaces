@@ -1419,8 +1419,13 @@ int COM_CheckParm (const char *parm)
 
 // Game mods
 
+gamemode_t com_startupgamemode;
+gamemode_t com_startupgamegroup;
+
 typedef struct gamemode_info_s
 {
+	gamemode_t mode; // this gamemode
+	gamemode_t group; // different games with same group can switch automatically when gamedirs change
 	const char* prog_name; // not null
 	const char* cmdline; // not null
 	const char* gamename; // not null
@@ -1431,136 +1436,136 @@ typedef struct gamemode_info_s
 } gamemode_info_t;
 
 static const gamemode_info_t gamemode_info [GAME_COUNT] =
-{// prog_name		cmdline			gamename				basegame	modgame			screenshotprefix	userdir
-
-// GAME_NORMAL
-// COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
-{ "",				"-quake",		"DarkPlaces-Quake",		"id1",		NULL,			"dp",			"darkplaces" },
-// GAME_HIPNOTIC
-// COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
-{ "hipnotic",		"-hipnotic",	"Darkplaces-Hipnotic",	"id1",		"hipnotic",		"dp",			"darkplaces" },
-// GAME_ROGUE
-// COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
-{ "rogue",			"-rogue",		"Darkplaces-Rogue",		"id1",		"rogue",		"dp",			"darkplaces" },
-// GAME_NEHAHRA
-// COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
-{ "nehahra",		"-nehahra",		"DarkPlaces-Nehahra",	"id1",		"nehahra",		"dp",			"darkplaces" },
-// GAME_NEXUIZ
-// COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
-{ "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz" },
-// GAME_XONOTIC
-// COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
-{ "xonotic",			"-xonotic",		"Xonotic",				"data",		NULL,			"xonotic",		"xonotic" },
-// GAME_TRANSFUSION
-// COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
-{ "transfusion",	"-transfusion",	"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion" },
-// GAME_GOODVSBAD2
-// COMMANDLINEOPTION: Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
-{ "gvb2",			"-goodvsbad2",	"GoodVs.Bad2",			"rts",		NULL,			"gvb2",			"gvb2" },
-// GAME_TEU
-// COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
-{ "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	NULL,			"teu",			"teu" },
-// GAME_BATTLEMECH
-// COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
-{ "battlemech",		"-battlemech",	"Battlemech",			"base",		NULL,			"battlemech",	"battlemech" },
-// GAME_ZYMOTIC
-// COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
-{ "zymotic",		"-zymotic",		"Zymotic",				"basezym",		NULL,			"zymotic",		"zymotic" },
-// GAME_SETHERAL
-// COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
-{ "setheral",		"-setheral",	"Setheral",				"data",		NULL,			"setheral",		"setheral" },
-// GAME_SOM
-// COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man
-{ "som",			"-som",			"Son of Man",			"id1",		"sonofman",		"som",			"darkplaces" },
-// GAME_TENEBRAE
-// COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
-{ "tenebrae",		"-tenebrae",	"DarkPlaces-Tenebrae",	"id1",		"tenebrae",		"dp",			"darkplaces" },
-// GAME_NEOTERIC
-// COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
-{ "neoteric",		"-neoteric",	"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces" },
-// GAME_OPENQUARTZ
-// COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
-{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces" },
-// GAME_PRYDON
-// COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
-{ "prydon",			"-prydon",		"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces" },
-// GAME_DELUXEQUAKE
-// COMMANDLINEOPTION: Game: -dq runs the game Deluxe Quake
-{ "dq",	"-dq",	"Deluxe Quake",		"basedq",		"extradq",		"basedq",		"dq" },
-// GAME_THEHUNTED
-// COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
-{ "thehunted",		"-thehunted",	"The Hunted",			"thdata",	NULL, 			"th",			"thehunted" },
-// GAME_DEFEATINDETAIL2
-// COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
-{ "did2",			"-did2",		"Defeat In Detail 2",	"data",		NULL, 			"did2_",		"did2" },
-// GAME_DARSANA
-// COMMANDLINEOPTION: Game: -darsana runs the game Darsana
-{ "darsana",		"-darsana",	"Darsana",			"ddata",	NULL, 			"darsana",			"darsana" },
-// GAME_CONTAGIONTHEORY
-// COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
-{ "contagiontheory",		"-contagiontheory",	"Contagion Theory",			"ctdata",	NULL, 			"ct",			"contagiontheory" },
-// GAME_EDU2P
-// COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
-{ "edu2p", "-edu2p", "EDU2 Prototype", "id1", "edu2", "edu2_p", "edu2prototype" },
-// GAME_PROPHECY
-// COMMANDLINEOPTION: Game: -prophecy runs the game Prophecy
-{ "prophecy",				"-prophecy",		"Prophecy",		"data",		NULL,			"prophecy",			"prophecy" },
-// GAME_BLOODOMNICIDE
-// COMMANDLINEOPTION: Game: -omnicide runs the game Blood Omnicide
-{ "omnicide", "-omnicide", "Blood Omnicide", "kain", NULL, "omnicide", "omnicide" },
-// GAME_STEELSTORM
-// COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
-{ "steelstorm",				"-steelstorm",		"Steel-Storm",		"gamedata",		NULL,			"ss",			"steelstorm" },
-// GAME_STRAPBOMB
-// COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
-{ "strapbomb",				"-strapbomb",		"Strap-on-bomb Car",		"id1",		NULL,			"strap",			"strapbomb" },
-// GAME_MOONHELM
-// COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
-{ "moonhelm",				"-moonhelm",		"MoonHelm",		"data",		NULL,			"mh",			"moonhelm" },
+{// game				basegame				prog_name			cmdline				gamename				basegame	modgame			screenshot		userdir				   // commandline option
+{ GAME_NORMAL,			GAME_NORMAL,			"",					"-quake",			"DarkPlaces-Quake",		"id1",		NULL,			"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
+{ GAME_HIPNOTIC,		GAME_NORMAL,			"hipnotic",			"-hipnotic",		"Darkplaces-Hipnotic",	"id1",		"hipnotic",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
+{ GAME_ROGUE,			GAME_NORMAL,			"rogue",			"-rogue",			"Darkplaces-Rogue",		"id1",		"rogue",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
+{ GAME_NEHAHRA,			GAME_NORMAL,			"nehahra",			"-nehahra",			"DarkPlaces-Nehahra",	"id1",		"nehahra",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
+{ GAME_NEXUIZ,			GAME_NEXUIZ,			"nexuiz",			"-nexuiz",			"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz"			}, // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
+{ GAME_XONOTIC,			GAME_XONOTIC,			"xonotic",			"-xonotic",			"Xonotic",				"data",		NULL,			"xonotic",		"xonotic"			}, // COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
+{ GAME_TRANSFUSION,		GAME_TRANSFUSION,		"transfusion",		"-transfusion",		"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion"		}, // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
+{ GAME_GOODVSBAD2,		GAME_GOODVSBAD2,		"gvb2",				"-goodvsbad2",		"GoodVs.Bad2",			"rts",		NULL,			"gvb2",			"gvb2"				}, // COMMANDLINEOPTION: Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
+{ GAME_TEU,				GAME_TEU,				"teu",				"-teu",				"TheEvilUnleashed",		"baseteu",	NULL,			"teu",			"teu"				}, // COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
+{ GAME_BATTLEMECH,		GAME_BATTLEMECH,		"battlemech",		"-battlemech",		"Battlemech",			"base",		NULL,			"battlemech",	"battlemech"		}, // COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
+{ GAME_ZYMOTIC,			GAME_ZYMOTIC,			"zymotic",			"-zymotic",			"Zymotic",				"basezym",	NULL,			"zymotic",		"zymotic"			}, // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
+{ GAME_SETHERAL,		GAME_SETHERAL,			"setheral",			"-setheral",		"Setheral",				"data",		NULL,			"setheral",		"setheral"			}, // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
+{ GAME_SOM,				GAME_NORMAL,			"som",				"-som",				"Son of Man",			"id1",		"sonofman",		"som",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man
+{ GAME_TENEBRAE,		GAME_NORMAL,			"tenebrae",			"-tenebrae",		"DarkPlaces-Tenebrae",	"id1",		"tenebrae",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
+{ GAME_NEOTERIC,		GAME_NORMAL,			"neoteric",			"-neoteric",		"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
+{ GAME_OPENQUARTZ,		GAME_NORMAL,			"openquartz",		"-openquartz",		"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces"		}, // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
+{ GAME_PRYDON,			GAME_NORMAL,			"prydon",			"-prydon",			"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces"		}, // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
+{ GAME_DELUXEQUAKE,		GAME_DELUXEQUAKE,		"dq",				"-dq",				"Deluxe Quake",			"basedq",	"extradq",		"basedq",		"dq"				}, // COMMANDLINEOPTION: Game: -dq runs the game Deluxe Quake
+{ GAME_THEHUNTED,		GAME_THEHUNTED,			"thehunted",		"-thehunted",		"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"			}, // COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
+{ GAME_DEFEATINDETAIL2,	GAME_DEFEATINDETAIL2,	"did2",				"-did2",			"Defeat In Detail 2",	"data",		NULL, 			"did2_",		"did2"				}, // COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
+{ GAME_DARSANA,			GAME_DARSANA,			"darsana",			"-darsana",			"Darsana",				"ddata",	NULL, 			"darsana",		"darsana"			}, // COMMANDLINEOPTION: Game: -darsana runs the game Darsana
+{ GAME_CONTAGIONTHEORY,	GAME_CONTAGIONTHEORY,	"contagiontheory",	"-contagiontheory",	"Contagion Theory",		"ctdata",	NULL, 			"ct",			"contagiontheory"	}, // COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
+{ GAME_EDU2P,			GAME_EDU2P,				"edu2p",			"-edu2p",			"EDU2 Prototype",		"id1",		"edu2",			"edu2_p",		"edu2prototype"		}, // COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
+{ GAME_PROPHECY,		GAME_PROPHECY,			"prophecy",			"-prophecy",		"Prophecy",				"data",		NULL,			"prophecy",		"prophecy"			}, // COMMANDLINEOPTION: Game: -prophecy runs the game Prophecy
+{ GAME_BLOODOMNICIDE,	GAME_BLOODOMNICIDE,		"omnicide",			"-omnicide",		"Blood Omnicide",		"kain",		NULL,			"omnicide",		"omnicide"			}, // COMMANDLINEOPTION: Game: -omnicide runs the game Blood Omnicide
+{ GAME_STEELSTORM,		GAME_STEELSTORM,		"steelstorm",		"-steelstorm",		"Steel-Storm",			"gamedata",	NULL,			"ss",			"steelstorm"		}, // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
+{ GAME_STRAPBOMB,		GAME_STRAPBOMB,			"strapbomb",		"-strapbomb",		"Strap-on-bomb Car",	"id1",		NULL,			"strap",		"strapbomb"			}, // COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
+{ GAME_MOONHELM,		GAME_MOONHELM,			"moonhelm",			"-moonhelm",		"MoonHelm",				"data",		NULL,			"mh",			"moonhelm"			}, // COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
 };
 
+static void COM_SetGameType(int index);
 void COM_InitGameType (void)
 {
 	char name [MAX_OSPATH];
-	unsigned int i;
-	int t;
+	int i;
+	int index = 0;
 
 	FS_StripExtension (com_argv[0], name, sizeof (name));
 	COM_ToLowerString (name, name, sizeof (name));
 
-	// Check the binary name; default to GAME_NORMAL (0)
-	gamemode = GAME_NORMAL;
-	for (i = 1; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
-		if (strstr (name, gamemode_info[i].prog_name))
+	// check executable filename for keywords
+	for (i = 1;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
+		if (gamemode_info[i].prog_name && gamemode_info[i].prog_name[0] && strstr (name, gamemode_info[i].prog_name))
 		{
-			gamemode = (gamemode_t)i;
+			index = i;
 			break;
 		}
 
-	// Look for a command-line option
-	for (i = 0; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
+	// check commandline options for keywords
+	for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
 		if (COM_CheckParm (gamemode_info[i].cmdline))
 		{
-			gamemode = (gamemode_t)i;
+			index = i;
 			break;
 		}
 
-	gamename = gamemode_info[gamemode].gamename;
-	gamedirname1 = gamemode_info[gamemode].gamedirname1;
-	gamedirname2 = gamemode_info[gamemode].gamedirname2;
-	gamescreenshotname = gamemode_info[gamemode].gamescreenshotname;
-	gameuserdirname = gamemode_info[gamemode].gameuserdirname;
+	com_startupgamemode = gamemode_info[index].mode;
+	com_startupgamegroup = gamemode_info[index].group;
+	COM_SetGameType(index);
+}
 
-	if((t = COM_CheckParm("-customgamename")) && t + 1 < com_argc)
-		gamename = com_argv[t+1];
-	if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < com_argc)
-		gamedirname1 = com_argv[t+1];
-	if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < com_argc)
-		gamedirname2 = *com_argv[t+1] ? com_argv[t+1] : NULL;
-	if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < com_argc)
-		gamescreenshotname = com_argv[t+1];
-	if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < com_argc)
-		gameuserdirname = com_argv[t+1];
+void COM_ChangeGameTypeForGameDirs(void)
+{
+	int i;
+	int index = -1;
+	// this will not not change the gamegroup
+	// first check if a base game (single gamedir) matches
+	for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
+	{
+		if (gamemode_info[i].group == com_startupgamegroup && !(gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]))
+		{
+			index = i;
+			break;
+		}
+	}
+	// now that we have a base game, see if there is a matching derivative game (two gamedirs)
+	if (fs_numgamedirs)
+	{
+		for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
+		{
+			if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && !strcasecmp(fs_gamedirs[0], gamemode_info[i].gamedirname2))
+			{
+				index = i;
+				break;
+			}
+		}
+	}
+	// we now have a good guess at which game this is meant to be...
+	if (index >= 0 && gamemode != gamemode_info[index].mode)
+		COM_SetGameType(index);
+}
+
+static void COM_SetGameType(int index)
+{
+	int i, t;
+	if (index < 0 || index >= (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0])))
+		index = 0;
+	gamemode = gamemode_info[index].mode;
+	gamename = gamemode_info[index].gamename;
+	gamedirname1 = gamemode_info[index].gamedirname1;
+	gamedirname2 = gamemode_info[index].gamedirname2;
+	gamescreenshotname = gamemode_info[index].gamescreenshotname;
+	gameuserdirname = gamemode_info[index].gameuserdirname;
+
+	if (gamemode == com_startupgamemode)
+	{
+		if((t = COM_CheckParm("-customgamename")) && t + 1 < com_argc)
+			gamename = com_argv[t+1];
+		if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < com_argc)
+			gamedirname1 = com_argv[t+1];
+		if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < com_argc)
+			gamedirname2 = *com_argv[t+1] ? com_argv[t+1] : NULL;
+		if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < com_argc)
+			gamescreenshotname = com_argv[t+1];
+		if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < com_argc)
+			gameuserdirname = com_argv[t+1];
+	}
+
+	if (gamedirname2 && gamedirname2[0])
+		Con_Printf("Game is %s using base gamedirs %s %s", gamename, gamedirname1, gamedirname2);
+	else
+		Con_Printf("Game is %s using base gamedir %s", gamename, gamedirname1);
+	for (i = 0;i < fs_numgamedirs;i++)
+	{
+		if (i == 0)
+			Con_Printf(", with mod gamedirs");
+		Con_Printf(" %s", fs_gamedirs[i]);
+	}
+	Con_Printf("\n");
 }
 
 

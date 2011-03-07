@@ -81,6 +81,8 @@ cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdi
 cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 cvar_t timedemo_screenshotframelist = {0, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
+cvar_t vid_touchscreen_outlinealpha = {0, "vid_touchscreen_outlinealpha", "0.25", "opacity of touchscreen area outlines"};
+cvar_t vid_touchscreen_overlayalpha = {0, "vid_touchscreen_overlayalpha", "0.25", "opacity of touchscreen area icons"};
 
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
@@ -800,6 +802,7 @@ void R_TimeReport_EndFrame(void)
 "%5i leafs%5i portals%6i/%6i particles%6i/%6i decals %3i%% quality\n"
 "%7i lightmap updates (%7i pixels)%8iKB/%8iKB framedata\n"
 "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
+"bouncegrid:%4i lights%6i particles%6i traces%6i hits%6i splats%6i bounces\n"
 "%6i draws%8i vertices%8i triangles bloompixels%8i copied%8i drawn\n"
 "updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "%s"
@@ -810,6 +813,7 @@ void R_TimeReport_EndFrame(void)
 , r_refdef.stats.world_leafs, r_refdef.stats.world_portals, r_refdef.stats.particles, cl.num_particles, r_refdef.stats.drawndecals, r_refdef.stats.totaldecals, (int)(100 * r_refdef.view.quality)
 , r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels, (r_refdef.stats.framedatacurrent+512) / 1024, (r_refdef.stats.framedatasize+512)/1024
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
+, r_refdef.stats.bouncegrid_lights, r_refdef.stats.bouncegrid_particles, r_refdef.stats.bouncegrid_traces, r_refdef.stats.bouncegrid_hits, r_refdef.stats.bouncegrid_splats, r_refdef.stats.bouncegrid_bounces
 , r_refdef.stats.draws, r_refdef.stats.draws_vertices, r_refdef.stats.draws_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
 , r_refdef.stats.indexbufferuploadcount, r_refdef.stats.indexbufferuploadsize, r_refdef.stats.vertexbufferuploadcount, r_refdef.stats.vertexbufferuploadsize
 , r_speeds_timestring);
@@ -954,6 +958,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&shownetgraph);
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
 	Cvar_RegisterVariable(&timedemo_screenshotframelist);
+	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);
+	Cvar_RegisterVariable(&vid_touchscreen_overlayalpha);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
@@ -1572,6 +1578,31 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 //=============================================================================
 
+int scr_numtouchscreenareas;
+scr_touchscreenarea_t scr_touchscreenareas[16];
+
+static void SCR_DrawTouchscreenOverlay(void)
+{
+	int i;
+	scr_touchscreenarea_t *a;
+	cachepic_t *pic;
+	for (i = 0, a = scr_touchscreenareas;i < scr_numtouchscreenareas;i++, a++)
+	{
+		if (vid_touchscreen_outlinealpha.value > 0 && a->rect[0] >= 0 && a->rect[1] >= 0 && a->rect[2] >= 4 && a->rect[3] >= 4)
+		{
+			DrawQ_Fill(a->rect[0] +              2, a->rect[1]                 , a->rect[2] - 4,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              1, a->rect[1] +              1, a->rect[2] - 2,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0]                 , a->rect[1] +              2,          2    , a->rect[3] - 2, 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] + a->rect[2] - 2, a->rect[1] +              2,          2    , a->rect[3] - 2, 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              1, a->rect[1] + a->rect[3] - 2, a->rect[2] - 2,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+			DrawQ_Fill(a->rect[0] +              2, a->rect[1] + a->rect[3] - 1, a->rect[2] - 4,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
+		}
+		pic = a->pic ? Draw_CachePic(a->pic) : NULL;
+		if (pic && pic->tex != r_texture_notexture)
+			DrawQ_Pic(a->rect[0], a->rect[1], Draw_CachePic(a->pic), a->rect[2], a->rect[3], 1, 1, 1, vid_touchscreen_overlayalpha.value * (0.5f + 0.5f * a->active), 0);
+	}
+}
+
 extern void R_UpdateFogColor(void);
 void R_ClearScreen(qboolean fogcolor)
 {
@@ -1768,6 +1799,8 @@ void SCR_DrawScreen (void)
 	SCR_DrawBrand();
 
 	SCR_DrawInfobar();
+
+	SCR_DrawTouchscreenOverlay();
 
 	if (r_timereport_active)
 		R_TimeReport("2d");

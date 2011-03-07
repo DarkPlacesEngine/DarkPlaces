@@ -401,11 +401,8 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&crosshair_color_alpha);
 	Cvar_RegisterVariable(&crosshair_size);
 
-	if(gamemode == GAME_NEXUIZ)
-	{
-		Cvar_RegisterVariable(&sbar_flagstatus_right); // this cvar makes no sense in other games
-		Cvar_RegisterVariable(&sbar_flagstatus_pos); // this cvar makes no sense in other games
-	}
+	Cvar_RegisterVariable(&sbar_flagstatus_right); // (GAME_NEXUZI ONLY)
+	Cvar_RegisterVariable(&sbar_flagstatus_pos); // (GAME_NEXUIZ ONLY)
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap, NULL, NULL);
 }

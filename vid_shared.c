@@ -67,6 +67,7 @@ cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.
 cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 
+cvar_t vid_touchscreen = {0, "vid_touchscreen", "0", "Use touchscreen-style input (no mouse grab, track mouse motion only while button is down, screen areas for mimicing joystick axes and buttons"};
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CVAR_SAVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
 
@@ -1211,6 +1212,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&vid_grabkeyboard);
+	Cvar_RegisterVariable(&vid_touchscreen);
 	Cvar_RegisterVariable(&vid_stick_mouse);
 	Cvar_RegisterVariable(&vid_resizable);
 	Cvar_RegisterVariable(&vid_minwidth);
@@ -1279,12 +1281,19 @@ static void VID_CloseSystems(void)
 }
 
 qboolean vid_commandlinecheck = true;
+extern qboolean vid_opened;
 
 void VID_Restart_f(void)
 {
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
+
+	if (!vid_opened)
+	{
+		SCR_BeginLoadingPlaque();
+		return;
+	}
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
 		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va("x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(" (%ix AA)", vid.mode.samples) : "",
@@ -1311,7 +1320,7 @@ const char *vidfallbacks[][2] =
 	{NULL, NULL}
 };
 
-// this is only called once by Host_StartVideo
+// this is only called once by Host_StartVideo and again on each FS_GameDir_f
 void VID_Start(void)
 {
 	int i, width, height, success;
@@ -1359,6 +1368,12 @@ void VID_Start(void)
 			Sys_Error("Video modes failed");
 	}
 	VID_OpenSystems();
+}
+
+void VID_Stop(void)
+{
+	VID_CloseSystems();
+	VID_Shutdown();
 }
 
 int VID_SortModes_Compare(const void *a_, const void *b_)

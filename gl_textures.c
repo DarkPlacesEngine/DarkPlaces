@@ -1156,7 +1156,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	{
 		// multiply RGB channels by A channel before uploading
 		int alpha;
-		for (i = 0;i < width*height*depth*4;i += 4)
+		for (i = 0;i < glt->inputwidth*glt->inputheight*glt->inputdepth*4;i += 4)
 		{
 			alpha = prevbuffer[i+3];
 			colorconvertbuffer[i] = (prevbuffer[i] * alpha) >> 8;
@@ -2425,7 +2425,7 @@ int R_TextureHeight(rtexture_t *rt)
 	return rt ? ((gltexture_t *)rt)->inputheight : 0;
 }
 
-void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int width, int height)
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth)
 {
 	gltexture_t *glt = (gltexture_t *)rt;
 	if (data == NULL)
@@ -2446,6 +2446,8 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		int outputskip = glt->tilewidth*bpp;
 		const unsigned char *input = data;
 		unsigned char *output = glt->bufferpixels;
+		if (glt->inputdepth != 1 || glt->sides != 1)
+			Sys_Error("R_UpdateTexture on buffered texture that is not 2D\n");
 		if (x < 0)
 		{
 			width += x;
@@ -2470,8 +2472,8 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
 			memcpy(output, input, width*bpp);
 	}
-	else if (x || y || width != glt->inputwidth || height != glt->inputheight)
-		R_UploadPartialTexture(glt, data, x, y, 0, width, height, 1);
+	else if (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)
+		R_UploadPartialTexture(glt, data, x, y, z, width, height, depth);
 	else
 		R_UploadFullTexture(glt, data);
 }
