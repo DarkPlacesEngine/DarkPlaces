@@ -297,6 +297,8 @@ void R_FreeTexture(rtexture_t *rt)
 	else
 		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool", glt->identifier);
 
+	R_Mesh_ClearBindingsForTexture(glt->texnum);
+
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
