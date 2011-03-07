@@ -3371,6 +3371,23 @@ void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int w
 int d3drswrap[16] = {D3DRS_WRAP0, D3DRS_WRAP1, D3DRS_WRAP2, D3DRS_WRAP3, D3DRS_WRAP4, D3DRS_WRAP5, D3DRS_WRAP6, D3DRS_WRAP7, D3DRS_WRAP8, D3DRS_WRAP9, D3DRS_WRAP10, D3DRS_WRAP11, D3DRS_WRAP12, D3DRS_WRAP13, D3DRS_WRAP14, D3DRS_WRAP15};
 #endif
 
+void R_Mesh_ClearBindingsForTexture(int texnum)
+{
+	gltextureunit_t *unit;
+	unsigned int unitnum;
+	// this doesn't really unbind the texture, but it does prevent a mistaken "do nothing" behavior on the next time this same texnum is bound on the same unit as the same type (this mainly affects r_shadow_bouncegrid because 3D textures are so rarely used)
+	for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
+	{
+		unit = gl_state.units + unitnum;
+		if (unit->t2d == texnum)
+			unit->t2d = -1;
+		if (unit->t3d == texnum)
+			unit->t3d = -1;
+		if (unit->tcubemap == texnum)
+			unit->tcubemap = -1;
+	}
+}
+
 void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;

@@ -107,6 +107,8 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
 void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale);
 // set up a blank texture state (unbinds all textures, texcoord pointers, and resets combine settings)
 void R_Mesh_ResetTextureState(void);
+// before a texture is freed, make sure there are no references to it
+void R_Mesh_ClearBindingsForTexture(int texnum);
 
 // renders a mesh
 void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, size_t element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, size_t element3s_bufferoffset);

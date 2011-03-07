@@ -1,12 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
-0 bug darkplaces qw: tf skins not working (xavior)
-0 bug darkplaces renderer: rtworld seems to mess up player pants/shirt colors
-0 bug darkplaces d3d9: drawsetcliparea not working right (VorteX)
-0 bug darkplaces d3d9: shadowmaps are clipped - does this mean r_shadows 2 or light shadowmaps? (VorteX)
-0 bug darkplaces d3d9: overbright particles get weird colors (VorteX)
-0 bug darkplaces d3d9: gamma not working (VorteX)
-0 bug darkplaces d3d9: alphatest not working (VorteX)
-0 bug darkplaces renderer: sprites with ! in the filename are supposed to receive lighting (Asaki)
+-d bug darkplaces d3d9: drawsetcliparea not working right - seems to be Y-flipped, this also affects menus in Steelstorm (VorteX)
+-d bug darkplaces d3d9: overbright particles get weird colors (VorteX)
 0 bug darkplaces client csqc: CSQC_InputEvent is supposed to handle mouse movement, compare to FTEQW code (avirox)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
@@ -30,6 +24,9 @@
 0 bug darkplaces client win32: add some kind of workaround for Windows Firewall prompt killing the OpenGL context (motorsep)
 0 bug darkplaces client: can't move mouse around in nexuiz menu if vid_mouse is 0
 0 bug darkplaces client: if you press 1 during the demo loop when quake starts, escape doesn't do anything until you hit some other key (daemon)
+0 bug darkplaces d3d9: alphatest not working (VorteX)
+0 bug darkplaces d3d9: gamma not working (VorteX)
+0 bug darkplaces d3d9: shadowmaps are clipped - does this mean r_shadows 2 or light shadowmaps? (VorteX)
 0 bug darkplaces effects: add a cvar to disable colored dlights (leileilol)
 0 bug darkplaces effects: dlights don't look anything like quake ones, bring back lightmap dlights as a cvar - with both classic and old dp falloff modes (leileilol)
 0 bug darkplaces effects: quake mode blood trails don't have the appropriate slight gravity - there may be other effects missing this also (leileilol)
@@ -39,6 +36,7 @@
 0 bug darkplaces loader: png loading crashes if the image is transparent (Urre)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
+0 bug darkplaces qw: tf skins not working (xavior)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
@@ -46,6 +44,8 @@
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
 0 bug darkplaces renderer: if an animated model is entirely transparent, the RSurf_ActiveModelEntity call updating vertices is completely wasted
 0 bug darkplaces renderer: r_speeds counts entities twice with r_hdr 1, the whole counting code probably needs auditing (Morphed, and jim on inside3d)
+0 bug darkplaces renderer: rtworld seems to mess up player pants/shirt colors
+0 bug darkplaces renderer: sprites with ! in the filename are supposed to receive lighting (Asaki)
 0 bug darkplaces server csqc networking: csqc entity sending code does not currently detect packet loss and repeat lost entities (FrikaC, Chris Page, div0)
 0 bug darkplaces server qc: trace_dphittexturename should be a static buffer rather than a tempstring, it produces unnecessary warnings currently (div0)
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
@@ -567,6 +567,7 @@ d bug darkplaces csqc: network entity positions seem to be incorrectly updated w
 d bug darkplaces csqc: when playing back a demo, the csqc does not seem to be getting the cl.viewangles right
 d bug darkplaces docs: host_maxfps is gone, correct the darkplaces.txt and host.c cvar description for host_framerate
 d bug darkplaces general: make all text parsing routines support Mac newlines; \r with no \n (Zenex)
+d bug darkplaces gl: turning r_shadow_bouncegrid off and back on left a messed up texture binding state
 d bug darkplaces hud: sometimes texture borders wrap, causing annoying seams at the edges of pics, use TEXF_CLAMP
 d bug darkplaces init: only print "Playing shareware version." notice if running GAME_QUAKE (MrBIOS)
 d bug darkplaces input: buttons 4 and 5 on a mouse are acting like mwheel (Kedhrin)
