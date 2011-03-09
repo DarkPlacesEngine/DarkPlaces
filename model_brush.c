@@ -1314,8 +1314,8 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
 		// skip surfaces whose bounding box does not include the point
-		if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
-			continue;
+//		if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
+//			continue;
 		// skip faces with contents we don't care about
 		if (!(t->trace->hitsupercontentsmask & surface->texture->supercontents))
 			continue;
