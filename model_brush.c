@@ -1298,7 +1298,6 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	int i;
 	int j;
 	int k;
-	int axis = node->plane->type;
 	const msurface_t *surface;
 	float normal[3];
 	float v0[3];
@@ -1315,16 +1314,8 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
 		// skip surfaces whose bounding box does not include the point
-		if (axis < 3)
-		{
-			if (mid[axis] < surface->mins[axis] || mid[axis] > surface->maxs[axis])
-				continue;
-		}
-		else
-		{
-			if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
-				continue;
-		}
+		if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
+			continue;
 		// skip faces with contents we don't care about
 		if (!(t->trace->hitsupercontentsmask & surface->texture->supercontents))
 			continue;
