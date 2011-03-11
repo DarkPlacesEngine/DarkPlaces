@@ -1705,8 +1705,8 @@ void Collision_Cache_Reset(qboolean resetlimits)
 		collision_cachedtrace_max = 1024;
 	collision_cachedtrace_firstfree = 1;
 	collision_cachedtrace_lastused = 0;
-	collision_cachedtrace_array = Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(collision_cachedtrace_t));
-	collision_cachedtrace_hash = Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(int));
+	collision_cachedtrace_array = (collision_cachedtrace_t *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(collision_cachedtrace_t));
+	collision_cachedtrace_hash = (int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(int));
 	collision_cachedtrace_sequence = 1;
 }
 
