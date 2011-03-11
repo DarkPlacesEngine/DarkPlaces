@@ -803,6 +803,7 @@ void R_TimeReport_EndFrame(void)
 "%7i lightmap updates (%7i pixels)%8iKB/%8iKB framedata\n"
 "%4i lights%4i clears%4i scissored%7i light%7i shadow%7i dynamic\n"
 "bouncegrid:%4i lights%6i particles%6i traces%6i hits%6i splats%6i bounces\n"
+"collision cache efficiency:%6i cached%6i traced%6ianimated\n"
 "%6i draws%8i vertices%8i triangles bloompixels%8i copied%8i drawn\n"
 "updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "%s"
@@ -814,6 +815,7 @@ void R_TimeReport_EndFrame(void)
 , r_refdef.stats.lightmapupdates, r_refdef.stats.lightmapupdatepixels, (r_refdef.stats.framedatacurrent+512) / 1024, (r_refdef.stats.framedatasize+512)/1024
 , r_refdef.stats.lights, r_refdef.stats.lights_clears, r_refdef.stats.lights_scissored, r_refdef.stats.lights_lighttriangles, r_refdef.stats.lights_shadowtriangles, r_refdef.stats.lights_dynamicshadowtriangles
 , r_refdef.stats.bouncegrid_lights, r_refdef.stats.bouncegrid_particles, r_refdef.stats.bouncegrid_traces, r_refdef.stats.bouncegrid_hits, r_refdef.stats.bouncegrid_splats, r_refdef.stats.bouncegrid_bounces
+, r_refdef.stats.collisioncache_cached, r_refdef.stats.collisioncache_traced, r_refdef.stats.collisioncache_animated
 , r_refdef.stats.draws, r_refdef.stats.draws_vertices, r_refdef.stats.draws_elements / 3, r_refdef.stats.bloom_copypixels, r_refdef.stats.bloom_drawpixels
 , r_refdef.stats.indexbufferuploadcount, r_refdef.stats.indexbufferuploadsize, r_refdef.stats.vertexbufferuploadcount, r_refdef.stats.vertexbufferuploadsize
 , r_speeds_timestring);

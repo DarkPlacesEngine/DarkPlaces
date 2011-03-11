@@ -3108,6 +3108,8 @@ void SV_SpawnServer (const char *server)
 		return;
 	}
 
+	Collision_Cache_Reset(true);
+
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
 		Cvar_Set ("hostname", "UNNAMED");
