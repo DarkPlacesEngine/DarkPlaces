@@ -63,6 +63,10 @@ void Collision_Init(void);
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, const texture_t *boxtexture);
 void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, int hitsupercontentsmask, int boxsupercontents, int boxq3surfaceflags, const texture_t *boxtexture);
 
+void Collision_Cache_Reset(qboolean resetlimits);
+void Collision_Cache_Init(mempool_t *mempool);
+void Collision_Cache_NewFrame(void);
+
 typedef struct colpointf_s
 {
 	vec3_t v;

@@ -786,6 +786,9 @@ void Host_Main(void)
 			double advancetime, aborttime = 0;
 			float offset;
 
+			if (cls.state == ca_dedicated)
+				Collision_Cache_NewFrame();
+
 			// run the world state
 			// don't allow simulation to run too fast or too slow or logic glitches can occur
 
@@ -880,6 +883,8 @@ void Host_Main(void)
 		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
 		{
 			R_TimeReport("---");
+			Collision_Cache_NewFrame();
+			R_TimeReport("collisioncache");
 			// decide the simulation time
 			if (cls.capturevideo.active)
 			{
