@@ -1620,6 +1620,7 @@ void CL_ParseServerInfo (void)
 	int nummodels, numsounds;
 
 	Con_DPrint("Serverinfo packet received.\n");
+	Collision_Cache_Reset(true);
 
 	// if server is active, we already began a loading plaque
 	if (!sv.active)

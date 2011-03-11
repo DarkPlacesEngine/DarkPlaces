@@ -36,6 +36,8 @@
 0 bug darkplaces loader: png loading crashes if the image is transparent (Urre)
 0 bug darkplaces loader: q1bsp loader computes wrong submodel size for submodels with no surfaces, such as a func_wall comprised entirely of SKIP or CAULK brushes (neg|ke)
 0 bug darkplaces memory: memstats doesn't account for memory used by VBO/EBO buffers in models
+0 bug darkplaces mobile: add a command to lock in current accelerometer axes as default orientation (calibrate), which the menuqc/csqc can call
+0 bug darkplaces mobile: add a landscape mode for mobile devices where width is > height, which changes 2D and 3D rendering orientation
 0 bug darkplaces qw: tf skins not working (xavior)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
@@ -1342,6 +1344,7 @@ d hmap: add support for GTKRadiant stuff
 d lhfire: post lhfire build with example scripts.
 d litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
 d lmp2pcx: post new lmp2pcx build.
+d optimization darkplaces renderer: cache collision trace results for more performance in r_shadow_bouncegrid
 d optimization darkplaces renderer: initialize more lighting state in R_Shadow_Stage_Light to reduce per-surface overhead (LordHavoc)
 d optimization darkplaces renderer: rename r_shadow_glsl_geforcefxlowprecision to r_shadow_glsl_usehalffloat and enable it by default if the extension is present, it's about a 20% speed gain on GF6 compared to 5% on GFFX (SavageX)
 d optimization darkplaces server: optimize pvs checking by caching pvs cluster indices corresponding to entity box (Sajt)

@@ -1579,6 +1579,9 @@ typedef struct r_refdef_stats_s
 	int bouncegrid_hits;
 	int bouncegrid_splats;
 	int bouncegrid_bounces;
+	int collisioncache_animated;
+	int collisioncache_cached;
+	int collisioncache_traced;
 	int bloom;
 	int bloom_copypixels;
 	int bloom_drawpixels;
