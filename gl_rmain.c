@@ -982,6 +982,15 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 
 	// the first pretext is which type of shader to compile as
 	// (later these will all be bound together as a program object)
+	if(qglBindFragDataLocation && (permutation & SHADERPERMUTATION_OFFSETMAPPING)) // we use textureGrad() which is glsl 1.30
+	{
+		vertstrings_list[vertstrings_count++] = "#version 130\n";
+		geomstrings_list[geomstrings_count++] = "#version 130\n";
+		fragstrings_list[fragstrings_count++] = "#version 130\n";
+	}
+
+	// the first pretext is which type of shader to compile as
+	// (later these will all be bound together as a program object)
 	vertstrings_list[vertstrings_count++] = "#define VERTEX_SHADER\n";
 	geomstrings_list[geomstrings_count++] = "#define GEOMETRY_SHADER\n";
 	fragstrings_list[fragstrings_count++] = "#define FRAGMENT_SHADER\n";

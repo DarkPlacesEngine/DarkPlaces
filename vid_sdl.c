@@ -1211,6 +1211,7 @@ void wrapglAttachShader(GLuint containerObj, GLuint obj) {glAttachShader(contain
 void wrapglBegin(GLenum mode) {Con_Printf("glBegin(mode)\n");}
 //void wrapglBeginQuery(GLenum target, GLuint qid) {glBeginQuery(target, qid);}
 void wrapglBindAttribLocation(GLuint programObj, GLuint index, const GLchar *name) {glBindAttribLocation(programObj, index, name);}
+void wrapglBindFragDataLocation(GLuint programObj, GLuint index, const GLchar *name) {glBindFragDataLocation(programObj, index, name);}
 void wrapglBindBuffer(GLenum target, GLuint buffer) {glBindBuffer(target, buffer);}
 void wrapglBindFramebuffer(GLenum target, GLuint framebuffer) {glBindFramebuffer(target, framebuffer);}
 void wrapglBindRenderbuffer(GLenum target, GLuint renderbuffer) {glBindRenderbuffer(target, renderbuffer);}
@@ -1432,6 +1433,7 @@ void GLES_Init(void)
 	qglBegin = wrapglBegin;
 //	qglBeginQueryARB = wrapglBeginQuery;
 	qglBindAttribLocation = wrapglBindAttribLocation;
+	qglBindFragDataLocation = wrapglBindFragDataLocation;
 	qglBindBufferARB = wrapglBindBuffer;
 	qglBindFramebufferEXT = wrapglBindFramebuffer;
 	qglBindRenderbufferEXT = wrapglBindRenderbuffer;

@@ -2419,6 +2419,8 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD5, "Attrib_TexCoord5");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD6, "Attrib_TexCoord6");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD7, "Attrib_TexCoord7");
+	if(qglBindFragDataLocation)
+		qglBindFragDataLocation(programobject, 0, "dp_FragColor");
 
 	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER, "vertex", vertexstrings_count, vertexstrings_list))
 		goto cleanup;

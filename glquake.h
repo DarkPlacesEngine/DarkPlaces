@@ -847,6 +847,7 @@ extern void (GLAPIENTRY *qglVertexAttribPointer)(GLuint index, GLint size, GLenu
 extern void (GLAPIENTRY *qglEnableVertexAttribArray)(GLuint index);
 extern void (GLAPIENTRY *qglDisableVertexAttribArray)(GLuint index);
 extern void (GLAPIENTRY *qglBindAttribLocation)(GLuint programObj, GLuint index, const GLchar *name);
+extern void (GLAPIENTRY *qglBindFragDataLocation)(GLuint programObj, GLuint index, const GLchar *name);
 extern void (GLAPIENTRY *qglGetActiveAttrib)(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
 extern GLint (GLAPIENTRY *qglGetAttribLocation)(GLuint programObj, const GLchar *name);
 extern void (GLAPIENTRY *qglGetVertexAttribdv)(GLuint index, GLenum pname, GLdouble *params);

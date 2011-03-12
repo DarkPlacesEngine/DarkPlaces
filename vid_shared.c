@@ -335,6 +335,7 @@ void (GLAPIENTRY *qglVertexAttribPointer)(GLuint index, GLint size, GLenum type,
 void (GLAPIENTRY *qglEnableVertexAttribArray)(GLuint index);
 void (GLAPIENTRY *qglDisableVertexAttribArray)(GLuint index);
 void (GLAPIENTRY *qglBindAttribLocation)(GLuint programObj, GLuint index, const GLchar *name);
+void (GLAPIENTRY *qglBindFragDataLocation)(GLuint programObj, GLuint index, const GLchar *name);
 void (GLAPIENTRY *qglGetActiveAttrib)(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
 GLint (GLAPIENTRY *qglGetAttribLocation)(GLuint programObj, const GLchar *name);
 void (GLAPIENTRY *qglGetVertexAttribdv)(GLuint index, GLenum pname, GLdouble *params);
@@ -726,6 +727,12 @@ static dllfunction_t gl20shaderfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t glsl130funcs[] =
+{
+	{"glBindFragDataLocation", (void **) &qglBindFragDataLocation},
+	{NULL, NULL}
+};
+
 static dllfunction_t vbofuncs[] =
 {
 	{"glBindBufferARB"    , (void **) &qglBindBufferARB},
@@ -827,6 +834,9 @@ void VID_CheckExtensions(void)
 	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
 	vid.support.gl20shaders = GL_CheckExtension("2.0", gl20shaderfuncs, "-noshaders", false);
+
+	// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
+	GL_CheckExtension("2.0", glsl130funcs, "-noglsl130", false);
 
 	CHECKGLERROR
 
