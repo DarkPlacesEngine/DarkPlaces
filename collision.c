@@ -1850,7 +1850,46 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(int type, dp_model_t *mod
 			if (arrayfullhashindex[index] != fullhashindex)
 				continue;
 			cached = collision_cachedtrace_array + index;
-			if (memcmp(&cached->p, &params, sizeof(params)))
+			//if (memcmp(&cached->p, &params, sizeof(params)))
+			if (cached->p.model != params.model
+			 || cached->p.end[0] != params.end[0]
+			 || cached->p.end[1] != params.end[1]
+			 || cached->p.end[2] != params.end[2]
+			 || cached->p.start[0] != params.start[0]
+			 || cached->p.start[1] != params.start[1]
+			 || cached->p.start[2] != params.start[2]
+			 || cached->p.mins[0] != params.mins[0]
+			 || cached->p.mins[1] != params.mins[1]
+			 || cached->p.mins[2] != params.mins[2]
+			 || cached->p.maxs[0] != params.maxs[0]
+			 || cached->p.maxs[1] != params.maxs[1]
+			 || cached->p.maxs[2] != params.maxs[2]
+			 || cached->p.type != params.type
+			 || cached->p.bodysupercontents != params.bodysupercontents
+			 || cached->p.bodymins[0] != params.bodymins[0]
+			 || cached->p.bodymins[1] != params.bodymins[1]
+			 || cached->p.bodymins[2] != params.bodymins[2]
+			 || cached->p.bodymaxs[0] != params.bodymaxs[0]
+			 || cached->p.bodymaxs[1] != params.bodymaxs[1]
+			 || cached->p.bodymaxs[2] != params.bodymaxs[2]
+			 || cached->p.hitsupercontentsmask != params.hitsupercontentsmask
+			 || cached->p.matrix.m[0][0] != params.matrix.m[0][0]
+			 || cached->p.matrix.m[0][1] != params.matrix.m[0][1]
+			 || cached->p.matrix.m[0][2] != params.matrix.m[0][2]
+			 || cached->p.matrix.m[0][3] != params.matrix.m[0][3]
+			 || cached->p.matrix.m[1][0] != params.matrix.m[1][0]
+			 || cached->p.matrix.m[1][1] != params.matrix.m[1][1]
+			 || cached->p.matrix.m[1][2] != params.matrix.m[1][2]
+			 || cached->p.matrix.m[1][3] != params.matrix.m[1][3]
+			 || cached->p.matrix.m[2][0] != params.matrix.m[2][0]
+			 || cached->p.matrix.m[2][1] != params.matrix.m[2][1]
+			 || cached->p.matrix.m[2][2] != params.matrix.m[2][2]
+			 || cached->p.matrix.m[2][3] != params.matrix.m[2][3]
+			 || cached->p.matrix.m[3][0] != params.matrix.m[3][0]
+			 || cached->p.matrix.m[3][1] != params.matrix.m[3][1]
+			 || cached->p.matrix.m[3][2] != params.matrix.m[3][2]
+			 || cached->p.matrix.m[3][3] != params.matrix.m[3][3]
+			)
 				continue;
 			// found a matching trace in the cache
 			r_refdef.stats.collisioncache_cached++;
