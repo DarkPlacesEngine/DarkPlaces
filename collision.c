@@ -1666,23 +1666,29 @@ void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *brush)
 	}
 }
 
-typedef struct collision_cachedtrace_s
+typedef struct collision_cachedtrace_parameters_s
 {
-	int next;
-	int sequence;
 	dp_model_t *model;
-//	const frameblend_t *frameblend;
-//	const skeleton_t *skeleton;
-	vec3_t bodymins;
-	vec3_t bodymaxs;
-	int bodysupercontents;
-	matrix4x4_t matrix;
-	matrix4x4_t inversematrix;
+	vec3_t end;
 	vec3_t start;
 	vec3_t mins;
 	vec3_t maxs;
-	vec3_t end;
+//	const frameblend_t *frameblend;
+//	const skeleton_t *skeleton;
+//	matrix4x4_t inversematrix;
 	int hitsupercontentsmask;
+	int type; // which type of query produced this cache entry
+	matrix4x4_t matrix;
+	vec3_t bodymins;
+	vec3_t bodymaxs;
+	int bodysupercontents;
+}
+collision_cachedtrace_parameters_t;
+
+typedef struct collision_cachedtrace_s
+{
+	qboolean valid;
+	collision_cachedtrace_parameters_t p;
 	trace_t result;
 }
 collision_cachedtrace_t;
@@ -1695,6 +1701,11 @@ static int collision_cachedtrace_max;
 static int collision_cachedtrace_sequence;
 static int collision_cachedtrace_hashsize;
 static int *collision_cachedtrace_hash;
+static unsigned int *collision_cachedtrace_arrayfullhashindex;
+static unsigned int *collision_cachedtrace_arrayhashindex;
+static unsigned int *collision_cachedtrace_arraynext;
+static unsigned char *collision_cachedtrace_arrayused;
+static qboolean collision_cachedtrace_rebuildhash;
 
 void Collision_Cache_Reset(qboolean resetlimits)
 {
@@ -1702,14 +1713,27 @@ void Collision_Cache_Reset(qboolean resetlimits)
 		Mem_Free(collision_cachedtrace_hash);
 	if (collision_cachedtrace_array)
 		Mem_Free(collision_cachedtrace_array);
+	if (collision_cachedtrace_arrayfullhashindex)
+		Mem_Free(collision_cachedtrace_arrayfullhashindex);
+	if (collision_cachedtrace_arrayhashindex)
+		Mem_Free(collision_cachedtrace_arrayhashindex);
+	if (collision_cachedtrace_arraynext)
+		Mem_Free(collision_cachedtrace_arraynext);
+	if (collision_cachedtrace_arrayused)
+		Mem_Free(collision_cachedtrace_arrayused);
 	if (resetlimits || !collision_cachedtrace_max)
-		collision_cachedtrace_max = 1024;
+		collision_cachedtrace_max = collision_cache.integer ? 128 : 1;
 	collision_cachedtrace_firstfree = 1;
 	collision_cachedtrace_lastused = 0;
-	collision_cachedtrace_hashsize = collision_cachedtrace_max * 2;
+	collision_cachedtrace_hashsize = collision_cachedtrace_max;
 	collision_cachedtrace_array = (collision_cachedtrace_t *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(collision_cachedtrace_t));
 	collision_cachedtrace_hash = (int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_hashsize * sizeof(int));
+	collision_cachedtrace_arrayfullhashindex = (unsigned int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(unsigned int));
+	collision_cachedtrace_arrayhashindex = (unsigned int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(unsigned int));
+	collision_cachedtrace_arraynext = (unsigned int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(unsigned int));
+	collision_cachedtrace_arrayused = (unsigned char *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(unsigned char));
 	collision_cachedtrace_sequence = 1;
+	collision_cachedtrace_rebuildhash = false;
 }
 
 void Collision_Cache_Init(mempool_t *mempool)
@@ -1718,48 +1742,86 @@ void Collision_Cache_Init(mempool_t *mempool)
 	Collision_Cache_Reset(true);
 }
 
-void Collision_Cache_NewFrame(void)
+void Collision_Cache_RebuildHash(void)
 {
-	int hashindex;
 	int index;
-	int *p;
-	// unlink all stale traces
-	for (hashindex = 0;hashindex < collision_cachedtrace_hashsize;hashindex++)
+	int range = collision_cachedtrace_lastused + 1;
+	int sequence = collision_cachedtrace_sequence;
+	int firstfree = collision_cachedtrace_max;
+	int lastused = 0;
+	int *hash = collision_cachedtrace_hash;
+	unsigned int hashindex;
+	unsigned int *arrayhashindex = collision_cachedtrace_arrayhashindex;
+	unsigned int *arraynext = collision_cachedtrace_arraynext;
+	collision_cachedtrace_rebuildhash = false;
+	memset(collision_cachedtrace_hash, 0, collision_cachedtrace_hashsize * sizeof(int));
+	for (index = 1;index < range;index++)
 	{
-		if (!collision_cachedtrace_hash[hashindex])
-			continue;
-		p = &collision_cachedtrace_hash[hashindex];
-		while ((index = *p))
+		if (collision_cachedtrace_arrayused[index] == sequence)
 		{
-			if (collision_cachedtrace_array[index].sequence != collision_cachedtrace_sequence)
-			{
-				if (collision_cachedtrace_firstfree > index)
-					collision_cachedtrace_firstfree = index;
-				*p = collision_cachedtrace_array[index].next;
-				collision_cachedtrace_array[index].sequence = 0;
-				//memset(&collision_cachedtrace_array[index], 0, sizeof(collision_cachedtrace_array[index]));
-			}
-			else
-				p = &collision_cachedtrace_array[index].next;
+			hashindex = arrayhashindex[index];
+			arraynext[index] = hash[hashindex];
+			hash[hashindex] = index;
+			lastused = index;
+		}
+		else
+		{
+			if (firstfree > index)
+				firstfree = index;
+			collision_cachedtrace_arrayused[index] = 0;
 		}
 	}
-	// shrink used range if possible
-	index = collision_cachedtrace_lastused;
-	while (index && collision_cachedtrace_array[index].sequence == 0)
-		index--;
-	collision_cachedtrace_lastused = index;
-	// increment sequence
-	collision_cachedtrace_sequence++;
-	// do not allow sequence to wrap to 0
-	if (collision_cachedtrace_sequence >= 1<<30)
-		collision_cachedtrace_sequence = 1;
+	collision_cachedtrace_firstfree = firstfree;
+	collision_cachedtrace_lastused = lastused;
 }
 
-static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
+void Collision_Cache_NewFrame(void)
+{
+	if (collision_cache.integer)
+	{
+		if (collision_cachedtrace_max < 128)
+			Collision_Cache_Reset(true);
+	}
+	else
+	{
+		if (collision_cachedtrace_max > 1)
+			Collision_Cache_Reset(true);
+	}
+	// rebuild hash if sequence would overflow byte, otherwise increment
+	if (collision_cachedtrace_sequence == 255)
+	{
+		Collision_Cache_RebuildHash();
+		collision_cachedtrace_sequence = 1;
+	}
+	else
+	{
+		collision_cachedtrace_rebuildhash = true;
+		collision_cachedtrace_sequence++;
+	}
+}
+
+static unsigned int Collision_Cache_HashIndexForArray(unsigned int *array, unsigned int size)
+{
+	unsigned int i;
+	unsigned int hashindex = 0;
+	// this is a super-cheesy checksum, designed only for speed
+	for (i = 0;i < size;i++)
+		hashindex += array[i] * (1 + i);
+	return hashindex;
+}
+
+static collision_cachedtrace_t *Collision_Cache_Lookup(int type, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	int hashindex = 0;
+	unsigned int fullhashindex;
 	int index = 0;
+	int range;
+	int sequence = collision_cachedtrace_sequence;
+	int *hash = collision_cachedtrace_hash;
+	unsigned int *arrayfullhashindex = collision_cachedtrace_arrayfullhashindex;
+	unsigned int *arraynext = collision_cachedtrace_arraynext;
 	collision_cachedtrace_t *cached = collision_cachedtrace_array + index;
+	collision_cachedtrace_parameters_t params;
 	// all non-cached traces use the same index
 	if ((frameblend && frameblend[0].lerp != 1) || (skeleton && skeleton->relativetransforms))
 		r_refdef.stats.collisioncache_animated++;
@@ -1768,69 +1830,80 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	else
 	{
 		// cached trace lookup
-		hashindex = (int)(((size_t)model + (size_t) + (size_t)(start[0] * 53 + start[1] * 207 + start[2] * 97 + end[0] * 37 + end[1] * 743 + end[2] * 13) + bodysupercontents + hitsupercontentsmask) % collision_cachedtrace_hashsize);
-		for (index = collision_cachedtrace_hash[hashindex];index;index = cached->next)
+		params.type = type;
+		params.model = model;
+		VectorCopy(bodymins, params.bodymins);
+		VectorCopy(bodymaxs, params.bodymaxs);
+		params.bodysupercontents = bodysupercontents;
+		VectorCopy(start, params.start);
+		VectorCopy(mins,  params.mins);
+		VectorCopy(maxs,  params.maxs);
+		VectorCopy(end,   params.end);
+		params.hitsupercontentsmask = hitsupercontentsmask;
+		params.matrix = *matrix;
+		//params.inversematrix = *inversematrix;
+		fullhashindex = Collision_Cache_HashIndexForArray((unsigned int *)&params, sizeof(params) / sizeof(unsigned int));
+		//fullhashindex = Collision_Cache_HashIndexForArray((unsigned int *)&params, 10);
+		hashindex = (int)(fullhashindex % (unsigned int)collision_cachedtrace_hashsize);
+		for (index = hash[hashindex];index;index = arraynext[index])
 		{
+			if (arrayfullhashindex[index] != fullhashindex)
+				continue;
 			cached = collision_cachedtrace_array + index;
-			if (VectorCompare(cached->start, start)
-			 && VectorCompare(cached->end, end)
-			 && cached->model == model
-			 && VectorCompare(cached->bodymins, bodymins)
-			 && VectorCompare(cached->bodymaxs, bodymaxs)
-			 && cached->bodysupercontents == bodysupercontents
-			 && VectorCompare(cached->mins, mins)
-			 && VectorCompare(cached->maxs, maxs)
-			 && cached->hitsupercontentsmask == hitsupercontentsmask
-			 && !memcmp(&cached->matrix, matrix, sizeof(*matrix)))
-			{
-				r_refdef.stats.collisioncache_cached++;
-				return cached; // found a match
-			}
+			if (memcmp(&cached->p, &params, sizeof(params)))
+				continue;
+			// found a matching trace in the cache
+			r_refdef.stats.collisioncache_cached++;
+			cached->valid = true;
+			collision_cachedtrace_arrayused[index] = collision_cachedtrace_sequence;
+			return cached;
 		}
 		r_refdef.stats.collisioncache_traced++;
 		// find an unused cache entry
-		for (index = collision_cachedtrace_firstfree;index <= collision_cachedtrace_lastused;index++)
-			if (!collision_cachedtrace_array[index].sequence)
+		for (index = collision_cachedtrace_firstfree, range = collision_cachedtrace_max;index < range;index++)
+			if (collision_cachedtrace_arrayused[index] == 0)
 				break;
-		collision_cachedtrace_firstfree = index;
-		if (index > collision_cachedtrace_lastused)
+		if (index == range)
 		{
-			// see if we need to reset the cache for growth
-			if (collision_cachedtrace_max <= index)
+			// all claimed, but probably some are stale...
+			for (index = 1, range = collision_cachedtrace_max;index < range;index++)
+				if (collision_cachedtrace_arrayused[index] != sequence)
+					break;
+			if (index < range)
 			{
+				// found a stale one, rebuild the hash
+				Collision_Cache_RebuildHash();
+			}
+			else
+			{
+				// we need to grow the cache
 				collision_cachedtrace_max *= 2;
 				Collision_Cache_Reset(false);
-				collision_cachedtrace_firstfree = index = 1;
+				index = 1;
 			}
-			collision_cachedtrace_lastused = index;
 		}
 		// link the new cache entry into the hash bucket
+		collision_cachedtrace_firstfree = index + 1;
+		if (collision_cachedtrace_lastused < index)
+			collision_cachedtrace_lastused = index;
 		cached = collision_cachedtrace_array + index;
-		cached->next = collision_cachedtrace_hash[hashindex];
+		collision_cachedtrace_arraynext[index] = collision_cachedtrace_hash[hashindex];
 		collision_cachedtrace_hash[hashindex] = index;
-		cached->model = model;
-		VectorCopy(bodymins, cached->bodymins);
-		VectorCopy(bodymaxs, cached->bodymaxs);
-		cached->bodysupercontents = bodysupercontents;
-		VectorCopy(start, cached->start);
-		VectorCopy(mins,  cached->mins);
-		VectorCopy(maxs,  cached->maxs);
-		VectorCopy(end,   cached->end);
-		cached->hitsupercontentsmask = hitsupercontentsmask;
-		cached->matrix = *matrix;
-		cached->inversematrix = *inversematrix;
+		collision_cachedtrace_arrayhashindex[index] = hashindex;
+		cached->valid = false;
+		cached->p = params;
+		collision_cachedtrace_arrayfullhashindex[index] = fullhashindex;
+		collision_cachedtrace_arrayused[index] = collision_cachedtrace_sequence;
 	}
-	cached->sequence = 0;
 	return cached;
 }
 
 void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask)
 {
 	float starttransformed[3], endtransformed[3];
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, mins, maxs, end, hitsupercontentsmask);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(3, model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, mins, maxs, end, hitsupercontentsmask);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -1875,16 +1948,14 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const fram
 	// NOTE: this relies on plane.dist being directly after plane.normal
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
 void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents)
 {
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, mins, maxs, end, hitsupercontents);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(3, model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, mins, maxs, end, hitsupercontents);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -1898,17 +1969,15 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start
 	trace->realfraction = bound(0, trace->realfraction, 1);
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
 void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, qboolean hitsurfaces)
 {
 	float starttransformed[3], endtransformed[3];
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, vec3_origin, vec3_origin, end, hitsupercontentsmask);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(2, model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, vec3_origin, vec3_origin, end, hitsupercontentsmask);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -1936,16 +2005,14 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const 
 	// NOTE: this relies on plane.dist being directly after plane.normal
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
 void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, qboolean hitsurfaces)
 {
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, vec3_origin, vec3_origin, end, hitsupercontents);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(2, model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, vec3_origin, vec3_origin, end, hitsupercontents);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -1960,17 +2027,15 @@ void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t s
 	trace->realfraction = bound(0, trace->realfraction, 1);
 	VectorLerp(start, trace->fraction, end, trace->endpos);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
 void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask)
 {
 	float starttransformed[3];
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, vec3_origin, vec3_origin, start, hitsupercontentsmask);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(1, model, frameblend, skeleton, bodymins, bodymaxs, bodysupercontents, matrix, inversematrix, start, vec3_origin, vec3_origin, start, hitsupercontentsmask);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -1993,16 +2058,14 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 	// NOTE: this relies on plane.dist being directly after plane.normal
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents)
 {
-	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, vec3_origin, vec3_origin, start, hitsupercontents);
-	if (cached->sequence)
+	collision_cachedtrace_t *cached = Collision_Cache_Lookup(1, model, NULL, NULL, vec3_origin, vec3_origin, 0, &identitymatrix, &identitymatrix, start, vec3_origin, vec3_origin, start, hitsupercontents);
+	if (cached->valid)
 	{
-		cached->sequence = collision_cachedtrace_sequence;
 		*trace = cached->result;
 		return;
 	}
@@ -2013,7 +2076,6 @@ void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t 
 		model->TracePoint(model, NULL, NULL, trace, start, hitsupercontents);
 	VectorCopy(start, trace->endpos);
 
-	cached->sequence = collision_cachedtrace_sequence;
 	cached->result = *trace;
 }
 
