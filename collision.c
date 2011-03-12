@@ -1693,6 +1693,7 @@ static int collision_cachedtrace_firstfree;
 static int collision_cachedtrace_lastused;
 static int collision_cachedtrace_max;
 static int collision_cachedtrace_sequence;
+static int collision_cachedtrace_hashsize;
 static int *collision_cachedtrace_hash;
 
 void Collision_Cache_Reset(qboolean resetlimits)
@@ -1705,8 +1706,9 @@ void Collision_Cache_Reset(qboolean resetlimits)
 		collision_cachedtrace_max = 1024;
 	collision_cachedtrace_firstfree = 1;
 	collision_cachedtrace_lastused = 0;
+	collision_cachedtrace_hashsize = collision_cachedtrace_max * 2;
 	collision_cachedtrace_array = (collision_cachedtrace_t *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(collision_cachedtrace_t));
-	collision_cachedtrace_hash = (int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_max * sizeof(int));
+	collision_cachedtrace_hash = (int *)Mem_Alloc(collision_cachedtrace_mempool, collision_cachedtrace_hashsize * sizeof(int));
 	collision_cachedtrace_sequence = 1;
 }
 
@@ -1722,7 +1724,7 @@ void Collision_Cache_NewFrame(void)
 	int index;
 	int *p;
 	// unlink all stale traces
-	for (hashindex = 0;hashindex < collision_cachedtrace_max;hashindex++)
+	for (hashindex = 0;hashindex < collision_cachedtrace_hashsize;hashindex++)
 	{
 		if (!collision_cachedtrace_hash[hashindex])
 			continue;
@@ -1766,18 +1768,18 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	else
 	{
 		// cached trace lookup
-		hashindex = (int)(((size_t)model + (size_t) + (size_t)(VectorLength2(bodymins) + VectorLength2(bodymaxs) + start[0] + start[1] + start[2] + end[0] + end[1] + end[2]) + bodysupercontents + hitsupercontentsmask) % collision_cachedtrace_max);
+		hashindex = (int)(((size_t)model + (size_t) + (size_t)(start[0] * 53 + start[1] * 207 + start[2] * 97 + end[0] * 37 + end[1] * 743 + end[2] * 13) + bodysupercontents + hitsupercontentsmask) % collision_cachedtrace_hashsize);
 		for (index = collision_cachedtrace_hash[hashindex];index;index = cached->next)
 		{
 			cached = collision_cachedtrace_array + index;
-			if (cached->model == model
+			if (VectorCompare(cached->start, start)
+			 && VectorCompare(cached->end, end)
+			 && cached->model == model
 			 && VectorCompare(cached->bodymins, bodymins)
 			 && VectorCompare(cached->bodymaxs, bodymaxs)
 			 && cached->bodysupercontents == bodysupercontents
-			 && VectorCompare(cached->start, start)
 			 && VectorCompare(cached->mins, mins)
 			 && VectorCompare(cached->maxs, maxs)
-			 && VectorCompare(cached->end, end)
 			 && cached->hitsupercontentsmask == hitsupercontentsmask
 			 && !memcmp(&cached->matrix, matrix, sizeof(*matrix)))
 			{
