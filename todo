@@ -27,6 +27,7 @@
 0 bug darkplaces d3d9: alphatest not working (VorteX)
 0 bug darkplaces d3d9: gamma not working (VorteX)
 0 bug darkplaces d3d9: shadowmaps are clipped - does this mean r_shadows 2 or light shadowmaps? (VorteX)
+0 bug darkplaces d3d9: water/refraction/reflection/warp render scissor is wrong (SavageX)
 0 bug darkplaces effects: add a cvar to disable colored dlights (leileilol)
 0 bug darkplaces effects: dlights don't look anything like quake ones, bring back lightmap dlights as a cvar - with both classic and old dp falloff modes (leileilol)
 0 bug darkplaces effects: quake mode blood trails don't have the appropriate slight gravity - there may be other effects missing this also (leileilol)
