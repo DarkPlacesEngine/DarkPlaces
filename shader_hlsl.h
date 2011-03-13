@@ -475,7 +475,7 @@
 "float3 FogVertex(float4 surfacecolor, float3 FogColor, float3 EyeVectorModelSpace, float FogPlaneVertexDist, float FogRangeRecip, float FogPlaneViewDist, float FogHeightFade, sampler Texture_FogMask, sampler Texture_FogHeightTexture)\n"
 "{\n"
 "	float fogfrac;\n"
-"	float3 fc = Fogcolor;\n"
+"	float3 fc = FogColor;\n"
 "#ifdef USEFOGALPHAHACK\n"
 "	fc *= surfacecolor.a;\n"
 "#endif\n"
