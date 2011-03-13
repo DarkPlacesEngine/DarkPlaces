@@ -44,6 +44,7 @@ renderpath_t;
 typedef struct viddef_support_s
 {
 	qboolean gl20shaders;
+	qboolean gl20shaders130;
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;

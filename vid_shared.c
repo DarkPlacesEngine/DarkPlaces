@@ -835,12 +835,22 @@ void VID_CheckExtensions(void)
 		Sys_Error("OpenGL 1.1.0 functions not found");
 	vid.support.gl20shaders = GL_CheckExtension("2.0", gl20shaderfuncs, "-noshaders", false);
 
-	// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
-	GL_CheckExtension("2.0", glsl130funcs, "-noglsl130", false);
-
 	CHECKGLERROR
 
 	Con_DPrint("Checking OpenGL extensions...\n");
+
+	// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
+	vid.support.gl20shaders130 = GL_CheckExtension("2.0", glsl130funcs, "-noglsl130", false);
+	if(vid.support.gl20shaders130)
+	{
+		char *s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
+		if(!s || atof(s) < 1.30 - 0.00001)
+			vid.support.gl20shaders130 = 0;
+	}
+	if(vid.support.gl20shaders130)
+		Con_DPrintf("Using GLSL 1.30\n");
+	else
+		Con_DPrintf("Using GLSL 1.00\n");
 
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
 	vid.support.arb_depth_texture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
