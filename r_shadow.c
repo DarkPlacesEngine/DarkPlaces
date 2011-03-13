@@ -326,7 +326,6 @@ cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodel
 cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1)"};
 cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "3", "maximum number of bounces for a particle (minimum is 1)"};
-cvar_t r_shadow_bouncegrid_nolerpsplat = {CVAR_SAVE, "r_shadow_bouncegrid_nolerpsplat", "0", "enables slightly quicker (but worse looking) photon accumulation"};
 cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
 cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "2", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_photons = {CVAR_SAVE, "r_shadow_bouncegrid_photons", "2000", "total photons to shoot per update, divided proportionately between lights"};
@@ -358,7 +357,7 @@ static double r_shadow_bouncegridtime;
 static int r_shadow_bouncegridresolution[3];
 static int r_shadow_bouncegridnumpixels;
 static unsigned char *r_shadow_bouncegridpixels;
-static unsigned short *r_shadow_bouncegridhighpixels;
+static float *r_shadow_bouncegridhighpixels;
 
 // note the table actually includes one more value, just to avoid the need to clamp the distance index due to minor math error
 #define ATTENTABLESIZE 256
@@ -720,7 +719,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_lightradiusscale);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_maxbounce);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_nolerpsplat);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_photons);
@@ -2285,7 +2283,6 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	dlight_t *light;
 	int flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	int bouncecount;
-	int c[3];
 	int hitsupercontentsmask;
 	int maxbounce;
 	int numpixels;
@@ -2299,8 +2296,8 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	//trace_t cliptrace3;
 	unsigned char *pixel;
 	unsigned char *pixels;
-	unsigned short *highpixel;
-	unsigned short *highpixels;
+	float *highpixel;
+	float *highpixels;
 	unsigned int lightindex;
 	unsigned int range;
 	unsigned int range1;
@@ -2324,11 +2321,12 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	vec_t photonscaling;
 	vec_t photonresidual;
 	float m[16];
-	int texlerp[2][3];
-	int splatcolor[3];
+	float texlerp[2][3];
+	float splatcolor[3];
+	float pixelweight[8];
 	int pixelindex[8];
-	int pixelweight[8];
 	int corner;
+	int x, y, z;
 	qboolean isstatic = r_shadow_bouncegrid_updateinterval.value > 1.0f;
 	rtlight_t *rtlight;
 	if (!r_shadow_bouncegrid.integer || !vid.support.ext_texture_3d)
@@ -2397,13 +2395,13 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	if (r_shadow_bouncegridnumpixels != numpixels || !r_shadow_bouncegridpixels || !r_shadow_bouncegridhighpixels)
 	{
 		r_shadow_bouncegridpixels = (unsigned char *)Mem_Realloc(r_main_mempool, r_shadow_bouncegridpixels, numpixels * sizeof(unsigned char[4]));
-		r_shadow_bouncegridhighpixels = (unsigned short *)Mem_Realloc(r_main_mempool, r_shadow_bouncegridhighpixels, numpixels * sizeof(unsigned short[4]));
+		r_shadow_bouncegridhighpixels = (float *)Mem_Realloc(r_main_mempool, r_shadow_bouncegridhighpixels, numpixels * sizeof(float[3]));
 	}
 	r_shadow_bouncegridnumpixels = numpixels;
 	pixels = r_shadow_bouncegridpixels;
 	highpixels = r_shadow_bouncegridhighpixels;
 	memset(pixels, 0, numpixels * sizeof(unsigned char[4]));
-	memset(highpixels, 0, numpixels * sizeof(unsigned short[3]));
+	memset(highpixels, 0, numpixels * sizeof(float[3]));
 	// figure out what we want to interact with
 	if (r_shadow_bouncegrid_hitmodels.integer)
 		hitsupercontentsmask = SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK;
@@ -2502,9 +2500,9 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 		if (!shootparticles)
 			continue;
 		photonresidual -= shootparticles;
-		s = 65535.0f * r_shadow_bouncegrid_particleintensity.value / shootparticles;
+		s = r_shadow_bouncegrid_particleintensity.value / shootparticles;
 		VectorScale(lightcolor, s, baseshotcolor);
-		if (VectorLength2(baseshotcolor) < 3.0f)
+		if (VectorLength2(baseshotcolor) == 0.0f)
 			break;
 		r_refdef.stats.bouncegrid_lights++;
 		r_refdef.stats.bouncegrid_particles += shootparticles;
@@ -2533,72 +2531,45 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 				{
 					r_refdef.stats.bouncegrid_splats++;
 					// figure out which texture pixel this is in
-					texlerp[1][0] = (int)(((cliptrace.endpos[0] - mins[0]) * ispacing[0]) * 256.0f);
-					texlerp[1][1] = (int)(((cliptrace.endpos[1] - mins[1]) * ispacing[1]) * 256.0f);
-					texlerp[1][2] = (int)(((cliptrace.endpos[2] - mins[2]) * ispacing[2]) * 256.0f);
-					tex[0] = texlerp[1][0] >> 8;
-					tex[1] = texlerp[1][1] >> 8;
-					tex[2] = texlerp[1][2] >> 8;
+					texlerp[1][0] = ((cliptrace.endpos[0] - mins[0]) * ispacing[0]);
+					texlerp[1][1] = ((cliptrace.endpos[1] - mins[1]) * ispacing[1]);
+					texlerp[1][2] = ((cliptrace.endpos[2] - mins[2]) * ispacing[2]);
+					tex[0] = (int)floor(texlerp[1][0]);
+					tex[1] = (int)floor(texlerp[1][1]);
+					tex[2] = (int)floor(texlerp[1][2]);
 					if (tex[0] >= 1 && tex[1] >= 1 && tex[2] >= 1 && tex[0] < resolution[0] - 2 && tex[1] < resolution[1] - 2 && tex[2] < resolution[2] - 2)
 					{
 						// it is within bounds...
-						splatcolor[0] = (int)shotcolor[2];
-						splatcolor[1] = (int)shotcolor[1];
-						splatcolor[2] = (int)shotcolor[0];
+						splatcolor[0] = shotcolor[2] * 255.0f;
+						splatcolor[1] = shotcolor[1] * 255.0f;
+						splatcolor[2] = shotcolor[0] * 255.0f;
 						// calculate the lerp factors
-						if (r_shadow_bouncegrid_nolerpsplat.integer)
+						texlerp[1][0] -= tex[0];
+						texlerp[1][1] -= tex[1];
+						texlerp[1][2] -= tex[2];
+						texlerp[0][0] = 1.0f - texlerp[1][0];
+						texlerp[0][1] = 1.0f - texlerp[1][1];
+						texlerp[0][2] = 1.0f - texlerp[1][2];
+						// calculate individual pixel indexes and weights
+						pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[0] = (texlerp[0][0]*texlerp[0][1]*texlerp[0][2]);
+						pixelindex[1] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[1] = (texlerp[1][0]*texlerp[0][1]*texlerp[0][2]);
+						pixelindex[2] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[2] = (texlerp[0][0]*texlerp[1][1]*texlerp[0][2]);
+						pixelindex[3] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[3] = (texlerp[1][0]*texlerp[1][1]*texlerp[0][2]);
+						pixelindex[4] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[4] = (texlerp[0][0]*texlerp[0][1]*texlerp[1][2]);
+						pixelindex[5] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[5] = (texlerp[1][0]*texlerp[0][1]*texlerp[1][2]);
+						pixelindex[6] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[6] = (texlerp[0][0]*texlerp[1][1]*texlerp[1][2]);
+						pixelindex[7] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[7] = (texlerp[1][0]*texlerp[1][1]*texlerp[1][2]);
+						// update the 8 pixels...
+						for (corner = 0;corner < 8;corner++)
 						{
-							pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );
-							pixel = pixels + 4 * pixelindex[0];
-							highpixel = highpixels + 3 * pixelindex[0];
+							pixel = pixels + 4 * pixelindex[corner];
+							highpixel = highpixels + 3 * pixelindex[corner];
 							// add to the high precision pixel color
-							c[0] = highpixel[0] + splatcolor[0];
-							c[1] = highpixel[1] + splatcolor[1];
-							c[2] = highpixel[2] + splatcolor[2];
-							highpixel[0] = (unsigned short)min(c[0], 65535);
-							highpixel[1] = (unsigned short)min(c[1], 65535);
-							highpixel[2] = (unsigned short)min(c[2], 65535);
-							// update the low precision pixel color
-							pixel[0] = highpixel[0] >> 8;
-							pixel[1] = highpixel[1] >> 8;
-							pixel[2] = highpixel[2] >> 8;
+							highpixel[0] += (splatcolor[0]*pixelweight[corner]);
+							highpixel[1] += (splatcolor[1]*pixelweight[corner]);
+							highpixel[2] += (splatcolor[2]*pixelweight[corner]);
+							// flag the low precision pixel as needing to be updated
 							pixel[3] = 255;
-						}
-						else
-						{
-							texlerp[1][0] &= 0xFF;
-							texlerp[1][1] &= 0xFF;
-							texlerp[1][2] &= 0xFF;
-							texlerp[0][0] = 256 - texlerp[1][0];
-							texlerp[0][1] = 256 - texlerp[1][1];
-							texlerp[0][2] = 256 - texlerp[1][2];
-							// calculate individual pixel indexes and weights
-							pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[0] = (texlerp[0][0]*texlerp[0][1]*texlerp[0][2]) >> 16;
-							pixelindex[1] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[1] = (texlerp[1][0]*texlerp[0][1]*texlerp[0][2]) >> 16;
-							pixelindex[2] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[2] = (texlerp[0][0]*texlerp[1][1]*texlerp[0][2]) >> 16;
-							pixelindex[3] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[3] = (texlerp[1][0]*texlerp[1][1]*texlerp[0][2]) >> 16;
-							pixelindex[4] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[4] = (texlerp[0][0]*texlerp[0][1]*texlerp[1][2]) >> 16;
-							pixelindex[5] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[5] = (texlerp[1][0]*texlerp[0][1]*texlerp[1][2]) >> 16;
-							pixelindex[6] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[6] = (texlerp[0][0]*texlerp[1][1]*texlerp[1][2]) >> 16;
-							pixelindex[7] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[7] = (texlerp[1][0]*texlerp[1][1]*texlerp[1][2]) >> 16;
-							// update the 8 pixels...
-							for (corner = 0;corner < 8;corner++)
-							{
-								pixel = pixels + 4 * pixelindex[corner];
-								highpixel = highpixels + 3 * pixelindex[corner];
-								// add to the high precision pixel color
-								c[0] = highpixel[0] + ((splatcolor[0]*pixelweight[corner])>>8);
-								c[1] = highpixel[1] + ((splatcolor[1]*pixelweight[corner])>>8);
-								c[2] = highpixel[2] + ((splatcolor[2]*pixelweight[corner])>>8);
-								highpixel[0] = (unsigned short)min(c[0], 65535);
-								highpixel[1] = (unsigned short)min(c[1], 65535);
-								highpixel[2] = (unsigned short)min(c[2], 65535);
-								// update the low precision pixel color
-								pixel[0] = highpixel[0] >> 8;
-								pixel[1] = highpixel[1] >> 8;
-								pixel[2] = highpixel[2] >> 8;
-								pixel[3] = 255;
-							}
 						}
 					}
 				}
@@ -2615,7 +2586,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 				surfcolor[1] = min(surfcolor[1], 1.0f);
 				surfcolor[2] = min(surfcolor[2], 1.0f);
 				VectorMultiply(shotcolor, surfcolor, shotcolor);
-				if (VectorLength2(shotcolor) < 3.0f)
+				if (VectorLength2(baseshotcolor) == 0.0f)
 					break;
 				r_refdef.stats.bouncegrid_bounces++;
 				if (r_shadow_bouncegrid_bounceanglediffuse.integer)
@@ -2639,6 +2610,25 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 				// calculate the new line start and end
 				VectorCopy(cliptrace.endpos, clipstart);
 				VectorAdd(clipstart, clipend, clipend);
+			}
+		}
+	}
+	// generate pixels array from highpixels array
+	// skip first and last columns, rows, and layers as these are blank
+	// the pixel[3] value was written above, so we can use it to detect only pixels that need to be calculated
+	for (z = 1;z < resolution[2]-1;z++)
+	{
+		for (y = 1;y < resolution[1]-1;y++)
+		{
+			for (x = 1, pixelindex[0] = (resolution[1]*z+y)*resolution[0]+x, pixel = pixels + 4*pixelindex[0], highpixel = highpixels + 3*pixelindex[0];x < resolution[0]-1;x++, pixel += 4, highpixel += 3)
+			{
+				// only convert pixels that were hit by photons
+				if (pixel[3])
+				{
+					pixel[0] = (unsigned char)min(highpixel[0], 255);
+					pixel[1] = (unsigned char)min(highpixel[1], 255);
+					pixel[2] = (unsigned char)min(highpixel[2], 255);
+				}
 			}
 		}
 	}
