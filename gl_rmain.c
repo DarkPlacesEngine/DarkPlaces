@@ -980,9 +980,8 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 
 	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
 
-	// the first pretext is which type of shader to compile as
-	// (later these will all be bound together as a program object)
-	if(qglBindFragDataLocation && (permutation & SHADERPERMUTATION_OFFSETMAPPING)) // we use textureGrad() which is glsl 1.30
+	// if we can do #version 130, we should (this improves quality of offset/reliefmapping thanks to textureGrad)
+	if(vid.support.gl20shaders130)
 	{
 		vertstrings_list[vertstrings_count++] = "#version 130\n";
 		geomstrings_list[geomstrings_count++] = "#version 130\n";
