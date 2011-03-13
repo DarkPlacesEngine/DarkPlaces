@@ -1450,7 +1450,7 @@
 "#endif\n"
 "\n"
 "#ifdef USEFOG\n"
-"	color.rgb = FogVertex(color, FogColor, EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask, Texture_FogHeightTexture);\n"
+"	color.rgb = half3(FogVertex(color, FogColor, EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask, Texture_FogHeightTexture));\n"
 "#endif\n"
 "\n"
 "	// reflection must come last because it already contains exactly the correct fog (the reflection render preserves camera distance from the plane, it only flips the side) and ContrastBoost/SceneBrightness\n"
