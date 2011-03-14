@@ -2377,11 +2377,11 @@ void CL_UpdateScreen(void)
 	else if (key_consoleactive)
 		VID_SetMouse(vid.fullscreen, false, false);
 	else if (key_dest == key_menu_grabbed)
-		VID_SetMouse(true, vid_mouse.integer && !in_client_mouse, true);
+		VID_SetMouse(true, vid_mouse.integer && !in_client_mouse && !vid_touchscreen.integer, !vid_touchscreen.integer);
 	else if (key_dest == key_menu)
-		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !in_client_mouse, true);
+		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !in_client_mouse && !vid_touchscreen.integer, !vid_touchscreen.integer);
 	else
-		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0 && (!cls.demoplayback || cl_demo_mousegrab.integer), true);
+		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0 && (!cls.demoplayback || cl_demo_mousegrab.integer) && !vid_touchscreen.integer, !vid_touchscreen.integer);
 
 	VID_Finish();
 }
