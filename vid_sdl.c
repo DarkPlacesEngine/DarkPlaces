@@ -599,28 +599,33 @@ static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
 #define MAXFINGERS 11
 int multitouch[MAXFINGERS][3];
 
-qboolean VID_TouchscreenArea(float x, float y, float width, float height, const char *icon, float *resultmove, qboolean *resultbutton, keynum_t key)
+qboolean VID_TouchscreenArea(int corner, float px, float py, float pwidth, float pheight, const char *icon, float *resultmove, qboolean *resultbutton, keynum_t key)
 {
 	int finger;
+	float fx, fy, fwidth, fheight;
 	float rel[3];
 	qboolean button = false;
 	VectorClear(rel);
+	if (pwidth > 0 && pheight > 0)
 #ifdef __IPHONEOS__
-	if (width > 0 && height > 0 && (key == '`' || key == K_ESCAPE || !VID_ShowingKeyboard()))
-#else
-	if (width > 0 && height > 0 && (key == '`' || key == K_ESCAPE))
+	if (!VID_ShowingKeyboard())
 #endif
 	{
-		x *= 32768.0f / 320.0f;
-		y *= 32768.0f / 480.0f;
-		width *= 32768.0f / 320.0f;
-		height *= 32768.0f / 480.0f;
+		if (corner & 1) px += vid_conwidth.value;
+		if (corner & 2) py += vid_conheight.value;
+		if (corner & 4) px += vid_conwidth.value * 0.5f;
+		if (corner & 8) py += vid_conheight.value * 0.5f;
+		if (corner & 16) {px *= vid_conwidth.value * (1.0f / 640.0f);py *= vid_conheight.value * (1.0f / 480.0f);pwidth *= vid_conwidth.value * (1.0f / 640.0f);pheight *= vid_conheight.value * (1.0f / 480.0f);}
+		fx = px * 32768.0f / vid_conwidth.value;
+		fy = py * 32768.0f / vid_conheight.value;
+		fwidth = pwidth * 32768.0f / vid_conwidth.value;
+		fheight = pheight * 32768.0f / vid_conheight.value;
 		for (finger = 0;finger < MAXFINGERS;finger++)
 		{
-			if (multitouch[finger][0] && multitouch[finger][1] >= x && multitouch[finger][2] >= y && multitouch[finger][1] < x + width && multitouch[finger][2] < y + height)
+			if (multitouch[finger][0] && multitouch[finger][1] >= fx && multitouch[finger][2] >= fy && multitouch[finger][1] < fx + fwidth && multitouch[finger][2] < fy + fheight)
 			{
-				rel[0] = (multitouch[finger][1] - (x + 0.5f * width)) * (2.0f / width);
-				rel[1] = (multitouch[finger][2] - (y + 0.5f * height)) * (2.0f / height);
+				rel[0] = (multitouch[finger][1] - (fx + 0.5f * fwidth)) * (2.0f / fwidth);
+				rel[1] = (multitouch[finger][2] - (fy + 0.5f * fheight)) * (2.0f / fheight);
 				rel[2] = 0;
 				button = true;
 				break;
@@ -629,10 +634,10 @@ qboolean VID_TouchscreenArea(float x, float y, float width, float height, const 
 		if (scr_numtouchscreenareas < 16)
 		{
 			scr_touchscreenareas[scr_numtouchscreenareas].pic = icon;
-			scr_touchscreenareas[scr_numtouchscreenareas].rect[0] = x * vid_conwidth.value / 32768.0f;
-			scr_touchscreenareas[scr_numtouchscreenareas].rect[1] = y * vid_conheight.value / 32768.0f;
-			scr_touchscreenareas[scr_numtouchscreenareas].rect[2] = width * vid_conwidth.value / 32768.0f;
-			scr_touchscreenareas[scr_numtouchscreenareas].rect[3] = height * vid_conheight.value / 32768.0f;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[0] = px;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[1] = py;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[2] = pwidth;
+			scr_touchscreenareas[scr_numtouchscreenareas].rect[3] = pheight;
 			scr_touchscreenareas[scr_numtouchscreenareas].active = button;
 			scr_numtouchscreenareas++;
 		}
@@ -686,42 +691,63 @@ void IN_Move( void )
 		}
 		oldkeydest = keydest;
 		// top of screen is toggleconsole and K_ESCAPE
-			VID_TouchscreenArea(  0,   0,  50,  50, NULL                         , NULL, &buttons[13], (keynum_t)'`');
-			VID_TouchscreenArea( 50,   0, 270,  50, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
 		switch(keydest)
 		{
 		case key_console:
 #ifdef __IPHONEOS__
+			VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , NULL, &buttons[13], (keynum_t)'`');
+			VID_TouchscreenArea( 0,  64,   0,  64,  64, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
 			if (!VID_ShowingKeyboard())
 			{
 				// user entered a command, close the console now
 				Con_ToggleConsole_f();
 			}
 #endif
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[15], (keynum_t)0);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , click,&buttons[2], K_MOUSE1);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[4], K_MOUSE2);
 			break;
 		case key_game:
-			VID_TouchscreenArea(  0, 380, 100, 100, "gfx/touch_movebutton.tga"   , move, &buttons[0], K_MOUSE4);
-			VID_TouchscreenArea(220, 380, 100, 100, "gfx/touch_aimbutton.tga"    , aim,  &buttons[1], K_MOUSE5);
-			VID_TouchscreenArea(110, 380, 100, 100, "gfx/touch_attackbutton.tga" , NULL, &buttons[2], K_MOUSE1);
-			VID_TouchscreenArea(  0, 330, 100,  50, "gfx/touch_jumpbutton.tga"   , NULL, &buttons[3], K_SPACE);
-			VID_TouchscreenArea(220, 330, 100,  50, "gfx/touch_attack2button.tga", NULL, &buttons[4], K_MOUSE2);
+#ifdef __IPHONEOS__
+			VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , NULL, &buttons[13], (keynum_t)'`');
+			VID_TouchscreenArea( 0,  64,   0,  64,  64, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
+#endif
+			VID_TouchscreenArea( 2,   0,-128, 128, 128, "gfx/touch_movebutton.tga"   , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea( 3,-128,-128, 128, 128, "gfx/touch_aimbutton.tga"    , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea( 2,   0,-160,  64,  32, "gfx/touch_jumpbutton.tga"   , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea( 3,-128,-160,  64,  32, "gfx/touch_attackbutton.tga" , NULL, &buttons[2], K_MOUSE1);
+			VID_TouchscreenArea( 3, -64,-160,  64,  32, "gfx/touch_attack2button.tga", NULL, &buttons[4], K_MOUSE2);
 			buttons[15] = false;
 			break;
 		default:
+#ifdef __IPHONEOS__
+			VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , NULL, &buttons[13], (keynum_t)'`');
+			VID_TouchscreenArea( 0,  64,   0,  64,  64, "gfx/touch_menu.tga"         , NULL, &buttons[14], K_ESCAPE);
 			// in menus, an icon in the corner activates keyboard
-			VID_TouchscreenArea(  0, 430,  50,  50, "gfx/touch_keyboard.tga"     , NULL, &buttons[15], (keynum_t)0);
+			VID_TouchscreenArea( 2,   0, -32,  32,  32, "gfx/touch_keyboard.tga"     , NULL, &buttons[15], (keynum_t)0);
 			if (buttons[15])
 				VID_ShowKeyboard(true);
-			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
-			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , aim,  &buttons[1], K_MOUSE5);
-			VID_TouchscreenArea(-320,-480,640, 960, NULL                         , click,&buttons[2], K_MOUSE1);
-			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , NULL, &buttons[3], K_SPACE);
-			VID_TouchscreenArea(  0,   0,   0,   0, NULL                         , NULL, &buttons[4], K_MOUSE2);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea(16, -320,-480,640, 960, NULL                         , click,&buttons[2], K_MOUSE1);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[4], K_MOUSE2);
 			if (buttons[2])
 			{
 				in_windowmouse_x = x;
 				in_windowmouse_y = y;
 			}
+#else
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[15], (keynum_t)0);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , move, &buttons[0], K_MOUSE4);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , aim,  &buttons[1], K_MOUSE5);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , click,&buttons[2], K_MOUSE1);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[3], K_SPACE);
+			VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , NULL, &buttons[4], K_MOUSE2);
+#endif
 			break;
 		}
 		cl.cmd.forwardmove -= move[1] * cl_forwardspeed.value;
@@ -884,6 +910,7 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
+				if (!vid_touchscreen.integer)
 				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
 				break;
@@ -992,6 +1019,7 @@ void Sys_SendKeyEvents( void )
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 #ifndef __IPHONEOS__
+				if (!vid_touchscreen.integer)
 				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
 #endif
