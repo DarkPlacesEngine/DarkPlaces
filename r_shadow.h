@@ -41,6 +41,7 @@ extern cvar_t gl_ext_stenciltwoside;
 extern rtexture_t *r_shadow_bouncegridtexture;
 extern matrix4x4_t r_shadow_bouncegridmatrix;
 extern vec_t r_shadow_bouncegridintensity;
+extern qboolean r_shadow_bouncegriddirectional;
 
 void R_Shadow_Init(void);
 qboolean R_Shadow_ShadowMappingEnabled(void);
