@@ -656,6 +656,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEREFLECTCUBE\n", " reflectcube"},
 	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 	{"#define USEBOUNCEGRID\n", " bouncegrid"},
+	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"},
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
@@ -2261,7 +2262,11 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		if (r_shadow_bouncegridtexture)
+		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
+			if (r_shadow_bouncegriddirectional)
+				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
+		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
@@ -2309,7 +2314,11 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		if (r_shadow_bouncegridtexture)
+		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
+			if (r_shadow_bouncegriddirectional)
+				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
+		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
@@ -2393,7 +2402,11 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			mode = SHADERMODE_VERTEXCOLOR;
 		}
 		if (r_shadow_bouncegridtexture)
+		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
+			if (r_shadow_bouncegriddirectional)
+				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
+		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 	}
