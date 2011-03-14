@@ -3861,6 +3861,9 @@ void gl_main_start(void)
 	r_qwskincache = NULL;
 	r_qwskincache_size = 0;
 
+	// due to caching of texture_t references, the collision cache must be reset
+	Collision_Cache_Reset(true);
+
 	// set up r_skinframe loading system for textures
 	memset(&r_skinframe, 0, sizeof(r_skinframe));
 	r_skinframe.loadsequence = 1;
