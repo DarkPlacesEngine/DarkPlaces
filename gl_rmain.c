@@ -10282,11 +10282,23 @@ static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, flo
 	vertex3f = rsurface.modelvertex3f;
 	normal3f = rsurface.modelnormal3f;
 
-	for (cornerindex = 0;cornerindex < 3;cornerindex++)
+	if (normal3f)
 	{
-		index = 3*e[cornerindex];
-		VectorMA(vertex3f + index, cl_decals_bias.value, normal3f + index, v[cornerindex]);
+		for (cornerindex = 0;cornerindex < 3;cornerindex++)
+		{
+			index = 3*e[cornerindex];
+			VectorMA(vertex3f + index, cl_decals_bias.value, normal3f + index, v[cornerindex]);
+		}
 	}
+	else
+	{
+		for (cornerindex = 0;cornerindex < 3;cornerindex++)
+		{
+			index = 3*e[cornerindex];
+			VectorCopy(vertex3f + index, v[cornerindex]);
+		}
+	}
+
 	// cull backfaces
 	//TriangleNormal(v[0], v[1], v[2], normal);
 	//if (DotProduct(normal, localnormal) < 0.0f)
