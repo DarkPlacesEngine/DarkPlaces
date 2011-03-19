@@ -86,6 +86,7 @@ cvar_t vid_touchscreen_overlayalpha = {0, "vid_touchscreen_overlayalpha", "0.25"
 
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
+extern cvar_t r_fog_clear;
 #define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && vid_usinghwgamma)
 
 int jpeg_supported = false;
@@ -1612,7 +1613,8 @@ void R_ClearScreen(qboolean fogcolor)
 	if (fogcolor)
 	{
 		R_UpdateFogColor();
-		VectorCopy(r_refdef.fogcolor, clearcolor);
+		if (r_fog_clear.integer)
+			VectorCopy(r_refdef.fogcolor, clearcolor);
 	}
 	// clear depth is 1.0
 	// LordHavoc: we use a stencil centered around 128 instead of 0,

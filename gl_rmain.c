@@ -115,6 +115,7 @@ cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", 
 cvar_t r_polygonoffset_decals_factor = {0, "r_polygonoffset_decals_factor", "0", "biases depth values of decals to prevent z-fighting artifacts"};
 cvar_t r_polygonoffset_decals_offset = {0, "r_polygonoffset_decals_offset", "-14", "biases depth values of decals to prevent z-fighting artifacts"};
 cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
+cvar_t r_fog_clear = {0, "r_fog_clear", "1", "clears renderbuffer with fog color before render starts"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 cvar_t r_transparentdepthmasking = {CVAR_SAVE, "r_transparentdepthmasking", "0", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
 
@@ -4069,6 +4070,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_polygonoffset_decals_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_decals_offset);
 	Cvar_RegisterVariable(&r_fog_exp2);
+	Cvar_RegisterVariable(&r_fog_clear);
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_transparentdepthmasking);
 	Cvar_RegisterVariable(&r_texture_dds_load);
