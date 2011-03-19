@@ -6042,6 +6042,17 @@ void R_Shadow_EditLights_Edit_f(void)
 		origin[1] = atof(Cmd_Argv(3));
 		origin[2] = atof(Cmd_Argv(4));
 	}
+	else if (!strcmp(Cmd_Argv(1), "originscale"))
+	{
+		if (Cmd_Argc() != 5)
+		{
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			return;
+		}
+		origin[0] *= atof(Cmd_Argv(2));
+		origin[1] *= atof(Cmd_Argv(3));
+		origin[2] *= atof(Cmd_Argv(4));
+	}
 	else if (!strcmp(Cmd_Argv(1), "originx"))
 	{
 		if (Cmd_Argc() != 3)
@@ -6473,6 +6484,7 @@ void R_Shadow_EditLights_Help_f(void)
 "colorscale r g b : multiply color of light (1 1 1 does nothing)\n"
 "radiusscale scale : multiply radius (size) of light (1 does nothing)\n"
 "sizescale scale : multiply radius (size) of light (1 does nothing)\n"
+"originscale x y z : multiply origin of light (1 1 1 does nothing)\n"
 "style style : set lightstyle of light (flickering patterns, switches, etc)\n"
 "cubemap basename : set filter cubemap of light (not yet supported)\n"
 "shadows 1/0 : turn on/off shadows\n"
