@@ -2361,6 +2361,8 @@ CL_Init
 */
 void CL_Init (void)
 {
+	int i;
+
 	cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
 	cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
 
@@ -2369,7 +2371,13 @@ void CL_Init (void)
 	r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
 	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-	r_refdef.scene.maxtempentities = MAX_TEMPENTITIES; // FIXME: make this grow
+	// max temp entities
+	// FIXME: make this grow
+	i = COM_CheckParm("-maxtempents");
+	if (i)
+		r_refdef.scene.maxtempentities = atof(com_argv[i + 1]);
+	else
+		r_refdef.scene.maxtempentities = MAX_TEMPENTITIES;
 	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
 	CL_InitInput ();
