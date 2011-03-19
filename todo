@@ -42,6 +42,7 @@
 0 bug darkplaces qw: tf skins not working (xavior)
 0 bug darkplaces readme: it would be a very good idea to add documentation of sv_gameplayfix_* cvars in the readme as a means to run broken mods (xaGe)
 0 bug darkplaces readme: readme says that q3 shaders are not supported, this is not true, describe the working features in detail (qqshka)
+0 bug darkplaces renderer deferred: scissoring artifacts are very obvious on shadowless lights, turn off scissor (Rock)
 0 bug darkplaces renderer: GL13 path has broken handling of unlit surfaces in Nexuiz toxic.bsp - the small red light surfaces are black in GL13 path (m0rfar)
 0 bug darkplaces renderer: coronas are not affected by fog (div0)
 0 bug darkplaces renderer: if an animated model has transparent surfaces, each one calls RSurf_ActiveModelEntity, recomputing all vertices
