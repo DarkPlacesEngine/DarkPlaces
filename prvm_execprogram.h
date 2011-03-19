@@ -167,7 +167,7 @@
 					goto cleanup;
 				}
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
-					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
@@ -179,7 +179,7 @@
 					goto cleanup;
 				}
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
-					Con_DPrintf("WARNING: assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
