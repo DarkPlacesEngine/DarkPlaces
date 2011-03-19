@@ -989,6 +989,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		vertstrings_list[vertstrings_count++] = "#version 130\n";
 		geomstrings_list[geomstrings_count++] = "#version 130\n";
 		fragstrings_list[fragstrings_count++] = "#version 130\n";
+		vertstrings_list[vertstrings_count++] = "#define GLSL130\n";
+		geomstrings_list[geomstrings_count++] = "#define GLSL130\n";
+		fragstrings_list[fragstrings_count++] = "#define GLSL130\n";
 	}
 
 	// the first pretext is which type of shader to compile as
