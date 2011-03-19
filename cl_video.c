@@ -5,9 +5,9 @@
 #include "dpvsimpledecode.h"
 
 // VorteX: JAM video module used by Blood Omnicide
-//#define USEJAM
+#define USEJAM
 #ifdef USEJAM
-  #include "jamdecode.c"
+  #include "cl_video_jamdecode.c"
 #endif
 
 // cvars
