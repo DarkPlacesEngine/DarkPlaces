@@ -207,6 +207,8 @@ cvar_t r_overheadsprites_scaley = {CVAR_SAVE, "r_overheadsprites_scaley", "1", "
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
 
+cvar_t r_glsl_vertextextureblend_usebothalphas = {CVAR_SAVE, "r_glsl_vertextextureblend_usebothalphas", "0", "use both alpha layers on vertex blended surfaces, each alpha layer sets amount of 'blend leak' on another layer."};
+
 cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "0.5", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
 
 extern cvar_t v_glslgamma;
@@ -845,7 +847,8 @@ enum
 	SHADERSTATICPARM_POSTPROCESS_USERVEC1 = 2, ///< postprocess uservec1 is enabled
 	SHADERSTATICPARM_POSTPROCESS_USERVEC2 = 3, ///< postprocess uservec2 is enabled
 	SHADERSTATICPARM_POSTPROCESS_USERVEC3 = 4, ///< postprocess uservec3 is enabled
-	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5  ///< postprocess uservec4 is enabled
+	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5,  ///< postprocess uservec4 is enabled
+	SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS = 6 // use both alpha layers while blending materials, allows more advanced microblending
 };
 #define SHADERSTATICPARMS_COUNT 6
 
@@ -863,6 +866,8 @@ qboolean R_CompileShader_CheckStaticParms(void)
 	// detect all
 	if (r_glsl_saturation_redcompensate.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SATURATION_REDCOMPENSATE);
+	if (r_glsl_vertextextureblend_usebothalphas.integer)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS);
 	if (r_shadow_glossexact.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_EXACTSPECULARMATH);
 	if (r_glsl_postprocess.integer)
@@ -895,6 +900,7 @@ void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC2, "USERVEC2");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC3, "USERVEC3");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC4, "USERVEC4");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS, "USEBOTHALPHAS");
 }
 
 /// information about each possible shader permutation
@@ -4135,6 +4141,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_glsl_saturation);
 	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
+	Cvar_RegisterVariable(&r_glsl_vertextextureblend_usebothalphas);
 	Cvar_RegisterVariable(&r_framedatasize);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
