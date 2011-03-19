@@ -850,7 +850,7 @@ enum
 	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5,  ///< postprocess uservec4 is enabled
 	SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS = 6 // use both alpha layers while blending materials, allows more advanced microblending
 };
-#define SHADERSTATICPARMS_COUNT 6
+#define SHADERSTATICPARMS_COUNT 7
 
 static const char *shaderstaticparmstrings_list[SHADERSTATICPARMS_COUNT];
 static int shaderstaticparms_count = 0;
