@@ -112,7 +112,7 @@ static int vid_x11_gammarampsize = 0;
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
 static qboolean vid_usingdgamouse = false;
 #endif
-cvar_t vid_netwmfullscreen = {CVAR_SAVE, "vid_netwmfullscreen", "0", "make use _NET_WM_STATE_FULLSCREEN; turn this off if fullscreen does not work for you"};
+cvar_t vid_netwmfullscreen = {CVAR_SAVE, "vid_netwmfullscreen", "1", "make use _NET_WM_STATE_FULLSCREEN; turn this off if fullscreen does not work for you"};
 
 qboolean vidmode_ext = false;
 
