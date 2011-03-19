@@ -9,7 +9,7 @@
 "#define highp\n"
 "#endif\n"
 "\n"
-"#if __VERSION__ >= 130\n"
+"#ifdef GLSL130\n"
 "# ifdef VERTEX_SHADER\n"
 "#  define dp_varying out\n"
 "#  define dp_attribute in\n"
