@@ -1732,6 +1732,7 @@ typedef struct r_refdef_scene_s {
 	entity_render_t *tempentities;
 	int numtempentities;
 	int maxtempentities;
+	qboolean expandtempentities;
 
 	// renderable dynamic lights
 	rtlight_t *lights[MAX_DLIGHTS];
