@@ -634,6 +634,14 @@ static float CL_LerpPoint(void)
 void CL_ClearTempEntities (void)
 {
 	r_refdef.scene.numtempentities = 0;
+	// grow tempentities buffer on request
+	if (r_refdef.scene.expandtempentities)
+	{
+		Con_Printf("CL_NewTempEntity: grow maxtempentities from %i to %i\n", r_refdef.scene.maxtempentities, r_refdef.scene.maxtempentities * 2);
+		r_refdef.scene.maxtempentities *= 2;
+		r_refdef.scene.tempentities = (entity_render_t *)Mem_Realloc(cls.permanentmempool, r_refdef.scene.tempentities, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
+		r_refdef.scene.expandtempentities = false;
+	}
 }
 
 entity_render_t *CL_NewTempEntity(double shadertime)
@@ -643,7 +651,10 @@ entity_render_t *CL_NewTempEntity(double shadertime)
 	if (r_refdef.scene.numentities >= r_refdef.scene.maxentities)
 		return NULL;
 	if (r_refdef.scene.numtempentities >= r_refdef.scene.maxtempentities)
+	{
+		r_refdef.scene.expandtempentities = true; // will be reallocated next frame since current frame may have pointers set already
 		return NULL;
+	}
 	render = &r_refdef.scene.tempentities[r_refdef.scene.numtempentities++];
 	memset (render, 0, sizeof(*render));
 	r_refdef.scene.entities[r_refdef.scene.numentities++] = render;
@@ -1885,7 +1896,7 @@ void CL_UpdateWorld(void)
 	r_refdef.scene.numlights = 0;
 	r_refdef.view.matrix = identitymatrix;
 	r_refdef.view.quality = 1;
-
+		
 	cl.num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
@@ -2365,7 +2376,6 @@ CL_Init
 */
 void CL_Init (void)
 {
-	int i;
 
 	cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
 	cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
@@ -2376,12 +2386,7 @@ void CL_Init (void)
 	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
 	// max temp entities
-	// FIXME: make this grow
-	i = COM_CheckParm("-maxtempents");
-	if (i)
-		r_refdef.scene.maxtempentities = atof(com_argv[i + 1]);
-	else
-		r_refdef.scene.maxtempentities = MAX_TEMPENTITIES;
+	r_refdef.scene.maxtempentities = MAX_TEMPENTITIES;
 	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
 	CL_InitInput ();
