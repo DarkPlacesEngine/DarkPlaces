@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "libcurl.h"
 #include "utf8lib.h"
 #include "menu.h"
+#include "cl_video.h"
 
 const char *svc_strings[128] =
 {
@@ -1618,6 +1619,9 @@ void CL_ParseServerInfo (void)
 	int i;
 	protocolversion_t protocol;
 	int nummodels, numsounds;
+
+	// if we start loading a level and a video is still playing, stop it
+	CL_VideoStop();
 
 	Con_DPrint("Serverinfo packet received.\n");
 	Collision_Cache_Reset(true);
