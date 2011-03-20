@@ -1246,8 +1246,9 @@ void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int s
 	if (th > sh) th = sh;
 	if (tw < 1 || th < 1)
 		return;
+	sy1 = sheight - 1 - sy1;
 	for (y = 0;y < th;y++)
-		memcpy(tpixels + ((ty1 + y) * twidth + tx1), spixels + ((sy1 + y) * swidth + sx1), tw*4);
+		memcpy(tpixels + ((ty1 + y) * twidth + tx1), spixels + ((sy1 - y) * swidth + sx1), tw*4);
 	if (texture->mipmaps > 1)
 		DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
