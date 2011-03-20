@@ -416,6 +416,10 @@ void CL_EstablishConnection(const char *host, int firstarg)
 	if (cls.state == ca_dedicated)
 		return;
 
+	// don't connect to a server if we're benchmarking a demo
+	if (COM_CheckParm("-benchmark"))
+		return;
+
 	// clear menu's connect error message
 	M_Update_Return_Reason("");
 	cls.demonum = -1;
