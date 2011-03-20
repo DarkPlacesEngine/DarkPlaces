@@ -2998,14 +2998,14 @@ void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Triangle * RESTRI
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&inb4ub[x*4]), _mm_setzero_si128());
-		pix1 = _mm_add_epi16(pix1, _mm_sub_epi16(pix2, localcolor));
+		pix1 = _mm_add_epi16(pix1, _mm_subs_epu16(pix2, localcolor));
 		_mm_storel_epi64((__m128i *)&out4ub[x*4], _mm_packus_epi16(pix1, pix1));
 	}
 	if (x < endx)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&ina4ub[x*4]), _mm_setzero_si128());
 		__m128i pix2 = _mm_unpacklo_epi8(_mm_cvtsi32_si128(*(const int *)&inb4ub[x*4]), _mm_setzero_si128());
-		pix1 = _mm_add_epi16(pix1, _mm_sub_epi16(pix2, localcolor));
+		pix1 = _mm_add_epi16(pix1, _mm_subs_epu16(pix2, localcolor));
 		*(int *)&out4ub[x*4] = _mm_cvtsi128_si32(_mm_packus_epi16(pix1, pix1));
 	}
 #endif
