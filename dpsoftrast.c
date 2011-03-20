@@ -4692,9 +4692,9 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				attribxslope = _mm_sub_ps(_mm_mul_ps(attribuxslope, attribedge1), _mm_mul_ps(attribvxslope, attribedge2));
 				attribyslope = _mm_sub_ps(_mm_mul_ps(attribvyslope, attribedge2), _mm_mul_ps(attribuyslope, attribedge1));
 				attriborigin = _mm_sub_ps(attriborigin, _mm_add_ps(_mm_mul_ps(attribxslope, x1), _mm_mul_ps(attribyslope, y1)));
-				_mm_stream_ps(triangle->attribs[k][0], attribxslope);
-				_mm_stream_ps(triangle->attribs[k][1], attribyslope);
-				_mm_stream_ps(triangle->attribs[k][2], attriborigin);
+				_mm_storeu_ps(triangle->attribs[k][0], attribxslope);
+				_mm_storeu_ps(triangle->attribs[k][1], attribyslope);
+				_mm_storeu_ps(triangle->attribs[k][2], attriborigin);
 				if (k == DPSOFTRAST_ShaderModeTable[thread->shader_mode].lodarrayindex)
 				{
 					mipedgescale = _mm_movelh_ps(triangleedge1, triangleedge2);
