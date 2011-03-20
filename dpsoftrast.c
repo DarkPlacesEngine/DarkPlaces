@@ -2992,7 +2992,7 @@ void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Triangle * RESTRI
 #ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
 	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(subcolor), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2));
-	localcolor = _mm_shuffle_epi32(_mm_packs_epi32(localcolor, localcolor), _MM_SHUFFLE(1, 0, 1, 0));
+	localcolor = _mm_packs_epi32(localcolor, localcolor);
 	for (x = startx;x+2 <= endx;x+=2)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
@@ -3057,7 +3057,7 @@ void DPSOFTRAST_Draw_Span_TintedAddBuffersBGRA8(const DPSOFTRAST_State_Triangle 
 #ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
 	__m128i tint = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(inbtintbgra), _mm_set1_ps(256.0f)));
-	tint = _mm_shuffle_epi32(_mm_packs_epi32(tint, tint), _MM_SHUFFLE(1, 0, 1, 0));
+	tint = _mm_packs_epi32(tint, tint);
 	for (x = startx;x+2 <= endx;x+=2)
 	{
 		__m128i pix1 = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ina4ub[x*4]), _mm_setzero_si128());
@@ -3103,7 +3103,7 @@ void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Triangle *
 #ifdef SSE2_PRESENT
 	int x, startx = span->startx, endx = span->endx;
 	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(color), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2)), blend;
-	localcolor = _mm_shuffle_epi32(_mm_packs_epi32(localcolor, localcolor), _MM_SHUFFLE(1, 0, 1, 0));
+	localcolor = _mm_packs_epi32(localcolor, localcolor);
 	blend = _mm_slli_epi16(_mm_shufflehi_epi16(_mm_shufflelo_epi16(localcolor, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3)), 4);
 	for (x = startx;x+2 <= endx;x+=2)
 	{
