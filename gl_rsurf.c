@@ -956,6 +956,9 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 	int axis;
 	int surfaceindex;
 	int t;
+	int nodeleafindex;
+	int nodenumleafs;
+	const int *nodeleaflist;
 	int currentmaterialflags;
 	qboolean castshadow;
 	msurface_t *surface;
@@ -977,30 +980,51 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 		{
 			// node
 			node = bih->nodes + nodenum;
-			axis = node->type - BIH_SPLITX;
-#if 0
-			if (!BoxesOverlap(info->lightmins, info->lightmaxs, node->mins, node->maxs))
-				continue;
-#endif
-#if 0
-			if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
-				continue;
-#endif
-			if (info->lightmins[axis] <= node->backmax)
+			if (node->type == BIH_UNORDERED)
 			{
-				if (info->lightmaxs[axis] >= node->frontmin && nodestackpos < GETLIGHTINFO_MAXNODESTACK)
-					nodestack[nodestackpos++] = node->front;
-				nodestack[nodestackpos++] = node->back;
+				nodeleaflist = node->children;
+				for (nodenumleafs = 0;nodenumleafs < BIH_MAXUNORDEREDCHILDREN;nodenumleafs++)
+					if (node->children[nodenumleafs] < 0)
+						break;
 			}
-			else if (info->lightmaxs[axis] >= node->frontmin)
-				nodestack[nodestackpos++] = node->front;
 			else
-				continue; // light falls between children, nothing here
+			{
+				axis = node->type - BIH_SPLITX;
+#if 0
+				if (!BoxesOverlap(info->lightmins, info->lightmaxs, node->mins, node->maxs))
+					continue;
+#endif
+#if 0
+				if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
+					continue;
+#endif
+				if (info->lightmins[axis] <= node->backmax)
+				{
+					if (info->lightmaxs[axis] >= node->frontmin && nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+						nodestack[nodestackpos++] = node->front;
+					nodestack[nodestackpos++] = node->back;
+					continue;
+				}
+				else if (info->lightmaxs[axis] >= node->frontmin)
+				{
+					nodestack[nodestackpos++] = node->front;
+					continue;
+				}
+				else
+					continue; // light falls between children, nothing here
+			}
 		}
 		else
 		{
 			// leaf
-			leaf = bih->leafs + (-1-nodenum);
+			nodenum = -1-nodenum;
+			nodenumleafs = 1;
+			nodeleaflist = &nodenum;
+		}
+
+		for (nodeleafindex = 0;nodeleafindex < nodenumleafs;nodeleafindex++)
+		{
+			leaf = bih->leafs + nodeleaflist[nodeleafindex];
 			if (leaf->type != BIH_RENDERTRIANGLE)
 				continue;
 #if 1

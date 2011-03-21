@@ -52,6 +52,7 @@ cvar_t mod_q3shader_default_polygonoffset = {0, "mod_q3shader_default_polygonoff
 
 cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
 cvar_t mod_collision_bih = {0, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
+cvar_t mod_collision_bih_childrengrouping = {0, "mod_collision_bih_childrengrouping", "16", "this setting prevents excessive recursion depth in the BIH tree by building a shallow tree"};
 cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 
 static texture_t mod_q1bsp_texture_solid;
@@ -87,6 +88,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3shader_default_polygonoffset);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
 	Cvar_RegisterVariable(&mod_collision_bih);
+	Cvar_RegisterVariable(&mod_collision_bih_childrengrouping);
 	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
 
 	memset(&mod_q1bsp_texture_solid, 0, sizeof(mod_q1bsp_texture_solid));
@@ -5978,6 +5980,31 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 	while (nodenum >= 0)
 	{
 		node = model->collision_bih.nodes + nodenum;
+		if (node->type == BIH_UNORDERED)
+		{
+			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
+			{
+				leaf = model->collision_bih.leafs + node->children[axis];
+#if 1
+				if (!BoxesOverlap(point, point, leaf->mins, leaf->maxs))
+					continue;
+#endif
+				switch(leaf->type)
+				{
+				case BIH_BRUSH:
+					brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
+					Collision_TracePointBrushFloat(trace, point, brush);
+					break;
+				case BIH_COLLISIONTRIANGLE:
+					// collision triangle - skipped because they have no volume
+					break;
+				case BIH_RENDERTRIANGLE:
+					// render triangle - skipped because they have no volume
+					break;
+				}
+			}
+			return;
+		}
 		axis = node->type - BIH_SPLITX;
 		if (point[axis] <= node->backmax)
 		{
@@ -5993,6 +6020,10 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 	if (!model->collision_bih.leafs)
 		return;
 	leaf = model->collision_bih.leafs + (-1-nodenum);
+#if 1
+	if (!BoxesOverlap(point, point, leaf->mins, leaf->maxs))
+		return;
+#endif
 	switch(leaf->type)
 	{
 	case BIH_BRUSH:
@@ -6042,6 +6073,37 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
 #endif
+		if (node->type == BIH_UNORDERED)
+		{
+			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
+			{
+				leaf = model->collision_bih.leafs + node->children[axis];
+#if 1
+				if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+					continue;
+#endif
+				switch(leaf->type)
+				{
+				case BIH_BRUSH:
+					brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
+					Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
+					break;
+				case BIH_COLLISIONTRIANGLE:
+					if (!mod_q3bsp_curves_collisions.integer)
+						continue;
+					e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
+					texture = model->data_textures + leaf->textureindex;
+					Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					break;
+				case BIH_RENDERTRIANGLE:
+					e = model->surfmesh.data_element3i + 3*leaf->itemindex;
+					texture = model->data_textures + leaf->textureindex;
+					Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					break;
+				}
+			}
+			return;
+		}
 		axis = node->type - BIH_SPLITX;
 #if 0
 		if (segmentmins[axis] <= node->backmax)
@@ -6325,6 +6387,37 @@ static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_mode
 	while (nodenum >= 0)
 	{
 		node = model->collision_bih.nodes + nodenum;
+		if (node->type == BIH_UNORDERED)
+		{
+			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
+			{
+				leaf = model->collision_bih.leafs + node->children[axis];
+#if 1
+				if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+					continue;
+#endif
+				switch(leaf->type)
+				{
+				case BIH_BRUSH:
+					brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
+					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush, brush);
+					break;
+				case BIH_COLLISIONTRIANGLE:
+					if (!mod_q3bsp_curves_collisions.integer)
+						continue;
+					e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
+					texture = model->data_textures + leaf->textureindex;
+					Collision_TraceBrushTriangleFloat(trace, thisbrush_start, thisbrush_end, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					break;
+				case BIH_RENDERTRIANGLE:
+					e = model->surfmesh.data_element3i + 3*leaf->itemindex;
+					texture = model->data_textures + leaf->textureindex;
+					Collision_TraceBrushTriangleFloat(trace, thisbrush_start, thisbrush_end, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					break;
+				}
+			}
+			return;
+		}
 		axis = node->type - BIH_SPLITX;
 #if 1
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
@@ -7050,7 +7143,7 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 	temp_leafsortscratch = temp_leafsort + bihnumleafs;
 
 	// now build it
-	BIH_Build(out, bihnumleafs, bihleafs, bihmaxnodes, bihnodes, temp_leafsort, temp_leafsortscratch);
+	BIH_Build(out, bihnumleafs, bihleafs, bihmaxnodes, bihnodes, temp_leafsort, temp_leafsortscratch, mod_collision_bih_childrengrouping.integer);
 
 	// we're done with the temporary data
 	Mem_Free(temp_leafsort);
@@ -7164,7 +7257,7 @@ void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->TraceLine = Mod_Q3BSP_TraceLine;
 	mod->TracePoint = Mod_Q3BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q3BSP_PointSuperContents;
-	mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLineAgainstSurfaces;
+	mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLine;
 	mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
@@ -7463,7 +7556,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 	loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 	loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
-	loadmodel->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLineAgainstSurfaces;
+	loadmodel->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLine;
 	loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	loadmodel->brush.TraceLineOfSight = NULL;
 	loadmodel->brush.SuperContentsFromNativeContents = NULL;
