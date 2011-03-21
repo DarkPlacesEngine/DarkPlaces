@@ -6069,7 +6069,7 @@ static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model
 	while (nodenum >= 0)
 	{
 		node = bih->nodes + nodenum;
-#if 0
+#if 1
 		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
 			return;
 #endif
