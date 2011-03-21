@@ -6,6 +6,8 @@
 #ifndef BIH_H
 #define BIH_H
 
+#define BIH_MAXUNORDEREDCHILDREN 16
+
 typedef enum biherror_e
 {
 	BIHERROR_OK, // no error, be happy
@@ -17,15 +19,16 @@ typedef enum bih_nodetype_e
 {
 	BIH_SPLITX = 0,
 	BIH_SPLITY = 1,
-	BIH_SPLITZ = 2
+	BIH_SPLITZ = 2,
+	BIH_UNORDERED = 3,
 }
 bih_nodetype_t;
 
 typedef enum bih_leaftype_e
 {
-	BIH_BRUSH = 3,
-	BIH_COLLISIONTRIANGLE = 4,
-	BIH_RENDERTRIANGLE = 5
+	BIH_BRUSH = 4,
+	BIH_COLLISIONTRIANGLE = 5,
+	BIH_RENDERTRIANGLE = 6
 }
 bih_leaftype_t;
 
@@ -42,6 +45,8 @@ typedef struct bih_node_s
 	// interval of children
 	float frontmin; // children[0]
 	float backmax; // children[1]
+	// BIH_UNORDERED uses this for a list of leafindex (positive), -1 = end of list
+	int children[BIH_MAXUNORDEREDCHILDREN];
 }
 bih_node_t;
 
@@ -73,13 +78,14 @@ typedef struct bih_s
 
 	// fields used only during BIH_Build:
 	int maxnodes;
+	int maxchildrenunordered;
 	int error; // set to a value if an error occurs in building (such as numnodes == maxnodes)
 	int *leafsort;
 	int *leafsortscratch;
 }
 bih_t;
 
-int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch);
+int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch, int maxchildrenunordered);
 
 int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, const float *mins, const float *maxs);
 
