@@ -5980,6 +5980,10 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 	while (nodenum >= 0)
 	{
 		node = model->collision_bih.nodes + nodenum;
+#if 1
+		if (!BoxesOverlap(point, point, node->mins, node->maxs))
+			continue;
+#endif
 		if (node->type == BIH_UNORDERED)
 		{
 			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
