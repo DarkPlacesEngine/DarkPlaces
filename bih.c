@@ -53,15 +53,12 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *tota
 	totalmaxs[0] = maxs[0];
 	totalmaxs[1] = maxs[1];
 	totalmaxs[2] = maxs[2];
-	// if there is only one child this is a leaf
-	if (numchildren < 2)
-		return -1-leaflist[0];
 	// if we run out of nodes it's the caller's fault, but don't crash
 	if (bih->numnodes == bih->maxnodes)
 	{
 		if (!bih->error)
 			bih->error = BIHERROR_OUT_OF_NODES;
-		return -1-leaflist[0];
+		return 0;
 	}
 	nodenum = bih->numnodes++;
 	node = bih->nodes + nodenum;
@@ -77,8 +74,8 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *tota
 	node->frontmin = 0;
 	node->backmax = 0;
 	memset(node->children, -1, sizeof(node->children));
-	// check if this should be an unordered node to reduce recursion depth
-	if (numchildren <= bih->maxchildrenunordered)
+	// check if there are few enough children to store an unordered node
+	if (numchildren <= BIH_MAXUNORDEREDCHILDREN)
 	{
 		node->type = BIH_UNORDERED;
 		for (j = 0;j < numchildren;j++)
@@ -133,7 +130,7 @@ static int BIH_BuildNode(bih_t *bih, int numchildren, int *leaflist, float *tota
 	return nodenum;
 }
 
-int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch, int maxchildrenunordered)
+int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch)
 {
 	int i;
 
@@ -145,9 +142,6 @@ int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_nod
 	bih->numnodes = 0;
 	bih->maxnodes = maxnodes;
 	bih->nodes = nodes;
-	bih->maxchildrenunordered = maxchildrenunordered;
-	if (bih->maxchildrenunordered > BIH_MAXUNORDEREDCHILDREN)
-		bih->maxchildrenunordered = BIH_MAXUNORDEREDCHILDREN;
 
 	// clear things we intend to rebuild
 	memset(bih->nodes, 0, sizeof(bih->nodes[0]) * bih->maxnodes);
@@ -163,7 +157,7 @@ static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int ma
 	int axis;
 	bih_node_t *node;
 	bih_leaf_t *leaf;
-	while (nodenum >= 0)
+	for(;;)
 	{
 		node = bih->nodes + nodenum;
 		// check if this is an unordered node (which holds an array of leaf numbers)
@@ -212,32 +206,11 @@ static void BIH_GetTriangleListForBox_Node(const bih_t *bih, int nodenum, int ma
 		// fell between the child groups, nothing here
 		return;
 	}
-	leaf = bih->leafs + (-1-nodenum);
-	if (mins[0] > leaf->maxs[0] || maxs[0] < leaf->mins[0]
-	 || mins[1] > leaf->maxs[1] || maxs[1] < leaf->mins[1]
-	 || mins[2] > leaf->maxs[2] || maxs[2] < leaf->mins[2])
-		return;
-	switch(leaf->type)
-	{
-	case BIH_RENDERTRIANGLE:
-		if (*numtrianglespointer >= maxtriangles)
-		{
-			++*numtrianglespointer; // so the caller can detect overflow
-			break;
-		}
-		if(trianglelist_surf)
-			trianglelist_surf[*numtrianglespointer] = leaf->surfaceindex;
-		trianglelist_idx[*numtrianglespointer] = leaf->itemindex;
-		++*numtrianglespointer;
-		break;
-	default:
-		break;
-	}
 }
 
 int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, const float *mins, const float *maxs)
 {
 	int numtriangles = 0;
-	BIH_GetTriangleListForBox_Node(bih, 0, maxtriangles, trianglelist_idx, trianglelist_surf, &numtriangles, mins, maxs);
+	BIH_GetTriangleListForBox_Node(bih, bih->rootnode, maxtriangles, trianglelist_idx, trianglelist_surf, &numtriangles, mins, maxs);
 	return numtriangles;
 }

@@ -6,7 +6,7 @@
 #ifndef BIH_H
 #define BIH_H
 
-#define BIH_MAXUNORDEREDCHILDREN 16
+#define BIH_MAXUNORDEREDCHILDREN 8
 
 typedef enum biherror_e
 {
@@ -39,13 +39,13 @@ typedef struct bih_node_s
 	// TODO: move bounds data to parent node and remove it from leafs?
 	float mins[3];
 	float maxs[3];
-	// < 0 is a leaf index (-1-leafindex), >= 0 is another node index (always >= this node's index)
+	// node indexes of children (always > this node's index)
 	int front;
 	int back;
 	// interval of children
 	float frontmin; // children[0]
 	float backmax; // children[1]
-	// BIH_UNORDERED uses this for a list of leafindex (positive), -1 = end of list
+	// BIH_UNORDERED uses this for a list of leafindex (all >= 0), -1 = end of list
 	int children[BIH_MAXUNORDEREDCHILDREN];
 }
 bih_node_t;
@@ -78,14 +78,13 @@ typedef struct bih_s
 
 	// fields used only during BIH_Build:
 	int maxnodes;
-	int maxchildrenunordered;
 	int error; // set to a value if an error occurs in building (such as numnodes == maxnodes)
 	int *leafsort;
 	int *leafsortscratch;
 }
 bih_t;
 
-int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch, int maxchildrenunordered);
+int BIH_Build(bih_t *bih, int numleafs, bih_leaf_t *leafs, int maxnodes, bih_node_t *nodes, int *temp_leafsort, int *temp_leafsortscratch);
 
 int BIH_GetTriangleListForBox(const bih_t *bih, int maxtriangles, int *trianglelist_idx, int *trianglelist_surf, const float *mins, const float *maxs);
 
