@@ -2072,14 +2072,14 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		permutation |= SHADERPERMUTATION_ALPHAKILL;
-	if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
-		permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND; // todo: make generic
 	if (rsurfacepass == RSURFPASS_BACKGROUND)
 	{
 		// distorted background
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
 		{
 			mode = SHADERMODE_WATER;
+			if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
+				permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND;
 			if((r_wateralpha.value < 1) && (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERALPHA))
 			{
 				// this is the right thing to do for wateralpha
