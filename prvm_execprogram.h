@@ -1,10 +1,12 @@
 #ifdef PRVMTIMEPROFILING 
 #define PreError() \
+	prog->xstatement = st - prog->statements; \
 	tm = Sys_DoubleTime(); \
 	prog->xfunction->profile += (st - startst); \
 	prog->xfunction->tprofile += (tm - starttm);
 #else
 #define PreError() \
+	prog->xstatement = st - prog->statements; \
 	prog->xfunction->profile += (st - startst);
 #endif
 
@@ -167,7 +169,10 @@
 					goto cleanup;
 				}
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+				{
+					prog->xstatement = st - prog->statements;
 					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
@@ -179,7 +184,10 @@
 					goto cleanup;
 				}
 				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+				{
+					prog->xstatement = st - prog->statements;
 					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
+				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
