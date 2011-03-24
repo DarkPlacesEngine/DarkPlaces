@@ -98,9 +98,10 @@ void R_Shadow_PrepareShadowSides(int numtris);
 
 void R_Shadow_PrepareModelShadows(void);
 
-#define LP_LIGHTMAP	1
-#define LP_RTWORLD	2
-#define LP_DYNLIGHT	4
+#define LP_LIGHTMAP		1
+#define LP_RTWORLD		2
+#define LP_DYNLIGHT		4
+void R_LightPoint(vec3_t color, const vec3_t p, const int flags);
 void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, const int flags);
 
 #endif

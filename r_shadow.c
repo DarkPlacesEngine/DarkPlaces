@@ -6598,6 +6598,84 @@ LIGHT SAMPLING
 =============================================================================
 */
 
+void R_LightPoint(vec3_t color, const vec3_t p, const int flags)
+{
+	int i, numlights, flag;
+	float f, relativepoint[3], dist, dist2, lightradius2;
+	vec3_t diffuse, n;
+	rtlight_t *light;
+	dlight_t *dlight;
+
+	VectorClear(color);
+
+	if (r_fullbright.integer)
+	{
+		VectorSet(color, 1, 1, 1);
+		return;
+	}
+
+	if (flags & LP_LIGHTMAP)
+	{
+		if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+		{
+			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, color, diffuse, n);
+			color[0] += r_refdef.scene.ambient + diffuse[0];
+			color[1] += r_refdef.scene.ambient + diffuse[1];
+			color[2] += r_refdef.scene.ambient + diffuse[2];
+		}
+		else
+			VectorSet(color, 1, 1, 1);
+	}
+	if (flags & LP_RTWORLD)
+	{
+		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+		numlights = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+		for (i = 0; i < numlights; i++)
+		{
+			dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);
+			if (!dlight)
+				continue;
+			light = &dlight->rtlight;
+			if (!(light->flags & flag))
+				continue;
+			// sample
+			lightradius2 = light->radius * light->radius;
+			VectorSubtract(light->shadoworigin, p, relativepoint);
+			dist2 = VectorLength2(relativepoint);
+			if (dist2 >= lightradius2)
+				continue;
+			dist = sqrt(dist2) / light->radius;
+			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
+			if (f <= 0)
+				continue;
+			// todo: add to both ambient and diffuse
+			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1)
+				VectorMA(color, f, light->currentcolor, color);
+		}
+	}
+	if (flags & LP_DYNLIGHT)
+	{
+		// sample dlights
+		for (i = 0;i < r_refdef.scene.numlights;i++)
+		{
+			light = r_refdef.scene.lights[i];
+			// sample
+			lightradius2 = light->radius * light->radius;
+			VectorSubtract(light->shadoworigin, p, relativepoint);
+			dist2 = VectorLength2(relativepoint);
+			if (dist2 >= lightradius2)
+				continue;
+			dist = sqrt(dist2) / light->radius;
+			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
+			if (f <= 0)
+				continue;
+			// todo: add to both ambient and diffuse
+			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1)
+				VectorMA(color, f, light->color, color);
+		}
+	}
+}
+
 void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const vec3_t p, const int flags)
 {
 	int i, numlights, flag;
@@ -6620,7 +6698,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 		return;
 	}
 
-	if (flags & LP_LIGHTMAP)
+	if (flags == LP_LIGHTMAP)
 	{
 		VectorSet(ambient, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
 		VectorClear(diffuse);

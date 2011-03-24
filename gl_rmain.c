@@ -4614,7 +4614,7 @@ static void R_View_UpdateEntityLighting (void)
 			{
 				if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
 					org[2] = org[2] + r_overheadsprites_pushback.value;
-				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+				R_LightPoint(ent->modellight_ambient, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 			}
 			else
 				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP);
