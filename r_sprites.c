@@ -374,6 +374,10 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		org[2] = org[2] - middle[2]*r_overheadsprites_pushback.value;
 		// little perspective effect
 		up[2] = up[2] + dir_angle * 0.3;
+		// a bit of counter-camera rotation
+		up[0] = up[0] + r_refdef.view.forward[0] * 0.07;
+		up[1] = up[1] + r_refdef.view.forward[1] * 0.07;
+		up[2] = up[2] + r_refdef.view.forward[2] * 0.07;
 		break;
 	}
 
