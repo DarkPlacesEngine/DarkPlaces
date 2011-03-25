@@ -2514,68 +2514,72 @@ void EntityFrame5_CL_ReadFrame(void)
 	}
 }
 
+static int packetlog5cmp(const void *a_, const void *b_)
+{
+	const entityframe5_packetlog_t *a = (const entityframe5_packetlog_t *) a_;
+	const entityframe5_packetlog_t *b = (const entityframe5_packetlog_t *) b_;
+	return a->packetnumber - b->packetnumber;
+}
+
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum)
 {
-	int i, j, k, l, bits;
-	entityframe5_changestate_t *s, *s2;
-	entityframe5_packetlog_t *p, *p2;
-	unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
-	// scan for packets that were lost
+	int i, j, l, bits;
+	entityframe5_changestate_t *s;
+	entityframe5_packetlog_t *p;
+	static unsigned char statsdeltabits[(MAX_CL_STATS+7)/8];
+	static int deltabits[MAX_EDICTS];
+	entityframe5_packetlog_t *packetlogs[ENTITYFRAME5_MAXPACKETLOGS];
+
 	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
+		packetlogs[i] = p;
+	qsort(packetlogs, sizeof(*packetlogs), ENTITYFRAME5_MAXPACKETLOGS, packetlog5cmp);
+
+	memset(deltabits, 0, sizeof(deltabits));
+	memset(statsdeltabits, 0, sizeof(statsdeltabits));
+	for (i = 0; i < ENTITYFRAME5_MAXPACKETLOGS; i++)
 	{
-		if (p->packetnumber && p->packetnumber <= framenum)
+		p = packetlogs[i];
+
+		if (!p->packetnumber)
+			continue;
+
+		if (p->packetnumber <= framenum)
 		{
-			// packet was lost - merge deltabits into the main array so they
-			// will be re-sent, but only if there is no newer update of that
-			// bit in the logs (as those will arrive before this update)
 			for (j = 0, s = p->states;j < p->numstates;j++, s++)
-			{
-				// check for any newer updates to this entity and mask off any
-				// overlapping bits (we don't need to send something again if
-				// it has already been sent more recently)
-				bits = s->bits & ~d->deltabits[s->number];
-				for (k = 0, p2 = d->packetlog;k < ENTITYFRAME5_MAXPACKETLOGS && bits;k++, p2++)
-				{
-					if (p2->packetnumber > framenum)
-					{
-						for (l = 0, s2 = p2->states;l < p2->numstates;l++, s2++)
-						{
-							if (s2->number == s->number)
-							{
-								bits &= ~s2->bits;
-								break;
-							}
-						}
-					}
-				}
-				// if the bits haven't all been cleared, there were some bits
-				// lost with this packet, so set them again now
-				if (bits)
-				{
-					d->deltabits[s->number] |= bits;
-					// if it was a very important update, set priority higher
-					if (bits & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL | E5_COLORMAP))
-						d->priorities[s->number] = max(d->priorities[s->number], 4);
-					else
-						d->priorities[s->number] = max(d->priorities[s->number], 1);
-				}
-			}
-			// mark lost stats
-			for (j = 0;j < MAX_CL_STATS;j++)
-			{
-				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
-					statsdeltabits[l] = p->statsdeltabits[l] & ~host_client->statsdeltabits[l];
-				for (k = 0, p2 = d->packetlog;k < ENTITYFRAME5_MAXPACKETLOGS;k++, p2++)
-					if (p2->packetnumber > framenum)
-						for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
-							statsdeltabits[l] = p->statsdeltabits[l] & ~p2->statsdeltabits[l];
-				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
-					host_client->statsdeltabits[l] |= statsdeltabits[l];
-			}
-			// delete this packet log as it is now obsolete
+				deltabits[s->number] |= s->bits;
+
+			for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+				statsdeltabits[l] |= p->statsdeltabits[l];
+
 			p->packetnumber = 0;
 		}
+		else
+		{
+			for (j = 0, s = p->states;j < p->numstates;j++, s++)
+				deltabits[s->number] &= ~s->bits;
+			for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+				statsdeltabits[l] &= ~p->statsdeltabits[l];
+		}
 	}
+
+	for(i = 0; i < d->maxedicts; ++i)
+	{
+		bits = deltabits[i] & ~d->deltabits[i];
+		if(bits)
+		{
+			d->deltabits[i] |= bits;
+			// if it was a very important update, set priority higher
+			if (bits & (E5_FULLUPDATE | E5_ATTACHMENT | E5_MODEL | E5_COLORMAP))
+				d->priorities[i] = max(d->priorities[i], 4);
+			else
+				d->priorities[i] = max(d->priorities[i], 1);
+		}
+	}
+
+	for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+		host_client->statsdeltabits[l] |= statsdeltabits[l];
+		// no need to mask out the already-set bits here, as we do not
+		// do that priorities stuff
 }
 
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
