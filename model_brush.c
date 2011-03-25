@@ -7067,7 +7067,7 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 	}
 
 	// allocate buffers for the produced and temporary data
-	bihmaxnodes = bihnumleafs - 1;
+	bihmaxnodes = bihnumleafs + 1;
 	bihnodes = (bih_node_t *)Mem_Alloc(loadmodel->mempool, sizeof(bih_node_t) * bihmaxnodes);
 	temp_leafsort = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int) * bihnumleafs * 2);
 	temp_leafsortscratch = temp_leafsort + bihnumleafs;
