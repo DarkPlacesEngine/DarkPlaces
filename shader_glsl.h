@@ -693,7 +693,7 @@
 "\n"
 "#  ifdef USESHADOWSAMPLER\n"
 "#    ifdef USESHADOWMAPPCF\n"
-"#      define texval(x, y) dp_shadow2D(Texture_ShadowMap2D, vec3(center + vec2(x, y)*ShadowMap_TextureScale, shadowmaptc.z)).r  \n"
+"#      define texval(x, y) float(dp_shadow2D(Texture_ShadowMap2D, vec3(center + vec2(x, y)*ShadowMap_TextureScale, shadowmaptc.z)))  \n"
 "	vec2 center = shadowmaptc.xy*ShadowMap_TextureScale;\n"
 "	f = dot(vec4(0.25), vec4(texval(-0.4, 1.0), texval(-1.0, -0.4), texval(0.4, -1.0), texval(1.0, 0.4)));\n"
 "#    else\n"
