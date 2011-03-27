@@ -9206,6 +9206,12 @@ static void RSurf_DrawBatch_GL11_MakeFogColor(float r, float g, float b, float a
 	float f;
 	const float *v;
 	float *c;
+
+	// fake shading
+	rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
+	rsurface.passcolor4f_vertexbuffer = 0;
+	rsurface.passcolor4f_bufferoffset = 0;
+
 	for (i = 0, v = rsurface.batchvertex3f + rsurface.batchfirstvertex * 3, c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;i < rsurface.batchnumvertices;i++, v += 3, c += 4)
 	{
 		f = 1 - RSurf_FogVertex(v);
