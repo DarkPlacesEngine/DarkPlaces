@@ -319,7 +319,7 @@ cvar_t r_shadow_sortsurfaces = {0, "r_shadow_sortsurfaces", "1", "improve perfor
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
-cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, requires r_shadow_realtime_world 1"};
+cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
 cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
 cvar_t r_shadow_bouncegrid_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_directionalshading", "0", "use diffuse shading rather than ambient, 3D texture becomes 4x as many pixels to hold the additional data"};
 cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dlightparticlemultiplier", "0", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
@@ -2360,7 +2360,29 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	int x, y, z, d;
 	rtlight_t *rtlight;
 	r_shadow_bouncegrid_settings_t settings;
-	qboolean enable = r_shadow_bouncegrid.integer != 0 && vid.support.ext_texture_3d && r_refdef.scene.worldmodel;
+	qboolean enable = r_shadow_bouncegrid.integer != 0 && r_refdef.scene.worldmodel;
+	qboolean allowdirectionalshading = false;
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+		allowdirectionalshading = true;
+		if (!vid.support.ext_texture_3d)
+			return;
+		break;
+	case RENDERPATH_GLES2:
+		// for performance reasons, do not use directional shading on GLES devices
+		if (!vid.support.ext_texture_3d)
+			return;
+		break;
+		// these renderpaths do not currently have the code to display the bouncegrid, so disable it on them...
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+		return;
+	}
 
 	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
 
@@ -2426,7 +2448,7 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	// build up a complete collection of the desired settings, so that memcmp can be used to compare parameters
 	settings.staticmode                    = r_shadow_bouncegrid_static.integer != 0;
 	settings.bounceanglediffuse            = r_shadow_bouncegrid_bounceanglediffuse.integer != 0;
-	settings.directionalshading            = r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_directionalshading.integer != 0;
+	settings.directionalshading            = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_directionalshading.integer != 0) && allowdirectionalshading;
 	settings.dlightparticlemultiplier      = r_shadow_bouncegrid_dlightparticlemultiplier.value;
 	settings.hitmodels                     = r_shadow_bouncegrid_hitmodels.integer != 0;
 	settings.lightradiusscale              = r_shadow_bouncegrid_lightradiusscale.value;
