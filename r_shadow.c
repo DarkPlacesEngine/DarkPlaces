@@ -2973,7 +2973,7 @@ int bboxedges[12][2] =
 
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
-	if (!r_shadow_scissor.integer)
+	if (!r_shadow_scissor.integer || r_shadow_usingdeferredprepass)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
 		r_shadow_lightscissor[1] = r_refdef.view.viewport.y;
