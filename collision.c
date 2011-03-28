@@ -1830,6 +1830,7 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(int type, dp_model_t *mod
 	else
 	{
 		// cached trace lookup
+		memset(&params, 0, sizeof(params));
 		params.type = type;
 		params.model = model;
 		VectorCopy(bodymins, params.bodymins);
