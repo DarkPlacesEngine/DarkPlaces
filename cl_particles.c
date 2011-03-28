@@ -2468,7 +2468,7 @@ void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtligh
 	float *v3f, *t2f, *c4f;
 	particletexture_t *tex;
 	float up2[3], v[3], right[3], up[3], fog, ifog, size, len, lenfactor, alpha;
-	float ambient[3], diffuse[3], diffusenormal[3];
+//	float ambient[3], diffuse[3], diffusenormal[3];
 	float palpha, spintime, spinrad, spincos, spinsin, spinm1, spinm2, spinm3, spinm4, baseright[3], baseup[3];
 	vec4_t colormultiplier;
 	float minparticledist_start, minparticledist_end;
