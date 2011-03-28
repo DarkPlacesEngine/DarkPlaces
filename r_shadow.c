@@ -2386,28 +2386,6 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 
 	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
 
-	// see if there are really any lights to render...
-	if (enable && r_shadow_bouncegrid_static.integer)
-	{
-		enable = false;
-		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
-		for (lightindex = 0;lightindex < range;lightindex++)
-		{
-			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-			if (!light || !(light->flags & flag))
-				continue;
-			rtlight = &light->rtlight;
-			// when static, we skip styled lights because they tend to change...
-			if (rtlight->style > 0)
-				continue;
-			VectorScale(rtlight->color, (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale), lightcolor);
-			if (!VectorLength2(lightcolor))
-				continue;
-			enable = true;
-			break;
-		}
-	}
-
 	if (!enable)
 	{
 		if (r_shadow_bouncegridtexture)
