@@ -957,7 +957,6 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 	int surfaceindex;
 	int t;
 	int nodeleafindex;
-	const int *nodeleaflist;
 	int currentmaterialflags;
 	qboolean castshadow;
 	msurface_t *surface;
@@ -979,7 +978,6 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 		node = bih->nodes + nodenum;
 		if (node->type == BIH_UNORDERED)
 		{
-			nodeleaflist = node->children;
 			for (nodeleafindex = 0;nodeleafindex < BIH_MAXUNORDEREDCHILDREN && node->children[nodeleafindex] >= 0;nodeleafindex++)
 			{
 				leaf = bih->leafs + node->children[nodeleafindex];
