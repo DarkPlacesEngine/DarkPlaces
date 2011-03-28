@@ -2387,39 +2387,20 @@ static void R_Shadow_UpdateBounceGridTexture(void)
 	r_shadow_bouncegridintensity = r_shadow_bouncegrid_intensity.value;
 
 	// see if there are really any lights to render...
-	if (enable)
+	if (enable && r_shadow_bouncegrid_static.integer)
 	{
 		enable = false;
 		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
-		range1 = r_shadow_bouncegrid_static.integer ? 0 : r_refdef.scene.numlights;
-		range2 = range + range1;
-		for (lightindex = 0;lightindex < range2;lightindex++)
+		for (lightindex = 0;lightindex < range;lightindex++)
 		{
-			if (r_shadow_bouncegrid_static.integer)
-			{
-				light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-				if (!light || !(light->flags & flag))
-					continue;
-				rtlight = &light->rtlight;
-				// when static, we skip styled lights because they tend to change...
-				if (rtlight->style > 0)
-					continue;
-				VectorScale(rtlight->color, (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale) * (rtlight->style >= 0 ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1), lightcolor);
-			}
-			else
-			{
-				if (lightindex < range)
-				{
-					light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-					rtlight = &light->rtlight;
-				}
-				else
-					rtlight = r_refdef.scene.lights[lightindex - range];
-				// draw only visible lights (major speedup)
-				if (!rtlight->draw)
-					continue;
-				VectorScale(rtlight->currentcolor, rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale, lightcolor);
-			}
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (!light || !(light->flags & flag))
+				continue;
+			rtlight = &light->rtlight;
+			// when static, we skip styled lights because they tend to change...
+			if (rtlight->style > 0)
+				continue;
+			VectorScale(rtlight->color, (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale), lightcolor);
 			if (!VectorLength2(lightcolor))
 				continue;
 			enable = true;
