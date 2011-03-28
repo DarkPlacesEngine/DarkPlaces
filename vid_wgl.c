@@ -259,6 +259,7 @@ static cvar_t joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0", "how fast th
 static cvar_t joy_wwhack1 = {0, "joywwhack1", "0.0", "special hack for wingman warrior"};
 static cvar_t joy_wwhack2 = {0, "joywwhack2", "0.0", "special hack for wingman warrior"};
 static cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
+static cvar_t joy_axiskeyevents_deadzone = {CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
 
 static cvar_t vid_forcerefreshrate = {0, "vid_forcerefreshrate", "0", "try to set the given vid_refreshrate even if Windows doesn't list it as valid video mode"};
 
@@ -2309,11 +2310,11 @@ static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
 			return false;
 		axis = IN_JoystickGetAxisNum(AxisForward);
 		if (keycode == K_UPARROW || keycode == K_DOWNARROW)
-			if (IN_JoystickGetAxis(axis, 1, 0.01) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
+			if (IN_JoystickGetAxis(axis, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
 				return true;
 		axis = IN_JoystickGetAxisNum(AxisSide);
 		if (keycode == K_RIGHTARROW || keycode == K_LEFTARROW)
-			if (IN_JoystickGetAxis(axis, 1, 0.01) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
+			if (IN_JoystickGetAxis(axis, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[axis].move || joy_axescache[axis].oldmove)
 				return true;
 	}
 
@@ -2513,7 +2514,7 @@ static void IN_JoyMove (void)
 	
 		// cache for keyevents
 		joy_axescache[i].oldmove = joy_axescache[i].move;
-		joy_axescache[i].move = IN_JoystickGetAxis(i, 1, 0.01);
+		joy_axescache[i].move = IN_JoystickGetAxis(i, 1, joy_axiskeyevents_deadzone.value);
 	}
 
 	// run keyevents
@@ -2549,6 +2550,7 @@ static void IN_Init(void)
 	Cvar_RegisterVariable (&joy_wwhack1);
 	Cvar_RegisterVariable (&joy_wwhack2);
 	Cvar_RegisterVariable (&joy_axiskeyevents);
+	Cvar_RegisterVariable (&joy_axiskeyevents_deadzone);
 	Cvar_RegisterVariable (&vid_forcerefreshrate);
 	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f, "applies current joyadv* cvar settings to the joystick driver");
 }

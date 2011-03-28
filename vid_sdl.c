@@ -91,6 +91,7 @@ cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multipl
 cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
 cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
+cvar_t joy_axiskeyevents_deadzone = {CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
 
 #ifdef __IPHONEOS__
 # define SETVIDEOMODE 0
@@ -584,10 +585,10 @@ static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
 		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
 
 		if (keycode == K_UPARROW || keycode == K_DOWNARROW)
-			if (IN_JoystickGetAxis(joy, joy_axisforward.integer, 1, 0.01) || joy_axescache[joy_axisforward.integer].move || joy_axescache[joy_axisforward.integer].oldmove)
+			if (IN_JoystickGetAxis(joy, joy_axisforward.integer, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[joy_axisforward.integer].move || joy_axescache[joy_axisforward.integer].oldmove)
 				return true;
 		if (keycode == K_RIGHTARROW || keycode == K_LEFTARROW)
-			if (IN_JoystickGetAxis(joy, joy_axisside.integer, 1, 0.01) || joy_axescache[joy_axisside.integer].move || joy_axescache[joy_axisside.integer].oldmove)
+			if (IN_JoystickGetAxis(joy, joy_axisside.integer, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[joy_axisside.integer].move || joy_axescache[joy_axisside.integer].oldmove)
 				return true;
 	}
 
@@ -826,7 +827,7 @@ void IN_Move( void )
 		for (j = 0; j < numaxes; j++)
 		{
 			joy_axescache[j].oldmove = joy_axescache[j].move;
-			joy_axescache[j].move = IN_JoystickGetAxis(joy, j, 1, 0.01);
+			joy_axescache[j].move = IN_JoystickGetAxis(joy, j, 1, joy_axiskeyevents_deadzone.value);
 		}
 
 		// run keyevents
@@ -1786,6 +1787,7 @@ void VID_Init (void)
 	Cvar_RegisterVariable(&joy_sensitivityyaw);
 	//Cvar_RegisterVariable(&joy_sensitivityroll);
 	Cvar_RegisterVariable(&joy_axiskeyevents);
+	Cvar_RegisterVariable(&joy_axiskeyevents_deadzone);
 #ifdef __IPHONEOS__
 	Cvar_SetValueQuick(&vid_touchscreen, 1);
 #endif
