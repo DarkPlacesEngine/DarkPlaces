@@ -922,6 +922,12 @@ void Sys_SendKeyEvents( void )
 				if (event.jbutton.button < 48)
 					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
 				break;
+			case SDL_JOYAXISMOTION:
+			case SDL_JOYBALLMOTION:
+			case SDL_JOYHATMOTION:
+				break;
+			case SDL_VIDEOEXPOSE:
+				break;
 			case SDL_VIDEORESIZE:
 				if(vid_resizable.integer < 2)
 				{
@@ -1031,6 +1037,12 @@ void Sys_SendKeyEvents( void )
 			case SDL_JOYBUTTONUP:
 				if (event.jbutton.button < 48)
 					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
+				break;
+			case SDL_JOYAXISMOTION:
+			case SDL_JOYBALLMOTION:
+			case SDL_JOYHATMOTION:
+				break;
+			case SDL_VIDEOEXPOSE:
 				break;
 			case SDL_WINDOWEVENT:
 				//if (event.window.windowID == window) // how to compare?
