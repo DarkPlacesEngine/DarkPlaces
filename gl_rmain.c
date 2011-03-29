@@ -2888,7 +2888,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		permutation |= SHADERPERMUTATION_CUBEFILTER;
 	if (diffusescale > 0)
 		permutation |= SHADERPERMUTATION_DIFFUSE;
-	if (specularscale > 0)
+	if (specularscale > 0 && r_shadow_gloss.integer > 0)
 		permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
 	if (r_shadow_usingshadowmap2d)
 	{
