@@ -4469,8 +4469,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		buffer_FragColorbgra8[x*4+0] = c[0] * RefractColor[0];
 		buffer_FragColorbgra8[x*4+1] = c[1] * RefractColor[1];
 		buffer_FragColorbgra8[x*4+2] = c[2] * RefractColor[2];
-		buffer_FragColorbgra8[x*4+3] =                                         RefractColor[3] * 256; if(buffer_FragColorbgra8[x*4+3] > 255) buffer_FragColorbgra8[x*4+3] = 255;
-		buffer_FragColorbgra8[x*4+3] = 255; // WHY?!?!?!?!??!?!? is RefractColor[3] apparently 0?
+		buffer_FragColorbgra8[x*4+3] = min(RefractColor[3] * 256, 255);
 	}
 
 	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
