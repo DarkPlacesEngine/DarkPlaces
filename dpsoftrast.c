@@ -4350,19 +4350,9 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 
 void DPSOFTRAST_VertexShader_Refraction(void)
 {
-	int i;
-	int numvertices = dpsoftrast.numvertices;
-
 	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
 	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD0, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
-
-	for (i = 0;i < numvertices;i++)
-	{
-		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+0] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
-		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+1] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
-		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+2] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
-	}
 }
 
 void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
@@ -4375,7 +4365,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 
 	// texture reads
 	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	unsigned char buffer_texture_refractionbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	//unsigned char buffer_texture_refractionbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 
 	// varyings
@@ -4388,14 +4378,19 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 	float DistortScaleRefractReflect[2];
 	float RefractColor[4];
 
+	const unsigned char * RESTRICT pixelbase;
+	const unsigned char * RESTRICT pixel[4];
+	DPSOFTRAST_Texture *texture = thread->texbound[GL20TU_REFRACTION];
+	if(!texture) return;
+	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[0][0];
+
 	// read textures
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
-	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_refractionbgra8, GL20TU_REFRACTION, DPSOFTRAST_ARRAY_TEXCOORD1, buffer_z);
+	//DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_refractionbgra8, GL20TU_REFRACTION, DPSOFTRAST_ARRAY_TEXCOORD1, buffer_z);
 
 	// read varyings
 	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD1); // or POSITION?
-	printf("texcoord: from %f to %f\n", buffer_z[startx] * (ModelViewProjectionPositiondata[0] + startx * ModelViewProjectionPositionslope[0]), buffer_z[endx-1] * (ModelViewProjectionPositiondata[0] + (endx-1) * ModelViewProjectionPositionslope[0]));
 
 	// read uniforms
 	ScreenScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+0];
@@ -4412,20 +4407,20 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 	// do stuff
 	for (x = startx;x < endx;x++)
 	{
-		float ScreenScaleRefractReflectIW[2];
 		float SafeScreenTexCoord[2];
 		float ScreenTexCoord[2];
 		float v[3];
-		int p;
+		float iw;
+		unsigned char c[4];
 
 		z = buffer_z[x];
 
 		// "	vec2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
-		// "IW" was done in the vertex shader in the ModelViewProjectionPosition instead!
-
+		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
+        
 		// "	vec2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
-		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * z * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0];
-		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * z * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1];
+		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * iw * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0]; // * z (disappears)
+		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * iw * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1]; // * z (disappears)
 
 		// "	vec2 ScreenTexCoord = SafeScreenTexCoord + vec3(normalize(myhalf3(dp_texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5))).xy * DistortScaleRefractReflect.zw;\n"
 		v[0] = buffer_texture_normalbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
@@ -4436,11 +4431,44 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		ScreenTexCoord[1] = SafeScreenTexCoord[1] + v[1] * DistortScaleRefractReflect[1];
 
 		// "	dp_FragColor = vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord).rgb, 1.0) * RefractColor;\n"
-		p = (int) bound(startx, x + (ScreenTexCoord[0] - SafeScreenTexCoord[0]) / (ModelViewProjectionPositionslope[0]*z), endx-1);
-		p = x; // debug
-		buffer_FragColorbgra8[x*4+0] = buffer_texture_refractionbgra8[p*4+0] * RefractColor[0];
-		buffer_FragColorbgra8[x*4+1] = buffer_texture_refractionbgra8[p*4+1] * RefractColor[1];
-		buffer_FragColorbgra8[x*4+2] = buffer_texture_refractionbgra8[p*4+2] * RefractColor[2];
+		if(texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR)
+		{
+			unsigned int tc[2] = { ScreenTexCoord[0] * (texture->mipmap[0][2]<<16) - 32768, ScreenTexCoord[1] * (texture->mipmap[0][3]<<16) - 32678};
+			unsigned int frac[2] = { tc[0]&0xFFF, tc[1]&0xFFF };
+			unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
+			unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
+			int tci[2] = { tc[0]>>16, tc[1]>>16 };
+			int tci1[2] = { tci[0] + 1, tci[1] + 1 };
+			tci[0] = tci[0] >= 0 ? (tci[0] <= texture->mipmap[0][2]-1 ? tci[0] : texture->mipmap[0][2]-1) : 0;
+			tci[1] = tci[1] >= 0 ? (tci[1] <= texture->mipmap[0][3]-1 ? tci[1] : texture->mipmap[0][3]-1) : 0;
+			tci1[0] = tci1[0] >= 0 ? (tci1[0] <= texture->mipmap[0][2]-1 ? tci1[0] : texture->mipmap[0][2]-1) : 0;
+			tci1[1] = tci1[1] >= 0 ? (tci1[1] <= texture->mipmap[0][3]-1 ? tci1[1] : texture->mipmap[0][3]-1) : 0;
+			pixel[0] = pixelbase + 4 * (tci[1]*texture->mipmap[0][2]+tci[0]);
+			pixel[1] = pixelbase + 4 * (tci[1]*texture->mipmap[0][2]+tci1[0]);
+			pixel[2] = pixelbase + 4 * (tci1[1]*texture->mipmap[0][2]+tci[0]);
+			pixel[3] = pixelbase + 4 * (tci1[1]*texture->mipmap[0][2]+tci1[0]);
+			c[0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3])>>24;
+			c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3])>>24;
+			c[2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3])>>24;
+		}
+		else
+		{
+			int tci[2] = { ScreenTexCoord[0] * texture->mipmap[0][2] - 0.5, ScreenTexCoord[1] * texture->mipmap[0][3] - 0.5 };
+			int tci1[2] = { tci[0] + 1, tci[1] + 1 };
+			tci[0] = tci[0] >= 0 ? (tci[0] <= texture->mipmap[0][2]-1 ? tci[0] : texture->mipmap[0][2]-1) : 0;
+			tci[1] = tci[1] >= 0 ? (tci[1] <= texture->mipmap[0][3]-1 ? tci[1] : texture->mipmap[0][3]-1) : 0;
+			tci1[0] = tci1[0] >= 0 ? (tci1[0] <= texture->mipmap[0][2]-1 ? tci1[0] : texture->mipmap[0][2]-1) : 0;
+			tci1[1] = tci1[1] >= 0 ? (tci1[1] <= texture->mipmap[0][3]-1 ? tci1[1] : texture->mipmap[0][3]-1) : 0;
+			pixel[0] = pixelbase + 4 * (tci[1]*texture->mipmap[0][2]+tci[0]);
+			c[0] = pixel[0][0];
+			c[1] = pixel[0][1];
+			c[2] = pixel[0][2];
+		}
+
+		//p = (int) bound(startx, x + (ScreenTexCoord[0] - SafeScreenTexCoord[0]) / (ModelViewProjectionPositionslope[0]*z), endx-1);
+		buffer_FragColorbgra8[x*4+0] = c[0] * RefractColor[0];
+		buffer_FragColorbgra8[x*4+1] = c[1] * RefractColor[1];
+		buffer_FragColorbgra8[x*4+2] = c[2] * RefractColor[2];
 		buffer_FragColorbgra8[x*4+3] =                                         RefractColor[3] * 256; if(buffer_FragColorbgra8[x*4+3] > 255) buffer_FragColorbgra8[x*4+3] = 255;
 		buffer_FragColorbgra8[x*4+3] = 255; // WHY?!?!?!?!??!?!? is RefractColor[3] apparently 0?
 	}
