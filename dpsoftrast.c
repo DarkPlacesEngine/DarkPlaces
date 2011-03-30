@@ -234,6 +234,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 
 	int shader_mode;
 	int shader_permutation;
+	int shader_exactspecularmath;
 
 	DPSOFTRAST_Texture *texbound[DPSOFTRAST_MAXTEXTUREUNITS];
 	
@@ -311,6 +312,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_s
 	
 	int shader_mode;
 	int shader_permutation;
+	int shader_exactspecularmath;
 
 	int texture_max;
 	int texture_end;
@@ -1308,20 +1310,23 @@ void DPSOFTRAST_SetTexCoordPointer(int unitnum, int numcomponents, size_t stride
 	dpsoftrast.stride_texcoord[unitnum] = stride;
 }
 
-DEFCOMMAND(18, SetShader, int mode; int permutation;)
+DEFCOMMAND(18, SetShader, int mode; int permutation; int exactspecularmath;)
 static void DPSOFTRAST_Interpret_SetShader(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_SetShader *command)
 {
 	thread->shader_mode = command->mode;
 	thread->shader_permutation = command->permutation;
+	thread->shader_exactspecularmath = command->exactspecularmath;
 }
-void DPSOFTRAST_SetShader(int mode, int permutation)
+void DPSOFTRAST_SetShader(int mode, int permutation, int exactspecularmath)
 {
 	DPSOFTRAST_Command_SetShader *command = DPSOFTRAST_ALLOCATECOMMAND(SetShader);
 	command->mode = mode;
 	command->permutation = permutation;
+	command->exactspecularmath = exactspecularmath;
 
 	dpsoftrast.shader_mode = mode;
 	dpsoftrast.shader_permutation = permutation;
+	dpsoftrast.shader_exactspecularmath = exactspecularmath;
 }
 
 DEFCOMMAND(19, Uniform4f, DPSOFTRAST_UNIFORM index; float val[4];)
@@ -3742,7 +3747,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				lightnormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
 				lightnormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
 				lightnormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
-				DPSOFTRAST_Vector3Normalize(eyenormal);
+				DPSOFTRAST_Vector3Normalize(lightnormal);
 
 				LightColor[0] = 1.0;
 				LightColor[1] = 1.0;
@@ -3756,18 +3761,41 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				DPSOFTRAST_Vector3Normalize(lightnormal);
 			}
 
-			eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
-			eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
-			eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
-			DPSOFTRAST_Vector3Normalize(eyenormal);
-
-			specularnormal[0] = lightnormal[0] + eyenormal[0];
-			specularnormal[1] = lightnormal[1] + eyenormal[1];
-			specularnormal[2] = lightnormal[2] + eyenormal[2];
-			DPSOFTRAST_Vector3Normalize(specularnormal);
-
 			diffuse = DPSOFTRAST_Vector3Dot(surfacenormal, lightnormal);if (diffuse < 0.0f) diffuse = 0.0f;
-			specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+
+			if(thread->shader_exactspecularmath)
+			{
+				// reflect lightnormal at surfacenormal, take the negative of that
+				// i.e. we want (2*dot(N, i) * N - I) for N=surfacenormal, I=lightnormal
+				float f;
+				f = DPSOFTRAST_Vector3Dot(lightnormal, surfacenormal);
+				specularnormal[0] = 2*f*surfacenormal[0] - lightnormal[0];
+				specularnormal[1] = 2*f*surfacenormal[1] - lightnormal[1];
+				specularnormal[2] = 2*f*surfacenormal[2] - lightnormal[2];
+
+				// dot of this and normalize(EyeVectorFogDepth.xyz)
+				eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+			}
+			else
+			{
+				eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				specularnormal[0] = lightnormal[0] + eyenormal[0];
+				specularnormal[1] = lightnormal[1] + eyenormal[1];
+				specularnormal[2] = lightnormal[2] + eyenormal[2];
+				DPSOFTRAST_Vector3Normalize(specularnormal);
+
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+			}
+
 			specular = pow(specular, SpecularPower * glosstex[3]);
 			if (thread->shader_permutation & SHADERPERMUTATION_GLOW)
 			{
@@ -3817,7 +3845,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 		}
 		else if(thread->shader_mode == SHADERMODE_FAKELIGHT)
 		{
-			// nothing of this needed
+			DPSOFTRAST_CALCATTRIB4F(triangle, span, EyeVectordata, EyeVectorslope, DPSOFTRAST_ARRAY_TEXCOORD6);
 		}
 		else
 		{
@@ -3886,7 +3914,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				lightnormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
 				lightnormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
 				lightnormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
-				DPSOFTRAST_Vector3Normalize(eyenormal);
+				DPSOFTRAST_Vector3Normalize(lightnormal);
 
 				LightColor[0] = 1.0;
 				LightColor[1] = 1.0;
@@ -4142,19 +4170,42 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 			lightnormal[2] = (LightVectordata[2] + LightVectorslope[2]*x) * z;
 			DPSOFTRAST_Vector3Normalize(lightnormal);
 
-			eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
-			eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
-			eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
-			DPSOFTRAST_Vector3Normalize(eyenormal);
-
-			specularnormal[0] = lightnormal[0] + eyenormal[0];
-			specularnormal[1] = lightnormal[1] + eyenormal[1];
-			specularnormal[2] = lightnormal[2] + eyenormal[2];
-			DPSOFTRAST_Vector3Normalize(specularnormal);
-
 			diffuse = DPSOFTRAST_Vector3Dot(surfacenormal, lightnormal);if (diffuse < 0.0f) diffuse = 0.0f;
-			specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+
+			if(thread->shader_exactspecularmath)
+			{
+				// reflect lightnormal at surfacenormal, take the negative of that
+				// i.e. we want (2*dot(N, i) * N - I) for N=surfacenormal, I=lightnormal
+				float f;
+				f = DPSOFTRAST_Vector3Dot(lightnormal, surfacenormal);
+				specularnormal[0] = 2*f*surfacenormal[0] - lightnormal[0];
+				specularnormal[1] = 2*f*surfacenormal[1] - lightnormal[1];
+				specularnormal[2] = 2*f*surfacenormal[2] - lightnormal[2];
+
+				// dot of this and normalize(EyeVectorFogDepth.xyz)
+				eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+			}
+			else
+			{
+				eyenormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				eyenormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				eyenormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				specularnormal[0] = lightnormal[0] + eyenormal[0];
+				specularnormal[1] = lightnormal[1] + eyenormal[1];
+				specularnormal[2] = lightnormal[2] + eyenormal[2];
+				DPSOFTRAST_Vector3Normalize(specularnormal);
+
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+			}
 			specular = pow(specular, SpecularPower * glosstex[3]);
+
 			if (thread->shader_permutation & SHADERPERMUTATION_CUBEFILTER)
 			{
 				// scale down the attenuation to account for the cubefilter multiplying everything by 255
