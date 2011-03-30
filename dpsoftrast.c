@@ -3444,32 +3444,27 @@ void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSO
 }
 
 
+void DPSOFTRAST_VertexShader_LightDirection(void);
+void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span);
 
 void DPSOFTRAST_VertexShader_FakeLight(void)
 {
-	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_VertexShader_LightDirection();
 }
 
 void DPSOFTRAST_PixelShader_FakeLight(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-	// TODO: IMPLEMENT
-	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
-	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
-	memset(buffer_FragColorbgra8 + span->startx*4, 0, (span->endx - span->startx)*4);
-	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
+	DPSOFTRAST_PixelShader_LightDirection(thread, triangle, span);
 }
 
 
 
-void DPSOFTRAST_VertexShader_LightDirection(void);
 void DPSOFTRAST_VertexShader_LightDirectionMap_ModelSpace(void)
 {
 	DPSOFTRAST_VertexShader_LightDirection();
 	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD4);
 }
 
-void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span);
 void DPSOFTRAST_PixelShader_LightDirectionMap_ModelSpace(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
 	DPSOFTRAST_PixelShader_LightDirection(thread, triangle, span);
@@ -3479,13 +3474,13 @@ void DPSOFTRAST_PixelShader_LightDirectionMap_ModelSpace(DPSOFTRAST_State_Thread
 
 void DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace(void)
 {
-	DPSOFTRAST_VertexShader_Lightmap();
+	DPSOFTRAST_VertexShader_LightDirection();
+	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD4);
 }
 
 void DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-	DPSOFTRAST_PixelShader_Lightmap(thread, triangle, span);
-	// TODO: IMPLEMENT
+	DPSOFTRAST_PixelShader_LightDirection(thread, triangle, span);
 }
 
 
@@ -3643,7 +3638,6 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 		LightColor[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_LightColor*4+1];
 		LightColor[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_LightColor*4+2];
 		LightColor[3] = 0.0f;
-		DPSOFTRAST_CALCATTRIB4F(triangle, span, LightVectordata, LightVectorslope, DPSOFTRAST_ARRAY_TEXCOORD5);
 		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 		Color_Specular[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Specular*4+0];
 		Color_Specular[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Specular*4+1];
@@ -3660,6 +3654,19 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 			DPSOFTRAST_CALCATTRIB4F(triangle, span, VectorRdata, VectorRslope, DPSOFTRAST_ARRAY_TEXCOORD3);
 			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
 			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_deluxemapbgra8, GL20TU_DELUXEMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+		}
+		else if(thread->shader_mode == SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
+		{
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_deluxemapbgra8, GL20TU_DELUXEMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+		}
+		else if(thread->shader_mode == SHADERMODE_FAKELIGHT)
+		{
+			// nothing of this needed
+		}
+		else
+		{
+			DPSOFTRAST_CALCATTRIB4F(triangle, span, LightVectordata, LightVectorslope, DPSOFTRAST_ARRAY_TEXCOORD5);
 		}
 
 		for (x = startx;x < endx;x++)
@@ -3718,6 +3725,29 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 					LightColor[2] = buffer_texture_lightmapbgra8[x*4+2] * f;
 				}
 			}
+			else if(thread->shader_mode == SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
+			{
+				lightnormal[0] = buffer_texture_deluxemapbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
+				lightnormal[1] = buffer_texture_deluxemapbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
+				lightnormal[2] = buffer_texture_deluxemapbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
+				{
+					float f = 1.0f / 256.0f;
+					LightColor[0] = buffer_texture_lightmapbgra8[x*4+0] * f;
+					LightColor[1] = buffer_texture_lightmapbgra8[x*4+1] * f;
+					LightColor[2] = buffer_texture_lightmapbgra8[x*4+2] * f;
+				}
+			}
+			else if(thread->shader_mode == SHADERMODE_FAKELIGHT)
+			{
+				lightnormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				lightnormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				lightnormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				LightColor[0] = 1.0;
+				LightColor[1] = 1.0;
+				LightColor[2] = 1.0;
+			}
 			else
 			{
 				lightnormal[0] = (LightVectordata[0] + LightVectorslope[0]*x) * z;
@@ -3770,7 +3800,6 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 		LightColor[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_LightColor*4+1];
 		LightColor[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_LightColor*4+2];
 		LightColor[3] = 0.0f;
-		DPSOFTRAST_CALCATTRIB4F(triangle, span, LightVectordata, LightVectorslope, DPSOFTRAST_ARRAY_TEXCOORD5);
 		DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 
 		if(thread->shader_mode == SHADERMODE_LIGHTDIRECTIONMAP_MODELSPACE)
@@ -3780,6 +3809,19 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 			DPSOFTRAST_CALCATTRIB4F(triangle, span, VectorRdata, VectorRslope, DPSOFTRAST_ARRAY_TEXCOORD3);
 			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
 			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_deluxemapbgra8, GL20TU_DELUXEMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+		}
+		else if(thread->shader_mode == SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
+		{
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+			DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_deluxemapbgra8, GL20TU_DELUXEMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
+		}
+		else if(thread->shader_mode == SHADERMODE_FAKELIGHT)
+		{
+			// nothing of this needed
+		}
+		else
+		{
+			DPSOFTRAST_CALCATTRIB4F(triangle, span, LightVectordata, LightVectorslope, DPSOFTRAST_ARRAY_TEXCOORD5);
 		}
 
 		for (x = startx;x < endx;x++)
@@ -3826,6 +3868,29 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 					LightColor[1] = buffer_texture_lightmapbgra8[x*4+1] * f;
 					LightColor[2] = buffer_texture_lightmapbgra8[x*4+2] * f;
 				}
+			}
+			else if(thread->shader_mode == SHADERMODE_LIGHTDIRECTIONMAP_TANGENTSPACE)
+			{
+				lightnormal[0] = buffer_texture_deluxemapbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
+				lightnormal[1] = buffer_texture_deluxemapbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
+				lightnormal[2] = buffer_texture_deluxemapbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
+				{
+					float f = 1.0f / 256.0f;
+					LightColor[0] = buffer_texture_lightmapbgra8[x*4+0] * f;
+					LightColor[1] = buffer_texture_lightmapbgra8[x*4+1] * f;
+					LightColor[2] = buffer_texture_lightmapbgra8[x*4+2] * f;
+				}
+			}
+			else if(thread->shader_mode == SHADERMODE_FAKELIGHT)
+			{
+				lightnormal[0] = (EyeVectordata[0] + EyeVectorslope[0]*x) * z;
+				lightnormal[1] = (EyeVectordata[1] + EyeVectorslope[1]*x) * z;
+				lightnormal[2] = (EyeVectordata[2] + EyeVectorslope[2]*x) * z;
+				DPSOFTRAST_Vector3Normalize(eyenormal);
+
+				LightColor[0] = 1.0;
+				LightColor[1] = 1.0;
+				LightColor[2] = 1.0;
 			}
 			else
 			{
@@ -4336,9 +4401,9 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_FlatColor,                      DPSOFTRAST_PixelShader_FlatColor,                      {DPSOFTRAST_ARRAY_TEXCOORD0, ~0}, {GL20TU_COLOR, ~0}},
 	{2, DPSOFTRAST_VertexShader_VertexColor,                    DPSOFTRAST_PixelShader_VertexColor,                    {DPSOFTRAST_ARRAY_COLOR, DPSOFTRAST_ARRAY_TEXCOORD0, ~0}, {GL20TU_COLOR, ~0}},
 	{2, DPSOFTRAST_VertexShader_Lightmap,                       DPSOFTRAST_PixelShader_Lightmap,                       {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_LIGHTMAP, GL20TU_GLOW, ~0}},
-	{2, DPSOFTRAST_VertexShader_FakeLight,                      DPSOFTRAST_PixelShader_FakeLight,                      {~0}, {~0}},
+	{2, DPSOFTRAST_VertexShader_FakeLight,                      DPSOFTRAST_PixelShader_FakeLight,                      {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightDirectionMap_ModelSpace,   DPSOFTRAST_PixelShader_LightDirectionMap_ModelSpace,   {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_LIGHTMAP, GL20TU_DELUXEMAP, ~0}},
-	{2, DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace, DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace, {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_LIGHTMAP, GL20TU_GLOW, ~0}},
+	{2, DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace, DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace, {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_LIGHTMAP, GL20TU_DELUXEMAP, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightDirection,                 DPSOFTRAST_PixelShader_LightDirection,                 {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                    {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_CUBE, ~0}},
 	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {~0}},
