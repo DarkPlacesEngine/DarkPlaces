@@ -4350,16 +4350,101 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 
 void DPSOFTRAST_VertexShader_Refraction(void)
 {
+	int i;
+	int numvertices = dpsoftrast.numvertices;
+
+	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD0, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+
+	for (i = 0;i < numvertices;i++)
+	{
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+0] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+1] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+2] /= dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+3];
+	}
 }
 
 void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-	// TODO: IMPLEMENT
+	// DIRTY TRICK: only do sideways displacement. Not correct, but cheaper and thus better for SW.
+
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	float z;
+	int x, startx = span->startx, endx = span->endx;
+
+	// texture reads
+	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+	unsigned char buffer_texture_refractionbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+
+	// varyings
+	float ModelViewProjectionPositiondata[4];
+	float ModelViewProjectionPositionslope[4];
+
+	// uniforms
+	float ScreenScaleRefractReflect[2];
+	float ScreenCenterRefractReflect[2];
+	float DistortScaleRefractReflect[2];
+	float RefractColor[4];
+
+	// read textures
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
-	memset(buffer_FragColorbgra8 + span->startx*4, 0, (span->endx - span->startx)*4);
+	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
+	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_refractionbgra8, GL20TU_REFRACTION, DPSOFTRAST_ARRAY_TEXCOORD1, buffer_z);
+
+	// read varyings
+	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD1); // or POSITION?
+	printf("texcoord: from %f to %f\n", buffer_z[startx] * (ModelViewProjectionPositiondata[0] + startx * ModelViewProjectionPositionslope[0]), buffer_z[endx-1] * (ModelViewProjectionPositiondata[0] + (endx-1) * ModelViewProjectionPositionslope[0]));
+
+	// read uniforms
+	ScreenScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+0];
+	ScreenScaleRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+1];
+	ScreenCenterRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+0];
+	ScreenCenterRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+1];
+	DistortScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+0];
+	DistortScaleRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+1];
+	RefractColor[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+2];
+	RefractColor[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+1];
+	RefractColor[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+0];
+	RefractColor[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+3];
+
+	// do stuff
+	for (x = startx;x < endx;x++)
+	{
+		float ScreenScaleRefractReflectIW[2];
+		float SafeScreenTexCoord[2];
+		float ScreenTexCoord[2];
+		float v[3];
+		int p;
+
+		z = buffer_z[x];
+
+		// "	vec2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
+		// "IW" was done in the vertex shader in the ModelViewProjectionPosition instead!
+
+		// "	vec2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
+		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * z * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0];
+		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * z * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1];
+
+		// "	vec2 ScreenTexCoord = SafeScreenTexCoord + vec3(normalize(myhalf3(dp_texture2D(Texture_Normal, TexCoord)) - myhalf3(0.5))).xy * DistortScaleRefractReflect.zw;\n"
+		v[0] = buffer_texture_normalbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
+		v[1] = buffer_texture_normalbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
+		v[2] = buffer_texture_normalbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
+		DPSOFTRAST_Vector3Normalize(v);
+		ScreenTexCoord[0] = SafeScreenTexCoord[0] + v[0] * DistortScaleRefractReflect[0];
+		ScreenTexCoord[1] = SafeScreenTexCoord[1] + v[1] * DistortScaleRefractReflect[1];
+
+		// "	dp_FragColor = vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord).rgb, 1.0) * RefractColor;\n"
+		p = (int) bound(startx, x + (ScreenTexCoord[0] - SafeScreenTexCoord[0]) / (ModelViewProjectionPositionslope[0]*z), endx-1);
+		p = x; // debug
+		buffer_FragColorbgra8[x*4+0] = buffer_texture_refractionbgra8[p*4+0] * RefractColor[0];
+		buffer_FragColorbgra8[x*4+1] = buffer_texture_refractionbgra8[p*4+1] * RefractColor[1];
+		buffer_FragColorbgra8[x*4+2] = buffer_texture_refractionbgra8[p*4+2] * RefractColor[2];
+		buffer_FragColorbgra8[x*4+3] =                                         RefractColor[3] * 256; if(buffer_FragColorbgra8[x*4+3] > 255) buffer_FragColorbgra8[x*4+3] = 255;
+		buffer_FragColorbgra8[x*4+3] = 255; // WHY?!?!?!?!??!?!? is RefractColor[3] apparently 0?
+	}
+
 	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
 }
 
@@ -4457,7 +4542,7 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace, DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace, {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_LIGHTMAP, GL20TU_DELUXEMAP, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightDirection,                 DPSOFTRAST_PixelShader_LightDirection,                 {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                    {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_CUBE, ~0}},
-	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {~0}},
+	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, ~0}, {GL20TU_NORMAL, GL20TU_REFRACTION, ~0}},
 	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {~0}},
 	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
