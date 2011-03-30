@@ -1772,7 +1772,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 
 void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutation)
 {
-	DPSOFTRAST_SetShader(mode, permutation);
+	DPSOFTRAST_SetShader(mode, permutation, r_shadow_glossexact.integer);
 	DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
 	DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewMatrixM1, 1, false, gl_modelview16f);
 	DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_ClientTime, cl.time);
