@@ -2603,7 +2603,7 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
 
 	k = 0;
-	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); *vidmodes; ++vidmodes)
+	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); vidmodes && *vidmodes; ++vidmodes)
 	{
 		if(k >= maxcount)
 			break;
