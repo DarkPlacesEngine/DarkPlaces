@@ -2030,6 +2030,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 //	CHECKGLERROR
 	r_refdef.draw2dstage = true;
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
+	R_Mesh_ResetRenderTargets();
 	R_SetViewport(&viewport);
 	GL_ColorMask(1,1,1,1);
 	// when starting up a new video mode, make sure the screen is cleared to black
@@ -2291,6 +2292,7 @@ void CL_UpdateScreen(void)
 	}
 
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
+	R_Mesh_ResetRenderTargets();
 	R_SetViewport(&viewport);
 	GL_ScissorTest(false);
 	GL_ColorMask(1,1,1,1);

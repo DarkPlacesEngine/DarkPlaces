@@ -56,7 +56,11 @@ typedef enum textype_e
 	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel)
 	TEXTYPE_DXT5,
 	// this represents the same format as the framebuffer, for fast copies
-	TEXTYPE_COLORBUFFER
+	TEXTYPE_COLORBUFFER,
+	// this represents an RGBA half_float texture (4 16bit floats)
+	TEXTYPE_COLORBUFFER16F,
+	// this represents an RGBA float texture (4 32bit floats)
+	TEXTYPE_COLORBUFFER32F
 }
 textype_t;
 
