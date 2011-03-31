@@ -2010,7 +2010,7 @@ void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight)
 
 void R_Shadow_RenderMode_Reset(void)
 {
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetMainRenderTargets();
 	R_SetViewport(&r_refdef.view.viewport);
 	GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
 	R_Mesh_ResetTextureState();
@@ -2157,15 +2157,9 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 
 	R_Mesh_ResetTextureState();
-	R_Mesh_ResetRenderTargets();
 	R_Shadow_RenderMode_Reset();
-	if (fbo)
-	{
-		R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
-		R_SetupShader_DepthOrShadow();
-	}
-	else
-		R_SetupShader_ShowDepth();
+	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
+	R_SetupShader_DepthOrShadow();
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
@@ -2227,7 +2221,7 @@ init_done:
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
 {
 	R_Mesh_ResetTextureState();
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetMainRenderTargets();
 	if (transparent)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
@@ -4527,7 +4521,7 @@ void R_Shadow_DrawPrepass(void)
 			if (r_refdef.scene.lights[lnum]->draw)
 				R_Shadow_DrawLight(r_refdef.scene.lights[lnum]);
 
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetMainRenderTargets();
 
 	R_Shadow_RenderMode_End();
 
@@ -4919,7 +4913,7 @@ void R_DrawModelShadowMaps(void)
 
 #if 0
 	// debugging
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetMainRenderTargets();
 	R_SetupShader_ShowDepth();
 	GL_ColorMask(1,1,1,1);
 	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);

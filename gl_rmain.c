@@ -141,6 +141,9 @@ cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to 
 static cvar_t gl_combine = {CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
 static cvar_t r_glsl = {CVAR_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
 
+cvar_t r_viewfbo = {CVAR_SAVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
+cvar_t r_viewscale = {CVAR_SAVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
+
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_steps = {CVAR_SAVE, "r_glsl_offsetmapping_steps", "2", "offset mapping steps (note: too high values may be not supported by your GPU)"};
@@ -221,6 +224,13 @@ static struct r_bloomstate_s
 	qboolean hdr;
 
 	int bloomwidth, bloomheight;
+
+	textype_t texturetype;
+	int viewfbo; // used to check if r_viewfbo cvar has changed
+
+	int fbo_framebuffer; // non-zero if r_viewfbo is enabled and working
+	rtexture_t *texture_framebuffercolor; // non-NULL if fbo_screen is non-zero
+	rtexture_t *texture_framebufferdepth; // non-NULL if fbo_screen is non-zero
 
 	int screentexturewidth, screentextureheight;
 	rtexture_t *texture_screen; /// \note also used for motion blur if enabled!
@@ -4091,6 +4101,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_texture_convertsRGB_particles);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&gl_combine);
+	Cvar_RegisterVariable(&r_viewfbo);
+	Cvar_RegisterVariable(&r_viewscale);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
@@ -5108,6 +5120,14 @@ void R_View_Update(void)
 	R_View_UpdateEntityLighting();
 }
 
+void R_Mesh_SetMainRenderTargets(void)
+{
+	if (r_bloomstate.fbo_framebuffer)
+		R_Mesh_SetRenderTargets(r_bloomstate.fbo_framebuffer, r_bloomstate.texture_framebufferdepth, r_bloomstate.texture_framebuffercolor, NULL, NULL, NULL);
+	else
+		R_Mesh_ResetRenderTargets();
+}
+
 void R_SetupView(qboolean allowwaterclippingplane)
 {
 	const float *customclipplane = NULL;
@@ -5132,6 +5152,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
 		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
+	R_Mesh_SetMainRenderTargets();
 	R_SetViewport(&r_refdef.view.viewport);
 }
 
@@ -5184,6 +5205,7 @@ void R_ResetViewRendering2D(void)
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, 0, 0, 1, 1, -10, 100, NULL);
+	R_Mesh_ResetRenderTargets();
 	R_SetViewport(&viewport);
 	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	GL_Color(1, 1, 1, 1);
@@ -5643,6 +5665,7 @@ error:
 void R_Bloom_StartFrame(void)
 {
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
+	textype_t textype;
 
 	switch(vid.renderpath)
 	{
@@ -5690,31 +5713,82 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)))
+	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
 
-	// allocate textures as needed
-	if (r_bloomstate.screentexturewidth != screentexturewidth || r_bloomstate.screentextureheight != screentextureheight)
+	textype = TEXTYPE_COLORBUFFER;
+	switch (vid.renderpath)
 	{
-		if (r_bloomstate.texture_screen)
-			R_FreeTexture(r_bloomstate.texture_screen);
-		r_bloomstate.texture_screen = NULL;
-		r_bloomstate.screentexturewidth = screentexturewidth;
-		r_bloomstate.screentextureheight = screentextureheight;
-		if (r_bloomstate.screentexturewidth && r_bloomstate.screentextureheight)
-			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
+		if (vid.support.ext_framebuffer_object)
+		{
+			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
+			if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
+		}
+		break;
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL11:
+		break;
 	}
-	if (r_bloomstate.bloomtexturewidth != bloomtexturewidth || r_bloomstate.bloomtextureheight != bloomtextureheight)
+
+	// allocate textures as needed
+	if (r_bloomstate.screentexturewidth != screentexturewidth
+	 || r_bloomstate.screentextureheight != screentextureheight
+	 || r_bloomstate.bloomtexturewidth != bloomtexturewidth
+	 || r_bloomstate.bloomtextureheight != bloomtextureheight
+	 || r_bloomstate.texturetype != textype
+	 || r_bloomstate.viewfbo != r_viewfbo.integer)
 	{
 		if (r_bloomstate.texture_bloom)
 			R_FreeTexture(r_bloomstate.texture_bloom);
 		r_bloomstate.texture_bloom = NULL;
+		if (r_bloomstate.texture_screen)
+			R_FreeTexture(r_bloomstate.texture_screen);
+		r_bloomstate.texture_screen = NULL;
+		if (r_bloomstate.fbo_framebuffer)
+			R_Mesh_DestroyFramebufferObject(r_bloomstate.fbo_framebuffer);
+		r_bloomstate.fbo_framebuffer = 0;
+		if (r_bloomstate.texture_framebuffercolor)
+			R_FreeTexture(r_bloomstate.texture_framebuffercolor);
+		r_bloomstate.texture_framebuffercolor = NULL;
+		if (r_bloomstate.texture_framebufferdepth)
+			R_FreeTexture(r_bloomstate.texture_framebufferdepth);
+		r_bloomstate.texture_framebufferdepth = NULL;
+		r_bloomstate.screentexturewidth = screentexturewidth;
+		r_bloomstate.screentextureheight = screentextureheight;
+		if (r_bloomstate.screentexturewidth && r_bloomstate.screentextureheight)
+			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+		if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+		{
+			// FIXME: choose depth bits based on a cvar
+			r_bloomstate.texture_framebufferdepth = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, 24, false);
+			r_bloomstate.texture_framebuffercolor = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+			r_bloomstate.fbo_framebuffer = R_Mesh_CreateFramebufferObject(r_bloomstate.texture_framebufferdepth, r_bloomstate.texture_framebuffercolor, NULL, NULL, NULL);
+			R_Mesh_SetRenderTargets(r_bloomstate.fbo_framebuffer, r_bloomstate.texture_framebufferdepth, r_bloomstate.texture_framebuffercolor, NULL, NULL, NULL);
+			// render depth into one texture and normalmap into the other
+			if (qglDrawBuffer)
+			{
+				int status;
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
+				qglReadBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
+				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
+				if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+					Con_Printf("R_Bloom_StartFrame: glCheckFramebufferStatusEXT returned %i\n", status);
+			}
+		}
 		r_bloomstate.bloomtexturewidth = bloomtexturewidth;
 		r_bloomstate.bloomtextureheight = bloomtextureheight;
 		if (r_bloomstate.bloomtexturewidth && r_bloomstate.bloomtextureheight)
-			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+			r_bloomstate.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_bloomstate.bloomtexturewidth, r_bloomstate.bloomtextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+		r_bloomstate.viewfbo = r_viewfbo.integer;
+		r_bloomstate.texturetype = textype;
 	}
 
 	// when doing a reduced render (HDR) we want to use a smaller area
@@ -5777,6 +5851,9 @@ void R_Bloom_StartFrame(void)
 	}
 
 	R_Viewport_InitOrtho(&r_bloomstate.viewport, &identitymatrix, r_refdef.view.x, vid.height - r_bloomstate.bloomheight - r_refdef.view.y, r_bloomstate.bloomwidth, r_bloomstate.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
+
+	if (r_bloomstate.fbo_framebuffer)
+		r_refdef.view.clear = true;
 }
 
 void R_Bloom_CopyBloomTexture(float colorscale)
@@ -5785,6 +5862,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 
 	// scale down screen texture to the bloom texture size
 	CHECKGLERROR
+	R_Mesh_SetMainRenderTargets();
 	R_SetViewport(&r_bloomstate.viewport);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(colorscale, colorscale, colorscale, 1);
@@ -5987,6 +6065,7 @@ static void R_BlendView(void)
 			if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
 
 			R_ResetViewRendering2D();
+			R_Mesh_SetMainRenderTargets();
 
 			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 			{

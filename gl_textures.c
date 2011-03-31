@@ -93,6 +93,8 @@ static textypeinfo_t textype_dxt1a                  = {TEXTYPE_DXT1A      , 4, 0
 static textypeinfo_t textype_dxt3                   = {TEXTYPE_DXT3       , 4, 0, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, 0                 , 0                };
 static textypeinfo_t textype_dxt5                   = {TEXTYPE_DXT5       , 4, 0, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, 0                 , 0                };
 static textypeinfo_t textype_colorbuffer            = {TEXTYPE_COLORBUFFER, 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_colorbuffer16f         = {TEXTYPE_COLORBUFFER16F,8,8,8.0f, GL_RGBA16F_ARB                  , GL_RGBA           , GL_FLOAT         };
+static textypeinfo_t textype_colorbuffer32f         = {TEXTYPE_COLORBUFFER32F,16,16,16.0f,GL_RGBA32F_ARB                , GL_RGBA           , GL_FLOAT         };
 
 
 typedef enum gltexturetype_e
@@ -236,6 +238,10 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 		return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
 	case TEXTYPE_COLORBUFFER:
 		return &textype_colorbuffer;
+	case TEXTYPE_COLORBUFFER16F:
+		return &textype_colorbuffer16f;
+	case TEXTYPE_COLORBUFFER32F:
+		return &textype_colorbuffer32f;
 	default:
 		Host_Error("R_GetTexTypeInfo: unknown texture format");
 		break;
@@ -1562,6 +1568,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		flags |= TEXF_ALPHA;
 		break;
 	case TEXTYPE_COLORBUFFER:
+	case TEXTYPE_COLORBUFFER16F:
+	case TEXTYPE_COLORBUFFER32F:
 		flags |= TEXF_ALPHA;
 		break;
 	default:
@@ -1633,7 +1641,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			case TEXTYPE_PALETTE: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
 			case TEXTYPE_RGBA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8B8G8R8 : D3DFMT_X8B8G8R8;break;
 			case TEXTYPE_BGRA: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
-			case TEXTYPE_COLORBUFFER: d3dformat = (flags & TEXF_ALPHA) ? D3DFMT_A8R8G8B8 : D3DFMT_X8R8G8B8;break;
+			case TEXTYPE_COLORBUFFER: d3dformat = D3DFMT_A8R8G8B8;break;
+			case TEXTYPE_COLORBUFFER16F: d3dformat = D3DFMT_A16B16G16R16F;break;
+			case TEXTYPE_COLORBUFFER32F: d3dformat = D3DFMT_A32B32G32R32F;break;
 			case TEXTYPE_SHADOWMAP: d3dformat = D3DFMT_D16;d3dusage = D3DUSAGE_DEPTHSTENCIL;break; // note: can not use D3DUSAGE_RENDERTARGET here
 			case TEXTYPE_ALPHA: d3dformat = D3DFMT_A8;break;
 			default: d3dformat = D3DFMT_A8R8G8B8;Sys_Error("R_LoadTexture: unsupported texture type %i when picking D3DFMT", (int)textype);break;
@@ -1680,6 +1690,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			case TEXTYPE_RGBA: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA8;break;
 			case TEXTYPE_BGRA: tflags = DPSOFTRAST_TEXTURE_FORMAT_BGRA8;break;
 			case TEXTYPE_COLORBUFFER: tflags = DPSOFTRAST_TEXTURE_FORMAT_BGRA8;break;
+			case TEXTYPE_COLORBUFFER16F: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA16F;break;
+			case TEXTYPE_COLORBUFFER32F: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA32F;break;
 			case TEXTYPE_SHADOWMAP: tflags = DPSOFTRAST_TEXTURE_FORMAT_DEPTH;break;
 			case TEXTYPE_ALPHA: tflags = DPSOFTRAST_TEXTURE_FORMAT_ALPHA8;break;
 			default: Sys_Error("R_LoadTexture: unsupported texture type %i when picking DPSOFTRAST_TEXTURE_FLAGS", (int)textype);
