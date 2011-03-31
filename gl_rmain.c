@@ -5685,8 +5685,8 @@ void R_Bloom_StartFrame(void)
 	// calculate desired texture sizes
 	if (vid.support.arb_texture_non_power_of_two)
 	{
-		screentexturewidth = r_refdef.view.width;
-		screentextureheight = r_refdef.view.height;
+		screentexturewidth = vid.width;
+		screentextureheight = vid.height;
 		bloomtexturewidth = r_bloomstate.bloomwidth;
 		bloomtextureheight = r_bloomstate.bloomheight;
 	}
