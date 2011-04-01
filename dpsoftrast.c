@@ -6,6 +6,10 @@
 #include "thread.h"
 #include "dpsoftrast.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4324)
+#endif
+
 #ifndef __cplusplus
 typedef qboolean bool;
 #endif
@@ -13,7 +17,7 @@ typedef qboolean bool;
 #define ALIGN_SIZE 16
 #define ATOMIC_SIZE 32
 
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	#if defined(__APPLE__)
 		#include <libkern/OSAtomic.h>
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
@@ -66,7 +70,7 @@ typedef qboolean bool;
 #define ATOMIC_ADD(counter, val) ((void)((counter) += (val)))
 #endif
 
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 #include <emmintrin.h>
 
 #define MM_MALLOC(size) _mm_malloc(size, ATOMIC_SIZE)
@@ -1372,7 +1376,7 @@ static void DPSOFTRAST_Interpret_UniformMatrix4f(DPSOFTRAST_State_Thread *thread
 }
 void DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM uniform, int arraysize, int transpose, const float *v)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int i, index;
 	for (i = 0, index = (int)uniform;i < arraysize;i++, index += 4, v += 16)
 	{
@@ -1431,7 +1435,7 @@ void DPSOFTRAST_Uniform1i(DPSOFTRAST_UNIFORM index, int i0)
 	dpsoftrast.uniform1i[command->index] = i0;
 }
 
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 static void DPSOFTRAST_Load4fTo4f(float *dst, const unsigned char *src, int size, int stride)
 {
 	float *end = dst + size*4;
@@ -1627,7 +1631,7 @@ static void DPSOFTRAST_Fill4f(float *dst, const float *src, int size)
 
 void DPSOFTRAST_Vertex_Transform(float *out4f, const float *in4f, int numitems, const float *inmatrix16f)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	static const float identitymatrix[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 	__m128 m0, m1, m2, m3;
 	float *end;
@@ -1678,7 +1682,7 @@ void DPSOFTRAST_Vertex_Copy(float *out4f, const float *in4f, int numitems)
 	memcpy(out4f, in4f, numitems * sizeof(float[4]));
 }
 
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 #define DPSOFTRAST_PROJECTVERTEX(out, in, viewportcenter, viewportscale) \
 { \
 	__m128 p = (in), w = _mm_shuffle_ps(p, p, _MM_SHUFFLE(3, 3, 3, 3)); \
@@ -1889,7 +1893,7 @@ static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int
 
 static float *DPSOFTRAST_Array_Load(int outarray, int inarray)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	float *outf = dpsoftrast.post_array4f[outarray];
 	const unsigned char *inb;
 	int firstvertex = dpsoftrast.firstvertex;
@@ -1956,7 +1960,7 @@ static float *DPSOFTRAST_Array_Transform(int outarray, int inarray, const float 
 #if 0
 static float *DPSOFTRAST_Array_Project(int outarray, int inarray)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	float *data = inarray >= 0 ? DPSOFTRAST_Array_Load(outarray, inarray) : dpsoftrast.post_array4f[outarray];
 	dpsoftrast.drawclipped = DPSOFTRAST_Vertex_Project(data, dpsoftrast.screencoord4f, &dpsoftrast.drawstarty, &dpsoftrast.drawendy, data, dpsoftrast.numvertices);
 	return data;
@@ -1968,7 +1972,7 @@ static float *DPSOFTRAST_Array_Project(int outarray, int inarray)
 
 static float *DPSOFTRAST_Array_TransformProject(int outarray, int inarray, const float *inmatrix16f)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	float *data = inarray >= 0 ? DPSOFTRAST_Array_Load(outarray, inarray) : dpsoftrast.post_array4f[outarray];
 	dpsoftrast.drawclipped = DPSOFTRAST_Vertex_TransformProject(data, dpsoftrast.screencoord4f, &dpsoftrast.drawstarty, &dpsoftrast.drawendy, data, dpsoftrast.numvertices, inmatrix16f);
 	return data;
@@ -2178,7 +2182,7 @@ void DPSOFTRAST_Draw_Span_Finish(DPSOFTRAST_State_Thread *thread, const DPSOFTRA
 
 void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, const unsigned char* RESTRICT in4ub)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
@@ -2507,7 +2511,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 
 void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char * RESTRICT out4ub, int texunitindex, int arrayindex, const float * RESTRICT zf)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
@@ -2923,7 +2927,7 @@ void DPSOFTRAST_Draw_Span_MixUniformColor(const DPSOFTRAST_State_Triangle * REST
 
 void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, int arrayindex, const float *zf)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
@@ -2970,7 +2974,7 @@ void DPSOFTRAST_Draw_Span_MultiplyVaryingBGRA8(const DPSOFTRAST_State_Triangle *
 
 void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, int arrayindex, const float *zf)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
@@ -3015,7 +3019,7 @@ void DPSOFTRAST_Draw_Span_VaryingBGRA8(const DPSOFTRAST_State_Triangle * RESTRIC
 
 void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub, const float *subcolor)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(subcolor), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2));
 	localcolor = _mm_packs_epi32(localcolor, localcolor);
@@ -3038,7 +3042,7 @@ void DPSOFTRAST_Draw_Span_AddBloomBGRA8(const DPSOFTRAST_State_Triangle * RESTRI
 
 void DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	for (x = startx;x+2 <= endx;x+=2)
 	{
@@ -3059,7 +3063,7 @@ void DPSOFTRAST_Draw_Span_MultiplyBuffersBGRA8(const DPSOFTRAST_State_Triangle *
 
 void DPSOFTRAST_Draw_Span_AddBuffersBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	for (x = startx;x+2 <= endx;x+=2)
 	{
@@ -3080,7 +3084,7 @@ void DPSOFTRAST_Draw_Span_AddBuffersBGRA8(const DPSOFTRAST_State_Triangle * REST
 
 void DPSOFTRAST_Draw_Span_TintedAddBuffersBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub, const float *inbtintbgra)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	__m128i tint = _mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(inbtintbgra), _mm_set1_ps(256.0f)));
 	tint = _mm_packs_epi32(tint, tint);
@@ -3103,7 +3107,7 @@ void DPSOFTRAST_Draw_Span_TintedAddBuffersBGRA8(const DPSOFTRAST_State_Triangle 
 
 void DPSOFTRAST_Draw_Span_MixBuffersBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *ina4ub, const unsigned char *inb4ub)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	for (x = startx;x+2 <= endx;x+=2)
 	{
@@ -3126,7 +3130,7 @@ void DPSOFTRAST_Draw_Span_MixBuffersBGRA8(const DPSOFTRAST_State_Triangle * REST
 
 void DPSOFTRAST_Draw_Span_MixUniformColorBGRA8(const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, unsigned char *out4ub, const unsigned char *in4ub, const float *color)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int x, startx = span->startx, endx = span->endx;
 	__m128i localcolor = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_loadu_ps(color), _mm_set1_ps(255.0f))), _MM_SHUFFLE(3, 0, 1, 2)), blend;
 	localcolor = _mm_packs_epi32(localcolor, localcolor);
@@ -3254,7 +3258,7 @@ void DPSOFTRAST_VertexShader_FlatColor(void)
 
 void DPSOFTRAST_PixelShader_FlatColor(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + (span->y * dpsoftrast.fb_width + span->x) * 4;
 	int x, startx = span->startx, endx = span->endx;
@@ -3305,7 +3309,7 @@ void DPSOFTRAST_VertexShader_VertexColor(void)
 
 void DPSOFTRAST_PixelShader_VertexColor(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + (span->y * dpsoftrast.fb_width + span->x) * 4;
 	int x, startx = span->startx, endx = span->endx;
@@ -3379,7 +3383,7 @@ void DPSOFTRAST_VertexShader_Lightmap(void)
 
 void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0] + (span->y * dpsoftrast.fb_width + span->x) * 4;
 	int x, startx = span->startx, endx = span->endx;
@@ -4073,7 +4077,7 @@ void DPSOFTRAST_VertexShader_LightSource(void)
 
 void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	unsigned char buffer_texture_colorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
@@ -4679,7 +4683,7 @@ DEFCOMMAND(22, Draw, int datasize; int starty; int endy; ATOMIC_COUNTER refcount
 
 static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_Draw *command)
 {
-#ifdef SSE2_PRESENT
+#ifdef SSE_POSSIBLE
 	int cullface = thread->cullface;
 	int minx, maxx, miny, maxy;
 	int miny1, maxy1, miny2, maxy2;
