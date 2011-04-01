@@ -9,6 +9,7 @@
 #include "csprogs.h"
 #include "cap_avi.h"
 #include "cap_ogg.h"
+#include "dpsoftrast.h"
 
 // we have to include snd_main.h here only to get access to snd_renderbuffer->format.speed when writing the AVI headers
 #include "snd_main.h"
@@ -2335,8 +2336,30 @@ void CL_UpdateScreen(void)
 		}
 	}
 
-	if (r_viewscale_fpsscaling.integer && qglFinish)
-		qglFinish();
+	if (r_viewscale_fpsscaling.integer)
+	{
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
+			qglFinish();
+			break;
+		case RENDERPATH_D3D9:
+			//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_Flush();
+			break;
+		}
+	}
 	drawscreenstart = Sys_DoubleTime();
 	if (R_Stereo_Active())
 	{
@@ -2370,8 +2393,30 @@ void CL_UpdateScreen(void)
 	}
 	else
 		SCR_DrawScreen();
-	if (r_viewscale_fpsscaling.integer && qglFinish)
-		qglFinish();
+	if (r_viewscale_fpsscaling.integer)
+	{
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
+			qglFinish();
+			break;
+		case RENDERPATH_D3D9:
+			//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_Flush();
+			break;
+		}
+	}
 	r_refdef.lastdrawscreentime = Sys_DoubleTime() - drawscreenstart;
 
 	SCR_CaptureVideo();
