@@ -475,10 +475,16 @@ extern cvar_t developer_loading;
 # undef SSE2_PRESENT
 #endif
 
-// for x86 cpus only...  (x64 has SSE2_PRESENT)
-#if defined(SSE_POSSIBLE) && !defined(SSE2_PRESENT)
+#ifdef SSE2_PRESENT
+#define Sys_HaveSSE() true
+#define Sys_HaveSSE2() true
+#elif defined(SSE_POSSIBLE)
+// runtime detection of SSE/SSE2 capabilities for x86
 qboolean Sys_HaveSSE(void);
 qboolean Sys_HaveSSE2(void);
+#else
+#define Sys_HaveSSE() false
+#define Sys_HaveSSE2() false
 #endif
 
 /// incremented every frame, never reset
