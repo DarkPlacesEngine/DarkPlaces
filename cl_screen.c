@@ -613,9 +613,9 @@ static int SCR_InfobarHeight(void)
 	if (cl.time > cl.oldtime)
 		scr_infobartime_off -= cl.time - cl.oldtime;
 	if(scr_infobartime_off > 0)
-		offset += 8;
+		offset += 1;
 	if(cls.qw_downloadname[0])
-		offset += 8;
+		offset += 1;
 
 	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
 	if(downinfo)
