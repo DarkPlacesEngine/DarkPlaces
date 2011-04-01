@@ -28,6 +28,7 @@ void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, int border, float nearclip, float farclip, const float *nearplane);
 void R_SetViewport(const r_viewport_t *v);
 void R_GetViewport(r_viewport_t *v);
+void GL_Finish(void);
 
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
