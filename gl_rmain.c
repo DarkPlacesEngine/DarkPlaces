@@ -143,6 +143,12 @@ static cvar_t r_glsl = {CVAR_READONLY, "r_glsl", "1", "indicates whether the Ope
 
 cvar_t r_viewfbo = {CVAR_SAVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
 cvar_t r_viewscale = {CVAR_SAVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
+cvar_t r_viewscale_fpsscaling = {CVAR_SAVE, "r_viewscale_fpsscaling", "0", "change resolution based on framerate"};
+cvar_t r_viewscale_fpsscaling_min = {CVAR_SAVE, "r_viewscale_fpsscaling_min", "0.25", "worst acceptable quality"};
+cvar_t r_viewscale_fpsscaling_multiply = {CVAR_SAVE, "r_viewscale_fpsscaling_multiply", "5", "adjust quality up or down by the frametime difference from 1.0/target, multiplied by this factor"};
+cvar_t r_viewscale_fpsscaling_stepsize = {CVAR_SAVE, "r_viewscale_fpsscaling_stepsize", "0.01", "smallest adjustment to hit the target framerate (this value prevents minute oscillations)"};
+cvar_t r_viewscale_fpsscaling_stepmax = {CVAR_SAVE, "r_viewscale_fpsscaling_stepmax", "1.00", "largest adjustment to hit the target framerate (this value prevents wild overshooting of the estimate)"};
+cvar_t r_viewscale_fpsscaling_target = {CVAR_SAVE, "r_viewscale_fpsscaling_target", "90", "desired framerate"};
 
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
@@ -4103,6 +4109,12 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&r_viewfbo);
 	Cvar_RegisterVariable(&r_viewscale);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling_min);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling_multiply);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling_stepsize);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling_stepmax);
+	Cvar_RegisterVariable(&r_viewscale_fpsscaling_target);
 	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
@@ -5120,6 +5132,16 @@ void R_View_Update(void)
 	R_View_UpdateEntityLighting();
 }
 
+static float viewscalefpsadjusted = 1.0f;
+
+void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
+{
+	float scale = r_viewscale.value * sqrt(viewscalefpsadjusted);
+	scale = bound(0.03125f, scale, 1.0f);
+	*outwidth = (int)ceil(width * scale);
+	*outheight = (int)ceil(height * scale);
+}
+
 void R_Mesh_SetMainRenderTargets(void)
 {
 	if (r_bloomstate.fbo_framebuffer)
@@ -5147,8 +5169,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		customclipplane = plane;
 	}
 
-	scaledwidth = (int)ceil(r_refdef.view.width * bound(0.125f, r_viewscale.value, 1.0f));
-	scaledheight = (int)ceil(r_refdef.view.height * bound(0.125f, r_viewscale.value, 1.0f));
+	R_GetScaledViewSize(r_refdef.view.width, r_refdef.view.height, &scaledwidth, &scaledheight);
 	if (!r_refdef.view.useperspective)
 		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
 	else if (vid.stencil && r_useinfinitefarclip.integer)
@@ -5668,7 +5689,29 @@ error:
 void R_Bloom_StartFrame(void)
 {
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
+	int viewwidth, viewheight;
 	textype_t textype;
+
+	if (r_viewscale_fpsscaling.integer)
+	{
+		static double lastrealtime;
+		double actualframetime;
+		double targetframetime;
+		double adjust;
+		actualframetime = realtime - lastrealtime;
+		targetframetime = (1.0 / r_viewscale_fpsscaling_target.value);
+		adjust = (targetframetime - actualframetime) * r_viewscale_fpsscaling_multiply.value;
+		adjust = bound(-r_viewscale_fpsscaling_stepmax.value, adjust, r_viewscale_fpsscaling_stepmax.value);
+		if (r_viewscale_fpsscaling_stepsize.value > 0)
+			adjust = (int)(adjust / r_viewscale_fpsscaling_stepsize.value) * r_viewscale_fpsscaling_stepsize.value;
+		viewscalefpsadjusted += adjust;
+		lastrealtime = realtime;
+		viewscalefpsadjusted = bound(r_viewscale_fpsscaling_min.value, viewscalefpsadjusted, 1.0f);
+	}
+	else
+		viewscalefpsadjusted = 1.0f;
+
+	R_GetScaledViewSize(r_refdef.view.width, r_refdef.view.height, &viewwidth, &viewheight);
 
 	switch(vid.renderpath)
 	{
@@ -5716,7 +5759,7 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f)
+	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f && !r_viewscale_fpsscaling.integer)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_hdr.integer && !r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -5804,10 +5847,10 @@ void R_Bloom_StartFrame(void)
 	// set up a texcoord array for the full resolution screen image
 	// (we have to keep this around to copy back during final render)
 	r_bloomstate.screentexcoord2f[0] = 0;
-	r_bloomstate.screentexcoord2f[1] = (float)r_refdef.view.viewport.height    / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[2] = (float)r_refdef.view.viewport.width     / (float)r_bloomstate.screentexturewidth;
-	r_bloomstate.screentexcoord2f[3] = (float)r_refdef.view.viewport.height    / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[4] = (float)r_refdef.view.viewport.width     / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[1] = (float)viewheight    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[2] = (float)viewwidth     / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[3] = (float)viewheight    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[4] = (float)viewwidth     / (float)r_bloomstate.screentexturewidth;
 	r_bloomstate.screentexcoord2f[5] = 0;
 	r_bloomstate.screentexcoord2f[6] = 0;
 	r_bloomstate.screentexcoord2f[7] = 0;
