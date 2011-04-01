@@ -1144,42 +1144,43 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		width = glt->tilewidth;
 		height = glt->tileheight;
 		depth = glt->tiledepth;
-		memset(resizebuffer, 0, width * height * depth * glt->sides * glt->bytesperpixel);
-		prevbuffer = resizebuffer;
+//		memset(resizebuffer, 0, width * height * depth * glt->sides * glt->bytesperpixel);
+//		prevbuffer = resizebuffer;
 	}
-	else if (glt->textype->textype == TEXTYPE_PALETTE)
+	else
 	{
-		// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
-		Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, glt->inputwidth * glt->inputheight * glt->inputdepth * glt->sides, glt->palette);
-		prevbuffer = colorconvertbuffer;
-	}
-
-	if (glt->flags & TEXF_RGBMULTIPLYBYALPHA)
-	{
-		// multiply RGB channels by A channel before uploading
-		int alpha;
-		for (i = 0;i < glt->inputwidth*glt->inputheight*glt->inputdepth*4;i += 4)
+		if (glt->textype->textype == TEXTYPE_PALETTE)
 		{
-			alpha = prevbuffer[i+3];
-			colorconvertbuffer[i] = (prevbuffer[i] * alpha) >> 8;
-			colorconvertbuffer[i+1] = (prevbuffer[i+1] * alpha) >> 8;
-			colorconvertbuffer[i+2] = (prevbuffer[i+2] * alpha) >> 8;
-			colorconvertbuffer[i+3] = alpha;
+			// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
+			Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, glt->inputwidth * glt->inputheight * glt->inputdepth * glt->sides, glt->palette);
+			prevbuffer = colorconvertbuffer;
 		}
-		prevbuffer = colorconvertbuffer;
-	}
-
-	// scale up to a power of 2 size (if appropriate)
-	if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
-	{
-		Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
-		prevbuffer = resizebuffer;
-	}
-	// apply mipmap reduction algorithm to get down to picmip/max_size
-	while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
-	{
-		Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
-		prevbuffer = resizebuffer;
+		if (glt->flags & TEXF_RGBMULTIPLYBYALPHA)
+		{
+			// multiply RGB channels by A channel before uploading
+			int alpha;
+			for (i = 0;i < glt->inputwidth*glt->inputheight*glt->inputdepth*4;i += 4)
+			{
+				alpha = prevbuffer[i+3];
+				colorconvertbuffer[i] = (prevbuffer[i] * alpha) >> 8;
+				colorconvertbuffer[i+1] = (prevbuffer[i+1] * alpha) >> 8;
+				colorconvertbuffer[i+2] = (prevbuffer[i+2] * alpha) >> 8;
+				colorconvertbuffer[i+3] = alpha;
+			}
+			prevbuffer = colorconvertbuffer;
+		}
+		// scale up to a power of 2 size (if appropriate)
+		if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
+		{
+			Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
+			prevbuffer = resizebuffer;
+		}
+		// apply mipmap reduction algorithm to get down to picmip/max_size
+		while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
+		{
+			Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+			prevbuffer = resizebuffer;
+		}
 	}
 
 	// do the appropriate upload type...
