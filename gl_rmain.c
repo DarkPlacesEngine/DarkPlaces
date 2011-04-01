@@ -5888,10 +5888,10 @@ void R_Bloom_StartFrame(void)
 		break;
 	}
 
-	if (r_hdr.integer || r_bloom.integer)
+	if ((r_hdr.integer || r_bloom.integer) && r_bloomstate.bloomwidth)
 	{
 		r_bloomstate.enabled = true;
-		r_bloomstate.hdr = r_hdr.integer != 0;
+		r_bloomstate.hdr = r_hdr.integer != 0 && !r_bloomstate.fbo_framebuffer;
 	}
 
 	R_Viewport_InitOrtho(&r_bloomstate.viewport, &identitymatrix, r_refdef.view.x, vid.height - r_bloomstate.bloomheight - r_refdef.view.y, r_bloomstate.bloomwidth, r_bloomstate.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
@@ -5974,7 +5974,7 @@ void R_Bloom_MakeTexture(void)
 
 	range = r_bloom_blur.integer * r_bloomstate.bloomwidth / 320;
 	brighten = r_bloom_brighten.value;
-	if (r_hdr.integer)
+	if (r_bloomstate.hdr)
 		brighten *= r_hdr_range.value;
 	brighten = sqrt(brighten);
 	if(range >= 1)
@@ -6580,7 +6580,7 @@ void R_RenderView(void)
 	r_refdef.view.clear = true;
 
 	// this produces a bloom texture to be used in R_BlendView() later
-	if (r_hdr.integer && r_bloomstate.bloomwidth)
+	if (r_bloomstate.hdr)
 	{
 		R_HDR_RenderBloomTexture();
 		// we have to bump the texture frame again because r_refdef.view.colorscale is cached in the textures
