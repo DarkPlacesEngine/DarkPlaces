@@ -5132,7 +5132,7 @@ void R_View_Update(void)
 	R_View_UpdateEntityLighting();
 }
 
-static float viewscalefpsadjusted = 1.0f;
+float viewscalefpsadjusted = 1.0f;
 
 void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
 {
@@ -5694,18 +5694,16 @@ void R_Bloom_StartFrame(void)
 
 	if (r_viewscale_fpsscaling.integer)
 	{
-		static double lastrealtime;
 		double actualframetime;
 		double targetframetime;
 		double adjust;
-		actualframetime = realtime - lastrealtime;
+		actualframetime = r_refdef.lastdrawscreentime;
 		targetframetime = (1.0 / r_viewscale_fpsscaling_target.value);
 		adjust = (targetframetime - actualframetime) * r_viewscale_fpsscaling_multiply.value;
 		adjust = bound(-r_viewscale_fpsscaling_stepmax.value, adjust, r_viewscale_fpsscaling_stepmax.value);
 		if (r_viewscale_fpsscaling_stepsize.value > 0)
 			adjust = (int)(adjust / r_viewscale_fpsscaling_stepsize.value) * r_viewscale_fpsscaling_stepsize.value;
 		viewscalefpsadjusted += adjust;
-		lastrealtime = realtime;
 		viewscalefpsadjusted = bound(r_viewscale_fpsscaling_min.value, viewscalefpsadjusted, 1.0f);
 	}
 	else
