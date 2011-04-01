@@ -355,6 +355,22 @@ static void DPSOFTRAST_RecalcViewport(const int *viewport, float *fb_viewportcen
 	fb_viewportscale[0] = 1.0f;
 }
 
+static void DPSOFTRAST_RecalcThread(DPSOFTRAST_State_Thread *thread)
+{
+	if (dpsoftrast.interlace)
+	{
+		thread->miny1 = (thread->index*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+		thread->maxy1 = ((thread->index+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+		thread->miny2 = ((dpsoftrast.numthreads+thread->index)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+		thread->maxy2 = ((dpsoftrast.numthreads+thread->index+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
+	}
+	else
+	{
+		thread->miny1 = thread->miny2 = (thread->index*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+		thread->maxy1 = thread->maxy2 = ((thread->index+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
+	}
+}
+
 static void DPSOFTRAST_RecalcFB(DPSOFTRAST_State_Thread *thread)
 {
 	// calculate framebuffer scissor, viewport, viewport clipped by scissor,
@@ -376,6 +392,7 @@ static void DPSOFTRAST_RecalcFB(DPSOFTRAST_State_Thread *thread)
 	thread->fb_scissor[3] = y2 - y1;
 
 	DPSOFTRAST_RecalcViewport(thread->viewport, thread->fb_viewportcenter, thread->fb_viewportscale);
+	DPSOFTRAST_RecalcThread(thread);
 }
 
 static void DPSOFTRAST_RecalcDepthFunc(DPSOFTRAST_State_Thread *thread)
@@ -755,21 +772,6 @@ void DPSOFTRAST_Texture_Filter(int index, DPSOFTRAST_TEXTURE_FILTER filter)
 	texture->filter = filter;
 }
 
-void DPSOFTRAST_SetRenderTargets(int width, int height, unsigned int *depthpixels, unsigned int *colorpixels0, unsigned int *colorpixels1, unsigned int *colorpixels2, unsigned int *colorpixels3)
-{
-	if (width != dpsoftrast.fb_width || height != dpsoftrast.fb_height || depthpixels != dpsoftrast.fb_depthpixels ||
-		colorpixels0 != dpsoftrast.fb_colorpixels[0] || colorpixels1 != dpsoftrast.fb_colorpixels[1] ||
-		colorpixels2 != dpsoftrast.fb_colorpixels[2] || colorpixels3 != dpsoftrast.fb_colorpixels[3])
-		DPSOFTRAST_Flush();
-	dpsoftrast.fb_width = width;
-	dpsoftrast.fb_height = height;
-	dpsoftrast.fb_depthpixels = depthpixels;
-	dpsoftrast.fb_colorpixels[0] = colorpixels0;
-	dpsoftrast.fb_colorpixels[1] = colorpixels1;
-	dpsoftrast.fb_colorpixels[2] = colorpixels2;
-	dpsoftrast.fb_colorpixels[3] = colorpixels3;
-}
-
 static void DPSOFTRAST_Draw_FlushThreads(void);
 
 static void DPSOFTRAST_Draw_SyncCommands(void)
@@ -900,14 +902,15 @@ DEFCOMMAND(2, ClearColor, float r; float g; float b; float a;)
 static void DPSOFTRAST_Interpret_ClearColor(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_Command_ClearColor *command)
 {
 	int i, x1, y1, x2, y2, w, h, x, y;
-	int miny1 = thread->miny1;
-	int maxy1 = thread->maxy1;
-	int miny2 = thread->miny2;
-	int maxy2 = thread->maxy2;
+	int miny1, maxy1, miny2, maxy2;
 	int bandy;
 	unsigned int *p;
 	unsigned int c;
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
+	miny1 = thread->miny1;
+	maxy1 = thread->maxy1;
+	miny2 = thread->miny2;
+	maxy2 = thread->maxy2;
 	x1 = thread->fb_scissor[0];
 	y1 = thread->fb_scissor[1];
 	x2 = thread->fb_scissor[0] + thread->fb_scissor[2];
@@ -946,14 +949,15 @@ DEFCOMMAND(3, ClearDepth, float depth;)
 static void DPSOFTRAST_Interpret_ClearDepth(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_ClearDepth *command)
 {
 	int x1, y1, x2, y2, w, h, x, y;
-	int miny1 = thread->miny1;
-	int maxy1 = thread->maxy1;
-	int miny2 = thread->miny2;
-	int maxy2 = thread->maxy2;
+	int miny1, maxy1, miny2, maxy2;
 	int bandy;
 	unsigned int *p;
 	unsigned int c;
 	DPSOFTRAST_Validate(thread, DPSOFTRAST_VALIDATE_FB);
+	miny1 = thread->miny1;
+	maxy1 = thread->maxy1;
+	miny2 = thread->miny2;
+	maxy2 = thread->maxy2;
 	x1 = thread->fb_scissor[0];
 	y1 = thread->fb_scissor[1];
 	x2 = thread->fb_scissor[0] + thread->fb_scissor[2];
@@ -5168,6 +5172,31 @@ void DPSOFTRAST_DrawTriangles(int firstvertex, int numvertices, int numtriangles
 		DPSOFTRAST_Draw_FlushThreads();
 	}
 }
+
+DEFCOMMAND(23, SetRenderTargets, int width; int height;);
+static void DPSOFTRAST_Interpret_SetRenderTargets(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_Command_SetRenderTargets *command)
+{
+	thread->validate |= DPSOFTRAST_VALIDATE_FB;
+}
+void DPSOFTRAST_SetRenderTargets(int width, int height, unsigned int *depthpixels, unsigned int *colorpixels0, unsigned int *colorpixels1, unsigned int *colorpixels2, unsigned int *colorpixels3)
+{
+	DPSOFTRAST_Command_SetRenderTargets *command;
+	if (width != dpsoftrast.fb_width || height != dpsoftrast.fb_height || depthpixels != dpsoftrast.fb_depthpixels ||
+		colorpixels0 != dpsoftrast.fb_colorpixels[0] || colorpixels1 != dpsoftrast.fb_colorpixels[1] ||
+		colorpixels2 != dpsoftrast.fb_colorpixels[2] || colorpixels3 != dpsoftrast.fb_colorpixels[3])
+		DPSOFTRAST_Flush();
+	dpsoftrast.fb_width = width;
+	dpsoftrast.fb_height = height;
+	dpsoftrast.fb_depthpixels = depthpixels;
+	dpsoftrast.fb_colorpixels[0] = colorpixels0;
+	dpsoftrast.fb_colorpixels[1] = colorpixels1;
+	dpsoftrast.fb_colorpixels[2] = colorpixels2;
+	dpsoftrast.fb_colorpixels[3] = colorpixels3;
+	DPSOFTRAST_RecalcViewport(dpsoftrast.viewport, dpsoftrast.fb_viewportcenter, dpsoftrast.fb_viewportscale);
+	command = DPSOFTRAST_ALLOCATECOMMAND(SetRenderTargets);
+	command->width = width;
+	command->height = height;
+}
  
 static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, int endoffset)
 {
@@ -5205,6 +5234,7 @@ static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, i
 		INTERPCOMMAND(Uniform4f)
 		INTERPCOMMAND(UniformMatrix4f)
 		INTERPCOMMAND(Uniform1i)
+		INTERPCOMMAND(SetRenderTargets)
 
 		case DPSOFTRAST_OPCODE_Draw:
 			DPSOFTRAST_Interpret_Draw(thread, (DPSOFTRAST_Command_Draw *)command);
@@ -5368,19 +5398,8 @@ int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsign
 		thread->polygonoffset[0] = 0;
 		thread->polygonoffset[1] = 0;
 	
-		if (dpsoftrast.interlace)
-		{
-			thread->miny1 = (i*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
-			thread->maxy1 = ((i+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
-			thread->miny2 = ((dpsoftrast.numthreads+i)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
-			thread->maxy2 = ((dpsoftrast.numthreads+i+1)*dpsoftrast.fb_height)/(2*dpsoftrast.numthreads);
-		}
-		else
-		{
-			thread->miny1 = thread->miny2 = (i*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-			thread->maxy1 = thread->maxy2 = ((i+1)*dpsoftrast.fb_height)/dpsoftrast.numthreads;
-		}
-
+		DPSOFTRAST_RecalcThread(thread);
+	
 		thread->numspans = 0;
 		thread->numtriangles = 0;
 		thread->commandoffset = 0;
