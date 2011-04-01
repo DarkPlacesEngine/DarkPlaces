@@ -212,11 +212,8 @@ void VID_Finish (void)
 
 	if (!vid_hidden)
 	{
-		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)
-		{
-			qglFinish();CHECKGLERROR
-		}
+			GL_Finish();
 		qaglSwapBuffers(context);
 	}
 	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);

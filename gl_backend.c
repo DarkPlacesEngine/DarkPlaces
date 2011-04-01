@@ -543,6 +543,31 @@ void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t
 	out[2] = v->z + (out[2] * iw + 1.0f) * v->depth * 0.5f;
 }
 
+void GL_Finish(void)
+{
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
+		qglFinish();
+		break;
+	case RENDERPATH_D3D9:
+		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D10:
+		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_D3D11:
+		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+		break;
+	case RENDERPATH_SOFT:
+		DPSOFTRAST_Finish();
+		break;
+	}
+}
+
 static int bboxedges[12][2] =
 {
 	// top

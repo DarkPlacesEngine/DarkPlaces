@@ -748,9 +748,7 @@ void VID_Finish (void)
 	{
 		CHECKGLERROR
 		if (r_speeds.integer == 2 || gl_finish.integer)
-		{
-			qglFinish();CHECKGLERROR
-		}
+			GL_Finish();
 		qglXSwapBuffers(vidx11_display, win);CHECKGLERROR
 	}
 
