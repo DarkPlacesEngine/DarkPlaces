@@ -692,13 +692,16 @@ void DPSOFTRAST_Texture_UpdatePartial(int index, int mip, const unsigned char *p
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
 	if (texture->binds)
 		DPSOFTRAST_Flush();
-	dst = texture->bytes + (blocky * texture->mipmap[0][2] + blockx) * 4;
-	while (blockheight > 0)
+	if (pixels)
 	{
-		memcpy(dst, pixels, blockwidth * 4);
-		pixels += blockwidth * 4;
-		dst += texture->mipmap[0][2] * 4;
-		blockheight--;
+		dst = texture->bytes + (blocky * texture->mipmap[0][2] + blockx) * 4;
+		while (blockheight > 0)
+		{
+			memcpy(dst, pixels, blockwidth * 4);
+			pixels += blockwidth * 4;
+			dst += texture->mipmap[0][2] * 4;
+			blockheight--;
+		}
 	}
 	DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
@@ -708,7 +711,8 @@ void DPSOFTRAST_Texture_UpdateFull(int index, const unsigned char *pixels)
 	texture = DPSOFTRAST_Texture_GetByIndex(index);if (!texture) return;
 	if (texture->binds)
 		DPSOFTRAST_Flush();
-	memcpy(texture->bytes, pixels, texture->mipmap[0][1]);
+	if (pixels)
+		memcpy(texture->bytes, pixels, texture->mipmap[0][1]);
 	DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
 int DPSOFTRAST_Texture_GetWidth(int index, int mip)
