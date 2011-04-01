@@ -3840,6 +3840,7 @@ void gl_main_start(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES2:
 		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
 		Cvar_SetValueQuick(&gl_combine, 1);
 		Cvar_SetValueQuick(&r_glsl, 1);
@@ -3862,14 +3863,6 @@ void gl_main_start(void)
 		r_loadnormalmap = false;
 		r_loadgloss = false;
 		r_loadfog = true;
-		break;
-	case RENDERPATH_GLES2:
-		Cvar_SetValueQuick(&r_textureunits, 1);
-		Cvar_SetValueQuick(&gl_combine, 1);
-		Cvar_SetValueQuick(&r_glsl, 1);
-		r_loadnormalmap = true;
-		r_loadgloss = false;
-		r_loadfog = false;
 		break;
 	}
 
