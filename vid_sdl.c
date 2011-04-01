@@ -2552,9 +2552,7 @@ void VID_Finish (void)
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (r_speeds.integer == 2 || gl_finish.integer)
-			{
-				qglFinish();CHECKGLERROR
-			}
+				GL_Finish();
 #if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 #else
 {
@@ -2591,6 +2589,8 @@ void VID_Finish (void)
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
 		case RENDERPATH_D3D11:
+			if (r_speeds.integer == 2 || gl_finish.integer)
+				GL_Finish();
 			break;
 		}
 	}
