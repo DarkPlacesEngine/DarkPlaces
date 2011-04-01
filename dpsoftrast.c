@@ -2388,6 +2388,11 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 	tciwrapmask[1] = texture->mipmap[mip][3]-1;
 	endtc[0] = (data[0] + slope[0]*startx) * zf[startx] * tcscale[0] - 0.5f;
 	endtc[1] = (data[1] + slope[1]*startx) * zf[startx] * tcscale[1] - 0.5f;
+	if (filter)
+	{
+		endtc[0] -= 0.5f;
+		endtc[1] -= 0.5f;
+	}
 	for (x = startx;x < endx;)
 	{
 		unsigned int subtc[2];
@@ -2401,8 +2406,13 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		}
 		tc[0] = endtc[0];
 		tc[1] = endtc[1];
-		endtc[0] = (data[0] + slope[0]*nextsub) * zf[nextsub] * tcscale[0] - 0.5f;
-		endtc[1] = (data[1] + slope[1]*nextsub) * zf[nextsub] * tcscale[1] - 0.5f;
+		endtc[0] = (data[0] + slope[0]*nextsub) * zf[nextsub] * tcscale[0];
+		endtc[1] = (data[1] + slope[1]*nextsub) * zf[nextsub] * tcscale[1];
+		if (filter)
+		{
+			endtc[0] -= 0.5f;
+			endtc[1] -= 0.5f;
+		}
 		substep[0] = (endtc[0] - tc[0]) * subscale;
 		substep[1] = (endtc[1] - tc[1]) * subscale;
 		subtc[0] = tc[0] * (1<<12);
@@ -2549,7 +2559,9 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	tcscale = _mm_cvtepi32_ps(tcsize);
 	data = _mm_mul_ps(_mm_movelh_ps(data, data), tcscale);
 	slope = _mm_mul_ps(_mm_movelh_ps(slope, slope), tcscale);
-	endtc = _mm_sub_ps(_mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx))), _mm_load1_ps(&zf[startx])), _mm_set1_ps(0.5f));
+	endtc = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(startx))), _mm_load1_ps(&zf[startx]));
+	if (filter)
+		endtc = _mm_sub_ps(endtc, _mm_set1_ps(0.5f));
 	endsubtc = _mm_cvtps_epi32(_mm_mul_ps(endtc, _mm_set1_ps(65536.0f)));
 	tcoffset = _mm_add_epi32(_mm_slli_epi32(_mm_shuffle_epi32(tcsize, _MM_SHUFFLE(0, 0, 0, 0)), 18), _mm_set1_epi32(4));
 	tcmax = _mm_packs_epi32(tcmask, tcmask);
@@ -2564,7 +2576,9 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 		}	
 		tc = endtc;
 		subtc = endsubtc;
-		endtc = _mm_sub_ps(_mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(nextsub))), _mm_load1_ps(&zf[nextsub])), _mm_set1_ps(0.5f));
+		endtc = _mm_mul_ps(_mm_add_ps(data, _mm_mul_ps(slope, _mm_set1_ps(nextsub))), _mm_load1_ps(&zf[nextsub]));
+		if (filter)
+			endtc = _mm_sub_ps(endtc, _mm_set1_ps(0.5f));
 		substep = _mm_cvtps_epi32(_mm_mul_ps(_mm_sub_ps(endtc, tc), subscale));
 		endsubtc = _mm_cvtps_epi32(_mm_mul_ps(endtc, _mm_set1_ps(65536.0f)));
 		subtc = _mm_unpacklo_epi64(subtc, _mm_add_epi32(subtc, substep));
@@ -4475,7 +4489,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		}
 		else
 		{
-			int tci[2] = { ScreenTexCoord[0] * texture->mipmap[0][2] - 0.5f, ScreenTexCoord[1] * texture->mipmap[0][3] - 0.5f };
+			int tci[2] = { ScreenTexCoord[0] * texture->mipmap[0][2], ScreenTexCoord[1] * texture->mipmap[0][3] };
 			tci[0] = tci[0] >= 0 ? (tci[0] <= texture->mipmap[0][2]-1 ? tci[0] : texture->mipmap[0][2]-1) : 0;
 			tci[1] = tci[1] >= 0 ? (tci[1] <= texture->mipmap[0][3]-1 ? tci[1] : texture->mipmap[0][3]-1) : 0;
 			pixel[0] = pixelbase + 4 * (tci[1]*texture->mipmap[0][2]+tci[0]);
