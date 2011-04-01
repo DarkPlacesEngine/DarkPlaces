@@ -2392,12 +2392,12 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 	{
 		unsigned int subtc[2];
 		unsigned int substep[2];
-		float subscale = 65536.0f/DPSOFTRAST_DRAW_MAXSUBSPAN;
+		float subscale = 4096.0f/DPSOFTRAST_DRAW_MAXSUBSPAN;
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		if (nextsub >= endx)
 		{
 			nextsub = endsub = endx-1;	
-			if (x < nextsub) subscale = 65536.0f / (nextsub - x);
+			if (x < nextsub) subscale = 4096.0f / (nextsub - x);
 		}
 		tc[0] = endtc[0];
 		tc[1] = endtc[1];
@@ -2405,8 +2405,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		endtc[1] = (data[1] + slope[1]*nextsub) * zf[nextsub] * tcscale[1] - 0.5f;
 		substep[0] = (endtc[0] - tc[0]) * subscale;
 		substep[1] = (endtc[1] - tc[1]) * subscale;
-		subtc[0] = tc[0] * (1<<16);
-		subtc[1] = tc[1] * (1<<16);
+		subtc[0] = tc[0] * (1<<12);
+		subtc[1] = tc[1] * (1<<12);
 		if (filter)
 		{
 			if (flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
@@ -2416,8 +2416,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
 					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>16;
-					tci[1] = subtc[1]>>16;
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
 					tci1[0] = tci[0] + 1;
 					tci1[1] = tci[1] + 1;
 					tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
@@ -2445,8 +2445,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 					unsigned int frac[2] = { subtc[0]&0xFFF, subtc[1]&0xFFF };
 					unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 					unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-					tci[0] = subtc[0]>>16;
-					tci[1] = subtc[1]>>16;
+					tci[0] = subtc[0]>>12;
+					tci[1] = subtc[1]>>12;
 					tci1[0] = tci[0] + 1;
 					tci1[1] = tci[1] + 1;
 					tci[0] &= tciwrapmask[0];
@@ -2472,8 +2472,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		{
 			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				tci[0] = subtc[0]>>16;
-				tci[1] = subtc[1]>>16;
+				tci[0] = subtc[0]>>12;
+				tci[1] = subtc[1]>>12;
 				tci[0] = tci[0] >= tcimin[0] ? (tci[0] <= tcimax[0] ? tci[0] : tcimax[0]) : tcimin[0];
 				tci[1] = tci[1] >= tcimin[1] ? (tci[1] <= tcimax[1] ? tci[1] : tcimax[1]) : tcimin[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -2491,8 +2491,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 		{
 			for (; x <= endsub; x++, subtc[0] += substep[0], subtc[1] += substep[1])
 			{
-				tci[0] = subtc[0]>>16;
-				tci[1] = subtc[1]>>16;
+				tci[0] = subtc[0]>>12;
+				tci[1] = subtc[1]>>12;
 				tci[0] &= tciwrapmask[0];
 				tci[1] &= tciwrapmask[1];
 				pixel[0] = pixelbase + 4 * (tci[1]*tciwidth+tci[0]);
@@ -4389,7 +4389,6 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 
 	// texture reads
 	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	//unsigned char buffer_texture_refractionbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 
 	// varyings
@@ -4411,7 +4410,6 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 	// read textures
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
-	//DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_refractionbgra8, GL20TU_REFRACTION, DPSOFTRAST_ARRAY_TEXCOORD1, buffer_z);
 
 	// read varyings
 	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD1); // or POSITION?
@@ -4457,11 +4455,11 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		// "	dp_FragColor = vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord).rgb, 1.0) * RefractColor;\n"
 		if(texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR)
 		{
-			unsigned int tc[2] = { ScreenTexCoord[0] * (texture->mipmap[0][2]<<16) - 32768, ScreenTexCoord[1] * (texture->mipmap[0][3]<<16) - 32678};
+			unsigned int tc[2] = { ScreenTexCoord[0] * (texture->mipmap[0][2]<<12) - 2048, ScreenTexCoord[1] * (texture->mipmap[0][3]<<12) - 2048};
 			unsigned int frac[2] = { tc[0]&0xFFF, tc[1]&0xFFF };
 			unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 			unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-			int tci[2] = { tc[0]>>16, tc[1]>>16 };
+			int tci[2] = { tc[0]>>12, tc[1]>>12 };
 			int tci1[2] = { tci[0] + 1, tci[1] + 1 };
 			tci[0] = tci[0] >= 0 ? (tci[0] <= texture->mipmap[0][2]-1 ? tci[0] : texture->mipmap[0][2]-1) : 0;
 			tci[1] = tci[1] >= 0 ? (tci[1] <= texture->mipmap[0][3]-1 ? tci[1] : texture->mipmap[0][3]-1) : 0;
@@ -4477,12 +4475,9 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		}
 		else
 		{
-			int tci[2] = { ScreenTexCoord[0] * texture->mipmap[0][2] - 0.5, ScreenTexCoord[1] * texture->mipmap[0][3] - 0.5 };
-			int tci1[2] = { tci[0] + 1, tci[1] + 1 };
+			int tci[2] = { ScreenTexCoord[0] * texture->mipmap[0][2] - 0.5f, ScreenTexCoord[1] * texture->mipmap[0][3] - 0.5f };
 			tci[0] = tci[0] >= 0 ? (tci[0] <= texture->mipmap[0][2]-1 ? tci[0] : texture->mipmap[0][2]-1) : 0;
 			tci[1] = tci[1] >= 0 ? (tci[1] <= texture->mipmap[0][3]-1 ? tci[1] : texture->mipmap[0][3]-1) : 0;
-			tci1[0] = tci1[0] >= 0 ? (tci1[0] <= texture->mipmap[0][2]-1 ? tci1[0] : texture->mipmap[0][2]-1) : 0;
-			tci1[1] = tci1[1] >= 0 ? (tci1[1] <= texture->mipmap[0][3]-1 ? tci1[1] : texture->mipmap[0][3]-1) : 0;
 			pixel[0] = pixelbase + 4 * (tci[1]*texture->mipmap[0][2]+tci[0]);
 			c[0] = pixel[0][0];
 			c[1] = pixel[0][1];
