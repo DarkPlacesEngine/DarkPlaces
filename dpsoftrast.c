@@ -2386,8 +2386,8 @@ void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *thread, cons
 	tcimax[1] = texture->mipmap[mip][3]-1;
 	tciwrapmask[0] = texture->mipmap[mip][2]-1;
 	tciwrapmask[1] = texture->mipmap[mip][3]-1;
-	endtc[0] = (data[0] + slope[0]*startx) * zf[startx] * tcscale[0] - 0.5f;
-	endtc[1] = (data[1] + slope[1]*startx) * zf[startx] * tcscale[1] - 0.5f;
+	endtc[0] = (data[0] + slope[0]*startx) * zf[startx] * tcscale[0];
+	endtc[1] = (data[1] + slope[1]*startx) * zf[startx] * tcscale[1];
 	if (filter)
 	{
 		endtc[0] -= 0.5f;
