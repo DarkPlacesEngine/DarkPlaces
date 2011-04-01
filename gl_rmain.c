@@ -5132,6 +5132,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 {
 	const float *customclipplane = NULL;
 	float plane[4];
+	int scaledwidth, scaledheight;
 	if (r_refdef.view.useclipplane && allowwaterclippingplane)
 	{
 		// LordHavoc: couldn't figure out how to make this approach the
@@ -5146,12 +5147,14 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		customclipplane = plane;
 	}
 
+	scaledwidth = (int)ceil(r_refdef.view.width * bound(0.125f, r_viewscale.value, 1.0f));
+	scaledheight = (int)ceil(r_refdef.view.height * bound(0.125f, r_viewscale.value, 1.0f));
 	if (!r_refdef.view.useperspective)
-		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
 	else if (vid.stencil && r_useinfinitefarclip.integer)
-		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
+		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
-		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
 	R_Mesh_SetMainRenderTargets();
 	R_SetViewport(&r_refdef.view.viewport);
 }
@@ -5764,12 +5767,12 @@ void R_Bloom_StartFrame(void)
 		r_bloomstate.screentexturewidth = screentexturewidth;
 		r_bloomstate.screentextureheight = screentextureheight;
 		if (r_bloomstate.screentexturewidth && r_bloomstate.screentextureheight)
-			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+			r_bloomstate.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 		if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
 		{
 			// FIXME: choose depth bits based on a cvar
 			r_bloomstate.texture_framebufferdepth = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, 24, false);
-			r_bloomstate.texture_framebuffercolor = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+			r_bloomstate.texture_framebuffercolor = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_bloomstate.screentexturewidth, r_bloomstate.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			r_bloomstate.fbo_framebuffer = R_Mesh_CreateFramebufferObject(r_bloomstate.texture_framebufferdepth, r_bloomstate.texture_framebuffercolor, NULL, NULL, NULL);
 			R_Mesh_SetRenderTargets(r_bloomstate.fbo_framebuffer, r_bloomstate.texture_framebufferdepth, r_bloomstate.texture_framebuffercolor, NULL, NULL, NULL);
 			// render depth into one texture and normalmap into the other
@@ -5801,10 +5804,10 @@ void R_Bloom_StartFrame(void)
 	// set up a texcoord array for the full resolution screen image
 	// (we have to keep this around to copy back during final render)
 	r_bloomstate.screentexcoord2f[0] = 0;
-	r_bloomstate.screentexcoord2f[1] = (float)r_refdef.view.height    / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[2] = (float)r_refdef.view.width     / (float)r_bloomstate.screentexturewidth;
-	r_bloomstate.screentexcoord2f[3] = (float)r_refdef.view.height    / (float)r_bloomstate.screentextureheight;
-	r_bloomstate.screentexcoord2f[4] = (float)r_refdef.view.width     / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[1] = (float)r_refdef.view.viewport.height    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[2] = (float)r_refdef.view.viewport.width     / (float)r_bloomstate.screentexturewidth;
+	r_bloomstate.screentexcoord2f[3] = (float)r_refdef.view.viewport.height    / (float)r_bloomstate.screentextureheight;
+	r_bloomstate.screentexcoord2f[4] = (float)r_refdef.view.viewport.width     / (float)r_bloomstate.screentexturewidth;
 	r_bloomstate.screentexcoord2f[5] = 0;
 	r_bloomstate.screentexcoord2f[6] = 0;
 	r_bloomstate.screentexcoord2f[7] = 0;
@@ -6231,7 +6234,7 @@ static void R_BlendView(void)
 			break;
 		}
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-		r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
