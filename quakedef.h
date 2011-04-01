@@ -475,6 +475,12 @@ extern cvar_t developer_loading;
 # undef SSE2_PRESENT
 #endif
 
+// for x86 cpus only...  (x64 has SSE2_PRESENT)
+#if defined(SSE_POSSIBLE) && !defined(SSE2_PRESENT)
+qboolean Sys_HaveSSE(void);
+qboolean Sys_HaveSSE2(void);
+#endif
+
 /// incremented every frame, never reset
 extern int host_framecount;
 /// not bounded in any way, changed at start of every frame, never reset

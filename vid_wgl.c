@@ -45,6 +45,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef SUPPORTDIRECTX
 #include <dinput.h>
 #endif
+#include "dpsoftrast.h"
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
@@ -138,6 +139,11 @@ HWND mainwindow;
 
 static HDC	 baseDC;
 static HGLRC baseRC;
+
+static HDC vid_softhdc;
+static HGDIOBJ vid_softhdc_backup;
+static BITMAPINFO vid_softbmi;
+static HBITMAP vid_softdibhandle;
 
 //HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
@@ -294,76 +300,92 @@ qboolean vid_begunscene = false;
 void VID_Finish (void)
 {
 #ifdef SUPPORTD3D
-	if (vid_d3d9dev)
-	{
-		HRESULT hr;
-		if (vid_begunscene)
-		{
-			IDirect3DDevice9_EndScene(vid_d3d9dev);
-			vid_begunscene = false;
-		}
-		if (vid_reallyhidden)
-			return;
-		if (!vid_d3ddevicelost)
-		{
-			vid_hidden = vid_reallyhidden;
-			hr = IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
-			if (hr == D3DERR_DEVICELOST)
-			{
-				vid_d3ddevicelost = true;
-				vid_hidden = true;
-				Sleep(100);
-			}
-		}
-		else
-		{
-			hr = IDirect3DDevice9_TestCooperativeLevel(vid_d3d9dev);
-			switch(hr)
-			{
-			case D3DERR_DEVICELOST:
-				vid_d3ddevicelost = true;
-				vid_hidden = true;
-				Sleep(100);
-				break;
-			case D3DERR_DEVICENOTRESET:
-				vid_d3ddevicelost = false;
-				vid_hidden = vid_reallyhidden;
-				R_Modules_DeviceLost();
-				IDirect3DDevice9_Reset(vid_d3d9dev, &vid_d3dpresentparameters);
-				R_Modules_DeviceRestored();
-				break;
-			case D3D_OK:
-				vid_hidden = vid_reallyhidden;
-				IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
-				break;
-			}
-		}
-		if (!vid_begunscene && !vid_hidden)
-		{
-			IDirect3DDevice9_BeginScene(vid_d3d9dev);
-			vid_begunscene = true;
-		}
-		return;
-	}
+	HRESULT hr;
 #endif
-
 	vid_hidden = vid_reallyhidden;
 
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && qwglSwapIntervalEXT;
-	if (vid_usingvsync != vid_usevsync)
-	{
-		vid_usingvsync = vid_usevsync;
-		qwglSwapIntervalEXT (vid_usevsync);
-	}
 
 	if (!vid_hidden)
 	{
-		CHECKGLERROR
-		if (r_speeds.integer == 2 || gl_finish.integer)
+		switch(vid.renderpath)
 		{
-			qglFinish();CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
+			if (vid_usingvsync != vid_usevsync)
+			{
+				vid_usingvsync = vid_usevsync;
+				qwglSwapIntervalEXT (vid_usevsync);
+			}
+			if (r_speeds.integer == 2 || gl_finish.integer)
+				GL_Finish();
+			SwapBuffers(baseDC);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			if (vid_begunscene)
+			{
+				IDirect3DDevice9_EndScene(vid_d3d9dev);
+				vid_begunscene = false;
+			}
+			if (!vid_reallyhidden)
+			{
+				if (!vid_d3ddevicelost)
+				{
+					vid_hidden = vid_reallyhidden;
+					hr = IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
+					if (hr == D3DERR_DEVICELOST)
+					{
+						vid_d3ddevicelost = true;
+						vid_hidden = true;
+						Sleep(100);
+					}
+				}
+				else
+				{
+					hr = IDirect3DDevice9_TestCooperativeLevel(vid_d3d9dev);
+					switch(hr)
+					{
+					case D3DERR_DEVICELOST:
+						vid_d3ddevicelost = true;
+						vid_hidden = true;
+						Sleep(100);
+						break;
+					case D3DERR_DEVICENOTRESET:
+						vid_d3ddevicelost = false;
+						vid_hidden = vid_reallyhidden;
+						R_Modules_DeviceLost();
+						IDirect3DDevice9_Reset(vid_d3d9dev, &vid_d3dpresentparameters);
+						R_Modules_DeviceRestored();
+						break;
+					case D3D_OK:
+						vid_hidden = vid_reallyhidden;
+						IDirect3DDevice9_Present(vid_d3d9dev, NULL, NULL, NULL, NULL);
+						break;
+					}
+				}
+				if (!vid_begunscene && !vid_hidden)
+				{
+					IDirect3DDevice9_BeginScene(vid_d3d9dev);
+					vid_begunscene = true;
+				}
+			}
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			break;
+		case RENDERPATH_D3D11:
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_Finish();
+//			baseDC = GetDC(mainwindow);
+			BitBlt(baseDC, 0, 0, vid.width, vid.height, vid_softhdc, 0, 0, SRCCOPY);
+//			ReleaseDC(mainwindow, baseDC);
+//			baseDC = NULL;
+			break;
 		}
-		SwapBuffers(baseDC);
 	}
 
 	// make sure a context switch can happen every frame - Logitech drivers
@@ -1613,8 +1635,293 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 }
 #endif
 
+qboolean VID_InitModeSOFT(viddef_mode_t *mode)
+{
+	int i;
+	HDC hdc;
+	RECT rect;
+	MSG msg;
+	int pixelformat, newpixelformat;
+	DWORD WindowStyle, ExWindowStyle;
+	int CenterX, CenterY;
+	int depth;
+	DEVMODE thismode;
+	qboolean foundmode, foundgoodmode;
+	int bpp = mode->bitsperpixel;
+	int width = mode->width;
+	int height = mode->height;
+	int refreshrate = (int)floor(mode->refreshrate+0.5);
+	int fullscreen = mode->fullscreen;
+
+	if (vid_initialized)
+		Sys_Error("VID_InitMode called when video is already initialised");
+
+	memset(&gdevmode, 0, sizeof(gdevmode));
+
+	vid_isfullscreen = false;
+	if (fullscreen)
+	{
+		if(vid_forcerefreshrate.integer)
+		{
+			foundmode = true;
+			gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+			gdevmode.dmBitsPerPel = bpp;
+			gdevmode.dmPelsWidth = width;
+			gdevmode.dmPelsHeight = height;
+			gdevmode.dmSize = sizeof (gdevmode);
+			if(refreshrate)
+			{
+				gdevmode.dmFields |= DM_DISPLAYFREQUENCY;
+				gdevmode.dmDisplayFrequency = refreshrate;
+			}
+		}
+		else
+		{
+			if(refreshrate == 0)
+				refreshrate = initialdevmode.dmDisplayFrequency; // default vid_refreshrate to the rate of the desktop
+
+			foundmode = false;
+			foundgoodmode = false;
+
+			thismode.dmSize = sizeof(thismode);
+			thismode.dmDriverExtra = 0;
+			for(i = 0; EnumDisplaySettings(NULL, i, &thismode); ++i)
+			{
+				if(~thismode.dmFields & (DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY))
+				{
+					Con_DPrintf("enumerating modes yielded a bogus item... please debug this\n");
+					continue;
+				}
+				if(developer_extra.integer)
+					Con_DPrintf("Found mode %dx%dx%dbpp %dHz... ", (int)thismode.dmPelsWidth, (int)thismode.dmPelsHeight, (int)thismode.dmBitsPerPel, (int)thismode.dmDisplayFrequency);
+				if(thismode.dmBitsPerPel != (DWORD)bpp)
+				{
+					if(developer_extra.integer)
+						Con_DPrintf("wrong bpp\n");
+					continue;
+				}
+				if(thismode.dmPelsWidth != (DWORD)width)
+				{
+					if(developer_extra.integer)
+						Con_DPrintf("wrong width\n");
+					continue;
+				}
+				if(thismode.dmPelsHeight != (DWORD)height)
+				{
+					if(developer_extra.integer)
+						Con_DPrintf("wrong height\n");
+					continue;
+				}
+
+				if(foundgoodmode)
+				{
+					// if we have a good mode, make sure this mode is better than the previous one, and allowed by the refreshrate
+					if(thismode.dmDisplayFrequency > (DWORD)refreshrate)
+					{
+						if(developer_extra.integer)
+							Con_DPrintf("too high refresh rate\n");
+						continue;
+					}
+					else if(thismode.dmDisplayFrequency <= gdevmode.dmDisplayFrequency)
+					{
+						if(developer_extra.integer)
+							Con_DPrintf("doesn't beat previous best match (too low)\n");
+						continue;
+					}
+				}
+				else if(foundmode)
+				{
+					// we do have one, but it isn't good... make sure it has a lower frequency than the previous one
+					if(thismode.dmDisplayFrequency >= gdevmode.dmDisplayFrequency)
+					{
+						if(developer_extra.integer)
+							Con_DPrintf("doesn't beat previous best match (too high)\n");
+						continue;
+					}
+				}
+				// otherwise, take anything
+
+				memcpy(&gdevmode, &thismode, sizeof(gdevmode));
+				if(thismode.dmDisplayFrequency <= (DWORD)refreshrate)
+					foundgoodmode = true;
+				else
+				{
+					if(developer_extra.integer)
+						Con_DPrintf("(out of range)\n");
+				}
+				foundmode = true;
+				if(developer_extra.integer)
+					Con_DPrintf("accepted\n");
+			}
+		}
+
+		if (!foundmode)
+		{
+			VID_Shutdown();
+			Con_Printf("Unable to find the requested mode %dx%dx%dbpp\n", width, height, bpp);
+			return false;
+		}
+		else if(ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
+		{
+			VID_Shutdown();
+			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", width, height, bpp);
+			return false;
+		}
+
+		vid_isfullscreen = true;
+		WindowStyle = WS_POPUP;
+		ExWindowStyle = WS_EX_TOPMOST;
+	}
+	else
+	{
+		hdc = GetDC (NULL);
+		i = GetDeviceCaps(hdc, RASTERCAPS);
+		depth = GetDeviceCaps(hdc, PLANES) * GetDeviceCaps(hdc, BITSPIXEL);
+		ReleaseDC (NULL, hdc);
+		if (i & RC_PALETTE)
+		{
+			VID_Shutdown();
+			Con_Print("Can't run in non-RGB mode\n");
+			return false;
+		}
+		if (bpp > depth)
+		{
+			VID_Shutdown();
+			Con_Print("A higher desktop depth is required to run this video mode\n");
+			return false;
+		}
+
+		WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		ExWindowStyle = 0;
+	}
+
+	rect.top = 0;
+	rect.left = 0;
+	rect.right = width;
+	rect.bottom = height;
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
+
+	if (fullscreen)
+	{
+		CenterX = 0;
+		CenterY = 0;
+	}
+	else
+	{
+		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
+		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
+	}
+	CenterX = max(0, CenterX);
+	CenterY = max(0, CenterY);
+
+	// x and y may be changed by WM_MOVE messages
+	window_x = CenterX;
+	window_y = CenterY;
+	rect.left += CenterX;
+	rect.right += CenterX;
+	rect.top += CenterY;
+	rect.bottom += CenterY;
+
+	pixelformat = 0;
+	newpixelformat = 0;
+	gl_extensions = "";
+	gl_platformextensions = "";
+
+	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
+	if (!mainwindow)
+	{
+		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %p, %p) failed\n", (int)ExWindowStyle, "DarkPlacesWindowClass", gamename, (int)WindowStyle, (int)(rect.left), (int)(rect.top), (int)(rect.right - rect.left), (int)(rect.bottom - rect.top), (void *)NULL, (void *)NULL, (void *)global_hInstance, (void *)NULL);
+		VID_Shutdown();
+		return false;
+	}
+
+	baseDC = GetDC(mainwindow);
+	vid.softpixels = NULL;
+	memset(&vid_softbmi, 0, sizeof(vid_softbmi));
+	vid_softbmi.bmiHeader.biSize = sizeof(vid_softbmi.bmiHeader);
+	vid_softbmi.bmiHeader.biWidth = width;
+	vid_softbmi.bmiHeader.biHeight = -height; // negative to make a top-down bitmap
+	vid_softbmi.bmiHeader.biPlanes = 1;
+	vid_softbmi.bmiHeader.biBitCount = 32;
+	vid_softbmi.bmiHeader.biCompression = BI_RGB;
+	vid_softbmi.bmiHeader.biSizeImage = width*height*4;
+	vid_softbmi.bmiHeader.biClrUsed = 256;
+	vid_softbmi.bmiHeader.biClrImportant = 256;
+	vid_softdibhandle = CreateDIBSection(baseDC, &vid_softbmi, DIB_RGB_COLORS, (void **)&vid.softpixels, NULL, 0);
+	if (!vid_softdibhandle)
+	{
+		Con_Printf("CreateDIBSection failed\n");
+		VID_Shutdown();
+		return false;
+	}
+
+	vid_softhdc = CreateCompatibleDC(baseDC);
+	vid_softhdc_backup = SelectObject(vid_softhdc, vid_softdibhandle);
+	if (!vid_softhdc_backup)
+	{
+		Con_Printf("SelectObject failed\n");
+		VID_Shutdown();
+		return false;
+	}
+//	ReleaseDC(mainwindow, baseDC);
+//	baseDC = NULL;
+
+	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
+	if (DPSOFTRAST_Init(mode->width, mode->height, vid_soft_threads.integer, vid_soft_interlace.integer, (unsigned int *)vid.softpixels, (unsigned int *)vid.softdepthpixels) < 0)
+	{
+		Con_Printf("Failed to initialize software rasterizer\n");
+		VID_Shutdown();
+		return false;
+	}
+
+	VID_Soft_SharedSetup();
+
+	ShowWindow (mainwindow, SW_SHOWDEFAULT);
+	UpdateWindow (mainwindow);
+
+	// now we try to make sure we get the focus on the mode switch, because
+	// sometimes in some systems we don't.  We grab the foreground, then
+	// finish setting up, pump all our messages, and sleep for a little while
+	// to let messages finish bouncing around the system, then we put
+	// ourselves at the top of the z order, then grab the foreground again,
+	// Who knows if it helps, but it probably doesn't hurt
+	SetForegroundWindow (mainwindow);
+
+	while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		TranslateMessage (&msg);
+		DispatchMessage (&msg);
+	}
+
+	Sleep (100);
+
+	SetWindowPos (mainwindow, HWND_TOP, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
+
+	SetForegroundWindow (mainwindow);
+
+	// fix the leftover Alt from any Alt-Tab or the like that switched us away
+	ClearAllStates ();
+
+	//vid_menudrawfn = VID_MenuDraw;
+	//vid_menukeyfn = VID_MenuKey;
+	vid_usingmouse = false;
+	vid_usinghidecursor = false;
+	vid_usingvsync = false;
+	vid_reallyhidden = vid_hidden = false;
+	vid_initialized = true;
+
+	IN_StartupMouse ();
+	IN_StartupJoystick ();
+
+	return true;
+}
+
 qboolean VID_InitMode(viddef_mode_t *mode)
 {
+#ifdef SSE_POSSIBLE
+	if (vid_soft.integer)
+		return VID_InitModeSOFT(mode);
+#endif
 #ifdef SUPPORTD3D
 //	if (vid_dx11.integer)
 //		return VID_InitModeDX(mode, 11);
@@ -1644,6 +1951,20 @@ void VID_Shutdown (void)
 	gl_extensions = "";
 	gl_platform = "";
 	gl_platformextensions = "";
+	if (vid_softhdc)
+	{
+		SelectObject(vid_softhdc, vid_softhdc_backup);
+		ReleaseDC(mainwindow, vid_softhdc);
+	}
+	vid_softhdc = NULL;
+	vid_softhdc_backup = NULL;
+	if (vid_softdibhandle)
+		DeleteObject(vid_softdibhandle);
+	vid_softdibhandle = NULL;
+	vid.softpixels = NULL;
+	if (vid.softdepthpixels)
+		free(vid.softdepthpixels);
+	vid.softdepthpixels = NULL;
 #ifdef SUPPORTD3D
 	if (vid_d3d9dev)
 	{
@@ -1669,6 +1990,7 @@ void VID_Shutdown (void)
 	GL_CloseLibrary();
 	if (baseDC && mainwindow)
 		ReleaseDC(mainwindow, baseDC);
+	baseDC = NULL;
 	AppActivate(false, false);
 	if (mainwindow)
 		DestroyWindow(mainwindow);
