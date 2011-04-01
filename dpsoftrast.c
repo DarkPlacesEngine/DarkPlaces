@@ -1704,10 +1704,13 @@ void DPSOFTRAST_Vertex_Copy(float *out4f, const float *in4f, int numitems)
 											_mm_mul_ps(_mm_shuffle_ps(p, p, _MM_SHUFFLE(3, 3, 3, 3)), m3)))); \
 }
 
-static int DPSOFTRAST_Vertex_BoundY(int *starty, int *endy, __m128 minpos, __m128 maxpos, __m128 viewportcenter, __m128 viewportscale, __m128 m0, __m128 m1, __m128 m2, __m128 m3)
+static int DPSOFTRAST_Vertex_BoundY(int *starty, int *endy, const float *minposf, const float *maxposf, const float *inmatrix16f)
 {
 	int clipmask = 0xFF;
+	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	__m128 bb[8], clipdist[8], minproj = _mm_set_ss(2.0f), maxproj = _mm_set_ss(-2.0f);
+	__m128 m0 = _mm_loadu_ps(inmatrix16f), m1 = _mm_loadu_ps(inmatrix16f + 4), m2 = _mm_loadu_ps(inmatrix16f + 8), m3 = _mm_loadu_ps(inmatrix16f + 12);
+	__m128 minpos = _mm_load_ps(minposf), maxpos = _mm_load_ps(maxposf);
 	m0 = _mm_shuffle_ps(m0, m0, _MM_SHUFFLE(3, 2, 0, 1));
 	m1 = _mm_shuffle_ps(m1, m1, _MM_SHUFFLE(3, 2, 0, 1));
 	m2 = _mm_shuffle_ps(m2, m2, _MM_SHUFFLE(3, 2, 0, 1));
@@ -1777,6 +1780,7 @@ static int DPSOFTRAST_Vertex_BoundY(int *starty, int *endy, __m128 minpos, __m12
 	
 static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems)
 {
+	static const float identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 	float *end = out4f + numitems*4;
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	__m128 minpos, maxpos;
@@ -1813,17 +1817,19 @@ static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty,
 		}
 	}
 	if (starty && endy) 
-		return DPSOFTRAST_Vertex_BoundY(starty, endy, minpos, maxpos, viewportcenter, viewportscale, 
-					_mm_setr_ps(1.0f, 0.0f, 0.0f, 0.0f),
-					_mm_setr_ps(0.0f, 1.0f, 0.0f, 0.0f),
-					_mm_setr_ps(0.0f, 0.0f, 1.0f, 0.0f),
-					_mm_setr_ps(0.0f, 0.0f, 0.0f, 1.0f));
+	{
+		ALIGN(float minposf[4]);
+		ALIGN(float maxposf[4]);
+		_mm_store_ps(minposf, minpos);
+		_mm_store_ps(maxposf, maxpos);
+		return DPSOFTRAST_Vertex_BoundY(starty, endy, minposf, maxposf, identitymatrix);
+	}
 	return 0;
 }
 
 static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems, const float *inmatrix16f)
 {
-	static const float identitymatrix[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+	static const float identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 	__m128 m0, m1, m2, m3, viewportcenter, viewportscale, minpos, maxpos;
 	float *end;
 	if (!memcmp(identitymatrix, inmatrix16f, sizeof(float[16])))
@@ -1870,7 +1876,13 @@ static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int
 		}
 	}
 	if (starty && endy) 
-		return DPSOFTRAST_Vertex_BoundY(starty, endy, minpos, maxpos, viewportcenter, viewportscale, m0, m1, m2, m3); 
+	{
+		ALIGN(float minposf[4]);
+		ALIGN(float maxposf[4]);
+		_mm_store_ps(minposf, minpos);
+		_mm_store_ps(maxposf, maxpos);
+		return DPSOFTRAST_Vertex_BoundY(starty, endy, minposf, maxposf, inmatrix16f); 
+	}
 	return 0;
 }
 #endif
