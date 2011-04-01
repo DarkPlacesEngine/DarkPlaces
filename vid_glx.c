@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <GL/glx.h>
 
 #include "quakedef.h"
+#include "dpsoftrast.h"
 
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
@@ -82,6 +83,8 @@ static Display *vidx11_display = NULL;
 static int vidx11_screen;
 static Window win, root;
 static GLXContext ctx = NULL;
+static GC vidx11_gc = NULL;
+static XImage *vidx11_ximage = NULL;
 
 Atom wm_delete_window_atom;
 Atom net_wm_state_atom;
@@ -530,6 +533,18 @@ static void HandleEvents(void)
 					Con_Printf("NetWM fullscreen: actually using resolution %dx%d\n", vid.width, vid.height);
 				else
 					Con_DPrintf("Updating to ConfigureNotify resolution %dx%d\n", vid.width, vid.height);
+
+				if (vidx11_ximage)
+				{
+					XDestroyImage(vidx11_ximage);
+					if(vid.softdepthpixels)
+						free(vid.softdepthpixels);
+					vid.softpixels = (unsigned int *)calloc(1, vid.width * vid.height * 4);
+					vid.softdepthpixels = (unsigned int *)calloc(1, vid.width * vid.height * 4);
+					vidx11_ximage = XCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, 0, (char*)vid.softpixels, vid.width, vid.height, 8, 0);
+
+					// FIXME inform softrast!
+				}
 			}
 			break;
 		case DestroyNotify:
@@ -696,6 +711,19 @@ void VID_Shutdown(void)
 	// FIXME: glXDestroyContext here?
 	if (vid_isvidmodefullscreen)
 		XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
+
+	if(vidx11_gc)
+		XFreeGC(vidx11_display, vidx11_gc);
+	vidx11_gc = NULL;
+
+	if(vidx11_ximage)
+		XDestroyImage(vidx11_ximage);
+	vidx11_ximage = 0;
+	vid.softpixels = NULL;
+
+	if (vid.softdepthpixels)
+		free(vid.softdepthpixels);
+
 	if (win)
 		XDestroyWindow(vidx11_display, win);
 	XCloseDisplay(vidx11_display);
@@ -737,19 +765,36 @@ void InitSig(void)
 void VID_Finish (void)
 {
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && qglXSwapIntervalSGI;
-	if (vid_usingvsync != vid_usevsync)
+	switch(vid.renderpath)
 	{
-		vid_usingvsync = vid_usevsync;
-		if (qglXSwapIntervalSGI (vid_usevsync))
-			Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
-	}
+		case RENDERPATH_SOFT:
+			XPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage, 0, 0, 0, 0, vid.width, vid.height);
+			break;
 
-	if (!vid_hidden)
-	{
-		CHECKGLERROR
-		if (r_speeds.integer == 2 || gl_finish.integer)
-			GL_Finish();
-		qglXSwapBuffers(vidx11_display, win);CHECKGLERROR
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
+			if (vid_usingvsync != vid_usevsync)
+			{
+				vid_usingvsync = vid_usevsync;
+				if (qglXSwapIntervalSGI (vid_usevsync))
+					Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
+			}
+
+			if (!vid_hidden)
+			{
+				CHECKGLERROR
+				if (r_speeds.integer == 2 || gl_finish.integer)
+					GL_Finish();
+				qglXSwapBuffers(vidx11_display, win);CHECKGLERROR
+			}
+			break;
+
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+			break;
 	}
 
 	if (vid_x11_hardwaregammasupported)
@@ -804,7 +849,294 @@ void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, in
 	*attrib++ = None;
 }
 
-qboolean VID_InitMode(viddef_mode_t *mode)
+qboolean VID_InitModeSoft(viddef_mode_t *mode)
+{
+	int i, j;
+	XSetWindowAttributes attr;
+	XClassHint *clshints;
+	XWMHints *wmhints;
+	XSizeHints *szhints;
+	unsigned long mask;
+	int MajorVersion, MinorVersion;
+	char *xpm;
+	char **idata;
+	unsigned char *data;
+	XGCValues gcval;
+
+	vid_isfullscreen = false;
+	vid_isnetwmfullscreen = false;
+	vid_isvidmodefullscreen = false;
+	vid_isoverrideredirect = false;
+
+	if (!(vidx11_display = XOpenDisplay(NULL)))
+	{
+		Con_Print("Couldn't open the X display\n");
+		return false;
+	}
+
+	// LordHavoc: making the close button on a window do the right thing
+	// seems to involve this mess, sigh...
+	wm_delete_window_atom = XInternAtom(vidx11_display, "WM_DELETE_WINDOW", false);
+	net_wm_state_atom = XInternAtom(vidx11_display, "_NET_WM_STATE", false);
+	net_wm_state_fullscreen_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_FULLSCREEN", false);
+	net_wm_state_hidden_atom = XInternAtom(vidx11_display, "_NET_WM_STATE_HIDDEN", false);
+	net_wm_icon = XInternAtom(vidx11_display, "_NET_WM_ICON", false);
+	cardinal = XInternAtom(vidx11_display, "CARDINAL", false);
+
+	// make autorepeat send keypress/keypress/.../keyrelease instead of intervening keyrelease
+	XkbSetDetectableAutoRepeat(vidx11_display, true, NULL);
+
+	vidx11_screen = DefaultScreen(vidx11_display);
+	root = RootWindow(vidx11_display, vidx11_screen);
+
+	// Get video mode list
+	MajorVersion = MinorVersion = 0;
+	if (!XF86VidModeQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
+		vidmode_ext = false;
+	else
+	{
+		Con_DPrintf("Using XFree86-VidModeExtension Version %d.%d\n", MajorVersion, MinorVersion);
+		vidmode_ext = true;
+	}
+
+	if (mode->fullscreen)
+	{
+		if(vid_netwmfullscreen.integer)
+		{
+			// TODO detect WM support
+			vid_isnetwmfullscreen = true;
+			vid_isfullscreen = true;
+			// width and height will be filled in later
+			Con_DPrintf("Using NetWM fullscreen mode\n");
+		}
+
+		if(!vid_isfullscreen && vidmode_ext)
+		{
+			int best_fit, best_dist, dist, x, y;
+
+			// Are we going fullscreen?  If so, let's change video mode
+			XF86VidModeModeLine *current_vidmode;
+			XF86VidModeModeInfo **vidmodes;
+			int num_vidmodes;
+
+			// This nice hack comes from the SDL source code
+			current_vidmode = (XF86VidModeModeLine*)((char*)&init_vidmode + sizeof(init_vidmode.dotclock));
+			XF86VidModeGetModeLine(vidx11_display, vidx11_screen, (int*)&init_vidmode.dotclock, current_vidmode);
+
+			XF86VidModeGetAllModeLines(vidx11_display, vidx11_screen, &num_vidmodes, &vidmodes);
+			best_dist = 0;
+			best_fit = -1;
+
+			for (i = 0; i < num_vidmodes; i++)
+			{
+				if (mode->width > vidmodes[i]->hdisplay || mode->height > vidmodes[i]->vdisplay)
+					continue;
+
+				x = mode->width - vidmodes[i]->hdisplay;
+				y = mode->height - vidmodes[i]->vdisplay;
+				dist = (x * x) + (y * y);
+				if (best_fit == -1 || dist < best_dist)
+				{
+					best_dist = dist;
+					best_fit = i;
+				}
+			}
+
+			if (best_fit != -1)
+			{
+				// LordHavoc: changed from ActualWidth/ActualHeight =,
+				// to width/height =, so the window will take the full area of
+				// the mode chosen
+				mode->width = vidmodes[best_fit]->hdisplay;
+				mode->height = vidmodes[best_fit]->vdisplay;
+
+				// change to the mode
+				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
+				memcpy(&game_vidmode, vidmodes[best_fit], sizeof(game_vidmode));
+				vid_isvidmodefullscreen = true;
+				vid_isfullscreen = true;
+
+				// Move the viewport to top left
+				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
+				Con_DPrintf("Using XVidMode fullscreen mode at %dx%d\n", mode->width, mode->height);
+			}
+
+			free(vidmodes);
+		}
+
+		if(!vid_isfullscreen)
+		{
+			// sorry, no FS available
+			// use the full desktop resolution
+			vid_isfullscreen = true;
+			// width and height will be filled in later
+			mode->width = DisplayWidth(vidx11_display, vidx11_screen);
+			mode->height = DisplayHeight(vidx11_display, vidx11_screen);
+			Con_DPrintf("Using X11 fullscreen mode at %dx%d\n", mode->width, mode->height);
+		}
+	}
+
+	// LordHavoc: save the visual for use in gamma ramp settings later
+	vidx11_visual = DefaultVisual(vidx11_display, vidx11_screen);
+
+	/* window attributes */
+	attr.background_pixel = 0;
+	attr.border_pixel = 0;
+	// LordHavoc: save the colormap for later, too
+	vidx11_colormap = attr.colormap = XCreateColormap(vidx11_display, root, vidx11_visual, AllocNone);
+	attr.event_mask = X_MASK;
+
+	if (mode->fullscreen)
+	{
+		if(vid_isnetwmfullscreen)
+		{
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
+			attr.backing_store = NotUseful;
+			attr.save_under = False;
+		}
+		else
+		{
+			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask | CWOverrideRedirect;
+			attr.override_redirect = True;
+			attr.backing_store = NotUseful;
+			attr.save_under = False;
+			vid_isoverrideredirect = true; // so it knows to grab
+		}
+	}
+	else
+	{
+		mask = CWBackPixel | CWBorderPixel | CWColormap | CWEventMask;
+	}
+
+	win = XCreateWindow(vidx11_display, root, 0, 0, mode->width, mode->height, 0, CopyFromParent, InputOutput, vidx11_visual, mask, &attr);
+
+	data = loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
+	if(data)
+	{
+		// use _NET_WM_ICON too
+		static long netwm_icon[MAX_NETWM_ICON];
+		int pos = 0;
+		int i = 1;
+
+		while(data)
+		{
+			if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
+			{
+				netwm_icon[pos++] = image_width;
+				netwm_icon[pos++] = image_height;
+				for(i = 0; i < image_height; ++i)
+					for(j = 0; j < image_width; ++j)
+						netwm_icon[pos++] = BuffLittleLong(&data[(i*image_width+j)*4]);
+			}
+			else
+			{
+				Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
+			}
+			++i;
+			Mem_Free(data);
+			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+		}
+		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
+	}
+
+	// fallthrough for old window managers
+	xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
+	idata = NULL;
+	if(xpm)
+		idata = XPM_DecodeString(xpm);
+	if(!idata)
+		idata = ENGINE_ICON;
+
+	wmhints = XAllocWMHints();
+	if(XpmCreatePixmapFromData(vidx11_display, win,
+		idata,
+		&wmhints->icon_pixmap, &wmhints->icon_mask, NULL) == XpmSuccess)
+		wmhints->flags |= IconPixmapHint | IconMaskHint;
+
+	if(xpm)
+		Mem_Free(xpm);
+
+	clshints = XAllocClassHint();
+	clshints->res_name = strdup(gamename);
+	clshints->res_class = strdup("DarkPlaces");
+
+	szhints = XAllocSizeHints();
+	if(vid_resizable.integer == 0 && !vid_isnetwmfullscreen)
+	{
+		szhints->min_width = szhints->max_width = mode->width;
+		szhints->min_height = szhints->max_height = mode->height;
+		szhints->flags |= PMinSize | PMaxSize;
+	}
+
+	XmbSetWMProperties(vidx11_display, win, gamename, gamename, (char **) com_argv, com_argc, szhints, wmhints, clshints);
+	// strdup() allocates using malloc(), should be freed with free()
+	free(clshints->res_name);
+	free(clshints->res_class);
+	XFree(clshints);
+	XFree(wmhints);
+	XFree(szhints);
+
+	//XStoreName(vidx11_display, win, gamename);
+	XMapWindow(vidx11_display, win);
+
+	XSetWMProtocols(vidx11_display, win, &wm_delete_window_atom, 1);
+
+	if (vid_isoverrideredirect)
+	{
+		XMoveWindow(vidx11_display, win, 0, 0);
+		XRaiseWindow(vidx11_display, win);
+		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
+		XFlush(vidx11_display);
+	}
+
+	if(vid_isvidmodefullscreen)
+	{
+		// Move the viewport to top left
+		XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
+	}
+
+	//XSync(vidx11_display, False);
+
+	// TODO XShm
+	vid.softpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
+	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
+	vidx11_ximage = XCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, 0, (char*)vid.softpixels, mode->width, mode->height, 8, 0);
+	if(!vidx11_ximage)
+	{
+		Con_Printf("Failed to initialize an XImage\n");
+		VID_Shutdown();
+		return false;
+	}
+	memset(&gcval, 0, sizeof(gcval));
+	vidx11_gc = XCreateGC(vidx11_display, win, 0, &gcval);
+
+	if (DPSOFTRAST_Init(mode->width, mode->height, vid_soft_threads.integer, vid_soft_interlace.integer, (unsigned int *)vid.softpixels, (unsigned int *)vid.softdepthpixels) < 0)
+	{
+		Con_Printf("Failed to initialize software rasterizer\n");
+		VID_Shutdown();
+		return false;
+	}
+
+	XSync(vidx11_display, False);
+
+	vid_usingmousegrab = false;
+	vid_usingmouse = false;
+	vid_usinghidecursor = false;
+	vid_usingvsync = false;
+	vid_hidden = false;
+	vid_activewindow = true;
+	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
+#if !defined(__APPLE__) && !defined(SUNOS)
+	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
+	if (!vid_x11_dgasupported)
+		Con_Print( "Failed to detect XF86DGA Mouse extension\n" );
+#endif
+
+	VID_Soft_SharedSetup();
+
+	return true;
+}
+qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i, j;
 	int attrib[32];
@@ -1140,6 +1472,16 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 	GL_Init();
 	return true;
+}
+
+qboolean VID_InitMode(viddef_mode_t *mode)
+{
+#ifdef SSE_POSSIBLE
+	if (vid_soft.integer)
+		return VID_InitModeSoft(mode);
+	else
+#endif
+		return VID_InitModeGL(mode);
 }
 
 void Sys_SendKeyEvents(void)
