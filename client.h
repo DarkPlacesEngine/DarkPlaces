@@ -1656,7 +1656,7 @@ typedef struct r_refdef_view_s
 	int width;
 	int height;
 	int depth;
-	r_viewport_t viewport;
+	r_viewport_t viewport; // note: if r_viewscale is used, the viewport.width and viewport.height may be less than width and height
 
 	// which color components to allow (for anaglyph glasses)
 	int colormask[4];
