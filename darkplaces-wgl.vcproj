@@ -685,7 +685,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\thread_null.c"
+				RelativePath=".\thread_win.c"
 				>
 			</File>
 			<File

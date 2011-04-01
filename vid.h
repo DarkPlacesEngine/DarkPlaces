@@ -135,6 +135,10 @@ extern cvar_t vid_hardwaregammasupported;
 extern qboolean vid_usinghwgamma;
 extern qboolean vid_supportrefreshrate;
 
+extern cvar_t vid_soft;
+extern cvar_t vid_soft_threads;
+extern cvar_t vid_soft_interlace;
+
 extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;
 extern cvar_t vid_height;
@@ -246,5 +250,6 @@ typedef struct
 vid_mode_t;
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount);
 size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean userefreshrate, qboolean useaspect);
+void VID_Soft_SharedSetup(void);
 #endif
 

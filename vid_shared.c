@@ -31,6 +31,11 @@ qboolean vid_hidden = true;
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 qboolean vid_activewindow = true;
 
+// cvars for DPSOFTRAST
+cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
+cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "2", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
+cvar_t vid_soft_interlace = {CVAR_SAVE, "vid_soft_interlace", "1", "whether the DarkPlaces Software Rasterizer should interlace the screen bands occupied by each thread"};
+
 // we don't know until we try it!
 cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1", "indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)"};
 
@@ -1193,6 +1198,20 @@ void VID_RestoreSystemGamma(void)
 
 void VID_Shared_Init(void)
 {
+#ifdef SSE_POSSIBLE
+	if (Sys_HaveSSE2())
+	{
+		Con_Printf("DPSOFTRAST available (SSE2 instructions detected)\n");
+		Cvar_RegisterVariable(&vid_soft);
+		Cvar_RegisterVariable(&vid_soft_threads);
+		Cvar_RegisterVariable(&vid_soft_interlace);
+	}
+	else
+		Con_Printf("DPSOFTRAST not available (SSE2 disabled or not detected)\n");
+#else
+	Con_Printf("DPSOFTRAST not available (SSE2 not compiled in)\n");
+#endif
+
 	Cvar_RegisterVariable(&vid_hardwaregammasupported);
 	Cvar_RegisterVariable(&gl_info_vendor);
 	Cvar_RegisterVariable(&gl_info_renderer);
@@ -1457,4 +1476,64 @@ size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean 
 		--count;
 	}
 	return count;
+}
+
+void VID_Soft_SharedSetup(void)
+{
+	gl_platform = "DPSOFTRAST";
+	gl_platformextensions = "";
+
+	gl_renderer = "DarkPlaces-Soft";
+	gl_vendor = "Forest Hale";
+	gl_version = "0.0";
+	gl_extensions = "";
+
+	// clear the extension flags
+	memset(&vid.support, 0, sizeof(vid.support));
+	Cvar_SetQuick(&gl_info_extensions, "");
+
+	vid.forcevbo = false;
+	vid.support.arb_depth_texture = true;
+	vid.support.arb_draw_buffers = true;
+	vid.support.arb_occlusion_query = true;
+	vid.support.arb_shadow = true;
+	//vid.support.arb_texture_compression = true;
+	vid.support.arb_texture_cube_map = true;
+	vid.support.arb_texture_non_power_of_two = false;
+	vid.support.arb_vertex_buffer_object = true;
+	vid.support.ext_blend_subtract = true;
+	vid.support.ext_draw_range_elements = true;
+	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_texture_3d = true;
+	//vid.support.ext_texture_compression_s3tc = true;
+	vid.support.ext_texture_filter_anisotropic = true;
+	vid.support.ati_separate_stencil = true;
+
+	vid.maxtexturesize_2d = 16384;
+	vid.maxtexturesize_3d = 512;
+	vid.maxtexturesize_cubemap = 16384;
+	vid.texunits = 4;
+	vid.teximageunits = 32;
+	vid.texarrayunits = 8;
+	vid.max_anisotropy = 1;
+	vid.maxdrawbuffers = 4;
+
+	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
+	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
+	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
+	Con_DPrintf("Using DarkPlaces Software Rasterizer rendering path\n");
+	vid.renderpath = RENDERPATH_SOFT;
+	vid.useinterleavedarrays = false;
+
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
+
+	// LordHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+
+	// clear to black (loading plaque will be seen over this)
+	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
 }

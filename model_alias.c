@@ -74,55 +74,6 @@ void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frame
 	Mod_Skeletal_AnimateVertices_Generic(model, frameblend, skeleton, vertex3f, normal3f, svector3f, tvector3f);
 }
 
-#ifdef SSE_POSSIBLE
-#ifndef SSE_PRESENT
-// code from SDL, shortened as we can expect CPUID to work
-static int CPUID_Features(void)
-{
-	int features = 0;
-# if defined(__GNUC__) && defined(__i386__)
-        __asm__ (
-"        movl    %%ebx,%%edi\n"
-"        xorl    %%eax,%%eax                                           \n"
-"        incl    %%eax                                                 \n"
-"        cpuid                       # Get family/model/stepping/features\n"
-"        movl    %%edx,%0                                              \n"
-"        movl    %%edi,%%ebx\n"
-        : "=m" (features)
-        :
-        : "%eax", "%ecx", "%edx", "%edi"
-        );
-# elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
-        __asm {
-        xor     eax, eax
-        inc     eax
-        cpuid                       ; Get family/model/stepping/features
-        mov     features, edx
-        }
-# else
-#  error SSE_POSSIBLE set but no CPUID implementation
-# endif
-	return features;
-}
-#endif
-static qboolean Have_SSE(void)
-{
-	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
-	if(COM_CheckParm("-nosse"))
-		return false;
-	// COMMANDLINEOPTION: SSE: -forcesse enables SSE support and disables detection
-#ifdef SSE_PRESENT
-	return true;
-#else
-	if(COM_CheckParm("-forcesse"))
-		return true;
-	if(CPUID_Features() & (1 << 25))
-		return true;
-	return false;
-#endif
-}
-#endif
-
 void Mod_AliasInit (void)
 {
 	int i;
@@ -136,16 +87,14 @@ void Mod_AliasInit (void)
 	for (i = 0;i < 320;i++)
 		mod_md3_sin[i] = sin(i * M_PI * 2.0f / 256.0);
 #ifdef SSE_POSSIBLE
+	if(Sys_HaveSSE())
 	{
-		if(Have_SSE())
-		{
-			Con_Printf("Skeletal animation uses SSE code path\n");
-			r_skeletal_use_sse_defined = true;
-			Cvar_RegisterVariable(&r_skeletal_use_sse);
-		}
-		else
-			Con_Printf("Skeletal animation uses generic code path (SSE disabled or not detected)\n");
+		Con_Printf("Skeletal animation uses SSE code path\n");
+		r_skeletal_use_sse_defined = true;
+		Cvar_RegisterVariable(&r_skeletal_use_sse);
 	}
+	else
+		Con_Printf("Skeletal animation uses generic code path (SSE disabled or not detected)\n");
 #else
 	Con_Printf("Skeletal animation uses generic code path (SSE not compiled in)\n");
 #endif

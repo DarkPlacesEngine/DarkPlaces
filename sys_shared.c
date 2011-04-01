@@ -510,3 +510,61 @@ void Sys_ProvideSelfFD(void)
 		return;
 	com_selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
 }
+
+// for x86 cpus only...  (x64 has SSE2_PRESENT)
+#if defined(SSE_POSSIBLE) && !defined(SSE2_PRESENT)
+// code from SDL, shortened as we can expect CPUID to work
+static int CPUID_Features(void)
+{
+	int features = 0;
+# if defined(__GNUC__) && defined(__i386__)
+        __asm__ (
+"        movl    %%ebx,%%edi\n"
+"        xorl    %%eax,%%eax                                           \n"
+"        incl    %%eax                                                 \n"
+"        cpuid                       # Get family/model/stepping/features\n"
+"        movl    %%edx,%0                                              \n"
+"        movl    %%edi,%%ebx\n"
+        : "=m" (features)
+        :
+        : "%eax", "%ecx", "%edx", "%edi"
+        );
+# elif (defined(_MSC_VER) && defined(_M_IX86)) || defined(__WATCOMC__)
+        __asm {
+        xor     eax, eax
+        inc     eax
+        cpuid                       ; Get family/model/stepping/features
+        mov     features, edx
+        }
+# else
+#  error SSE_POSSIBLE set but no CPUID implementation
+# endif
+	return features;
+}
+
+qboolean Sys_HaveSSE(void)
+{
+	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
+	if(COM_CheckParm("-nosse"))
+		return false;
+	// COMMANDLINEOPTION: SSE: -forcesse enables SSE support and disables detection
+	if(COM_CheckParm("-forcesse") || COM_CheckParm("-forcesse2"))
+		return true;
+	if(CPUID_Features() & (1 << 25))
+		return true;
+	return false;
+}
+
+qboolean Sys_HaveSSE2(void)
+{
+	// COMMANDLINEOPTION: SSE2: -nosse2 disables SSE2 support and detection
+	if(COM_CheckParm("-nosse") || COM_CheckParm("-nosse2"))
+		return false;
+	// COMMANDLINEOPTION: SSE2: -forcesse2 enables SSE2 support and disables detection
+	if(COM_CheckParm("-forcesse2"))
+		return true;
+	if((CPUID_Features() & (3 << 25)) == (3 << 25)) // SSE is 1<<25, SSE2 is 1<<26
+		return true;
+	return false;
+}
+#endif
