@@ -1824,6 +1824,9 @@ typedef struct r_refdef_s
 	float shadowpolygonfactor;
 	float shadowpolygonoffset;
 
+	// how long R_RenderView took on the previous frame
+	double lastdrawscreentime;
+
 	// rendering stats for r_speeds display
 	// (these are incremented in many places)
 	r_refdef_stats_t stats;
