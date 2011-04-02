@@ -195,6 +195,7 @@ CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
 CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
 
 CFLAGS_SSE=-msse
+CFLAGS_SSE2=-msse2
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
@@ -532,6 +533,10 @@ crypto.o: crypto.c
 mod_skeletal_animatevertices_sse.o: mod_skeletal_animatevertices_sse.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SSE)
+
+dpsoftrast.o: dpsoftrast.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SSE2)
 
 darkplaces.o: %.o : %.rc
 	$(CHECKLEVEL2)
