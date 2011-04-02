@@ -1989,6 +1989,13 @@ void DPSOFTRAST_Draw_Span_Begin(DPSOFTRAST_State_Thread *thread, const DPSOFTRAS
 	float wslope = triangle->w[0];
 	float w = triangle->w[2] + span->x*wslope + span->y*triangle->w[1];
 	float endz = 1.0f / (w + wslope * startx);
+	if (triangle->w[0] == 0)
+	{
+		// LordHavoc: fast flat polygons (HUD/menu)
+		for (x = startx;x < endx;x++)
+			zf[x] = endz;
+		return;
+	}
 	for (x = startx;x < endx;)
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
