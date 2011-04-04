@@ -2193,6 +2193,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
+	int subx;
 	const unsigned int * RESTRICT ini = (const unsigned int *)in4ub;
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
 	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
@@ -2204,127 +2205,193 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 	// handle alphatest now (this affects depth writes too)
 	if (thread->alphatest)
 		for (x = startx;x < endx;x++)
-			if (in4ub[x*4+3] < 0.5f)
+			if (in4ub[x*4+3] < 128)
 				pixelmask[x] = false;
-	// FIXME: this does not handle bigendian
+	// LordHavoc: clear pixelmask for some pixels in alphablend cases, this
+	// helps sprites, text and hud artwork
 	switch(thread->fb_blendmode)
 	{
+	case DPSOFTRAST_BLENDMODE_ALPHA:
+	case DPSOFTRAST_BLENDMODE_ADDALPHA:
+	case DPSOFTRAST_BLENDMODE_SUBALPHA:
+		for (x = startx;x < endx;x++)
+			if (in4ub[x*4+3] < 1)
+				pixelmask[x] = false;
+		break;
 	case DPSOFTRAST_BLENDMODE_OPAQUE:
-		for (x = startx;x + 4 <= endx;)
+	case DPSOFTRAST_BLENDMODE_ADD:
+	case DPSOFTRAST_BLENDMODE_INVMOD:
+	case DPSOFTRAST_BLENDMODE_MUL:
+	case DPSOFTRAST_BLENDMODE_MUL2:
+	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
+	case DPSOFTRAST_BLENDMODE_INVADD:
+		break;
+	}
+	// put some special values at the end of the mask to ensure the loops end
+	pixelmask[endx] = 1;
+	pixelmask[endx+1] = 0;
+	// LordHavoc: use a double loop to identify subspans, this helps the
+	// optimized copy/blend loops to perform at their best, most triangles
+	// have only one run of pixels, and do the search using wide reads...
+	x = startx;
+	while (x < endx)
+	{
+		// if this pixel is masked off, it's probably not alone...
+		if (!pixelmask[x])
 		{
-			if (*(const unsigned int *)&pixelmask[x] == 0x01010101)
+			x++;
+#if 1
+			if (x + 8 < endx)
 			{
-				_mm_storeu_si128((__m128i *)&pixeli[x], _mm_loadu_si128((const __m128i *)&ini[x]));
-				x += 4;
+				// the 4-item search must be aligned or else it stalls badly
+				if ((x & 3) && !pixelmask[x]) x++;
+				if ((x & 3) && !pixelmask[x]) x++;
+				if ((x & 3) && !pixelmask[x]) x++;
+				while (*((unsigned int *)pixelmask + x) == 0x00000000)
+					x += 4;
+			}
+#endif
+			for (;!pixelmask[x];x++)
+				;
+			// rather than continue the loop, just check the end variable
+			if (x >= endx)
+				break;
+		}
+		// find length of subspan
+		subx = x + 1;
+#if 1
+		if (x + 8 < endx)
+		{
+			if ((subx & 3) && pixelmask[subx]) subx++;
+			if ((subx & 3) && pixelmask[subx]) subx++;
+			if ((subx & 3) && pixelmask[subx]) subx++;
+			while (*((unsigned int *)pixelmask + subx) == 0x01010101)
+				subx += 4;
+		}
+#endif
+		for (;pixelmask[subx];subx++)
+			;
+		// the checks can overshoot, so make sure to clip it...
+		if (subx > endx)
+			subx = endx;
+		// now that we know the subspan length...  process!
+		switch(thread->fb_blendmode)
+		{
+		case DPSOFTRAST_BLENDMODE_OPAQUE:
+#if 0
+			if (subx - x >= 16)
+			{
+				memcpy(pixeli + x, ini + x, (subx - x) * sizeof(pixeli[x]));
+				x = subx;
 			}
 			else
+#elif 1
+			while (x + 16 <= subx)
 			{
-				if (pixelmask[x])
-					pixeli[x] = ini[x];
-				x++;
+				_mm_storeu_si128((__m128i *)&pixeli[x], _mm_loadu_si128((const __m128i *)&ini[x]));
+				_mm_storeu_si128((__m128i *)&pixeli[x+4], _mm_loadu_si128((const __m128i *)&ini[x+4]));
+				_mm_storeu_si128((__m128i *)&pixeli[x+8], _mm_loadu_si128((const __m128i *)&ini[x+8]));
+				_mm_storeu_si128((__m128i *)&pixeli[x+12], _mm_loadu_si128((const __m128i *)&ini[x+12]));
+				x += 16;
 			}
-		}
-		for (;x < endx;x++)
-			if (pixelmask[x])
-				pixeli[x] = ini[x];
-		break;
-	case DPSOFTRAST_BLENDMODE_ALPHA:
-	#define FINISHBLEND(blend2, blend1) \
-		for (x = startx;x + 1 < endx;x += 2) \
-		{ \
-			__m128i src, dst; \
-			switch (*(const unsigned short*)&pixelmask[x]) \
+#endif
+			{
+				while (x + 4 <= subx)
+				{
+					_mm_storeu_si128((__m128i *)&pixeli[x], _mm_loadu_si128((const __m128i *)&ini[x]));
+					x += 4;
+				}
+				if (x + 2 <= subx)
+				{
+					pixeli[x] = ini[x];
+					pixeli[x+1] = ini[x+1];
+					x += 2;
+				}
+				if (x < subx)
+				{
+					pixeli[x] = ini[x];
+					x++;
+				}
+			}
+			break;
+		case DPSOFTRAST_BLENDMODE_ALPHA:
+		#define FINISHBLEND(blend2, blend1) \
+			for (;x + 1 < subx;x += 2) \
 			{ \
-			case 0x0101: \
+				__m128i src, dst; \
 				src = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&ini[x]), _mm_setzero_si128()); \
 				dst = _mm_unpacklo_epi8(_mm_loadl_epi64((const __m128i *)&pixeli[x]), _mm_setzero_si128()); \
 				blend2; \
 				_mm_storel_epi64((__m128i *)&pixeli[x], _mm_packus_epi16(dst, dst)); \
-				continue; \
-			case 0x0100: \
-				src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x+1]), _mm_setzero_si128()); \
-				dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x+1]), _mm_setzero_si128()); \
-				blend1; \
-				pixeli[x+1] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst));  \
-				continue; \
-			case 0x0001: \
+			} \
+			if (x < subx) \
+			{ \
+				__m128i src, dst; \
 				src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x]), _mm_setzero_si128()); \
 				dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x]), _mm_setzero_si128()); \
 				blend1; \
 				pixeli[x] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst)); \
-				continue; \
-			} \
-			break; \
-		} \
-		for(;x < endx; x++) \
-		{ \
-			__m128i src, dst; \
-			if (!pixelmask[x]) \
-				continue; \
-			src = _mm_unpacklo_epi8(_mm_cvtsi32_si128(ini[x]), _mm_setzero_si128()); \
-			dst = _mm_unpacklo_epi8(_mm_cvtsi32_si128(pixeli[x]), _mm_setzero_si128()); \
-			blend1; \
-			pixeli[x] = _mm_cvtsi128_si32(_mm_packus_epi16(dst, dst)); \
+				x++; \
+			}
+			FINISHBLEND({
+				__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
+			}, {
+				__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
+			});
+			break;
+		case DPSOFTRAST_BLENDMODE_ADDALPHA:
+			FINISHBLEND({
+				__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+			}, {
+				__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+			});
+			break;
+		case DPSOFTRAST_BLENDMODE_ADD:
+			FINISHBLEND({ dst = _mm_add_epi16(src, dst); }, { dst = _mm_add_epi16(src, dst); });
+			break;
+		case DPSOFTRAST_BLENDMODE_INVMOD:
+			FINISHBLEND({
+				dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
+			}, {
+				dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
+			});
+			break;
+		case DPSOFTRAST_BLENDMODE_MUL:
+			FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); });
+			break;
+		case DPSOFTRAST_BLENDMODE_MUL2:
+			FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); });
+			break;
+		case DPSOFTRAST_BLENDMODE_SUBALPHA:
+			FINISHBLEND({
+				__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+			}, {
+				__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
+			});
+			break;
+		case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
+			FINISHBLEND({
+				__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
+			}, {
+				__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
+				dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
+			});
+			break;
+		case DPSOFTRAST_BLENDMODE_INVADD:
+			FINISHBLEND({
+				dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(_mm_set1_epi16(255), dst), 4), _mm_slli_epi16(src, 4)));
+			}, {
+				dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(_mm_set1_epi16(255), dst), 4), _mm_slli_epi16(src, 4)));
+			});
+			break;
 		}
-
-		FINISHBLEND({
-			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
-		}, {
-			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(src, dst), 4), _mm_slli_epi16(blend, 4)));
-		});
-		break;
-	case DPSOFTRAST_BLENDMODE_ADDALPHA:
-		FINISHBLEND({
-			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
-		}, {
-			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
-		});
-		break;
-	case DPSOFTRAST_BLENDMODE_ADD:
-		FINISHBLEND({ dst = _mm_add_epi16(src, dst); }, { dst = _mm_add_epi16(src, dst); });
-		break;
-	case DPSOFTRAST_BLENDMODE_INVMOD:
-		FINISHBLEND({
-			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
-		}, {
-			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, src), 8));
-		});
-		break;
-	case DPSOFTRAST_BLENDMODE_MUL:
-		FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 8); });
-		break;
-	case DPSOFTRAST_BLENDMODE_MUL2:
-		FINISHBLEND({ dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); }, { dst = _mm_srli_epi16(_mm_mullo_epi16(src, dst), 7); });
-		break;
-	case DPSOFTRAST_BLENDMODE_SUBALPHA:
-		FINISHBLEND({
-			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
-		}, {
-			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(src, blend), 8));
-		});
-		break;
-	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
-		FINISHBLEND({
-			__m128i blend = _mm_shufflehi_epi16(_mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3)), _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
-		}, {
-			__m128i blend = _mm_shufflelo_epi16(src, _MM_SHUFFLE(3, 3, 3, 3));
-			dst = _mm_add_epi16(src, _mm_sub_epi16(dst, _mm_srli_epi16(_mm_mullo_epi16(dst, blend), 8)));
-		});
-		break;
-	case DPSOFTRAST_BLENDMODE_INVADD:
-		FINISHBLEND({
-			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(_mm_set1_epi16(255), dst), 4), _mm_slli_epi16(src, 4)));
-		}, {
-			dst = _mm_add_epi16(dst, _mm_mulhi_epi16(_mm_slli_epi16(_mm_sub_epi16(_mm_set1_epi16(255), dst), 4), _mm_slli_epi16(src, 4)));
-		});
-		break;
 	}
 #endif
 }
@@ -4632,7 +4699,7 @@ void DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread)
 	unsigned int d;
 	DPSOFTRAST_State_Triangle *triangle;
 	DPSOFTRAST_State_Span *span;
-	unsigned char pixelmask[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	unsigned char pixelmask[DPSOFTRAST_DRAW_MAXSPANLENGTH+4]; // LordHavoc: padded to allow some termination bytes
 	for (i = 0; i < thread->numspans; i++)
 	{
 		span = &thread->spans[i];
