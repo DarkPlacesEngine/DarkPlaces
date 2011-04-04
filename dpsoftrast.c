@@ -2100,11 +2100,17 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 				// the 4-item search must be aligned or else it stalls badly
 				if ((x & 3) && !pixelmask[x]) 
 				{
+					if(pixelmask[x]) goto endmasked;
 					x++;
-					if ((x & 3) && !pixelmask[x]) 
+					if (x & 3)
 					{
+						if(pixelmask[x]) goto endmasked;
 						x++;
-						if ((x & 3) && !pixelmask[x]) x++;
+						if (x & 3)
+						{
+							if(pixelmask[x]) goto endmasked;
+							x++;
+						}
 					}
 				}
 				while (*(unsigned int *)&pixelmask[x] == 0x00000000)
@@ -2117,18 +2123,25 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 			if (x >= endx)
 				break;
 		}
+	endmasked:
 		// find length of subspan
 		subx = x + 1;
 #if 1
-		if (x + 8 < endx)
+		if (subx + 8 < endx)
 		{
-			if ((subx & 3) && pixelmask[subx]) 
+			if (subx & 3)
 			{
+				if(!pixelmask[subx]) goto endunmasked;
 				subx++;
-				if ((subx & 3) && pixelmask[subx]) 
+				if (subx & 3)
 				{
+					if(!pixelmask[subx]) goto endunmasked;
 					subx++;
-					if ((subx & 3) && pixelmask[subx]) subx++;
+					if (subx & 3)
+					{
+						if(!pixelmask[subx]) goto endunmasked;
+						subx++;
+					}
 				}
 			}
 			while (*(unsigned int *)&pixelmask[subx] == 0x01010101)
@@ -2140,6 +2153,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 		// the checks can overshoot, so make sure to clip it...
 		if (subx > endx)
 			subx = endx;
+	endunmasked:
 		// now that we know the subspan length...  process!
 		switch(thread->fb_blendmode)
 		{
