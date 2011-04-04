@@ -188,11 +188,14 @@ typedef ALIGN(struct DPSOFTRAST_State_Span_s
 	int startx; // usable range (according to pixelmask)
 	int endx; // usable range (according to pixelmask)
 	unsigned char *pixelmask; // true for pixels that passed depth test, false for others
+	int depthbase; // depthbuffer value at x (add depthslope*startx to get first pixel's depthbuffer value)
+	int depthslope; // depthbuffer value pixel delta
 }
 DPSOFTRAST_State_Span);
 
 #define DPSOFTRAST_DRAW_MAXSPANS 1024
 #define DPSOFTRAST_DRAW_MAXTRIANGLES 128
+#define DPSOFTRAST_DRAW_MAXSPANLENGTH 256
 
 #define DPSOFTRAST_VALIDATE_FB 1
 #define DPSOFTRAST_VALIDATE_DEPTHFUNC 2
@@ -280,6 +283,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	int numtriangles;
 	DPSOFTRAST_State_Span spans[DPSOFTRAST_DRAW_MAXSPANS];
 	DPSOFTRAST_State_Triangle triangles[DPSOFTRAST_DRAW_MAXTRIANGLES];
+	unsigned char pixelmaskarray[DPSOFTRAST_DRAW_MAXSPANLENGTH+4]; // LordHavoc: padded to allow some termination bytes
 }
 DPSOFTRAST_State_Thread);
 
@@ -347,7 +351,9 @@ DPSOFTRAST_State dpsoftrast;
 #define DPSOFTRAST_DEPTHOFFSET (128.0f)
 #define DPSOFTRAST_BGRA8_FROM_RGBA32F(r,g,b,a) (((int)(r * 255.0f + 0.5f) << 16) | ((int)(g * 255.0f + 0.5f) << 8) | (int)(b * 255.0f + 0.5f) | ((int)(a * 255.0f + 0.5f) << 24))
 #define DPSOFTRAST_DEPTH32_FROM_DEPTH32F(d) ((int)(DPSOFTRAST_DEPTHSCALE * (1-d)))
-#define DPSOFTRAST_DRAW_MAXSPANLENGTH 256
+
+static void DPSOFTRAST_Draw_DepthTest(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_State_Span *span);
+static void DPSOFTRAST_Draw_DepthWrite(const DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Span *span);
 
 static void DPSOFTRAST_RecalcViewport(const int *viewport, float *fb_viewportcenter, float *fb_viewportscale)
 {
@@ -2032,185 +2038,6 @@ void DPSOFTRAST_Draw_Span_Begin(DPSOFTRAST_State_Thread *thread, const DPSOFTRAS
 		dz = x < nextsub ? (endz - z) / (nextsub - x) : 0.0f;
 		for (; x <= endsub; x++, z += dz)
 			zf[x] = z;
-	}
-}
-
-void DPSOFTRAST_Draw_Span_Finish(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span, const float * RESTRICT in4f)
-{
-	int x;
-	int startx = span->startx;
-	int endx = span->endx;
-	int d[4];
-	float a, b;
-	unsigned char * RESTRICT pixelmask = span->pixelmask;
-	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
-	if (!pixel)
-		return;
-	pixel += (span->y * dpsoftrast.fb_width + span->x) * 4;
-	// handle alphatest now (this affects depth writes too)
-	if (thread->alphatest)
-		for (x = startx;x < endx;x++)
-			if (in4f[x*4+3] < 0.5f)
-				pixelmask[x] = false;
-	// FIXME: this does not handle bigendian
-	switch(thread->fb_blendmode)
-	{
-	case DPSOFTRAST_BLENDMODE_OPAQUE:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)(in4f[x*4+2]*255.0f);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*255.0f);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*255.0f);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*255.0f);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_ALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4f[x*4+3] * 255.0f;
-			b = 1.0f - in4f[x*4+3];
-			d[0] = (int)(in4f[x*4+2]*a+pixel[x*4+0]*b);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*a+pixel[x*4+1]*b);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*a+pixel[x*4+2]*b);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*a+pixel[x*4+3]*b);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_ADDALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4f[x*4+3] * 255.0f;
-			d[0] = (int)(in4f[x*4+2]*a+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*a+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*a+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*a+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_ADD:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)(in4f[x*4+2]*255.0f+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*255.0f+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*255.0f+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*255.0f+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_INVMOD:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)((1.0f-in4f[x*4+2])*pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)((1.0f-in4f[x*4+1])*pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)((1.0f-in4f[x*4+0])*pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)((1.0f-in4f[x*4+3])*pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_MUL:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)(in4f[x*4+2]*pixel[x*4+0]);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*pixel[x*4+2]);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_MUL2:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)(in4f[x*4+2]*pixel[x*4+0]*2.0f);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*pixel[x*4+1]*2.0f);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*pixel[x*4+2]*2.0f);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*pixel[x*4+3]*2.0f);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_SUBALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = in4f[x*4+3] * -255.0f;
-			d[0] = (int)(in4f[x*4+2]*a+pixel[x*4+0]);if (d[0] > 255) d[0] = 255;if (d[0] < 0) d[0] = 0;
-			d[1] = (int)(in4f[x*4+1]*a+pixel[x*4+1]);if (d[1] > 255) d[1] = 255;if (d[1] < 0) d[1] = 0;
-			d[2] = (int)(in4f[x*4+0]*a+pixel[x*4+2]);if (d[2] > 255) d[2] = 255;if (d[2] < 0) d[2] = 0;
-			d[3] = (int)(in4f[x*4+3]*a+pixel[x*4+3]);if (d[3] > 255) d[3] = 255;if (d[3] < 0) d[3] = 0;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_PSEUDOALPHA:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			a = 255.0f;
-			b = 1.0f - in4f[x*4+3];
-			d[0] = (int)(in4f[x*4+2]*a+pixel[x*4+0]*b);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)(in4f[x*4+1]*a+pixel[x*4+1]*b);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)(in4f[x*4+0]*a+pixel[x*4+2]*b);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)(in4f[x*4+3]*a+pixel[x*4+3]*b);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
-	case DPSOFTRAST_BLENDMODE_INVADD:
-		for (x = startx;x < endx;x++)
-		{
-			if (!pixelmask[x])
-				continue;
-			d[0] = (int)((255.0f-pixel[x*4+2])*in4f[x*4+0] + pixel[x*4+2]);if (d[0] > 255) d[0] = 255;
-			d[1] = (int)((255.0f-pixel[x*4+1])*in4f[x*4+1] + pixel[x*4+1]);if (d[1] > 255) d[1] = 255;
-			d[2] = (int)((255.0f-pixel[x*4+0])*in4f[x*4+2] + pixel[x*4+0]);if (d[2] > 255) d[2] = 255;
-			d[3] = (int)((255.0f-pixel[x*4+3])*in4f[x*4+3] + pixel[x*4+3]);if (d[3] > 255) d[3] = 255;
-			pixel[x*4+0] = d[0];
-			pixel[x*4+1] = d[1];
-			pixel[x*4+2] = d[2];
-			pixel[x*4+3] = d[3];
-		}
-		break;
 	}
 }
 
@@ -4712,81 +4539,89 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}},
 };
 
-void DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread)
+static void DPSOFTRAST_Draw_DepthTest(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_State_Span *span)
 {
-	int i;
 	int x;
 	int startx;
 	int endx;
-//	unsigned int c;
-//	unsigned int *colorpixel;
 	unsigned int *depthpixel;
-	float w;
-	float wslope;
 	int depth;
 	int depthslope;
 	unsigned int d;
+	unsigned char *pixelmask;
+	DPSOFTRAST_State_Triangle *triangle;
+	triangle = &thread->triangles[span->triangle];
+	depthpixel = dpsoftrast.fb_depthpixels + span->y * dpsoftrast.fb_width + span->x;
+	startx = span->startx;
+	endx = span->endx;
+	depth = span->depthbase;
+	depthslope = span->depthslope;
+	pixelmask = thread->pixelmaskarray;
+	if (thread->depthtest && dpsoftrast.fb_depthpixels)
+	{
+		switch(thread->fb_depthfunc)
+		{
+		default:
+		case GL_ALWAYS:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = true; break;
+		case GL_LESS:    for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] < d; break;
+		case GL_LEQUAL:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] <= d; break;
+		case GL_EQUAL:   for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] == d; break;
+		case GL_GEQUAL:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] >= d; break;
+		case GL_GREATER: for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] > d; break;
+		case GL_NEVER:   for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = false; break;
+		}
+		while (startx < endx && !pixelmask[startx])
+			startx++;
+		while (endx > startx && !pixelmask[endx-1])
+			endx--;
+	}
+	else
+	{
+		// no depth testing means we're just dealing with color...
+		memset(pixelmask + startx, 1, endx - startx);
+	}
+	span->pixelmask = pixelmask;
+	span->startx = startx;
+	span->endx = endx;
+}
+
+static void DPSOFTRAST_Draw_DepthWrite(const DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Span *span)
+{
+	int x, d, depth, depthslope, startx, endx;
+	const unsigned char *pixelmask;
+	unsigned int *depthpixel;
+	if (thread->depthmask && thread->depthtest && dpsoftrast.fb_depthpixels)
+	{
+		depth = span->depthbase;
+		depthslope = span->depthslope;
+		pixelmask = span->pixelmask;
+		startx = span->startx;
+		endx = span->endx;
+		depthpixel = dpsoftrast.fb_depthpixels + span->y * dpsoftrast.fb_width + span->x;
+		for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope)
+			if (pixelmask[x])
+				depthpixel[x] = d;
+	}
+}
+
+void DPSOFTRAST_Draw_ProcessSpans(DPSOFTRAST_State_Thread *thread)
+{
+	int i;
 	DPSOFTRAST_State_Triangle *triangle;
 	DPSOFTRAST_State_Span *span;
-	unsigned char pixelmask[DPSOFTRAST_DRAW_MAXSPANLENGTH+4]; // LordHavoc: padded to allow some termination bytes
 	for (i = 0; i < thread->numspans; i++)
 	{
 		span = &thread->spans[i];
 		triangle = &thread->triangles[span->triangle];
-		if (thread->depthtest && dpsoftrast.fb_depthpixels)
-		{
-			wslope = triangle->w[0];
-			w = triangle->w[2] + span->x*wslope + span->y*triangle->w[1];
-			depthslope = (int)(wslope*DPSOFTRAST_DEPTHSCALE);
-			depth = (int)(w*DPSOFTRAST_DEPTHSCALE - DPSOFTRAST_DEPTHOFFSET*(thread->polygonoffset[1] + fabs(wslope)*thread->polygonoffset[0]));
-			depthpixel = dpsoftrast.fb_depthpixels + span->y * dpsoftrast.fb_width + span->x;
-			startx = span->startx;
-			endx = span->endx;
-			switch(thread->fb_depthfunc)
-			{
-			default:
-			case GL_ALWAYS:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = true; break;
-			case GL_LESS:    for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] < d; break;
-			case GL_LEQUAL:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] <= d; break;
-			case GL_EQUAL:   for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] == d; break;
-			case GL_GEQUAL:  for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] >= d; break;
-			case GL_GREATER: for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = depthpixel[x] > d; break;
-			case GL_NEVER:   for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope) pixelmask[x] = false; break;
-			}
-			//colorpixel = dpsoftrast.fb_colorpixels[0] + (span->y * dpsoftrast.fb_width + span->x) * 4;;
-			//for (x = startx;x < endx;x++)
-			//	colorpixel[x] = (depthpixel[x] & 0xFF000000) ? (0x00FF0000) : (depthpixel[x] & 0x00FF0000);
-			// if there is no color buffer, skip pixel shader
-			while (startx < endx && !pixelmask[startx])
-				startx++;
-			while (endx > startx && !pixelmask[endx-1])
-				endx--;
-			if (startx >= endx)
-				continue; // no pixels to fill
-			span->pixelmask = pixelmask;
-			span->startx = startx;
-			span->endx = endx;
-			// run pixel shader if appropriate
-			// do this before running depthmask code, to allow the pixelshader
-			// to clear pixelmask values for alpha testing
-			if (dpsoftrast.fb_colorpixels[0] && thread->fb_colormask)
-				DPSOFTRAST_ShaderModeTable[thread->shader_mode].Span(thread, triangle, span);
-			if (thread->depthmask)
-				for (x = startx, d = depth + depthslope*startx;x < endx;x++, d += depthslope)
-					if (pixelmask[x])
-						depthpixel[x] = d;
-		}
-		else
-		{
-			// no depth testing means we're just dealing with color...
-			// if there is no color buffer, skip pixel shader
-			if (dpsoftrast.fb_colorpixels[0] && thread->fb_colormask)
-			{
-				memset(pixelmask + span->startx, 1, span->endx - span->startx);
-				span->pixelmask = pixelmask;
-				DPSOFTRAST_ShaderModeTable[thread->shader_mode].Span(thread, triangle, span);
-			}
-		}
+		DPSOFTRAST_Draw_DepthTest(thread, span);
+		if (span->startx >= span->endx)
+			continue;
+		// run pixel shader if appropriate
+		// do this before running depthmask code, to allow the pixelshader
+		// to clear pixelmask values for alpha testing
+		if (dpsoftrast.fb_colorpixels[0] && thread->fb_colormask)
+			DPSOFTRAST_ShaderModeTable[thread->shader_mode].Span(thread, triangle, span);
+		DPSOFTRAST_Draw_DepthWrite(thread, span);
 	}
 	thread->numspans = 0;
 }
@@ -5141,6 +4976,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			int yccmask = _mm_movemask_epi8(ycc);
 			int edge0p, edge0n, edge1p, edge1n;
 			int nexty;
+			float w, wslope;
 			float clip0;
 			if (numpoints == 4)
 			{
@@ -5236,7 +5072,11 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 					span->startx = max(clipx - offset, 0);
 					span->endx = min(endx - offset, DPSOFTRAST_DRAW_MAXSPANLENGTH);
 					if (span->startx >= span->endx)
-						continue; 
+						continue;
+					wslope = triangle->w[0];
+					w = triangle->w[2] + span->x*wslope + span->y*triangle->w[1];
+					span->depthslope = (int)(wslope*DPSOFTRAST_DEPTHSCALE);
+					span->depthbase = (int)(w*DPSOFTRAST_DEPTHSCALE - DPSOFTRAST_DEPTHOFFSET*(thread->polygonoffset[1] + fabs(wslope)*thread->polygonoffset[0]));
 					if (++thread->numspans >= DPSOFTRAST_DRAW_MAXSPANS)
 						DPSOFTRAST_Draw_ProcessSpans(thread);
 				}
