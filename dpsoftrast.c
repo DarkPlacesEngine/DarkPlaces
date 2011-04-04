@@ -235,6 +235,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	int scissor[4];
 	float depthrange[2];
 	float polygonoffset[2];
+	ALIGN(float clipplane[4]);
 
 	int shader_mode;
 	int shader_permutation;
@@ -1433,6 +1434,25 @@ void DPSOFTRAST_Uniform1i(DPSOFTRAST_UNIFORM index, int i0)
 	command->val = i0;
 
 	dpsoftrast.uniform1i[command->index] = i0;
+}
+
+DEFCOMMAND(24, ClipPlane, float clipplane[4];)
+static void DPSOFTRAST_Interpret_ClipPlane(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_ClipPlane *command)
+{
+	memcpy(thread->clipplane, command->clipplane, 4*sizeof(float));
+}
+void DPSOFTRAST_ClipPlane(float x, float y, float z, float w)
+{
+	DPSOFTRAST_Command_ClipPlane *command = DPSOFTRAST_ALLOCATECOMMAND(ClipPlane);
+	x /= dpsoftrast.fb_viewportscale[1];
+	y /= dpsoftrast.fb_viewportscale[2];
+	z /= dpsoftrast.fb_viewportscale[3];
+	w /= dpsoftrast.fb_viewportscale[0];
+	w -= dpsoftrast.fb_viewportcenter[1]*x + dpsoftrast.fb_viewportcenter[2]*y + dpsoftrast.fb_viewportcenter[3]*z + dpsoftrast.fb_viewportcenter[0]*w; 
+	command->clipplane[0] = x;
+	command->clipplane[1] = y;
+	command->clipplane[2] = z;
+	command->clipplane[3] = w;
 }
 
 #ifdef SSE_POSSIBLE
@@ -4527,7 +4547,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 
 		// "	vec2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
 		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
-        
+		
 		// "	vec2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
 		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * iw * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0]; // * z (disappears)
 		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * iw * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1]; // * z (disappears)
@@ -4788,6 +4808,8 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 	int numpoints;
 	int clipcase;
 	float clipdist[4];
+	float clip0origin, clip0slope;
+	int clip0dir;
 	__m128 triangleedge1, triangleedge2, trianglenormal;
 	__m128 clipfrac[3];
 	__m128 screen[4];
@@ -5012,6 +5034,43 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			_mm_store_ss(&triangle->w[0], attribxslope);
 			_mm_store_ss(&triangle->w[1], attribyslope);
 			_mm_store_ss(&triangle->w[2], attriborigin);
+			
+			clip0origin = 0;
+			clip0slope = 0;
+			clip0dir = 0;
+			if(thread->clipplane[0] || thread->clipplane[1] || thread->clipplane[2])
+			{
+				float cliporigin, clipxslope, clipyslope;
+				attriborigin = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(2, 2, 2, 2));
+				attribedge1 = _mm_sub_ss(_mm_shuffle_ps(screen[0], screen[0], _MM_SHUFFLE(2, 2, 2, 2)), attriborigin);
+				attribedge2 = _mm_sub_ss(_mm_shuffle_ps(screen[2], screen[2], _MM_SHUFFLE(2, 2, 2, 2)), attriborigin);
+				attribxslope = _mm_sub_ss(_mm_mul_ss(attribuxslope, attribedge1), _mm_mul_ss(attribvxslope, attribedge2));
+				attribyslope = _mm_sub_ss(_mm_mul_ss(attribvyslope, attribedge2), _mm_mul_ss(attribuyslope, attribedge1));
+				attriborigin = _mm_sub_ss(attriborigin, _mm_add_ss(_mm_mul_ss(attribxslope, x1), _mm_mul_ss(attribyslope, y1)));
+				cliporigin = _mm_cvtss_f32(attriborigin)*thread->clipplane[2] + thread->clipplane[3];
+				clipxslope = thread->clipplane[0] + _mm_cvtss_f32(attribxslope)*thread->clipplane[2];
+				clipyslope = thread->clipplane[1] + _mm_cvtss_f32(attribyslope)*thread->clipplane[2];
+				if(clipxslope != 0)
+				{
+					clip0origin = -cliporigin/clipxslope;
+					clip0slope = -clipyslope/clipxslope;
+					clip0dir = clipxslope > 0 ? 1 : -1;
+				}
+				else if(clipyslope > 0)
+				{
+					clip0origin = dpsoftrast.fb_width*floor(cliporigin/clipyslope);
+					clip0slope = dpsoftrast.fb_width;
+					clip0dir = -1;
+				}
+				else if(clipyslope < 0)
+				{
+					clip0origin = dpsoftrast.fb_width*ceil(cliporigin/clipyslope);
+					clip0slope = -dpsoftrast.fb_width;
+					clip0dir = -1;
+				}
+				else if(clip0origin < 0) continue;
+			}
+
 			mipedgescale = _mm_setzero_ps();
 			for (j = 0;j < DPSOFTRAST_ARRAY_TOTAL; j++)
 			{
@@ -5073,6 +5132,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			int yccmask = _mm_movemask_epi8(ycc);
 			int edge0p, edge0n, edge1p, edge1n;
 			int nexty;
+			float clip0;
 			if (numpoints == 4)
 			{
 				switch(yccmask)
@@ -5126,9 +5186,10 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				xcoords = _mm_shuffle_ps(xcoords, xcoords, _MM_SHUFFLE(1, 0, 3, 2));
 				xslope = _mm_shuffle_ps(xslope, xslope, _MM_SHUFFLE(1, 0, 3, 2));
 			}
-			for(; y <= nexty; y++, xcoords = _mm_add_ps(xcoords, xslope))
+			clip0 = clip0origin + (y+0.5f)*clip0slope;
+			for(; y <= nexty; y++, xcoords = _mm_add_ps(xcoords, xslope), clip0 += clip0slope)
 			{
-				int startx, endx, offset;
+				int startx, endx, clipx = minx, offset;
 				startx = _mm_cvtss_si32(xcoords);
 				endx = _mm_cvtss_si32(_mm_movehl_ps(xcoords, xcoords));
 				if (startx < minx) 
@@ -5138,13 +5199,32 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				}
 				if (endx > maxx) endx = maxx;
 				if (startx >= endx) continue;
+
+				if (clip0dir)
+				{
+					if (clip0dir > 0)
+					{
+						if (startx < clip0) 
+						{
+							if(endx <= clip0) continue;
+							clipx = max((int)clip0, minx);
+							startx += (clipx-startx)&~(DPSOFTRAST_DRAW_MAXSPANLENGTH-1); 
+						}
+					}
+					else if (endx > clip0) 
+					{
+						if(startx >= clip0) continue;
+						endx = (int)clip0;
+					}
+				}
+						
 				for (offset = startx; offset < endx;offset += DPSOFTRAST_DRAW_MAXSPANLENGTH)
 				{
 					DPSOFTRAST_State_Span *span = &thread->spans[thread->numspans];
 					span->triangle = thread->numtriangles;
 					span->x = offset;
 					span->y = y;
-					span->startx = max(minx - offset, 0);
+					span->startx = max(clipx - offset, 0);
 					span->endx = min(endx - offset, DPSOFTRAST_DRAW_MAXSPANLENGTH);
 					if (span->startx >= span->endx)
 						continue; 
@@ -5334,6 +5414,7 @@ static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, i
 		INTERPCOMMAND(UniformMatrix4f)
 		INTERPCOMMAND(Uniform1i)
 		INTERPCOMMAND(SetRenderTargets)
+		INTERPCOMMAND(ClipPlane)
 
 		case DPSOFTRAST_OPCODE_Draw:
 			DPSOFTRAST_Interpret_Draw(thread, (DPSOFTRAST_Command_Draw *)command);
@@ -5496,6 +5577,10 @@ int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsign
 		thread->depthrange[1] = 1;
 		thread->polygonoffset[0] = 0;
 		thread->polygonoffset[1] = 0;
+		thread->clipplane[0] = 0;
+		thread->clipplane[1] = 0;
+		thread->clipplane[2] = 0;
+		thread->clipplane[3] = 1;
 	
 		DPSOFTRAST_RecalcThread(thread);
 	
