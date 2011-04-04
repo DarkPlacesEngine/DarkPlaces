@@ -2626,6 +2626,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	__m128i subtc, substep, endsubtc;
 	int filter;
 	int mip;
+	int affine; // LordHavoc: optimized affine texturing case
 	unsigned int * RESTRICT outi = (unsigned int *)out4ub;
 	const unsigned char * RESTRICT pixelbase;
 	DPSOFTRAST_Texture *texture = thread->texbound[texunitindex];
@@ -2645,6 +2646,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 			outi[x] = k;
 		return;
 	}
+	affine = zf[startx] == zf[endx-1];
 	filter = texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR;
 	DPSOFTRAST_CALCATTRIB(triangle, span, data, slope, arrayindex);
 	flags = texture->flags;
@@ -2663,7 +2665,7 @@ void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *thread,
 	{
 		int nextsub = x + DPSOFTRAST_DRAW_MAXSUBSPAN, endsub = nextsub - 1;
 		__m128 subscale = _mm_set1_ps(65536.0f/DPSOFTRAST_DRAW_MAXSUBSPAN);
-		if (nextsub >= endx)
+		if (nextsub >= endx || affine)
 		{
 			nextsub = endsub = endx-1;
 			if (x < nextsub) subscale = _mm_set1_ps(65536.0f / (nextsub - x));
