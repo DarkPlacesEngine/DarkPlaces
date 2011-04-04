@@ -2098,10 +2098,16 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 			if (x + 8 < endx)
 			{
 				// the 4-item search must be aligned or else it stalls badly
-				if ((x & 3) && !pixelmask[x]) x++;
-				if ((x & 3) && !pixelmask[x]) x++;
-				if ((x & 3) && !pixelmask[x]) x++;
-				while (*((unsigned int *)pixelmask + x) == 0x00000000)
+				if ((x & 3) && !pixelmask[x]) 
+				{
+					x++;
+					if ((x & 3) && !pixelmask[x]) 
+					{
+						x++;
+						if ((x & 3) && !pixelmask[x]) x++;
+					}
+				}
+				while (*(unsigned int *)&pixelmask[x] == 0x00000000)
 					x += 4;
 			}
 #endif
@@ -2116,10 +2122,16 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 #if 1
 		if (x + 8 < endx)
 		{
-			if ((subx & 3) && pixelmask[subx]) subx++;
-			if ((subx & 3) && pixelmask[subx]) subx++;
-			if ((subx & 3) && pixelmask[subx]) subx++;
-			while (*((unsigned int *)pixelmask + subx) == 0x01010101)
+			if ((subx & 3) && pixelmask[subx]) 
+			{
+				subx++;
+				if ((subx & 3) && pixelmask[subx]) 
+				{
+					subx++;
+					if ((subx & 3) && pixelmask[subx]) subx++;
+				}
+			}
+			while (*(unsigned int *)&pixelmask[subx] == 0x01010101)
 				subx += 4;
 		}
 #endif
@@ -5034,14 +5046,10 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			clip0 = clip0origin + (y+0.5f)*clip0slope + 0.5f;
 			for(; y <= nexty; y++, xcoords = _mm_add_ps(xcoords, xslope), clip0 += clip0slope)
 			{
-				int startx, endx, clipx = minx, offset;
+				int startx, endx, offset;
 				startx = _mm_cvtss_si32(xcoords);
 				endx = _mm_cvtss_si32(_mm_movehl_ps(xcoords, xcoords));
-				if (startx < minx) 
-				{
-					if (startx < 0) startx = 0;
-					startx += (minx-startx)&~(DPSOFTRAST_DRAW_MAXSPANLENGTH-1);
-				}
+				if (startx < minx) startx = minx;
 				if (endx > maxx) endx = maxx;
 				if (startx >= endx) continue;
 
@@ -5052,8 +5060,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 						if (startx < clip0) 
 						{
 							if(endx <= clip0) continue;
-							clipx = max((int)clip0, minx);
-							startx += (clipx-startx)&~(DPSOFTRAST_DRAW_MAXSPANLENGTH-1); 
+							startx = (int)clip0;
 						}
 					}
 					else if (endx > clip0) 
@@ -5069,7 +5076,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 					span->triangle = thread->numtriangles;
 					span->x = offset;
 					span->y = y;
-					span->startx = max(clipx - offset, 0);
+					span->startx = 0;
 					span->endx = min(endx - offset, DPSOFTRAST_DRAW_MAXSPANLENGTH);
 					if (span->startx >= span->endx)
 						continue;
@@ -5402,6 +5409,7 @@ int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsign
 		DPSOFTRAST_State_Thread *thread = &dpsoftrast.threads[i];
 		thread->index = i;
 		thread->cullface = GL_BACK;
+       	thread->colormask[0] = 1; 
 		thread->colormask[1] = 1;
 		thread->colormask[2] = 1;
 		thread->colormask[3] = 1;
