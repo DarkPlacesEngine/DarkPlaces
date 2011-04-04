@@ -5675,7 +5675,7 @@ static void R_Water_ProcessPlanes(void)
 		}
 
 	}
-	DPSOFTRAST_ClipPlane(0, 0, 0, 1);
+	if(vid.renderpath==RENDERPATH_SOFT) DPSOFTRAST_ClipPlane(0, 0, 0, 1);
 	r_waterstate.renderingscene = false;
 	r_refdef.view = originalview;
 	R_ResetViewRendering3D();
