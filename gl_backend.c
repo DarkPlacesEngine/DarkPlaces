@@ -730,7 +730,7 @@ static void R_Viewport_ApplyNearClipPlaneFloatGL(const r_viewport_t *v, float *m
 
 	VectorSet(normal, normalx, normaly, normalz);
 	Matrix4x4_Transform3x3(&v->viewmatrix, normal, clipPlane);
-	VectorScale(normal, dist, v3);
+	VectorScale(normal, -dist, v3);
 	Matrix4x4_Transform(&v->viewmatrix, v3, v4);
 	// FIXME: LordHavoc: I think this can be done more efficiently somehow but I can't remember the technique
 	clipPlane[3] = -DotProduct(v4, clipPlane);

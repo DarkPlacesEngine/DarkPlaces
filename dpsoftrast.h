@@ -56,6 +56,7 @@ void DPSOFTRAST_ColorMask(int r, int g, int b, int a);
 void DPSOFTRAST_DepthTest(int enable);
 void DPSOFTRAST_ScissorTest(int enable);
 void DPSOFTRAST_Scissor(float x, float y, float width, float height);
+void DPSOFTRAST_ClipPlane(float x, float y, float z, float w);
 
 void DPSOFTRAST_BlendFunc(int smodulate, int dmodulate);
 void DPSOFTRAST_BlendSubtract(int enable);
