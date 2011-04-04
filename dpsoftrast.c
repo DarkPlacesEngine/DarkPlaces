@@ -2047,6 +2047,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 	int x;
 	int startx = span->startx;
 	int endx = span->endx;
+	int maskx;
 	int subx;
 	const unsigned int * RESTRICT ini = (const unsigned int *)in4ub;
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
@@ -2068,9 +2069,25 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 	case DPSOFTRAST_BLENDMODE_ALPHA:
 	case DPSOFTRAST_BLENDMODE_ADDALPHA:
 	case DPSOFTRAST_BLENDMODE_SUBALPHA:
+		maskx = startx;
 		for (x = startx;x < endx;x++)
-			if (in4ub[x*4+3] < 1)
-				pixelmask[x] = false;
+		{
+			if (in4ub[x*4+3] >= 1)
+			{
+				startx = x;
+				for (;;)
+				{
+					while (++x < endx && in4ub[x*4+3] >= 1) ;
+					maskx = x;
+					if (x >= endx) break;
+					++x;
+					while (++x < endx && in4ub[x*4+3] < 1) pixelmask[x] = false;
+					if (x >= endx) break;
+				}
+				break;
+			}
+		}
+		endx = maskx;
 		break;
 	case DPSOFTRAST_BLENDMODE_OPAQUE:
 	case DPSOFTRAST_BLENDMODE_ADD:
