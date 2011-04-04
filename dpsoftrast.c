@@ -235,7 +235,8 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	int scissor[4];
 	float depthrange[2];
 	float polygonoffset[2];
-	ALIGN(float clipplane[4]);
+	float clipplane[4];
+	ALIGN(float fb_clipplane[4]);
 
 	int shader_mode;
 	int shader_permutation;
@@ -376,6 +377,15 @@ static void DPSOFTRAST_RecalcThread(DPSOFTRAST_State_Thread *thread)
 	}
 }
 
+static void DPSOFTRAST_RecalcClipPlane(DPSOFTRAST_State_Thread *thread)
+{
+	thread->fb_clipplane[0] = thread->clipplane[0] / thread->fb_viewportscale[1];
+	thread->fb_clipplane[1] = thread->clipplane[1] / thread->fb_viewportscale[2];
+	thread->fb_clipplane[2] = thread->clipplane[2] / thread->fb_viewportscale[3];
+	thread->fb_clipplane[3] = thread->clipplane[3] / thread->fb_viewportscale[0];
+	thread->fb_clipplane[3] -= thread->fb_viewportcenter[1]*thread->fb_clipplane[0] + thread->fb_viewportcenter[2]*thread->fb_clipplane[1] + thread->fb_viewportcenter[3]*thread->fb_clipplane[2] + thread->fb_viewportcenter[0]*thread->fb_clipplane[3];
+}
+
 static void DPSOFTRAST_RecalcFB(DPSOFTRAST_State_Thread *thread)
 {
 	// calculate framebuffer scissor, viewport, viewport clipped by scissor,
@@ -397,6 +407,7 @@ static void DPSOFTRAST_RecalcFB(DPSOFTRAST_State_Thread *thread)
 	thread->fb_scissor[3] = y2 - y1;
 
 	DPSOFTRAST_RecalcViewport(thread->viewport, thread->fb_viewportcenter, thread->fb_viewportscale);
+	DPSOFTRAST_RecalcClipPlane(thread);
 	DPSOFTRAST_RecalcThread(thread);
 }
 
@@ -1440,15 +1451,11 @@ DEFCOMMAND(24, ClipPlane, float clipplane[4];)
 static void DPSOFTRAST_Interpret_ClipPlane(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_ClipPlane *command)
 {
 	memcpy(thread->clipplane, command->clipplane, 4*sizeof(float));
+	thread->validate |= DPSOFTRAST_VALIDATE_FB;
 }
 void DPSOFTRAST_ClipPlane(float x, float y, float z, float w)
 {
 	DPSOFTRAST_Command_ClipPlane *command = DPSOFTRAST_ALLOCATECOMMAND(ClipPlane);
-	x /= dpsoftrast.fb_viewportscale[1];
-	y /= dpsoftrast.fb_viewportscale[2];
-	z /= dpsoftrast.fb_viewportscale[3];
-	w /= dpsoftrast.fb_viewportscale[0];
-	w -= dpsoftrast.fb_viewportcenter[1]*x + dpsoftrast.fb_viewportcenter[2]*y + dpsoftrast.fb_viewportcenter[3]*z + dpsoftrast.fb_viewportcenter[0]*w; 
 	command->clipplane[0] = x;
 	command->clipplane[1] = y;
 	command->clipplane[2] = z;
@@ -5040,7 +5047,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 			clip0origin = 0;
 			clip0slope = 0;
 			clip0dir = 0;
-			if(thread->clipplane[0] || thread->clipplane[1] || thread->clipplane[2])
+			if(thread->fb_clipplane[0] || thread->fb_clipplane[1] || thread->fb_clipplane[2])
 			{
 				float cliporigin, clipxslope, clipyslope;
 				attriborigin = _mm_shuffle_ps(screen[1], screen[1], _MM_SHUFFLE(2, 2, 2, 2));
@@ -5049,9 +5056,9 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				attribxslope = _mm_sub_ss(_mm_mul_ss(attribuxslope, attribedge1), _mm_mul_ss(attribvxslope, attribedge2));
 				attribyslope = _mm_sub_ss(_mm_mul_ss(attribvyslope, attribedge2), _mm_mul_ss(attribuyslope, attribedge1));
 				attriborigin = _mm_sub_ss(attriborigin, _mm_add_ss(_mm_mul_ss(attribxslope, x1), _mm_mul_ss(attribyslope, y1)));
-				cliporigin = _mm_cvtss_f32(attriborigin)*thread->clipplane[2] + thread->clipplane[3];
-				clipxslope = thread->clipplane[0] + _mm_cvtss_f32(attribxslope)*thread->clipplane[2];
-				clipyslope = thread->clipplane[1] + _mm_cvtss_f32(attribyslope)*thread->clipplane[2];
+				cliporigin = _mm_cvtss_f32(attriborigin)*thread->fb_clipplane[2] + thread->fb_clipplane[3];
+				clipxslope = thread->fb_clipplane[0] + _mm_cvtss_f32(attribxslope)*thread->fb_clipplane[2];
+				clipyslope = thread->fb_clipplane[1] + _mm_cvtss_f32(attribyslope)*thread->fb_clipplane[2];
 				if(clipxslope != 0)
 				{
 					clip0origin = -cliporigin/clipxslope;
@@ -5188,7 +5195,7 @@ static void DPSOFTRAST_Interpret_Draw(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 				xcoords = _mm_shuffle_ps(xcoords, xcoords, _MM_SHUFFLE(1, 0, 3, 2));
 				xslope = _mm_shuffle_ps(xslope, xslope, _MM_SHUFFLE(1, 0, 3, 2));
 			}
-			clip0 = clip0origin + (y+0.5f)*clip0slope;
+			clip0 = clip0origin + (y+0.5f)*clip0slope + 0.5f;
 			for(; y <= nexty; y++, xcoords = _mm_add_ps(xcoords, xslope), clip0 += clip0slope)
 			{
 				int startx, endx, clipx = minx, offset;
@@ -5583,8 +5590,6 @@ int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsign
 		thread->clipplane[1] = 0;
 		thread->clipplane[2] = 0;
 		thread->clipplane[3] = 1;
-	
-		DPSOFTRAST_RecalcThread(thread);
 	
 		thread->numspans = 0;
 		thread->numtriangles = 0;
