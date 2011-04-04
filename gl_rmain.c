@@ -5158,8 +5158,8 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		plane[0] = r_refdef.view.clipplane.normal[0];
 		plane[1] = r_refdef.view.clipplane.normal[1];
 		plane[2] = r_refdef.view.clipplane.normal[2];
-		plane[3] = dist;
-		customclipplane = plane;
+		plane[3] = -dist;
+		if(vid.renderpath != RENDERPATH_SOFT) customclipplane = plane;
 	}
 
 	R_GetScaledViewSize(r_refdef.view.width, r_refdef.view.height, &scaledwidth, &scaledheight);
@@ -5171,6 +5171,16 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
 	R_Mesh_SetMainRenderTargets();
 	R_SetViewport(&r_refdef.view.viewport);
+	if (r_refdef.view.useclipplane && allowwaterclippingplane && vid.renderpath == RENDERPATH_SOFT)
+	{
+		matrix4x4_t mvpmatrix, invmvpmatrix, invtransmvpmatrix;
+		float screenplane[4];
+		Matrix4x4_Concat(&mvpmatrix, &r_refdef.view.viewport.projectmatrix, &r_refdef.view.viewport.viewmatrix);
+		Matrix4x4_Invert_Full(&invmvpmatrix, &mvpmatrix);
+		Matrix4x4_Transpose(&invtransmvpmatrix, &invmvpmatrix);
+		Matrix4x4_Transform4(&invtransmvpmatrix, plane, screenplane);
+		DPSOFTRAST_ClipPlane(screenplane[0], screenplane[1], screenplane[2], screenplane[3]);
+	}
 }
 
 void R_EntityMatrix(const matrix4x4_t *matrix)
@@ -5665,6 +5675,7 @@ static void R_Water_ProcessPlanes(void)
 		}
 
 	}
+	DPSOFTRAST_ClipPlane(0, 0, 0, 1);
 	r_waterstate.renderingscene = false;
 	r_refdef.view = originalview;
 	R_ResetViewRendering3D();
