@@ -2298,6 +2298,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	int i;
 #if SETVIDEOMODE
 	int flags = SDL_HWSURFACE;
+	if(!COM_CheckParm("-noasyncblit")) flags |= SDL_ASYNCBLIT;
 #else
 	int windowflags = SDL_WINDOW_SHOWN;
 #endif
