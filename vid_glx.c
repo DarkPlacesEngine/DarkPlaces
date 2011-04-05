@@ -455,6 +455,31 @@ static keynum_t buttonremap[18] =
 static qboolean BuildXImages(int w, int h)
 {
 	int i;
+	if(DefaultDepth(vidx11_display, vidx11_screen) != 32 && DefaultDepth(vidx11_display, vidx11_screen) != 24)
+	{
+		Con_Printf("Sorry, we only support 24bpp and 32bpp modes\n");
+		VID_Shutdown();
+		return false;
+	}
+	// match to dpsoftrast's specs
+	if(vidx11_visual->red_mask != 0x00FF0000)
+	{
+		Con_Printf("Sorry, we only support BGR visuals\n");
+		VID_Shutdown();
+		return false;
+	}
+	if(vidx11_visual->green_mask != 0x0000FF00)
+	{
+		Con_Printf("Sorry, we only support BGR visuals\n");
+		VID_Shutdown();
+		return false;
+	}
+	if(vidx11_visual->blue_mask != 0x000000FF)
+	{
+		Con_Printf("Sorry, we only support BGR visuals\n");
+		VID_Shutdown();
+		return false;
+	}
 	if(vidx11_shmevent >= 0)
 	{
 		for(i = 0; i < 2; ++i)
@@ -464,6 +489,12 @@ static qboolean BuildXImages(int w, int h)
 			if(!vidx11_ximage[i])
 			{
 				Con_Printf("Failed to get an XImage segment\n");
+				VID_Shutdown();
+				return false;
+			}
+			if(vidx11_ximage[i]->bytes_per_line != w * 4)
+			{
+				Con_Printf("Sorry, we only support linear pixel layout\n");
 				VID_Shutdown();
 				return false;
 			}
@@ -495,6 +526,12 @@ static qboolean BuildXImages(int w, int h)
 			if(!vidx11_ximage[i])
 			{
 				Con_Printf("Failed to get an XImage segment\n");
+				VID_Shutdown();
+				return false;
+			}
+			if(vidx11_ximage[i]->bytes_per_line != w * 4)
+			{
+				Con_Printf("Sorry, we only support linear pixel layout\n");
 				VID_Shutdown();
 				return false;
 			}
