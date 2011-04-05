@@ -73,6 +73,10 @@ typedef qboolean bool;
 #ifdef SSE_POSSIBLE
 #include <emmintrin.h>
 
+#if defined(__GNUC__) && (__GNUC < 4 || __GNUC_MINOR__ < 6)
+	#define _mm_cvtss_f32(val) (__builtin_ia32_vec_ext_v4sf ((__v4sf)(val), 0))
+#endif
+
 #define MM_MALLOC(size) _mm_malloc(size, ATOMIC_SIZE)
 
 static void *MM_CALLOC(size_t nmemb, size_t size)
