@@ -829,7 +829,7 @@ void *GL_GetProcAddress(const char *name)
 
 void VID_Shutdown(void)
 {
-	if (!ctx || !vidx11_display)
+	if (!vidx11_display)
 		return;
 
 	VID_SetMouse(false, false, false);
