@@ -518,7 +518,7 @@ static qboolean BuildXImages(int w, int h)
 	}
 	else
 	{
-		for(i = 0; i < 2; ++i)
+		for(i = 0; i < 1; ++i) // we only need one buffer if we don't use Xshm
 		{
 			char *p = calloc(4, w * h);
 			vidx11_shminfo[i].shmid = -1;
@@ -894,11 +894,11 @@ void VID_Finish (void)
 	switch(vid.renderpath)
 	{
 		case RENDERPATH_SOFT:
-			vidx11_ximage_pos = !vidx11_ximage_pos;
-			vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
-			DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
-
 			if(vidx11_shmevent >= 0) {
+				vidx11_ximage_pos = !vidx11_ximage_pos;
+				vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
+				DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
+
 				// save mouse motion so we can deal with it later
 				in_mouse_x = 0;
 				in_mouse_y = 0;
@@ -912,7 +912,9 @@ void VID_Finish (void)
 				++vidx11_shmwait;
 				XShmPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height, True);
 			} else {
-				XPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height);
+				// no buffer switching here, we just flush the renderer
+				DPSOFTRAST_Finish();
+				XPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height);
 			}
 			break;
 
