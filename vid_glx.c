@@ -40,6 +40,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 #include <X11/extensions/xf86vmode.h>
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <X11/extensions/XShm.h>
+
 // get the Uchar type
 #include "utf8lib.h"
 #include "image.h"
@@ -84,7 +88,11 @@ static int vidx11_screen;
 static Window win, root;
 static GLXContext ctx = NULL;
 static GC vidx11_gc = NULL;
-static XImage *vidx11_ximage = NULL;
+static XImage *vidx11_ximage[2] = { NULL, NULL };
+static int vidx11_ximage_pos;
+static XShmSegmentInfo vidx11_shminfo[2];
+static int vidx11_shmevent = -1;
+static int vidx11_shmwait = 0; // number of frames outstanding
 
 Atom wm_delete_window_atom;
 Atom net_wm_state_atom;
@@ -444,6 +452,77 @@ static keynum_t buttonremap[18] =
 	K_MOUSE16,
 };
 
+static qboolean BuildXImages(int w, int h)
+{
+	int i;
+	if(vidx11_shmevent >= 0)
+	{
+		for(i = 0; i < 2; ++i)
+		{
+			vidx11_shminfo[i].shmid = -1;
+			vidx11_ximage[i] = XShmCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, NULL, &vidx11_shminfo[i], w, h);
+			if(!vidx11_ximage[i])
+			{
+				Con_Printf("Failed to get an XImage segment\n");
+				VID_Shutdown();
+				return false;
+			}
+			vidx11_shminfo[i].shmid = shmget(IPC_PRIVATE, vidx11_ximage[i]->bytes_per_line * vidx11_ximage[i]->height, IPC_CREAT|0777);
+			if(vidx11_shminfo[i].shmid < 0)
+			{
+				Con_Printf("Failed to get a shm segment\n");
+				VID_Shutdown();
+				return false;
+			}
+			vidx11_shminfo[i].shmaddr = vidx11_ximage[i]->data = shmat(vidx11_shminfo[i].shmid, NULL, 0);
+			if(!vidx11_shminfo[i].shmaddr)
+			{
+				Con_Printf("Failed to get a shm segment addresst\n");
+				VID_Shutdown();
+				return false;
+			}
+			vidx11_shminfo[i].readOnly = True;
+			XShmAttach(vidx11_display, &vidx11_shminfo[i]);
+		}
+	}
+	else
+	{
+		for(i = 0; i < 2; ++i)
+		{
+			char *p = calloc(4, w * h);
+			vidx11_shminfo[i].shmid = -1;
+			vidx11_ximage[i] = XCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, 0, (char*)p, w, h, 8, 0);
+			if(!vidx11_ximage[i])
+			{
+				Con_Printf("Failed to get an XImage segment\n");
+				VID_Shutdown();
+				return false;
+			}
+		}
+	}
+	return true;
+}
+static void DestroyXImages(void)
+{
+	int i;
+	for(i = 0; i < 2; ++i)
+	{
+		if(vidx11_shminfo[i].shmid >= 0)
+		{
+			XShmDetach(vidx11_display, &vidx11_shminfo[i]);
+			XDestroyImage(vidx11_ximage[i]);
+			vidx11_ximage[i] = NULL;
+			shmdt(vidx11_shminfo[i].shmaddr);
+			shmctl(vidx11_shminfo[i].shmid, IPC_RMID, 0);
+			vidx11_shminfo[i].shmid = -1;
+		}
+		if(vidx11_ximage[i])
+			XDestroyImage(vidx11_ximage[i]);
+		vidx11_ximage[i] = 0;
+	}
+}
+
+static int in_mouse_x_save = 0, in_mouse_y_save = 0;
 static void HandleEvents(void)
 {
 	XEvent event;
@@ -453,6 +532,11 @@ static void HandleEvents(void)
 
 	if (!vidx11_display)
 		return;
+
+	in_mouse_x += in_mouse_x_save;
+	in_mouse_y += in_mouse_y_save;
+	in_mouse_x_save = 0;
+	in_mouse_y_save = 0;
 
 	while (XPending(vidx11_display))
 	{
@@ -525,7 +609,7 @@ static void HandleEvents(void)
 			// window changed size/location
 			win_x = event.xconfigure.x;
 			win_y = event.xconfigure.y;
-			if(vid_resizable.integer < 2 || vid_isnetwmfullscreen)
+			if((vid_resizable.integer < 2 || vid_isnetwmfullscreen) && (vid.width != event.xconfigure.width || vid.height != event.xconfigure.height))
 			{
 				vid.width = event.xconfigure.width;
 				vid.height = event.xconfigure.height;
@@ -534,17 +618,19 @@ static void HandleEvents(void)
 				else
 					Con_DPrintf("Updating to ConfigureNotify resolution %dx%d\n", vid.width, vid.height);
 
-				if (vidx11_ximage)
-				{
-					XDestroyImage(vidx11_ximage);
-					if(vid.softdepthpixels)
-						free(vid.softdepthpixels);
-					vid.softpixels = (unsigned int *)calloc(1, vid.width * vid.height * 4);
-					vid.softdepthpixels = (unsigned int *)calloc(1, vid.width * vid.height * 4);
-					vidx11_ximage = XCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, 0, (char*)vid.softpixels, vid.width, vid.height, 8, 0);
+				DPSOFTRAST_Flush();
 
-					// FIXME inform softrast!
-				}
+				if(vid.softdepthpixels)
+					free(vid.softdepthpixels);
+
+				DestroyXImages();
+				XSync(vidx11_display, False);
+				if(!BuildXImages(vid.width, vid.height))
+					return;
+				XSync(vidx11_display, False);
+
+				vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
+				vid.softdepthpixels = (unsigned int *)calloc(4, vid.width * vid.height);
 			}
 			break;
 		case DestroyNotify:
@@ -644,6 +730,10 @@ static void HandleEvents(void)
 		case LeaveNotify:
 			// mouse left window
 			break;
+		default:
+			if(vidx11_shmevent >= 0 && event.type == vidx11_shmevent)
+				--vidx11_shmwait;
+			break;
 		}
 	}
 
@@ -716,9 +806,8 @@ void VID_Shutdown(void)
 		XFreeGC(vidx11_display, vidx11_gc);
 	vidx11_gc = NULL;
 
-	if(vidx11_ximage)
-		XDestroyImage(vidx11_ximage);
-	vidx11_ximage = 0;
+	DestroyXImages();
+	vidx11_shmevent = -1;
 	vid.softpixels = NULL;
 
 	if (vid.softdepthpixels)
@@ -768,7 +857,26 @@ void VID_Finish (void)
 	switch(vid.renderpath)
 	{
 		case RENDERPATH_SOFT:
-			XPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage, 0, 0, 0, 0, vid.width, vid.height);
+			vidx11_ximage_pos = !vidx11_ximage_pos;
+			vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
+			DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
+
+			if(vidx11_shmevent >= 0) {
+				// save mouse motion so we can deal with it later
+				in_mouse_x = 0;
+				in_mouse_y = 0;
+				while(vidx11_shmwait)
+					HandleEvents();
+				in_mouse_x_save += in_mouse_x;
+				in_mouse_y_save += in_mouse_y;
+				in_mouse_x = 0;
+				in_mouse_y = 0;
+
+				++vidx11_shmwait;
+				XShmPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height, True);
+			} else {
+				XPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height);
+			}
 			break;
 
 		case RENDERPATH_GL11:
@@ -821,6 +929,8 @@ void VID_Init(void)
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse"))
 		mouse_avail = false;
+	vidx11_shminfo[0].shmid = -1;
+	vidx11_shminfo[1].shmid = -1;
 }
 
 void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, int samples)
@@ -862,6 +972,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	char **idata;
 	unsigned char *data;
 	XGCValues gcval;
+	const char *dpyname;
 
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
@@ -873,6 +984,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 		Con_Print("Couldn't open the X display\n");
 		return false;
 	}
+	dpyname = XDisplayName(NULL);
 
 	// LordHavoc: making the close button on a window do the right thing
 	// seems to involve this mess, sigh...
@@ -1097,16 +1209,24 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	//XSync(vidx11_display, False);
 
-	// TODO XShm
-	vid.softpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
-	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
-	vidx11_ximage = XCreateImage(vidx11_display, vidx11_visual, DefaultDepth(vidx11_display, vidx11_screen), ZPixmap, 0, (char*)vid.softpixels, mode->width, mode->height, 8, 0);
-	if(!vidx11_ximage)
+	// COMMANDLINEOPTION: Unix GLX: -noshm disables XShm extensioon
+	if(dpyname && dpyname[0] == ':' && dpyname[1] && (dpyname[2] < '0' || dpyname[2] > '9') && !COM_CheckParm("-noshm") && XShmQueryExtension(vidx11_display))
 	{
-		Con_Printf("Failed to initialize an XImage\n");
-		VID_Shutdown();
-		return false;
+		Con_Printf("Using XShm\n");
+		vidx11_shmevent = XShmGetEventBase(vidx11_display) + ShmCompletion;
 	}
+	else
+	{
+		Con_Printf("Not using XShm\n");
+		vidx11_shmevent = -1;
+	}
+	BuildXImages(mode->width, mode->height);
+
+	vidx11_ximage_pos = 0;
+	vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
+	vidx11_shmwait = 0;
+	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
+
 	memset(&gcval, 0, sizeof(gcval));
 	vidx11_gc = XCreateGC(vidx11_display, win, 0, &gcval);
 
