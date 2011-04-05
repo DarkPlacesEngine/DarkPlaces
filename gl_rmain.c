@@ -10404,6 +10404,9 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	decal->texcoord2f[1][1] = t1[1];
 	decal->texcoord2f[2][0] = t2[0];
 	decal->texcoord2f[2][1] = t2[1];
+	TriangleNormal(v0, v1, v2, decal->plane);
+	VectorNormalize(decal->plane);
+	decal->plane[3] = DotProduct(v0, decal->plane);
 }
 
 extern cvar_t cl_decals_bias;
@@ -10855,6 +10858,10 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 			continue;
 
 		if (surfacevisible && !surfacevisible[decal->surfaceindex])
+			continue;
+
+		// skip backfaces
+		if (decal->triangleindex < 0 && DotProduct(r_refdef.view.origin, decal->plane) < decal->plane[3])
 			continue;
 
 		// update color values for fading decals

@@ -35,6 +35,7 @@ typedef struct tridecal_s
 	float			texcoord2f[3][2];
 	float			vertex3f[3][3];
 	float			color4f[3][4];
+	float			plane[4]; // backface culling
 	// how long this decal has lived so far (the actual fade begins at cl_decals_time)
 	float			lived;
 	// if >= 0 this indicates the decal should follow an animated triangle
