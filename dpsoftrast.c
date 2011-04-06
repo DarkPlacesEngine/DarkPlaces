@@ -4561,7 +4561,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 
 	// read varyings
-	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD4); // or POSITION?
+	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD4);
 
 	// read uniforms
 	ScreenScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+0];
@@ -4617,17 +4617,167 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 
 void DPSOFTRAST_VertexShader_Water(void)
 {
-	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	int i;
+	int numvertices = dpsoftrast.numvertices;
+	float EyePosition[4];
+	float EyeVectorModelSpace[4];
+	float EyeVector[4];
+	float position[4];
+	float svector[4];
+	float tvector[4];
+	float normal[4];
+	EyePosition[0] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_EyePosition*4+0];
+	EyePosition[1] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_EyePosition*4+1];
+	EyePosition[2] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_EyePosition*4+2];
+	EyePosition[3] = dpsoftrast.uniform4f[DPSOFTRAST_UNIFORM_EyePosition*4+3];
+	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION);
+	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD1);
+	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD2);
+	DPSOFTRAST_Array_Load(DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD3);
+	for (i = 0;i < numvertices;i++)
+	{
+		position[0] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_POSITION][i*4+0];
+		position[1] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_POSITION][i*4+1];
+		position[2] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_POSITION][i*4+2];
+		svector[0] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+0];
+		svector[1] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+1];
+		svector[2] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD1][i*4+2];
+		tvector[0] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD2][i*4+0];
+		tvector[1] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD2][i*4+1];
+		tvector[2] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD2][i*4+2];
+		normal[0] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD3][i*4+0];
+		normal[1] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD3][i*4+1];
+		normal[2] = dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD3][i*4+2];
+		EyeVectorModelSpace[0] = EyePosition[0] - position[0];
+		EyeVectorModelSpace[1] = EyePosition[1] - position[1];
+		EyeVectorModelSpace[2] = EyePosition[2] - position[2];
+		EyeVector[0] = svector[0] * EyeVectorModelSpace[0] + svector[1] * EyeVectorModelSpace[1] + svector[2] * EyeVectorModelSpace[2];
+		EyeVector[1] = tvector[0] * EyeVectorModelSpace[0] + tvector[1] * EyeVectorModelSpace[1] + tvector[2] * EyeVectorModelSpace[2];
+		EyeVector[2] = normal[0]  * EyeVectorModelSpace[0] + normal[1]  * EyeVectorModelSpace[1] + normal[2]  * EyeVectorModelSpace[2];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD6][i*4+0] = EyeVector[0];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD6][i*4+1] = EyeVector[1];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD6][i*4+2] = EyeVector[2];
+		dpsoftrast.post_array4f[DPSOFTRAST_ARRAY_TEXCOORD6][i*4+3] = 0.0f;
+	}
+	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, -1, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD0, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 }
 
 
 void DPSOFTRAST_PixelShader_Water(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-	// TODO: IMPLEMENT
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
+	float z;
+	int x, startx = span->startx, endx = span->endx;
+
+	// texture reads
+	unsigned char buffer_texture_normalbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
+
+	// varyings
+	float ModelViewProjectionPositiondata[4];
+	float ModelViewProjectionPositionslope[4];
+	float EyeVectordata[4];
+	float EyeVectorslope[4];
+
+	// uniforms
+	float ScreenScaleRefractReflect[2];
+	float ScreenCenterRefractReflect[2];
+	float DistortScaleRefractReflect[2];
+	float RefractColor[4];
+	float ReflectColor[4];
+	float ReflectFactor;
+	float ReflectOffset;
+
+	DPSOFTRAST_Texture *texture_refraction = thread->texbound[GL20TU_REFRACTION];
+	DPSOFTRAST_Texture *texture_reflection = thread->texbound[GL20TU_REFLECTION];
+	if(!texture_refraction || !texture_reflection) return;
+
+	// read textures
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
-	memset(buffer_FragColorbgra8 + span->startx*4, 0, (span->endx - span->startx)*4);
+	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
+
+	// read varyings
+	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD4);
+	DPSOFTRAST_CALCATTRIB4F(triangle, span, EyeVectordata, EyeVectorslope, DPSOFTRAST_ARRAY_TEXCOORD6);
+
+	// read uniforms
+	ScreenScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+0];
+	ScreenScaleRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+1];
+	ScreenScaleRefractReflect[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+2];
+	ScreenScaleRefractReflect[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+3];
+	ScreenCenterRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+0];
+	ScreenCenterRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+1];
+	ScreenCenterRefractReflect[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+2];
+	ScreenCenterRefractReflect[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenCenterRefractReflect*4+3];
+	DistortScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+0];
+	DistortScaleRefractReflect[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+1];
+	DistortScaleRefractReflect[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+2];
+	DistortScaleRefractReflect[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_DistortScaleRefractReflect*4+3];
+	RefractColor[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+2];
+	RefractColor[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+1];
+	RefractColor[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+0];
+	RefractColor[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_RefractColor*4+3];
+	ReflectColor[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectColor*4+2];
+	ReflectColor[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectColor*4+1];
+	ReflectColor[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectColor*4+0];
+	ReflectColor[3] = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectColor*4+3];
+	ReflectFactor = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectFactor*4+0];
+	ReflectOffset = thread->uniform4f[DPSOFTRAST_UNIFORM_ReflectOffset*4+0];
+
+	// do stuff
+	for (x = startx;x < endx;x++)
+	{
+		float SafeScreenTexCoord[4];
+		float ScreenTexCoord[4];
+		float v[3];
+		float iw;
+		unsigned char c1[4];
+		unsigned char c2[4];
+		float Fresnel;
+
+		z = buffer_z[x];
+
+		// "    vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
+		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
+
+		// "    vec4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
+		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * iw * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0]; // * z (disappears)
+		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * iw * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1]; // * z (disappears)
+		SafeScreenTexCoord[2] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * iw * ScreenScaleRefractReflect[2] + ScreenCenterRefractReflect[2]; // * z (disappears)
+		SafeScreenTexCoord[3] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * iw * ScreenScaleRefractReflect[3] + ScreenCenterRefractReflect[3]; // * z (disappears)
+
+		// "    vec4 ScreenTexCoord = SafeScreenTexCoord + vec2(normalize(vec3(dp_texture2D(Texture_Normal, TexCoord)) - vec3(0.5))).xyxy * DistortScaleRefractReflect;\n"
+		v[0] = buffer_texture_normalbgra8[x*4+2] * (1.0f / 128.0f) - 1.0f;
+		v[1] = buffer_texture_normalbgra8[x*4+1] * (1.0f / 128.0f) - 1.0f;
+		v[2] = buffer_texture_normalbgra8[x*4+0] * (1.0f / 128.0f) - 1.0f;
+		DPSOFTRAST_Vector3Normalize(v);
+		ScreenTexCoord[0] = SafeScreenTexCoord[0] + v[0] * DistortScaleRefractReflect[0];
+		ScreenTexCoord[1] = SafeScreenTexCoord[1] + v[1] * DistortScaleRefractReflect[1];
+		ScreenTexCoord[2] = SafeScreenTexCoord[2] + v[0] * DistortScaleRefractReflect[2];
+		ScreenTexCoord[3] = SafeScreenTexCoord[3] + v[1] * DistortScaleRefractReflect[3];
+
+		// "    float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0) * ReflectFactor + ReflectOffset;\n"
+		v[0] = (EyeVectordata[0] + EyeVectorslope[0] * x); // * z (disappears)
+		v[1] = (EyeVectordata[1] + EyeVectorslope[1] * x); // * z (disappears)
+		v[2] = (EyeVectordata[2] + EyeVectorslope[2] * x); // * z (disappears)
+		DPSOFTRAST_Vector3Normalize(v);
+		Fresnel = 1.0f - v[2];
+		Fresnel = min(1.0f, Fresnel);
+		Fresnel = Fresnel * Fresnel * ReflectFactor + ReflectOffset;
+
+		// "	dp_FragColor = vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord).rgb, 1.0) * RefractColor;\n"
+		// "    dp_FragColor = mix(vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord.xy).rgb, 1) * RefractColor, vec4(dp_texture2D(Texture_Reflection, ScreenTexCoord.zw).rgb, 1) * ReflectColor, Fresnel);\n"
+		DPSOFTRAST_Texture2DBGRA8(texture_refraction, 0, ScreenTexCoord[0], ScreenTexCoord[1], c1);
+		DPSOFTRAST_Texture2DBGRA8(texture_reflection, 0, ScreenTexCoord[2], ScreenTexCoord[3], c2);
+
+		buffer_FragColorbgra8[x*4+0] = (c1[0] * RefractColor[0]) * (1.0f - Fresnel) + (c2[0] * ReflectColor[0]) * Fresnel;
+		buffer_FragColorbgra8[x*4+1] = (c1[1] * RefractColor[1]) * (1.0f - Fresnel) + (c2[1] * ReflectColor[1]) * Fresnel;
+		buffer_FragColorbgra8[x*4+2] = (c1[2] * RefractColor[2]) * (1.0f - Fresnel) + (c2[2] * ReflectColor[2]) * Fresnel;
+		buffer_FragColorbgra8[x*4+3] = min((    RefractColor[3] *  (1.0f - Fresnel) +          ReflectColor[3]  * Fresnel) * 256, 255);
+	}
+
 	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
 }
 
@@ -4708,7 +4858,7 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_LightDirection,                 DPSOFTRAST_PixelShader_LightDirection,                 {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                    {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_CUBE, ~0}},
 	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_NORMAL, GL20TU_REFRACTION, ~0}},
-	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {~0}},
+	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_NORMAL, GL20TU_REFLECTION, GL20TU_REFRACTION, ~0}},
 	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}},
