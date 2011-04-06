@@ -4528,15 +4528,13 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 
 void DPSOFTRAST_VertexShader_Refraction(void)
 {
-	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
+	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
 	DPSOFTRAST_Array_Transform(DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD0, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_TexMatrixM1);
 	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
 }
 
 void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
-	// DIRTY TRICK: only do sideways displacement. Not correct, but cheaper and thus better for SW.
-
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
 	float z;
 	int x, startx = span->startx, endx = span->endx;
@@ -4563,7 +4561,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_normalbgra8, GL20TU_NORMAL, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 
 	// read varyings
-	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD1); // or POSITION?
+	DPSOFTRAST_CALCATTRIB4F(triangle, span, ModelViewProjectionPositiondata, ModelViewProjectionPositionslope, DPSOFTRAST_ARRAY_TEXCOORD4); // or POSITION?
 
 	// read uniforms
 	ScreenScaleRefractReflect[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_ScreenScaleRefractReflect*4+0];
@@ -4590,7 +4588,7 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 
 		// "	vec2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
 		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
-		
+
 		// "	vec2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
 		SafeScreenTexCoord[0] = (ModelViewProjectionPositiondata[0] + ModelViewProjectionPositionslope[0]*x) * iw * ScreenScaleRefractReflect[0] + ScreenCenterRefractReflect[0]; // * z (disappears)
 		SafeScreenTexCoord[1] = (ModelViewProjectionPositiondata[1] + ModelViewProjectionPositionslope[1]*x) * iw * ScreenScaleRefractReflect[1] + ScreenCenterRefractReflect[1]; // * z (disappears)
@@ -4606,7 +4604,6 @@ void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DP
 		// "	dp_FragColor = vec4(dp_texture2D(Texture_Refraction, ScreenTexCoord).rgb, 1.0) * RefractColor;\n"
 		DPSOFTRAST_Texture2DBGRA8(texture, 0, ScreenTexCoord[0], ScreenTexCoord[1], c);
 
-		//p = (int) bound(startx, x + (ScreenTexCoord[0] - SafeScreenTexCoord[0]) / (ModelViewProjectionPositionslope[0]*z), endx-1);
 		buffer_FragColorbgra8[x*4+0] = c[0] * RefractColor[0];
 		buffer_FragColorbgra8[x*4+1] = c[1] * RefractColor[1];
 		buffer_FragColorbgra8[x*4+2] = c[2] * RefractColor[2];
@@ -4710,7 +4707,7 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_LightDirectionMap_TangentSpace, DPSOFTRAST_PixelShader_LightDirectionMap_TangentSpace, {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_LIGHTMAP, GL20TU_DELUXEMAP, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightDirection,                 DPSOFTRAST_PixelShader_LightDirection,                 {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD5, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, ~0}},
 	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                    {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_CUBE, ~0}},
-	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, ~0}, {GL20TU_NORMAL, GL20TU_REFRACTION, ~0}},
+	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_NORMAL, GL20TU_REFRACTION, ~0}},
 	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {~0}},
 	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
