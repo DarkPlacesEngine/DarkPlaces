@@ -5975,33 +5975,55 @@ static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t s
 	}
 }
 
-static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_model_t *model, int nodenum, const vec3_t point)
+void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
 {
+	const bih_t *bih;
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
 	const colbrushf_t *brush;
 	int axis;
-	for(;;)
+	int nodenum;
+	int nodestackpos = 0;
+	int nodestack[1024];
+
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+
+	bih = &model->collision_bih;
+	nodenum = bih->rootnode;
+	nodestack[nodestackpos++] = nodenum;
+	while (nodestackpos)
 	{
-		node = model->collision_bih.nodes + nodenum;
+		nodenum = nodestack[--nodestackpos];
+		node = bih->nodes + nodenum;
 #if 1
-		if (!BoxesOverlap(point, point, node->mins, node->maxs))
-			return;
+		if (!BoxesOverlap(start, start, node->mins, node->maxs))
+			continue;
 #endif
-		if (node->type == BIH_UNORDERED)
+		if (node->type <= BIH_SPLITZ && nodestackpos+2 <= 1024)
+		{
+			axis = node->type - BIH_SPLITX;
+			if (start[axis] >= node->frontmin)
+				nodestack[nodestackpos++] = node->front;
+			if (start[axis] <= node->backmax)
+				nodestack[nodestackpos++] = node->back;
+		}
+		else if (node->type == BIH_UNORDERED)
 		{
 			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
 			{
-				leaf = model->collision_bih.leafs + node->children[axis];
+				leaf = bih->leafs + node->children[axis];
 #if 1
-				if (!BoxesOverlap(point, point, leaf->mins, leaf->maxs))
+				if (!BoxesOverlap(start, start, leaf->mins, leaf->maxs))
 					continue;
 #endif
 				switch(leaf->type)
 				{
 				case BIH_BRUSH:
 					brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
-					Collision_TracePointBrushFloat(trace, point, brush);
+					Collision_TracePointBrushFloat(trace, start, brush);
 					break;
 				case BIH_COLLISIONTRIANGLE:
 					// collision triangle - skipped because they have no volume
@@ -6011,353 +6033,239 @@ static void Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace_t *trace, dp_mode
 					break;
 				}
 			}
-			return;
 		}
-		axis = node->type - BIH_SPLITX;
-		if (point[axis] <= node->backmax)
-		{
-			if (point[axis] >= node->frontmin)
-				Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace, model, node->front, point);
-			nodenum = node->back;
-		}
-		else if (point[axis] >= node->frontmin)
-			nodenum = node->front;
-		else // no overlap with either child?  just return
-			return;
 	}
 }
 
-static void Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace_t *trace, dp_model_t *model, bih_t *bih, int nodenum, const vec3_t start, const vec3_t end, const vec3_t linestart, const vec3_t lineend)
+void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, const bih_t *bih)
 {
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
 	const colbrushf_t *brush;
 	const int *e;
 	const texture_t *texture;
-	int axis;
-#define BIHLINECLIP
-#ifdef BIHLINECLIP
-	int sideflags;
-	vec_t frontdist1;
-	vec_t frontdist2;
-	vec_t frontfrac;
-	vec_t backdist1;
-	vec_t backdist2;
-	vec_t backfrac;
-	vec3_t clipped, newstart, newend;
-#endif
-	vec3_t segmentmins;
-	vec3_t segmentmaxs;
-	segmentmins[0] = min(start[0], end[0]);
-	segmentmins[1] = min(start[1], end[1]);
-	segmentmins[2] = min(start[2], end[2]);
-	segmentmaxs[0] = max(start[0], end[0]);
-	segmentmaxs[1] = max(start[1], end[1]);
-	segmentmaxs[2] = max(start[2], end[2]);
-	for (;;)
+	vec3_t nodebigmins, nodebigmaxs, nodestart, nodeend, sweepnodemins, sweepnodemaxs;
+	vec_t d1, d2, d3, d4, f, nodestackline[1024][6];
+	int axis, nodenum, nodestackpos = 0, nodestack[1024];
+
+	if (VectorCompare(start, end))
 	{
+		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
+		return;
+	}
+
+	nodenum = bih->rootnode;
+
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+
+	// push first node
+	nodestackline[nodestackpos][0] = start[0];
+	nodestackline[nodestackpos][1] = start[1];
+	nodestackline[nodestackpos][2] = start[2];
+	nodestackline[nodestackpos][3] = end[0];
+	nodestackline[nodestackpos][4] = end[1];
+	nodestackline[nodestackpos][5] = end[2];
+	nodestack[nodestackpos++] = nodenum;
+	while (nodestackpos)
+	{
+		nodenum = nodestack[--nodestackpos];
 		node = bih->nodes + nodenum;
-#if 1
-		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
-			return;
-#endif
-		if (node->type == BIH_UNORDERED)
+		VectorCopy(nodestackline[nodestackpos], nodestart);
+		VectorCopy(nodestackline[nodestackpos] + 3, nodeend);
+		sweepnodemins[0] = min(nodestart[0], nodeend[0]); sweepnodemins[1] = min(nodestart[1], nodeend[1]); sweepnodemins[2] = min(nodestart[2], nodeend[2]); sweepnodemaxs[0] = max(nodestart[0], nodeend[0]); sweepnodemaxs[1] = max(nodestart[1], nodeend[1]); sweepnodemaxs[2] = max(nodestart[2], nodeend[2]);
+		if (!BoxesOverlap(sweepnodemins, sweepnodemaxs, node->mins, node->maxs))
+			continue;
+		if (node->type <= BIH_SPLITZ && nodestackpos+2 <= 1024)
 		{
+			// recurse children of the split
+			axis = node->type - BIH_SPLITX;
+			d1 = node->backmax - nodestart[axis];
+			d2 = node->backmax - nodeend[axis];
+			d3 = nodestart[axis] - node->frontmin;
+			d4 = nodeend[axis] - node->frontmin;
+			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
+			{
+			case  0: /* >>>> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  1: /* <>>> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  2: /* ><>> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  3: /* <<>> */                                                                                                                                                                                                                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  4: /* >><> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  5: /* <><> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  6: /* ><<> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  7: /* <<<> */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  8: /* >>>< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  9: /* <>>< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 10: /* ><>< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 11: /* <<>< */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 12: /* >><< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 13: /* <><< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 14: /* ><<< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 15: /* <<<< */                                                                                                                                                                                                                                                                                                                                                                                                   break;
+			}
+		}
+		else if (node->type == BIH_UNORDERED)
+		{
+			// calculate sweep bounds for this node
+			// copy node bounds into local variables
+			VectorCopy(node->mins, nodebigmins);
+			VectorCopy(node->maxs, nodebigmaxs);
+			// clip line to this node bounds
+			axis = 0; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			axis = 1; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			axis = 2; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			// some of the line intersected the enlarged node box
+			// calculate sweep bounds for this node
+			sweepnodemins[0] = min(nodestart[0], nodeend[0]); sweepnodemins[1] = min(nodestart[1], nodeend[1]); sweepnodemins[2] = min(nodestart[2], nodeend[2]); sweepnodemaxs[0] = max(nodestart[0], nodeend[0]); sweepnodemaxs[1] = max(nodestart[1], nodeend[1]); sweepnodemaxs[2] = max(nodestart[2], nodeend[2]);
 			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
 			{
-				leaf = model->collision_bih.leafs + node->children[axis];
-#if 1
-				if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+				leaf = bih->leafs + node->children[axis];
+				if (!BoxesOverlap(sweepnodemins, sweepnodemaxs, leaf->mins, leaf->maxs))
 					continue;
-#endif
 				switch(leaf->type)
 				{
 				case BIH_BRUSH:
 					brush = model->brush.data_brushes[leaf->itemindex].colbrushf;
-					Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
+					Collision_TraceLineBrushFloat(trace, start, end, brush, brush);
 					break;
 				case BIH_COLLISIONTRIANGLE:
 					if (!mod_q3bsp_curves_collisions.integer)
 						continue;
 					e = model->brush.data_collisionelement3i + 3*leaf->itemindex;
 					texture = model->data_textures + leaf->textureindex;
-					Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					Collision_TraceLineTriangleFloat(trace, start, end, model->brush.data_collisionvertex3f + e[0] * 3, model->brush.data_collisionvertex3f + e[1] * 3, model->brush.data_collisionvertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
 					break;
 				case BIH_RENDERTRIANGLE:
 					e = model->surfmesh.data_element3i + 3*leaf->itemindex;
 					texture = model->data_textures + leaf->textureindex;
-					Collision_TraceLineTriangleFloat(trace, linestart, lineend, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
+					Collision_TraceLineTriangleFloat(trace, start, end, model->surfmesh.data_vertex3f + e[0] * 3, model->surfmesh.data_vertex3f + e[1] * 3, model->surfmesh.data_vertex3f + e[2] * 3, texture->supercontents, texture->surfaceflags, texture);
 					break;
 				}
 			}
-			return;
 		}
-		axis = node->type - BIH_SPLITX;
-#if 0
-		if (segmentmins[axis] <= node->backmax)
-		{
-			if (segmentmaxs[axis] >= node->frontmin)
-				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-			nodenum = node->back;
-		}
-		else if (segmentmaxs[axis] >= node->frontmin)
-			nodenum = node->front;
-		else
-			return; // trace falls between children
-#else
-		frontdist1 = start[axis] - node->frontmin;
-		frontdist2 = end[axis] - node->frontmin;
-		backdist1 = start[axis] - node->backmax;
-		backdist2 = end[axis] - node->backmax;
-		sideflags = 0;
-		if (frontdist1 < 0)
-			sideflags |= 1;
-		if (frontdist2 < 0)
-			sideflags |= 2;
-		if (backdist1 < 0)
-			sideflags |= 4;
-		if (backdist2 < 0)
-			sideflags |= 8;
-#if 0
-		if (sideflags & 12)
-		{
-			if ((sideflags & 3) != 3)
-				Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-			nodenum = node->back;
-		}
-		else if ((sideflags & 3) != 3)
-			nodenum = node->front;
-		else
-			return; // trace falls between children
-#else
-		switch(sideflags)
-		{
-		case 0:
-			// start end START END
-			nodenum = node->front;
-			continue;
-		case 1:
-			// START end START END
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, newstart); start = newstart;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->front;
-			break;
-		case 2:
-#ifdef BIHLINECLIP
-			// start END START END
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, newend); end = newend;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->front;
-			break;
-		case 3:
-			// START END START END
-			return; // line falls in gap between children
-		case 4:
-			// start end start END
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#ifdef BIHLINECLIP
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newend); end = newend;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->back;
-			break;
-		case 5:
-			// START end start END
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newend); end = newend;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 6:
-			// start END start END
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newend); end = newend;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 7:
-			// START END start END
-#ifdef BIHLINECLIP
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newend); end = newend;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->back;
-			break;
-		case 8:
-			// start end START end
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#ifdef BIHLINECLIP
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newstart); start = newstart;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->back;
-			break;
-		case 9:
-			// START end START end
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newstart); start = newstart;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 10:
-			// start END START end
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newstart); start = newstart;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 11:
-			// START END START end
-#ifdef BIHLINECLIP
-			backfrac = backdist1 / (backdist1 - backdist2);
-			VectorLerp(start, backfrac, end, newstart); start = newstart;
-			segmentmins[0] = min(start[0], end[0]);
-			segmentmins[1] = min(start[1], end[1]);
-			segmentmins[2] = min(start[2], end[2]);
-			segmentmaxs[0] = max(start[0], end[0]);
-			segmentmaxs[1] = max(start[1], end[1]);
-			segmentmaxs[2] = max(start[2], end[2]);
-#endif
-			nodenum = node->back;
-			break;
-		case 12:
-			// start end start end
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-			nodenum = node->back;
-			break;
-		case 13:
-			// START end start end
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, clipped, end, linestart, lineend);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 14:
-			// start END start end
-#ifdef BIHLINECLIP
-			frontfrac = frontdist1 / (frontdist1 - frontdist2);
-			VectorLerp(start, frontfrac, end, clipped);
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, clipped, linestart, lineend);
-#else
-			Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, bih, node->front, start, end, linestart, lineend);
-#endif
-			nodenum = node->back;
-			break;
-		case 15:
-			// START END start end
-			nodenum = node->back;
-			continue;
-		}
-#endif
-#endif
 	}
 }
 
-static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_model_t *model, int nodenum, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const vec3_t segmentmins, const vec3_t segmentmaxs)
+void Mod_CollisionBIH_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
+	if (VectorCompare(start, end))
+	{
+		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
+		return;
+	}
+	Mod_CollisionBIH_TraceLineShared(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, &model->collision_bih);
+}
+
+void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *thisbrush_start, colbrushf_t *thisbrush_end, int hitsupercontentsmask)
+{
+	const bih_t *bih;
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
 	const colbrushf_t *brush;
 	const int *e;
 	const texture_t *texture;
-	int axis;
-	for(;;)
+	vec3_t start, end, startmins, startmaxs, endmins, endmaxs, mins, maxs;
+	vec3_t nodebigmins, nodebigmaxs, nodestart, nodeend, sweepnodemins, sweepnodemaxs;
+	vec_t d1, d2, d3, d4, f, nodestackline[1024][6];
+	int axis, nodenum, nodestackpos = 0, nodestack[1024];
+
+	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(thisbrush_start->mins, thisbrush_start->maxs) && VectorCompare(thisbrush_end->mins, thisbrush_end->maxs))
 	{
-		node = model->collision_bih.nodes + nodenum;
-		if (node->type == BIH_UNORDERED)
+		if (VectorCompare(thisbrush_start->mins, thisbrush_end->mins))
+			Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, thisbrush_start->mins, hitsupercontentsmask);
+		else
+			Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, thisbrush_start->mins, thisbrush_end->mins, hitsupercontentsmask);
+		return;
+	}
+
+	bih = &model->collision_bih;
+	nodenum = bih->rootnode;
+
+	// box trace, performed as brush trace
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->realfraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+
+	// calculate tracebox-like parameters for efficient culling
+	VectorMAM(0.5f, thisbrush_start->mins, 0.5f, thisbrush_start->maxs, start);
+	VectorMAM(0.5f, thisbrush_end->mins, 0.5f, thisbrush_end->maxs, end);
+	VectorSubtract(thisbrush_start->mins, start, startmins);
+	VectorSubtract(thisbrush_start->maxs, start, startmaxs);
+	VectorSubtract(thisbrush_end->mins, end, endmins);
+	VectorSubtract(thisbrush_end->maxs, end, endmaxs);
+	mins[0] = min(startmins[0], endmins[0]);
+	mins[1] = min(startmins[1], endmins[1]);
+	mins[2] = min(startmins[2], endmins[2]);
+	maxs[0] = max(startmaxs[0], endmaxs[0]);
+	maxs[1] = max(startmaxs[1], endmaxs[1]);
+	maxs[2] = max(startmaxs[2], endmaxs[2]);
+
+	// push first node
+	nodestackline[nodestackpos][0] = start[0];
+	nodestackline[nodestackpos][1] = start[1];
+	nodestackline[nodestackpos][2] = start[2];
+	nodestackline[nodestackpos][3] = end[0];
+	nodestackline[nodestackpos][4] = end[1];
+	nodestackline[nodestackpos][5] = end[2];
+	nodestack[nodestackpos++] = nodenum;
+	while (nodestackpos)
+	{
+		nodenum = nodestack[--nodestackpos];
+		node = bih->nodes + nodenum;
+		VectorCopy(nodestackline[nodestackpos], nodestart);
+		VectorCopy(nodestackline[nodestackpos] + 3, nodeend);
+		sweepnodemins[0] = min(nodestart[0], nodeend[0]) + mins[0]; sweepnodemins[1] = min(nodestart[1], nodeend[1]) + mins[1]; sweepnodemins[2] = min(nodestart[2], nodeend[2]) + mins[2]; sweepnodemaxs[0] = max(nodestart[0], nodeend[0]) + maxs[0]; sweepnodemaxs[1] = max(nodestart[1], nodeend[1]) + maxs[1]; sweepnodemaxs[2] = max(nodestart[2], nodeend[2]) + maxs[2];
+		if (!BoxesOverlap(sweepnodemins, sweepnodemaxs, node->mins, node->maxs))
+			continue;
+		if (node->type <= BIH_SPLITZ && nodestackpos+2 <= 1024)
 		{
+			// recurse children of the split
+			axis = node->type - BIH_SPLITX;
+			d1 = node->backmax - nodestart[axis] - mins[axis];
+			d2 = node->backmax - nodeend[axis] - mins[axis];
+			d3 = nodestart[axis] - node->frontmin + maxs[axis];
+			d4 = nodeend[axis] - node->frontmin + maxs[axis];
+			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
+			{
+			case  0: /* >>>> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  1: /* <>>> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  2: /* ><>> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  3: /* <<>> */                                                                                                                                                                                                                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  4: /* >><> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  5: /* <><> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  6: /* ><<> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  7: /* <<<> */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  8: /* >>>< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case  9: /* <>>< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 10: /* ><>< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 11: /* <<>< */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
+			case 12: /* >><< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 13: /* <><< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 14: /* ><<< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
+			case 15: /* <<<< */                                                                                                                                                                                                                                                                                                                                                                                                   break;
+			}
+		}
+		else if (node->type == BIH_UNORDERED)
+		{
+			// calculate sweep bounds for this node
+			// copy node bounds into local variables and expand to get Minkowski Sum of the two shapes
+			VectorSubtract(node->mins, maxs, nodebigmins);
+			VectorSubtract(node->maxs, mins, nodebigmaxs);
+			// clip line to this node bounds
+			axis = 0; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			axis = 1; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			axis = 2; d1 = nodestart[axis] - nodebigmins[axis]; d2 = nodeend[axis] - nodebigmins[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); } d1 = nodebigmaxs[axis] - nodestart[axis]; d2 = nodebigmaxs[axis] - nodeend[axis]; if (d1 < 0) { if (d2 < 0) continue; f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestart); } else if (d2 < 0) { f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodeend); }
+			// some of the line intersected the enlarged node box
+			// calculate sweep bounds for this node
+			sweepnodemins[0] = min(nodestart[0], nodeend[0]) + mins[0]; sweepnodemins[1] = min(nodestart[1], nodeend[1]) + mins[1]; sweepnodemins[2] = min(nodestart[2], nodeend[2]) + mins[2]; sweepnodemaxs[0] = max(nodestart[0], nodeend[0]) + maxs[0]; sweepnodemaxs[1] = max(nodestart[1], nodeend[1]) + maxs[1]; sweepnodemaxs[2] = max(nodestart[2], nodeend[2]) + maxs[2];
 			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
 			{
-				leaf = model->collision_bih.leafs + node->children[axis];
-#if 1
-				if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
+				leaf = bih->leafs + node->children[axis];
+				if (!BoxesOverlap(sweepnodemins, sweepnodemaxs, leaf->mins, leaf->maxs))
 					continue;
-#endif
 				switch(leaf->type)
 				{
 				case BIH_BRUSH:
@@ -6378,119 +6286,25 @@ static void Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace_t *trace, dp_mode
 					break;
 				}
 			}
-			return;
 		}
-		axis = node->type - BIH_SPLITX;
-#if 1
-		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
-			return;
-#endif
-#if 0
-		Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, node->front, thisbrush_start, thisbrush_end, segmentmins, segmentmaxs);
-		nodenum = node->back;
-		continue;
-#endif
-		if (segmentmins[axis] <= node->backmax)
-		{
-			if (segmentmaxs[axis] >= node->frontmin)
-				Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, node->front, thisbrush_start, thisbrush_end, segmentmins, segmentmaxs);
-			nodenum = node->back;
-		}
-		else if (segmentmaxs[axis] >= node->frontmin)
-			nodenum = node->front;
-		else
-			return; // trace falls between children
 	}
-}
-
-void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask)
-{
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start);
-}
-
-void Mod_CollisionBIH_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
-{
-	if (VectorCompare(start, end))
-	{
-		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
-		return;
-	}
-
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->collision_bih, model->collision_bih.rootnode, start, end, start, end);
 }
 
 void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
-	float segmentmins[3], segmentmaxs[3];
 	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
 
-	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxmins, boxmaxs))
-	{
-		vec3_t shiftstart, shiftend;
-		VectorAdd(start, boxmins, shiftstart);
-		VectorAdd(end, boxmins, shiftend);
-		if (VectorCompare(start, end))
-			Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, shiftstart, hitsupercontentsmask);
-		else
-			Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
-		return;
-	}
-
 	// box trace, performed as brush trace
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
-	segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
-	segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
-	segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
-	segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
-	segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
 	VectorAdd(start, boxmins, boxstartmins);
 	VectorAdd(start, boxmaxs, boxstartmaxs);
 	VectorAdd(end, boxmins, boxendmins);
 	VectorAdd(end, boxmaxs, boxendmaxs);
 	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
 	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
-	Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, &thisbrush_start.brush, &thisbrush_end.brush, segmentmins, segmentmaxs);
+	Mod_CollisionBIH_TraceBrush(model, frameblend, skeleton, trace, &thisbrush_start.brush, &thisbrush_end.brush, hitsupercontentsmask);
 }
 
-void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
-{
-	float segmentmins[3], segmentmaxs[3];
-
-	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(start->mins, start->maxs) && VectorCompare(end->mins, end->maxs))
-	{
-		if (VectorCompare(start->mins, end->mins))
-			Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start->mins, hitsupercontentsmask);
-		else
-			Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start->mins, end->mins, hitsupercontentsmask);
-		return;
-	}
-
-	// box trace, performed as brush trace
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	segmentmins[0] = min(start->mins[0], end->mins[0]);
-	segmentmins[1] = min(start->mins[1], end->mins[1]);
-	segmentmins[2] = min(start->mins[2], end->mins[2]);
-	segmentmaxs[0] = max(start->maxs[0], end->maxs[0]);
-	segmentmaxs[1] = max(start->maxs[1], end->maxs[1]);
-	segmentmaxs[2] = max(start->maxs[2], end->maxs[2]);
-	Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, segmentmins, segmentmaxs);
-}
 
 int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
 {
@@ -6512,7 +6326,7 @@ void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *fra
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 #if 0
-	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, start, end);
+	Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	hitsupercontents = trace->hitsupercontents;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
@@ -6533,7 +6347,7 @@ int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, c
 	trace.fraction = 1;
 	trace.realfraction = 1;
 	trace.hitsupercontentsmask = 0;
-	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(&trace, model, model->collision_bih.rootnode, start, end, start, end);
+	Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	return trace.hitsupercontents;
 #else
 	return 0;
@@ -6764,7 +6578,7 @@ static void Mod_Q3BSP_TracePoint(dp_model_t *model, const frameblend_t *frameble
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TracePoint_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start);
+		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -6799,7 +6613,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	segmentmaxs[1] = max(start[1], end[1]) + 1;
 	segmentmaxs[2] = max(start[2], end[2]) + 1;
 	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->collision_bih, model->collision_bih.rootnode, start, end, start, end);
+		Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -6812,60 +6626,6 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	}
 	else
 		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
-}
-
-static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
-{
-	int i;
-	float segmentmins[3], segmentmaxs[3];
-	msurface_t *surface;
-	q3mbrush_t *brush;
-	colboxbrushf_t thisbrush_start, thisbrush_end;
-	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
-
-	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxmins, boxmaxs))
-	{
-		vec3_t shiftstart, shiftend;
-		VectorAdd(start, boxmins, shiftstart);
-		VectorAdd(end, boxmins, shiftend);
-		if (VectorCompare(start, end))
-			Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, shiftstart, hitsupercontentsmask);
-		else
-			Mod_Q3BSP_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
-		return;
-	}
-
-	// box trace, performed as brush trace
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
-	segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
-	segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
-	segmentmaxs[0] = max(start[0], end[0]) + boxmaxs[0] + 1;
-	segmentmaxs[1] = max(start[1], end[1]) + boxmaxs[1] + 1;
-	segmentmaxs[2] = max(start[2], end[2]) + boxmaxs[2] + 1;
-	VectorAdd(start, boxmins, boxstartmins);
-	VectorAdd(start, boxmaxs, boxstartmaxs);
-	VectorAdd(end, boxmins, boxendmins);
-	VectorAdd(end, boxmaxs, boxendmaxs);
-	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
-	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
-	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, &thisbrush_start.brush, &thisbrush_end.brush, segmentmins, segmentmaxs);
-	else if (model->brush.submodel)
-	{
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
-				Collision_TraceBrushBrushFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, brush->colbrushf, brush->colbrushf);
-		if (mod_q3bsp_curves_collisions.integer)
-			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
-					Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
-	}
-	else
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, &thisbrush_start.brush, &thisbrush_end.brush, ++markframe, segmentmins, segmentmaxs);
 }
 
 void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
@@ -6896,7 +6656,7 @@ void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, con
 	segmentmaxs[1] = max(start->maxs[1], end->maxs[1]);
 	segmentmaxs[2] = max(start->maxs[2], end->maxs[2]);
 	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceBrush_RecursiveBIHNode(trace, model, model->collision_bih.rootnode, start, end, segmentmins, segmentmaxs);
+		Mod_CollisionBIH_TraceBrush(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	else if (model->brush.submodel)
 	{
 		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
@@ -6909,6 +6669,21 @@ void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, con
 	}
 	else
 		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, ++markframe, segmentmins, segmentmaxs);
+}
+
+static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+{
+	colboxbrushf_t thisbrush_start, thisbrush_end;
+	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
+
+	// box trace, performed as brush trace
+	VectorAdd(start, boxmins, boxstartmins);
+	VectorAdd(start, boxmaxs, boxstartmaxs);
+	VectorAdd(end, boxmins, boxendmins);
+	VectorAdd(end, boxmaxs, boxendmaxs);
+	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
+	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
+	Mod_Q3BSP_TraceBrush(model, frameblend, skeleton, trace, &thisbrush_start.brush, &thisbrush_end.brush, hitsupercontentsmask);
 }
 
 static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
@@ -6951,11 +6726,7 @@ static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const 
 
 void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	Mod_CollisionBIH_TraceLine_RecursiveBIHNode(trace, model, &model->render_bih, model->render_bih.rootnode, start, end, start, end);
+	Mod_CollisionBIH_TraceLineShared(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, &model->render_bih);
 }
 
 
