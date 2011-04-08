@@ -1588,6 +1588,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	skinframe_t *skinframe;
 	miptex_t *dmiptex;
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
+	texture_t backuptex;
 	dmiptexlump_t *m;
 	unsigned char *data, *mtdata;
 	const char *s;
@@ -1722,8 +1723,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
+		// LordHavoc: backup the texture_t because q3 shader loading overwrites it
+		backuptex = loadmodel->data_textures[i];
 		if (dmiptex->name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->data_textures + i, name, false, false, 0))
 			continue;
+		loadmodel->data_textures[i] = backuptex;
 
 		tx = loadmodel->data_textures + i;
 		strlcpy(tx->name, name, sizeof(tx->name));
