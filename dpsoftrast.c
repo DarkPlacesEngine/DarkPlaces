@@ -73,7 +73,7 @@ typedef qboolean bool;
 #ifdef SSE_POSSIBLE
 #include <emmintrin.h>
 
-#if defined(__GNUC__) && (__GNUC < 4 || __GNUC_MINOR__ < 6)
+#if defined(__GNUC__) && (__GNUC < 4 || __GNUC_MINOR__ < 6) && !defined(__clang__)
 	#define _mm_cvtss_f32(val) (__builtin_ia32_vec_ext_v4sf ((__v4sf)(val), 0))
 #endif
 
