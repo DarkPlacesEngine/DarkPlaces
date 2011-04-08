@@ -2127,23 +2127,18 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		// normalmap (deferred prepass), may use alpha test on diffuse
 		mode = SHADERMODE_DEFERREDGEOMETRY;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
-			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
 	}
@@ -2151,23 +2146,18 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		// light source
 		mode = SHADERMODE_LIGHTSOURCE;
-		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
-			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
 			permutation |= SHADERPERMUTATION_CUBEFILTER;
 		if (diffusescale > 0)
@@ -2200,15 +2190,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
@@ -2245,15 +2232,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
@@ -2300,15 +2284,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
@@ -2352,15 +2333,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 		if (r_glsl_offsetmapping.integer)
 		{
-			if (rsurface.texture->offsetmapping == OFFSETMAPPING_LINEAR)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-			else if (rsurface.texture->offsetmapping == OFFSETMAPPING_RELIEF)
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
-			else if (rsurface.texture->offsetmapping != OFFSETMAPPING_OFF)
+			switch(rsurface.texture->offsetmapping)
 			{
-				permutation |= SHADERPERMUTATION_OFFSETMAPPING;
-				if (r_glsl_offsetmapping_reliefmapping.integer)
-					permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
 			}
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
