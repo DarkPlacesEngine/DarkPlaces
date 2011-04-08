@@ -1605,6 +1605,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
 }
 
+extern cvar_t mod_noshader_default_offsetmapping;
 extern cvar_t mod_q3shader_default_offsetmapping;
 extern cvar_t mod_q3shader_default_polygonoffset;
 extern cvar_t mod_q3shader_default_polygonfactor;
@@ -2281,7 +2282,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	if(defaulttexflags & TEXF_ISSPRITE)
 		texflagsor |= TEXF_ISSPRITE;
 	// unless later loaded from the shader
-	texture->offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
+	texture->offsetmapping = (mod_noshader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
 	texture->offsetscale = 1;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1; 
