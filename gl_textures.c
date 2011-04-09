@@ -75,13 +75,13 @@ typedef struct textypeinfo_s
 textypeinfo_t;
 
 
-static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE    , 1, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_palette                = {TEXTYPE_PALETTE    , 1, 4, 4.0f, GL_RGB                          , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_palette_alpha          = {TEXTYPE_PALETTE    , 1, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA       , 4, 4, 4.0f, GL_RGBA                         , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_rgba                   = {TEXTYPE_RGBA       , 4, 4, 4.0f, GL_RGB                          , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_rgba_alpha             = {TEXTYPE_RGBA       , 4, 4, 4.0f, GL_RGBA                         , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_rgba_compress          = {TEXTYPE_RGBA       , 4, 4, 0.5f, GL_COMPRESSED_RGB_S3TC_DXT1_EXT , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_rgba_alpha_compress    = {TEXTYPE_RGBA       , 4, 4, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_RGBA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA       , 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_bgra                   = {TEXTYPE_BGRA       , 4, 4, 4.0f, GL_RGB                          , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_bgra_alpha             = {TEXTYPE_BGRA       , 4, 4, 4.0f, GL_RGBA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_bgra_compress          = {TEXTYPE_BGRA       , 4, 4, 0.5f, GL_COMPRESSED_RGB_S3TC_DXT1_EXT , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_bgra_alpha_compress    = {TEXTYPE_BGRA       , 4, 4, 1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_BGRA           , GL_UNSIGNED_BYTE };
