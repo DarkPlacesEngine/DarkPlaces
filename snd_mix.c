@@ -503,6 +503,8 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				continue;
 			if (ch->flags & CHANNELFLAG_PAUSED)
 				continue;
+			if (!sfx->total_length)
+				continue;
 
 			ltime = 0;
 			if (ch->pos < 0)
