@@ -2449,25 +2449,42 @@ void VM_strireplace(void)
 	subject_len = (int)strlen(subject);
 
 	si = 0;
-	for (i = 0; i < subject_len; i++)
+	for (i = 0; i <= subject_len - search_len; i++)
 	{
-		for (j = 0; j < search_len && i+j < subject_len; j++)
+		for (j = 0; j < search_len; j++) // thus, i+j < subject_len
 			if (tolower(subject[i+j]) != tolower(search[j]))
 				break;
-		if (j == search_len || i+j == subject_len)
+		if (j == search_len)
 		{
-		// found it at offset 'i'
+			// NOTE: if search_len == 0, we always hit THIS case, and never the other
+			// found it at offset 'i'
 			for (j = 0; j < replace_len && si < (int)sizeof(string) - 1; j++)
 				string[si++] = replace[j];
-			i += search_len - 1;
+			if(search_len > 0)
+			{
+				i += search_len - 1;
+			}
+			else
+			{
+				// the above would subtract 1 from i... so we
+				// don't do that, but instead output the next
+				// char
+				if (si < (int)sizeof(string) - 1)
+					string[si++] = subject[i];
+			}
 		}
 		else
 		{
-		// not found
+			// in THIS case, we know search_len > 0, thus i < subject_len
+			// not found
 			if (si < (int)sizeof(string) - 1)
 				string[si++] = subject[i];
 		}
 	}
+	// remaining chars (these cannot match)
+	for (; i < subject_len; i++)
+		if (si < (int)sizeof(string) - 1)
+			string[si++] = subject[i];
 	string[si] = '\0';
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(string);
