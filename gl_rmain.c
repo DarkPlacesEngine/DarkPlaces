@@ -10086,7 +10086,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		else
 			R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
-	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && !r_showsurfaces.integer)
+	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && (!r_showsurfaces.integer || r_showsurfaces.integer == 3))
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
@@ -10164,7 +10164,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		else
 			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
-	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && !r_showsurfaces.integer)
+	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && (!r_showsurfaces.integer || r_showsurfaces.integer == 3))
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
