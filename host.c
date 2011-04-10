@@ -445,7 +445,7 @@ void SV_DropClient(qboolean crash)
 
 	if (host_client->netconnection)
 	{
-		// free the client (the body stays around)
+		// tell the client to be gone
 		if (!crash)
 		{
 			// LordHavoc: no opportunity for resending, so use unreliable 3 times
@@ -459,9 +459,6 @@ void SV_DropClient(qboolean crash)
 			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, false);
 			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, false);
 		}
-		// break the net connection
-		NetConn_Close(host_client->netconnection);
-		host_client->netconnection = NULL;
 	}
 
 	// call qc ClientDisconnect function
@@ -476,6 +473,13 @@ void SV_DropClient(qboolean crash)
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
 		PRVM_ExecuteProgram(prog->globals.server->ClientDisconnect, "QC function ClientDisconnect is missing");
 		prog->globals.server->self = saveSelf;
+	}
+
+	if (host_client->netconnection)
+	{
+		// break the net connection
+		NetConn_Close(host_client->netconnection);
+		host_client->netconnection = NULL;
 	}
 
 	// if a download is active, close it
