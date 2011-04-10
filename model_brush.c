@@ -1578,8 +1578,8 @@ void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesp
 		}
 	}
 
-	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture", 0         , (unsigned char *) solidpixels, w, h);
-	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA, (unsigned char *) alphapixels, w, h);
+	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture", 0         , (unsigned char *) solidpixels, w, h, bytesperpixel == 4 && r_texture_sRGB_skybox.integer);
+	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA, (unsigned char *) alphapixels, w, h, bytesperpixel == 4 && r_texture_sRGB_skybox.integer);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
 }
@@ -1595,9 +1595,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	unsigned char *data, *mtdata;
 	const char *s;
 	char mapname[MAX_QPATH], name[MAX_QPATH];
-	unsigned char zero[4];
-
-	memset(zero, 0, sizeof(zero));
+	unsigned char zeroopaque[4], zerotrans[4];
+	Vector4Set(zeroopaque, 0, 0, 0, 255);
+	Vector4Set(zerotrans, 0, 0, 0, 128);
 
 	loadmodel->data_textures = NULL;
 
@@ -1770,9 +1770,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_convertsRGB_skin.integer != 0, NULL);
+				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, r_texture_sRGB_skin_diffuse.integer != 0, NULL);
 				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_convertsRGB_skin.integer != 0, NULL);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, r_texture_sRGB_skin_diffuse.integer != 0, NULL);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
@@ -1802,7 +1802,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height);
+							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, true);
 						}
 						if (freepixels)
 							Mem_Free(freepixels);
@@ -1822,8 +1822,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
 				{
 					// replace the texture with transparent black
-					Vector4Set(zero, 128, 128, 128, 128);
-					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zero, 1, 1);
+					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
 					tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
 				}
 				else if (!strncmp(tx->name,"*lava",5)
@@ -1838,7 +1837,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 			{
 				// replace the texture with black
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zero, 1, 1);
+				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
 				tx->basematerialflags |= MATERIALFLAG_REFLECTION;
 			}
 			else if (!strncmp(tx->name, "sky", 3))

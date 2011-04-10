@@ -43,8 +43,6 @@ typedef enum textype_e
 	TEXTYPE_RGBA,
 	// 32bit BGRA (preferred format due to faster uploads on most hardware)
 	TEXTYPE_BGRA,
-	// 16bit D16 (16bit depth) or 32bit S8D24 (24bit depth, 8bit stencil unused)
-	TEXTYPE_SHADOWMAP,
 	// 8bit ALPHA (used for freetype fonts)
 	TEXTYPE_ALPHA,
 	// 4x4 block compressed 15bit color (4 bits per pixel)
@@ -55,12 +53,30 @@ typedef enum textype_e
 	TEXTYPE_DXT3,
 	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel)
 	TEXTYPE_DXT5,
+
+	// 8bit paletted in sRGB colorspace
+	TEXTYPE_SRGB_PALETTE,
+	// 32bit RGBA in sRGB colorspace
+	TEXTYPE_SRGB_RGBA,
+	// 32bit BGRA (preferred format due to faster uploads on most hardware) in sRGB colorspace
+	TEXTYPE_SRGB_BGRA,
+	// 4x4 block compressed 15bit color (4 bits per pixel) in sRGB colorspace
+	TEXTYPE_SRGB_DXT1,
+	// 4x4 block compressed 15bit color plus 1bit alpha (4 bits per pixel) in sRGB colorspace
+	TEXTYPE_SRGB_DXT1A,
+	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel) in sRGB colorspace
+	TEXTYPE_SRGB_DXT3,
+	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel) in sRGB colorspace
+	TEXTYPE_SRGB_DXT5,
+
 	// this represents the same format as the framebuffer, for fast copies
 	TEXTYPE_COLORBUFFER,
 	// this represents an RGBA half_float texture (4 16bit floats)
 	TEXTYPE_COLORBUFFER16F,
 	// this represents an RGBA float texture (4 32bit floats)
-	TEXTYPE_COLORBUFFER32F
+	TEXTYPE_COLORBUFFER32F,
+	// 16bit D16 (16bit depth) or 32bit S8D24 (24bit depth, 8bit stencil unused)
+	TEXTYPE_SHADOWMAP
 }
 textype_t;
 

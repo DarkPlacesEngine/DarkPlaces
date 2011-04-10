@@ -109,20 +109,20 @@ int R_LoadSkyBox(void)
 		success = 0;
 		for (i=0; i<6; i++)
 		{
-			if (dpsnprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_skybox.integer != 0, NULL)))
+			if (dpsnprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, false, NULL)))
 			{
-				if (dpsnprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_skybox.integer != 0, NULL)))
+				if (dpsnprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, false, NULL)))
 				{
-					if (dpsnprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_skybox.integer != 0, NULL)))
+					if (dpsnprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, false, NULL)))
 					{
-						if (dpsnprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, r_texture_convertsRGB_skybox.integer != 0, NULL)))
+						if (dpsnprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_buffer = loadimagepixelsbgra(name, false, false, false, NULL)))
 							continue;
 					}
 				}
 			}
 			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 			Image_CopyMux (temp, image_buffer, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
-			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va("skyboxside%d", i), TEXF_CLAMP | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height);
+			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va("skyboxside%d", i), TEXF_CLAMP | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height, r_texture_sRGB_skybox.integer != 0);
 			Mem_Free(image_buffer);
 			Mem_Free(temp);
 			success++;
