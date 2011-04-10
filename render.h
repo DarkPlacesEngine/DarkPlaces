@@ -143,7 +143,7 @@ void R_SkinFrame_Purge(void);
 skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name );
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add);
 skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain);
-skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height);
+skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, qboolean sRGB);
 skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height);
 skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, const unsigned char *skindata, int width, int height, const unsigned int *palette, const unsigned int *alphapalette);
 skinframe_t *R_SkinFrame_LoadMissing(void);
@@ -199,11 +199,13 @@ extern cvar_t r_smoothnormals_areaweighting;
 
 extern cvar_t r_test;
 
-extern cvar_t r_texture_convertsRGB_2d;
-extern cvar_t r_texture_convertsRGB_skin;
-extern cvar_t r_texture_convertsRGB_cubemap;
-extern cvar_t r_texture_convertsRGB_skybox;
-extern cvar_t r_texture_convertsRGB_particles;
+extern cvar_t r_texture_sRGB_2d;
+extern cvar_t r_texture_sRGB_skin_diffuse;
+extern cvar_t r_texture_sRGB_skin_gloss;
+extern cvar_t r_texture_sRGB_skin_glow;
+extern cvar_t r_texture_sRGB_skin_reflect;
+extern cvar_t r_texture_sRGB_cubemap;
+extern cvar_t r_texture_sRGB_skybox;
 
 #include "gl_backend.h"
 

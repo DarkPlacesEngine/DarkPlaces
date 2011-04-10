@@ -1569,6 +1569,9 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	memset(&vid.support, 0, sizeof(vid.support));
 	Cvar_SetQuick(&gl_info_extensions, "");
 
+	// D3D9 requires BGRA
+	vid.forcetextype = TEXTYPE_BGRA;
+
 	vid.forcevbo = false;
 	vid.support.arb_depth_texture = true;
 	vid.support.arb_draw_buffers = vid_d3d9caps.NumSimultaneousRTs > 1;
@@ -1585,6 +1588,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	vid.support.ext_texture_compression_s3tc = true;
 	vid.support.ext_texture_filter_anisotropic = true;
 	vid.support.ati_separate_stencil = (vid_d3d9caps.StencilCaps & D3DSTENCILCAPS_TWOSIDED) != 0;
+	vid.support.ext_texture_srgb = false; // FIXME use D3DSAMP_SRGBTEXTURE if CheckDeviceFormat agrees
 
 	vid.maxtexturesize_2d = min(vid_d3d9caps.MaxTextureWidth, vid_d3d9caps.MaxTextureHeight);
 	vid.maxtexturesize_3d = vid_d3d9caps.MaxVolumeExtent;

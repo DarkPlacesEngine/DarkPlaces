@@ -144,7 +144,7 @@ void r_lightningbeams_setuptexture(void)
 		}
 	}
 
-	r_lightningbeamtexture = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, BEAMWIDTH, BEAMHEIGHT);
+	r_lightningbeamtexture = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, BEAMWIDTH, BEAMHEIGHT, false);
 	Mem_Free(noise1);
 	Mem_Free(noise2);
 	Mem_Free(data);

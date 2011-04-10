@@ -1004,14 +1004,14 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 }
 
 extern cvar_t gl_picmip;
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean convertsRGB)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean sRGB)
 {
 	unsigned char *data;
 	rtexture_t *rt;
 	int miplevel = R_PicmipForFlags(flags);
-	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans, convertsRGB, &miplevel)))
+	if (!(data = loadimagepixelsbgra (filename, complain, allowFixtrans, false, &miplevel)))
 		return 0;
-	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, TEXTYPE_BGRA, flags, miplevel, NULL);
+	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data, sRGB ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, flags, miplevel, NULL);
 	Mem_Free(data);
 	return rt;
 }
