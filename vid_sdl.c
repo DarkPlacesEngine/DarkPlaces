@@ -1685,6 +1685,9 @@ void GLES_Init(void)
 	
 	// LordHavoc: report supported extensions
 	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+
+	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
+	vid.forcetextype = TEXTYPE_RGBA;
 	
 	vid.support.gl20shaders = true;
 	vid.support.amd_texture_texture4 = false;
@@ -1709,6 +1712,7 @@ void GLES_Init(void)
 	vid.support.ext_texture_compression_s3tc = false;
 	vid.support.ext_texture_edge_clamp = true;
 	vid.support.ext_texture_filter_anisotropic = false; // probably don't want to use it...
+	vid.support.ext_texture_srgb = false;
 
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
 	if (vid.support.ext_texture_filter_anisotropic)
@@ -2516,8 +2520,11 @@ void VID_Finish (void)
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_Finish();
 #if SETVIDEOMODE
+		if (!r_test.integer)
+		{
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
 			SDL_Flip(screen);
+		}
 #else
 			{
 				SDL_Surface *screen = SDL_GetWindowSurface(window);

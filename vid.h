@@ -67,6 +67,7 @@ typedef struct viddef_support_s
 	qboolean ext_texture_compression_s3tc;
 	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
+	qboolean ext_texture_srgb;
 }
 viddef_support_t;
 
@@ -122,6 +123,8 @@ typedef struct viddef_s
 	//  blit to the window)
 	unsigned int *softpixels;
 	unsigned int *softdepthpixels;
+
+	int forcetextype; // always use GL_BGRA for D3D, always use GL_RGBA for GLES, etc
 } viddef_t;
 
 // global video state

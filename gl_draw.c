@@ -371,9 +371,9 @@ reload:
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
 
 	// load a high quality image from disk if possible
-	pixels = loadimagepixelsbgra(path, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
+	pixels = loadimagepixelsbgra(path, false, true, false, NULL);
 	if (pixels == NULL && !strncmp(path, "gfx/", 4))
-		pixels = loadimagepixelsbgra(path+4, false, true, r_texture_convertsRGB_2d.integer != 0, NULL);
+		pixels = loadimagepixelsbgra(path+4, false, true, false, NULL);
 	if (pixels)
 	{
 		pic->hasalpha = false;
@@ -392,7 +392,7 @@ reload:
 		pic->width = image_width;
 		pic->height = image_height;
 		if (!pic->autoload)
-			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
+			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, r_texture_sRGB_2d.integer ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
 	}
 	else
 	{
@@ -472,9 +472,9 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
 	if (pic->autoload && !pic->tex)
 	{
-		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
+		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_convertsRGB_2d.integer != 0);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
 	}
