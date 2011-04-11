@@ -33,9 +33,14 @@ typedef qboolean bool;
 		#define MEMORY_BARRIER (_mm_sfence())
 		//(__sync_synchronize())
 		#define ATOMIC_COUNTER volatile LONG
-		#define ATOMIC_INCREMENT(counter) (InterlockedIncrement(&(counter)))
-		#define ATOMIC_DECREMENT(counter) (InterlockedDecrement(&(counter)))
-		#define ATOMIC_ADD(counter, val) ((void)InterlockedExchangeAdd(&(counter), (val)))
+		// this LONG * cast serves to fix an issue with broken mingw
+		// packages on Ubuntu; these only declare the function to take
+		// a LONG *, causing a compile error here. This seems to be
+		// error- and warn-free on platforms that DO declare
+		// InterlockedIncrement correctly, like mingw on Windows.
+		#define ATOMIC_INCREMENT(counter) (InterlockedIncrement((LONG *) &(counter)))
+		#define ATOMIC_DECREMENT(counter) (InterlockedDecrement((LONG *) &(counter)))
+		#define ATOMIC_ADD(counter, val) ((void)InterlockedExchangeAdd((LONG *) &(counter), (val)))
 	#elif defined(__GNUC__)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
 		#define ATOMIC(var) var __attribute__((__aligned__(32)))
