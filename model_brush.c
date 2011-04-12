@@ -7311,6 +7311,9 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	VectorClear(mins);
 	VectorClear(maxs);
 
+	// we always have model 0, i.e. the first "submodel"
+	loadmodel->brush.numsubmodels = 1;
+
 	// parse the OBJ text now
 	for(;;)
 	{
