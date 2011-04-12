@@ -5991,6 +5991,9 @@ void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameble
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 
 	bih = &model->collision_bih;
+	if(!bih->nodes)
+		return;
+
 	nodenum = bih->rootnode;
 	nodestack[nodestackpos++] = nodenum;
 	while (nodestackpos)
@@ -6046,6 +6049,9 @@ void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend_t *fra
 	vec3_t nodebigmins, nodebigmaxs, nodestart, nodeend, sweepnodemins, sweepnodemaxs;
 	vec_t d1, d2, d3, d4, f, nodestackline[1024][6];
 	int axis, nodenum, nodestackpos = 0, nodestack[1024];
+
+	if(!bih->nodes)
+		return;
 
 	if (VectorCompare(start, end))
 	{
@@ -6180,6 +6186,8 @@ void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameble
 	}
 
 	bih = &model->collision_bih;
+	if(!bih->nodes)
+		return;
 	nodenum = bih->rootnode;
 
 	// box trace, performed as brush trace
