@@ -89,8 +89,8 @@ static Window win, root;
 static GLXContext ctx = NULL;
 static GC vidx11_gc = NULL;
 static XImage *vidx11_ximage[2] = { NULL, NULL };
-static int vidx11_ximage_pos;
-static XShmSegmentInfo vidx11_shminfo[2];
+static int vidx11_ximage_pos = 0;
+static XShmSegmentInfo vidx11_shminfo[2] = { -1, -1 };
 static int vidx11_shmevent = -1;
 static int vidx11_shmwait = 0; // number of frames outstanding
 
@@ -849,6 +849,7 @@ void VID_Shutdown(void)
 
 	if (vid.softdepthpixels)
 		free(vid.softdepthpixels);
+	vid.softdepthpixels = NULL;
 
 	if (win)
 		XDestroyWindow(vidx11_display, win);
