@@ -2519,7 +2519,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		hlslPSSetParameter1f(D3DPSREGISTER_FogRangeRecip, rsurface.fograngerecip);
 		hlslPSSetParameter1f(D3DPSREGISTER_FogHeightFade, rsurface.fogheightfade);
 		hlslPSSetParameter4f(D3DPSREGISTER_OffsetMapping_ScaleSteps,
-				r_glsl_offsetmapping_scale.value,
+				r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale,
 				max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				1.0 / max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
@@ -2679,7 +2679,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_FogRangeRecip >= 0) qglUniform1f(r_glsl_permutation->loc_FogRangeRecip, rsurface.fograngerecip);
 		if (r_glsl_permutation->loc_FogHeightFade >= 0) qglUniform1f(r_glsl_permutation->loc_FogHeightFade, rsurface.fogheightfade);
 		if (r_glsl_permutation->loc_OffsetMapping_ScaleSteps >= 0) qglUniform4f(r_glsl_permutation->loc_OffsetMapping_ScaleSteps,
-				r_glsl_offsetmapping_scale.value,
+				r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale,
 				max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				1.0 / max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
@@ -2823,7 +2823,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_FogRangeRecip, rsurface.fograngerecip);
 		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_FogHeightFade, rsurface.fogheightfade);
 		DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_OffsetMapping_ScaleSteps,
-				r_glsl_offsetmapping_scale.value,
+				r_glsl_offsetmapping_scale.value*rsurface.texture->offsetscale,
 				max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				1.0 / max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
