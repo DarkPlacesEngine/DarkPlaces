@@ -20,7 +20,7 @@
 "#  define dp_attribute in\n"
 "# endif\n"
 "# define dp_offsetmapping_dFdx dFdx\n"
-"# define dp_offsetmapping_dFdy dFdx\n"
+"# define dp_offsetmapping_dFdy dFdy\n"
 "# define dp_textureGrad textureGrad\n"
 "# define dp_texture2D texture\n"
 "# define dp_texture3D texture\n"
