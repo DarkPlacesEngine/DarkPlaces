@@ -2520,7 +2520,7 @@ void VID_Finish (void)
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_Finish();
 #if SETVIDEOMODE
-		if (!r_test.integer)
+//		if (!r_test.integer)
 		{
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
 			SDL_Flip(screen);
