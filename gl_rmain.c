@@ -10989,7 +10989,10 @@ void R_DrawDebugModel(void)
 	dp_model_t *model = ent->model;
 	vec3_t v;
 
-	if (r_showoverdraw.value > 0 && (sv.active || ent != r_refdef.scene.worldentity))
+	if (!sv.active  && !cls.demoplayback && ent != r_refdef.scene.worldentity)
+		return;
+
+	if (r_showoverdraw.value > 0)
 	{
 		float c = r_refdef.view.colorscale * r_showoverdraw.value * 0.125f;
 		flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
@@ -10998,7 +11001,6 @@ void R_DrawDebugModel(void)
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_CullFace(GL_NONE);
 		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
@@ -11007,6 +11009,7 @@ void R_DrawDebugModel(void)
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
 				RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, 1, &surface);
+				GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
 				if (!rsurface.texture->currentlayers->depthmask)
 					GL_Color(c, 0, 0, 1.0f);
 				else if (ent == r_refdef.scene.worldentity)
