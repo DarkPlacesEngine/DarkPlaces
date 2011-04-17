@@ -101,6 +101,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 extern cvar_t r_nearclip;
 
 // forces all rendering to draw triangle outlines
+extern cvar_t r_showoverdraw;
 extern cvar_t r_showtris;
 extern cvar_t r_shownormals;
 extern cvar_t r_showlighting;
