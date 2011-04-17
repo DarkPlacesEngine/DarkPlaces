@@ -70,6 +70,7 @@ cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables 
 cvar_t r_farclip_base = {0, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
 cvar_t r_farclip_world = {0, "r_farclip_world", "2", "adds map size to farclip multiplied by this value"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
+cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
@@ -4042,6 +4043,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_farclip_base);
 	Cvar_RegisterVariable(&r_farclip_world);
 	Cvar_RegisterVariable(&r_nearclip);
+	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
 	Cvar_RegisterVariable(&r_showtris);
@@ -4761,24 +4763,6 @@ static void R_View_UpdateEntityVisible (void)
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
-		if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane)
-			// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
-		{
-			for (i = 0;i < r_refdef.scene.numentities;i++)
-			{
-				ent = r_refdef.scene.entities[i];
-				if(r_refdef.viewcache.entityvisible[i] && !(ent->flags & (RENDER_VIEWMODEL | RENDER_NOCULL | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
-				{
-					samples = ent->entitynumber ? r_cullentities_trace_samples.integer : r_cullentities_trace_tempentitysamples.integer;
-					if (samples < 0)
-						continue; // temp entities do pvs only
-					if(R_CanSeeBox(samples, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
-						ent->last_trace_visibility = realtime;
-					if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
-						r_refdef.viewcache.entityvisible[i] = 0;
-				}
-			}
-		}
 	}
 	else
 	{
@@ -4787,6 +4771,26 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.scene.entities[i];
 			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
+		}
+	}
+	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane)
+		// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
+	{
+		for (i = 0;i < r_refdef.scene.numentities;i++)
+		{
+			if (!r_refdef.viewcache.entityvisible[i])
+				continue;
+			ent = r_refdef.scene.entities[i];
+			if(!(ent->flags & (RENDER_VIEWMODEL | RENDER_NOCULL | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
+			{
+				samples = ent->entitynumber ? r_cullentities_trace_samples.integer : r_cullentities_trace_tempentitysamples.integer;
+				if (samples < 0)
+					continue; // temp entities do pvs only
+				if(R_CanSeeBox(samples, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
+					ent->last_trace_visibility = realtime;
+				if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
+					r_refdef.viewcache.entityvisible[i] = 0;
+			}
 		}
 	}
 }
@@ -6846,7 +6850,7 @@ void R_RenderScene(void)
 	if (r_timereport_active)
 		R_TimeReport("drawtrans");
 
-	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value != 0 || r_showcollisionbrushes.value > 0))
+	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value != 0 || r_showcollisionbrushes.value > 0 || r_showoverdraw.value > 0))
 	{
 		r_refdef.scene.worldmodel->DrawDebug(r_refdef.scene.worldentity);
 		if (r_timereport_active)
@@ -10984,6 +10988,37 @@ void R_DrawDebugModel(void)
 	const msurface_t *surface;
 	dp_model_t *model = ent->model;
 	vec3_t v;
+
+	if (r_showoverdraw.value > 0 && (sv.active || ent != r_refdef.scene.worldentity))
+	{
+		float c = r_refdef.view.colorscale * r_showoverdraw.value * 0.125f;
+		flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+		GL_DepthTest(false);
+		GL_DepthMask(false);
+		GL_DepthRange(0, 1);
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_CullFace(GL_NONE);
+		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		{
+			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
+				continue;
+			rsurface.texture = R_GetCurrentTexture(surface->texture);
+			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
+			{
+				RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, 1, &surface);
+				if (!rsurface.texture->currentlayers->depthmask)
+					GL_Color(c, 0, 0, 1.0f);
+				else if (ent == r_refdef.scene.worldentity)
+					GL_Color(c, c, c, 1.0f);
+				else
+					GL_Color(0, c, 0, 1.0f);
+				R_Mesh_PrepareVertices_Generic_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, NULL, NULL);
+				RSurf_DrawBatch();
+			}
+		}
+		rsurface.texture = NULL;
+	}
 
 	switch(vid.renderpath)
 	{
