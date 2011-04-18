@@ -1940,6 +1940,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		return;
@@ -1984,6 +1985,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		return;
@@ -2031,6 +2033,7 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 	case RENDERPATH_SOFT:
 		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		//Con_DPrintf("FIXME GLES2 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		return;
@@ -2053,6 +2056,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 	case RENDERPATH_SOFT:
 		GL_Scissor(ix, vid.height - iy - ih, iw, ih);
@@ -2102,11 +2106,12 @@ void R_DrawGamma(void)
 		if (vid_usinghwgamma || v_glslgamma.integer)
 			return;
 		break;
-	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
 		if (vid_usinghwgamma)
 			return;
 		break;
+	case RENDERPATH_GLES1:
 	case RENDERPATH_SOFT:
 		return;
 	}

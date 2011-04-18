@@ -5836,6 +5836,7 @@ static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambie
 		break;
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
+	case RENDERPATH_GLES1:
 		stylescale = r_refdef.scene.rtlightstylevalue[0];
 		break;
 	}
