@@ -435,6 +435,10 @@ extern cvar_t developer_loading;
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"
+#elif defined(TARGET_OS_IPHONE)
+# define DP_OS_NAME		"iPhoneOS"
+# define DP_OS_STR		"iphoneos"
+# define USE_GLES2		1
 #else
 # define DP_OS_NAME		"Unknown"
 #endif
