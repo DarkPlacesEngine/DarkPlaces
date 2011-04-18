@@ -433,14 +433,15 @@ extern cvar_t developer_loading;
 # define DP_OS_NAME		"iPhoneOS"
 # define DP_OS_STR		"iphoneos"
 # define USE_GLES2		1
-#else
 #elif defined(MACOSX)
 # define DP_OS_NAME		"Mac OS X"
 # define DP_OS_STR		"osx"
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"
+#else
 # define DP_OS_NAME		"Unknown"
+# define DP_OS_STR		"unknown"
 #endif
 
 #if defined(__GNUC__)
