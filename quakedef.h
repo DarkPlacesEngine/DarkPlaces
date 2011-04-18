@@ -429,17 +429,17 @@ extern cvar_t developer_loading;
 #elif defined(__OpenBSD__)
 # define DP_OS_NAME		"OpenBSD"
 # define DP_OS_STR		"openbsd"
+#elif defined(TARGET_OS_IPHONE)
+# define DP_OS_NAME		"iPhoneOS"
+# define DP_OS_STR		"iphoneos"
+# define USE_GLES2		1
+#else
 #elif defined(MACOSX)
 # define DP_OS_NAME		"Mac OS X"
 # define DP_OS_STR		"osx"
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"
-#elif defined(TARGET_OS_IPHONE)
-# define DP_OS_NAME		"iPhoneOS"
-# define DP_OS_STR		"iphoneos"
-# define USE_GLES2		1
-#else
 # define DP_OS_NAME		"Unknown"
 #endif
 
