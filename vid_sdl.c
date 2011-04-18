@@ -90,7 +90,7 @@ cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplie
 cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
 cvar_t joy_axiskeyevents_deadzone = {CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
 
-#ifdef __IPHONEOS__
+#ifdef USE_GLES2
 # define SETVIDEOMODE 0
 #else
 # if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
@@ -1022,11 +1022,9 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
-#ifndef __IPHONEOS__
 				if (!vid_touchscreen.integer)
 				if (event.button.button <= 18)
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
-#endif
 				break;
 			case SDL_JOYBUTTONDOWN:
 				if (!joy_enable.integer)
@@ -1222,9 +1220,12 @@ void Sys_SendKeyEvents( void )
 // Video system
 ////
 
+#ifdef USE_GLES2
 #ifdef __IPHONEOS__
-//#include <SDL_opengles.h>
 #include <OpenGLES/ES2/gl.h>
+#else
+#include <SDL_opengles.h>
+#endif
 
 GLboolean wrapglIsBuffer(GLuint buffer) {return glIsBuffer(buffer);}
 GLboolean wrapglIsEnabled(GLenum cap) {return glIsEnabled(cap);}
@@ -2140,7 +2141,8 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	mode->fullscreen = true;
 	// hide the menu with SDL_WINDOW_BORDERLESS
 	windowflags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
-#else
+#endif
+#ifndef USE_GLES2
 	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
 	{
 		VID_Shutdown();
@@ -2192,13 +2194,10 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	else
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
 #else
-#ifdef __IPHONEOS__
+#ifdef USE_GLES2
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute (SDL_GL_RETAINED_BACKING, 1);
-	// FIXME: get proper resolution from OS somehow (iPad for instance...)
-	mode->width = 320;
-	mode->height = 480;
 #endif
 #endif
 
@@ -2255,7 +2254,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	gl_platform = "SDL";
 	gl_platformextensions = "";
 
-#ifdef __IPHONEOS__
+#ifdef USE_GLES2
 	GLES_Init();
 #else
 	GL_Init();
