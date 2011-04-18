@@ -316,6 +316,7 @@ void R_FreeTexture(rtexture_t *rt)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		if (glt->texnum)
 		{
@@ -469,6 +470,7 @@ static void GL_TextureMode_f (void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		// change all the existing mipmap texture objects
 		// FIXME: force renderer(/client/something?) restart instead?
@@ -597,6 +599,7 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		break;
 	case RENDERPATH_D3D9:
@@ -714,6 +717,7 @@ static void r_textures_start(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		// LordHavoc: allow any alignment
 		CHECKGLERROR
@@ -781,6 +785,7 @@ static void r_textures_devicelost(void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
@@ -823,6 +828,7 @@ static void r_textures_devicerestored(void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_D3D9:
@@ -933,6 +939,7 @@ void R_Textures_Frame (void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			GL_ActiveTexture(0);
@@ -1088,6 +1095,7 @@ static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, 
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		{
 			int oldbindtexnum;
@@ -1201,6 +1209,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 
@@ -1670,6 +1679,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
@@ -2306,6 +2316,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		GL_ActiveTexture(0);
@@ -2358,6 +2369,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			if (bytesperblock)
 			{
@@ -2414,6 +2426,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		if (dds_miplevels >= 1 && !mipcomplete)
 		{

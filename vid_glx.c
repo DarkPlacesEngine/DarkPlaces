@@ -922,6 +922,7 @@ void VID_Finish (void)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			if (vid_usingvsync != vid_usevsync)
 			{
