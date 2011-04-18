@@ -1247,7 +1247,7 @@ void wrapglActiveTexture(GLenum e) {glActiveTexture(e);}
 void wrapglAlphaFunc(GLenum func, GLclampf ref) {Con_Printf("glAlphaFunc(func, ref)\n");}
 void wrapglArrayElement(GLint i) {Con_Printf("glArrayElement(i)\n");}
 void wrapglAttachShader(GLuint containerObj, GLuint obj) {glAttachShader(containerObj, obj);}
-void wrapglBegin(GLenum mode) {Con_Printf("glBegin(mode)\n");}
+//void wrapglBegin(GLenum mode) {Con_Printf("glBegin(mode)\n");}
 //void wrapglBeginQuery(GLenum target, GLuint qid) {glBeginQuery(target, qid);}
 void wrapglBindAttribLocation(GLuint programObj, GLuint index, const GLchar *name) {glBindAttribLocation(programObj, index, name);}
 void wrapglBindFragDataLocation(GLuint programObj, GLuint index, const GLchar *name) {glBindFragDataLocation(programObj, index, name);}
@@ -1300,7 +1300,7 @@ void wrapglDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *i
 void wrapglEnable(GLenum cap) {glEnable(cap);}
 void wrapglEnableClientState(GLenum cap) {Con_Printf("glEnableClientState(cap)\n");}
 void wrapglEnableVertexAttribArray(GLuint index) {glEnableVertexAttribArray(index);}
-void wrapglEnd(void) {Con_Printf("glEnd()\n");}
+//void wrapglEnd(void) {Con_Printf("glEnd()\n");}
 //void wrapglEndQuery(GLenum target) {glEndQuery(target);}
 void wrapglFinish(void) {glFinish();}
 void wrapglFlush(void) {glFlush();}
@@ -1351,7 +1351,7 @@ void wrapglMultiTexCoord4f(GLenum target, GLfloat s, GLfloat t, GLfloat r, GLflo
 void wrapglNormalPointer(GLenum type, GLsizei stride, const GLvoid *ptr) {Con_Printf("glNormalPointer(type, stride, ptr)\n");}
 void wrapglPixelStorei(GLenum pname, GLint param) {glPixelStorei(pname, param);}
 void wrapglPointSize(GLfloat size) {Con_Printf("glPointSize(size)\n");}
-void wrapglPolygonMode(GLenum face, GLenum mode) {Con_Printf("glPolygonMode(face, mode)\n");}
+//void wrapglPolygonMode(GLenum face, GLenum mode) {Con_Printf("glPolygonMode(face, mode)\n");}
 void wrapglPolygonOffset(GLfloat factor, GLfloat units) {glPolygonOffset(factor, units);}
 void wrapglPolygonStipple(const GLubyte *mask) {Con_Printf("glPolygonStipple(mask)\n");}
 void wrapglReadBuffer(GLenum mode) {Con_Printf("glReadBuffer(mode)\n");}
@@ -1469,7 +1469,7 @@ void GLES_Init(void)
 	qglAlphaFunc = wrapglAlphaFunc;
 	qglArrayElement = wrapglArrayElement;
 	qglAttachShader = wrapglAttachShader;
-	qglBegin = wrapglBegin;
+//	qglBegin = wrapglBegin;
 //	qglBeginQueryARB = wrapglBeginQuery;
 	qglBindAttribLocation = wrapglBindAttribLocation;
 	qglBindFragDataLocation = wrapglBindFragDataLocation;
@@ -1521,7 +1521,7 @@ void GLES_Init(void)
 	qglEnable = wrapglEnable;
 	qglEnableClientState = wrapglEnableClientState;
 	qglEnableVertexAttribArray = wrapglEnableVertexAttribArray;
-	qglEnd = wrapglEnd;
+//	qglEnd = wrapglEnd;
 //	qglEndQueryARB = wrapglEndQuery;
 	qglFinish = wrapglFinish;
 	qglFlush = wrapglFlush;
@@ -1572,7 +1572,7 @@ void GLES_Init(void)
 	qglNormalPointer = wrapglNormalPointer;
 	qglPixelStorei = wrapglPixelStorei;
 	qglPointSize = wrapglPointSize;
-	qglPolygonMode = wrapglPolygonMode;
+//	qglPolygonMode = wrapglPolygonMode;
 	qglPolygonOffset = wrapglPolygonOffset;
 //	qglPolygonStipple = wrapglPolygonStipple;
 	qglReadBuffer = wrapglReadBuffer;
