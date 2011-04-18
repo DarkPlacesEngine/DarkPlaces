@@ -37,6 +37,7 @@ typedef enum renderpath_e
 	RENDERPATH_D3D10,
 	RENDERPATH_D3D11,
 	RENDERPATH_SOFT,
+	RENDERPATH_GLES1,
 	RENDERPATH_GLES2
 }
 renderpath_t;
