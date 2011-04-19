@@ -758,7 +758,7 @@ void Cvar_RestoreInitState(void)
 					break;
 				}
 				else
-					cp2 = &c2->next;
+					cp2 = &c2->nextonhashchain;
 			}
 			// unlink struct from main list
 			*cp = c->next;
