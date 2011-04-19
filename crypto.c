@@ -1309,9 +1309,14 @@ static void seacpy(unsigned char *key, const unsigned char *iv, unsigned char *d
 	}
 }
 
+// NOTE: we MUST avoid the following begins of the packet:
+//   1. 0xFF, 0xFF, 0xFF, 0xFF
+//   2. 0x80, 0x00, length/256, length%256
+// this luckily does NOT affect AES mode, where the first byte always is in the range from 0x00 to 0x0F
 const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t len_src, void *data_dst, size_t *len_dst, size_t len)
 {
 	unsigned char h[32];
+	int i;
 	if(crypto->authenticated)
 	{
 		if(crypto->use_aes)
@@ -1346,6 +1351,15 @@ const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t 
 			*len_dst = len_src + 16;
 			memcpy(data_dst, h, 16);
 			memcpy(((unsigned char *) data_dst) + 16, (unsigned char *) data_src, len_src);
+
+			// handle the "avoid" conditions:
+			i = BuffBigLong(data_dst);
+			if(
+				(i == (int)0xFFFFFFFF) // avoid QW control packet
+				||
+				(i == (int)0x80000000 + (int)*len_dst) // avoid NQ control packet
+			)
+				*(unsigned char *)data_dst ^= 0x80; // this will ALWAYS fix it
 		}
 		return data_dst;
 	}
@@ -1359,6 +1373,17 @@ const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t 
 const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t len_src, void *data_dst, size_t *len_dst, size_t len)
 {
 	unsigned char h[32];
+	int i;
+
+	// silently handle non-crypto packets
+	i = BuffBigLong(data_src);
+	if(
+		(i == (int)0xFFFFFFFF) // avoid QW control packet
+		||
+		(i == (int)0x80000000 + (int)len_src) // avoid NQ control packet
+	)
+		return NULL;
+
 	if(crypto->authenticated)
 	{
 		if(crypto->use_aes)
@@ -1413,11 +1438,31 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 				Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
 				return NULL;
 			}
+
 			if(memcmp((const unsigned char *) data_src, h, 16)) // ignore first byte, used for length
 			{
-				Con_Printf("HMAC mismatch\n");
-				Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
-				return NULL;
+				// undo the "avoid conditions"
+				if(
+						(i == (int)0x7FFFFFFF) // avoided QW control packet
+						||
+						(i == (int)0x00000000 + (int)len_src) // avoided NQ control packet
+				  )
+				{
+					// do the avoidance on the hash too
+					h[0] ^= 0x80;
+					if(memcmp((const unsigned char *) data_src, h, 16)) // ignore first byte, used for length
+					{
+						Con_Printf("HMAC mismatch\n");
+						Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+						return NULL;
+					}
+				}
+				else
+				{
+					Con_Printf("HMAC mismatch\n");
+					Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+					return NULL;
+				}
 			}
 			return ((const unsigned char *) data_src) + 16; // no need to copy, so data_dst is not used
 		}
