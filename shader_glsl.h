@@ -1027,7 +1027,7 @@
 "# endif\n"
 "#endif\n"
 "\n"
-"	// transform vertex to camera space, using ftransform to match non-VS rendering\n"
+"	// transform vertex to clipspace (post-projection, but before perspective divide by W occurs)\n"
 "	gl_Position = ModelViewProjectionMatrix * Attrib_Position;\n"
 "\n"
 "#ifdef USESHADOWMAPORTHO\n"
