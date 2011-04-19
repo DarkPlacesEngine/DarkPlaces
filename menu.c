@@ -5207,7 +5207,8 @@ void MR_SetRouting(qboolean forceold)
 
 void MR_Restart(void)
 {
-	MR_Shutdown ();
+	if(MR_Shutdown)
+		MR_Shutdown ();
 	MR_SetRouting (FALSE);
 }
 
