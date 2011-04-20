@@ -1353,7 +1353,7 @@ const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t 
 			memcpy(((unsigned char *) data_dst) + 16, (unsigned char *) data_src, len_src);
 
 			// handle the "avoid" conditions:
-			i = BuffBigLong(data_dst);
+			i = BuffBigLong((unsigned char *) data_dst);
 			if(
 				(i == (int)0xFFFFFFFF) // avoid QW control packet
 				||
@@ -1376,7 +1376,7 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 	int i;
 
 	// silently handle non-crypto packets
-	i = BuffBigLong(data_src);
+	i = BuffBigLong((unsigned char *) data_src);
 	if(
 		(i == (int)0xFFFFFFFF) // avoid QW control packet
 		||
