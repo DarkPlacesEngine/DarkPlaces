@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "progsvm.h"
+#include "csprogs.h"
 
 prvm_prog_t *prog;
 
@@ -2335,7 +2336,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 	// later idea: include a list of authorized .po file checksums with the csprogs
 	{
 		qboolean deftrans = !!strcmp(PRVM_NAME, "client");
-		const char *realfilename = (strcmp(PRVM_NAME, "client") ? filename : sv.csqc_progname);
+		const char *realfilename = (strcmp(PRVM_NAME, "client") ? filename : csqc_progname.string);
 		if(deftrans) // once we have dotranslate_ strings, ALWAYS use the opt-in method!
 		{
 			for (i=0 ; i<prog->progs->numglobaldefs ; i++)
