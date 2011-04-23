@@ -4630,7 +4630,7 @@ static void R_View_UpdateEntityLighting (void)
 		VectorClear(ent->modellight_ambient);
 		VectorClear(ent->modellight_diffuse);
 		VectorClear(tempdiffusenormal);
-		if ((ent->flags & RENDER_LIGHT) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+		if (ent->flags & RENDER_LIGHT)
 		{
 			vec3_t org;
 			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
@@ -7512,7 +7512,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	else if (FAKELIGHT_ENABLED)
 	{
-			// no modellight if using fakelight for the map
+		// no modellight if using fakelight for the map
 	}
 	else if (rsurface.modeltexcoordlightmap2f == NULL && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
