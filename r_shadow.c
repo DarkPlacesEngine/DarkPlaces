@@ -6771,26 +6771,29 @@ void R_LightPoint(vec3_t color, const vec3_t p, const int flags)
 	rtlight_t *light;
 	dlight_t *dlight;
 
-	VectorClear(color);
-
 	if (r_fullbright.integer)
 	{
 		VectorSet(color, 1, 1, 1);
 		return;
 	}
 
+	VectorClear(color);
+
 	if (flags & LP_LIGHTMAP)
 	{
-		if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+		if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
 		{
+			VectorClear(diffuse);
 			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, color, diffuse, n);
-			color[0] += r_refdef.scene.ambient + diffuse[0];
-			color[1] += r_refdef.scene.ambient + diffuse[1];
-			color[2] += r_refdef.scene.ambient + diffuse[2];
+			VectorAdd(color, diffuse, color);
 		}
 		else
 			VectorSet(color, 1, 1, 1);
+		color[0] += r_refdef.scene.ambient;
+		color[1] += r_refdef.scene.ambient;
+		color[2] += r_refdef.scene.ambient;
 	}
+
 	if (flags & LP_RTWORLD)
 	{
 		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
@@ -6868,15 +6871,17 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 		VectorSet(ambient, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
 		VectorClear(diffuse);
 		VectorClear(lightdir);
-		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
 			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambient, diffuse, lightdir);
+		else
+			VectorSet(ambient, 1, 1, 1);
 		return;
 	}
 
 	memset(sample, 0, sizeof(sample));
 	VectorSet(sample, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
 
-	if ((flags & LP_LIGHTMAP) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.LightPoint)
+	if ((flags & LP_LIGHTMAP) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
 	{
 		vec3_t tempambient;
 		VectorClear(tempambient);
