@@ -1581,19 +1581,11 @@ This should be called at every map change.
 */
 void Curl_ClearRequirements(void)
 {
-	const char *p;
 	while(requirements)
 	{
 		requirement *req = requirements;
 		requirements = requirements->next;
 		Z_Free(req);
-	}
-	p = sv_curl_serverpackages.string;
-	Con_DPrintf("Require all of: %s\n", p);
-	while(COM_ParseToken_Simple(&p, false, false))
-	{
-		Con_DPrintf("Require: %s\n", com_token);
-		Curl_RequireFile(com_token);
 	}
 }
 
@@ -1609,47 +1601,56 @@ This is done by sending him the following console commands:
 	curl --finish_autodownload
 ====================
 */
+static qboolean Curl_SendRequirement(const char *filename, qboolean foundone, char *sendbuffer, size_t sendbuffer_len)
+{
+	const char *p;
+	const char *thispack = FS_WhichPack(filename);
+	const char *packurl;
+
+	if(!thispack)
+		return false;
+
+	p = strrchr(thispack, '/');
+	if(p)
+		thispack = p + 1;
+
+	packurl = Curl_FindPackURL(thispack);
+
+	if(packurl && *packurl && strcmp(packurl, "-"))
+	{
+		if(!foundone)
+			strlcat(sendbuffer, "curl --clear_autodownload\n", sendbuffer_len);
+
+		strlcat(sendbuffer, "curl --pak --forthismap --as ", sendbuffer_len);
+		strlcat(sendbuffer, thispack, sendbuffer_len);
+		if(sv_curl_maxspeed.value > 0)
+			dpsnprintf(sendbuffer + strlen(sendbuffer), sendbuffer_len - strlen(sendbuffer), " --maxspeed=%.1f", sv_curl_maxspeed.value);
+		strlcat(sendbuffer, " --for ", sendbuffer_len);
+		strlcat(sendbuffer, filename, sendbuffer_len);
+		strlcat(sendbuffer, " ", sendbuffer_len);
+		strlcat(sendbuffer, packurl, sendbuffer_len);
+		strlcat(sendbuffer, thispack, sendbuffer_len);
+		strlcat(sendbuffer, "\n", sendbuffer_len);
+
+		return true;
+	}
+
+	return false;
+}
 void Curl_SendRequirements(void)
 {
 	// for each requirement, find the pack name
 	char sendbuffer[4096] = "";
 	requirement *req;
 	qboolean foundone = false;
+	const char *p;
 
 	for(req = requirements; req; req = req->next)
-	{
-		const char *p;
-		const char *thispack = FS_WhichPack(req->filename);
-		const char *packurl;
+		foundone = Curl_SendRequirement(req->filename, foundone, sendbuffer, sizeof(sendbuffer)) || foundone;
 
-		if(!thispack)
-			continue;
-
-		p = strrchr(thispack, '/');
-		if(p)
-			thispack = p + 1;
-
-		packurl = Curl_FindPackURL(thispack);
-
-		if(packurl && *packurl && strcmp(packurl, "-"))
-		{
-			if(!foundone)
-				strlcat(sendbuffer, "curl --clear_autodownload\n", sizeof(sendbuffer));
-
-			strlcat(sendbuffer, "curl --pak --forthismap --as ", sizeof(sendbuffer));
-			strlcat(sendbuffer, thispack, sizeof(sendbuffer));
-			if(sv_curl_maxspeed.value > 0)
-				dpsnprintf(sendbuffer + strlen(sendbuffer), sizeof(sendbuffer) - strlen(sendbuffer), " --maxspeed=%.1f", sv_curl_maxspeed.value);
-			strlcat(sendbuffer, " --for ", sizeof(sendbuffer));
-			strlcat(sendbuffer, req->filename, sizeof(sendbuffer));
-			strlcat(sendbuffer, " ", sizeof(sendbuffer));
-			strlcat(sendbuffer, packurl, sizeof(sendbuffer));
-			strlcat(sendbuffer, thispack, sizeof(sendbuffer));
-			strlcat(sendbuffer, "\n", sizeof(sendbuffer));
-
-			foundone = true;
-		}
-	}
+	p = sv_curl_serverpackages.string;
+	while(COM_ParseToken_Simple(&p, false, false))
+		foundone = Curl_SendRequirement(com_token, foundone, sendbuffer, sizeof(sendbuffer)) || foundone;
 
 	if(foundone)
 		strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
