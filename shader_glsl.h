@@ -3,7 +3,7 @@
 "// shadowmapping enhancements by Lee 'eihrul' Salzman\n"
 "\n"
 "#ifdef GLSL130\n"
-"precision mediump float;\n"
+"precision highp float;\n"
 "# ifdef VERTEX_SHADER\n"
 "#  define dp_varying out\n"
 "#  define dp_attribute in\n"
