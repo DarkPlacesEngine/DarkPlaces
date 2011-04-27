@@ -70,6 +70,8 @@ cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables 
 cvar_t r_farclip_base = {0, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
 cvar_t r_farclip_world = {0, "r_farclip_world", "2", "adds map size to farclip multiplied by this value"};
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
+cvar_t r_deformvertexes = {0, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
+cvar_t r_transparent = {0, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -4051,6 +4053,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_farclip_base);
 	Cvar_RegisterVariable(&r_farclip_world);
 	Cvar_RegisterVariable(&r_nearclip);
+	Cvar_RegisterVariable(&r_deformvertexes);
+	Cvar_RegisterVariable(&r_transparent);
 	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -6867,9 +6871,12 @@ void R_RenderScene(void)
 		}
 	}
 
-	R_MeshQueue_RenderTransparent();
-	if (r_timereport_active)
-		R_TimeReport("drawtrans");
+	if (r_transparent.integer)
+	{
+		R_MeshQueue_RenderTransparent();
+		if (r_timereport_active)
+			R_TimeReport("drawtrans");
+	}
 
 	if (r_refdef.view.showdebug && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDebug && (r_showtris.value > 0 || r_shownormals.value != 0 || r_showcollisionbrushes.value > 0 || r_showoverdraw.value > 0))
 	{
@@ -8270,7 +8277,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		needsupdate |= BATCHNEED_VERTEXMESH_VERTEXCOLOR;
 	}
 
-	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform;deformindex++, deform++)
+	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform && r_deformvertexes.integer;deformindex++, deform++)
 	{
 		switch (deform->deform)
 		{
@@ -8638,7 +8645,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// if vertices are deformed (sprite flares and things in maps, possibly
 	// water waves, bulges and other deformations), modify the copied vertices
 	// in place
-	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform;deformindex++, deform++)
+	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform && r_deformvertexes.integer;deformindex++, deform++)
 	{
 		switch (deform->deform)
 		{
