@@ -3990,6 +3990,44 @@ static void VM_CL_frameduration(void)
 		PRVM_G_FLOAT(OFS_RETURN) = model->animscenes[framenum].framecount / model->animscenes[framenum].framerate;
 }
 
+void VM_CL_RotateMoves(void)
+{
+	/*
+	 * Obscure builtin used by GAME_XONOTIC.
+	 *
+	 * Edits the input history of cl_movement by rotating all move commands
+	 * currently in the queue using the given transform.
+	 *
+	 * The vector passed is an "angles transform" as used by warpzonelib, i.e.
+	 * v_angle-like (non-inverted) euler angles that perform the rotation
+	 * of the space that is to be done.
+	 *
+	 * This is meant to be used as a fixangle replacement after passing
+	 * through a warpzone/portal: the client is told about the warp transform,
+	 * and calls this function in the same frame as the one on which the
+	 * client's origin got changed by the serverside teleport. Then this code
+	 * transforms the pre-warp input (which matches the empty space behind
+	 * the warp plane) into post-warp input (which matches the target area
+	 * of the warp). Also, at the same time, the client has to use
+	 * R_SetView to adjust VF_CL_VIEWANGLES according to the same transform.
+	 *
+	 * This together allows warpzone motion to be perfectly predicted by
+	 * the client!
+	 *
+	 * Furthermore, for perfect warpzone behaviour, the server side also
+	 * has to detect input the client sent before it received the origin
+	 * update, but after the warp occurred on the server, and has to adjust
+	 * input appropriately.
+	 */
+	matrix4x4_t m;
+	vec3_t v = {0, 0, 0};
+	vec3_t x, y, z;
+	VM_SAFEPARMCOUNT(1, VM_CL_RotateMoves);
+	AngleVectorsFLU(PRVM_G_VECTOR(OFS_PARM0), x, y, z);
+	Matrix4x4_FromVectors(&m, x, y, z, v);
+	CL_RotateMoves(&m);
+}
+
 //============================================================================
 
 // To create a almost working builtin file from this replace:
@@ -4638,6 +4676,12 @@ VM_setkeybind,						// #630 float(float key, string bind[, float bindmap]) setke
 VM_getbindmaps,						// #631 vector(void) getbindmap
 VM_setbindmaps,						// #632 float(vector bm) setbindmap
 NULL,							// #633
+NULL,							// #634
+NULL,							// #635
+NULL,							// #636
+NULL,							// #637
+VM_CL_RotateMoves,					// #638
+NULL,							// #639
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
