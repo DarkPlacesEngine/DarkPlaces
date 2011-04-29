@@ -1697,6 +1697,25 @@ void CL_NewFrameReceived(int num)
 	cl.latestframenumsposition = (cl.latestframenumsposition + 1) % LATESTFRAMENUMS;
 }
 
+void CL_RotateMoves(const matrix4x4_t *m)
+{
+	// rotate viewangles in all previous moves
+	vec3_t v;
+	vec3_t f, r, u;
+	int i;
+	for (i = 0;i < CL_MAX_USERCMDS;i++)
+	{
+		if (cl.movecmd[i].sequence > cls.servermovesequence)
+		{
+			usercmd_t *c = &cl.movecmd[i];
+			AngleVectors(c->viewangles, f, r, u);
+			Matrix4x4_Transform(m, f, v); VectorCopy(v, f);
+			Matrix4x4_Transform(m, u, v); VectorCopy(v, u);
+			AnglesFromVectors(c->viewangles, f, u, false);
+		}
+	}
+}
+
 /*
 ==============
 CL_SendMove

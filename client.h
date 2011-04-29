@@ -1836,5 +1836,8 @@ r_refdef_t;
 
 extern r_refdef_t r_refdef;
 
+// warpzone prediction hack (CSQC builtin)
+void CL_RotateMoves(const matrix4x4_t *m);
+
 #endif
 
