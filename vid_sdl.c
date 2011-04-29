@@ -1820,20 +1820,20 @@ void VID_Init (void)
 #ifdef WIN32
 #include "resource.h"
 #include <SDL_syswm.h>
-static void VID_SetCaption(void)
+static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
 {
-    SDL_SysWMinfo	info;
-	HICON			icon;
-
-	// set the caption
+	SDL_Surface *screen = NULL;
+	SDL_SysWMinfo info;
+	HICON icon;
 	SDL_WM_SetCaption( gamename, NULL );
-
-	// get the HWND handle
-    SDL_VERSION( &info.version );
-	if( !SDL_GetWMInfo( &info ) )
-		return;
-
-	icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
+	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
+	if (screen)
+	{
+		// get the HWND handle
+		SDL_VERSION( &info.version );
+		if (SDL_GetWMInfo(&info))
+		{
+			icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
 #ifndef _W64 //If Windows 64bit data types don't exist
 #ifndef SetClassLongPtr
 #define SetClassLongPtr SetClassLong
@@ -1845,20 +1845,17 @@ static void VID_SetCaption(void)
 #define LONG_PTR LONG
 #endif
 #endif
-	SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
-}
-static void VID_SetIcon_Pre(void)
-{
-}
-static void VID_SetIcon_Post(void)
-{
+			SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
+		}
+	}
+	return screen;
 }
 #else
 // Adding the OS independent XPM version --blub
 #include "darkplaces.xpm"
 #include "nexuiz.xpm"
 static SDL_Surface *icon = NULL;
-static void VID_SetIcon_Pre(void)
+static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
 {
 	/*
 	 * Somewhat restricted XPM reader. Only supports XPMs saved by GIMP 2.4 at
@@ -1872,7 +1869,11 @@ static void VID_SetIcon_Pre(void)
 	char *xpm;
 	char **idata, *data;
 	const SDL_version *version;
+	SDL_Surface *screen = NULL;
 
+	if (icon)
+		SDL_FreeSurface(icon);
+	icon = NULL;
 	version = SDL_Linked_Version();
 	// only use non-XPM icon support in SDL v1.3 and higher
 	// SDL v1.2 does not support "smooth" transparency, and thus is better
@@ -1898,14 +1899,14 @@ static void VID_SetIcon_Pre(void)
 
 			icon = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, LittleLong(red), LittleLong(green), LittleLong(blue), LittleLong(alpha));
 
-			if(icon == NULL) {
+			if (icon)
+				icon->pixels = data;
+			else
+			{
 				Con_Printf(	"Failed to create surface for the window Icon!\n"
 						"%s\n", SDL_GetError());
 				free(data);
-				return;
 			}
-
-			icon->pixels = data;
 		}
 	}
 
@@ -1924,107 +1925,114 @@ static void VID_SetIcon_Pre(void)
 
 		data = idata[0];
 
-		if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) != 4)
+		if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) == 4)
 		{
-			// NOTE: Only 1-char colornames are supported
-			Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
-			return;
-		}
-
-		if(isize != 1)
-		{
-			// NOTE: Only 1-char colornames are supported
-			Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
-			return;
-		}
-
-		for(i = 0; i < colors; ++i)
-		{
-			unsigned int r, g, b;
-			char idx;
-
-			if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
+			if(isize == 1)
 			{
-				char foo[2];
-				if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
+				for(i = 0; i < colors; ++i)
 				{
-					Con_Printf("This XPM's palette looks odd. Can't continue.\n");
-					return;
+					unsigned int r, g, b;
+					char idx;
+
+					if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
+					{
+						char foo[2];
+						if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
+							break;
+						else
+						{
+							palette[i].r = 255; // color key
+							palette[i].g = 0;
+							palette[i].b = 255;
+							thenone = i; // weeeee
+							palenc[(unsigned char) idx] = i;
+						}
+					}
+					else
+					{
+						palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
+						palette[i].g = g;
+						palette[i].b = b;
+						palenc[(unsigned char) idx] = i;
+					}
+				}
+
+				if (i == colors)
+				{
+					// allocate the image data
+					data = (char*) malloc(width*height);
+
+					for(j = 0; j < height; ++j)
+					{
+						for(i = 0; i < width; ++i)
+						{
+							// casting to the safest possible datatypes ^^
+							data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
+						}
+					}
+
+					if(icon != NULL)
+					{
+						// SDL_FreeSurface should free the data too
+						// but for completeness' sake...
+						if(icon->flags & SDL_PREALLOC)
+						{
+							free(icon->pixels);
+							icon->pixels = NULL; // safety
+						}
+						SDL_FreeSurface(icon);
+					}
+
+					icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
+					// 8 bit surfaces get an empty palette allocated according to the docs
+					// so it's a palette image for sure :) no endian check necessary for the mask
+
+					if(icon)
+					{
+						icon->pixels = data;
+						SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
+						SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
+					}
+					else
+					{
+						Con_Printf(	"Failed to create surface for the window Icon!\n"
+								"%s\n", SDL_GetError());
+						free(data);
+					}
 				}
 				else
 				{
-					palette[i].r = 255; // color key
-					palette[i].g = 0;
-					palette[i].b = 255;
-					thenone = i; // weeeee
+					Con_Printf("This XPM's palette looks odd. Can't continue.\n");
 				}
 			}
 			else
 			{
-				palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
-				palette[i].g = g;
-				palette[i].b = b;
+				// NOTE: Only 1-char colornames are supported
+				Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
 			}
-
-			palenc[(unsigned char) idx] = i;
 		}
-
-		// allocate the image data
-		data = (char*) malloc(width*height);
-
-		for(j = 0; j < height; ++j)
+		else
 		{
-			for(i = 0; i < width; ++i)
-			{
-				// casting to the safest possible datatypes ^^
-				data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
-			}
+			// NOTE: Only 1-char colornames are supported
+			Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
 		}
-
-		if(icon != NULL)
-		{
-			// SDL_FreeSurface should free the data too
-			// but for completeness' sake...
-			if(icon->flags & SDL_PREALLOC)
-			{
-				free(icon->pixels);
-				icon->pixels = NULL; // safety
-			}
-			SDL_FreeSurface(icon);
-		}
-
-		icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
-		// 8 bit surfaces get an empty palette allocated according to the docs
-		// so it's a palette image for sure :) no endian check necessary for the mask
-
-		if(icon == NULL) {
-			Con_Printf(	"Failed to create surface for the window Icon!\n"
-					"%s\n", SDL_GetError());
-			free(data);
-			return;
-		}
-
-		icon->pixels = data;
-		SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
-		SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
 	}
 
-	SDL_WM_SetIcon(icon, NULL);
-}
-static void VID_SetIcon_Post(void)
-{
+	if (icon)
+		SDL_WM_SetIcon(icon, NULL);
+
+	SDL_WM_SetCaption( gamename, NULL );
+	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
+
 #if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 // LordHavoc: info.info.x11.lock_func and accompanying code do not seem to compile with SDL 1.3
 #if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
-	int j;
-	char *data;
-	const SDL_version *version;
 
 	version = SDL_Linked_Version();
 	// only use non-XPM icon support in SDL v1.3 and higher
 	// SDL v1.2 does not support "smooth" transparency, and thus is better
 	// off the xpm way
-	if(!(version->major >= 2 || (version->major == 1 && version->minor >= 3)))
+	if(screen && (!(version->major >= 2 || (version->major == 1 && version->minor >= 3))))
 	{
 		// in this case, we did not set the good icon yet
 		SDL_SysWMinfo info;
@@ -2069,13 +2077,9 @@ static void VID_SetIcon_Post(void)
 	}
 #endif
 #endif
+	return screen;
 }
 
-
-static void VID_SetCaption(void)
-{
-	SDL_WM_SetCaption( gamename, NULL );
-}
 #endif
 #endif
 
@@ -2204,9 +2208,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	video_bpp = mode->bitsperpixel;
 #if SETVIDEOMODE
 	video_flags = flags;
-	VID_SetIcon_Pre();
-	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
-	VID_SetIcon_Post();
+	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
@@ -2237,10 +2239,6 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_softsurface = NULL;
 	vid.softpixels = NULL;
 
-#if SETVIDEOMODE
-	// set window title
-	VID_SetCaption();
-#endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
@@ -2331,9 +2329,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	video_bpp = mode->bitsperpixel;
 #if SETVIDEOMODE
 	video_flags = flags;
-	VID_SetIcon_Pre();
-	screen = SDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
-	VID_SetIcon_Post();
+	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	if (screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
@@ -2373,10 +2369,6 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 		return false;
 	}
 
-#if SETVIDEOMODE
-	// set window title
-	VID_SetCaption();
-#endif
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
