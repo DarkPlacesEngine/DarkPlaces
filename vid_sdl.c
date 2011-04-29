@@ -2471,7 +2471,7 @@ void VID_Finish (void)
 	appstate = SDL_GetAppState();
 
 	vid_hidden = !(appstate & SDL_APPACTIVE);
-	vid_hasfocus = (appstate & SDL_APPMOUSEFOCUS) && (appstate & SDL_APPINPUTFOCUS);
+	vid_hasfocus = (appstate & SDL_APPINPUTFOCUS) != 0;
 #endif
 	vid_activewindow = !vid_hidden && vid_hasfocus;
 
