@@ -1771,7 +1771,13 @@ void FS_Init (void)
 #else
 		homedir = getenv ("HOME");
 		if(homedir)
+		{
+#ifdef __APPLE__
+			dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/Library/Application Support/%s/", homedir, gameuserdirname);
+#else
 			dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/.%s/", homedir, gameuserdirname);
+#endif
+		}
 
 		if(!*fs_userdir)
 			Con_DPrintf("Could not obtain home directory; assuming -nohome\n");
