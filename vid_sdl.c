@@ -1850,6 +1850,15 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 	}
 	return screen;
 }
+#elif defined(MACOSX)
+static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
+{
+	SDL_Surface *screen = NULL;
+	SDL_WM_SetCaption( gamename, NULL );
+	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
+	// we don't use SDL_WM_SetIcon here because the icon in the .app should be used
+	return screen;
+}
 #else
 // Adding the OS independent XPM version --blub
 #include "darkplaces.xpm"
