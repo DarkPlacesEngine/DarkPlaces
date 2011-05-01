@@ -2433,9 +2433,11 @@ void VID_Shutdown (void)
 
 #if SETVIDEOMODE
 #ifndef WIN32
+#ifndef MACOSX
 	if (icon)
 		SDL_FreeSurface(icon);
 	icon = NULL;
+#endif
 #endif
 #endif
 
