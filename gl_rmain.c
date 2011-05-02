@@ -121,6 +121,8 @@ cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rat
 cvar_t r_fog_clear = {0, "r_fog_clear", "1", "clears renderbuffer with fog color before render starts"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 cvar_t r_transparentdepthmasking = {CVAR_SAVE, "r_transparentdepthmasking", "0", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
+cvar_t r_transparent_sortmaxdist = {CVAR_SAVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
+cvar_t r_transparent_sortarraysize = {CVAR_SAVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -4101,6 +4103,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fog_clear);
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_transparentdepthmasking);
+	Cvar_RegisterVariable(&r_transparent_sortmaxdist);
+	Cvar_RegisterVariable(&r_transparent_sortarraysize);
 	Cvar_RegisterVariable(&r_texture_dds_load);
 	Cvar_RegisterVariable(&r_texture_dds_save);
 	Cvar_RegisterVariable(&r_texture_sRGB_2d);
@@ -9965,8 +9969,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	int texturenumsurfaces, endsurface;
 	texture_t *texture;
 	const msurface_t *surface;
-#define MAXBATCH_TRANSPARENTSURFACES 256
-	const msurface_t *texturesurfacelist[MAXBATCH_TRANSPARENTSURFACES];
+	const msurface_t *texturesurfacelist[MESHQUEUE_TRANSPARENT_BATCHSIZE];
 
 	// if the model is static it doesn't matter what value we give for
 	// wantnormals and wanttangents, so this logic uses only rules applicable
@@ -10051,7 +10054,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		texture = surface->texture;
 		rsurface.texture = R_GetCurrentTexture(texture);
 		// scan ahead until we find a different texture
-		endsurface = min(i + MAXBATCH_TRANSPARENTSURFACES, numsurfaces);
+		endsurface = min(i + MESHQUEUE_TRANSPARENT_BATCHSIZE, numsurfaces);
 		texturenumsurfaces = 0;
 		texturesurfacelist[texturenumsurfaces++] = surface;
 		if(FAKELIGHT_ENABLED)
