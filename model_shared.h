@@ -445,6 +445,7 @@ typedef struct q3shaderinfo_s
 	// dp-specific additions:
 
 	// shadow control
+	qboolean dpnortlight;
 	qboolean dpshadow;
 	qboolean dpnoshadow;
 

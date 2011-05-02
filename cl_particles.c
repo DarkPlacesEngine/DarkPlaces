@@ -2281,14 +2281,13 @@ static void r_part_newmap(void)
 	CL_Particles_LoadEffectInfo();
 }
 
-#define BATCHSIZE 256
-unsigned short particle_elements[BATCHSIZE*6];
-float particle_vertex3f[BATCHSIZE*12], particle_texcoord2f[BATCHSIZE*8], particle_color4f[BATCHSIZE*16];
+unsigned short particle_elements[MESHQUEUE_TRANSPARENT_BATCHSIZE*6];
+float particle_vertex3f[MESHQUEUE_TRANSPARENT_BATCHSIZE*12], particle_texcoord2f[MESHQUEUE_TRANSPARENT_BATCHSIZE*8], particle_color4f[MESHQUEUE_TRANSPARENT_BATCHSIZE*16];
 
 void R_Particles_Init (void)
 {
 	int i;
-	for (i = 0;i < BATCHSIZE;i++)
+	for (i = 0;i < MESHQUEUE_TRANSPARENT_BATCHSIZE;i++)
 	{
 		particle_elements[i*6+0] = i*4+0;
 		particle_elements[i*6+1] = i*4+1;

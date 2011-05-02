@@ -1487,7 +1487,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 			for (kend = k;kend < batchnumsurfaces && tex == batchsurfacelist[kend]->texture;kend++)
 				;
 			// now figure out what to do with this particular range of surfaces
-			if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_WALL))
+			// VorteX: added MATERIALFLAG_NORTLIGHT
+			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL + MATERIALFLAG_NORTLIGHT)) != MATERIALFLAG_WALL)
 				continue;
 			if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 				continue;

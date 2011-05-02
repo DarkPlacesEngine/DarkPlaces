@@ -116,6 +116,8 @@ mplane_t;
 #define MATERIALFLAG_TRANSDEPTH 33554432
 // like refraction, but doesn't distort etc.
 #define MATERIALFLAG_CAMERA 67108864
+// disable rtlight on surface, use R_LightPoint instead
+#define MATERIALFLAG_NORTLIGHT 134217728
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency
