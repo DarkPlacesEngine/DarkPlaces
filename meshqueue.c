@@ -13,7 +13,14 @@ typedef struct meshqueue_s
 }
 meshqueue_t;
 
+int trans_sortarraysize;
+meshqueue_t **trans_hash = NULL;
+meshqueue_t ***trans_hashpointer = NULL;
+extern cvar_t r_transparent_sortarraysize;
+extern cvar_t r_transparent_sortmaxdist;
+
 float mqt_viewplanedist;
+float mqt_viewmindist;
 float mqt_viewmaxdist;
 meshqueue_t *mqt_array;
 int mqt_count;
@@ -24,6 +31,7 @@ void R_MeshQueue_BeginScene(void)
 	mqt_count = 0;
 	mqt_viewplanedist = DotProduct(r_refdef.view.origin, r_refdef.view.forward);
 	mqt_viewmaxdist = 0;
+	mqt_viewmindist = 999999999;
 }
 
 void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
@@ -49,47 +57,67 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const enti
 	mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
+	mqt_viewmindist = min(mqt_viewmindist, mq->dist);
 }
 
 void R_MeshQueue_RenderTransparent(void)
 {
-	int i;
-	int hashdist;
-	int batchnumsurfaces;
+	int i, hashindex, maxhashindex, batchnumsurfaces;
 	float distscale;
 	const entity_render_t *ent;
 	const rtlight_t *rtlight;
 	void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfaceindices);
+	int batchsurfaceindex[MESHQUEUE_TRANSPARENT_BATCHSIZE];
 	meshqueue_t *mqt;
-	static meshqueue_t *hash[4096], **hashpointer[4096];
-	int batchsurfaceindex[256];
+
 	if (!mqt_count)
 		return;
-	memset(hash, 0, sizeof(hash));
-	for (i = 0;i < 4096;i++)
-		hashpointer[i] = &hash[i];
-	distscale = 4095.0f / max(mqt_viewmaxdist, 4095);
-	for (i = 0, mqt = mqt_array;i < mqt_count;i++, mqt++)
+
+	// check for bad cvars
+	if (r_transparent_sortarraysize.integer < 1 || r_transparent_sortarraysize.integer > 32768)
+		Cvar_SetValueQuick(&r_transparent_sortarraysize, bound(1, r_transparent_sortarraysize.integer, 32768));
+	if (r_transparent_sortmaxdist.integer < 1 || r_transparent_sortmaxdist.integer > 32768)
+		Cvar_SetValueQuick(&r_transparent_sortmaxdist, bound(1, r_transparent_sortmaxdist.integer, 32768));
+
+	// update hash array
+	if (trans_sortarraysize != r_transparent_sortarraysize.integer)
 	{
-		// generate index
-		hashdist = (int) (mqt->dist * distscale);
-		hashdist = bound(0, hashdist, 4095);
+		trans_sortarraysize = r_transparent_sortarraysize.integer;
+		if (trans_hash)
+			Mem_Free(trans_hash);
+		trans_hash = Mem_Alloc(cls.permanentmempool, sizeof(trans_hash) * trans_sortarraysize); 
+		if (trans_hashpointer)
+			Mem_Free(trans_hashpointer);
+		trans_hashpointer = Mem_Alloc(cls.permanentmempool, sizeof(trans_hashpointer) * trans_sortarraysize); 
+	}
+
+	// build index
+	memset(trans_hash, 0, sizeof(trans_hash) * trans_sortarraysize);
+	for (i = 0; i < trans_sortarraysize; i++)
+		trans_hashpointer[i] = &trans_hash[i];
+	distscale = (trans_sortarraysize - 1) / max( min(mqt_viewmaxdist, r_transparent_sortmaxdist.integer) - mqt_viewmindist, 64 );
+	maxhashindex = trans_sortarraysize - 1;
+	for (i = 0, mqt = mqt_array; i < mqt_count; i++, mqt++)
+	{
+		hashindex = bound(0, (int)(min(mqt->dist - mqt_viewmindist, r_transparent_sortmaxdist.integer) * distscale - 0.1), maxhashindex);
 		// link to tail of hash chain (to preserve render order)
 		mqt->next = NULL;
-		*hashpointer[hashdist] = mqt;
-		hashpointer[hashdist] = &mqt->next;
+		*trans_hashpointer[hashindex] = mqt;
+		trans_hashpointer[hashindex] = &mqt->next;
 	}
 	callback = NULL;
 	ent = NULL;
 	rtlight = NULL;
 	batchnumsurfaces = 0;
-	for (i = 4095;i >= 0;i--)
+
+	// draw
+	for (i = maxhashindex; i >= 0; i--)
 	{
-		if (hash[i])
+		if (trans_hash[i])
 		{
-			for (mqt = hash[i];mqt;mqt = mqt->next)
+			for (mqt = trans_hash[i]; mqt; mqt = mqt->next)
 			{
-				if (ent != mqt->ent || rtlight != mqt->rtlight || callback != mqt->callback || batchnumsurfaces >= 256)
+				if (ent != mqt->ent || rtlight != mqt->rtlight || callback != mqt->callback || batchnumsurfaces >= MESHQUEUE_TRANSPARENT_BATCHSIZE)
 				{
 					if (batchnumsurfaces)
 						callback(ent, rtlight, batchnumsurfaces, batchsurfaceindex);
