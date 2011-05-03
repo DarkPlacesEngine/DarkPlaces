@@ -143,6 +143,8 @@ extern cvar_t gl_texturecompression_q3bspdeluxemaps;
 extern cvar_t gl_texturecompression_sky;
 extern cvar_t gl_texturecompression_lightcubemaps;
 extern cvar_t gl_texturecompression_reflectmask;
+extern cvar_t r_texture_dds_load;
+extern cvar_t r_texture_dds_save;
 
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)

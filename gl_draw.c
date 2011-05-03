@@ -302,6 +302,7 @@ static rtexture_t *draw_generatepic(const char *name, qboolean quiet)
 	return r_texture_notexture;
 }
 
+int draw_frame = 1;
 
 /*
 ================
@@ -312,18 +313,21 @@ Draw_CachePic
 cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 {
 	int crc, hashkey;
-	unsigned char *pixels;
+	unsigned char *pixels = NULL;
 	cachepic_t *pic;
 	fs_offset_t lmpsize;
 	unsigned char *lmpdata;
 	char lmpname[MAX_QPATH];
 	int texflags;
 	int j;
+	qboolean ddshasalpha;
+	float ddsavgcolor[4];
+	qboolean loaded = false;
 
 	texflags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
 		texflags |= TEXF_CLAMP;
-	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer)
+	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer && gl_texturecompression.integer)
 		texflags |= TEXF_COMPRESS;
 
 	// check whether the picture has already been cached
@@ -369,13 +373,20 @@ reload:
 	pic->hasalpha = true; // assume alpha unless we know it has none
 	pic->texflags = texflags;
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
+	pic->lastusedframe = draw_frame;
 
 	// load a high quality image from disk if possible
-	pixels = loadimagepixelsbgra(path, false, true, false, NULL);
-	if (pixels == NULL && !strncmp(path, "gfx/", 4))
-		pixels = loadimagepixelsbgra(path+4, false, true, false, NULL);
-	if (pixels)
+	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
 	{
+		// note this loads even if autoload is true, otherwise we can't get the width/height
+		loaded = true;
+		pic->hasalpha = ddshasalpha;
+		pic->width = R_TextureWidth(pic->tex);
+		pic->height = R_TextureHeight(pic->tex);
+	}
+	if (!loaded && ((pixels = loadimagepixelsbgra(pic->name, false, true, false, NULL)) || (!strncmp(pic->name, "gfx/", 4) && (pixels = loadimagepixelsbgra(pic->name+4, false, true, false, NULL)))))
+	{
+		loaded = true;
 		pic->hasalpha = false;
 		if (pic->texflags & TEXF_ALPHA)
 		{
@@ -392,9 +403,13 @@ reload:
 		pic->width = image_width;
 		pic->height = image_height;
 		if (!pic->autoload)
-			pic->tex = R_LoadTexture2D(drawtexturepool, path, image_width, image_height, pixels, r_texture_sRGB_2d.integer ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
+		{
+			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, r_texture_sRGB_2d.integer ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
+			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
+				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+		}
 	}
-	else
+	if (!loaded)
 	{
 		pic->autoload = false;
 		// never compress the fallback images
@@ -405,11 +420,11 @@ reload:
 	// size from that even if we don't upload the texture, this way the pics
 	// show up the right size in the menu even if they were replaced with
 	// higher or lower resolution versions
-	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", path);
-	if (!strncmp(path, "gfx/", 4) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
+	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", pic->name);
+	if (!strncmp(pic->name, "gfx/", 4) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
 	{
 		if (developer_loading.integer)
-			Con_Printf("loading lump \"%s\"\n", path);
+			Con_Printf("loading lump \"%s\"\n", pic->name);
 
 		if (lmpsize >= 9)
 		{
@@ -417,23 +432,23 @@ reload:
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pixels)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
 		}
 		Mem_Free(lmpdata);
 	}
-	else if ((lmpdata = W_GetLumpName (path + 4)))
+	else if ((lmpdata = W_GetLumpName (pic->name + 4)))
 	{
 		if (developer_loading.integer)
-			Con_Printf("loading gfx.wad lump \"%s\"\n", path + 4);
+			Con_Printf("loading gfx.wad lump \"%s\"\n", pic->name + 4);
 
-		if (!strcmp(path, "gfx/conchars"))
+		if (!strcmp(pic->name, "gfx/conchars"))
 		{
 			// conchars is a raw image and with color 0 as transparent instead of 255
 			pic->width = 128;
 			pic->height = 128;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pixels)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, lmpdata, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, 128, 128, lmpdata, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
 		}
 		else
 		{
@@ -441,7 +456,7 @@ reload:
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
 			if (!pixels)
-				pic->tex = R_LoadTexture2D(drawtexturepool, path, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
 		}
 	}
 
@@ -450,10 +465,10 @@ reload:
 		Mem_Free(pixels);
 		pixels = NULL;
 	}
-	else if (pic->tex == NULL)
+	if (!loaded)
 	{
 		// if it's not found on disk, generate an image
-		pic->tex = draw_generatepic(path, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
+		pic->tex = draw_generatepic(pic->name, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
 	}
@@ -466,15 +481,28 @@ cachepic_t *Draw_CachePic (const char *path)
 	return Draw_CachePic_Flags (path, 0); // default to persistent!
 }
 
-int draw_frame = 1;
-
 rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
 	if (pic->autoload && !pic->tex)
 	{
-		pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
+		if (pic->tex == NULL && r_texture_dds_load.integer != 0)
+		{
+			qboolean ddshasalpha;
+			float ddsavgcolor[4];
+			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), pic->texflags, &ddshasalpha, ddsavgcolor, 0);
+		}
+		if (pic->tex == NULL)
+		{
+			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
+			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
+				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+		}
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
+		{
 			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
+			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
+				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+		}
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
 	}
