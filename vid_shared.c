@@ -838,7 +838,7 @@ void VID_CheckExtensions(void)
 {
 	if (!GL_CheckExtension("glbase", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
-	vid.support.gl20shaders = GL_CheckExtension("glshaders", gl20shaderfuncs, "-noshaders", true);
+	vid.support.gl20shaders = GL_CheckExtension("GL_ARB_fragment_shader", gl20shaderfuncs, "-noshaders", true);
 
 	CHECKGLERROR
 
