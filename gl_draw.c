@@ -431,8 +431,11 @@ reload:
 			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pixels)
+			if (!loaded)
+			{
+				loaded = true;
 				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+			}
 		}
 		Mem_Free(lmpdata);
 	}
@@ -447,16 +450,22 @@ reload:
 			pic->width = 128;
 			pic->height = 128;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pixels)
+			if (!loaded)
+			{
+				loaded = true;
 				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, 128, 128, lmpdata, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
+			}
 		}
 		else
 		{
 			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
 			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
 			// if no high quality replacement image was found, upload the original low quality texture
-			if (!pixels)
+			if (!loaded)
+			{
+				loaded = true;
 				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+			}
 		}
 	}
 
