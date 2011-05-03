@@ -6,6 +6,7 @@
 #include "ft2.h"
 #include "ft2_defs.h"
 #include "ft2_fontdefs.h"
+#include "image.h"
 
 static int img_fontmap[256] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -36,6 +37,8 @@ cvar_t r_font_disable_freetype = {CVAR_SAVE, "r_font_disable_freetype", "1", "di
 cvar_t r_font_use_alpha_textures = {CVAR_SAVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_kerning = {CVAR_SAVE, "r_font_kerning", "1", "Use kerning if available"};
+cvar_t r_font_diskcache = {CVAR_SAVE, "r_font_diskcache", "0", "save font textures to disk for future loading rather than generating them every time"};
+cvar_t r_font_compress = {CVAR_SAVE, "r_font_compress", "0", "use texture compression on font textures to save video memory"};
 cvar_t developer_font = {CVAR_SAVE, "developer_font", "0", "prints debug messages about fonts"};
 
 /*
@@ -134,7 +137,6 @@ static dllhandle_t ft2_dll = NULL;
 
 /// Memory pool for fonts
 static mempool_t *font_mempool= NULL;
-static rtexturepool_t *font_texturepool = NULL;
 
 /// FreeType library handle
 static FT_Library font_ft2lib = NULL;
@@ -237,8 +239,6 @@ void Font_CloseLibrary (void)
 	fontfilecache_FreeAll();
 	if (font_mempool)
 		Mem_FreePool(&font_mempool);
-	if (font_texturepool)
-		R_FreeTexturePool(&font_texturepool);
 	if (font_ft2lib && qFT_Done_FreeType)
 	{
 		qFT_Done_FreeType(font_ft2lib);
@@ -312,14 +312,6 @@ void font_start(void)
 		Font_CloseLibrary();
 		return;
 	}
-
-	font_texturepool = R_AllocTexturePool();
-	if (!font_texturepool)
-	{
-		Con_Print("ERROR: Failed to allocate FONT texture pool!\n");
-		Font_CloseLibrary();
-		return;
-	}
 }
 
 void font_shutdown(void)
@@ -346,6 +338,8 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
 	Cvar_RegisterVariable(&r_font_kerning);
+	Cvar_RegisterVariable(&r_font_diskcache);
+	Cvar_RegisterVariable(&r_font_compress);
 	Cvar_RegisterVariable(&developer_font);
 
 	// let's open it at startup already
@@ -1021,10 +1015,10 @@ qboolean Font_GetKerningForSize(ft2_font_t *font, float w, float h, Uchar left, 
 
 static void UnloadMapRec(ft2_font_map_t *map)
 {
-	if (map->texture)
+	if (map->pic)
 	{
-		R_FreeTexture(map->texture);
-		map->texture = NULL;
+		//Draw_FreePic(map->pic); // FIXME: refcounting needed...
+		map->pic = NULL;
 	}
 	if (map->next)
 		UnloadMapRec(map->next);
@@ -1096,7 +1090,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 {
 	char map_identifier[MAX_QPATH];
 	unsigned long mapidx = _ch / FONT_CHARS_PER_MAP;
-	unsigned char *data;
+	unsigned char *data = NULL;
 	FT_ULong ch, mapch;
 	int status;
 	int tp;
@@ -1206,6 +1200,22 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		return false;
 	}
 
+	// create a totally unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
+	dpsnprintf(map_identifier, sizeof(map_identifier),
+		"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u",
+		font->name,
+		mapstart->intSize,
+		load_flags,
+		font->settings->blur,
+		font->settings->outline,
+		font->settings->shadowx,
+		font->settings->shadowy,
+		font->settings->shadowz,
+		(unsigned)map->start/FONT_CHARS_PER_MAP);
+
+	// create a cachepic_t from the data now, or reuse an existing one
+	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
+
 	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	// copy over the information
@@ -1216,27 +1226,30 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	map->sfy = mapstart->sfy;
 
 	pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
-	data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
-	if (!data)
+	if (map->pic->tex == r_texture_notexture)
 	{
-		Con_Printf("ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
-		Mem_Free(map);
-		return false;
-	}
-	memset(map->width_of, 0, sizeof(map->width_of));
-
-	// initialize as white texture with zero alpha
-	tp = 0;
-	while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
-	{
-		if (bytesPerPixel == 4)
+		data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
+		if (!data)
 		{
-			data[tp++] = 0xFF;
-			data[tp++] = 0xFF;
-			data[tp++] = 0xFF;
+			Con_Printf("ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
+			Mem_Free(map);
+			return false;
 		}
-		data[tp++] = 0x00;
+		// initialize as white texture with zero alpha
+		tp = 0;
+		while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
+		{
+			if (bytesPerPixel == 4)
+			{
+				data[tp++] = 0xFF;
+				data[tp++] = 0xFF;
+				data[tp++] = 0xFF;
+			}
+			data[tp++] = 0x00;
+		}
 	}
+
+	memset(map->width_of, 0, sizeof(map->width_of));
 
 	// insert the map
 	map->start = mapidx * FONT_CHARS_PER_MAP;
@@ -1256,7 +1269,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		int w, h, x, y;
 		FT_GlyphSlot glyph;
 		FT_Bitmap *bmp;
-		unsigned char *imagedata, *dst, *src;
+		unsigned char *imagedata = NULL, *dst, *src;
 		glyph_slot_t *mapglyph;
 		FT_Face face;
 		int pad_l, pad_r, pad_t, pad_b;
@@ -1273,8 +1286,11 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			++gR;
 		}
 
-		imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
-		imagedata += gpad_t * pitch + gpad_l * bytesPerPixel;
+		if (data)
+		{
+			imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
+			imagedata += gpad_t * pitch + gpad_l * bytesPerPixel;
+		}
 		//status = qFT_Load_Char(face, ch, FT_LOAD_RENDER);
 		// we need the glyphIndex
 		face = (FT_Face)font->face;
@@ -1339,91 +1355,94 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				h = map->glyphSize;
 		}
 
-		switch (bmp->pixel_mode)
+		if (imagedata)
 		{
-		case FT_PIXEL_MODE_MONO:
-			if (developer_font.integer)
-				Con_DPrint("glyphinfo:   Pixel Mode: MONO\n");
-			break;
-		case FT_PIXEL_MODE_GRAY2:
-			if (developer_font.integer)
-				Con_DPrint("glyphinfo:   Pixel Mode: GRAY2\n");
-			break;
-		case FT_PIXEL_MODE_GRAY4:
-			if (developer_font.integer)
-				Con_DPrint("glyphinfo:   Pixel Mode: GRAY4\n");
-			break;
-		case FT_PIXEL_MODE_GRAY:
-			if (developer_font.integer)
-				Con_DPrint("glyphinfo:   Pixel Mode: GRAY\n");
-			break;
-		default:
-			if (developer_font.integer)
-				Con_DPrintf("glyphinfo:   Pixel Mode: Unknown: %i\n", bmp->pixel_mode);
-			Mem_Free(data);
-			Con_Printf("ERROR: Unrecognized pixel mode for font %s size %f: %i\n", font->name, mapstart->size, bmp->pixel_mode);
-			return false;
-		}
-		for (y = 0; y < h; ++y)
-		{
-			dst = imagedata + y * pitch;
-			src = bmp->buffer + y * bmp->pitch;
-
 			switch (bmp->pixel_mode)
 			{
 			case FT_PIXEL_MODE_MONO:
-				dst += bytesPerPixel - 1; // shift to alpha byte
-				for (x = 0; x < bmp->width; x += 8)
-				{
-					unsigned char ch = *src++;
-					*dst = 255 * !!((ch & 0x80) >> 7); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x40) >> 6); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x20) >> 5); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x10) >> 4); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x08) >> 3); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x04) >> 2); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x02) >> 1); dst += bytesPerPixel;
-					*dst = 255 * !!((ch & 0x01) >> 0); dst += bytesPerPixel;
-				}
+				if (developer_font.integer)
+					Con_DPrint("glyphinfo:   Pixel Mode: MONO\n");
 				break;
 			case FT_PIXEL_MODE_GRAY2:
-				dst += bytesPerPixel - 1; // shift to alpha byte
-				for (x = 0; x < bmp->width; x += 4)
-				{
-					unsigned char ch = *src++;
-					*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-					*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-					*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-					*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-				}
+				if (developer_font.integer)
+					Con_DPrint("glyphinfo:   Pixel Mode: GRAY2\n");
 				break;
 			case FT_PIXEL_MODE_GRAY4:
-				dst += bytesPerPixel - 1; // shift to alpha byte
-				for (x = 0; x < bmp->width; x += 2)
-				{
-					unsigned char ch = *src++;
-					*dst = ( ((ch & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
-					*dst = ( ((ch & 0x0F) ) * 0x11); dst += bytesPerPixel;
-				}
+				if (developer_font.integer)
+					Con_DPrint("glyphinfo:   Pixel Mode: GRAY4\n");
 				break;
 			case FT_PIXEL_MODE_GRAY:
-				// in this case pitch should equal width
-				for (tp = 0; tp < bmp->pitch; ++tp)
-					dst[(bytesPerPixel - 1) + tp*bytesPerPixel] = src[tp]; // copy the grey value into the alpha bytes
-
-				//memcpy((void*)dst, (void*)src, bmp->pitch);
-				//dst += bmp->pitch;
+				if (developer_font.integer)
+					Con_DPrint("glyphinfo:   Pixel Mode: GRAY\n");
 				break;
 			default:
-				break;
+				if (developer_font.integer)
+					Con_DPrintf("glyphinfo:   Pixel Mode: Unknown: %i\n", bmp->pixel_mode);
+				Mem_Free(data);
+				Con_Printf("ERROR: Unrecognized pixel mode for font %s size %f: %i\n", font->name, mapstart->size, bmp->pixel_mode);
+				return false;
 			}
-		}
+			for (y = 0; y < h; ++y)
+			{
+				dst = imagedata + y * pitch;
+				src = bmp->buffer + y * bmp->pitch;
 
-		pad_l = gpad_l;
-		pad_r = gpad_r;
-		pad_t = gpad_t;
-		pad_b = gpad_b;
-		Font_Postprocess(font, imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+				switch (bmp->pixel_mode)
+				{
+				case FT_PIXEL_MODE_MONO:
+					dst += bytesPerPixel - 1; // shift to alpha byte
+					for (x = 0; x < bmp->width; x += 8)
+					{
+						unsigned char ch = *src++;
+						*dst = 255 * !!((ch & 0x80) >> 7); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x40) >> 6); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x20) >> 5); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x10) >> 4); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x08) >> 3); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x04) >> 2); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x02) >> 1); dst += bytesPerPixel;
+						*dst = 255 * !!((ch & 0x01) >> 0); dst += bytesPerPixel;
+					}
+					break;
+				case FT_PIXEL_MODE_GRAY2:
+					dst += bytesPerPixel - 1; // shift to alpha byte
+					for (x = 0; x < bmp->width; x += 4)
+					{
+						unsigned char ch = *src++;
+						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
+						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
+						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
+						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
+					}
+					break;
+				case FT_PIXEL_MODE_GRAY4:
+					dst += bytesPerPixel - 1; // shift to alpha byte
+					for (x = 0; x < bmp->width; x += 2)
+					{
+						unsigned char ch = *src++;
+						*dst = ( ((ch & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
+						*dst = ( ((ch & 0x0F) ) * 0x11); dst += bytesPerPixel;
+					}
+					break;
+				case FT_PIXEL_MODE_GRAY:
+					// in this case pitch should equal width
+					for (tp = 0; tp < bmp->pitch; ++tp)
+						dst[(bytesPerPixel - 1) + tp*bytesPerPixel] = src[tp]; // copy the grey value into the alpha bytes
+
+					//memcpy((void*)dst, (void*)src, bmp->pitch);
+					//dst += bmp->pitch;
+					break;
+				default:
+					break;
+				}
+			}
+
+			pad_l = gpad_l;
+			pad_r = gpad_r;
+			pad_t = gpad_t;
+			pad_b = gpad_b;
+			Font_Postprocess(font, imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+		}
 
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
@@ -1474,33 +1493,37 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		map->glyphs[mapch].image = false;
 	}
 
-	// create a texture from the data now
-
-	if (developer_font.integer > 100)
+	if (data)
 	{
-		// LordHavoc: why are we writing this?  And why not write it as TGA using the appropriate function?
-		// view using `display -depth 8 -size 512x512 name_page.rgba` (be sure to use a correct -size parameter)
-		dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%u.rgba", font->name, (unsigned)map->start/FONT_CHARS_PER_MAP);
-		FS_WriteFile(map_identifier, data, pitch * FONT_CHAR_LINES * map->glyphSize);
-	}
-	dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%u", font->name, (unsigned)map->start/FONT_CHARS_PER_MAP);
+		int w = map->glyphSize * FONT_CHARS_PER_LINE;
+		int h = map->glyphSize * FONT_CHAR_LINES;
+		rtexture_t *tex;
+		// abuse the Draw_CachePic system to keep track of this texture
+		tex = R_LoadTexture2D(drawtexturepool, map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0), -1, NULL);
+		// if tex is NULL for any reason, the pic->tex will remain set to r_texture_notexture
+		if (tex)
+			map->pic->tex = tex;
 
-	// probably use bytesPerPixel here instead?
-	if (r_font_use_alpha_textures.integer)
-	{
-		map->texture = R_LoadTexture2D(font_texturepool, map_identifier,
-					       map->glyphSize * FONT_CHARS_PER_LINE,
-					       map->glyphSize * FONT_CHAR_LINES,
-					       data, TEXTYPE_ALPHA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, -1, NULL);
-	} else {
-		map->texture = R_LoadTexture2D(font_texturepool, map_identifier,
-					       map->glyphSize * FONT_CHARS_PER_LINE,
-					       map->glyphSize * FONT_CHAR_LINES,
-					       data, TEXTYPE_RGBA, TEXF_ALPHA /*gone: | TEXF_ALWAYSPRECACHE*/ /* | TEXF_MIPMAP*/, -1, NULL);
+		if (r_font_diskcache.integer >= 1)
+		{
+			// swap to BGRA for tga writing...
+			int s = w * h;
+			int x;
+			int b;
+			for (x = 0;x < s;x++)
+			{
+				b = data[x*4+0];
+				data[x*4+0] = data[x*4+2];
+				data[x*4+2] = b;
+			}
+			Image_WriteTGABGRA(va("%s.tga", map_identifier), w, h, data);
+			if (r_font_compress.integer && qglGetCompressedTexImageARB && tex)
+				R_SaveTextureDDSFile(tex, va("dds/%s.dds", map_identifier), true, true);
+		}
+		Mem_Free(data);
 	}
 
-	Mem_Free(data);
-	if (!map->texture)
+	if (map->pic->tex == r_texture_notexture)
 	{
 		// if the first try isn't successful, keep it with a broken texture
 		// otherwise we retry to load it every single frame where ft2 rendering is used

@@ -53,7 +53,7 @@ static cachepic_t *cachepichash[CACHEPICHASHSIZE];
 static cachepic_t cachepics[MAX_CACHED_PICS];
 static int numcachepics;
 
-static rtexturepool_t *drawtexturepool;
+rtexturepool_t *drawtexturepool;
 
 static const unsigned char concharimage[FONT_FILESIZE] =
 {
@@ -1721,7 +1721,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 							break;
 						}
 					}
-					R_SetupShader_Generic(map->texture, NULL, GL_MODULATE, 1);
+					R_SetupShader_Generic(map->pic->tex, NULL, GL_MODULATE, 1);
 				}
 
 				mapch = ch - map->start;
