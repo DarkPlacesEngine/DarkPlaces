@@ -836,26 +836,29 @@ void VID_ClearExtensions(void)
 
 void VID_CheckExtensions(void)
 {
-	if (!GL_CheckExtension("1.1", opengl110funcs, NULL, false))
+	if (!GL_CheckExtension("glbase", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found");
-	vid.support.gl20shaders = GL_CheckExtension("2.0", gl20shaderfuncs, "-noshaders", false);
+	vid.support.gl20shaders = GL_CheckExtension("glshaders", gl20shaderfuncs, "-noshaders", true);
 
 	CHECKGLERROR
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
-	// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
-	vid.support.gl20shaders130 = GL_CheckExtension("2.0", glsl130funcs, "-noglsl130", false);
-	if(vid.support.gl20shaders130)
+	if (vid.support.gl20shaders)
 	{
-		char *s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
-		if(!s || atof(s) < 1.30 - 0.00001)
-			vid.support.gl20shaders130 = 0;
+		// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
+		vid.support.gl20shaders130 = GL_CheckExtension("glshaders130", glsl130funcs, "-noglsl130", true);
+		if(vid.support.gl20shaders130)
+		{
+			char *s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
+			if(!s || atof(s) < 1.30 - 0.00001)
+				vid.support.gl20shaders130 = 0;
+		}
+		if(vid.support.gl20shaders130)
+			Con_DPrintf("Using GLSL 1.30\n");
+		else
+			Con_DPrintf("Using GLSL 1.00\n");
 	}
-	if(vid.support.gl20shaders130)
-		Con_DPrintf("Using GLSL 1.30\n");
-	else
-		Con_DPrintf("Using GLSL 1.00\n");
 
 	// GL drivers generally prefer GL_BGRA
 	vid.forcetextype = GL_BGRA;
@@ -872,10 +875,10 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
-	vid.support.ati_separate_stencil = GL_CheckExtension("2.0", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
+	vid.support.ati_separate_stencil = GL_CheckExtension("separatestencil", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
-	vid.support.ext_draw_range_elements = GL_CheckExtension("1.2", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
+	vid.support.ext_draw_range_elements = GL_CheckExtension("drawrangeelements", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 	vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
