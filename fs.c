@@ -420,13 +420,13 @@ static const char* shfolderdllnames [] =
 static dllhandle_t shfolder_dll = NULL;
 
 const GUID qFOLDERID_SavedGames = {0x4C5C32FF, 0xBB9D, 0x43b0, {0xB5, 0xB4, 0x2D, 0x72, 0xE5, 0x4E, 0xAA, 0xA4}}; 
-#define qREFKNOWNFOLDERID GUID
+#define qREFKNOWNFOLDERID const GUID *
 #define qKF_FLAG_CREATE 0x8000
 #define qKF_FLAG_NO_ALIAS 0x1000
 static HRESULT (WINAPI *qSHGetKnownFolderPath) (qREFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR *ppszPath);
 static dllfunction_t shell32funcs[] =
 {
-	{"SHGetKnownFolderPathA", (void **) &qSHGetKnownFolderPath},
+	{"SHGetKnownFolderPath", (void **) &qSHGetKnownFolderPath},
 	{NULL, NULL}
 };
 static const char* shell32dllnames [] =
@@ -1681,6 +1681,13 @@ static void FS_ListGameDirs(void)
 }
 
 /*
+#ifdef WIN32
+#pragma comment(lib, "shell32.lib")
+#include <ShlObj.h>
+#endif
+*/
+
+/*
 ================
 FS_Init_SelfPack
 ================
@@ -1797,7 +1804,14 @@ int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsiz
 		{
 			savedgamesdir[0] = 0;
 			qCoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-			if (qSHGetKnownFolderPath(qFOLDERID_SavedGames, qKF_FLAG_CREATE | qKF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
+/*
+#ifdef __cplusplus
+			if (SHGetKnownFolderPath(FOLDERID_SavedGames, KF_FLAG_CREATE | KF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
+#else
+			if (SHGetKnownFolderPath(&FOLDERID_SavedGames, KF_FLAG_CREATE | KF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
+#endif
+*/
+			if (qSHGetKnownFolderPath(&qFOLDERID_SavedGames, qKF_FLAG_CREATE | qKF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
 			{
 				memset(savedgamesdir, 0, sizeof(savedgamesdir));
 #if _MSC_VER >= 1400
