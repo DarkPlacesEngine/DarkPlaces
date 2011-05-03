@@ -34,7 +34,7 @@ struct ft2_font_map_s
 	float                  intSize;
 	int                    glyphSize;
 
-	rtexture_t            *texture;
+	cachepic_t            *pic;
 	qboolean               static_tex;
 	glyph_slot_t           glyphs[FONT_CHARS_PER_MAP];
 

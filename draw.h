@@ -190,5 +190,7 @@ void DrawQ_RecalcView(void); // use this when changing r_refdef.view.* from e.g.
 
 void R_DrawGamma(void);
 
+extern rtexturepool_t *drawtexturepool; // used by ft2.c
+
 #endif
 
