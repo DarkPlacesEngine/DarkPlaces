@@ -1364,11 +1364,14 @@ void FS_Rescan (void)
 	// gamedirname1 (typically id1)
 	FS_AddGameHierarchy (gamedirname1);
 	// update the com_modname (used for server info)
-	strlcpy(com_modname, gamedirname1, sizeof(com_modname));
+	if (gamedirname2 && gamedirname2[0])
+		strlcpy(com_modname, gamedirname2, sizeof(com_modname));
+	else
+		strlcpy(com_modname, gamedirname1, sizeof(com_modname));
 
 	// add the game-specific path, if any
 	// (only used for mission packs and the like, which should set fs_modified)
-	if (gamedirname2)
+	if (gamedirname2 && gamedirname2[0])
 	{
 		fs_modified = true;
 		FS_AddGameHierarchy (gamedirname2);
