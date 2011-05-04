@@ -20,7 +20,6 @@ extern cvar_t r_transparent_sortarraysize;
 extern cvar_t r_transparent_sortmaxdist;
 
 float mqt_viewplanedist;
-float mqt_viewmindist;
 float mqt_viewmaxdist;
 meshqueue_t *mqt_array;
 int mqt_count;
@@ -31,7 +30,6 @@ void R_MeshQueue_BeginScene(void)
 	mqt_count = 0;
 	mqt_viewplanedist = DotProduct(r_refdef.view.origin, r_refdef.view.forward);
 	mqt_viewmaxdist = 0;
-	mqt_viewmindist = 999999999;
 }
 
 void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
@@ -57,7 +55,6 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const enti
 	mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
-	mqt_viewmindist = min(mqt_viewmindist, mq->dist);
 }
 
 void R_MeshQueue_RenderTransparent(void)
@@ -95,11 +92,11 @@ void R_MeshQueue_RenderTransparent(void)
 	memset(trans_hash, 0, sizeof(trans_hash) * trans_sortarraysize);
 	for (i = 0; i < trans_sortarraysize; i++)
 		trans_hashpointer[i] = &trans_hash[i];
-	distscale = (trans_sortarraysize - 1) / max( min(mqt_viewmaxdist, r_transparent_sortmaxdist.integer) - mqt_viewmindist, 64 );
+	distscale = (trans_sortarraysize - 1) / min(mqt_viewmaxdist, r_transparent_sortmaxdist.integer);
 	maxhashindex = trans_sortarraysize - 1;
 	for (i = 0, mqt = mqt_array; i < mqt_count; i++, mqt++)
 	{
-		hashindex = bound(0, (int)(min(mqt->dist - mqt_viewmindist, r_transparent_sortmaxdist.integer) * distscale - 0.1), maxhashindex);
+		hashindex = bound(0, (int)(min(mqt->dist, r_transparent_sortmaxdist.integer) * distscale), maxhashindex);
 		// link to tail of hash chain (to preserve render order)
 		mqt->next = NULL;
 		*trans_hashpointer[hashindex] = mqt;
