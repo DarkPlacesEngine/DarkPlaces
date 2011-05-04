@@ -1452,6 +1452,15 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			pad_b = gpad_b;
 			Font_Postprocess(font, imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
 		}
+		else
+		{
+			pad_l = gpad_l;
+			pad_r = gpad_r;
+			pad_t = gpad_t;
+			pad_b = gpad_b;
+			Font_Postprocess(font, NULL, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+		}
+
 
 		// now fill map->glyphs[ch - map->start]
 		mapglyph = &map->glyphs[mapch];
