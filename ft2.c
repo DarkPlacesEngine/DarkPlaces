@@ -667,11 +667,13 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
 {
 	int x, y;
+
+	// calculate gauss table
 	Font_Postprocess_Update(fnt, bpp, w, h);
+
 	if(imagedata)
 	{
 		// enlarge buffer
-
 		// perform operation, not exceeding the passed padding values,
 		// but possibly reducing them
 		*pad_l = min(*pad_l, pp.padding_l);
@@ -679,8 +681,6 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 		*pad_t = min(*pad_t, pp.padding_t);
 		*pad_b = min(*pad_b, pp.padding_b);
 
-		// calculate gauss table
-		
 		// outline the font (RGBA only)
 		if(bpp == 4 && (pp.outline > 0 || pp.blur > 0 || pp.shadowx != 0 || pp.shadowy != 0 || pp.shadowz != 0)) // we can only do this in BGRA
 		{
@@ -766,6 +766,15 @@ void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int 
 					//imagedata[x * bpp + pitch * y + (bpp - 1)] |= 0x80;
 				}
 		}
+	}
+	else if(pitch)
+	{
+		// perform operation, not exceeding the passed padding values,
+		// but possibly reducing them
+		*pad_l = min(*pad_l, pp.padding_l);
+		*pad_r = min(*pad_r, pp.padding_r);
+		*pad_t = min(*pad_t, pp.padding_t);
+		*pad_b = min(*pad_b, pp.padding_b);
 	}
 	else
 	{
