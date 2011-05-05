@@ -1875,6 +1875,12 @@ int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsiz
 	}
 #endif
 
+
+#ifdef WIN32
+	// historical behavior...
+	if (userdirmode == USERDIRMODE_NOHOME && strcmp(gamedirname1, "id1"))
+		return 0; // don't bother checking if the basedir folder is writable, it's annoying...  unless it is Quake on Windows where NOHOME is the default preferred and we have to check for an error case
+#endif
 	// see if we can write to this path (note: won't create path)
 #if _MSC_VER >= 1400
 	_sopen_s(&fd, va("%s%s/config.cfg", userdir, gamedirname1), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
