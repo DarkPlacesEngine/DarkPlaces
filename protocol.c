@@ -2489,7 +2489,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			break;
 		case 4:
 			if (!cl.engineskeletonobjects)
-				cl.engineskeletonobjects = Mem_Alloc(cls.levelmempool, sizeof(*cl.engineskeletonobjects) * MAX_EDICTS);
+				cl.engineskeletonobjects = (skeleton_t *) Mem_Alloc(cls.levelmempool, sizeof(*cl.engineskeletonobjects) * MAX_EDICTS);
 			skeleton = &cl.engineskeletonobjects[number];
 			modelindex = MSG_ReadShort();
 			model = CL_GetModelByIndex(modelindex);
@@ -2499,7 +2499,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			if (!skeleton->relativetransforms || skeleton->model != model)
 			{
 				skeleton->model = model;
-				skeleton->relativetransforms = Mem_Realloc(cls.levelmempool, skeleton->relativetransforms, sizeof(*skeleton->relativetransforms) * skeleton->model->num_bones);
+				skeleton->relativetransforms = (matrix4x4_t *) Mem_Realloc(cls.levelmempool, skeleton->relativetransforms, sizeof(*skeleton->relativetransforms) * skeleton->model->num_bones);
 				for (bonenum = 0;bonenum < model->num_bones;bonenum++)
 					skeleton->relativetransforms[bonenum] = identitymatrix;
 			}
