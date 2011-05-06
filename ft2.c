@@ -1224,6 +1224,13 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 	// create a cachepic_t from the data now, or reuse an existing one
 	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
+	if (developer_font.integer)
+	{
+		if (map->pic->tex == r_texture_notexture)
+			Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
+		else
+			Con_Printf("Using cached font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
+	}
 
 	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
