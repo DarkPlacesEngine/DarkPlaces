@@ -1099,13 +1099,6 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 extern cvar_t r_mipskins;
 extern cvar_t r_mipnormalmaps;
 
-typedef struct skeleton_s
-{
-	const dp_model_t *model;
-	matrix4x4_t *relativetransforms;
-}
-skeleton_t;
-
 typedef struct skinfileitem_s
 {
 	struct skinfileitem_s *next;

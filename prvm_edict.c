@@ -1638,6 +1638,7 @@ void PRVM_FindOffsets(void)
 	prog->fieldoffsets.yaw_speed                      = PRVM_ED_FindFieldOffset("yaw_speed");
 	prog->fieldoffsets.bouncefactor                   = PRVM_ED_FindFieldOffset("bouncefactor");
 	prog->fieldoffsets.bouncestop                     = PRVM_ED_FindFieldOffset("bouncestop");
+	prog->fieldoffsets.sendcomplexanimation           = PRVM_ED_FindFieldOffset("sendcomplexanimation");
 
 	prog->fieldoffsets.solid                          = PRVM_ED_FindFieldOffset("solid");
 	prog->fieldoffsets.movetype                       = PRVM_ED_FindFieldOffset("movetype");
