@@ -248,6 +248,7 @@ typedef struct prvm_prog_fieldoffsets_s
 	int yaw_speed; // ssqc / csqc
 	int bouncefactor; // ssqc
 	int bouncestop; // ssqc
+	int sendcomplexanimation; // ssqc
 
 	int solid; // ssqc / csqc (physics)
 	int movetype; // ssqc / csqc (physics)

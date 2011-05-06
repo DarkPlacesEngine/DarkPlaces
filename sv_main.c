@@ -311,6 +311,18 @@ prvm_required_field_t reqfields[] =
 	{ev_vector, "glowmod"},
 	{ev_vector, "movement"},
 	{ev_vector, "punchvector"},
+	{ev_float, "frame"},
+	{ev_float, "frame1time"},
+	{ev_float, "frame2"},
+	{ev_float, "frame2time"},
+	{ev_float, "frame3"},
+	{ev_float, "frame3time"},
+	{ev_float, "frame4"},
+	{ev_float, "frame4time"},
+	{ev_float, "lerpfrac"},
+	{ev_float, "lerpfrac3"},
+	{ev_float, "lerpfrac4"},
+	{ev_float, "sendcomplexanimation"},
 
 	// physics
 	//{ev_float, "solid"},
@@ -1228,6 +1240,25 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 		cs->flags |= RENDER_COLORMAPPED;
 	if (cs->viewmodelforclient)
 		cs->flags |= RENDER_VIEWMODEL; // show relative to the view
+
+	if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.sendcomplexanimation)->_float)
+	{
+		cs->flags |= RENDER_COMPLEXANIMATION;
+		if (PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.skeletonindex)->_float >= 1)
+			cs->skeletonobject = ent->priv.server->skeleton;
+		cs->framegroupblend[0].frame = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame)->_float;
+		cs->framegroupblend[1].frame = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame2)->_float;
+		cs->framegroupblend[2].frame = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame3)->_float;
+		cs->framegroupblend[3].frame = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame4)->_float;
+		cs->framegroupblend[0].start = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame1time)->_float;
+		cs->framegroupblend[1].start = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame2time)->_float;
+		cs->framegroupblend[2].start = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame3time)->_float;
+		cs->framegroupblend[3].start = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.frame4time)->_float;
+		cs->framegroupblend[1].lerp = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.lerpfrac)->_float;
+		cs->framegroupblend[2].lerp = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.lerpfrac3)->_float;
+		cs->framegroupblend[3].lerp = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.lerpfrac4)->_float;
+		cs->framegroupblend[0].lerp = 1.0f - cs->framegroupblend[1].lerp - cs->framegroupblend[2].lerp - cs->framegroupblend[3].lerp;
+	}
 
 	cs->light[0] = light[0];
 	cs->light[1] = light[1];

@@ -2232,10 +2232,79 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			MSG_WriteByte(msg, s->glowmod[1]);
 			MSG_WriteByte(msg, s->glowmod[2]);
 		}
+		if (bits & E5_COMPLEXANIMATION)
+		{
+			if (s->skeletonobject.model && s->skeletonobject.relativetransforms)
+			{
+				int numbones = s->skeletonobject.model->num_bones;
+				int bonenum;
+				short pose6s[6];
+				MSG_WriteByte(msg, 4);
+				MSG_WriteShort(msg, s->modelindex);
+				MSG_WriteByte(msg, numbones);
+				for (bonenum = 0;bonenum < numbones;bonenum++)
+				{
+					Matrix4x4_ToBonePose6s(s->skeletonobject.relativetransforms + bonenum, 64, pose6s);
+					MSG_WriteShort(msg, pose6s[0]);
+					MSG_WriteShort(msg, pose6s[1]);
+					MSG_WriteShort(msg, pose6s[2]);
+					MSG_WriteShort(msg, pose6s[3]);
+					MSG_WriteShort(msg, pose6s[4]);
+					MSG_WriteShort(msg, pose6s[5]);
+				}
+			}
+			else if (s->framegroupblend[3].lerp > 0)
+			{
+				MSG_WriteByte(msg, 3);
+				MSG_WriteShort(msg, s->framegroupblend[0].frame);
+				MSG_WriteShort(msg, s->framegroupblend[1].frame);
+				MSG_WriteShort(msg, s->framegroupblend[2].frame);
+				MSG_WriteShort(msg, s->framegroupblend[3].frame);
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[2].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[3].start) * 1000.0));
+				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[3].lerp * 255.0f);
+			}
+			else if (s->framegroupblend[2].lerp > 0)
+			{
+				MSG_WriteByte(msg, 2);
+				MSG_WriteShort(msg, s->framegroupblend[0].frame);
+				MSG_WriteShort(msg, s->framegroupblend[1].frame);
+				MSG_WriteShort(msg, s->framegroupblend[2].frame);
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[2].start) * 1000.0));
+				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+			}
+			else if (s->framegroupblend[1].lerp > 0)
+			{
+				MSG_WriteByte(msg, 1);
+				MSG_WriteShort(msg, s->framegroupblend[0].frame);
+				MSG_WriteShort(msg, s->framegroupblend[1].frame);
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
+				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+			}
+			else
+			{
+				MSG_WriteByte(msg, 0);
+				MSG_WriteShort(msg, s->framegroupblend[0].frame);
+				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
+			}
+		}
 	}
 
 	ENTITYSIZEPROFILING_END(msg, s->number);
 }
+
+extern dp_model_t *CL_GetModelByIndex(int modelindex);
 
 static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 {
@@ -2350,6 +2419,107 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 		s->glowmod[1] = MSG_ReadByte();
 		s->glowmod[2] = MSG_ReadByte();
 	}
+	if (bits & E5_COMPLEXANIMATION)
+	{
+		skeleton_t *skeleton;
+		const dp_model_t *model;
+		int modelindex;
+		int type;
+		int bonenum;
+		int numbones;
+		short pose6s[6];
+		type = MSG_ReadByte();
+		switch(type)
+		{
+		case 0:
+			s->framegroupblend[0].frame = MSG_ReadShort();
+			s->framegroupblend[1].frame = 0;
+			s->framegroupblend[2].frame = 0;
+			s->framegroupblend[3].frame = 0;
+			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = 0;
+			s->framegroupblend[2].start = 0;
+			s->framegroupblend[3].start = 0;
+			s->framegroupblend[0].lerp = 1;
+			s->framegroupblend[1].lerp = 0;
+			s->framegroupblend[2].lerp = 0;
+			s->framegroupblend[3].lerp = 0;
+			break;
+		case 1:
+			s->framegroupblend[0].frame = MSG_ReadShort();
+			s->framegroupblend[1].frame = MSG_ReadShort();
+			s->framegroupblend[2].frame = 0;
+			s->framegroupblend[3].frame = 0;
+			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[2].start = 0;
+			s->framegroupblend[3].start = 0;
+			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[1].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[2].lerp = 0;
+			s->framegroupblend[3].lerp = 0;
+			break;
+		case 2:
+			s->framegroupblend[0].frame = MSG_ReadShort();
+			s->framegroupblend[1].frame = MSG_ReadShort();
+			s->framegroupblend[2].frame = MSG_ReadShort();
+			s->framegroupblend[3].frame = 0;
+			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[2].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[3].start = 0;
+			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[1].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[2].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[3].lerp = 0;
+			break;
+		case 3:
+			s->framegroupblend[0].frame = MSG_ReadShort();
+			s->framegroupblend[1].frame = MSG_ReadShort();
+			s->framegroupblend[2].frame = MSG_ReadShort();
+			s->framegroupblend[3].frame = MSG_ReadShort();
+			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[2].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[3].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[1].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[2].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			s->framegroupblend[3].lerp = MSG_ReadByte() * (1.0f / 255.0f);
+			break;
+		case 4:
+			if (!cl.engineskeletonobjects)
+				cl.engineskeletonobjects = Mem_Alloc(cls.levelmempool, sizeof(*cl.engineskeletonobjects) * MAX_EDICTS);
+			skeleton = &cl.engineskeletonobjects[number];
+			modelindex = MSG_ReadShort();
+			model = CL_GetModelByIndex(modelindex);
+			numbones = MSG_ReadByte();
+			if (model && numbones != model->num_bones)
+				Host_Error("E5_COMPLEXANIMATION: model has different number of bones than network packet describes\n");
+			if (!skeleton->relativetransforms || skeleton->model != model)
+			{
+				skeleton->model = model;
+				skeleton->relativetransforms = Mem_Realloc(cls.levelmempool, skeleton->relativetransforms, sizeof(*skeleton->relativetransforms) * skeleton->model->num_bones);
+				for (bonenum = 0;bonenum < model->num_bones;bonenum++)
+					skeleton->relativetransforms[bonenum] = identitymatrix;
+			}
+			for (bonenum = 0;bonenum < numbones;bonenum++)
+			{
+				pose6s[0] = (short)MSG_ReadShort();
+				pose6s[1] = (short)MSG_ReadShort();
+				pose6s[2] = (short)MSG_ReadShort();
+				pose6s[3] = (short)MSG_ReadShort();
+				pose6s[4] = (short)MSG_ReadShort();
+				pose6s[5] = (short)MSG_ReadShort();
+				Matrix4x4_FromBonePose6s(skeleton->relativetransforms + bonenum, 1.0f / 64.0f, pose6s);
+			}
+			s->skeletonobject = *skeleton;
+			break;
+		default:
+			Host_Error("E5_COMPLEXANIMATION: Parse error - unknown type %i\n", type);
+			break;
+		}
+	}
 
 
 	if (developer_networkentities.integer >= 2)
@@ -2448,6 +2618,8 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 			bits |= E5_COLORMOD;
 		if (o->glowmod[0] != n->glowmod[0] || o->glowmod[1] != n->glowmod[1] || o->glowmod[2] != n->glowmod[2])
 			bits |= E5_GLOWMOD;
+		if (n->flags & RENDER_COMPLEXANIMATION)
+			bits |= E5_COMPLEXANIMATION;
 	}
 	else
 		if (o->active == ACTIVE_NETWORK)

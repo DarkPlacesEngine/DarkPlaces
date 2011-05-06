@@ -333,6 +333,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_LOWPRECISION 16 // send as low precision coordinates to save bandwidth
 #define RENDER_COLORMAPPED 32
 #define RENDER_NOCULL 64 // do not cull this entity with r_cullentities
+#define RENDER_COMPLEXANIMATION 128
 
 #define RENDER_SHADOW 65536 // cast shadow
 #define RENDER_LIGHT 131072 // receive light
@@ -343,6 +344,28 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_ADDITIVE 2097152
 #define RENDER_DOUBLESIDED 4194304
 
+#define MAX_FRAMEGROUPBLENDS 4
+typedef struct framegroupblend_s
+{
+	// animation number and blend factor
+	// (for most models this is the frame number)
+	int frame;
+	float lerp;
+	// time frame began playing (for framegroup animations)
+	double start;
+}
+framegroupblend_t;
+
+struct matrix4x4_s;
+struct model_s;
+
+typedef struct skeleton_s
+{
+	const struct model_s *model;
+	struct matrix4x4_s *relativetransforms;
+}
+skeleton_t;
+
 typedef enum entity_state_active_e
 {
 	ACTIVE_NOT = 0,
@@ -351,7 +374,7 @@ typedef enum entity_state_active_e
 }
 entity_state_active_t;
 
-// this is 96 bytes
+// this was 96 bytes, now 168 bytes (32bit) or 176 bytes (64bit)
 typedef struct entity_state_s
 {
 	// ! means this is not sent to client
@@ -385,6 +408,9 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	unsigned char glowmod[3];
+	// LordHavoc: very big data here :(
+	framegroupblend_t framegroupblend[4];
+	skeleton_t skeletonobject;
 }
 entity_state_t;
 
@@ -713,8 +739,13 @@ void EntityFrame4_CL_ReadFrame(void);
 
 // byte[3] = s->glowmod[0], s->glowmod[1], s->glowmod[2]
 #define E5_GLOWMOD (1<<24)
-// unused
-#define E5_UNUSED25 (1<<25)
+// byte type=0 short frames[1] short times[1]
+// byte type=1 short frames[2] short times[2] byte lerps[2]
+// byte type=2 short frames[3] short times[3] byte lerps[3]
+// byte type=3 short frames[4] short times[4] byte lerps[4]
+// byte type=4 short modelindex byte numbones {short pose6s[6]}
+// see also RENDER_COMPLEXANIMATION
+#define E5_COMPLEXANIMATION (1<<25)
 // unused
 #define E5_UNUSED26 (1<<26)
 // unused

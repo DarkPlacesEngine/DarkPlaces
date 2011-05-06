@@ -291,18 +291,6 @@ typedef struct dlight_s
 }
 dlight_t;
 
-#define MAX_FRAMEGROUPBLENDS 4
-typedef struct framegroupblend_s
-{
-	// animation number and blend factor
-	// (for most models this is the frame number)
-	int frame;
-	float lerp;
-	// time frame began playing (for framegroup animations)
-	double start;
-}
-framegroupblend_t;
-
 // this is derived from processing of the framegroupblend array
 // note: technically each framegroupblend can produce two of these, but that
 // never happens in practice because no one blends between more than 2
@@ -1274,6 +1262,9 @@ typedef struct client_state_s
 	// freed on each level change
 	size_t buildlightmapmemorysize;
 	unsigned char *buildlightmapmemory;
+
+	// used by EntityState5_ReadUpdate
+	skeleton_t *engineskeletonobjects;
 }
 client_state_t;
 
