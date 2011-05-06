@@ -1098,7 +1098,17 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	}
 
 	// animation lerp
-	if (e->render.framegroupblend[0].frame == frame)
+	e->render.skeleton = NULL;
+	if (e->render.flags & RENDER_COMPLEXANIMATION)
+	{
+		e->render.framegroupblend[0] = e->state_current.framegroupblend[0];
+		e->render.framegroupblend[1] = e->state_current.framegroupblend[1];
+		e->render.framegroupblend[2] = e->state_current.framegroupblend[2];
+		e->render.framegroupblend[3] = e->state_current.framegroupblend[3];
+		if (e->state_current.skeletonobject.model && e->state_current.skeletonobject.relativetransforms)
+			e->render.skeleton = &e->state_current.skeletonobject;
+	}
+	else if (e->render.framegroupblend[0].frame == frame)
 	{
 		// update frame lerp fraction
 		e->render.framegroupblend[0].lerp = 1;
