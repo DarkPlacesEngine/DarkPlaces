@@ -1211,16 +1211,16 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 
 	// create a totally unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
 	dpsnprintf(map_identifier, sizeof(map_identifier),
-		"%s_cache_%g_%u_%g_%g_%g_%g_%g_%u",
+		"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u",
 		font->name,
-		mapstart->intSize,
-		load_flags,
-		font->settings->blur,
-		font->settings->outline,
-		font->settings->shadowx,
-		font->settings->shadowy,
-		font->settings->shadowz,
-		(unsigned)map->start/FONT_CHARS_PER_MAP);
+		(double) mapstart->intSize,
+		(int) load_flags,
+		(double) font->settings->blur,
+		(double) font->settings->outline,
+		(double) font->settings->shadowx,
+		(double) font->settings->shadowy,
+		(double) font->settings->shadowz,
+		(unsigned) map->start/FONT_CHARS_PER_MAP);
 
 	// create a cachepic_t from the data now, or reuse an existing one
 	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
