@@ -39,6 +39,7 @@ cvar_t r_font_size_snapping = {CVAR_SAVE, "r_font_size_snapping", "1", "stick to
 cvar_t r_font_kerning = {CVAR_SAVE, "r_font_kerning", "1", "Use kerning if available"};
 cvar_t r_font_diskcache = {CVAR_SAVE, "r_font_diskcache", "0", "save font textures to disk for future loading rather than generating them every time"};
 cvar_t r_font_compress = {CVAR_SAVE, "r_font_compress", "0", "use texture compression on font textures to save video memory"};
+cvar_t r_font_nonpoweroftwo = {CVAR_SAVE, "r_font_nonpoweroftwo", "0", "use nonpoweroftwo textures for font (saves memory, slower)"};
 cvar_t developer_font = {CVAR_SAVE, "developer_font", "0", "prints debug messages about fonts"};
 
 /*
@@ -334,6 +335,7 @@ void font_newmap(void)
 
 void Font_Init(void)
 {
+	Cvar_RegisterVariable(&r_font_nonpoweroftwo);
 	Cvar_RegisterVariable(&r_font_disable_freetype);
 	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
@@ -828,7 +830,9 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
-	temp.glyphSize = CeilPowerOf2(size*2 + max(gpad_l + gpad_r, gpad_t + gpad_b));
+	temp.glyphSize = size*2 + max(gpad_l + gpad_r, gpad_t + gpad_b);
+	if (!(r_font_nonpoweroftwo.integer && vid.support.arb_texture_non_power_of_two))
+		temp.glyphSize = CeilPowerOf2(temp.glyphSize);
 	temp.sfx = (1.0/64.0)/(double)size;
 	temp.sfy = (1.0/64.0)/(double)size;
 	temp.intSize = -1; // negative value: LoadMap must search now :)
