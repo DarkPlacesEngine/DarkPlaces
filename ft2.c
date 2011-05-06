@@ -1220,7 +1220,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		(double) font->settings->shadowx,
 		(double) font->settings->shadowy,
 		(double) font->settings->shadowz,
-		(unsigned) map->start/FONT_CHARS_PER_MAP);
+		(unsigned) mapidx);
 
 	// create a cachepic_t from the data now, or reuse an existing one
 	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
