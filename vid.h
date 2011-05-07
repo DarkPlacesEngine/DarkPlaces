@@ -99,6 +99,10 @@ typedef struct viddef_s
 	qboolean stereobuffer;
 	int samples;
 	qboolean stencil;
+	qboolean sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
+	qboolean sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
+	qboolean sRGBcapable2D; // whether 2D rendering can be sRGB corrected (renderpath, v_hwgamma)
+	qboolean sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath, v_hwgamma)
 
 	renderpath_t renderpath;
 	qboolean forcevbo; // some renderpaths can not operate without it
