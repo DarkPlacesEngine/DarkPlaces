@@ -476,6 +476,14 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 .float button6;
 .float button7;
 .float button8;
+.float button9;
+.float button10;
+.float button11;
+.float button12;
+.float button13;
+.float button14;
+.float button15;
+.float button16;
 //description:
 //set to the state of the +button3, +button4, +button5, +button6, +button7, and +button8 buttons from the client, this does not involve protocol changes (the extra 6 button bits were simply not used).
 //the exact mapping of protocol button bits on the server is:
@@ -583,11 +591,11 @@ float(float a) tan = #475; // returns tangent value (which is simply sin(a)/cos(
 //NOTE: copying a string-typed autocvar to another variable/field, and then
 //changing the cvar or returning from progs is UNDEFINED. Writing to autocvar
 //globals is UNDEFINED.  Accessing autocvar globals after cvar_set()ing that
-//cvar is IMPLEMENTATION DEFINED (an implementation may either yield the
-//previous, or the current, value). Whether autocvar globals, after restoring
-//a savegame, have the cvar's current value, or the original value at time of
-//saving, is UNDEFINED. Restoring a savegame however must not restore the
-//cvar values themselves.
+//cvar in the same frame is IMPLEMENTATION DEFINED (an implementation may
+//either yield the previous, or the current, value). Whether autocvar globals,
+//after restoring a savegame, have the cvar's current value, or the original
+//value at time of saving, is UNDEFINED. Restoring a savegame however must not
+//restore the cvar values themselves.
 //In case the cvar does NOT exist, then it is automatically created with the
 //value of the autocvar initializer, if given. This is possible with e.g.
 //frikqcc and fteqcc the following way:
