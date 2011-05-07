@@ -5379,8 +5379,7 @@ static void R_Water_StartFrame(void)
 
 	// set waterwidth and waterheight to the water resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	waterwidth = (int)bound(1, vid.width * r_water_resolutionmultiplier.value, vid.width);
-	waterheight = (int)bound(1, vid.height * r_water_resolutionmultiplier.value, vid.height);
+	R_GetScaledViewSize(bound(1, vid.width * r_water_resolutionmultiplier.value, vid.width), bound(1, vid.height * r_water_resolutionmultiplier.value, vid.height), &waterwidth, &waterheight);
 
 	// calculate desired texture sizes
 	// can't use water if the card does not support the texture size
@@ -5426,17 +5425,20 @@ static void R_Water_StartFrame(void)
 
 	if (r_waterstate.texturewidth)
 	{
+		int scaledwidth, scaledheight;
+
 		r_waterstate.enabled = true;
 
 		// when doing a reduced render (HDR) we want to use a smaller area
 		r_waterstate.waterwidth = (int)bound(1, r_refdef.view.width * r_water_resolutionmultiplier.value, r_refdef.view.width);
 		r_waterstate.waterheight = (int)bound(1, r_refdef.view.height * r_water_resolutionmultiplier.value, r_refdef.view.height);
+		R_GetScaledViewSize(r_waterstate.waterwidth, r_waterstate.waterheight, &scaledwidth, &scaledheight);
 
 		// set up variables that will be used in shader setup
-		r_waterstate.screenscale[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
-		r_waterstate.screenscale[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
-		r_waterstate.screencenter[0] = 0.5f * (float)r_waterstate.waterwidth / (float)r_waterstate.texturewidth;
-		r_waterstate.screencenter[1] = 0.5f * (float)r_waterstate.waterheight / (float)r_waterstate.textureheight;
+		r_waterstate.screenscale[0] = 0.5f * (float)scaledwidth / (float)r_waterstate.texturewidth;
+		r_waterstate.screenscale[1] = 0.5f * (float)scaledheight / (float)r_waterstate.textureheight;
+		r_waterstate.screencenter[0] = 0.5f * (float)scaledwidth / (float)r_waterstate.texturewidth;
+		r_waterstate.screencenter[1] = 0.5f * (float)scaledheight / (float)r_waterstate.textureheight;
 	}
 
 	r_waterstate.maxwaterplanes = MAX_WATERPLANES;
