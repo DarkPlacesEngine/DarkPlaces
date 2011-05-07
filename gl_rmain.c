@@ -136,14 +136,6 @@ cvar_t gl_skyclip = {0, "gl_skyclip", "4608", "nehahra farclip distance - the re
 cvar_t r_texture_dds_load = {CVAR_SAVE, "r_texture_dds_load", "0", "load compressed dds/filename.dds texture instead of filename.tga, if the file exists (requires driver support)"};
 cvar_t r_texture_dds_save = {CVAR_SAVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
 
-cvar_t r_texture_sRGB_2d = {0, "r_texture_sRGB_2d", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_skin_diffuse = {0, "r_texture_sRGB_skin_diffuse", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_skin_gloss = {0, "r_texture_sRGB_skin_gloss", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_skin_glow = {0, "r_texture_sRGB_skin_glow", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_skin_reflect = {0, "r_texture_sRGB_skin_reflect", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_cubemap = {0, "r_texture_sRGB_cubemap", "0", "load textures as sRGB"};
-cvar_t r_texture_sRGB_skybox = {0, "r_texture_sRGB_skybox", "0", "load textures as sRGB"};
-
 cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
 static cvar_t gl_combine = {CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
 static cvar_t r_glsl = {CVAR_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
@@ -3235,7 +3227,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	{
 		basepixels_width = image_width;
 		basepixels_height = image_height;
-		skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, r_texture_sRGB_skin_diffuse.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), miplevel, NULL);
+		skinframe->base = R_LoadTexture2D (r_main_texturepool, skinframe->basename, basepixels_width, basepixels_height, basepixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), miplevel, NULL);
 		if (textureflags & TEXF_ALPHA)
 		{
 			for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
@@ -3316,7 +3308,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	mymiplevel = savemiplevel;
 	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false, false, &mymiplevel))))
 	{
-		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, r_texture_sRGB_skin_glow.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->glow)
 			R_SaveTextureDDSFile(skinframe->glow, va("dds/%s_glow.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 		Mem_Free(pixels);pixels = NULL;
@@ -3325,7 +3317,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	mymiplevel = savemiplevel;
 	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, r_texture_sRGB_skin_gloss.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_gloss.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_gloss.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->gloss)
 			R_SaveTextureDDSFile(skinframe->gloss, va("dds/%s_gloss.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 		Mem_Free(pixels);
@@ -3335,7 +3327,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	mymiplevel = savemiplevel;
 	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, r_texture_sRGB_skin_diffuse.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->pants)
 			R_SaveTextureDDSFile(skinframe->pants, va("dds/%s_pants.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
 		Mem_Free(pixels);
@@ -3345,7 +3337,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	mymiplevel = savemiplevel;
 	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, r_texture_sRGB_skin_diffuse.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->shirt)
 			R_SaveTextureDDSFile(skinframe->shirt, va("dds/%s_shirt.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
 		Mem_Free(pixels);
@@ -3355,7 +3347,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	mymiplevel = savemiplevel;
 	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va("%s_reflect", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va("%s_reflect", skinframe->basename), image_width, image_height, pixels, r_texture_sRGB_skin_reflect.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_reflectmask.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va("%s_reflect", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_reflectmask.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->reflect)
 			R_SaveTextureDDSFile(skinframe->reflect, va("dds/%s_reflect.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 		Mem_Free(pixels);
@@ -3537,20 +3529,20 @@ static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboo
 	if (skinframe->qgenerateglow)
 	{
 		skinframe->qgenerateglow = false;
-		skinframe->glow = R_LoadTexture2D(r_main_texturepool, va("%s_glow", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_onlyfullbrights); // glow
+		skinframe->glow = R_LoadTexture2D(r_main_texturepool, va("%s_glow", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_onlyfullbrights); // glow
 	}
 
 	if (colormapped)
 	{
 		skinframe->qgeneratebase = false;
-		skinframe->base  = R_LoadTexture2D(r_main_texturepool, va("%s_nospecial", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nocolormapnofullbrights : palette_bgra_nocolormap);
-		skinframe->pants = R_LoadTexture2D(r_main_texturepool, va("%s_pants", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_pantsaswhite);
-		skinframe->shirt = R_LoadTexture2D(r_main_texturepool, va("%s_shirt", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_shirtaswhite);
+		skinframe->base  = R_LoadTexture2D(r_main_texturepool, va("%s_nospecial", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nocolormapnofullbrights : palette_bgra_nocolormap);
+		skinframe->pants = R_LoadTexture2D(r_main_texturepool, va("%s_pants", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_pantsaswhite);
+		skinframe->shirt = R_LoadTexture2D(r_main_texturepool, va("%s_shirt", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_shirtaswhite);
 	}
 	else
 	{
 		skinframe->qgeneratemerged = false;
-		skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nofullbrights : palette_bgra_complete);
+		skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nofullbrights : palette_bgra_complete);
 	}
 
 	if (!skinframe->qgeneratemerged && !skinframe->qgeneratebase)
@@ -3726,7 +3718,7 @@ rtexture_t *R_LoadCubemap(const char *basename)
 		if (developer_loading.integer)
 			Con_Printf("loading cubemap \"%s\"\n", basename);
 
-		cubemaptexture = R_LoadTextureCubeMap(r_main_texturepool, basename, cubemapsize, cubemappixels, r_texture_sRGB_cubemap.integer != 0 ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer && gl_texturecompression.integer ? TEXF_COMPRESS : 0) | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+		cubemaptexture = R_LoadTextureCubeMap(r_main_texturepool, basename, cubemapsize, cubemappixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer && gl_texturecompression.integer ? TEXF_COMPRESS : 0) | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 		Mem_Free(cubemappixels);
 	}
 	else
@@ -4107,13 +4099,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_transparent_sortarraysize);
 	Cvar_RegisterVariable(&r_texture_dds_load);
 	Cvar_RegisterVariable(&r_texture_dds_save);
-	Cvar_RegisterVariable(&r_texture_sRGB_2d);
-	Cvar_RegisterVariable(&r_texture_sRGB_skin_diffuse);
-	Cvar_RegisterVariable(&r_texture_sRGB_skin_gloss);
-	Cvar_RegisterVariable(&r_texture_sRGB_skin_glow);
-	Cvar_RegisterVariable(&r_texture_sRGB_skin_reflect);
-	Cvar_RegisterVariable(&r_texture_sRGB_cubemap);
-	Cvar_RegisterVariable(&r_texture_sRGB_skybox);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&r_viewfbo);

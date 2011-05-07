@@ -200,14 +200,6 @@ extern cvar_t r_smoothnormals_areaweighting;
 
 extern cvar_t r_test;
 
-extern cvar_t r_texture_sRGB_2d;
-extern cvar_t r_texture_sRGB_skin_diffuse;
-extern cvar_t r_texture_sRGB_skin_gloss;
-extern cvar_t r_texture_sRGB_skin_glow;
-extern cvar_t r_texture_sRGB_skin_reflect;
-extern cvar_t r_texture_sRGB_cubemap;
-extern cvar_t r_texture_sRGB_skybox;
-
 #include "gl_backend.h"
 
 extern rtexture_t *r_texture_blanknormalmap;

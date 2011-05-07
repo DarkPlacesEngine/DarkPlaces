@@ -404,7 +404,7 @@ reload:
 		pic->height = image_height;
 		if (!pic->autoload)
 		{
-			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, r_texture_sRGB_2d.integer ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
+			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, vid.sRGB2D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 		}
@@ -434,7 +434,7 @@ reload:
 			if (!loaded)
 			{
 				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, vid.sRGB2D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
 			}
 		}
 		Mem_Free(lmpdata);
@@ -453,7 +453,7 @@ reload:
 			if (!loaded)
 			{
 				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, 128, 128, lmpdata, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, 128, 128, lmpdata, vid.sRGB2D != 0 ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
 			}
 		}
 		else
@@ -464,7 +464,7 @@ reload:
 			if (!loaded)
 			{
 				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
+				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, vid.sRGB2D != 0 ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
 			}
 		}
 	}
@@ -502,13 +502,13 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 		}
 		if (pic->tex == NULL)
 		{
-			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, vid.sRGB2D);
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 		}
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
 		{
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, r_texture_sRGB_2d.integer != 0);
+			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, vid.sRGB2D);
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 		}

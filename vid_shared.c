@@ -71,6 +71,7 @@ cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acc
 cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.3 features (such as GL_ARB_texture_env_combine extension)"};
 cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
+cvar_t vid_sRGB = {CVAR_SAVE, "vid_sRGB", "0", "if hardware is capable, modify rendering to be gamma corrected for the sRGB color standard (computer monitors, TVs), recommended"};
 
 cvar_t vid_touchscreen = {0, "vid_touchscreen", "0", "Use touchscreen-style input (no mouse grab, track mouse motion only while button is down, screen areas for mimicing joystick axes and buttons"};
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
@@ -90,8 +91,8 @@ cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5", "desired color of g
 cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1", "desired color of white"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
-cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above), values are 0 = off, 1 = attempt to use hardware gamma, 2 = use hardware gamma whether it works or not"};
-cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "0", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
+cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "0", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above), values are 0 = off, 1 = attempt to use hardware gamma, 2 = use hardware gamma whether it works or not"};
+cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
 
 // brand of graphics chip
@@ -812,6 +813,8 @@ void VID_ClearExtensions(void)
 	// clear the extension flags
 	memset(&vid.support, 0, sizeof(vid.support));
 	vid.renderpath = RENDERPATH_GL11;
+	vid.sRGBcapable2D = false;
+	vid.sRGBcapable3D = false;
 	vid.useinterleavedarrays = false;
 	vid.forcevbo = false;
 	vid.maxtexturesize_2d = 0;
@@ -959,6 +962,8 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
 		Con_DPrintf("Using GL2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
 		vid.renderpath = RENDERPATH_GL20;
+		vid.sRGBcapable2D = false;
+		vid.sRGBcapable3D = true;
 		vid.useinterleavedarrays = false;
 	}
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
@@ -969,6 +974,8 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = vid.texunits;
 		Con_DPrintf("Using GL1.3 rendering path - %i texture units, single pass rendering\n", vid.texunits);
 		vid.renderpath = RENDERPATH_GL13;
+		vid.sRGBcapable2D = false;
+		vid.sRGBcapable3D = false;
 		vid.useinterleavedarrays = false;
 	}
 	else
@@ -978,6 +985,8 @@ void VID_CheckExtensions(void)
 		vid.texarrayunits = vid.texunits;
 		Con_DPrintf("Using GL1.1 rendering path - %i texture units, two pass rendering\n", vid.texunits);
 		vid.renderpath = RENDERPATH_GL11;
+		vid.sRGBcapable2D = false;
+		vid.sRGBcapable3D = false;
 		vid.useinterleavedarrays = false;
 	}
 
@@ -1002,17 +1011,18 @@ unsigned int vid_gammatables_serial = 0; // so other subsystems can poll if gamm
 qboolean vid_gammatables_trivial = true;
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 {
+	float srgbmul = (vid.sRGB2D || vid.sRGB3D) ? 2.2f : 1.0f;
 	if (cachecolorenable)
 	{
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], cachecontrastboost, ramps, rampsize);
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], cachecontrastboost, ramps + rampsize, rampsize);
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], cachecontrastboost, ramps + rampsize*2, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]) * srgbmul, cachewhite[0], cacheblack[0], cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]) * srgbmul, cachewhite[1], cacheblack[1], cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]) * srgbmul, cachewhite[2], cacheblack[2], cachecontrastboost, ramps + rampsize*2, rampsize);
 	}
 	else
 	{
-		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps, rampsize);
-		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize, rampsize);
-		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize*2, rampsize);
+		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize*2, rampsize);
 	}
 
 	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
@@ -1105,6 +1115,8 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 	vid_gammatables_trivial = false;
 	if(v_psycho.integer == 0)
 	if(v_contrastboost.value == 1)
+	if(!vid.sRGB2D)
+	if(!vid.sRGB3D)
 	{
 		if(v_color_enable.integer)
 		{
@@ -1271,6 +1283,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_gl13);
 	Cvar_RegisterVariable(&vid_gl20);
 	Cvar_RegisterVariable(&gl_finish);
+	Cvar_RegisterVariable(&vid_sRGB);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
@@ -1302,6 +1315,8 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		vid.stereobuffer   = vid.mode.stereobuffer;
 		vid.samples        = vid.mode.samples;
 		vid.stencil        = vid.mode.bitsperpixel > 16;
+		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
+		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
 
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(" (%ix AA)", mode.samples) : "");
 
@@ -1540,6 +1555,8 @@ void VID_Soft_SharedSetup(void)
 	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
 	Con_DPrintf("Using DarkPlaces Software Rasterizer rendering path\n");
 	vid.renderpath = RENDERPATH_SOFT;
+	vid.sRGBcapable2D = false;
+	vid.sRGBcapable3D = false;
 	vid.useinterleavedarrays = false;
 
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
