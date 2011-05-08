@@ -238,9 +238,10 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 	"SVC_PARTICLE"
 };
 
-#define SV_REQFUNCS (sizeof(sv_reqfuncs) / sizeof(const char *))
-
+#define SV_REQFUNCS 0
 #define sv_reqfuncs NULL
+
+//#define SV_REQFUNCS (sizeof(sv_reqfuncs) / sizeof(const char *))
 //static const char *sv_reqfuncs[] = {
 //};
 
