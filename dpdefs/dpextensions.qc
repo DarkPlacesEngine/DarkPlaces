@@ -1600,6 +1600,18 @@ const float JOINTTYPE_SLIDER = 3;
 const float JOINTTYPE_UNIVERSAL = 4;
 const float JOINTTYPE_HINGE2 = 5;
 const float JOINTTYPE_FIXED = -1;
+// common joint properties:
+// .entity aiment, enemy; // connected objects
+// .vector movedir;
+//   for a spring:
+//     movedir_x = spring constant (force multiplier, must be > 0)
+//     movedir_y = spring dampening constant to prevent oscillation (must be > 0)
+//     movedir_z = spring stop position (+/-)
+//   for a motor:
+//     movedir_x = desired motor velocity
+//     movedir_y = -1 * max motor force to use
+//     movedir_z = stop position (+/-), set to 0 for no stop
+//   note that ODE does not support both in one anyway
 //field definitions:
 .float mass; // ODE mass, standart value is 1
 .float bouncefactor;
@@ -2400,38 +2412,6 @@ void(float pause) setpause = #531;
 
 
 // EXPERIMENTAL (not finalized) EXTENSIONS:
-
-//DP_PHYSICS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc, divVerent
-//constant definitions:
-float SOLID_PHYSICS_BOX = 32;
-float SOLID_PHYSICS_SPHERE = 33;
-float SOLID_PHYSICS_CAPSULE = 34;
-float MOVETYPE_PHYSICS = 32;
-float JOINTTYPE_POINT = 1; // point; uses origin (anchor)
-float JOINTTYPE_HINGE = 2; // hinge; uses origin (anchor) and angles (axis)
-float JOINTTYPE_SLIDER = 3; // slider; uses angles (axis)
-float JOINTTYPE_UNIVERSAL = 4; // universal; uses origin (anchor) and angles (forward is axis1, up is axis2)
-float JOINTTYPE_HINGE2 = 5; // hinge2; uses origin (anchor), angles (axis1), velocity (axis2)
-//field definitions:
-.float mass;
-.float jointtype; // see JOINTTYPE_ definitions above
-// common joint properties:
-// .entity aiment, enemy; // connected objects
-// .vector movedir;
-//   for a spring:
-//     movedir_x = spring constant (force multiplier, must be > 0)
-//     movedir_y = spring dampening constant to prevent oscillation (must be > 0)
-//     movedir_z = spring stop position (+/-)
-//   for a motor:
-//     movedir_x = desired motor velocity
-//     movedir_y = -1 * max motor force to use
-//     movedir_z = stop position (+/-), set to 0 for no stop
-//   note that ODE does not support both in one anyway
-//description:
-//various physics properties can be defined in an entity and are executed via
-//ODE
 
 //DP_CRYPTO
 //idea: divVerent
