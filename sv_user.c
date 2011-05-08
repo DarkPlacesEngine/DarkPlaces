@@ -759,7 +759,7 @@ void SV_ApplyClientMove (void)
 	VectorCopy(move->cursor_screen, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_screen));
 	VectorCopy(move->cursor_start, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_trace_start));
 	VectorCopy(move->cursor_impact, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_trace_endpos));
-	PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_ent)->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
+	PRVM_EDICTFIELDEDICT(host_client->edict, prog->fieldoffsets.cursor_trace_ent) = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping) = host_client->ping * 1000.0;
 	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping_packetloss) = packetloss / (float) NETGRAPH_PACKETS;
 	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
