@@ -1939,7 +1939,7 @@ void FS_Init (void)
 				// truncate to just after the .app/
 				split[5] = 0;
 				// see if gamedir exists in Resources
-				if (stat(va("%s/Contents/Resources/%s", fs_basedir, gamedirname1)), &statresult) == 0)
+				if (stat(va("%s/Contents/Resources/%s", fs_basedir, gamedirname1), &statresult) == 0)
 				{
 					// found gamedir inside Resources, use it
 					strlcat(fs_basedir, "Contents/Resources/", sizeof(fs_basedir));
