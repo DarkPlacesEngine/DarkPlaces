@@ -1927,8 +1927,7 @@ void FS_Init (void)
 #ifdef DP_FS_BASEDIR
 		strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
 #elif defined(MACOSX)
-		// FIXME: is there a better way to find the directory outside the .app?
-		// FIXME: check if game data is inside .app bundle
+		// FIXME: is there a better way to find the directory outside the .app, without using Objective-C?
 		if (strstr(com_argv[0], ".app/"))
 		{
 			char *split;
@@ -1936,9 +1935,23 @@ void FS_Init (void)
 			split = strstr(fs_basedir, ".app/");
 			if (split)
 			{
-				while (split > fs_basedir && *split != '/')
-					split--;
-				*split = 0;
+				struct stat statresult;
+				// truncate to just after the .app/
+				split[5] = 0;
+				// see if gamedir exists in Resources
+				if (stat(va("%s/Contents/Resources/%s", fs_basedir, gamedirname1)), &statresult) == 0)
+				{
+					// found gamedir inside Resources, use it
+					strlcat(fs_basedir, "Contents/Resources/", sizeof(fs_basedir));
+				}
+				else
+				{
+					// no gamedir found in Resources, gamedir is probably
+					// outside the .app, remove .app part of path
+					while (split > fs_basedir && *split != '/')
+						split--;
+					*split = 0;
+				}
 			}
 		}
 #endif
