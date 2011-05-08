@@ -72,6 +72,7 @@ cvar_t r_farclip_world = {0, "r_farclip_world", "2", "adds map size to farclip m
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_deformvertexes = {0, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
 cvar_t r_transparent = {0, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
+cvar_t r_transparent_alphatocoverage = {0, "r_transparent_alphatocoverage", "0", "enables alpha-to-coverage antialiasing technique on alphatest surfaces, this is not yet finished as multisampling is not used"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -2092,6 +2093,19 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		permutation |= SHADERPERMUTATION_ALPHAKILL;
+	// Alpha to Coverage
+	// fixme: move to gl_backend
+	if (vid_multisampling.integer && r_transparent_alphatocoverage.integer)
+	{
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		{
+			qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+		}
+		else
+		{
+			qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+		}
+	}
 	if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
 		permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND; // todo: make generic
 	if (rsurfacepass == RSURFPASS_BACKGROUND)
@@ -4049,6 +4063,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_nearclip);
 	Cvar_RegisterVariable(&r_deformvertexes);
 	Cvar_RegisterVariable(&r_transparent);
+	Cvar_RegisterVariable(&r_transparent_alphatocoverage);
 	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
