@@ -59,6 +59,7 @@ cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32", "how many bits per pixel to render at (32 or 16, 32 is recommended)"};
 cvar_t vid_samples = {CVAR_SAVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
+cvar_t vid_multisampling = {CVAR_SAVE, "vid_multisampling", "0", "Make use of GL_AGB_MULTISAMPLING for advaced anti-aliasing techniques such as Alpha-To-Coverage, not yet finished"};
 cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
 cvar_t vid_userefreshrate = {CVAR_SAVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
 cvar_t vid_stereobuffer = {CVAR_SAVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
@@ -396,6 +397,8 @@ void (GLAPIENTRY *qglEndQueryARB)(GLenum target);
 void (GLAPIENTRY *qglGetQueryivARB)(GLenum target, GLenum pname, GLint *params);
 void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *params);
 void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
+
+void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
 
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
@@ -805,6 +808,12 @@ static dllfunction_t drawbuffersfuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t multisamplefuncs[] =
+{
+	{"glSampleCoverageARB",          (void **) &qglSampleCoverageARB},
+	{NULL, NULL}
+};
+
 void VID_ClearExtensions(void)
 {
 	// VorteX: reset extensions info cvar, it got filled by GL_CheckExtension
@@ -892,6 +901,8 @@ void VID_CheckExtensions(void)
 	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 	vid.support.ext_texture_srgb = GL_CheckExtension("GL_EXT_texture_sRGB", NULL, "-nosrgb", false);
+	vid.support.arb_multisample = GL_CheckExtension("GL_ARB_multisample", multisamplefuncs, "-nomultisample", false);
+
 // COMMANDLINEOPTION: GL: -noshaders disables use of OpenGL 2.0 shaders (which allow pixel shader effects, can improve per pixel lighting performance and capabilities)
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
 // COMMANDLINEOPTION: GL: -noblendminmax disables GL_EXT_blend_minmax
@@ -916,6 +927,7 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -notexturenonpoweroftwo disables GL_ARB_texture_non_power_of_two (which saves video memory if it is supported, but crashes on some buggy drivers)
 // COMMANDLINEOPTION: GL: -novbo disables GL_ARB_vertex_buffer_object (which accelerates rendering)
 // COMMANDLINEOPTION: GL: -nosrgb disables GL_EXT_texture_sRGB (which is used for higher quality non-linear texture gamma)
+// COMMANDLINEOPTION: GL: -nomultisample disables GL_ARB_multisample
 
 	if (vid.support.arb_draw_buffers)
 		qglGetIntegerv(GL_MAX_DRAW_BUFFERS_ARB, (GLint*)&vid.maxdrawbuffers);
@@ -1269,6 +1281,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
 	Cvar_RegisterVariable(&vid_samples);
+	Cvar_RegisterVariable(&vid_multisampling);
 	Cvar_RegisterVariable(&vid_refreshrate);
 	Cvar_RegisterVariable(&vid_userefreshrate);
 	Cvar_RegisterVariable(&vid_stereobuffer);
