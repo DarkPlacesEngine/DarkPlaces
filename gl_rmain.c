@@ -7046,9 +7046,9 @@ static void R_DrawEntityBBoxes(void)
 		if (edict->priv.server->free)
 			continue;
 		// exclude the following for now, as they don't live in world coordinate space and can't be solid:
-		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.tag_entity)->edict != 0)
+		if(PRVM_EDICTFIELDEDICT(edict, prog->fieldoffsets.tag_entity) != 0)
 			continue;
-		if(PRVM_EDICTFIELDVALUE(edict, prog->fieldoffsets.viewmodelforclient)->edict != 0)
+		if(PRVM_EDICTFIELDEDICT(edict, prog->fieldoffsets.viewmodelforclient) != 0)
 			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
 		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
