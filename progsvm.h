@@ -115,8 +115,18 @@ typedef struct prvm_edict_s
 	} fields;
 } prvm_edict_t;
 
-#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((int *)ed->fields.vp + fieldoffset) : NULL)
-#define PRVM_GLOBALFIELDVALUE(fieldoffset) (fieldoffset >= 0 ? (prvm_eval_t *)((int *)prog->globals.generic + fieldoffset) : NULL)
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) ((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))
+#define PRVM_EDICTFIELDFLOAT(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->_float)
+#define PRVM_EDICTFIELDVECTOR(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->vector)
+#define PRVM_EDICTFIELDSTRING(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->string)
+#define PRVM_EDICTFIELDEDICT(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->edict)
+#define PRVM_EDICTFIELDFUNCTION(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->function)
+#define PRVM_GLOBALFIELDVALUE(fieldoffset) ((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))
+#define PRVM_GLOBALFIELDFLOAT(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->_float)
+#define PRVM_GLOBALFIELDVECTOR(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->vector)
+#define PRVM_GLOBALFIELDSTRING(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->string)
+#define PRVM_GLOBALFIELDEDICT(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->edict)
+#define PRVM_GLOBALFIELDFUNCTION(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->function)
 
 //============================================================================
 #define PRVM_OP_STATE		1
@@ -402,15 +412,33 @@ typedef struct prvm_prog_s
 {
 	double              starttime;
 	unsigned int		id; // increasing unique id of progs instance
-	dprograms_t			*progs;
 	mfunction_t			*functions;
 	char				*strings;
 	int					stringssize;
 	ddef_t				*fielddefs;
 	ddef_t				*globaldefs;
-	dstatement_t		*statements;
+	mstatement_t		*statements;
 	int					entityfields;			// number of vec_t fields in progs (some variables are 3)
 	int					entityfieldsarea;		// LordHavoc: equal to max_edicts * entityfields (for bounds checking)
+
+	// loaded values from the disk format
+	int					progs_version;
+	int					progs_crc;
+	int					progs_numstatements;
+	int					progs_numglobaldefs;
+	int					progs_numfielddefs;
+	int					progs_numfunctions;
+	int					progs_numstrings;
+	int					progs_numglobals;
+	int					progs_entityfields;
+
+	// real values in memory (some modified by loader)
+	int					numstatements;
+	int					numglobaldefs;
+	int					numfielddefs;
+	int					numfunctions;
+	int					numstrings;
+	int					numglobals;
 
 	int					*statement_linenums; // NULL if not available
 
@@ -723,7 +751,7 @@ Load a program with LoadProgs
 */
 void PRVM_InitProg(int prognr);
 // LoadProgs expects to be called right after InitProg
-void PRVM_LoadProgs (const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, char **required_global);
+void PRVM_LoadProgs (const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
 void PRVM_ResetProg(void);
 
 qboolean PRVM_ProgLoaded(int prognr);

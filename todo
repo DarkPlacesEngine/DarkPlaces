@@ -1,6 +1,8 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d bug darkplaces d3d9: drawsetcliparea not working right - seems to be Y-flipped, this also affects menus in Steelstorm (VorteX)
 -d bug darkplaces d3d9: overbright particles get weird colors (VorteX)
+0 optimize darkplaces renderer: get rid of attenuation texture on lights because math is faster, add fastpath for no normalmap (Lava_Croft)
+0 bug darkplaces filesystem: -game nehahra does not load properly; menu does not work properly - probably not activating gamemode
 0 bug darkplaces client csqc: CSQC_InputEvent is supposed to handle mouse movement, compare to FTEQW code (avirox)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)

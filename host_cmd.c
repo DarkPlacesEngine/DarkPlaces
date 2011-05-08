@@ -943,7 +943,7 @@ void Host_Loadgame_f (void)
 			while (entnum >= prog->max_edicts)
 				PRVM_MEM_IncreaseEdicts();
 			ent = PRVM_EDICT_NUM(entnum);
-			memset (ent->fields.server, 0, prog->progs->entityfields * 4);
+			memset (ent->fields.server, 0, prog->entityfields * 4);
 			ent->priv.server->free = false;
 
 			if(developer_entityparsing.integer)
@@ -1254,8 +1254,8 @@ void Host_Playermodel_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
-	if( prog->fieldoffsets.playermodel >= 0 )
-		PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playermodel)->string = PRVM_SetEngineString(host_client->playermodel);
+	if (prog->fieldoffsets.playermodel >= 0)
+		PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playermodel) = PRVM_SetEngineString(host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
@@ -1311,8 +1311,8 @@ void Host_Playerskin_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
-	if( prog->fieldoffsets.playerskin >= 0 )
-		PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.playerskin)->string = PRVM_SetEngineString(host_client->playerskin);
+	if (prog->fieldoffsets.playerskin >= 0)
+		PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playerskin) = PRVM_SetEngineString(host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		//if (host_client->spawned)
@@ -1583,11 +1583,9 @@ void Host_Color(int changetop, int changebottom)
 	}
 	else
 	{
-		prvm_eval_t *val;
 		if (host_client->edict)
 		{
-			if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.clientcolors)))
-				val->_float = playercolor;
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.clientcolors) = playercolor;
 			host_client->edict->fields.server->team = bottom + 1;
 		}
 		host_client->colors = playercolor;
@@ -1719,7 +1717,6 @@ cvar_t cl_pmodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "interna
 static void Host_PModel_f (void)
 {
 	int i;
-	prvm_eval_t *val;
 
 	if (Cmd_Argc () == 1)
 	{
@@ -1738,8 +1735,7 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	if (host_client->edict && (val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.pmodel)))
-		val->_float = i;
+	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.pmodel) = i;
 }
 
 //===========================================================================
@@ -2029,7 +2025,6 @@ void Host_Give_f (void)
 {
 	const char *t;
 	int v;
-	prvm_eval_t *val;
 
 	if (!allowcheats)
 	{
@@ -2077,20 +2072,17 @@ void Host_Give_f (void)
 		break;
 
 	case 's':
-		if (gamemode == GAME_ROGUE && (val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_shells1)))
-			val->_float = v;
+		if (gamemode == GAME_ROGUE)
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_shells1) = v;
 
 		host_client->edict->fields.server->ammo_shells = v;
 		break;
 	case 'n':
 		if (gamemode == GAME_ROGUE)
 		{
-			if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_nails1)))
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_nails = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_nails1) = v;
+			if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_nails = v;
 		}
 		else
 		{
@@ -2100,25 +2092,17 @@ void Host_Give_f (void)
 	case 'l':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_lava_nails);
-			if (val)
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_nails = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_lava_nails) = v;
+			if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_nails = v;
 		}
 		break;
 	case 'r':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_rockets1);
-			if (val)
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_rockets = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_rockets1) = v;
+			if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_rockets = v;
 		}
 		else
 		{
@@ -2128,13 +2112,9 @@ void Host_Give_f (void)
 	case 'm':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_multi_rockets);
-			if (val)
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_rockets = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_multi_rockets) = v;
+			if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_rockets = v;
 		}
 		break;
 	case 'h':
@@ -2143,13 +2123,9 @@ void Host_Give_f (void)
 	case 'c':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_cells1);
-			if (val)
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_cells = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_cells1) = v;
+			if (host_client->edict->fields.server->weapon <= IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_cells = v;
 		}
 		else
 		{
@@ -2159,13 +2135,9 @@ void Host_Give_f (void)
 	case 'p':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ammo_plasma);
-			if (val)
-			{
-				val->_float = v;
-				if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
-					host_client->edict->fields.server->ammo_cells = v;
-			}
+			PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ammo_plasma) = v;
+			if (host_client->edict->fields.server->weapon > IT_LIGHTNING)
+				host_client->edict->fields.server->ammo_cells = v;
 		}
 		break;
 	}

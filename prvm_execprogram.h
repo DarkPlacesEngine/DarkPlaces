@@ -168,7 +168,7 @@
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
 				{
 					prog->xstatement = st - prog->statements;
 					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
@@ -183,7 +183,7 @@
 					PRVM_ERROR("%s attempted to write to an out of bounds edict (%i)", PRVM_NAME, OPB->_int);
 					goto cleanup;
 				}
-				if (OPB->_int < prog->progs->entityfields && !prog->allowworldwrites)
+				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
 				{
 					prog->xstatement = st - prog->statements;
 					VM_Warning("assignment to world.%s (field %i) in %s\n", PRVM_GetString(PRVM_ED_FieldAtOfs(OPB->_int)->s_name), OPB->_int, PRVM_NAME);
@@ -201,7 +201,7 @@
 					PRVM_ERROR ("%s Progs attempted to address an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
-				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->progs->entityfields))
+				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
 				{
 					PreError();
 					PRVM_ERROR("%s attempted to address an invalid field (%i) in an edict", PRVM_NAME, OPB->_int);
@@ -230,7 +230,7 @@
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
-				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->progs->entityfields))
+				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
 				{
 					PreError();
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
@@ -247,7 +247,7 @@
 					PRVM_ERROR ("%s Progs attempted to read an out of bounds edict number", PRVM_NAME);
 					goto cleanup;
 				}
-				if (OPB->_int < 0 || OPB->_int + 2 >= prog->progs->entityfields)
+				if (OPB->_int < 0 || OPB->_int + 2 >= prog->entityfields)
 				{
 					PreError();
 					PRVM_ERROR("%s attempted to read an invalid field in an edict (%i)", PRVM_NAME, OPB->_int);
@@ -268,7 +268,7 @@
 				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
-					st += st->b - 1;	// offset the s++
+					st = prog->statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
@@ -287,7 +287,7 @@
 				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
-					st += st->b - 1;	// offset the s++
+					st = prog->statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
@@ -301,7 +301,7 @@
 
 			case OP_GOTO:
 				prog->xfunction->profile += (st - startst);
-				st += st->a - 1;	// offset the s++
+				st = prog->statements + st->jumpabsolute - 1;	// offset the st++
 				startst = st;
 				// no bounds check needed, it is done when loading progs
 				if (++jumpcount == 10000000 && prvm_runawaycheck)
@@ -333,7 +333,7 @@
 				if (!OPA->function)
 					PRVM_ERROR("NULL function in %s", PRVM_NAME);
 
-				if(!OPA->function || OPA->function >= (unsigned int)prog->progs->numfunctions)
+				if(!OPA->function || OPA->function >= (unsigned int)prog->numfunctions)
 				{
 					PreError();
 					PRVM_ERROR("%s CALL outside the program", PRVM_NAME);
@@ -376,9 +376,9 @@
 				prog->xfunction->profile += (st - startst);
 				prog->xstatement = st - prog->statements;
 
-				prog->globals.generic[OFS_RETURN] = prog->globals.generic[(unsigned short) st->a];
-				prog->globals.generic[OFS_RETURN+1] = prog->globals.generic[(unsigned short) st->a+1];
-				prog->globals.generic[OFS_RETURN+2] = prog->globals.generic[(unsigned short) st->a+2];
+				prog->globals.generic[OFS_RETURN] = prog->globals.generic[st->operand[0]];
+				prog->globals.generic[OFS_RETURN+1] = prog->globals.generic[st->operand[0]+1];
+				prog->globals.generic[OFS_RETURN+2] = prog->globals.generic[st->operand[0]+2];
 
 				st = prog->statements + PRVM_LeaveFunction();
 				startst = st;
@@ -391,10 +391,10 @@
 			case OP_STATE:
 				if(prog->flag & PRVM_OP_STATE)
 				{
-					ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict);
-					PRVM_EDICTFIELDVALUE(ed,prog->fieldoffsets.nextthink)->_float = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.time)->_float + 0.1;
-					PRVM_EDICTFIELDVALUE(ed,prog->fieldoffsets.frame)->_float = OPA->_float;
-					PRVM_EDICTFIELDVALUE(ed,prog->fieldoffsets.think)->function = OPB->function;
+					ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self));
+					PRVM_EDICTFIELDFLOAT(ed,prog->fieldoffsets.nextthink) = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.time) + 0.1;
+					PRVM_EDICTFIELDFLOAT(ed,prog->fieldoffsets.frame) = OPA->_float;
+					PRVM_EDICTFIELDFUNCTION(ed,prog->fieldoffsets.think) = OPB->function;
 				}
 				else
 				{
