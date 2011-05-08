@@ -2150,7 +2150,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 	if (LittleLong(dprograms->ofs_strings) + prog->progs_numstrings >= (int)filesize)
 		PRVM_ERROR ("%s: %s strings go past end of file", PRVM_NAME, filename);
 	prog->strings = (char *)Mem_Alloc(prog->progs_mempool, prog->progs_numstrings);
-	memcpy(prog->strings, (char *)dprograms + LittleLong(dprograms->ofs_strings), prog->progs_numstrings);
+	memcpy(prog->strings, instrings, prog->progs_numstrings);
 	prog->stringssize = prog->progs_numstrings;
 
 	prog->numknownstrings = 0;
