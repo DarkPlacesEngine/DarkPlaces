@@ -1,35 +1,3 @@
-// csprogs: Field predraw declared but not defined
-// csprogs: Field touch declared but not defined
-// csprogs: Field use declared but not defined
-// csprogs: Field blocked declared but not defined
-// csprogs: Global particle_type declared but not defined
-// csprogs: Global particle_blendmode declared but not defined
-// csprogs: Global particle_orientation declared but not defined
-// csprogs: Global particle_color1 declared but not defined
-// csprogs: Global particle_color2 declared but not defined
-// csprogs: Global particle_tex declared but not defined
-// csprogs: Global particle_size declared but not defined
-// csprogs: Global particle_sizeincrease declared but not defined
-// csprogs: Global particle_alpha declared but not defined
-// csprogs: Global particle_alphafade declared but not defined
-// csprogs: Global particle_time declared but not defined
-// csprogs: Global particle_gravity declared but not defined
-// csprogs: Global particle_bounce declared but not defined
-// csprogs: Global particle_airfriction declared but not defined
-// csprogs: Global particle_liquidfriction declared but not defined
-// csprogs: Global particle_originjitter declared but not defined
-// csprogs: Global particle_velocityjitter declared but not defined
-// csprogs: Global particle_qualityreduction declared but not defined
-// csprogs: Global particle_stretch declared but not defined
-// csprogs: Global particle_staincolor1 declared but not defined
-// csprogs: Global particle_staincolor2 declared but not defined
-// csprogs: Global particle_staintex declared but not defined
-// csprogs: Global particle_stainalpha declared but not defined
-// csprogs: Global particle_stainsize declared but not defined
-// csprogs: Global particle_delayspawn declared but not defined
-// csprogs: Global particle_delaycollision declared but not defined
-// csprogs: Global particle_angle declared but not defined
-// csprogs: Global particle_spin declared but not defined
 // progs: Builtin #487 declared but not defined
 // progs: Builtin #488 declared but not defined
 // progs: Builtin #489 declared but not defined
@@ -51,9 +19,6 @@
 // progs: Field frame3time declared but not defined
 // progs: Field frame4time declared but not defined
 // menu: Global null_entity declared but not defined
-// progs: Field touch declared but not defined
-// progs: Field use declared but not defined
-// progs: Field blocked declared but not defined
 // progs: Global movedist declared but not defined
 // progs: Global gameover declared but not defined
 // progs: Global string_null declared but not defined
@@ -252,6 +217,11 @@ float sprintf(...) = #627; // DP_UNKNOWN
 float getsurfacenumpoints(...) = #628; // DP_QC_GETSURFACETRIANGLE
 float getsurfacepoint(...) = #629; // DP_QC_GETSURFACETRIANGLE
 float VM_CL_RotateMoves(...) = #638; // DP_UNKNOWN
+float CSQC_ConsoleCommand; // DP_UNKNOWN
+float CSQC_Init; // DP_UNKNOWN
+float CSQC_InputEvent; // DP_UNKNOWN
+float CSQC_Shutdown; // DP_UNKNOWN
+float CSQC_UpdateView; // DP_UNKNOWN
 float coop; // DP_UNKNOWN
 float deathmatch; // DP_UNKNOWN
 float dmg_origin; // DP_UNKNOWN
@@ -431,7 +401,17 @@ float modelnameforindex(...) = #334; // EXT_CSQC
 float isserver(...) = #350; // EXT_CSQC
 float serverkey(...) = #354; // EXT_CSQC
 float VM_parseentitydata(...) = #613; // DP_UNKNOWN
+float ClientConnect; // DP_UNKNOWN
+float ClientDisconnect; // DP_UNKNOWN
+float ClientKill; // DP_UNKNOWN
+float PlayerPostThink; // DP_UNKNOWN
+float PlayerPreThink; // DP_UNKNOWN
+float PutClientInServer; // DP_UNKNOWN
 float SV_InitCmd; // DP_UNKNOWN
+float SetChangeParms; // DP_UNKNOWN
+float SetNewParms; // DP_UNKNOWN
+float StartFrame; // DP_UNKNOWN
+float main; // DP_UNKNOWN
 float require_spawnfunc_prefix; // DP_UNKNOWN
 .float SendEntity; // DP_UNKNOWN
 .float SendFlags; // DP_UNKNOWN
