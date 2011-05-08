@@ -2203,6 +2203,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, mode->samples);
 	}
+
 #if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
 	if (vid_vsync.integer)
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
@@ -2292,6 +2293,21 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 
+	// enable multisampling
+	if (mode->samples > 1 && vid_multisampling.integer)
+	{
+		if (vid.support.arb_multisample)
+			qglEnable(GL_MULTISAMPLE_ARB);
+		else
+		{
+			Cvar_SetValueQuick(&vid_multisampling, 0);
+			qglDisable(GL_MULTISAMPLE_ARB);
+		}
+	}
+	else
+		qglDisable(GL_MULTISAMPLE_ARB);
+	CHECKGLERROR
+		
 #if SETVIDEOMODE
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
 #endif

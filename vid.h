@@ -69,6 +69,7 @@ typedef struct viddef_support_s
 	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
 	qboolean ext_texture_srgb;
+	qboolean arb_multisample;
 }
 viddef_support_t;
 
@@ -152,6 +153,7 @@ extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_samples;
+extern cvar_t vid_multisampling;
 extern cvar_t vid_refreshrate;
 extern cvar_t vid_userefreshrate;
 extern cvar_t vid_vsync;
