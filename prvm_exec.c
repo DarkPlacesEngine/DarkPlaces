@@ -694,8 +694,8 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
-		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
+		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self))
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self)), NULL);
 		PRVM_ERROR ("MVM_ExecuteProgram: %s", errormessage);
 	}
 
@@ -783,8 +783,8 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
-		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
+		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self))
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self)), NULL);
 		PRVM_ERROR ("CLVM_ExecuteProgram: %s", errormessage);
 	}
 
@@ -873,8 +873,8 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
-		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict)
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDVALUE(prog->globaloffsets.self)->edict), NULL);
+		if (prog->globaloffsets.self >= 0 && PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self))
+			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self)), NULL);
 		PRVM_ERROR ("SVVM_ExecuteProgram: %s", errormessage);
 	}
 
