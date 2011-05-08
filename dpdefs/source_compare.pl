@@ -158,7 +158,7 @@ for(<../*.h>, <../*.c>)
 			if(/^\s*\/\//)
 			{
 			}
-			elsif(/^\s+(?:int|float|string_t|vec3_t)\s+(\w+);\s*(?:\/\/(.*))?/)
+			elsif(/^\s+(?:int|float|string_t|vec3_t|func_t)\s+(\w+);\s*(?:\/\/(.*))?/)
 			{
 				my $name = $1;
 				my $descr = $2 || "";
@@ -177,6 +177,11 @@ for(<../*.h>, <../*.c>)
 				warn "$descr does not yield info about target VM"
 					if not defined $found;
 			}
+		}
+		elsif(/getglobal\w*\(\w+, "(\w+)"\)/)
+		{
+			# hack for weird DP source 
+			$vm{csprogs}{globals}{$1} = [0, "DP_CSQC_SPAWNPARTICLE"];
 		}
 	}
 	close $fh;
