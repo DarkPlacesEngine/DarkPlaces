@@ -234,10 +234,8 @@ static void VM_CL_spawn (void)
 
 void CL_VM_SetTraceGlobals(const trace_t *trace, int svent)
 {
-	prvm_eval_t *val;
 	VM_SetTraceGlobals(trace);
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_networkentity)))
-		val->_float = svent;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_networkentity) = svent;
 }
 
 #define CL_HitNetworkBrushModels(move) !((move) == MOVE_WORLDONLY)
@@ -320,7 +318,6 @@ trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore, int *svent)
 	vec3_t original_velocity;
 	vec3_t original_angles;
 	vec3_t original_avelocity;
-	prvm_eval_t *val;
 	trace_t trace;
 
 	VectorCopy(tossent->fields.client->origin   , original_origin   );
@@ -328,11 +325,9 @@ trace_t CL_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore, int *svent)
 	VectorCopy(tossent->fields.client->angles   , original_angles   );
 	VectorCopy(tossent->fields.client->avelocity, original_avelocity);
 
-	val = PRVM_EDICTFIELDVALUE(tossent, prog->fieldoffsets.gravity);
-	if (val != NULL && val->_float != 0)
-		gravity = val->_float;
-	else
-		gravity = 1.0;
+	gravity = PRVM_EDICTFIELDFLOAT(tossent, prog->fieldoffsets.gravity);
+	if (!gravity)
+		gravity = 1.0f;
 	gravity *= cl.movevars_gravity * 0.05;
 
 	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
@@ -493,7 +488,7 @@ static void VM_CL_findradius (void)
 			VectorMAMAM(1, eorg, -0.5f, ent->fields.client->mins, -0.5f, ent->fields.client->maxs, eorg);
 		if (DotProduct(eorg, eorg) < radius2)
 		{
-			PRVM_EDICTFIELDVALUE(ent, chainfield)->edict = PRVM_EDICT_TO_PROG(chain);
+			PRVM_EDICTFIELDEDICT(ent, chainfield) = PRVM_EDICT_TO_PROG(chain);
 			chain = ent;
 		}
 	}
@@ -505,7 +500,6 @@ static void VM_CL_findradius (void)
 static void VM_CL_droptofloor (void)
 {
 	prvm_edict_t		*ent;
-	prvm_eval_t			*val;
 	vec3_t				end;
 	trace_t				trace;
 
@@ -535,8 +529,7 @@ static void VM_CL_droptofloor (void)
 	{
 		VectorCopy (trace.endpos, ent->fields.client->origin);
 		ent->fields.client->flags = (int)ent->fields.client->flags | FL_ONGROUND;
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.groundentity)))
-			val->edict = PRVM_EDICT_TO_PROG(trace.ent);
+		PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
 		PRVM_G_FLOAT(OFS_RETURN) = 1;
 		// if support is destroyed, keep suspended (gross hack for floating items in various maps)
 //		ent->priv.server->suspendedinairflag = true;
@@ -1266,7 +1259,6 @@ static void VM_CL_boxparticles (void)
 	float count;
 	int flags;
 	float tintmins[4], tintmaxs[4];
-	prvm_eval_t *val;
 	VM_SAFEPARMCOUNTRANGE(7, 8, VM_CL_boxparticles);
 
 	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
@@ -1284,17 +1276,13 @@ static void VM_CL_boxparticles (void)
 	Vector4Set(tintmaxs, 1, 1, 1, 1);
 	if(flags & 1) // read alpha
 	{
-		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_alphamin)))
-			tintmins[3] = val->_float;
-		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_alphamax)))
-			tintmaxs[3] = val->_float;
+		tintmins[3] = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.particles_alphamin);
+		tintmaxs[3] = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.particles_alphamax);
 	}
 	if(flags & 2) // read color
 	{
-		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_colormin)))
-			VectorCopy(val->vector, tintmins);
-		if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.particles_colormax)))
-			VectorCopy(val->vector, tintmaxs);
+		VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.particles_colormin), tintmins);
+		VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.particles_colormax), tintmaxs);
 	}
 	if (effectnum < 0)
 		return;
@@ -1586,7 +1574,6 @@ static void VM_CL_makestatic (void)
 	if (cl.num_static_entities < cl.max_static_entities)
 	{
 		int renderflags;
-		prvm_eval_t *val;
 		entity_t *staticent = &cl.static_entities[cl.num_static_entities++];
 
 		// copy it to the current state
@@ -1598,19 +1585,22 @@ static void VM_CL_makestatic (void)
 		staticent->render.framegroupblend[0].start = lhrandom(-10, -1);
 		staticent->render.skinnum = (int)ent->fields.client->skin;
 		staticent->render.effects = (int)ent->fields.client->effects;
-		staticent->render.alpha = 1;
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.alpha)) && val->_float) staticent->render.alpha = val->_float;
-		staticent->render.scale = 1;
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale)) && val->_float) staticent->render.scale = val->_float;
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.colormod)) && VectorLength2(val->vector)) VectorCopy(val->vector, staticent->render.colormod);
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector)) VectorCopy(val->vector, staticent->render.glowmod);
+		staticent->render.alpha = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.alpha);
+		staticent->render.scale = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.scale);
+		VectorCopy(PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.colormod), staticent->render.colormod);
+		VectorCopy(PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.glowmod), staticent->render.glowmod);
+
+		// sanitize values
+		if (!staticent->render.alpha)
+			staticent->render.alpha = 1.0f;
+		if (!staticent->render.scale)
+			staticent->render.scale = 1.0f;
 		if (!VectorLength2(staticent->render.colormod))
 			VectorSet(staticent->render.colormod, 1, 1, 1);
 		if (!VectorLength2(staticent->render.glowmod))
 			VectorSet(staticent->render.glowmod, 1, 1, 1);
 
-		renderflags = 0;
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && val->_float) renderflags = (int)val->_float;
+		renderflags = (int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.renderflags);
 		if (renderflags & RF_USEAXIS)
 		{
 			vec3_t left;
@@ -1686,7 +1676,7 @@ static void VM_CL_copyentity (void)
 		VM_Warning("copyentity: can not modify free entity\n");
 		return;
 	}
-	memcpy(out->fields.vp, in->fields.vp, prog->progs->entityfields * 4);
+	memcpy(out->fields.vp, in->fields.vp, prog->entityfields * 4);
 	CL_LinkEdict(out);
 }
 
@@ -2100,8 +2090,8 @@ void VM_CL_setattachment (void)
 	prvm_edict_t *e;
 	prvm_edict_t *tagentity;
 	const char *tagname;
-	prvm_eval_t *v;
 	int modelindex;
+	int tagindex;
 	dp_model_t *model;
 	VM_SAFEPARMCOUNT(3, VM_CL_setattachment);
 
@@ -2123,26 +2113,23 @@ void VM_CL_setattachment (void)
 	if (tagentity == NULL)
 		tagentity = prog->edicts;
 
-	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_entity);
-	if (v)
-		v->edict = PRVM_EDICT_TO_PROG(tagentity);
-
-	v = PRVM_EDICTFIELDVALUE(e, prog->fieldoffsets.tag_index);
-	if (v)
-		v->_float = 0;
+	tagindex = 0;
 	if (tagentity != NULL && tagentity != prog->edicts && tagname && tagname[0])
 	{
 		modelindex = (int)tagentity->fields.client->modelindex;
 		model = CL_GetModelByIndex(modelindex);
 		if (model)
 		{
-			v->_float = Mod_Alias_GetTagIndexForName(model, (int)tagentity->fields.client->skin, tagname);
-			if (v->_float == 0)
+			tagindex = Mod_Alias_GetTagIndexForName(model, (int)tagentity->fields.client->skin, tagname);
+			if (tagindex == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity), model->name);
 		}
 		else
 			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity));
 	}
+
+	PRVM_EDICTFIELDEDICT(e, prog->fieldoffsets.tag_entity) = PRVM_EDICT_TO_PROG(tagentity);
+	PRVM_EDICTFIELDFLOAT(e, prog->fieldoffsets.tag_index) = tagindex;
 }
 
 /////////////////////////////////////////
@@ -2191,18 +2178,16 @@ int CL_GetPitchSign(prvm_edict_t *ent)
 
 void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
 {
-	prvm_eval_t *val;
 	float scale;
 	float pitchsign = 1;
 
-	scale = 1;
-	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.scale);
-	if (val && val->_float != 0)
-		scale = val->_float;
+	scale = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.scale);
+	if (!scale)
+		scale = 1.0f;
 
 	if(viewmatrix)
 		*out = r_refdef.view.matrix;
-	else if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && ((int)val->_float & RF_USEAXIS))
+	else if ((int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.renderflags) & RF_USEAXIS)
 	{
 		vec3_t forward;
 		vec3_t left;
@@ -2250,7 +2235,6 @@ extern cvar_t cl_bobup;
 int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
 	int ret;
-	prvm_eval_t *val;
 	int attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	dp_model_t *model;
@@ -2281,10 +2265,10 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 		// next iteration we process the parent entity
-		if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_entity)) && val->edict)
+		if (PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.tag_entity))
 		{
-			tagindex = (int)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.tag_index)->_float;
-			ent = PRVM_EDICT_NUM(val->edict);
+			tagindex = (int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.tag_index);
+			ent = PRVM_EDICT_NUM(PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.tag_entity));
 		}
 		else
 			break;
@@ -2292,7 +2276,7 @@ int CL_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	}
 
 	// RENDER_VIEWMODEL magic
-	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && (RF_VIEWMODEL & (int)val->_float))
+	if ((int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.renderflags) & RF_VIEWMODEL)
 	{
 		Matrix4x4_Copy(&tagmatrix, out);
 
@@ -2369,7 +2353,6 @@ void VM_CL_gettaginfo (void)
 	int parentindex;
 	const char *tagname;
 	int returncode;
-	prvm_eval_t *val;
 	vec3_t fo, le, up, trans;
 	const dp_model_t *model;
 
@@ -2387,18 +2370,12 @@ void VM_CL_gettaginfo (void)
 	CL_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
 	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
 
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_parent)))
-		val->_float = parentindex;
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_name)))
-		val->string = tagname ? PRVM_SetTempString(tagname) : 0;
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_offset)))
-		VectorCopy(trans, val->vector);
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_forward)))
-		VectorCopy(fo, val->vector);
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_right)))
-		VectorScale(le, -1, val->vector);
-	if((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.gettaginfo_up)))
-		VectorCopy(up, val->vector);
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.gettaginfo_parent) = parentindex;
+	PRVM_GLOBALFIELDSTRING(prog->globaloffsets.gettaginfo_name) = tagname ? PRVM_SetTempString(tagname) : 0;
+	VectorCopy(trans, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_offset));
+	VectorCopy(fo, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_forward));
+	VectorScale(le, -1, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_right));
+	VectorCopy(up, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_up));
 
 	switch(returncode)
 	{
@@ -2505,8 +2482,6 @@ vmparticlespawner_t vmpartspawner;
 // TODO: automatic max_themes grow
 static void VM_InitParticleSpawner (int maxthemes)
 {
-	prvm_eval_t *val;
-
 	// bound max themes to not be an insane value
 	if (maxthemes < 4)
 		maxthemes = 4;
@@ -2524,8 +2499,8 @@ static void VM_InitParticleSpawner (int maxthemes)
 	vmpartspawner.initialized = true;
 	vmpartspawner.verified = true;
 	// get field addresses for fast querying (we can do 1000 calls of spawnparticle in a frame)
-	#define getglobal(v,s) val = PRVM_GLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset(s)); if (val) { vmpartspawner.v = &val->_float; } else { VM_Warning("VM_InitParticleSpawner: missing global '%s', spawner cannot work\n", s); vmpartspawner.verified = false; }
-	#define getglobalvector(v,s) val = PRVM_GLOBALFIELDVALUE(PRVM_ED_FindGlobalOffset(s)); if (val) { vmpartspawner.v = (float *)val->vector; } else { VM_Warning("VM_InitParticleSpawner: missing global '%s', spawner cannot work\n", s); vmpartspawner.verified = false; }
+	#define getglobal(v,s) vmpartspawner.v = &PRVM_GLOBALFIELDFLOAT(PRVM_ED_FindGlobalOffset(s))
+	#define getglobalvector(v,s) vmpartspawner.v = PRVM_GLOBALFIELDVECTOR(PRVM_ED_FindGlobalOffset(s))
 	getglobal(particle_type, "particle_type");
 	getglobal(particle_blendmode, "particle_blendmode");
 	getglobal(particle_orientation, "particle_orientation");
@@ -3445,7 +3420,6 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	trace_t		trace;
 	int			i, svent;
 	prvm_edict_t		*enemy;
-	prvm_eval_t	*val;
 
 // try the move
 	VectorCopy (ent->fields.client->origin, oldorg);
@@ -3542,8 +3516,7 @@ qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	if ( (int)ent->fields.client->flags & FL_PARTIALGROUND )
 		ent->fields.client->flags = (int)ent->fields.client->flags & ~FL_PARTIALGROUND;
 
-	if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.groundentity)))
-		val->edict = PRVM_EDICT_TO_PROG(trace.ent);
+	PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
 
 // the move is ok
 	if (relink)

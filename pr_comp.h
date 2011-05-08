@@ -42,7 +42,7 @@ typedef enum etype_e {ev_void, ev_string, ev_float, ev_vector, ev_entity, ev_fie
 #define	RESERVED_OFS	28
 
 
-enum opcode_e
+typedef enum opcode_e
 {
 	OP_DONE,
 	OP_MUL_F,
@@ -119,7 +119,8 @@ enum opcode_e
 
 	OP_BITAND,
 	OP_BITOR
-};
+}
+opcode_t;
 
 
 typedef struct statement_s
@@ -182,6 +183,14 @@ typedef struct mfunction_s
 	unsigned char	parm_size[MAX_PARMS];
 }
 mfunction_t;
+
+typedef struct mstatement_s
+{
+	opcode_t	op;
+	int			operand[3]; // always a global or -1 for unused
+	int			jumpabsolute; // only used by IF, IFNOT, GOTO
+}
+mstatement_t;
 
 
 #define	PROG_VERSION	6

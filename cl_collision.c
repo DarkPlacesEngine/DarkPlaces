@@ -197,12 +197,11 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
-	prvm_eval_t *val;
 	if (passedict)
 	{
-		val = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
-		if (val && val->_float)
-			return (int)val->_float;
+		int dphitcontentsmask = (int)PRVM_EDICTFIELDFLOAT(passedict, prog->fieldoffsets.dphitcontentsmask);
+		if (dphitcontentsmask)
+			return dphitcontentsmask;
 		else if (passedict->fields.client->solid == SOLID_SLIDEBOX)
 		{
 			if ((int)passedict->fields.client->flags & FL_MONSTER)
