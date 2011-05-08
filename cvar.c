@@ -265,31 +265,32 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 		// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
 		int j;
 		const char *s;
-		prvm_eval_t *val = (prvm_eval_t *)(prog->globals.generic + prog->globaldefs[var->globaldefindex[i]].ofs);
+		vec3_t v;
 		switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
 		{
 			case ev_float:
-				val->_float = var->value;
+				PRVM_GLOBALFIELDFLOAT(prog->globaldefs[var->globaldefindex[i]].ofs) = var->value;
 				break;
 			case ev_vector:
 				s = var->string;
-				VectorClear(val->vector);
+				VectorClear(v);
 				for (j = 0;j < 3;j++)
 				{
 					while (*s && ISWHITESPACE(*s))
 						s++;
 					if (!*s)
 						break;
-					val->vector[j] = atof(s);
+					v[j] = atof(s);
 					while (!ISWHITESPACE(*s))
 						s++;
 					if (!*s)
 						break;
 				}
+				VectorCopy(v, PRVM_GLOBALFIELDVECTOR(prog->globaldefs[var->globaldefindex[i]].ofs));
 				break;
 			case ev_string:
 				PRVM_ChangeEngineString(var->globaldefindex_stringno[i], var->string);
-				val->string = var->globaldefindex_stringno[i];
+				PRVM_GLOBALFIELDSTRING(prog->globaldefs[var->globaldefindex[i]].ofs) = var->globaldefindex_stringno[i];
 				break;
 		}
 	}

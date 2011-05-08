@@ -19,13 +19,11 @@ static prvm_prog_t *csqc_tmpprog;
 
 void CL_VM_PreventInformationLeaks(void)
 {
-	prvm_eval_t *val;
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
 		VM_ClearTraceGlobals();
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_networkentity)))
-			val->_float = 0;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_networkentity) = 0;
 	CSQC_END
 }
 
@@ -62,46 +60,30 @@ void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never execut
 }
 void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 {
-	prvm_eval_t *val;
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_take);
-		if(val)
-			val->_float = dmg_take;
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_save);
-		if(val)
-			val->_float = dmg_save;
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.dmg_origin);
-		if(val)
-		{
-			val->vector[0] = dmg_origin[0];
-			val->vector[1] = dmg_origin[1];
-			val->vector[2] = dmg_origin[2];
-		}
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.dmg_take) = dmg_take;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.dmg_save) = dmg_save;
+		VectorCopy(dmg_origin, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.dmg_origin));
 		CSQC_END
 	}
 }
 
 void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 {
-	prvm_eval_t *val;
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.servertime)))
-		val->_float = newtime;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.serverprevtime)))
-		val->_float = oldtime;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.serverdeltatime)))
-		val->_float = newtime - oldtime;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.servertime) = newtime;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.serverprevtime) = oldtime;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.serverdeltatime) = newtime - oldtime;
 	CSQC_END
 }
 
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (void)
 {
-	prvm_eval_t *val;
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
 		prog->globals.client->frametime = max(0, cl.time - cl.oldtime);
@@ -120,12 +102,9 @@ static void CSQC_SetGlobals (void)
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, prog->globals.client->pmove_org);
 		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
 
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
-			VectorCopy(cl.viewangles, val->vector);
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_punchangle)))
-			VectorCopy(cl.punchangle, val->vector);
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_punchvector)))
-			VectorCopy(cl.punchvector, val->vector);
+		VectorCopy(cl.viewangles, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_angles));
+		VectorCopy(cl.punchangle, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_punchangle));
+		VectorCopy(cl.punchvector, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_punchvector));
 		prog->globals.client->maxclients = cl.maxclients;
 	CSQC_END
 }
@@ -162,7 +141,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	int renderflags;
 	int c;
 	float scale;
-	prvm_eval_t *val;
 	entity_render_t *entrender;
 	dp_model_t *model;
 
@@ -192,22 +170,24 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 			return false;
 	}
 
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param0)))	entrender->userwavefunc_param[0] = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param1)))	entrender->userwavefunc_param[1] = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param2)))	entrender->userwavefunc_param[2] = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.userwavefunc_param3)))	entrender->userwavefunc_param[3] = val->_float;
+	entrender->userwavefunc_param[0] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param0);
+	entrender->userwavefunc_param[1] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param1);
+	entrender->userwavefunc_param[2] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param2);
+	entrender->userwavefunc_param[3] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param3);
 
 	entrender->model = model;
 	entrender->skinnum = (int)ed->fields.client->skin;
 	entrender->effects |= entrender->model->effects;
-	scale = 1;
-	renderflags = 0;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.renderflags)) && val->_float)	renderflags = (int)val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.alpha)) && val->_float)		entrender->alpha = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.scale)) && val->_float)		entrender->scale = scale = val->_float;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->colormod);
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->glowmod);
+	renderflags = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.renderflags);
+	entrender->alpha = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.alpha);
+	entrender->scale = scale = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.scale);
+	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.colormod), entrender->colormod);
+	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.glowmod), entrender->glowmod);
 	if(ed->fields.client->effects)	entrender->effects |= (int)ed->fields.client->effects;
+	if (!entrender->alpha)
+		entrender->alpha = 1.0f;
+	if (!entrender->scale)
+		entrender->scale = scale = 1.0f;
 	if (!VectorLength2(entrender->colormod))
 		VectorSet(entrender->colormod, 1, 1, 1);
 	if (!VectorLength2(entrender->glowmod))
@@ -220,11 +200,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
 	VM_UpdateEdictSkeleton(ed, model, ed->priv.server->frameblend);
-	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
+	entrender->shadertime = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.shadertime);
 
 	// transparent offset
-	if ((renderflags & RF_USETRANSPARENTOFFSET) && (val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.transparent_offset)))
-		entrender->transparent_offset = val->_float;
+	if (renderflags & RF_USETRANSPARENTOFFSET)
+		entrender->transparent_offset = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.transparent_offset);
 
 	if(renderflags)
 	{
@@ -533,25 +513,19 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 
 void CL_VM_UpdateIntermissionState (int intermission)
 {
-	prvm_eval_t *val;
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.intermission);
-		if(val)
-			val->_float = intermission;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.intermission) = intermission;
 		CSQC_END
 	}
 }
 void CL_VM_UpdateShowingScoresState (int showingscores)
 {
-	prvm_eval_t *val;
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.sb_showscores);
-		if(val)
-			val->_float = showingscores;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.sb_showscores) = showingscores;
 		CSQC_END
 	}
 }
@@ -585,7 +559,6 @@ void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 	int localcoop;
 	int localdeathmatch;
 
-	prvm_eval_t *val;
 	if(cl.csqc_loaded)
 	{
 		if(gametype == GAME_COOP)
@@ -607,12 +580,8 @@ void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 			localdeathmatch = 0;
 		}
 		CSQC_BEGIN
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.coop);
-		if(val)
-			val->_float = localcoop;
-		val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.deathmatch);
-		if(val)
-			val->_float = localdeathmatch;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.coop) = localcoop;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.deathmatch) = localdeathmatch;
 		CSQC_END
 	}
 }
@@ -816,6 +785,146 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 	return false;
 }
 
+#define CL_REQFIELDS (sizeof(cl_reqfields) / sizeof(prvm_required_field_t))
+
+prvm_required_field_t cl_reqfields[] =
+{
+	{ev_entity, "groundentity"},
+	{ev_entity, "tag_entity"},
+	{ev_float, "alpha"},
+	{ev_float, "dimension_hit"},
+	{ev_float, "dimension_solid"},
+	{ev_float, "dphitcontentsmask"},
+	{ev_float, "frame"},
+	{ev_float, "frame1time"},
+	{ev_float, "frame2"},
+	{ev_float, "frame2time"},
+	{ev_float, "frame3"},
+	{ev_float, "frame3time"},
+	{ev_float, "frame4"},
+	{ev_float, "frame4time"},
+	{ev_float, "gravity"},
+	{ev_float, "idealpitch"},
+	{ev_float, "lerpfrac"},
+	{ev_float, "lerpfrac3"},
+	{ev_float, "lerpfrac4"},
+	{ev_float, "movetype"}, // used by ODE code
+	{ev_float, "nextthink"},
+	{ev_float, "pitch_speed"},
+	{ev_float, "renderflags"},
+	{ev_float, "scale"},
+	{ev_float, "shadertime"},
+	{ev_float, "skeletonindex"},
+	{ev_float, "solid"}, // used by ODE code
+	{ev_float, "tag_index"},
+	{ev_float, "userwavefunc_param0"},
+	{ev_float, "userwavefunc_param1"},
+	{ev_float, "userwavefunc_param2"},
+	{ev_float, "userwavefunc_param3"},
+	{ev_function, "camera_transform"},
+	{ev_function, "think"},
+	{ev_string, "classname"},
+	{ev_vector, "colormod"},
+	{ev_vector, "glowmod"},
+
+	// physics
+	//{ev_float, "solid"},
+	//{ev_float, "movetype"},
+	//{ev_float, "modelindex"},
+	{ev_vector, "mass"},
+	//{ev_vector, "origin"},
+	//{ev_vector, "velocity"},
+	//{ev_vector, "axis_forward"},
+	//{ev_vector, "axis_left"},
+	//{ev_vector, "axis_up"},
+	//{ev_vector, "spinvelocity"},
+	//{ev_vector, "angles"},
+	//{ev_vector, "avelocity"},
+};
+
+#define CL_REQGLOBALS (sizeof(cl_reqglobals) / sizeof(prvm_required_field_t))
+
+prvm_required_field_t cl_reqglobals[] =
+{
+	{ev_entity, "self"},
+	{ev_entity, "trace_ent"},
+	{ev_entity, "trace_networkentity"},
+	{ev_float, "coop"},
+	{ev_float, "deathmatch"},
+	{ev_float, "dmg_save"},
+	{ev_float, "dmg_take"},
+	{ev_float, "drawfont"},
+	{ev_float, "drawfontscale"},
+	{ev_float, "gettaginfo_parent"},
+	{ev_float, "intermission"},
+	{ev_float, "particle_airfriction"},
+	{ev_float, "particle_alpha"},
+	{ev_float, "particle_alphafade"},
+	{ev_float, "particle_angle"},
+	{ev_float, "particle_blendmode"},
+	{ev_float, "particle_bounce"},
+	{ev_float, "particle_delaycollision"},
+	{ev_float, "particle_delayspawn"},
+	{ev_float, "particle_gravity"},
+	{ev_float, "particle_liquidfriction"},
+	{ev_float, "particle_orientation"},
+	{ev_float, "particle_originjitter"},
+	{ev_float, "particle_qualityreduction"},
+	{ev_float, "particle_size"},
+	{ev_float, "particle_sizeincrease"},
+	{ev_float, "particle_spin"},
+	{ev_float, "particle_stainalpha"},
+	{ev_float, "particle_stainsize"},
+	{ev_float, "particle_staintex"},
+	{ev_float, "particle_staintex"},
+	{ev_float, "particle_stretch"},
+	{ev_float, "particle_tex"},
+	{ev_float, "particle_time"},
+	{ev_float, "particle_type"},
+	{ev_float, "particle_velocityjitter"},
+	{ev_float, "particles_alphamax"},
+	{ev_float, "particles_alphamin"},
+	{ev_float, "require_spawnfunc_prefix"},
+	{ev_float, "sb_showscores"},
+	{ev_float, "serverdeltatime"},
+	{ev_float, "serverprevtime"},
+	{ev_float, "servertime"},
+	{ev_float, "time"},
+	{ev_float, "trace_allsolid"},
+	{ev_float, "trace_dphitcontents"},
+	{ev_float, "trace_dphitq3surfaceflags"},
+	{ev_float, "trace_dpstartcontents"},
+	{ev_float, "trace_fraction"},
+	{ev_float, "trace_inopen"},
+	{ev_float, "trace_inwater"},
+	{ev_float, "trace_plane_dist"},
+	{ev_float, "trace_startsolid"},
+	{ev_float, "transparent_offset"},
+	{ev_string, "SV_InitCmd"},
+	{ev_string, "gettaginfo_name"},
+	{ev_string, "trace_dphittexturename"},
+	{ev_string, "worldstatus"},
+	{ev_vector, "dmg_origin"},
+	{ev_vector, "gettaginfo_forward"},
+	{ev_vector, "gettaginfo_offset"},
+	{ev_vector, "gettaginfo_right"},
+	{ev_vector, "gettaginfo_up"},
+	{ev_vector, "particle_color1"},
+	{ev_vector, "particle_color2"},
+	{ev_vector, "particle_staincolor1"},
+	{ev_vector, "particle_staincolor2"},
+	{ev_vector, "particles_colormax"},
+	{ev_vector, "particles_colormin"},
+	{ev_vector, "trace_endpos"},
+	{ev_vector, "trace_plane_normal"},
+	{ev_vector, "v_forward"},
+	{ev_vector, "v_right"},
+	{ev_vector, "v_up"},
+	{ev_vector, "view_angles"},
+	{ev_vector, "view_punchangle"},
+	{ev_vector, "view_punchvector"},
+};
+
 void CL_VM_Init (void)
 {
 	const char* csprogsfn;
@@ -823,7 +932,6 @@ void CL_VM_Init (void)
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
 	int requiredsize;
-	prvm_eval_t *val;
 
 	// reset csqc_progcrc after reading it, so that changing servers doesn't
 	// expect csqc on the next server
@@ -908,7 +1016,7 @@ void CL_VM_Init (void)
 	prog->error_cmd = CL_VM_Error;
 	prog->ExecuteProgram = CLVM_ExecuteProgram;
 
-	PRVM_LoadProgs(csprogsfn, cl_numrequiredfunc, cl_required_func, 0, NULL, 0, NULL);
+	PRVM_LoadProgs(csprogsfn, cl_numrequiredfunc, cl_required_func, CL_REQFIELDS, cl_reqfields, CL_REQGLOBALS, cl_reqglobals);
 
 	if (!prog->loaded)
 	{
@@ -957,9 +1065,7 @@ void CL_VM_Init (void)
 	prog->globals.client->player_localentnum = cl.playerentity;
 
 	// set map description (use world entity 0)
-	val = PRVM_EDICTFIELDVALUE(prog->edicts, prog->fieldoffsets.message);
-	if(val)
-		val->string = PRVM_SetEngineString(cl.worldmessage);
+	PRVM_EDICTFIELDSTRING(prog->edicts, prog->fieldoffsets.message) = PRVM_SetEngineString(cl.worldmessage);
 	VectorCopy(cl.world.mins, prog->edicts->fields.client->mins);
 	VectorCopy(cl.world.maxs, prog->edicts->fields.client->maxs);
 
@@ -1027,7 +1133,6 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 {
 	qboolean ret = false;
 	prvm_edict_t *ed;
-	prvm_eval_t *val, *valforward, *valright, *valup, *valendpos;
 	vec3_t forward, left, up, origin, ang;
 	matrix4x4_t mat, matq;
 
@@ -1035,38 +1140,31 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 		ed = PRVM_EDICT_NUM(entnum);
 		// camera:
 		//   camera_transform
-		if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.camera_transform)) && val->function)
+		if(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform))
 		{
 			ret = true;
 			if(viewmatrix || clipplane || visorigin)
 			{
-				valforward = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_forward);
-				valright = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_right);
-				valup = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.v_up);
-				valendpos = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_endpos);
-				if(valforward && valright && valup && valendpos)
-				{
-					Matrix4x4_ToVectors(viewmatrix, forward, left, up, origin);
-					AnglesFromVectors(ang, forward, up, false);
-					prog->globals.client->time = cl.time;
-					prog->globals.client->self = entnum;
-					VectorCopy(origin, PRVM_G_VECTOR(OFS_PARM0));
-					VectorCopy(ang, PRVM_G_VECTOR(OFS_PARM1));
-					VectorCopy(forward, valforward->vector);
-					VectorScale(left, -1, valright->vector);
-					VectorCopy(up, valup->vector);
-					VectorCopy(origin, valendpos->vector);
-					PRVM_ExecuteProgram(val->function, "QC function e.camera_transform is missing");
-					VectorCopy(PRVM_G_VECTOR(OFS_RETURN), origin);
-					VectorCopy(valforward->vector, forward);
-					VectorScale(valright->vector, -1, left);
-					VectorCopy(valup->vector, up);
-					VectorCopy(valendpos->vector, visorigin);
-					Matrix4x4_Invert_Full(&mat, viewmatrix);
-					Matrix4x4_FromVectors(viewmatrix, forward, left, up, origin);
-					Matrix4x4_Concat(&matq, viewmatrix, &mat);
-					Matrix4x4_TransformPositivePlane(&matq, clipplane->normal[0], clipplane->normal[1], clipplane->normal[2], clipplane->dist, &clipplane->normal[0]);
-				}
+				Matrix4x4_ToVectors(viewmatrix, forward, left, up, origin);
+				AnglesFromVectors(ang, forward, up, false);
+				prog->globals.client->time = cl.time;
+				prog->globals.client->self = entnum;
+				VectorCopy(origin, PRVM_G_VECTOR(OFS_PARM0));
+				VectorCopy(ang, PRVM_G_VECTOR(OFS_PARM1));
+				VectorCopy(forward, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward));
+				VectorScale(left, -1, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right));
+				VectorCopy(up, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up));
+				VectorCopy(origin, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos));
+				PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform), "QC function e.camera_transform is missing");
+				VectorCopy(PRVM_G_VECTOR(OFS_RETURN), origin);
+				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward), forward);
+				VectorScale(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right), -1, left);
+				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up), up);
+				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos), visorigin);
+				Matrix4x4_Invert_Full(&mat, viewmatrix);
+				Matrix4x4_FromVectors(viewmatrix, forward, left, up, origin);
+				Matrix4x4_Concat(&matq, viewmatrix, &mat);
+				Matrix4x4_TransformPositivePlane(&matq, clipplane->normal[0], clipplane->normal[1], clipplane->normal[2], clipplane->dist, &clipplane->normal[0]);
 			}
 		}
 	CSQC_END

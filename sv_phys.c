@@ -52,7 +52,7 @@ int SV_GetPitchSign(prvm_edict_t *ent)
 			model->type == mod_alias
 			:
 			(
-			 (((unsigned char)PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.pflags)->_float) & PFLAGS_FULLDYNAMIC)
+			 (((unsigned char)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.pflags)) & PFLAGS_FULLDYNAMIC)
 			 ||
 			 ((gamemode == GAME_TENEBRAE) && ((unsigned int)ent->fields.server->effects & (16 | 32)))
 			)
@@ -71,12 +71,11 @@ LINE TESTING IN HULLS
 
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
-	prvm_eval_t *val;
 	if (passedict)
 	{
-		val = PRVM_EDICTFIELDVALUE(passedict, prog->fieldoffsets.dphitcontentsmask);
-		if (val && val->_float)
-			return (int)val->_float;
+		int dphitcontentsmask = (int)PRVM_EDICTFIELDFLOAT(passedict, prog->fieldoffsets.dphitcontentsmask);
+		if (dphitcontentsmask)
+			return dphitcontentsmask;
 		else if (passedict->fields.server->solid == SOLID_SLIDEBOX)
 		{
 			if ((int)passedict->fields.server->flags & FL_MONSTER)
@@ -702,7 +701,6 @@ Linking entities into the world culling system
 
 void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 {
-	prvm_eval_t *val;
 	prog->globals.server->self = PRVM_EDICT_TO_PROG(touch);
 	prog->globals.server->other = PRVM_EDICT_TO_PROG(ent);
 	prog->globals.server->time = sv.time;
@@ -715,14 +713,10 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 	VectorSet (prog->globals.server->trace_plane_normal, 0, 0, 1);
 	prog->globals.server->trace_plane_dist = 0;
 	prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(ent);
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-		val->_float = 0;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-		val->_float = 0;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-		val->_float = 0;
-	if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-		val->string = 0;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dpstartcontents) = 0;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitcontents) = 0;
+	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitq3surfaceflags) = 0;
+	PRVM_GLOBALFIELDSTRING(prog->globaloffsets.trace_dphittexturename) = 0;
 	PRVM_ExecuteProgram (touch->fields.server->touch, "QC function self.touch is missing");
 }
 
@@ -1012,7 +1006,6 @@ returns true if entity had a valid contentstransition function call
 int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 {
 	int bValidFunctionCall;
-	prvm_eval_t *contentstransition;
 
 	// Default Valid Function Call to False
 	bValidFunctionCall = false;
@@ -1020,9 +1013,7 @@ int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 	if(ent->fields.server->watertype != nContents)
 	{ // Changed Contents
 		// Acquire Contents Transition Function from QC
-		contentstransition = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.contentstransition);
-
-		if(contentstransition->function)
+		if(PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.contentstransition))
 		{ // Valid Function; Execute
 			// Assign Valid Function
 			bValidFunctionCall = true;
@@ -1034,7 +1025,7 @@ int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 				// Assign Self
 				prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 			// Execute VM Function
-			PRVM_ExecuteProgram(contentstransition->function, "contentstransition: NULL function");
+			PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.contentstransition), "contentstransition: NULL function");
 		}
 	}
 
@@ -1137,7 +1128,6 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
-	prvm_eval_t *val;
 
 	old_self = prog->globals.server->self;
 	old_other = prog->globals.server->other;
@@ -1161,14 +1151,10 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 		VectorNegate(trace->plane.normal, prog->globals.server->trace_plane_normal);
 		prog->globals.server->trace_plane_dist = -trace->plane.dist;
 		prog->globals.server->trace_ent = PRVM_EDICT_TO_PROG(e1);
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dpstartcontents)))
-			val->_float = 0;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitcontents)))
-			val->_float = 0;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphitq3surfaceflags)))
-			val->_float = 0;
-		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.trace_dphittexturename)))
-			val->string = 0;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dpstartcontents) = 0;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitcontents) = 0;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitq3surfaceflags) = 0;
+		PRVM_GLOBALFIELDSTRING(prog->globaloffsets.trace_dphittexturename) = 0;
 		PRVM_ExecuteProgram (e2->fields.server->touch, "QC function self.touch is missing");
 	}
 
@@ -1447,13 +1433,10 @@ SV_Gravity
 static float SV_Gravity (prvm_edict_t *ent)
 {
 	float ent_gravity;
-	prvm_eval_t *val;
 
-	val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
-	if (val!=0 && val->_float)
-		ent_gravity = val->_float;
-	else
-		ent_gravity = 1.0;
+	ent_gravity = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.gravity);
+	if (!ent_gravity)
+		ent_gravity = 1.0f;
 	return ent_gravity * sv_gravity.value * sv.frametime;
 }
 
@@ -2521,11 +2504,10 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		movetime *= 1 - min(1, trace.fraction);
 		if (ent->fields.server->movetype == MOVETYPE_BOUNCEMISSILE)
 		{
-			prvm_eval_t *val;
-			float bouncefactor = 1.0f;
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.bouncefactor);
-			if (val!=0 && val->_float)
-				bouncefactor = val->_float;
+			float bouncefactor;
+			bouncefactor = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.bouncefactor);
+			if (!bouncefactor)
+				bouncefactor = 1.0f;
 
 			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 1 + bouncefactor);
 			ent->fields.server->flags = (int)ent->fields.server->flags & ~FL_ONGROUND;
@@ -2533,25 +2515,22 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		else if (ent->fields.server->movetype == MOVETYPE_BOUNCE)
 		{
 			float d, ent_gravity;
-			prvm_eval_t *val;
-			float bouncefactor = 0.5f;
-			float bouncestop = 60.0f / 800.0f;
+			float bouncefactor;
+			float bouncestop;
 
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.bouncefactor);
-			if (val!=0 && val->_float)
-				bouncefactor = val->_float;
+			bouncefactor = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.bouncefactor);
+			if (!bouncefactor)
+				bouncefactor = 0.5f;
 
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.bouncestop);
-			if (val!=0 && val->_float)
-				bouncestop = val->_float;
+			bouncestop = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.bouncestop);
+			if (!bouncestop)
+				bouncestop = 60.0f / 800.0f;
 
 			ClipVelocity (ent->fields.server->velocity, trace.plane.normal, ent->fields.server->velocity, 1 + bouncefactor);
+			ent_gravity = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.gravity);
+			if (!ent_gravity)
+				ent_gravity = 1.0f;
 			// LordHavoc: fixed grenades not bouncing when fired down a slope
-			val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.gravity);
-			if (val!=0 && val->_float)
-				ent_gravity = val->_float;
-			else
-				ent_gravity = 1.0;
 			if (sv_gameplayfix_grenadebouncedownslopes.integer)
 			{
 				d = DotProduct(trace.plane.normal, ent->fields.server->velocity);
@@ -2627,7 +2606,6 @@ void SV_Physics_Step (prvm_edict_t *ent)
 	// DRESK
 	// Backup Velocity in the event that movetypesteplandevent is called,
 	// to provide a parameter with the entity's velocity at impact.
-	prvm_eval_t *movetypesteplandevent;
 	vec3_t backupVelocity;
 	VectorCopy(ent->fields.server->velocity, backupVelocity);
 	// don't fall at all if fly/swim
@@ -2661,9 +2639,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 			if (hitsound && (int)ent->fields.server->flags & FL_ONGROUND)
 			{
 				// DRESK - Check for Entity Land Event Function
-				movetypesteplandevent = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.movetypesteplandevent);
-
-				if(movetypesteplandevent->function)
+				if(PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.movetypesteplandevent))
 				{ // Valid Function; Execute
 					// Prepare Parameters
 						// Assign Velocity at Impact
@@ -2673,7 +2649,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 						// Assign Self
 						prog->globals.server->self = PRVM_EDICT_TO_PROG(ent);
 					// Execute VM Function
-					PRVM_ExecuteProgram(movetypesteplandevent->function, "movetypesteplandevent: NULL function");
+					PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.movetypesteplandevent), "movetypesteplandevent: NULL function");
 				}
 				else
 				// Check for Engine Landing Sound

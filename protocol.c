@@ -10,7 +10,7 @@
 		const char *cname = "(no classname)"; \
 		if(prog->fieldoffsets.classname >= 0) \
 		{ \
-			string_t handle =  PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.classname)->string; \
+			string_t handle =  PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname); \
 			if (handle) \
 				cname = PRVM_GetString(handle); \
 		} \
@@ -279,7 +279,6 @@ static void EntityFrameCSQC_LostAllFrames(client_t *client)
 	// mark ALL csqc entities as requiring a FULL resend!
 	// I know this is a bad workaround, but better than nothing.
 	int i, n;
-	prvm_eval_t *val;
 	prvm_edict_t *ed;
 
 	if(prog->fieldoffsets.SendEntity < 0 || prog->fieldoffsets.Version < 0)
@@ -291,8 +290,7 @@ static void EntityFrameCSQC_LostAllFrames(client_t *client)
 		if(client->csqcentityglobalhistory[i])
 		{
 			ed = prog->edicts + i;
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
-			if (val->function)
+			if (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.SendEntity))
 				client->csqcentitysendflags[i] |= 0xFFFFFF; // FULL RESEND
 			else // if it was ever sent to that client as a CSQC entity
 			{
@@ -447,7 +445,6 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 	qboolean sectionstarted = false;
 	const unsigned short *n;
 	prvm_edict_t *ed;
-	prvm_eval_t *val;
 	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;
 	int dbframe = EntityFrameCSQC_AllocFrame(client, framenum);
 	csqcentityframedb_t *db = &client->csqcentityframehistory[dbframe];
@@ -482,8 +479,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 			}
 		}
 		ed = prog->edicts + number;
-		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
-		if (val->function)
+		if (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.SendEntity))
 			client->csqcentityscope[number] = 2;
 		else if (client->csqcentityscope[number])
 		{
@@ -512,8 +508,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 	{
 		number = *n;
 		ed = prog->edicts + number;
-		val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
-		if (val->function)
+		if (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.SendEntity))
 			client->csqcentityscope[number] = 2;
 	}
 	*/
@@ -562,8 +557,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 			// save the cursize value in case we overflow and have to rollback
 			int oldcursize = msg->cursize;
 			client->csqcentityscope[number] = 1;
-			val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.SendEntity);
-			if (val->function)
+			if (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.SendEntity))
 			{
 				if(!sectionstarted)
 					MSG_WriteByte(msg, svc_csqcentities);
@@ -574,7 +568,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 					PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
 					PRVM_G_FLOAT(OFS_PARM1) = sendflags;
 					prog->globals.server->self = number;
-					PRVM_ExecuteProgram(val->function, "Null SendEntity\n");
+					PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.SendEntity), "Null SendEntity\n");
 					msg->allowoverflow = false;
 					if(PRVM_G_FLOAT(OFS_RETURN) && msg->cursize + 2 <= maxsize)
 					{
@@ -701,7 +695,6 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 	int i, bits;
 	sizebuf_t buf;
 	unsigned char data[128];
-	prvm_eval_t *val;
 	qboolean success = false;
 
 	// prepare the buffer
@@ -713,8 +706,7 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 	{
 		ENTITYSIZEPROFILING_START(msg, states[i]->number);
 		s = states[i];
-		val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
-		if(val && val->function)
+		if(PRVM_EDICTFIELDFUNCTION((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity))
 			continue;
 
 		// prepare the buffer
@@ -1409,7 +1401,6 @@ qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_databas
 	entity_frame_t *o = &d->deltaframe;
 	const entity_state_t *ent, *delta;
 	vec3_t eye;
-	prvm_eval_t *val;
 
 	d->latestframenum++;
 
@@ -1441,8 +1432,7 @@ qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_databas
 		ent = states[i];
 		number = ent->number;
 
-		val = PRVM_EDICTFIELDVALUE((&prog->edicts[number]), prog->fieldoffsets.SendEntity);
-		if(val && val->function)
+		if (PRVM_EDICTFIELDFUNCTION((&prog->edicts[number]), prog->fieldoffsets.SendEntity))
 			continue;
 		for (;onum < o->numentities && o->entitydata[onum].number < number;onum++)
 		{
@@ -1887,7 +1877,6 @@ qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_datab
 	int i, n, startnumber;
 	sizebuf_t buf;
 	unsigned char data[128];
-	prvm_eval_t *val;
 
 	// if there isn't enough space to accomplish anything, skip it
 	if (msg->cursize + 24 > maxsize)
@@ -1932,8 +1921,7 @@ qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_datab
 	d->currententitynumber = 1;
 	for (i = 0, n = startnumber;n < prog->max_edicts;n++)
 	{
-		val = PRVM_EDICTFIELDVALUE((&prog->edicts[n]), prog->fieldoffsets.SendEntity);
-		if(val && val->function)
+		if (PRVM_EDICTFIELDFUNCTION((&prog->edicts[n]), prog->fieldoffsets.SendEntity))
 			continue;
 		// find the old state to delta from
 		e = EntityFrame4_GetReferenceEntity(d, n);
@@ -2089,9 +2077,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	//dp_model_t *model;
 	ENTITYSIZEPROFILING_START(msg, s->number);
 
-	prvm_eval_t *val;
-	val = PRVM_EDICTFIELDVALUE((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity);
-	if(val && val->function)
+	if (PRVM_EDICTFIELDFUNCTION((&prog->edicts[s->number]), prog->fieldoffsets.SendEntity))
 		return;
 
 	if (s->active != ACTIVE_NETWORK)
