@@ -798,8 +798,8 @@ void V_CalcRefdef (void)
 				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 1);
 			// calculate a viewmodel matrix for use in view-attached entities
 			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
-			VectorCopy(vieworg, cl.csqc_origin);
-			VectorCopy(viewangles, cl.csqc_angles);
+			VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
+			VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
 		}
 	}
 }

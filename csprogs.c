@@ -108,17 +108,16 @@ static void CSQC_SetGlobals (void)
 		prog->globals.client->servercommandframe = cls.servermovesequence;
 		prog->globals.client->clientcommandframe = cl.movecmd[0].sequence;
 		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
-		VectorCopy(cl.viewangles, cl.csqc_angles);
 		// // FIXME: this actually belongs into getinputstate().. [12/17/2007 Black]
 		prog->globals.client->input_buttons = cl.movecmd[0].buttons;
 		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
-		//VectorCopy(cl.movement_origin, cl.csqc_origin);
-		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, cl.csqc_origin);
+		VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
+		VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 
 		// LordHavoc: Spike says not to do this, but without pmove_org the
 		// CSQC is useless as it can't alter the view origin without
 		// completely replacing it
-		VectorCopy(cl.csqc_origin, prog->globals.client->pmove_org);
+		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, prog->globals.client->pmove_org);
 		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
 
 		if ((val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.view_angles)))
