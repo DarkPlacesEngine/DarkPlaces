@@ -2203,6 +2203,18 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	// TODO do we need the same weird angle inverting logic here as in the server side case?
 	if(viewmatrix)
 		Matrix4x4_CreateFromQuakeEntity(out, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale * cl_viewmodel_scale.value);
+	else if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && ((int)val->_float & RF_USEAXIS))
+	{
+		vec3_t forward;
+		vec3_t left;
+		vec3_t up;
+		vec3_t origin;
+		VectorScale(prog->globals.client->v_forward, scale, forward);
+		VectorScale(prog->globals.client->v_right, -scale, left);
+		VectorScale(prog->globals.client->v_up, scale, up);
+		VectorCopy(ent->fields.client->origin, origin);
+		Matrix4x4_FromVectors(out, forward, left, up, origin);
+	}
 	else
 	{
 		pitchsign = CL_GetPitchSign(ent);
