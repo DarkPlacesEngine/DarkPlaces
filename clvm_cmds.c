@@ -693,8 +693,8 @@ extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed, int edictnum);//csprogs.c
 static void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix;
-	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], 1);
-	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], cl_viewmodel_scale.value);
+	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], 1);
+	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], cl_viewmodel_scale.value);
 }
 
 void CL_RelinkLightFlashes(void);
@@ -722,8 +722,8 @@ void VM_CL_R_ClearScene (void)
 	r_refdef.view.ortho_y = scr_fov.value * (3.0 / 4.0);
 	r_refdef.view.clear = true;
 	r_refdef.view.isoverlay = false;
-	// FIXME: restore cl.csqc_origin
-	// FIXME: restore cl.csqc_angles
+	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
+	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 	cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
 	cl.csqc_vidvars.drawenginesbar = false;
 	cl.csqc_vidvars.drawcrosshair = false;
@@ -825,28 +825,28 @@ void VM_CL_R_SetView (void)
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.ortho_y;
 			break;
 		case VF_ORIGIN:
-			VectorCopy(cl.csqc_origin, PRVM_G_VECTOR(OFS_RETURN));
+			VectorCopy(cl.csqc_vieworigin, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case VF_ORIGIN_X:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[0];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vieworigin[0];
 			break;
 		case VF_ORIGIN_Y:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[1];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vieworigin[1];
 			break;
 		case VF_ORIGIN_Z:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_origin[2];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vieworigin[2];
 			break;
 		case VF_ANGLES:
-			VectorCopy(cl.csqc_angles, PRVM_G_VECTOR(OFS_RETURN));
+			VectorCopy(cl.csqc_viewangles, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case VF_ANGLES_X:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[0];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_viewangles[0];
 			break;
 		case VF_ANGLES_Y:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[1];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_viewangles[1];
 			break;
 		case VF_ANGLES_Z:
-			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_angles[2];
+			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_viewangles[2];
 			break;
 		case VF_DRAWWORLD:
 			PRVM_G_FLOAT(OFS_RETURN) = cl.csqc_vidvars.drawworld;
@@ -932,35 +932,35 @@ void VM_CL_R_SetView (void)
 		r_refdef.view.frustum_y = tan(k * M_PI / 360.0);r_refdef.view.ortho_y = k;
 		break;
 	case VF_ORIGIN:
-		VectorCopy(f, cl.csqc_origin);
+		VectorCopy(f, cl.csqc_vieworigin);
 		CSQC_R_RecalcView();
 		break;
 	case VF_ORIGIN_X:
-		cl.csqc_origin[0] = k;
+		cl.csqc_vieworigin[0] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_ORIGIN_Y:
-		cl.csqc_origin[1] = k;
+		cl.csqc_vieworigin[1] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_ORIGIN_Z:
-		cl.csqc_origin[2] = k;
+		cl.csqc_vieworigin[2] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_ANGLES:
-		VectorCopy(f, cl.csqc_angles);
+		VectorCopy(f, cl.csqc_viewangles);
 		CSQC_R_RecalcView();
 		break;
 	case VF_ANGLES_X:
-		cl.csqc_angles[0] = k;
+		cl.csqc_viewangles[0] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_ANGLES_Y:
-		cl.csqc_angles[1] = k;
+		cl.csqc_viewangles[1] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_ANGLES_Z:
-		cl.csqc_angles[2] = k;
+		cl.csqc_viewangles[2] = k;
 		CSQC_R_RecalcView();
 		break;
 	case VF_DRAWWORLD:
@@ -2200,9 +2200,8 @@ void CL_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	if (val && val->_float != 0)
 		scale = val->_float;
 
-	// TODO do we need the same weird angle inverting logic here as in the server side case?
 	if(viewmatrix)
-		Matrix4x4_CreateFromQuakeEntity(out, cl.csqc_origin[0], cl.csqc_origin[1], cl.csqc_origin[2], cl.csqc_angles[0], cl.csqc_angles[1], cl.csqc_angles[2], scale * cl_viewmodel_scale.value);
+		*out = r_refdef.view.matrix;
 	else if ((val = PRVM_EDICTFIELDVALUE(ent, prog->fieldoffsets.renderflags)) && ((int)val->_float & RF_USEAXIS))
 	{
 		vec3_t forward;
