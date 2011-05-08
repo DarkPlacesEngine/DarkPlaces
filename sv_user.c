@@ -762,8 +762,8 @@ void SV_ApplyClientMove (void)
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.cursor_trace_ent))) val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
 	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ping))) val->_float = host_client->ping * 1000.0;
-	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.packetloss))) val->_float = packetloss / (float) NETGRAPH_PACKETS;
-	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.movementloss))) val->_float = movementloss / (float) NETGRAPH_PACKETS;
+	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ping_packetloss))) val->_float = packetloss / (float) NETGRAPH_PACKETS;
+	if ((val = PRVM_EDICTFIELDVALUE(host_client->edict, prog->fieldoffsets.ping_movementloss))) val->_float = movementloss / (float) NETGRAPH_PACKETS;
 }
 
 void SV_FrameLost(int framenum)

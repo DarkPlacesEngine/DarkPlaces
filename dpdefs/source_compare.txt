@@ -6,8 +6,6 @@
 // progs: Builtin #492 declared but not defined
 // progs: Builtin #493 declared but not defined
 // progs: Builtin #608 declared but not defined
-// progs: Field ping_packetloss declared but not defined
-// progs: Field ping_movementloss declared but not defined
 // progs: Field frame2 declared but not defined
 // progs: Field frame3 declared but not defined
 // progs: Field frame4 declared but not defined
@@ -429,8 +427,6 @@ float require_spawnfunc_prefix; // DP_UNKNOWN
 .float fullbright; // DP_UNKNOWN
 .float hull; // DP_UNKNOWN
 .float items2; // DP_UNKNOWN
-.float movementloss; // DP_UNKNOWN
-.float packetloss; // DP_UNKNOWN
 .float pmodel; // DP_UNKNOWN
 .float renderamt; // DP_UNKNOWN
 .float rendermode; // DP_UNKNOWN
