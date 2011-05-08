@@ -2097,7 +2097,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 	char *instrings;
 	fs_offset_t filesize;
 	int requiredglobalspace;
-	int op;
+	opcode_t op;
 	int a;
 	int b;
 	int c;
