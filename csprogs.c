@@ -166,7 +166,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	prvm_eval_t *val;
 	entity_render_t *entrender;
 	dp_model_t *model;
-	matrix4x4_t tagmatrix, matrix2;
 
 	model = CL_GetModelFromEdict(ed);
 	if (!model)
@@ -216,34 +215,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		VectorSet(entrender->glowmod, 1, 1, 1);
 
 	// LordHavoc: use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
-	CL_GetTagMatrix(&tagmatrix, ed, 0);
-	if (renderflags & RF_USEAXIS)
-	{
-		vec3_t left;
-		VectorNegate(prog->globals.client->v_right, left);
-		Matrix4x4_FromVectors(&matrix2, prog->globals.client->v_forward, left, prog->globals.client->v_up, ed->fields.client->origin);
-		Matrix4x4_Scale(&matrix2, scale, 1);
-	}
-	else
-	{
-		vec3_t angles;
-		VectorCopy(ed->fields.client->angles, angles);
-		// if model is alias, reverse pitch direction
-		if (entrender->model->type == mod_alias)
-			angles[0] = -angles[0];
-
-		// set up the render matrix
-		Matrix4x4_CreateFromQuakeEntity(&matrix2, ed->fields.client->origin[0], ed->fields.client->origin[1], ed->fields.client->origin[2], angles[0], angles[1], angles[2], scale);
-	}
+	CL_GetTagMatrix(&entrender->matrix, ed, 0);
 
 	// set up the animation data
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
 	VM_UpdateEdictSkeleton(ed, model, ed->priv.server->frameblend);
 	if ((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.shadertime))) entrender->shadertime = val->_float;
-
-	// concat the matrices to make the entity relative to its tag
-	Matrix4x4_Concat(&entrender->matrix, &tagmatrix, &matrix2);
 
 	// transparent offset
 	if ((renderflags & RF_USETRANSPARENTOFFSET) && (val = PRVM_GLOBALFIELDVALUE(prog->globaloffsets.transparent_offset)))
