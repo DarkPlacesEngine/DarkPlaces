@@ -210,22 +210,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.colormod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->colormod);
 	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.glowmod)) && VectorLength2(val->vector))	VectorCopy(val->vector, entrender->glowmod);
 	if(ed->fields.client->effects)	entrender->effects |= (int)ed->fields.client->effects;
-	if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_entity)) && val->edict)
-	{
-		int tagentity;
-		int tagindex = 0;
-		tagentity = val->edict;
-		if((val = PRVM_EDICTFIELDVALUE(ed, prog->fieldoffsets.tag_index)) && val->_float)
-			tagindex = (int)val->_float;
-		CL_GetTagMatrix (&tagmatrix, PRVM_PROG_TO_EDICT(tagentity), tagindex);
-	}
-	else
-		Matrix4x4_CreateIdentity(&tagmatrix);
 	if (!VectorLength2(entrender->colormod))
 		VectorSet(entrender->colormod, 1, 1, 1);
 	if (!VectorLength2(entrender->glowmod))
 		VectorSet(entrender->glowmod, 1, 1, 1);
 
+	// LordHavoc: use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
+	CL_GetTagMatrix(&tagmatrix, ed, 0);
 	if (renderflags & RF_USEAXIS)
 	{
 		vec3_t left;
