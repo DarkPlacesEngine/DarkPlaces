@@ -1118,7 +1118,7 @@ void PRVM_GameCommand(const char *whichprogs, const char *whichcmd)
 		return;
 	}
 
-	if(!prog->funcoffsets.GameCommand)
+	if(!PRVM_allfunction(GameCommand))
 	{
 		Con_Printf("%s program do not support GameCommand!\n", whichprogs);
 	}
@@ -1131,7 +1131,7 @@ void PRVM_GameCommand(const char *whichprogs, const char *whichcmd)
 
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s ? s : "");
-		PRVM_ExecuteProgram (prog->funcoffsets.GameCommand, "QC function GameCommand is missing");
+		PRVM_ExecuteProgram (PRVM_allfunction(GameCommand), "QC function GameCommand is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 
@@ -1445,11 +1445,11 @@ void PRVM_ED_LoadFromFile (const char *data)
 			continue;
 		}
 
-		if (prog->funcoffsets.SV_OnEntityPreSpawnFunction)
+		if (PRVM_serverfunction(SV_OnEntityPreSpawnFunction))
 		{
 			// self = ent
-			PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPreSpawnFunction, "QC function SV_OnEntityPreSpawnFunction is missing");
+			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+			PRVM_ExecuteProgram (PRVM_serverfunction(SV_OnEntityPreSpawnFunction), "QC function SV_OnEntityPreSpawnFunction is missing");
 		}
 
 		if(ent->priv.required->free)
@@ -1481,11 +1481,11 @@ void PRVM_ED_LoadFromFile (const char *data)
 			if (!func)
 			{
 				// check for OnEntityNoSpawnFunction
-				if (prog->funcoffsets.SV_OnEntityNoSpawnFunction)
+				if (PRVM_serverfunction(SV_OnEntityNoSpawnFunction))
 				{
 					// self = ent
-					PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-					PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityNoSpawnFunction, "QC function SV_OnEntityNoSpawnFunction is missing");
+					PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+					PRVM_ExecuteProgram (PRVM_serverfunction(SV_OnEntityNoSpawnFunction), "QC function SV_OnEntityNoSpawnFunction is missing");
 				}
 				else
 				{
@@ -1507,11 +1507,11 @@ void PRVM_ED_LoadFromFile (const char *data)
 		}
 
 		if(!ent->priv.required->free)
-		if (prog->funcoffsets.SV_OnEntityPostSpawnFunction)
+		if (PRVM_serverfunction(SV_OnEntityPostSpawnFunction))
 		{
 			// self = ent
-			PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPostSpawnFunction, "QC function SV_OnEntityPostSpawnFunction is missing");
+			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+			PRVM_ExecuteProgram (PRVM_serverfunction(SV_OnEntityPostSpawnFunction), "QC function SV_OnEntityPostSpawnFunction is missing");
 		}
 
 		spawned++;
@@ -1529,264 +1529,81 @@ void PRVM_FindOffsets(void)
 	// field and global searches use -1 for NULL
 	memset(&prog->fieldoffsets, -1, sizeof(prog->fieldoffsets));
 	memset(&prog->globaloffsets, -1, sizeof(prog->globaloffsets));
-	// functions use 0 for NULL
+	// function searches use 0 for NULL
 	memset(&prog->funcoffsets, 0, sizeof(prog->funcoffsets));
-
-	// server and client qc use a lot of similar fields, so this is combined
-	prog->fieldoffsets.SendEntity                     = PRVM_ED_FindFieldOffset("SendEntity");
-	prog->fieldoffsets.SendFlags                      = PRVM_ED_FindFieldOffset("SendFlags");
-	prog->fieldoffsets.Version                        = PRVM_ED_FindFieldOffset("Version");
-	prog->fieldoffsets.alpha                          = PRVM_ED_FindFieldOffset("alpha");
-	prog->fieldoffsets.ammo_cells1                    = PRVM_ED_FindFieldOffset("ammo_cells1");
-	prog->fieldoffsets.ammo_lava_nails                = PRVM_ED_FindFieldOffset("ammo_lava_nails");
-	prog->fieldoffsets.ammo_multi_rockets             = PRVM_ED_FindFieldOffset("ammo_multi_rockets");
-	prog->fieldoffsets.ammo_nails1                    = PRVM_ED_FindFieldOffset("ammo_nails1");
-	prog->fieldoffsets.ammo_plasma                    = PRVM_ED_FindFieldOffset("ammo_plasma");
-	prog->fieldoffsets.ammo_rockets1                  = PRVM_ED_FindFieldOffset("ammo_rockets1");
-	prog->fieldoffsets.ammo_shells1                   = PRVM_ED_FindFieldOffset("ammo_shells1");
-	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
-	prog->fieldoffsets.button3                        = PRVM_ED_FindFieldOffset("button3");
-	prog->fieldoffsets.button4                        = PRVM_ED_FindFieldOffset("button4");
-	prog->fieldoffsets.button5                        = PRVM_ED_FindFieldOffset("button5");
-	prog->fieldoffsets.button6                        = PRVM_ED_FindFieldOffset("button6");
-	prog->fieldoffsets.button7                        = PRVM_ED_FindFieldOffset("button7");
-	prog->fieldoffsets.button8                        = PRVM_ED_FindFieldOffset("button8");
-	prog->fieldoffsets.button9                        = PRVM_ED_FindFieldOffset("button9");
-	prog->fieldoffsets.button10                       = PRVM_ED_FindFieldOffset("button10");
-	prog->fieldoffsets.button11                       = PRVM_ED_FindFieldOffset("button11");
-	prog->fieldoffsets.button12                       = PRVM_ED_FindFieldOffset("button12");
-	prog->fieldoffsets.button13                       = PRVM_ED_FindFieldOffset("button13");
-	prog->fieldoffsets.button14                       = PRVM_ED_FindFieldOffset("button14");
-	prog->fieldoffsets.button15                       = PRVM_ED_FindFieldOffset("button15");
-	prog->fieldoffsets.button16                       = PRVM_ED_FindFieldOffset("button16");
-	prog->fieldoffsets.buttonchat                     = PRVM_ED_FindFieldOffset("buttonchat");
-	prog->fieldoffsets.buttonuse                      = PRVM_ED_FindFieldOffset("buttonuse");
-	prog->fieldoffsets.chain                          = PRVM_ED_FindFieldOffset("chain");
-	prog->fieldoffsets.classname                      = PRVM_ED_FindFieldOffset("classname");
-	prog->fieldoffsets.clientcamera                   = PRVM_ED_FindFieldOffset("clientcamera");
-	prog->fieldoffsets.clientcolors                   = PRVM_ED_FindFieldOffset("clientcolors");
-	prog->fieldoffsets.clientstatus                   = PRVM_ED_FindFieldOffset("clientstatus");
-	prog->fieldoffsets.color                          = PRVM_ED_FindFieldOffset("color");
-	prog->fieldoffsets.colormod                       = PRVM_ED_FindFieldOffset("colormod");
-	prog->fieldoffsets.contentstransition             = PRVM_ED_FindFieldOffset("contentstransition");
-	prog->fieldoffsets.cursor_active                  = PRVM_ED_FindFieldOffset("cursor_active");
-	prog->fieldoffsets.cursor_screen                  = PRVM_ED_FindFieldOffset("cursor_screen");
-	prog->fieldoffsets.cursor_trace_endpos            = PRVM_ED_FindFieldOffset("cursor_trace_endpos");
-	prog->fieldoffsets.cursor_trace_ent               = PRVM_ED_FindFieldOffset("cursor_trace_ent");
-	prog->fieldoffsets.cursor_trace_start             = PRVM_ED_FindFieldOffset("cursor_trace_start");
-	prog->fieldoffsets.customizeentityforclient       = PRVM_ED_FindFieldOffset("customizeentityforclient");
-	prog->fieldoffsets.dimension_hit                  = PRVM_ED_FindFieldOffset("dimension_hit");
-	prog->fieldoffsets.dimension_solid                = PRVM_ED_FindFieldOffset("dimension_solid");
-	prog->fieldoffsets.disableclientprediction        = PRVM_ED_FindFieldOffset("disableclientprediction");
-	prog->fieldoffsets.discardabledemo                = PRVM_ED_FindFieldOffset("discardabledemo");
-	prog->fieldoffsets.dphitcontentsmask              = PRVM_ED_FindFieldOffset("dphitcontentsmask");
-	prog->fieldoffsets.drawonlytoclient               = PRVM_ED_FindFieldOffset("drawonlytoclient");
-	prog->fieldoffsets.exteriormodeltoclient          = PRVM_ED_FindFieldOffset("exteriormodeltoclient");
-	prog->fieldoffsets.fatness                        = PRVM_ED_FindFieldOffset("fatness");
-	prog->fieldoffsets.forceshader                    = PRVM_ED_FindFieldOffset("forceshader");
-	prog->fieldoffsets.frame                          = PRVM_ED_FindFieldOffset("frame");
-	prog->fieldoffsets.frame1time                     = PRVM_ED_FindFieldOffset("frame1time");
-	prog->fieldoffsets.frame2                         = PRVM_ED_FindFieldOffset("frame2");
-	prog->fieldoffsets.frame2time                     = PRVM_ED_FindFieldOffset("frame2time");
-	prog->fieldoffsets.frame3                         = PRVM_ED_FindFieldOffset("frame3");
-	prog->fieldoffsets.frame3time                     = PRVM_ED_FindFieldOffset("frame3time");
-	prog->fieldoffsets.frame4                         = PRVM_ED_FindFieldOffset("frame4");
-	prog->fieldoffsets.frame4time                     = PRVM_ED_FindFieldOffset("frame4time");
-	prog->fieldoffsets.fullbright                     = PRVM_ED_FindFieldOffset("fullbright");
-	prog->fieldoffsets.glow_color                     = PRVM_ED_FindFieldOffset("glow_color");
-	prog->fieldoffsets.glow_size                      = PRVM_ED_FindFieldOffset("glow_size");
-	prog->fieldoffsets.glow_trail                     = PRVM_ED_FindFieldOffset("glow_trail");
-	prog->fieldoffsets.glowmod                        = PRVM_ED_FindFieldOffset("glowmod");
-	prog->fieldoffsets.gravity                        = PRVM_ED_FindFieldOffset("gravity");
-	prog->fieldoffsets.groundentity                   = PRVM_ED_FindFieldOffset("groundentity");
-	prog->fieldoffsets.hull                           = PRVM_ED_FindFieldOffset("hull");
-	prog->fieldoffsets.ideal_yaw                      = PRVM_ED_FindFieldOffset("ideal_yaw");
-	prog->fieldoffsets.idealpitch                     = PRVM_ED_FindFieldOffset("idealpitch");
-	prog->fieldoffsets.items2                         = PRVM_ED_FindFieldOffset("items2");
-	prog->fieldoffsets.lerpfrac                       = PRVM_ED_FindFieldOffset("lerpfrac");
-	prog->fieldoffsets.lerpfrac3                      = PRVM_ED_FindFieldOffset("lerpfrac3");
-	prog->fieldoffsets.lerpfrac4                      = PRVM_ED_FindFieldOffset("lerpfrac4");
-	prog->fieldoffsets.light_lev                      = PRVM_ED_FindFieldOffset("light_lev");
-	prog->fieldoffsets.message                        = PRVM_ED_FindFieldOffset("message");
-	prog->fieldoffsets.modelflags                     = PRVM_ED_FindFieldOffset("modelflags");
-	prog->fieldoffsets.movement                       = PRVM_ED_FindFieldOffset("movement");
-	prog->fieldoffsets.movetypesteplandevent          = PRVM_ED_FindFieldOffset("movetypesteplandevent");
-	prog->fieldoffsets.netaddress                     = PRVM_ED_FindFieldOffset("netaddress");
-	prog->fieldoffsets.nextthink                      = PRVM_ED_FindFieldOffset("nextthink");
-	prog->fieldoffsets.nodrawtoclient                 = PRVM_ED_FindFieldOffset("nodrawtoclient");
-	prog->fieldoffsets.pflags                         = PRVM_ED_FindFieldOffset("pflags");
-	prog->fieldoffsets.ping                           = PRVM_ED_FindFieldOffset("ping");
-	prog->fieldoffsets.ping_packetloss                = PRVM_ED_FindFieldOffset("ping_packetloss");
-	prog->fieldoffsets.ping_movementloss              = PRVM_ED_FindFieldOffset("ping_movementloss");
-	prog->fieldoffsets.pitch_speed                    = PRVM_ED_FindFieldOffset("pitch_speed");
-	prog->fieldoffsets.playermodel                    = PRVM_ED_FindFieldOffset("playermodel");
-	prog->fieldoffsets.playerskin                     = PRVM_ED_FindFieldOffset("playerskin");
-	prog->fieldoffsets.pmodel                         = PRVM_ED_FindFieldOffset("pmodel");
-	prog->fieldoffsets.punchvector                    = PRVM_ED_FindFieldOffset("punchvector");
-	prog->fieldoffsets.renderamt                      = PRVM_ED_FindFieldOffset("renderamt"); // HalfLife support
-	prog->fieldoffsets.renderflags                    = PRVM_ED_FindFieldOffset("renderflags");
-	prog->fieldoffsets.rendermode                     = PRVM_ED_FindFieldOffset("rendermode"); // HalfLife support
-	prog->fieldoffsets.scale                          = PRVM_ED_FindFieldOffset("scale");
-	prog->fieldoffsets.shadertime                     = PRVM_ED_FindFieldOffset("shadertime");
-	prog->fieldoffsets.skeletonindex                  = PRVM_ED_FindFieldOffset("skeletonindex");
-	prog->fieldoffsets.style                          = PRVM_ED_FindFieldOffset("style");
-	prog->fieldoffsets.tag_entity                     = PRVM_ED_FindFieldOffset("tag_entity");
-	prog->fieldoffsets.tag_index                      = PRVM_ED_FindFieldOffset("tag_index");
-	prog->fieldoffsets.think                          = PRVM_ED_FindFieldOffset("think");
-	prog->fieldoffsets.viewmodelforclient             = PRVM_ED_FindFieldOffset("viewmodelforclient");
-	prog->fieldoffsets.viewzoom                       = PRVM_ED_FindFieldOffset("viewzoom");
-	prog->fieldoffsets.yaw_speed                      = PRVM_ED_FindFieldOffset("yaw_speed");
-	prog->fieldoffsets.bouncefactor                   = PRVM_ED_FindFieldOffset("bouncefactor");
-	prog->fieldoffsets.bouncestop                     = PRVM_ED_FindFieldOffset("bouncestop");
-	prog->fieldoffsets.sendcomplexanimation           = PRVM_ED_FindFieldOffset("sendcomplexanimation");
-
-	prog->fieldoffsets.solid                          = PRVM_ED_FindFieldOffset("solid");
-	prog->fieldoffsets.movetype                       = PRVM_ED_FindFieldOffset("movetype");
-	prog->fieldoffsets.modelindex                     = PRVM_ED_FindFieldOffset("modelindex");
-	prog->fieldoffsets.mins                           = PRVM_ED_FindFieldOffset("mins");
-	prog->fieldoffsets.maxs                           = PRVM_ED_FindFieldOffset("maxs");
-	prog->fieldoffsets.mass                           = PRVM_ED_FindFieldOffset("mass");
-	prog->fieldoffsets.origin                         = PRVM_ED_FindFieldOffset("origin");
-	prog->fieldoffsets.velocity                       = PRVM_ED_FindFieldOffset("velocity");
-	//prog->fieldoffsets.axis_forward                   = PRVM_ED_FindFieldOffset("axis_forward");
-	//prog->fieldoffsets.axis_left                      = PRVM_ED_FindFieldOffset("axis_left");
-	//prog->fieldoffsets.axis_up                        = PRVM_ED_FindFieldOffset("axis_up");
-	//prog->fieldoffsets.spinvelocity                   = PRVM_ED_FindFieldOffset("spinvelocity");
-	prog->fieldoffsets.angles                         = PRVM_ED_FindFieldOffset("angles");
-	prog->fieldoffsets.avelocity                      = PRVM_ED_FindFieldOffset("avelocity");
-	prog->fieldoffsets.aiment                         = PRVM_ED_FindFieldOffset("aiment");
-	prog->fieldoffsets.enemy                          = PRVM_ED_FindFieldOffset("enemy");
-	prog->fieldoffsets.jointtype                      = PRVM_ED_FindFieldOffset("jointtype");
-	prog->fieldoffsets.movedir                        = PRVM_ED_FindFieldOffset("movedir");
-
-	prog->fieldoffsets.camera_transform               = PRVM_ED_FindFieldOffset("camera_transform");
-	prog->fieldoffsets.userwavefunc_param0            = PRVM_ED_FindFieldOffset("userwavefunc_param0");
-	prog->fieldoffsets.userwavefunc_param1            = PRVM_ED_FindFieldOffset("userwavefunc_param1");
-	prog->fieldoffsets.userwavefunc_param2            = PRVM_ED_FindFieldOffset("userwavefunc_param2");
-	prog->fieldoffsets.userwavefunc_param3            = PRVM_ED_FindFieldOffset("userwavefunc_param3");
-
-	prog->fieldoffsets.crypto_keyfp                   = PRVM_ED_FindFieldOffset("crypto_keyfp");
-	prog->fieldoffsets.crypto_mykeyfp                 = PRVM_ED_FindFieldOffset("crypto_mykeyfp");
-	prog->fieldoffsets.crypto_idfp                    = PRVM_ED_FindFieldOffset("crypto_idfp");
-	prog->fieldoffsets.crypto_encryptmethod           = PRVM_ED_FindFieldOffset("crypto_encryptmethod");
-	prog->fieldoffsets.crypto_signmethod              = PRVM_ED_FindFieldOffset("crypto_signmethod");
-
-	prog->funcoffsets.CSQC_ConsoleCommand             = PRVM_ED_FindFunctionOffset("CSQC_ConsoleCommand");
-	prog->funcoffsets.CSQC_Ent_Remove                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Remove");
-	prog->funcoffsets.CSQC_Ent_Spawn                  = PRVM_ED_FindFunctionOffset("CSQC_Ent_Spawn");
-	prog->funcoffsets.CSQC_Ent_Update                 = PRVM_ED_FindFunctionOffset("CSQC_Ent_Update");
-	prog->funcoffsets.CSQC_Event                      = PRVM_ED_FindFunctionOffset("CSQC_Event");
-	prog->funcoffsets.CSQC_Event_Sound                = PRVM_ED_FindFunctionOffset("CSQC_Event_Sound");
-	prog->funcoffsets.CSQC_Init                       = PRVM_ED_FindFunctionOffset("CSQC_Init");
-	prog->funcoffsets.CSQC_InputEvent                 = PRVM_ED_FindFunctionOffset("CSQC_InputEvent");
-	prog->funcoffsets.CSQC_Parse_CenterPrint          = PRVM_ED_FindFunctionOffset("CSQC_Parse_CenterPrint");
-	prog->funcoffsets.CSQC_Parse_Print                = PRVM_ED_FindFunctionOffset("CSQC_Parse_Print");
-	prog->funcoffsets.CSQC_Parse_StuffCmd             = PRVM_ED_FindFunctionOffset("CSQC_Parse_StuffCmd");
-	prog->funcoffsets.CSQC_Parse_TempEntity           = PRVM_ED_FindFunctionOffset("CSQC_Parse_TempEntity");
-	prog->funcoffsets.CSQC_Shutdown                   = PRVM_ED_FindFunctionOffset("CSQC_Shutdown");
-	prog->funcoffsets.CSQC_UpdateView                 = PRVM_ED_FindFunctionOffset("CSQC_UpdateView");
-	prog->funcoffsets.EndFrame                        = PRVM_ED_FindFunctionOffset("EndFrame");
-	prog->funcoffsets.GameCommand                     = PRVM_ED_FindFunctionOffset("GameCommand");
-	prog->funcoffsets.Gecko_Query                     = PRVM_ED_FindFunctionOffset("Gecko_Query");
-	prog->funcoffsets.RestoreGame                     = PRVM_ED_FindFunctionOffset("RestoreGame");
-	prog->funcoffsets.SV_ChangeTeam                   = PRVM_ED_FindFunctionOffset("SV_ChangeTeam");
-	prog->funcoffsets.SV_OnEntityNoSpawnFunction      = PRVM_ED_FindFunctionOffset("SV_OnEntityNoSpawnFunction");
-	prog->funcoffsets.SV_OnEntityPostSpawnFunction    = PRVM_ED_FindFunctionOffset("SV_OnEntityPostSpawnFunction");
-	prog->funcoffsets.SV_OnEntityPreSpawnFunction     = PRVM_ED_FindFunctionOffset("SV_OnEntityPreSpawnFunction");
-	prog->funcoffsets.SV_ParseClientCommand           = PRVM_ED_FindFunctionOffset("SV_ParseClientCommand");
-	prog->funcoffsets.SV_PausedTic                    = PRVM_ED_FindFunctionOffset("SV_PausedTic");
-	prog->funcoffsets.SV_PlayerPhysics                = PRVM_ED_FindFunctionOffset("SV_PlayerPhysics");
-	prog->funcoffsets.SV_Shutdown                     = PRVM_ED_FindFunctionOffset("SV_Shutdown");
-	prog->funcoffsets.URI_Get_Callback                = PRVM_ED_FindFunctionOffset("URI_Get_Callback");
-	prog->globaloffsets.SV_InitCmd                    = PRVM_ED_FindGlobalOffset("SV_InitCmd");
-	prog->globaloffsets.coop                          = PRVM_ED_FindGlobalOffset("coop");
-	prog->globaloffsets.deathmatch                    = PRVM_ED_FindGlobalOffset("deathmatch");
-	prog->globaloffsets.dmg_origin                    = PRVM_ED_FindGlobalOffset("dmg_origin");
-	prog->globaloffsets.dmg_save                      = PRVM_ED_FindGlobalOffset("dmg_save");
-	prog->globaloffsets.dmg_take                      = PRVM_ED_FindGlobalOffset("dmg_take");
-	prog->globaloffsets.drawfont                      = PRVM_ED_FindGlobalOffset("drawfont");
-	prog->globaloffsets.drawfontscale                 = PRVM_ED_FindGlobalOffset("drawfontscale");
-	prog->globaloffsets.gettaginfo_forward            = PRVM_ED_FindGlobalOffset("gettaginfo_forward");
-	prog->globaloffsets.gettaginfo_name               = PRVM_ED_FindGlobalOffset("gettaginfo_name");
-	prog->globaloffsets.gettaginfo_offset             = PRVM_ED_FindGlobalOffset("gettaginfo_offset");
-	prog->globaloffsets.gettaginfo_parent             = PRVM_ED_FindGlobalOffset("gettaginfo_parent");
-	prog->globaloffsets.gettaginfo_right              = PRVM_ED_FindGlobalOffset("gettaginfo_right");
-	prog->globaloffsets.gettaginfo_up                 = PRVM_ED_FindGlobalOffset("gettaginfo_up");
-	prog->globaloffsets.transparent_offset            = PRVM_ED_FindGlobalOffset("transparent_offset");
-	prog->globaloffsets.intermission                  = PRVM_ED_FindGlobalOffset("intermission");
-	prog->globaloffsets.require_spawnfunc_prefix      = PRVM_ED_FindGlobalOffset("require_spawnfunc_prefix");
-	prog->globaloffsets.sb_showscores                 = PRVM_ED_FindGlobalOffset("sb_showscores");
-	prog->globaloffsets.self                          = PRVM_ED_FindGlobalOffset("self");
-	prog->globaloffsets.serverdeltatime               = PRVM_ED_FindGlobalOffset("serverdeltatime");
-	prog->globaloffsets.serverprevtime                = PRVM_ED_FindGlobalOffset("serverprevtime");
-	prog->globaloffsets.servertime                    = PRVM_ED_FindGlobalOffset("servertime");
-	prog->globaloffsets.time                          = PRVM_ED_FindGlobalOffset("time");
-	prog->globaloffsets.trace_allsolid                = PRVM_ED_FindGlobalOffset("trace_allsolid");
-	prog->globaloffsets.trace_dphitcontents           = PRVM_ED_FindGlobalOffset("trace_dphitcontents");
-	prog->globaloffsets.trace_dphitq3surfaceflags     = PRVM_ED_FindGlobalOffset("trace_dphitq3surfaceflags");
-	prog->globaloffsets.trace_dphittexturename        = PRVM_ED_FindGlobalOffset("trace_dphittexturename");
-	prog->globaloffsets.trace_dpstartcontents         = PRVM_ED_FindGlobalOffset("trace_dpstartcontents");
-	prog->globaloffsets.trace_endpos                  = PRVM_ED_FindGlobalOffset("trace_endpos");
-	prog->globaloffsets.trace_ent                     = PRVM_ED_FindGlobalOffset("trace_ent");
-	prog->globaloffsets.trace_fraction                = PRVM_ED_FindGlobalOffset("trace_fraction");
-	prog->globaloffsets.trace_inopen                  = PRVM_ED_FindGlobalOffset("trace_inopen");
-	prog->globaloffsets.trace_inwater                 = PRVM_ED_FindGlobalOffset("trace_inwater");
-	prog->globaloffsets.trace_networkentity           = PRVM_ED_FindGlobalOffset("trace_networkentity");
-	prog->globaloffsets.trace_plane_dist              = PRVM_ED_FindGlobalOffset("trace_plane_dist");
-	prog->globaloffsets.trace_plane_normal            = PRVM_ED_FindGlobalOffset("trace_plane_normal");
-	prog->globaloffsets.trace_startsolid              = PRVM_ED_FindGlobalOffset("trace_startsolid");
-	prog->globaloffsets.v_forward                     = PRVM_ED_FindGlobalOffset("v_forward");
-	prog->globaloffsets.v_right                       = PRVM_ED_FindGlobalOffset("v_right");
-	prog->globaloffsets.v_up                          = PRVM_ED_FindGlobalOffset("v_up");
-	prog->globaloffsets.view_angles                   = PRVM_ED_FindGlobalOffset("view_angles");
-	prog->globaloffsets.view_punchangle               = PRVM_ED_FindGlobalOffset("view_punchangle");
-	prog->globaloffsets.view_punchvector              = PRVM_ED_FindGlobalOffset("view_punchvector");
-	prog->globaloffsets.worldstatus                   = PRVM_ED_FindGlobalOffset("worldstatus");
-	prog->globaloffsets.particles_alphamin            = PRVM_ED_FindGlobalOffset("particles_alphamin");
-	prog->globaloffsets.particles_alphamax            = PRVM_ED_FindGlobalOffset("particles_alphamax");
-	prog->globaloffsets.particles_colormin            = PRVM_ED_FindGlobalOffset("particles_colormin");
-	prog->globaloffsets.particles_colormax            = PRVM_ED_FindGlobalOffset("particles_colormax");
-	prog->globaloffsets.pmove_onground                = PRVM_ED_FindGlobalOffset("pmove_onground");
-	prog->globaloffsets.pmove_inwater                 = PRVM_ED_FindGlobalOffset("pmove_inwater");
-
-	prog->globaloffsets.particle_type                 = PRVM_ED_FindGlobalOffset("particle_type");
-	prog->globaloffsets.particle_blendmode            = PRVM_ED_FindGlobalOffset("particle_blendmode");
-	prog->globaloffsets.particle_orientation          = PRVM_ED_FindGlobalOffset("particle_orientation");
-	prog->globaloffsets.particle_color1               = PRVM_ED_FindGlobalOffset("particle_color1");
-	prog->globaloffsets.particle_color2               = PRVM_ED_FindGlobalOffset("particle_color2");
-	prog->globaloffsets.particle_tex                  = PRVM_ED_FindGlobalOffset("particle_tex");
-	prog->globaloffsets.particle_size                 = PRVM_ED_FindGlobalOffset("particle_size");
-	prog->globaloffsets.particle_sizeincrease         = PRVM_ED_FindGlobalOffset("particle_sizeincrease");
-	prog->globaloffsets.particle_alpha                = PRVM_ED_FindGlobalOffset("particle_alpha");
-	prog->globaloffsets.particle_alphafade            = PRVM_ED_FindGlobalOffset("particle_alphafade");
-	prog->globaloffsets.particle_time                 = PRVM_ED_FindGlobalOffset("particle_time");
-	prog->globaloffsets.particle_gravity              = PRVM_ED_FindGlobalOffset("particle_gravity");
-	prog->globaloffsets.particle_bounce               = PRVM_ED_FindGlobalOffset("particle_bounce");
-	prog->globaloffsets.particle_airfriction          = PRVM_ED_FindGlobalOffset("particle_airfriction");
-	prog->globaloffsets.particle_liquidfriction       = PRVM_ED_FindGlobalOffset("particle_liquidfriction");
-	prog->globaloffsets.particle_originjitter         = PRVM_ED_FindGlobalOffset("particle_originjitter");
-	prog->globaloffsets.particle_velocityjitter       = PRVM_ED_FindGlobalOffset("particle_velocityjitter");
-	prog->globaloffsets.particle_qualityreduction     = PRVM_ED_FindGlobalOffset("particle_qualityreduction");
-	prog->globaloffsets.particle_stretch              = PRVM_ED_FindGlobalOffset("particle_stretch");
-	prog->globaloffsets.particle_staincolor1          = PRVM_ED_FindGlobalOffset("particle_staincolor1");
-	prog->globaloffsets.particle_staincolor2          = PRVM_ED_FindGlobalOffset("particle_staincolor2");
-	prog->globaloffsets.particle_stainalpha           = PRVM_ED_FindGlobalOffset("particle_stainalpha");
-	prog->globaloffsets.particle_stainsize            = PRVM_ED_FindGlobalOffset("particle_stainsize");
-	prog->globaloffsets.particle_staintex             = PRVM_ED_FindGlobalOffset("particle_staintex");
-	prog->globaloffsets.particle_staintex             = PRVM_ED_FindGlobalOffset("particle_staintex");
-	prog->globaloffsets.particle_delayspawn           = PRVM_ED_FindGlobalOffset("particle_delayspawn");
-	prog->globaloffsets.particle_delaycollision       = PRVM_ED_FindGlobalOffset("particle_delaycollision");
-	prog->globaloffsets.particle_angle                = PRVM_ED_FindGlobalOffset("particle_angle");
-	prog->globaloffsets.particle_spin                 = PRVM_ED_FindGlobalOffset("particle_spin");
-
-	// menu qc only uses some functions, nothing else
-	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");
-	prog->funcoffsets.m_init                          = PRVM_ED_FindFunctionOffset("m_init");
-	prog->funcoffsets.m_keydown                       = PRVM_ED_FindFunctionOffset("m_keydown");
-	prog->funcoffsets.m_keyup                         = PRVM_ED_FindFunctionOffset("m_keyup");
-	prog->funcoffsets.m_shutdown                      = PRVM_ED_FindFunctionOffset("m_shutdown");
-	prog->funcoffsets.m_toggle                        = PRVM_ED_FindFunctionOffset("m_toggle");
-	prog->funcoffsets.m_newmap                        = PRVM_ED_FindFunctionOffset("m_newmap");
+#define PRVM_DECLARE_serverglobalfloat(x)
+#define PRVM_DECLARE_serverglobalvector(x)
+#define PRVM_DECLARE_serverglobalstring(x)
+#define PRVM_DECLARE_serverglobaledict(x)
+#define PRVM_DECLARE_serverglobalfunction(x)
+#define PRVM_DECLARE_clientglobalfloat(x)
+#define PRVM_DECLARE_clientglobalvector(x)
+#define PRVM_DECLARE_clientglobalstring(x)
+#define PRVM_DECLARE_clientglobaledict(x)
+#define PRVM_DECLARE_clientglobalfunction(x)
+#define PRVM_DECLARE_menuglobalfloat(x)
+#define PRVM_DECLARE_menuglobalvector(x)
+#define PRVM_DECLARE_menuglobalstring(x)
+#define PRVM_DECLARE_menuglobaledict(x)
+#define PRVM_DECLARE_menuglobalfunction(x)
+#define PRVM_DECLARE_serverfieldfloat(x)
+#define PRVM_DECLARE_serverfieldvector(x)
+#define PRVM_DECLARE_serverfieldstring(x)
+#define PRVM_DECLARE_serverfieldedict(x)
+#define PRVM_DECLARE_serverfieldfunction(x)
+#define PRVM_DECLARE_clientfieldfloat(x)
+#define PRVM_DECLARE_clientfieldvector(x)
+#define PRVM_DECLARE_clientfieldstring(x)
+#define PRVM_DECLARE_clientfieldedict(x)
+#define PRVM_DECLARE_clientfieldfunction(x)
+#define PRVM_DECLARE_menufieldfloat(x)
+#define PRVM_DECLARE_menufieldvector(x)
+#define PRVM_DECLARE_menufieldstring(x)
+#define PRVM_DECLARE_menufieldedict(x)
+#define PRVM_DECLARE_menufieldfunction(x)
+#define PRVM_DECLARE_serverfunction(x)
+#define PRVM_DECLARE_clientfunction(x)
+#define PRVM_DECLARE_menufunction(x)
+#define PRVM_DECLARE_field(x) prog->fieldoffsets.x = PRVM_ED_FindFieldOffset(#x);
+#define PRVM_DECLARE_global(x) prog->globaloffsets.x = PRVM_ED_FindGlobalOffset(#x);
+#define PRVM_DECLARE_function(x) prog->funcoffsets.x = PRVM_ED_FindFunctionOffset(#x);
+#include "prvm_offsets.h"
+#undef PRVM_DECLARE_serverglobalfloat
+#undef PRVM_DECLARE_serverglobalvector
+#undef PRVM_DECLARE_serverglobalstring
+#undef PRVM_DECLARE_serverglobaledict
+#undef PRVM_DECLARE_serverglobalfunction
+#undef PRVM_DECLARE_clientglobalfloat
+#undef PRVM_DECLARE_clientglobalvector
+#undef PRVM_DECLARE_clientglobalstring
+#undef PRVM_DECLARE_clientglobaledict
+#undef PRVM_DECLARE_clientglobalfunction
+#undef PRVM_DECLARE_menuglobalfloat
+#undef PRVM_DECLARE_menuglobalvector
+#undef PRVM_DECLARE_menuglobalstring
+#undef PRVM_DECLARE_menuglobaledict
+#undef PRVM_DECLARE_menuglobalfunction
+#undef PRVM_DECLARE_serverfieldfloat
+#undef PRVM_DECLARE_serverfieldvector
+#undef PRVM_DECLARE_serverfieldstring
+#undef PRVM_DECLARE_serverfieldedict
+#undef PRVM_DECLARE_serverfieldfunction
+#undef PRVM_DECLARE_clientfieldfloat
+#undef PRVM_DECLARE_clientfieldvector
+#undef PRVM_DECLARE_clientfieldstring
+#undef PRVM_DECLARE_clientfieldedict
+#undef PRVM_DECLARE_clientfieldfunction
+#undef PRVM_DECLARE_menufieldfloat
+#undef PRVM_DECLARE_menufieldvector
+#undef PRVM_DECLARE_menufieldstring
+#undef PRVM_DECLARE_menufieldedict
+#undef PRVM_DECLARE_menufieldfunction
+#undef PRVM_DECLARE_serverfunction
+#undef PRVM_DECLARE_clientfunction
+#undef PRVM_DECLARE_menufunction
+#undef PRVM_DECLARE_field
+#undef PRVM_DECLARE_global
+#undef PRVM_DECLARE_function
 }
 
 // not used

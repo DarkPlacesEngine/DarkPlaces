@@ -2990,12 +2990,12 @@ void SV_Physics (void)
 		prog->globals.server->force_retouch = max(0, prog->globals.server->force_retouch - 1);
 
 	// LordHavoc: endframe support
-	if (prog->funcoffsets.EndFrame)
+	if (PRVM_serverfunction(EndFrame))
 	{
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(prog->edicts);
 		prog->globals.server->other = PRVM_EDICT_TO_PROG(prog->edicts);
 		prog->globals.server->time = sv.time;
-		PRVM_ExecuteProgram (prog->funcoffsets.EndFrame, "QC function EndFrame is missing");
+		PRVM_ExecuteProgram (PRVM_serverfunction(EndFrame), "QC function EndFrame is missing");
 	}
 
 	// decrement prog->num_edicts if the highest number entities died

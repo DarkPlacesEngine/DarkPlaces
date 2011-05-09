@@ -1572,13 +1572,13 @@ void Host_Color(int changetop, int changebottom)
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
-	if (host_client->edict && prog->funcoffsets.SV_ChangeTeam)
+	if (host_client->edict && PRVM_clientfunction(SV_ChangeTeam))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
 		prog->globals.server->time = sv.time;
 		prog->globals.generic[OFS_PARM0] = playercolor;
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram(prog->funcoffsets.SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
@@ -1795,12 +1795,12 @@ void Host_Spawn_f (void)
 	if (sv.loadgame)
 	{
 		// loaded games are fully initialized already
-		if (prog->funcoffsets.RestoreGame)
+		if (PRVM_serverfunction(RestoreGame))
 		{
 			Con_DPrint("Calling RestoreGame\n");
 			prog->globals.server->time = sv.time;
 			prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-			PRVM_ExecuteProgram(prog->funcoffsets.RestoreGame, "QC function RestoreGame is missing");
+			PRVM_ExecuteProgram(PRVM_serverfunction(RestoreGame), "QC function RestoreGame is missing");
 		}
 	}
 	else
@@ -2378,7 +2378,7 @@ void Host_SendCvar_f (void)
 			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
-	if(!sv.active)// || !prog->funcoffsets.SV_ParseClientCommand)
+	if(!sv.active)// || !PRVM_serverfunction(SV_ParseClientCommand))
 		return;
 
 	old = host_client;
