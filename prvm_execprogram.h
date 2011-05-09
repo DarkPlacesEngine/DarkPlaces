@@ -391,10 +391,10 @@
 			case OP_STATE:
 				if(prog->flag & PRVM_OP_STATE)
 				{
-					ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self));
-					PRVM_EDICTFIELDFLOAT(ed,prog->fieldoffsets.nextthink) = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.time) + 0.1;
-					PRVM_EDICTFIELDFLOAT(ed,prog->fieldoffsets.frame) = OPA->_float;
-					PRVM_EDICTFIELDFUNCTION(ed,prog->fieldoffsets.think) = OPB->function;
+					ed = PRVM_PROG_TO_EDICT(PRVM_gameglobaledict(self));
+					PRVM_gameedictfloat(ed,nextthink) = PRVM_gameglobalfloat(time) + 0.1;
+					PRVM_gameedictfloat(ed,frame) = OPA->_float;
+					PRVM_gameedictfunction(ed,think) = OPB->function;
 				}
 				else
 				{

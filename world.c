@@ -1755,10 +1755,10 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	int jointtype;
 	if (!body)
 		return;
-	movetype = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.movetype);
+	movetype = (int)PRVM_gameedictfloat(ed, movetype);
 	if (movetype != MOVETYPE_PHYSICS)
 	{
-		jointtype = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.jointtype);
+		jointtype = (int)PRVM_gameedictfloat(ed, jointtype);
 		switch(jointtype)
 		{
 			// TODO feed back data from physics
@@ -1815,14 +1815,14 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 		avelocity[PITCH] *= pitchsign;
 	}
 
-	VectorCopy(origin, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.origin));
-	VectorCopy(velocity, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.velocity));
-	//VectorCopy(forward, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_forward));
-	//VectorCopy(left, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_left));
-	//VectorCopy(up, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_up));
-	//VectorCopy(spinvelocity, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.spinvelocity));
-	VectorCopy(angles, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.angles));
-	VectorCopy(avelocity, PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.avelocity));
+	VectorCopy(origin, PRVM_gameedictvector(ed, origin));
+	VectorCopy(velocity, PRVM_gameedictvector(ed, velocity));
+	//VectorCopy(forward, PRVM_gameedictvector(ed, axis_forward));
+	//VectorCopy(left, PRVM_gameedictvector(ed, axis_left));
+	//VectorCopy(up, PRVM_gameedictvector(ed, axis_up));
+	//VectorCopy(spinvelocity, PRVM_gameedictvector(ed, spinvelocity));
+	VectorCopy(angles, PRVM_gameedictvector(ed, angles));
+	VectorCopy(avelocity, PRVM_gameedictvector(ed, avelocity));
 
 	// values for BodyFromEntity to check if the qc modified anything later
 	VectorCopy(origin, ed->priv.server->ode_origin);
@@ -1852,14 +1852,14 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	VectorClear(velocity);
 	VectorClear(angles);
 	VectorClear(movedir);
-	movetype = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.movetype);
-	jointtype = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.jointtype);
-	enemy = PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.enemy);
-	aiment = PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.aiment);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.origin), origin);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.velocity), velocity);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.angles), angles);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.movedir), movedir);
+	movetype = (int)PRVM_gameedictfloat(ed, movetype);
+	jointtype = (int)PRVM_gameedictfloat(ed, jointtype);
+	enemy = PRVM_gameedictedict(ed, enemy);
+	aiment = PRVM_gameedictedict(ed, aiment);
+	VectorCopy(PRVM_gameedictvector(ed, origin), origin);
+	VectorCopy(PRVM_gameedictvector(ed, velocity), velocity);
+	VectorCopy(PRVM_gameedictvector(ed, angles), angles);
+	VectorCopy(PRVM_gameedictvector(ed, movedir), movedir);
 	if(movetype == MOVETYPE_PHYSICS)
 		jointtype = 0; // can't have both
 	if(enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].priv.required->free || prog->edicts[enemy].priv.server->ode_body == 0)
@@ -2070,9 +2070,9 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 #endif
 	VectorClear(entmins);
 	VectorClear(entmaxs);
-	solid = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.solid);
-	movetype = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.movetype);
-	scale = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.scale);if (!scale) scale = 1.0f;
+	solid = (int)PRVM_gameedictfloat(ed, solid);
+	movetype = (int)PRVM_gameedictfloat(ed, movetype);
+	scale = PRVM_gameedictfloat(ed, scale);if (!scale) scale = 1.0f;
 	modelindex = 0;
 	if (world == &sv.world)
 		mempool = sv_mempool;
@@ -2084,7 +2084,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	switch(solid)
 	{
 	case SOLID_BSP:
-		modelindex = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.modelindex);
+		modelindex = (int)PRVM_gameedictfloat(ed, modelindex);
 		if (world == &sv.world)
 			model = SV_GetModelByIndex(modelindex);
 		else if (world == &cl.world)
@@ -2095,7 +2095,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		{
 			VectorScale(model->normalmins, scale, entmins);
 			VectorScale(model->normalmaxs, scale, entmaxs);
-			massval = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.mass);
+			massval = PRVM_gameedictfloat(ed, mass);
 		}
 		else
 		{
@@ -2109,9 +2109,9 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	case SOLID_PHYSICS_BOX:
 	case SOLID_PHYSICS_SPHERE:
 	case SOLID_PHYSICS_CAPSULE:
-		VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.mins), entmins);
-		VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.maxs), entmaxs);
-		massval = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.mass);
+		VectorCopy(PRVM_gameedictvector(ed, mins), entmins);
+		VectorCopy(PRVM_gameedictvector(ed, maxs), entmaxs);
+		massval = PRVM_gameedictfloat(ed, mass);
 		break;
 	default:
 		if (ed->priv.server->ode_physics)
@@ -2151,7 +2151,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		if (massval * geomsize[0] * geomsize[1] * geomsize[2] == 0)
 		{
 			if (movetype == MOVETYPE_PHYSICS)
-				Con_Printf("entity %i (classname %s) .mass * .size_x * .size_y * .size_z == 0\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname)));
+				Con_Printf("entity %i (classname %s) .mass * .size_x * .size_y * .size_z == 0\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
 			massval = 1.0f;
 			VectorSet(geomsize, 1.0f, 1.0f, 1.0f);
 		}
@@ -2162,7 +2162,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			ed->priv.server->ode_offsetmatrix = identitymatrix;
 			if (!model)
 			{
-				Con_Printf("entity %i (classname %s) has no model\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname)));
+				Con_Printf("entity %i (classname %s) has no model\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
 				goto treatasbox;
 			}
 			// add an optimized mesh to the model containing only the SUPERCONTENTS_SOLID surfaces
@@ -2170,7 +2170,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 				Mod_CreateCollisionMesh(model);
 			if (!model->brush.collisionmesh || !model->brush.collisionmesh->numtriangles)
 			{
-				Con_Printf("entity %i (classname %s) has no geometry\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname)));
+				Con_Printf("entity %i (classname %s) has no geometry\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
 				goto treatasbox;
 			}
 			// ODE requires persistent mesh storage, so we need to copy out
@@ -2288,15 +2288,15 @@ treatasbox:
 	VectorClear(angles);
 	VectorClear(avelocity);
 	gravity = true;
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.origin), origin);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.velocity), velocity);
-	//VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_forward), forward);
-	//VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_left), left);
-	//VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.axis_up), up);
-	//VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.spinvelocity), spinvelocity);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.angles), angles);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.avelocity), avelocity);
-	if (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.gravity) != 0.0f && PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.gravity) < 0.5f) gravity = false;
+	VectorCopy(PRVM_gameedictvector(ed, origin), origin);
+	VectorCopy(PRVM_gameedictvector(ed, velocity), velocity);
+	//VectorCopy(PRVM_gameedictvector(ed, axis_forward), forward);
+	//VectorCopy(PRVM_gameedictvector(ed, axis_left), left);
+	//VectorCopy(PRVM_gameedictvector(ed, axis_up), up);
+	//VectorCopy(PRVM_gameedictvector(ed, spinvelocity), spinvelocity);
+	VectorCopy(PRVM_gameedictvector(ed, angles), angles);
+	VectorCopy(PRVM_gameedictvector(ed, avelocity), avelocity);
+	if (PRVM_gameedictfloat(ed, gravity) != 0.0f && PRVM_EDICTFIELDFLOAT(ed, gravity) < 0.5f) gravity = false;
 	if (ed == prog->edicts)
 		gravity = false;
 
@@ -2346,9 +2346,9 @@ treatasbox:
 		if (IS_NAN(test))
 		{
 			modified = true;
-			//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
+			//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
 			if (physics_ode_trick_fixnan.integer >= 2)
-				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
+				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
 			test = VectorLength2(origin);
 			if (IS_NAN(test))
 				VectorClear(origin);
@@ -2534,8 +2534,8 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 		ed1 = NULL;
 	if(ed1)
 	{
-		bouncefactor1 = PRVM_EDICTFIELDFLOAT(ed1, prog->fieldoffsets.bouncefactor);
-		bouncestop1 = PRVM_EDICTFIELDFLOAT(ed1, prog->fieldoffsets.bouncestop);
+		bouncefactor1 = PRVM_gameedictfloat(ed1, bouncefactor);
+		bouncestop1 = PRVM_gameedictfloat(ed1, bouncestop);
 		if (!bouncestop1)
 			bouncestop1 = 60.0f / 800.0f;
 	}
@@ -2545,8 +2545,8 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 		ed2 = NULL;
 	if(ed2)
 	{
-		bouncefactor2 = PRVM_EDICTFIELDFLOAT(ed2, prog->fieldoffsets.bouncefactor);
-		bouncestop2 = PRVM_EDICTFIELDFLOAT(ed2, prog->fieldoffsets.bouncestop);
+		bouncefactor2 = PRVM_gameedictfloat(ed2, bouncefactor);
+		bouncestop2 = PRVM_gameedictfloat(ed2, bouncestop);
 		if (!bouncestop2)
 			bouncestop2 = 60.0f / 800.0f;
 	}

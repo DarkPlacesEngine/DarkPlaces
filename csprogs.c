@@ -23,7 +23,7 @@ void CL_VM_PreventInformationLeaks(void)
 		return;
 	CSQC_BEGIN
 		VM_ClearTraceGlobals();
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_networkentity) = 0;
+		PRVM_clientglobalfloat(trace_networkentity) = 0;
 	CSQC_END
 }
 
@@ -37,6 +37,146 @@ static const char *cl_required_func[] =
 };
 
 static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
+
+#define CL_REQFIELDS (sizeof(cl_reqfields) / sizeof(prvm_required_field_t))
+
+prvm_required_field_t cl_reqfields[] =
+{
+	{ev_entity, "aiment"}, // client field
+	{ev_entity, "enemy"}, // client field
+	{ev_entity, "groundentity"}, // client field
+	{ev_entity, "tag_entity"}, // client field
+	{ev_float, "alpha"}, // client field
+	{ev_float, "bouncefactor"}, // client field
+	{ev_float, "bouncestop"}, // client field
+	{ev_float, "dphitcontentsmask"}, // client field
+	{ev_float, "frame1time"}, // client field
+	{ev_float, "frame2time"}, // client field
+	{ev_float, "frame2"}, // client field
+	{ev_float, "frame3time"}, // client field
+	{ev_float, "frame3"}, // client field
+	{ev_float, "frame4time"}, // client field
+	{ev_float, "frame4"}, // client field
+	{ev_float, "frame"}, // client field
+	{ev_float, "gravity"}, // client field
+	{ev_float, "gravity"}, // client field
+	{ev_float, "ideal_yaw"}, // client field
+	{ev_float, "idealpitch"}, // client field
+	{ev_float, "jointtype"}, // client field
+	{ev_float, "lerpfrac3"}, // client field
+	{ev_float, "lerpfrac4"}, // client field
+	{ev_float, "lerpfrac"}, // client field
+	{ev_float, "mass"}, // client field
+	{ev_float, "modelindex"}, // client field
+	{ev_float, "movetype"}, // client field
+	{ev_float, "pitch_speed"}, // client field
+	{ev_float, "renderflags"}, // client field
+	{ev_float, "scale"}, // client field
+	{ev_float, "scale"}, // client field
+	{ev_float, "shadertime"}, // client field
+	{ev_float, "skeletonindex"}, // client field
+	{ev_float, "solid"}, // client field
+	{ev_float, "tag_index"}, // client field
+	{ev_float, "userwavefunc_param0"}, // client field
+	{ev_float, "userwavefunc_param1"}, // client field
+	{ev_float, "userwavefunc_param2"}, // client field
+	{ev_float, "userwavefunc_param3"}, // client field
+	{ev_float, "yaw_speed"}, // client field
+	{ev_function, "camera_transform"}, // client field
+	{ev_string, "classname"}, // client field
+	{ev_string, "message"}, // client field
+	{ev_vector, "angles"}, // client field
+	{ev_vector, "avelocity"}, // client field
+	{ev_vector, "colormod"}, // client field
+	{ev_vector, "glowmod"}, // client field
+	{ev_vector, "maxs"}, // client field
+	{ev_vector, "mins"}, // client field
+	{ev_vector, "movedir"}, // client field
+	{ev_vector, "origin"}, // client field
+	{ev_vector, "velocity"}, // client field
+};
+
+#define CL_REQGLOBALS (sizeof(cl_reqglobals) / sizeof(prvm_required_field_t))
+
+prvm_required_field_t cl_reqglobals[] =
+{
+	{ev_entity, "self"}, // client global
+	{ev_entity, "trace_ent"}, // client global
+	{ev_float, "coop"}, // client global
+	{ev_float, "deathmatch"}, // client global
+	{ev_float, "dmg_save"}, // client global
+	{ev_float, "dmg_take"}, // client global
+	{ev_float, "drawfont"}, // client global
+	{ev_float, "gettaginfo_parent"}, // client global
+	{ev_float, "intermission"}, // client global
+	{ev_float, "particle_airfriction"}, // client global
+	{ev_float, "particle_alpha"}, // client global
+	{ev_float, "particle_alphafade"}, // client global
+	{ev_float, "particle_angle"}, // client global
+	{ev_float, "particle_blendmode"}, // client global
+	{ev_float, "particle_bounce"}, // client global
+	{ev_float, "particle_delaycollision"}, // client global
+	{ev_float, "particle_delayspawn"}, // client global
+	{ev_float, "particle_gravity"}, // client global
+	{ev_float, "particle_liquidfriction"}, // client global
+	{ev_float, "particle_orientation"}, // client global
+	{ev_float, "particle_originjitter"}, // client global
+	{ev_float, "particle_qualityreduction"}, // client global
+	{ev_float, "particle_size"}, // client global
+	{ev_float, "particle_sizeincrease"}, // client global
+	{ev_float, "particle_spin"}, // client global
+	{ev_float, "particle_stainalpha"}, // client global
+	{ev_float, "particle_stainsize"}, // client global
+	{ev_float, "particle_staintex"}, // client global
+	{ev_float, "particle_staintex"}, // client global
+	{ev_float, "particle_stretch"}, // client global
+	{ev_float, "particle_tex"}, // client global
+	{ev_float, "particle_time"}, // client global
+	{ev_float, "particle_type"}, // client global
+	{ev_float, "particle_velocityjitter"}, // client global
+	{ev_float, "particles_alphamax"}, // client global
+	{ev_float, "particles_alphamin"}, // client global
+	{ev_float, "require_spawnfunc_prefix"}, // client global
+	{ev_float, "sb_showscores"}, // client global
+	{ev_float, "serverdeltatime"}, // client global
+	{ev_float, "serverprevtime"}, // client global
+	{ev_float, "servertime"}, // client global
+	{ev_float, "trace_allsolid"}, // client global
+	{ev_float, "trace_dphitcontents"}, // client global
+	{ev_float, "trace_dphitq3surfaceflags"}, // client global
+	{ev_float, "trace_dpstartcontents"}, // client global
+	{ev_float, "trace_fraction"}, // client global
+	{ev_float, "trace_inopen"}, // client global
+	{ev_float, "trace_inwater"}, // client global
+	{ev_float, "trace_networkentity"}, // client global
+	{ev_float, "trace_plane_dist"}, // client global
+	{ev_float, "trace_startsolid"}, // client global
+	{ev_float, "transparent_offset"}, // client global
+	{ev_string, "gettaginfo_name"}, // client global
+	{ev_string, "trace_dphittexturename"}, // client global
+	{ev_vector, "dmg_origin"}, // client global
+	{ev_vector, "drawfontscale"}, // client global
+	{ev_vector, "gettaginfo_forward"}, // client global
+	{ev_vector, "gettaginfo_offset"}, // client global
+	{ev_vector, "gettaginfo_right"}, // client global
+	{ev_vector, "gettaginfo_up"}, // client global
+	{ev_vector, "particle_color1"}, // client global
+	{ev_vector, "particle_color2"}, // client global
+	{ev_vector, "particle_staincolor1"}, // client global
+	{ev_vector, "particle_staincolor2"}, // client global
+	{ev_vector, "particles_colormax"}, // client global
+	{ev_vector, "particles_colormin"}, // client global
+	{ev_vector, "pmove_inwater"}, // client global
+	{ev_vector, "pmove_onground"}, // client global
+	{ev_vector, "trace_endpos"}, // client global
+	{ev_vector, "trace_plane_normal"}, // client global
+	{ev_vector, "v_forward"}, // client global
+	{ev_vector, "v_right"}, // client global
+	{ev_vector, "v_up"}, // client global
+	{ev_vector, "view_angles"}, // client global
+	{ev_vector, "view_punchangle"}, // client global
+	{ev_vector, "view_punchvector"}, // client global
+};
 
 void CL_VM_Error (const char *format, ...) DP_FUNC_PRINTF(1);
 void CL_VM_Error (const char *format, ...)	//[515]: hope it will be never executed =)
@@ -63,9 +203,9 @@ void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.dmg_take) = dmg_take;
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.dmg_save) = dmg_save;
-		VectorCopy(dmg_origin, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.dmg_origin));
+		PRVM_clientglobalfloat(dmg_take) = dmg_take;
+		PRVM_clientglobalfloat(dmg_save) = dmg_save;
+		VectorCopy(dmg_origin, PRVM_clientglobalvector(dmg_origin));
 		CSQC_END
 	}
 }
@@ -75,9 +215,9 @@ void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.servertime) = newtime;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.serverprevtime) = oldtime;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.serverdeltatime) = newtime - oldtime;
+	PRVM_clientglobalfloat(servertime) = newtime;
+	PRVM_clientglobalfloat(serverprevtime) = oldtime;
+	PRVM_clientglobalfloat(serverdeltatime) = newtime - oldtime;
 	CSQC_END
 }
 
@@ -101,12 +241,12 @@ static void CSQC_SetGlobals (void)
 		// completely replacing it
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, prog->globals.client->pmove_org);
 		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.pmove_onground) = cl.onground;
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.pmove_inwater) = cl.inwater;
+		PRVM_clientglobalfloat(pmove_onground) = cl.onground;
+		PRVM_clientglobalfloat(pmove_inwater) = cl.inwater;
 
-		VectorCopy(cl.viewangles, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_angles));
-		VectorCopy(cl.punchangle, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_punchangle));
-		VectorCopy(cl.punchvector, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_punchvector));
+		VectorCopy(cl.viewangles, PRVM_clientglobalvector(view_angles));
+		VectorCopy(cl.punchangle, PRVM_clientglobalvector(view_punchangle));
+		VectorCopy(cl.punchvector, PRVM_clientglobalvector(view_punchvector));
 		prog->globals.client->maxclients = cl.maxclients;
 	CSQC_END
 }
@@ -172,19 +312,19 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 			return false;
 	}
 
-	entrender->userwavefunc_param[0] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param0);
-	entrender->userwavefunc_param[1] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param1);
-	entrender->userwavefunc_param[2] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param2);
-	entrender->userwavefunc_param[3] = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.userwavefunc_param3);
+	entrender->userwavefunc_param[0] = PRVM_clientedictfloat(ed, userwavefunc_param0);
+	entrender->userwavefunc_param[1] = PRVM_clientedictfloat(ed, userwavefunc_param1);
+	entrender->userwavefunc_param[2] = PRVM_clientedictfloat(ed, userwavefunc_param2);
+	entrender->userwavefunc_param[3] = PRVM_clientedictfloat(ed, userwavefunc_param3);
 
 	entrender->model = model;
 	entrender->skinnum = (int)ed->fields.client->skin;
 	entrender->effects |= entrender->model->effects;
-	renderflags = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.renderflags);
-	entrender->alpha = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.alpha);
-	entrender->scale = scale = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.scale);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.colormod), entrender->colormod);
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.glowmod), entrender->glowmod);
+	renderflags = (int)PRVM_clientedictfloat(ed, renderflags);
+	entrender->alpha = PRVM_clientedictfloat(ed, alpha);
+	entrender->scale = scale = PRVM_clientedictfloat(ed, scale);
+	VectorCopy(PRVM_clientedictvector(ed, colormod), entrender->colormod);
+	VectorCopy(PRVM_clientedictvector(ed, glowmod), entrender->glowmod);
 	if(ed->fields.client->effects)	entrender->effects |= (int)ed->fields.client->effects;
 	if (!entrender->alpha)
 		entrender->alpha = 1.0f;
@@ -202,11 +342,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
 	VM_UpdateEdictSkeleton(ed, model, ed->priv.server->frameblend);
-	entrender->shadertime = PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.shadertime);
+	entrender->shadertime = PRVM_clientedictfloat(ed, shadertime);
 
 	// transparent offset
 	if (renderflags & RF_USETRANSPARENTOFFSET)
-		entrender->transparent_offset = PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.transparent_offset);
+		entrender->transparent_offset = PRVM_clientglobalfloat(transparent_offset);
 
 	if(renderflags)
 	{
@@ -518,7 +658,7 @@ void CL_VM_UpdateIntermissionState (int intermission)
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.intermission) = intermission;
+		PRVM_clientglobalfloat(intermission) = intermission;
 		CSQC_END
 	}
 }
@@ -527,7 +667,7 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.sb_showscores) = showingscores;
+		PRVM_clientglobalfloat(sb_showscores) = showingscores;
 		CSQC_END
 	}
 }
@@ -582,8 +722,8 @@ void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 			localdeathmatch = 0;
 		}
 		CSQC_BEGIN
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.coop) = localcoop;
-		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.deathmatch) = localdeathmatch;
+		PRVM_clientglobalfloat(coop) = localcoop;
+		PRVM_clientglobalfloat(deathmatch) = localdeathmatch;
 		CSQC_END
 	}
 }
@@ -787,149 +927,6 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 	return false;
 }
 
-#define CL_REQFIELDS (sizeof(cl_reqfields) / sizeof(prvm_required_field_t))
-
-prvm_required_field_t cl_reqfields[] =
-{
-	{ev_entity, "groundentity"},
-	{ev_entity, "tag_entity"},
-	{ev_float, "alpha"},
-	{ev_float, "dimension_hit"},
-	{ev_float, "dimension_solid"},
-	{ev_float, "dphitcontentsmask"},
-	{ev_float, "frame"},
-	{ev_float, "frame1time"},
-	{ev_float, "frame2"},
-	{ev_float, "frame2time"},
-	{ev_float, "frame3"},
-	{ev_float, "frame3time"},
-	{ev_float, "frame4"},
-	{ev_float, "frame4time"},
-	{ev_float, "gravity"},
-	{ev_float, "idealpitch"},
-	{ev_float, "lerpfrac"},
-	{ev_float, "lerpfrac3"},
-	{ev_float, "lerpfrac4"},
-	{ev_float, "movetype"}, // used by ODE code
-	{ev_float, "nextthink"},
-	{ev_float, "pitch_speed"},
-	{ev_float, "renderflags"},
-	{ev_float, "scale"},
-	{ev_float, "shadertime"},
-	{ev_float, "skeletonindex"},
-	{ev_float, "solid"}, // used by ODE code
-	{ev_float, "tag_index"},
-	{ev_float, "userwavefunc_param0"},
-	{ev_float, "userwavefunc_param1"},
-	{ev_float, "userwavefunc_param2"},
-	{ev_float, "userwavefunc_param3"},
-	{ev_function, "camera_transform"},
-	{ev_function, "think"},
-	{ev_string, "classname"},
-	{ev_vector, "colormod"},
-	{ev_vector, "glowmod"},
-
-	// physics
-	//{ev_float, "solid"},
-	//{ev_float, "movetype"},
-	//{ev_float, "modelindex"},
-	{ev_vector, "mass"},
-	//{ev_vector, "origin"},
-	//{ev_vector, "velocity"},
-	//{ev_vector, "axis_forward"},
-	//{ev_vector, "axis_left"},
-	//{ev_vector, "axis_up"},
-	//{ev_vector, "spinvelocity"},
-	//{ev_vector, "angles"},
-	//{ev_vector, "avelocity"},
-};
-
-#define CL_REQGLOBALS (sizeof(cl_reqglobals) / sizeof(prvm_required_field_t))
-
-prvm_required_field_t cl_reqglobals[] =
-{
-	{ev_entity, "self"},
-	{ev_entity, "trace_ent"},
-	{ev_entity, "trace_networkentity"},
-	{ev_float, "coop"},
-	{ev_float, "deathmatch"},
-	{ev_float, "dmg_save"},
-	{ev_float, "dmg_take"},
-	{ev_float, "drawfont"},
-	{ev_float, "drawfontscale"},
-	{ev_float, "gettaginfo_parent"},
-	{ev_float, "intermission"},
-	{ev_float, "particle_airfriction"},
-	{ev_float, "particle_alpha"},
-	{ev_float, "particle_alphafade"},
-	{ev_float, "particle_angle"},
-	{ev_float, "particle_blendmode"},
-	{ev_float, "particle_bounce"},
-	{ev_float, "particle_delaycollision"},
-	{ev_float, "particle_delayspawn"},
-	{ev_float, "particle_gravity"},
-	{ev_float, "particle_liquidfriction"},
-	{ev_float, "particle_orientation"},
-	{ev_float, "particle_originjitter"},
-	{ev_float, "particle_qualityreduction"},
-	{ev_float, "particle_size"},
-	{ev_float, "particle_sizeincrease"},
-	{ev_float, "particle_spin"},
-	{ev_float, "particle_stainalpha"},
-	{ev_float, "particle_stainsize"},
-	{ev_float, "particle_staintex"},
-	{ev_float, "particle_staintex"},
-	{ev_float, "particle_stretch"},
-	{ev_float, "particle_tex"},
-	{ev_float, "particle_time"},
-	{ev_float, "particle_type"},
-	{ev_float, "particle_velocityjitter"},
-	{ev_float, "particles_alphamax"},
-	{ev_float, "particles_alphamin"},
-	{ev_float, "pmove_onground"},
-	{ev_float, "pmove_inwater"},
-	{ev_float, "require_spawnfunc_prefix"},
-	{ev_float, "sb_showscores"},
-	{ev_float, "serverdeltatime"},
-	{ev_float, "serverprevtime"},
-	{ev_float, "servertime"},
-	{ev_float, "time"},
-	{ev_float, "trace_allsolid"},
-	{ev_float, "trace_dphitcontents"},
-	{ev_float, "trace_dphitq3surfaceflags"},
-	{ev_float, "trace_dpstartcontents"},
-	{ev_float, "trace_fraction"},
-	{ev_float, "trace_inopen"},
-	{ev_float, "trace_inwater"},
-	{ev_float, "trace_plane_dist"},
-	{ev_float, "trace_startsolid"},
-	{ev_float, "transparent_offset"},
-	{ev_string, "SV_InitCmd"},
-	{ev_string, "gettaginfo_name"},
-	{ev_string, "trace_dphittexturename"},
-	{ev_string, "worldstatus"},
-	{ev_string, "message"},
-	{ev_vector, "dmg_origin"},
-	{ev_vector, "gettaginfo_forward"},
-	{ev_vector, "gettaginfo_offset"},
-	{ev_vector, "gettaginfo_right"},
-	{ev_vector, "gettaginfo_up"},
-	{ev_vector, "particle_color1"},
-	{ev_vector, "particle_color2"},
-	{ev_vector, "particle_staincolor1"},
-	{ev_vector, "particle_staincolor2"},
-	{ev_vector, "particles_colormax"},
-	{ev_vector, "particles_colormin"},
-	{ev_vector, "trace_endpos"},
-	{ev_vector, "trace_plane_normal"},
-	{ev_vector, "v_forward"},
-	{ev_vector, "v_right"},
-	{ev_vector, "v_up"},
-	{ev_vector, "view_angles"},
-	{ev_vector, "view_punchangle"},
-	{ev_vector, "view_punchvector"},
-};
-
 void CL_VM_Init (void)
 {
 	const char* csprogsfn;
@@ -1070,7 +1067,7 @@ void CL_VM_Init (void)
 	prog->globals.client->player_localentnum = cl.playerentity;
 
 	// set map description (use world entity 0)
-	PRVM_EDICTFIELDSTRING(prog->edicts, prog->fieldoffsets.message) = PRVM_SetEngineString(cl.worldmessage);
+	PRVM_clientedictstring(prog->edicts, message) = PRVM_SetEngineString(cl.worldmessage);
 	VectorCopy(cl.world.mins, prog->edicts->fields.client->mins);
 	VectorCopy(cl.world.maxs, prog->edicts->fields.client->maxs);
 
@@ -1145,7 +1142,7 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 		ed = PRVM_EDICT_NUM(entnum);
 		// camera:
 		//   camera_transform
-		if(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform))
+		if(PRVM_clientedictfunction(ed, camera_transform))
 		{
 			ret = true;
 			if(viewmatrix || clipplane || visorigin)
@@ -1156,16 +1153,16 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 				prog->globals.client->self = entnum;
 				VectorCopy(origin, PRVM_G_VECTOR(OFS_PARM0));
 				VectorCopy(ang, PRVM_G_VECTOR(OFS_PARM1));
-				VectorCopy(forward, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward));
-				VectorScale(left, -1, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right));
-				VectorCopy(up, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up));
-				VectorCopy(origin, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos));
-				PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform), "QC function e.camera_transform is missing");
+				VectorCopy(forward, PRVM_clientglobalvector(v_forward));
+				VectorScale(left, -1, PRVM_clientglobalvector(v_right));
+				VectorCopy(up, PRVM_clientglobalvector(v_up));
+				VectorCopy(origin, PRVM_clientglobalvector(trace_endpos));
+				PRVM_ExecuteProgram(PRVM_clientedictfunction(ed, camera_transform), "QC function e.camera_transform is missing");
 				VectorCopy(PRVM_G_VECTOR(OFS_RETURN), origin);
-				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward), forward);
-				VectorScale(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right), -1, left);
-				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up), up);
-				VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos), visorigin);
+				VectorCopy(PRVM_clientglobalvector(v_forward), forward);
+				VectorScale(PRVM_clientglobalvector(v_right), -1, left);
+				VectorCopy(PRVM_clientglobalvector(v_up), up);
+				VectorCopy(PRVM_clientglobalvector(trace_endpos), visorigin);
 				Matrix4x4_Invert_Full(&mat, viewmatrix);
 				Matrix4x4_FromVectors(viewmatrix, forward, left, up, origin);
 				Matrix4x4_Concat(&matq, viewmatrix, &mat);
