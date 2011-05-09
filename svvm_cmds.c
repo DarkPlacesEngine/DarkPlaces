@@ -3767,10 +3767,10 @@ void VM_SV_Cmd_Init(void)
 void VM_SV_Cmd_Reset(void)
 {
 	World_End(&sv.world);
-	if(prog->funcoffsets.SV_Shutdown)
+	if(PRVM_serverfunction(SV_Shutdown))
 	{
-		func_t s = prog->funcoffsets.SV_Shutdown;
-		prog->funcoffsets.SV_Shutdown = 0; // prevent it from getting called again
+		func_t s = PRVM_serverfunction(SV_Shutdown);
+		PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
 		PRVM_ExecuteProgram(s,"SV_Shutdown() required");
 	}
 

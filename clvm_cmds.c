@@ -756,7 +756,7 @@ void VM_CL_R_AddEntities (void)
 	}
 
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
-	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
+	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= Sys_DoubleTime() - t;
 }
 
 //#302 void(entity ent) addentity (EXT_CSQC)
@@ -765,7 +765,7 @@ void VM_CL_R_AddEntity (void)
 	double t = Sys_DoubleTime();
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntity);
 	CSQC_AddRenderEdict(PRVM_G_EDICT(OFS_PARM0), 0);
-	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
+	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= Sys_DoubleTime() - t;
 }
 
 //#303 float(float property, ...) setproperty (EXT_CSQC)
@@ -1041,7 +1041,7 @@ void VM_CL_R_AddDynamicLight (void)
 
 	R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &matrix, col, style, cubemapname, castshadow, coronaintensity, coronasizescale, ambientscale, diffusescale, specularscale, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
-	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
+	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= Sys_DoubleTime() - t;
 }
 
 //============================================================================
@@ -3020,7 +3020,7 @@ void VM_CL_R_RenderScene (void)
 	polys->progstarttime = prog->starttime;
 
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
-	prog->functions[prog->funcoffsets.CSQC_UpdateView].totaltime -= Sys_DoubleTime() - t;
+	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= Sys_DoubleTime() - t;
 }
 
 static void VM_ResizePolygons(vmpolygons_t *polys)
