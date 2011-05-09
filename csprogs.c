@@ -101,6 +101,8 @@ static void CSQC_SetGlobals (void)
 		// completely replacing it
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, prog->globals.client->pmove_org);
 		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.pmove_onground) = cl.onground;
+		PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.pmove_inwater) = cl.inwater;
 
 		VectorCopy(cl.viewangles, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_angles));
 		VectorCopy(cl.punchangle, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.view_punchangle));
@@ -884,6 +886,8 @@ prvm_required_field_t cl_reqglobals[] =
 	{ev_float, "particle_velocityjitter"},
 	{ev_float, "particles_alphamax"},
 	{ev_float, "particles_alphamin"},
+	{ev_float, "pmove_onground"},
+	{ev_float, "pmove_inwater"},
 	{ev_float, "require_spawnfunc_prefix"},
 	{ev_float, "sb_showscores"},
 	{ev_float, "serverdeltatime"},

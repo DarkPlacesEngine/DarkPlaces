@@ -347,6 +347,8 @@ typedef struct prvm_prog_globaloffsets_s
 	int sb_showscores; // csqc
 	int drawfont; // csqc / menu
 	int drawfontscale; // csqc / menu
+	int pmove_onground; // csqc
+	int pmove_inwater; // csqc
 	int require_spawnfunc_prefix; // ssqc
 	int worldstatus; // ssqc
 	int servertime; // csqc
