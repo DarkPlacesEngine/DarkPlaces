@@ -29,6 +29,8 @@ static prvm_prog_t prog_list[PRVM_MAXPROGS];
 
 int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
+prvm_eval_t prvm_badvalue; // used only for error returns
+
 ddef_t *PRVM_ED_FieldAtOfs(int ofs);
 qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
 
