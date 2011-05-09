@@ -1748,6 +1748,8 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.particles_alphamax            = PRVM_ED_FindGlobalOffset("particles_alphamax");
 	prog->globaloffsets.particles_colormin            = PRVM_ED_FindGlobalOffset("particles_colormin");
 	prog->globaloffsets.particles_colormax            = PRVM_ED_FindGlobalOffset("particles_colormax");
+	prog->globaloffsets.pmove_onground                = PRVM_ED_FindGlobalOffset("pmove_onground");
+	prog->globaloffsets.pmove_inwater                 = PRVM_ED_FindGlobalOffset("pmove_inwater");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");
