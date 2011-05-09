@@ -42,140 +42,158 @@ static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
 
 prvm_required_field_t cl_reqfields[] =
 {
-	{ev_entity, "aiment"}, // client field
-	{ev_entity, "enemy"}, // client field
-	{ev_entity, "groundentity"}, // client field
-	{ev_entity, "tag_entity"}, // client field
-	{ev_float, "alpha"}, // client field
-	{ev_float, "bouncefactor"}, // client field
-	{ev_float, "bouncestop"}, // client field
-	{ev_float, "dphitcontentsmask"}, // client field
-	{ev_float, "frame1time"}, // client field
-	{ev_float, "frame2time"}, // client field
-	{ev_float, "frame2"}, // client field
-	{ev_float, "frame3time"}, // client field
-	{ev_float, "frame3"}, // client field
-	{ev_float, "frame4time"}, // client field
-	{ev_float, "frame4"}, // client field
-	{ev_float, "frame"}, // client field
-	{ev_float, "gravity"}, // client field
-	{ev_float, "gravity"}, // client field
-	{ev_float, "ideal_yaw"}, // client field
-	{ev_float, "idealpitch"}, // client field
-	{ev_float, "jointtype"}, // client field
-	{ev_float, "lerpfrac3"}, // client field
-	{ev_float, "lerpfrac4"}, // client field
-	{ev_float, "lerpfrac"}, // client field
-	{ev_float, "mass"}, // client field
-	{ev_float, "modelindex"}, // client field
-	{ev_float, "movetype"}, // client field
-	{ev_float, "pitch_speed"}, // client field
-	{ev_float, "renderflags"}, // client field
-	{ev_float, "scale"}, // client field
-	{ev_float, "scale"}, // client field
-	{ev_float, "shadertime"}, // client field
-	{ev_float, "skeletonindex"}, // client field
-	{ev_float, "solid"}, // client field
-	{ev_float, "tag_index"}, // client field
-	{ev_float, "userwavefunc_param0"}, // client field
-	{ev_float, "userwavefunc_param1"}, // client field
-	{ev_float, "userwavefunc_param2"}, // client field
-	{ev_float, "userwavefunc_param3"}, // client field
-	{ev_float, "yaw_speed"}, // client field
-	{ev_function, "camera_transform"}, // client field
-	{ev_string, "classname"}, // client field
-	{ev_string, "message"}, // client field
-	{ev_vector, "angles"}, // client field
-	{ev_vector, "avelocity"}, // client field
-	{ev_vector, "colormod"}, // client field
-	{ev_vector, "glowmod"}, // client field
-	{ev_vector, "maxs"}, // client field
-	{ev_vector, "mins"}, // client field
-	{ev_vector, "movedir"}, // client field
-	{ev_vector, "origin"}, // client field
-	{ev_vector, "velocity"}, // client field
+#define PRVM_DECLARE_serverglobalfloat(x)
+#define PRVM_DECLARE_serverglobalvector(x)
+#define PRVM_DECLARE_serverglobalstring(x)
+#define PRVM_DECLARE_serverglobaledict(x)
+#define PRVM_DECLARE_serverglobalfunction(x)
+#define PRVM_DECLARE_clientglobalfloat(x)
+#define PRVM_DECLARE_clientglobalvector(x)
+#define PRVM_DECLARE_clientglobalstring(x)
+#define PRVM_DECLARE_clientglobaledict(x)
+#define PRVM_DECLARE_clientglobalfunction(x)
+#define PRVM_DECLARE_menuglobalfloat(x)
+#define PRVM_DECLARE_menuglobalvector(x)
+#define PRVM_DECLARE_menuglobalstring(x)
+#define PRVM_DECLARE_menuglobaledict(x)
+#define PRVM_DECLARE_menuglobalfunction(x)
+#define PRVM_DECLARE_serverfieldfloat(x)
+#define PRVM_DECLARE_serverfieldvector(x)
+#define PRVM_DECLARE_serverfieldstring(x)
+#define PRVM_DECLARE_serverfieldedict(x)
+#define PRVM_DECLARE_serverfieldfunction(x)
+#define PRVM_DECLARE_clientfieldfloat(x) {ev_float, #x },
+#define PRVM_DECLARE_clientfieldvector(x) {ev_vector, #x },
+#define PRVM_DECLARE_clientfieldstring(x) {ev_string, #x },
+#define PRVM_DECLARE_clientfieldedict(x) {ev_entity, #x },
+#define PRVM_DECLARE_clientfieldfunction(x) {ev_function, #x },
+#define PRVM_DECLARE_menufieldfloat(x)
+#define PRVM_DECLARE_menufieldvector(x)
+#define PRVM_DECLARE_menufieldstring(x)
+#define PRVM_DECLARE_menufieldedict(x)
+#define PRVM_DECLARE_menufieldfunction(x)
+#define PRVM_DECLARE_serverfunction(x)
+#define PRVM_DECLARE_clientfunction(x)
+#define PRVM_DECLARE_menufunction(x)
+#define PRVM_DECLARE_field(x)
+#define PRVM_DECLARE_global(x)
+#define PRVM_DECLARE_function(x)
+#include "prvm_offsets.h"
+#undef PRVM_DECLARE_serverglobalfloat
+#undef PRVM_DECLARE_serverglobalvector
+#undef PRVM_DECLARE_serverglobalstring
+#undef PRVM_DECLARE_serverglobaledict
+#undef PRVM_DECLARE_serverglobalfunction
+#undef PRVM_DECLARE_clientglobalfloat
+#undef PRVM_DECLARE_clientglobalvector
+#undef PRVM_DECLARE_clientglobalstring
+#undef PRVM_DECLARE_clientglobaledict
+#undef PRVM_DECLARE_clientglobalfunction
+#undef PRVM_DECLARE_menuglobalfloat
+#undef PRVM_DECLARE_menuglobalvector
+#undef PRVM_DECLARE_menuglobalstring
+#undef PRVM_DECLARE_menuglobaledict
+#undef PRVM_DECLARE_menuglobalfunction
+#undef PRVM_DECLARE_serverfieldfloat
+#undef PRVM_DECLARE_serverfieldvector
+#undef PRVM_DECLARE_serverfieldstring
+#undef PRVM_DECLARE_serverfieldedict
+#undef PRVM_DECLARE_serverfieldfunction
+#undef PRVM_DECLARE_clientfieldfloat
+#undef PRVM_DECLARE_clientfieldvector
+#undef PRVM_DECLARE_clientfieldstring
+#undef PRVM_DECLARE_clientfieldedict
+#undef PRVM_DECLARE_clientfieldfunction
+#undef PRVM_DECLARE_menufieldfloat
+#undef PRVM_DECLARE_menufieldvector
+#undef PRVM_DECLARE_menufieldstring
+#undef PRVM_DECLARE_menufieldedict
+#undef PRVM_DECLARE_menufieldfunction
+#undef PRVM_DECLARE_serverfunction
+#undef PRVM_DECLARE_clientfunction
+#undef PRVM_DECLARE_menufunction
+#undef PRVM_DECLARE_field
+#undef PRVM_DECLARE_global
+#undef PRVM_DECLARE_function
 };
 
 #define CL_REQGLOBALS (sizeof(cl_reqglobals) / sizeof(prvm_required_field_t))
 
 prvm_required_field_t cl_reqglobals[] =
 {
-	{ev_entity, "self"}, // client global
-	{ev_entity, "trace_ent"}, // client global
-	{ev_float, "coop"}, // client global
-	{ev_float, "deathmatch"}, // client global
-	{ev_float, "dmg_save"}, // client global
-	{ev_float, "dmg_take"}, // client global
-	{ev_float, "drawfont"}, // client global
-	{ev_float, "gettaginfo_parent"}, // client global
-	{ev_float, "intermission"}, // client global
-	{ev_float, "particle_airfriction"}, // client global
-	{ev_float, "particle_alpha"}, // client global
-	{ev_float, "particle_alphafade"}, // client global
-	{ev_float, "particle_angle"}, // client global
-	{ev_float, "particle_blendmode"}, // client global
-	{ev_float, "particle_bounce"}, // client global
-	{ev_float, "particle_delaycollision"}, // client global
-	{ev_float, "particle_delayspawn"}, // client global
-	{ev_float, "particle_gravity"}, // client global
-	{ev_float, "particle_liquidfriction"}, // client global
-	{ev_float, "particle_orientation"}, // client global
-	{ev_float, "particle_originjitter"}, // client global
-	{ev_float, "particle_qualityreduction"}, // client global
-	{ev_float, "particle_size"}, // client global
-	{ev_float, "particle_sizeincrease"}, // client global
-	{ev_float, "particle_spin"}, // client global
-	{ev_float, "particle_stainalpha"}, // client global
-	{ev_float, "particle_stainsize"}, // client global
-	{ev_float, "particle_staintex"}, // client global
-	{ev_float, "particle_staintex"}, // client global
-	{ev_float, "particle_stretch"}, // client global
-	{ev_float, "particle_tex"}, // client global
-	{ev_float, "particle_time"}, // client global
-	{ev_float, "particle_type"}, // client global
-	{ev_float, "particle_velocityjitter"}, // client global
-	{ev_float, "particles_alphamax"}, // client global
-	{ev_float, "particles_alphamin"}, // client global
-	{ev_float, "require_spawnfunc_prefix"}, // client global
-	{ev_float, "sb_showscores"}, // client global
-	{ev_float, "serverdeltatime"}, // client global
-	{ev_float, "serverprevtime"}, // client global
-	{ev_float, "servertime"}, // client global
-	{ev_float, "trace_allsolid"}, // client global
-	{ev_float, "trace_dphitcontents"}, // client global
-	{ev_float, "trace_dphitq3surfaceflags"}, // client global
-	{ev_float, "trace_dpstartcontents"}, // client global
-	{ev_float, "trace_fraction"}, // client global
-	{ev_float, "trace_inopen"}, // client global
-	{ev_float, "trace_inwater"}, // client global
-	{ev_float, "trace_networkentity"}, // client global
-	{ev_float, "trace_plane_dist"}, // client global
-	{ev_float, "trace_startsolid"}, // client global
-	{ev_float, "transparent_offset"}, // client global
-	{ev_string, "gettaginfo_name"}, // client global
-	{ev_string, "trace_dphittexturename"}, // client global
-	{ev_vector, "dmg_origin"}, // client global
-	{ev_vector, "drawfontscale"}, // client global
-	{ev_vector, "gettaginfo_forward"}, // client global
-	{ev_vector, "gettaginfo_offset"}, // client global
-	{ev_vector, "gettaginfo_right"}, // client global
-	{ev_vector, "gettaginfo_up"}, // client global
-	{ev_vector, "particle_color1"}, // client global
-	{ev_vector, "particle_color2"}, // client global
-	{ev_vector, "particle_staincolor1"}, // client global
-	{ev_vector, "particle_staincolor2"}, // client global
-	{ev_vector, "particles_colormax"}, // client global
-	{ev_vector, "particles_colormin"}, // client global
-	{ev_vector, "pmove_inwater"}, // client global
-	{ev_vector, "pmove_onground"}, // client global
-	{ev_vector, "trace_endpos"}, // client global
-	{ev_vector, "trace_plane_normal"}, // client global
-	{ev_vector, "v_forward"}, // client global
-	{ev_vector, "v_right"}, // client global
-	{ev_vector, "v_up"}, // client global
-	{ev_vector, "view_angles"}, // client global
-	{ev_vector, "view_punchangle"}, // client global
-	{ev_vector, "view_punchvector"}, // client global
+#define PRVM_DECLARE_serverglobalfloat(x)
+#define PRVM_DECLARE_serverglobalvector(x)
+#define PRVM_DECLARE_serverglobalstring(x)
+#define PRVM_DECLARE_serverglobaledict(x)
+#define PRVM_DECLARE_serverglobalfunction(x)
+#define PRVM_DECLARE_clientglobalfloat(x) {ev_float, #x},
+#define PRVM_DECLARE_clientglobalvector(x) {ev_vector, #x},
+#define PRVM_DECLARE_clientglobalstring(x) {ev_string, #x},
+#define PRVM_DECLARE_clientglobaledict(x) {ev_entity, #x},
+#define PRVM_DECLARE_clientglobalfunction(x) {ev_function, #x},
+#define PRVM_DECLARE_menuglobalfloat(x)
+#define PRVM_DECLARE_menuglobalvector(x)
+#define PRVM_DECLARE_menuglobalstring(x)
+#define PRVM_DECLARE_menuglobaledict(x)
+#define PRVM_DECLARE_menuglobalfunction(x)
+#define PRVM_DECLARE_serverfieldfloat(x)
+#define PRVM_DECLARE_serverfieldvector(x)
+#define PRVM_DECLARE_serverfieldstring(x)
+#define PRVM_DECLARE_serverfieldedict(x)
+#define PRVM_DECLARE_serverfieldfunction(x)
+#define PRVM_DECLARE_clientfieldfloat(x)
+#define PRVM_DECLARE_clientfieldvector(x)
+#define PRVM_DECLARE_clientfieldstring(x)
+#define PRVM_DECLARE_clientfieldedict(x)
+#define PRVM_DECLARE_clientfieldfunction(x)
+#define PRVM_DECLARE_menufieldfloat(x)
+#define PRVM_DECLARE_menufieldvector(x)
+#define PRVM_DECLARE_menufieldstring(x)
+#define PRVM_DECLARE_menufieldedict(x)
+#define PRVM_DECLARE_menufieldfunction(x)
+#define PRVM_DECLARE_serverfunction(x)
+#define PRVM_DECLARE_clientfunction(x)
+#define PRVM_DECLARE_menufunction(x)
+#define PRVM_DECLARE_field(x)
+#define PRVM_DECLARE_global(x)
+#define PRVM_DECLARE_function(x)
+#include "prvm_offsets.h"
+#undef PRVM_DECLARE_serverglobalfloat
+#undef PRVM_DECLARE_serverglobalvector
+#undef PRVM_DECLARE_serverglobalstring
+#undef PRVM_DECLARE_serverglobaledict
+#undef PRVM_DECLARE_serverglobalfunction
+#undef PRVM_DECLARE_clientglobalfloat
+#undef PRVM_DECLARE_clientglobalvector
+#undef PRVM_DECLARE_clientglobalstring
+#undef PRVM_DECLARE_clientglobaledict
+#undef PRVM_DECLARE_clientglobalfunction
+#undef PRVM_DECLARE_menuglobalfloat
+#undef PRVM_DECLARE_menuglobalvector
+#undef PRVM_DECLARE_menuglobalstring
+#undef PRVM_DECLARE_menuglobaledict
+#undef PRVM_DECLARE_menuglobalfunction
+#undef PRVM_DECLARE_serverfieldfloat
+#undef PRVM_DECLARE_serverfieldvector
+#undef PRVM_DECLARE_serverfieldstring
+#undef PRVM_DECLARE_serverfieldedict
+#undef PRVM_DECLARE_serverfieldfunction
+#undef PRVM_DECLARE_clientfieldfloat
+#undef PRVM_DECLARE_clientfieldvector
+#undef PRVM_DECLARE_clientfieldstring
+#undef PRVM_DECLARE_clientfieldedict
+#undef PRVM_DECLARE_clientfieldfunction
+#undef PRVM_DECLARE_menufieldfloat
+#undef PRVM_DECLARE_menufieldvector
+#undef PRVM_DECLARE_menufieldstring
+#undef PRVM_DECLARE_menufieldedict
+#undef PRVM_DECLARE_menufieldfunction
+#undef PRVM_DECLARE_serverfunction
+#undef PRVM_DECLARE_clientfunction
+#undef PRVM_DECLARE_menufunction
+#undef PRVM_DECLARE_field
+#undef PRVM_DECLARE_global
+#undef PRVM_DECLARE_function
 };
 
 void CL_VM_Error (const char *format, ...) DP_FUNC_PRINTF(1);
@@ -413,7 +431,7 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 		return false;
 
 	CSQC_BEGIN
-		if (!prog->funcoffsets.CSQC_InputEvent)
+		if (!PRVM_clientfunction(CSQC_InputEvent))
 			r = false;
 		else
 		{
@@ -422,7 +440,7 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
 			PRVM_G_FLOAT(OFS_PARM2) = ascii;
-			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_InputEvent, "QC function CSQC_InputEvent is missing");
+			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_InputEvent), "QC function CSQC_InputEvent is missing");
 			r = CSQC_RETURNVAL != 0;
 		}
 	CSQC_END
@@ -451,7 +469,7 @@ qboolean CL_VM_UpdateView (void)
 		// pass in width and height as parameters (EXT_CSQC_1)
 		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
 		PRVM_G_FLOAT(OFS_PARM1) = vid.height;
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_UpdateView, "QC function CSQC_UpdateView is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_UpdateView), "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here
 		CL_VM_UpdateDmgGlobals(0, 0, emptyvector);
@@ -468,13 +486,13 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
-	if (prog->funcoffsets.CSQC_ConsoleCommand)
+	if (PRVM_clientfunction(CSQC_ConsoleCommand))
 	{
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_ConsoleCommand, "QC function CSQC_ConsoleCommand is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_ConsoleCommand), "QC function CSQC_ConsoleCommand is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		r = CSQC_RETURNVAL != 0;
 	}
@@ -489,12 +507,12 @@ qboolean CL_VM_Parse_TempEntity (void)
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
-	if(prog->funcoffsets.CSQC_Parse_TempEntity)
+	if(PRVM_clientfunction(CSQC_Parse_TempEntity))
 	{
 		t = msg_readcount;
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_TempEntity, "QC function CSQC_Parse_TempEntity is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_TempEntity), "QC function CSQC_Parse_TempEntity is missing");
 		r = CSQC_RETURNVAL != 0;
 		if(!r)
 		{
@@ -572,13 +590,13 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		return;
 	}
 	CSQC_BEGIN
-	if(prog->funcoffsets.CSQC_Parse_StuffCmd)
+	if(PRVM_clientfunction(CSQC_Parse_StuffCmd))
 	{
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_StuffCmd, "QC function CSQC_Parse_StuffCmd is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_StuffCmd), "QC function CSQC_Parse_StuffCmd is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
@@ -593,7 +611,7 @@ static void CL_VM_Parse_Print (const char *msg)
 	prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_Print, "QC function CSQC_Parse_Print is missing");
+	PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_Print), "QC function CSQC_Parse_Print is missing");
 	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }
 
@@ -606,7 +624,7 @@ void CSQC_AddPrintText (const char *msg)
 		return;
 	}
 	CSQC_BEGIN
-	if(prog->funcoffsets.CSQC_Parse_Print)
+	if(PRVM_clientfunction(CSQC_Parse_Print))
 	{
 		// FIXME: is this bugged?
 		i = strlen(msg)-1;
@@ -639,13 +657,13 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 		return;
 	}
 	CSQC_BEGIN
-	if(prog->funcoffsets.CSQC_Parse_CenterPrint)
+	if(PRVM_clientfunction(CSQC_Parse_CenterPrint))
 	{
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Parse_CenterPrint, "QC function CSQC_Parse_CenterPrint is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_CenterPrint), "QC function CSQC_Parse_CenterPrint is missing");
 		vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
@@ -677,7 +695,7 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
-		if(prog->funcoffsets.CSQC_Event_Sound)
+		if(PRVM_clientfunction(CSQC_Event_Sound))
 		{
 			prog->globals.client->time = cl.time;
 			prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
@@ -687,7 +705,7 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 			PRVM_G_FLOAT(OFS_PARM3) = volume;
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
-			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event_Sound, "QC function CSQC_Event_Sound is missing");
+			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Event_Sound), "QC function CSQC_Event_Sound is missing");
 			r = CSQC_RETURNVAL != 0;
 		}
 		CSQC_END
@@ -733,12 +751,12 @@ float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know
 	if(!cl.csqc_loaded)
 		return 0;
 	CSQC_BEGIN
-	if(prog->funcoffsets.CSQC_Event)
+	if(PRVM_clientfunction(CSQC_Event))
 	{
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_G_FLOAT(OFS_PARM0) = event;
-		PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Event, "QC function CSQC_Event is missing");
+		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Event), "QC function CSQC_Event is missing");
 		r = CSQC_RETURNVAL;
 	}
 	CSQC_END
@@ -768,7 +786,7 @@ void CSQC_ReadEntities (void)
 			{
 				if(prog->globals.client->self)
 				{
-					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Remove, "QC function CSQC_Ent_Remove is missing");
+					PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Remove), "QC function CSQC_Ent_Remove is missing");
 					cl.csqc_server2csqcentitynumber[realentnum] = 0;
 				}
 				else
@@ -784,7 +802,7 @@ void CSQC_ReadEntities (void)
 			{
 				if(!prog->globals.client->self)
 				{
-					if(!prog->funcoffsets.CSQC_Ent_Spawn)
+					if(!PRVM_clientfunction(CSQC_Ent_Spawn))
 					{
 						prvm_edict_t	*ed;
 						ed = PRVM_ED_Alloc();
@@ -798,15 +816,15 @@ void CSQC_ReadEntities (void)
 						PRVM_G_FLOAT(OFS_PARM0) = (float) realentnum;
 						// make sure no one gets wrong ideas
 						prog->globals.client->self = 0;
-						PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Spawn, "QC function CSQC_Ent_Spawn is missing");
+						PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Spawn), "QC function CSQC_Ent_Spawn is missing");
 						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
 					}
 					PRVM_G_FLOAT(OFS_PARM0) = 1;
-					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
+					PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Update), "QC function CSQC_Ent_Update is missing");
 				}
 				else {
 					PRVM_G_FLOAT(OFS_PARM0) = 0;
-					PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Ent_Update, "QC function CSQC_Ent_Update is missing");
+					PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Update), "QC function CSQC_Ent_Update is missing");
 				}
 			}
 		}
@@ -1072,7 +1090,7 @@ void CL_VM_Init (void)
 	VectorCopy(cl.world.maxs, prog->edicts->fields.client->maxs);
 
 	// call the prog init
-	PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Init, "QC function CSQC_Init is missing");
+	PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
 
 	PRVM_End;
 	cl.csqc_loaded = true;
@@ -1094,8 +1112,8 @@ void CL_VM_ShutDown (void)
 	CSQC_BEGIN
 		prog->globals.client->time = cl.time;
 		prog->globals.client->self = 0;
-		if (prog->funcoffsets.CSQC_Shutdown)
-			PRVM_ExecuteProgram(prog->funcoffsets.CSQC_Shutdown, "QC function CSQC_Shutdown is missing");
+		if (PRVM_clientfunction(CSQC_Shutdown))
+			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
 	CSQC_END
 	Con_DPrint("CSQC ^1unloaded\n");

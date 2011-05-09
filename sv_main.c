@@ -249,163 +249,158 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 
 prvm_required_field_t sv_reqfields[] =
 {
-	{ev_entity, "aiment"}, // server field
-	{ev_entity, "clientcamera"}, // server field
-	{ev_entity, "cursor_trace_ent"}, // server field
-	{ev_entity, "drawonlytoclient"}, // server field
-	{ev_entity, "enemy"}, // server field
-	{ev_entity, "exteriormodeltoclient"}, // server field
-	{ev_entity, "nodrawtoclient"}, // server field
-	{ev_entity, "tag_entity"}, // server field
-	{ev_entity, "viewmodelforclient"}, // server field
-	{ev_float, "SendFlags"}, // server field
-	{ev_float, "Version"}, // server field
-	{ev_float, "alpha"}, // server field
-	{ev_float, "ammo_cells1"}, // server field
-	{ev_float, "ammo_lava_nails"}, // server field
-	{ev_float, "ammo_multi_rockets"}, // server field
-	{ev_float, "ammo_nails1"}, // server field
-	{ev_float, "ammo_plasma"}, // server field
-	{ev_float, "ammo_rockets1"}, // server field
-	{ev_float, "ammo_shells1"}, // server field
-	{ev_float, "bouncefactor"}, // server field
-	{ev_float, "bouncestop"}, // server field
-	{ev_float, "button3"}, // server field
-	{ev_float, "button4"}, // server field
-	{ev_float, "button5"}, // server field
-	{ev_float, "button6"}, // server field
-	{ev_float, "button7"}, // server field
-	{ev_float, "button8"}, // server field
-	{ev_float, "button9"}, // server field
-	{ev_float, "button10"}, // server field
-	{ev_float, "button11"}, // server field
-	{ev_float, "button12"}, // server field
-	{ev_float, "button13"}, // server field
-	{ev_float, "button14"}, // server field
-	{ev_float, "button15"}, // server field
-	{ev_float, "button16"}, // server field
-	{ev_float, "buttonchat"}, // server field
-	{ev_float, "buttonuse"}, // server field
-	{ev_float, "clientcolors"}, // server field
-	{ev_float, "cursor_active"}, // server field
-	{ev_float, "disableclientprediction"}, // server field
-	{ev_float, "discardabledemo"}, // server field
-	{ev_float, "dphitcontentsmask"}, // server field
-	{ev_float, "frame1time"}, // server field
-	{ev_float, "frame1time"}, // server field
-	{ev_float, "frame2time"}, // server field
-	{ev_float, "frame2time"}, // server field
-	{ev_float, "frame2"}, // server field
-	{ev_float, "frame2"}, // server field
-	{ev_float, "frame3time"}, // server field
-	{ev_float, "frame3time"}, // server field
-	{ev_float, "frame3"}, // server field
-	{ev_float, "frame3"}, // server field
-	{ev_float, "frame4time"}, // server field
-	{ev_float, "frame4time"}, // server field
-	{ev_float, "frame4"}, // server field
-	{ev_float, "frame4"}, // server field
-	{ev_float, "frame"}, // server field
-	{ev_float, "fullbright"}, // server field
-	{ev_float, "glow_color"}, // server field
-	{ev_float, "glow_size"}, // server field
-	{ev_float, "glow_trail"}, // server field
-	{ev_float, "gravity"}, // server field
-	{ev_float, "gravity"}, // server field
-	{ev_float, "ideal_yaw"}, // server field
-	{ev_float, "idealpitch"}, // server field
-	{ev_float, "items2"}, // server field
-	{ev_float, "jointtype"}, // server field
-	{ev_float, "lerpfrac3"}, // server field
-	{ev_float, "lerpfrac3"}, // server field
-	{ev_float, "lerpfrac4"}, // server field
-	{ev_float, "lerpfrac4"}, // server field
-	{ev_float, "lerpfrac"}, // server field
-	{ev_float, "lerpfrac"}, // server field
-	{ev_float, "light_lev"}, // server field
-	{ev_float, "mass"}, // server field
-	{ev_float, "modelflags"}, // server field
-	{ev_float, "modelindex"}, // server field
-	{ev_float, "movetype"}, // server field
-	{ev_float, "pflags"}, // server field
-	{ev_float, "ping_movementloss"}, // server field
-	{ev_float, "ping_packetloss"}, // server field
-	{ev_float, "ping"}, // server field
-	{ev_float, "pitch_speed"}, // server field
-	{ev_float, "pmodel"}, // server field
-	{ev_float, "renderamt"}, // server field
-	{ev_float, "scale"}, // server field
-	{ev_float, "scale"}, // server field
-	{ev_float, "sendcomplexanimation"}, // server field
-	{ev_float, "skeletonindex"}, // server field
-	{ev_float, "skeletonindex"}, // server field
-	{ev_float, "solid"}, // server field
-	{ev_float, "style"}, // server field
-	{ev_float, "tag_index"}, // server field
-	{ev_float, "viewzoom"}, // server field
-	{ev_float, "yaw_speed"}, // server field
-	{ev_function, "SendEntity"}, // server field
-	{ev_function, "camera_transform"}, // server field
-	{ev_function, "contentstransition"}, // server field
-	{ev_function, "customizeentityforclient"}, // server field
-	{ev_function, "movetypesteplandevent"}, // server field
-	{ev_string, "classname"}, // server field
-	{ev_string, "clientstatus"}, // server field
-	{ev_string, "crypto_encryptmethod"}, // server field
-	{ev_string, "crypto_idfp"}, // server field
-	{ev_string, "crypto_keyfp"}, // server field
-	{ev_string, "crypto_mykeyfp"}, // server field
-	{ev_string, "crypto_signmethod"}, // server field
-	{ev_string, "netaddress"}, // server field
-	{ev_string, "playermodel"}, // server field
-	{ev_string, "playerskin"}, // server field
-	{ev_vector, "angles"}, // server field
-	{ev_vector, "avelocity"}, // server field
-	{ev_vector, "colormod"}, // server field
-	{ev_vector, "color"}, // server field
-	{ev_vector, "cursor_screen"}, // server field
-	{ev_vector, "cursor_trace_endpos"}, // server field
-	{ev_vector, "cursor_trace_start"}, // server field
-	{ev_vector, "glowmod"}, // server field
-	{ev_vector, "maxs"}, // server field
-	{ev_vector, "mins"}, // server field
-	{ev_vector, "movedir"}, // server field
-	{ev_vector, "movement"}, // server field
-	{ev_vector, "origin"}, // server field
-	{ev_vector, "punchvector"}, // server field
-	{ev_vector, "velocity"}, // server field
+#define PRVM_DECLARE_serverglobalfloat(x)
+#define PRVM_DECLARE_serverglobalvector(x)
+#define PRVM_DECLARE_serverglobalstring(x)
+#define PRVM_DECLARE_serverglobaledict(x)
+#define PRVM_DECLARE_serverglobalfunction(x)
+#define PRVM_DECLARE_clientglobalfloat(x)
+#define PRVM_DECLARE_clientglobalvector(x)
+#define PRVM_DECLARE_clientglobalstring(x)
+#define PRVM_DECLARE_clientglobaledict(x)
+#define PRVM_DECLARE_clientglobalfunction(x)
+#define PRVM_DECLARE_menuglobalfloat(x)
+#define PRVM_DECLARE_menuglobalvector(x)
+#define PRVM_DECLARE_menuglobalstring(x)
+#define PRVM_DECLARE_menuglobaledict(x)
+#define PRVM_DECLARE_menuglobalfunction(x)
+#define PRVM_DECLARE_serverfieldfloat(x) {ev_float, #x},
+#define PRVM_DECLARE_serverfieldvector(x) {ev_vector, #x},
+#define PRVM_DECLARE_serverfieldstring(x) {ev_string, #x},
+#define PRVM_DECLARE_serverfieldedict(x) {ev_entity, #x},
+#define PRVM_DECLARE_serverfieldfunction(x) {ev_function, #x},
+#define PRVM_DECLARE_clientfieldfloat(x)
+#define PRVM_DECLARE_clientfieldvector(x)
+#define PRVM_DECLARE_clientfieldstring(x)
+#define PRVM_DECLARE_clientfieldedict(x)
+#define PRVM_DECLARE_clientfieldfunction(x)
+#define PRVM_DECLARE_menufieldfloat(x)
+#define PRVM_DECLARE_menufieldvector(x)
+#define PRVM_DECLARE_menufieldstring(x)
+#define PRVM_DECLARE_menufieldedict(x)
+#define PRVM_DECLARE_menufieldfunction(x)
+#define PRVM_DECLARE_serverfunction(x)
+#define PRVM_DECLARE_clientfunction(x)
+#define PRVM_DECLARE_menufunction(x)
+#define PRVM_DECLARE_field(x)
+#define PRVM_DECLARE_global(x)
+#define PRVM_DECLARE_function(x)
+#include "prvm_offsets.h"
+#undef PRVM_DECLARE_serverglobalfloat
+#undef PRVM_DECLARE_serverglobalvector
+#undef PRVM_DECLARE_serverglobalstring
+#undef PRVM_DECLARE_serverglobaledict
+#undef PRVM_DECLARE_serverglobalfunction
+#undef PRVM_DECLARE_clientglobalfloat
+#undef PRVM_DECLARE_clientglobalvector
+#undef PRVM_DECLARE_clientglobalstring
+#undef PRVM_DECLARE_clientglobaledict
+#undef PRVM_DECLARE_clientglobalfunction
+#undef PRVM_DECLARE_menuglobalfloat
+#undef PRVM_DECLARE_menuglobalvector
+#undef PRVM_DECLARE_menuglobalstring
+#undef PRVM_DECLARE_menuglobaledict
+#undef PRVM_DECLARE_menuglobalfunction
+#undef PRVM_DECLARE_serverfieldfloat
+#undef PRVM_DECLARE_serverfieldvector
+#undef PRVM_DECLARE_serverfieldstring
+#undef PRVM_DECLARE_serverfieldedict
+#undef PRVM_DECLARE_serverfieldfunction
+#undef PRVM_DECLARE_clientfieldfloat
+#undef PRVM_DECLARE_clientfieldvector
+#undef PRVM_DECLARE_clientfieldstring
+#undef PRVM_DECLARE_clientfieldedict
+#undef PRVM_DECLARE_clientfieldfunction
+#undef PRVM_DECLARE_menufieldfloat
+#undef PRVM_DECLARE_menufieldvector
+#undef PRVM_DECLARE_menufieldstring
+#undef PRVM_DECLARE_menufieldedict
+#undef PRVM_DECLARE_menufieldfunction
+#undef PRVM_DECLARE_serverfunction
+#undef PRVM_DECLARE_clientfunction
+#undef PRVM_DECLARE_menufunction
+#undef PRVM_DECLARE_field
+#undef PRVM_DECLARE_global
+#undef PRVM_DECLARE_function
 };
 
 #define SV_REQGLOBALS (sizeof(sv_reqglobals) / sizeof(prvm_required_field_t))
 
 prvm_required_field_t sv_reqglobals[] =
 {
-	{ev_entity, "self"}, // server global
-	{ev_entity, "trace_ent"}, // server global
-	{ev_float, "gettaginfo_parent"}, // server global
-	{ev_float, "require_spawnfunc_prefix"}, // server global
-	{ev_float, "trace_allsolid"}, // server global
-	{ev_float, "trace_dphitcontents"}, // server global
-	{ev_float, "trace_dphitq3surfaceflags"}, // server global
-	{ev_float, "trace_dpstartcontents"}, // server global
-	{ev_float, "trace_fraction"}, // server global
-	{ev_float, "trace_inopen"}, // server global
-	{ev_float, "trace_inwater"}, // server global
-	{ev_float, "trace_plane_dist"}, // server global
-	{ev_float, "trace_startsolid"}, // server global
-	{ev_string, "SV_InitCmd"}, // server global
-	{ev_string, "gettaginfo_name"}, // server global
-	{ev_string, "trace_dphittexturename"}, // server global
-	{ev_string, "worldstatus"}, // server global
-	{ev_vector, "gettaginfo_forward"}, // server global
-	{ev_vector, "gettaginfo_offset"}, // server global
-	{ev_vector, "gettaginfo_right"}, // server global
-	{ev_vector, "gettaginfo_up"}, // server global
-	{ev_vector, "trace_endpos"}, // server global
-	{ev_vector, "trace_plane_normal"}, // server global
-	{ev_vector, "v_forward"}, // server global
-	{ev_vector, "v_right"}, // server global
-	{ev_vector, "v_up"}, // server global
+#define PRVM_DECLARE_serverglobalfloat(x) {ev_float, #x},
+#define PRVM_DECLARE_serverglobalvector(x) {ev_vector, #x},
+#define PRVM_DECLARE_serverglobalstring(x) {ev_string, #x},
+#define PRVM_DECLARE_serverglobaledict(x) {ev_entity, #x},
+#define PRVM_DECLARE_serverglobalfunction(x) {ev_function, #x},
+#define PRVM_DECLARE_clientglobalfloat(x)
+#define PRVM_DECLARE_clientglobalvector(x)
+#define PRVM_DECLARE_clientglobalstring(x)
+#define PRVM_DECLARE_clientglobaledict(x)
+#define PRVM_DECLARE_clientglobalfunction(x)
+#define PRVM_DECLARE_menuglobalfloat(x)
+#define PRVM_DECLARE_menuglobalvector(x)
+#define PRVM_DECLARE_menuglobalstring(x)
+#define PRVM_DECLARE_menuglobaledict(x)
+#define PRVM_DECLARE_menuglobalfunction(x)
+#define PRVM_DECLARE_serverfieldfloat(x)
+#define PRVM_DECLARE_serverfieldvector(x)
+#define PRVM_DECLARE_serverfieldstring(x)
+#define PRVM_DECLARE_serverfieldedict(x)
+#define PRVM_DECLARE_serverfieldfunction(x)
+#define PRVM_DECLARE_clientfieldfloat(x)
+#define PRVM_DECLARE_clientfieldvector(x)
+#define PRVM_DECLARE_clientfieldstring(x)
+#define PRVM_DECLARE_clientfieldedict(x)
+#define PRVM_DECLARE_clientfieldfunction(x)
+#define PRVM_DECLARE_menufieldfloat(x)
+#define PRVM_DECLARE_menufieldvector(x)
+#define PRVM_DECLARE_menufieldstring(x)
+#define PRVM_DECLARE_menufieldedict(x)
+#define PRVM_DECLARE_menufieldfunction(x)
+#define PRVM_DECLARE_serverfunction(x)
+#define PRVM_DECLARE_clientfunction(x)
+#define PRVM_DECLARE_menufunction(x)
+#define PRVM_DECLARE_field(x)
+#define PRVM_DECLARE_global(x)
+#define PRVM_DECLARE_function(x)
+#include "prvm_offsets.h"
+#undef PRVM_DECLARE_serverglobalfloat
+#undef PRVM_DECLARE_serverglobalvector
+#undef PRVM_DECLARE_serverglobalstring
+#undef PRVM_DECLARE_serverglobaledict
+#undef PRVM_DECLARE_serverglobalfunction
+#undef PRVM_DECLARE_clientglobalfloat
+#undef PRVM_DECLARE_clientglobalvector
+#undef PRVM_DECLARE_clientglobalstring
+#undef PRVM_DECLARE_clientglobaledict
+#undef PRVM_DECLARE_clientglobalfunction
+#undef PRVM_DECLARE_menuglobalfloat
+#undef PRVM_DECLARE_menuglobalvector
+#undef PRVM_DECLARE_menuglobalstring
+#undef PRVM_DECLARE_menuglobaledict
+#undef PRVM_DECLARE_menuglobalfunction
+#undef PRVM_DECLARE_serverfieldfloat
+#undef PRVM_DECLARE_serverfieldvector
+#undef PRVM_DECLARE_serverfieldstring
+#undef PRVM_DECLARE_serverfieldedict
+#undef PRVM_DECLARE_serverfieldfunction
+#undef PRVM_DECLARE_clientfieldfloat
+#undef PRVM_DECLARE_clientfieldvector
+#undef PRVM_DECLARE_clientfieldstring
+#undef PRVM_DECLARE_clientfieldedict
+#undef PRVM_DECLARE_clientfieldfunction
+#undef PRVM_DECLARE_menufieldfloat
+#undef PRVM_DECLARE_menufieldvector
+#undef PRVM_DECLARE_menufieldstring
+#undef PRVM_DECLARE_menufieldedict
+#undef PRVM_DECLARE_menufieldfunction
+#undef PRVM_DECLARE_serverfunction
+#undef PRVM_DECLARE_clientfunction
+#undef PRVM_DECLARE_menufunction
+#undef PRVM_DECLARE_field
+#undef PRVM_DECLARE_global
+#undef PRVM_DECLARE_function
 };
 
 
@@ -3168,10 +3163,10 @@ void SV_SpawnServer (const char *server)
 	{
 		SV_VM_Begin();
 		World_End(&sv.world);
-		if(prog->funcoffsets.SV_Shutdown)
+		if(PRVM_serverfunction(SV_Shutdown))
 		{
-			func_t s = prog->funcoffsets.SV_Shutdown;
-			prog->funcoffsets.SV_Shutdown = 0; // prevent it from getting called again
+			func_t s = PRVM_serverfunction(SV_Shutdown);
+			PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
 			PRVM_ExecuteProgram(s,"SV_Shutdown() required");
 		}
 		SV_VM_End();

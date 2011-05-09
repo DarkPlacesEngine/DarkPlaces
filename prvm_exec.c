@@ -523,7 +523,7 @@ void PRVM_Crash(void)
 	if (prog == NULL)
 		return;
 
-	prog->funcoffsets.SV_Shutdown = 0; // don't call SV_Shutdown on crash
+	PRVM_serverfunction(SV_Shutdown) = 0; // don't call SV_Shutdown on crash
 
 	if( prog->depth > 0 )
 	{

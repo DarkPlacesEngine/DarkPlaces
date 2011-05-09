@@ -5821,7 +5821,7 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 		
 	PRVM_SetProg(handle->prognr);
 	PRVM_Begin;
-		if((prog->starttime == handle->starttime) && (prog->funcoffsets.URI_Get_Callback))
+		if((prog->starttime == handle->starttime) && (PRVM_allfunction(URI_Get_Callback)))
 		{
 			if(length_received >= sizeof(handle->buffer))
 				length_received = sizeof(handle->buffer) - 1;
@@ -5830,7 +5830,7 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 			PRVM_G_FLOAT(OFS_PARM0) = handle->id;
 			PRVM_G_FLOAT(OFS_PARM1) = status;
 			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(handle->buffer);
-			PRVM_ExecuteProgram(prog->funcoffsets.URI_Get_Callback, "QC function URI_Get_Callback is missing");
+			PRVM_ExecuteProgram(PRVM_allfunction(URI_Get_Callback), "QC function URI_Get_Callback is missing");
 		}
 	PRVM_End;
 	
@@ -5856,7 +5856,7 @@ void VM_uri_get (void)
 	const char *query_string = NULL;
 	size_t lq;
 
-	if(!prog->funcoffsets.URI_Get_Callback)
+	if(!PRVM_allfunction(URI_Get_Callback))
 		PRVM_ERROR("uri_get called by %s without URI_Get_Callback defined", PRVM_NAME);
 
 	VM_SAFEPARMCOUNTRANGE(2, 6, VM_uri_get);

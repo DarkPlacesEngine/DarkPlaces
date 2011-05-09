@@ -382,11 +382,11 @@ void SV_ClientThink (void)
 	SV_CheckVelocity(host_client->edict);
 
 	// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
-	if (prog->funcoffsets.SV_PlayerPhysics && sv_playerphysicsqc.integer)
+	if (PRVM_serverfunction(SV_PlayerPhysics) && sv_playerphysicsqc.integer)
 	{
 		prog->globals.server->time = sv.time;
 		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram (prog->funcoffsets.SV_PlayerPhysics, "QC function SV_PlayerPhysics is missing");
+		PRVM_ExecuteProgram (PRVM_serverfunction(SV_PlayerPhysics), "QC function SV_PlayerPhysics is missing");
 		SV_CheckVelocity(host_client->edict);
 		return;
 	}
@@ -863,13 +863,13 @@ void SV_ReadClientMessage(void)
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
 				Cmd_ExecuteString (s, src_client);
-			else if (prog->funcoffsets.SV_ParseClientCommand)
+			else if (PRVM_serverfunction(SV_ParseClientCommand))
 			{
 				int restorevm_tempstringsbuf_cursize;
 				restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s);
 				prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-				PRVM_ExecuteProgram (prog->funcoffsets.SV_ParseClientCommand, "QC function SV_ParseClientCommand is missing");
+				PRVM_ExecuteProgram (PRVM_serverfunction(SV_ParseClientCommand), "QC function SV_ParseClientCommand is missing");
 				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else
