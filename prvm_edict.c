@@ -1448,7 +1448,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 		if (prog->funcoffsets.SV_OnEntityPreSpawnFunction)
 		{
 			// self = ent
-			PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self) = PRVM_EDICT_TO_PROG(ent);
+			PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPreSpawnFunction, "QC function SV_OnEntityPreSpawnFunction is missing");
 		}
 
@@ -1462,10 +1462,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 // immediately call spawn function, but only if there is a self global and a classname
 //
 		if(!ent->priv.required->free)
-		if(prog->globaloffsets.self >= 0 && prog->fieldoffsets.classname >= 0)
 		{
-			string_t handle =  PRVM_EDICTFIELDSTRING(ent, prog->fieldoffsets.classname);
-			if (!handle)
+			if (!PRVM_alledictstring(ent, classname))
 			{
 				Con_Print("No classname for:\n");
 				PRVM_ED_Print(ent, NULL);
@@ -1474,10 +1472,10 @@ void PRVM_ED_LoadFromFile (const char *data)
 			}
 
 			// look for the spawn function
-			funcname = PRVM_GetString(handle);
+			funcname = PRVM_GetString(PRVM_alledictstring(ent, classname));
 			func = PRVM_ED_FindFunction (va("spawnfunc_%s", funcname));
 			if(!func)
-				if(!PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.require_spawnfunc_prefix))
+				if(!PRVM_allglobalfloat(require_spawnfunc_prefix))
 					func = PRVM_ED_FindFunction (funcname);
 
 			if (!func)
@@ -1486,7 +1484,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 				if (prog->funcoffsets.SV_OnEntityNoSpawnFunction)
 				{
 					// self = ent
-					PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self) = PRVM_EDICT_TO_PROG(ent);
+					PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 					PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityNoSpawnFunction, "QC function SV_OnEntityNoSpawnFunction is missing");
 				}
 				else
@@ -1503,7 +1501,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 			else
 			{
 				// self = ent
-				PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self) = PRVM_EDICT_TO_PROG(ent);
+				PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 				PRVM_ExecuteProgram (func - prog->functions, "");
 			}
 		}
@@ -1512,7 +1510,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 		if (prog->funcoffsets.SV_OnEntityPostSpawnFunction)
 		{
 			// self = ent
-			PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self) = PRVM_EDICT_TO_PROG(ent);
+			PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 			PRVM_ExecuteProgram (prog->funcoffsets.SV_OnEntityPostSpawnFunction, "QC function SV_OnEntityPostSpawnFunction is missing");
 		}
 
@@ -1750,6 +1748,36 @@ void PRVM_FindOffsets(void)
 	prog->globaloffsets.particles_colormax            = PRVM_ED_FindGlobalOffset("particles_colormax");
 	prog->globaloffsets.pmove_onground                = PRVM_ED_FindGlobalOffset("pmove_onground");
 	prog->globaloffsets.pmove_inwater                 = PRVM_ED_FindGlobalOffset("pmove_inwater");
+
+	prog->globaloffsets.particle_type                 = PRVM_ED_FindGlobalOffset("particle_type");
+	prog->globaloffsets.particle_blendmode            = PRVM_ED_FindGlobalOffset("particle_blendmode");
+	prog->globaloffsets.particle_orientation          = PRVM_ED_FindGlobalOffset("particle_orientation");
+	prog->globaloffsets.particle_color1               = PRVM_ED_FindGlobalOffset("particle_color1");
+	prog->globaloffsets.particle_color2               = PRVM_ED_FindGlobalOffset("particle_color2");
+	prog->globaloffsets.particle_tex                  = PRVM_ED_FindGlobalOffset("particle_tex");
+	prog->globaloffsets.particle_size                 = PRVM_ED_FindGlobalOffset("particle_size");
+	prog->globaloffsets.particle_sizeincrease         = PRVM_ED_FindGlobalOffset("particle_sizeincrease");
+	prog->globaloffsets.particle_alpha                = PRVM_ED_FindGlobalOffset("particle_alpha");
+	prog->globaloffsets.particle_alphafade            = PRVM_ED_FindGlobalOffset("particle_alphafade");
+	prog->globaloffsets.particle_time                 = PRVM_ED_FindGlobalOffset("particle_time");
+	prog->globaloffsets.particle_gravity              = PRVM_ED_FindGlobalOffset("particle_gravity");
+	prog->globaloffsets.particle_bounce               = PRVM_ED_FindGlobalOffset("particle_bounce");
+	prog->globaloffsets.particle_airfriction          = PRVM_ED_FindGlobalOffset("particle_airfriction");
+	prog->globaloffsets.particle_liquidfriction       = PRVM_ED_FindGlobalOffset("particle_liquidfriction");
+	prog->globaloffsets.particle_originjitter         = PRVM_ED_FindGlobalOffset("particle_originjitter");
+	prog->globaloffsets.particle_velocityjitter       = PRVM_ED_FindGlobalOffset("particle_velocityjitter");
+	prog->globaloffsets.particle_qualityreduction     = PRVM_ED_FindGlobalOffset("particle_qualityreduction");
+	prog->globaloffsets.particle_stretch              = PRVM_ED_FindGlobalOffset("particle_stretch");
+	prog->globaloffsets.particle_staincolor1          = PRVM_ED_FindGlobalOffset("particle_staincolor1");
+	prog->globaloffsets.particle_staincolor2          = PRVM_ED_FindGlobalOffset("particle_staincolor2");
+	prog->globaloffsets.particle_stainalpha           = PRVM_ED_FindGlobalOffset("particle_stainalpha");
+	prog->globaloffsets.particle_stainsize            = PRVM_ED_FindGlobalOffset("particle_stainsize");
+	prog->globaloffsets.particle_staintex             = PRVM_ED_FindGlobalOffset("particle_staintex");
+	prog->globaloffsets.particle_staintex             = PRVM_ED_FindGlobalOffset("particle_staintex");
+	prog->globaloffsets.particle_delayspawn           = PRVM_ED_FindGlobalOffset("particle_delayspawn");
+	prog->globaloffsets.particle_delaycollision       = PRVM_ED_FindGlobalOffset("particle_delaycollision");
+	prog->globaloffsets.particle_angle                = PRVM_ED_FindGlobalOffset("particle_angle");
+	prog->globaloffsets.particle_spin                 = PRVM_ED_FindGlobalOffset("particle_spin");
 
 	// menu qc only uses some functions, nothing else
 	prog->funcoffsets.m_draw                          = PRVM_ED_FindFunctionOffset("m_draw");

@@ -674,7 +674,7 @@ static trace_t SV_Trace_Toss (prvm_edict_t *tossent, prvm_edict_t *ignore)
 	VectorCopy(tossent->fields.server->angles   , original_angles   );
 	VectorCopy(tossent->fields.server->avelocity, original_avelocity);
 
-	gravity = PRVM_EDICTFIELDFLOAT(tossent, prog->fieldoffsets.gravity);
+	gravity = PRVM_serveredictfloat(tossent, gravity);
 	if (!gravity)
 		gravity = 1.0f;
 	gravity *= sv_gravity.value * 0.025;
@@ -1742,7 +1742,7 @@ static void VM_SV_setcolor (void)
 	client = svs.clients + entnum-1;
 	if (client->edict)
 	{
-		PRVM_EDICTFIELDFLOAT(client->edict, prog->fieldoffsets.clientcolors) = i;
+		PRVM_serveredictfloat(client->edict, clientcolors) = i;
 		client->edict->fields.server->team = (i & 15) + 1;
 	}
 	client->colors = i;
@@ -2324,8 +2324,8 @@ static void VM_SV_setattachment (void)
 			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", PRVM_NUM_FOR_EDICT(e), PRVM_NUM_FOR_EDICT(tagentity), tagname, tagname, PRVM_NUM_FOR_EDICT(tagentity));
 	}
 
-	PRVM_EDICTFIELDEDICT(e, prog->fieldoffsets.tag_entity) = PRVM_EDICT_TO_PROG(tagentity);
-	PRVM_EDICTFIELDFLOAT(e, prog->fieldoffsets.tag_index) = tagindex;
+	PRVM_serveredictedict(e, tag_entity) = PRVM_EDICT_TO_PROG(tagentity);
+	PRVM_serveredictfloat(e, tag_index) = tagindex;
 }
 
 /////////////////////////////////////////
@@ -2369,7 +2369,7 @@ void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatri
 	float scale;
 	float pitchsign = 1;
 
-	scale = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.scale);
+	scale = PRVM_serveredictfloat(ent, scale);
 	if (!scale)
 		scale = 1.0f;
 	
@@ -2446,10 +2446,10 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 		Matrix4x4_Concat(&tagmatrix, &attachmatrix, out);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 		// next iteration we process the parent entity
-		if (PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.tag_entity))
+		if (PRVM_serveredictedict(ent, tag_entity))
 		{
-			tagindex = (int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.tag_index);
-			ent = PRVM_EDICT_NUM(PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.tag_entity));
+			tagindex = (int)PRVM_serveredictfloat(ent, tag_index);
+			ent = PRVM_EDICT_NUM(PRVM_serveredictedict(ent, tag_entity));
 		}
 		else
 			break;
@@ -2457,10 +2457,10 @@ int SV_GetTagMatrix (matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 	}
 
 	// RENDER_VIEWMODEL magic
-	if (PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.viewmodelforclient))
+	if (PRVM_serveredictedict(ent, viewmodelforclient))
 	{
 		Matrix4x4_Copy(&tagmatrix, out);
-		ent = PRVM_EDICT_NUM(PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.viewmodelforclient));
+		ent = PRVM_EDICT_NUM(PRVM_serveredictedict(ent, viewmodelforclient));
 
 		SV_GetEntityMatrix(ent, &entitymatrix, true);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
@@ -2556,12 +2556,12 @@ static void VM_SV_gettaginfo (void)
 	SV_GetExtendedTagInfo(e, tagindex, &parentindex, &tagname, &tag_localmatrix);
 	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
 
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.gettaginfo_parent) = parentindex;
-	PRVM_GLOBALFIELDSTRING(prog->globaloffsets.gettaginfo_name) = tagname ? PRVM_SetTempString(tagname) : 0;
-	VectorCopy(trans, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_offset));
-	VectorCopy(fo, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_forward));
-	VectorScale(le, -1, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_right));
-	VectorCopy(up, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.gettaginfo_up));
+	PRVM_serverglobalfloat(gettaginfo_parent) = parentindex;
+	PRVM_serverglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(tagname) : 0;
+	VectorCopy(trans, PRVM_serverglobalvector(gettaginfo_offset));
+	VectorCopy(fo, PRVM_serverglobalvector(gettaginfo_forward));
+	VectorScale(le, -1, PRVM_serverglobalvector(gettaginfo_right));
+	VectorCopy(up, PRVM_serverglobalvector(gettaginfo_up));
 
 	switch(returncode)
 	{

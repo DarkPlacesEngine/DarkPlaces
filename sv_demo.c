@@ -16,7 +16,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 	Con_Printf("Recording demo for # %d (%s) to %s\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress, name);
 
 	// Reset discardable flag for every new demo.
-	PRVM_EDICTFIELDFLOAT(client->edict, prog->fieldoffsets.discardabledemo) = 0;
+	PRVM_serveredictfloat(client->edict, discardabledemo) = 0;
 
 	client->sv_demo_file = FS_OpenRealFile(name, "wb", false);
 	if(!client->sv_demo_file)
@@ -64,7 +64,7 @@ void SV_StopDemoRecording(client_t *client)
 	MSG_WriteByte(&buf, svc_disconnect);
 	SV_WriteDemoMessage(client, &buf, false);
 
-	if (sv_autodemo_perclient_discardable.integer && PRVM_EDICTFIELDFLOAT(client->edict, prog->fieldoffsets.discardabledemo))
+	if (sv_autodemo_perclient_discardable.integer && PRVM_serveredictfloat(client->edict, discardabledemo))
 	{
 		FS_RemoveOnClose(client->sv_demo_file);
 		Con_Printf("Stopped recording discardable demo for # %d (%s)\n", PRVM_NUM_FOR_EDICT(client->edict), client->netaddress);

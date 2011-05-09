@@ -199,7 +199,7 @@ int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
 	if (passedict)
 	{
-		int dphitcontentsmask = (int)PRVM_EDICTFIELDFLOAT(passedict, prog->fieldoffsets.dphitcontentsmask);
+		int dphitcontentsmask = (int)PRVM_clientedictfloat(passedict, dphitcontentsmask);
 		if (dphitcontentsmask)
 			return dphitcontentsmask;
 		else if (passedict->fields.client->solid == SOLID_SLIDEBOX)
