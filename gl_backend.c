@@ -2155,6 +2155,14 @@ void GL_AlphaTest(int state)
 			break;
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
+			if (vid_multisampling.integer)
+			{
+				if (gl_state.alphatest && r_transparent_alphatocoverage.integer)
+					qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);
+				else
+					qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);
+				CHECKGLERROR
+			}
 			break;
 		}
 	}
