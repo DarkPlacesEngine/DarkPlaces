@@ -904,6 +904,7 @@ prvm_required_field_t cl_reqglobals[] =
 	{ev_string, "gettaginfo_name"},
 	{ev_string, "trace_dphittexturename"},
 	{ev_string, "worldstatus"},
+	{ev_string, "message"},
 	{ev_vector, "dmg_origin"},
 	{ev_vector, "gettaginfo_forward"},
 	{ev_vector, "gettaginfo_offset"},
