@@ -5015,6 +5015,23 @@ static const char *m_required_func[] = {
 
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
+static prvm_required_field_t m_required_fields[] =
+{
+	{ev_string, "classname"}, // menu field
+};
+
+static int m_numrequiredfields = sizeof(m_required_fields) / sizeof(m_required_fields[0]);
+
+static prvm_required_field_t m_required_globals[] =
+{
+	{ev_entity, "self"}, // menu global
+	{ev_float, "drawfont"}, // menu global
+	{ev_float, "require_spawnfunc_prefix"}, // menu global
+	{ev_vector, "drawfontscale"}, // menu global
+};
+
+static int m_numrequiredglobals = sizeof(m_required_globals) / sizeof(m_required_globals[0]);
+
 void MR_SetRouting (qboolean forceold);
 
 void MP_Error(const char *format, ...) DP_FUNC_PRINTF(1);
@@ -5158,7 +5175,7 @@ void MP_Init (void)
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
-	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, 0, NULL, 0, NULL);
+	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func, m_numrequiredfields, m_required_fields, m_numrequiredglobals, m_required_globals);
 
 	// note: OP_STATE is not supported by menu qc, we don't even try to detect
 	// it here

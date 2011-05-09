@@ -117,6 +117,62 @@ typedef struct prvm_edict_s
 
 extern prvm_eval_t prvm_badvalue;
 
+#define PRVM_alledictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_alledictvector(ed, fieldname)   (PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.fieldname))
+#define PRVM_alledictstring(ed, fieldname)   (PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.fieldname))
+#define PRVM_alledictedict(ed, fieldname)    (PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_alledictfunction(ed, fieldname) (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.fieldname))
+#define PRVM_allglobalfloat(fieldname)       (PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.fieldname))
+#define PRVM_allglobalvector(fieldname)      (PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.fieldname))
+#define PRVM_allglobalstring(fieldname)      (PRVM_GLOBALFIELDSTRING(prog->globaloffsets.fieldname))
+#define PRVM_allglobaledict(fieldname)       (PRVM_GLOBALFIELDEDICT(prog->globaloffsets.fieldname))
+#define PRVM_allglobalfunction(fieldname)    (PRVM_GLOBALFIELDFUNCTION(prog->globaloffsets.fieldname))
+
+#define PRVM_drawedictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_drawedictvector(ed, fieldname)   (PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.fieldname))
+#define PRVM_drawedictstring(ed, fieldname)   (PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.fieldname))
+#define PRVM_drawedictedict(ed, fieldname)    (PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_drawedictfunction(ed, fieldname) (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.fieldname))
+#define PRVM_drawglobalfloat(fieldname)       (PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.fieldname))
+#define PRVM_drawglobalvector(fieldname)      (PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.fieldname))
+#define PRVM_drawglobalstring(fieldname)      (PRVM_GLOBALFIELDSTRING(prog->globaloffsets.fieldname))
+#define PRVM_drawglobaledict(fieldname)       (PRVM_GLOBALFIELDEDICT(prog->globaloffsets.fieldname))
+#define PRVM_drawglobalfunction(fieldname)    (PRVM_GLOBALFIELDFUNCTION(prog->globaloffsets.fieldname))
+
+#define PRVM_gameedictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_gameedictvector(ed, fieldname)   (PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.fieldname))
+#define PRVM_gameedictstring(ed, fieldname)   (PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.fieldname))
+#define PRVM_gameedictedict(ed, fieldname)    (PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_gameedictfunction(ed, fieldname) (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.fieldname))
+#define PRVM_gameglobalfloat(fieldname)       (PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.fieldname))
+#define PRVM_gameglobalvector(fieldname)      (PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.fieldname))
+#define PRVM_gameglobalstring(fieldname)      (PRVM_GLOBALFIELDSTRING(prog->globaloffsets.fieldname))
+#define PRVM_gameglobaledict(fieldname)       (PRVM_GLOBALFIELDEDICT(prog->globaloffsets.fieldname))
+#define PRVM_gameglobalfunction(fieldname)    (PRVM_GLOBALFIELDFUNCTION(prog->globaloffsets.fieldname))
+
+#define PRVM_serveredictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_serveredictvector(ed, fieldname)   (PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.fieldname))
+#define PRVM_serveredictstring(ed, fieldname)   (PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.fieldname))
+#define PRVM_serveredictedict(ed, fieldname)    (PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_serveredictfunction(ed, fieldname) (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.fieldname))
+#define PRVM_serverglobalfloat(fieldname)       (PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.fieldname))
+#define PRVM_serverglobalvector(fieldname)      (PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.fieldname))
+#define PRVM_serverglobalstring(fieldname)      (PRVM_GLOBALFIELDSTRING(prog->globaloffsets.fieldname))
+#define PRVM_serverglobaledict(fieldname)       (PRVM_GLOBALFIELDEDICT(prog->globaloffsets.fieldname))
+#define PRVM_serverglobalfunction(fieldname)    (PRVM_GLOBALFIELDFUNCTION(prog->globaloffsets.fieldname))
+
+#define PRVM_clientedictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_clientedictvector(ed, fieldname)   (PRVM_EDICTFIELDVECTOR(ed, prog->fieldoffsets.fieldname))
+#define PRVM_clientedictstring(ed, fieldname)   (PRVM_EDICTFIELDSTRING(ed, prog->fieldoffsets.fieldname))
+#define PRVM_clientedictedict(ed, fieldname)    (PRVM_EDICTFIELDEDICT(ed, prog->fieldoffsets.fieldname))
+#define PRVM_clientedictfunction(ed, fieldname) (PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.fieldname))
+#define PRVM_clientglobalfloat(fieldname)       (PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.fieldname))
+#define PRVM_clientglobalvector(fieldname)      (PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.fieldname))
+#define PRVM_clientglobalstring(fieldname)      (PRVM_GLOBALFIELDSTRING(prog->globaloffsets.fieldname))
+#define PRVM_clientglobaledict(fieldname)       (PRVM_GLOBALFIELDEDICT(prog->globaloffsets.fieldname))
+#define PRVM_clientglobalfunction(fieldname)    (PRVM_GLOBALFIELDFUNCTION(prog->globaloffsets.fieldname))
+
+
 #if 1
 #define PRVM_EDICTFIELDVALUE(ed, fieldoffset)    (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))
 #define PRVM_EDICTFIELDFLOAT(ed, fieldoffset)    (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->_float)
@@ -366,6 +422,35 @@ typedef struct prvm_prog_globaloffsets_s
 	int particles_alphamax; // csqc
 	int particles_colormin; // csqc
 	int particles_colormax; // csqc
+
+	int particle_type; // csqc
+	int particle_blendmode; // csqc
+	int particle_orientation; // csqc
+	int particle_color1; // csqc
+	int particle_color2; // csqc
+	int particle_tex; // csqc
+	int particle_size; // csqc
+	int particle_sizeincrease; // csqc
+	int particle_alpha; // csqc
+	int particle_alphafade; // csqc
+	int particle_time; // csqc
+	int particle_gravity; // csqc
+	int particle_bounce; // csqc
+	int particle_airfriction; // csqc
+	int particle_liquidfriction; // csqc
+	int particle_originjitter; // csqc
+	int particle_velocityjitter; // csqc
+	int particle_qualityreduction; // csqc
+	int particle_stretch; // csqc
+	int particle_staincolor1; // csqc
+	int particle_staincolor2; // csqc
+	int particle_stainalpha; // csqc
+	int particle_stainsize; // csqc
+	int particle_staintex; // csqc
+	int particle_delayspawn; // csqc
+	int particle_delaycollision; // csqc
+	int particle_angle; // csqc
+	int particle_spin; // csqc
 }
 prvm_prog_globaloffsets_t;
 

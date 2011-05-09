@@ -2287,6 +2287,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	int length;
 	char teambuf[3];
 	const char *crypto_idstring;
+	const char *str;
 
 	SV_VM_Begin();
 
@@ -2302,19 +2303,16 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	}
 
 	*qcstatus = 0;
-	if(prog->globaloffsets.worldstatus >= 0)
+	str = PRVM_GetString(PRVM_serverglobalstring(worldstatus));
+	if(str && *str)
 	{
-		const char *str = PRVM_G_STRING(prog->globaloffsets.worldstatus);
-		if(str && *str)
-		{
-			char *p;
-			const char *q;
-			p = qcstatus;
-			for(q = str; *q && p - qcstatus < (ptrdiff_t)(sizeof(qcstatus)) - 1; ++q)
-				if(*q != '\\' && *q != '\n')
-					*p++ = *q;
-			*p = 0;
-		}
+		char *p;
+		const char *q;
+		p = qcstatus;
+		for(q = str; *q && p - qcstatus < (ptrdiff_t)(sizeof(qcstatus)) - 1; ++q)
+			if(*q != '\\' && *q != '\n')
+				*p++ = *q;
+		*p = 0;
 	}
 
 	/// \TODO: we should add more information for the full status string
@@ -2358,6 +2356,8 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 				int nameind, cleanind, pingvalue;
 				char curchar;
 				char cleanname [sizeof(cl->name)];
+				const char *str;
+				prvm_edict_t *ed;
 
 				// Remove all characters '"' and '\' in the player name
 				nameind = 0;
@@ -2381,19 +2381,17 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 					pingvalue = 0;
 
 				*qcstatus = 0;
-				if(prog->fieldoffsets.clientstatus >= 0)
+				ed = PRVM_EDICT_NUM(i + 1);
+				str = PRVM_GetString(PRVM_serveredictstring(ed, clientstatus));
+				if(str && *str)
 				{
-					const char *str = PRVM_E_STRING(PRVM_EDICT_NUM(i + 1), prog->fieldoffsets.clientstatus);
-					if(str && *str)
-					{
-						char *p;
-						const char *q;
-						p = qcstatus;
-						for(q = str; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
-							if(*q != '\\' && *q != '"' && !ISWHITESPACE(*q))
-								*p++ = *q;
-						*p = 0;
-					}
+					char *p;
+					const char *q;
+					p = qcstatus;
+					for(q = str; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
+						if(*q != '\\' && *q != '"' && !ISWHITESPACE(*q))
+							*p++ = *q;
+					*p = 0;
 				}
 
 				if ((gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC) && (teamplay.integer > 0))

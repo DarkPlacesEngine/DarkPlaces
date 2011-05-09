@@ -249,195 +249,163 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 
 prvm_required_field_t sv_reqfields[] =
 {
-	{ev_entity, "aiment"},
-	{ev_entity, "chain"},
-	{ev_entity, "clientcamera"},
-	{ev_entity, "cursor_trace_ent"},
-	{ev_entity, "drawonlytoclient"},
-	{ev_entity, "enemy"},
-	{ev_entity, "exteriormodeltoclient"},
-	{ev_entity, "groundentity"},
-	{ev_entity, "nodrawtoclient"},
-	{ev_entity, "tag_entity"},
-	{ev_entity, "viewmodelforclient"},
-	{ev_float, "SendFlags"},
-	{ev_float, "Version"},
-	{ev_float, "alpha"},
-	{ev_float, "ammo_cells1"},
-	{ev_float, "ammo_lava_nails"},
-	{ev_float, "ammo_multi_rockets"},
-	{ev_float, "ammo_nails1"},
-	{ev_float, "ammo_plasma"},
-	{ev_float, "ammo_rockets1"},
-	{ev_float, "ammo_shells1"},
-	{ev_float, "bouncefactor"},
-	{ev_float, "bouncestop"},
-	{ev_float, "button3"},
-	{ev_float, "button4"},
-	{ev_float, "button5"},
-	{ev_float, "button6"},
-	{ev_float, "button7"},
-	{ev_float, "button8"},
-	{ev_float, "button9"},
-	{ev_float, "button10"},
-	{ev_float, "button11"},
-	{ev_float, "button12"},
-	{ev_float, "button13"},
-	{ev_float, "button14"},
-	{ev_float, "button15"},
-	{ev_float, "button16"},
-	{ev_float, "buttonchat"},
-	{ev_float, "buttonuse"},
-	{ev_float, "clientcolors"},
-	{ev_float, "color"},
-	{ev_float, "colormod"},
-	{ev_float, "cursor_active"},
-	{ev_float, "cursor_screen"},
-	{ev_float, "cursor_trace_endpos"},
-	{ev_float, "cursor_trace_start"},
-	{ev_float, "dimension_hit"},
-	{ev_float, "dimension_solid"},
-	{ev_float, "disableclientprediction"},
-	{ev_float, "discardabledemo"},
-	{ev_float, "dphitcontentsmask"},
-	{ev_float, "fatness"},
-	{ev_float, "forceshader"},
-	{ev_float, "frame"},
-	{ev_float, "frame1time"},
-	{ev_float, "frame2"},
-	{ev_float, "frame2time"},
-	{ev_float, "frame3"},
-	{ev_float, "frame3time"},
-	{ev_float, "frame4"},
-	{ev_float, "frame4time"},
-	{ev_float, "fullbright"},
-	{ev_float, "glow_color"},
-	{ev_float, "glow_size"},
-	{ev_float, "glow_trail"},
-	{ev_float, "gravity"},
-	{ev_float, "hull"},
-	{ev_float, "ideal_yaw"},
-	{ev_float, "idealpitch"},
-	{ev_float, "items2"},
-	{ev_float, "jointtype"},
-	{ev_float, "lerpfrac"},
-	{ev_float, "lerpfrac3"},
-	{ev_float, "lerpfrac4"},
-	{ev_float, "light_lev"},
-	{ev_float, "mass"},
-	{ev_float, "modelflags"},
-	{ev_float, "modelindex"},
-	{ev_float, "movetype"},
-	{ev_float, "nextthink"},
-	{ev_float, "packetloss"},
-	{ev_float, "pflags"},
-	{ev_float, "ping"},
-	{ev_float, "ping_packetloss"},
-	{ev_float, "ping_movementloss"},
-	{ev_float, "pitch_speed"},
-	{ev_float, "pmodel"},
-	{ev_float, "renderamt"},
-	{ev_float, "renderflags"},
-	{ev_float, "rendermode"},
-	{ev_float, "scale"},
-	{ev_float, "sendcomplexanimation"},
-	{ev_float, "shadertime"},
-	{ev_float, "skeletonindex"},
-	{ev_float, "solid"},
-	{ev_float, "style"},
-	{ev_float, "tag_index"},
-	{ev_float, "think"},
-	{ev_float, "userwavefunc_param0"},
-	{ev_float, "userwavefunc_param1"},
-	{ev_float, "userwavefunc_param2"},
-	{ev_float, "userwavefunc_param3"},
-	{ev_float, "viewzoom"},
-	{ev_float, "yaw_speed"},
-	{ev_function, "SendEntity"},
-	{ev_function, "camera_transform"},
-	{ev_function, "contentstransition"},
-	{ev_function, "customizeentityforclient"},
-	{ev_function, "movetypesteplandevent"},
-	{ev_string, "classname"},
-	{ev_string, "clientstatus"},
-	{ev_string, "crypto_encryptmethod"},
-	{ev_string, "crypto_idfp"},
-	{ev_string, "crypto_keyfp"},
-	{ev_string, "crypto_mykeyfp"},
-	{ev_string, "crypto_signmethod"},
-	{ev_string, "message"},
-	{ev_string, "netaddress"},
-	{ev_string, "playermodel"},
-	{ev_string, "playerskin"},
-	{ev_vector, "angles"},
-	{ev_vector, "angles"},
-	{ev_vector, "avelocity"},
-//	{ev_vector, "axis_forward"},
-//	{ev_vector, "axis_left"},
-//	{ev_vector, "axis_up"},
-	{ev_vector, "glowmod"},
-	{ev_vector, "maxs"},
-	{ev_vector, "mins"},
-	{ev_vector, "movedir"},
-	{ev_vector, "movement"},
-	{ev_vector, "origin"},
-	{ev_vector, "punchvector"},
-//	{ev_vector, "spinvelocity"},
-	{ev_vector, "velocity"},
+	{ev_entity, "aiment"}, // server field
+	{ev_entity, "clientcamera"}, // server field
+	{ev_entity, "cursor_trace_ent"}, // server field
+	{ev_entity, "drawonlytoclient"}, // server field
+	{ev_entity, "enemy"}, // server field
+	{ev_entity, "exteriormodeltoclient"}, // server field
+	{ev_entity, "nodrawtoclient"}, // server field
+	{ev_entity, "tag_entity"}, // server field
+	{ev_entity, "viewmodelforclient"}, // server field
+	{ev_float, "SendFlags"}, // server field
+	{ev_float, "Version"}, // server field
+	{ev_float, "alpha"}, // server field
+	{ev_float, "ammo_cells1"}, // server field
+	{ev_float, "ammo_lava_nails"}, // server field
+	{ev_float, "ammo_multi_rockets"}, // server field
+	{ev_float, "ammo_nails1"}, // server field
+	{ev_float, "ammo_plasma"}, // server field
+	{ev_float, "ammo_rockets1"}, // server field
+	{ev_float, "ammo_shells1"}, // server field
+	{ev_float, "bouncefactor"}, // server field
+	{ev_float, "bouncestop"}, // server field
+	{ev_float, "button3"}, // server field
+	{ev_float, "button4"}, // server field
+	{ev_float, "button5"}, // server field
+	{ev_float, "button6"}, // server field
+	{ev_float, "button7"}, // server field
+	{ev_float, "button8"}, // server field
+	{ev_float, "button9"}, // server field
+	{ev_float, "button10"}, // server field
+	{ev_float, "button11"}, // server field
+	{ev_float, "button12"}, // server field
+	{ev_float, "button13"}, // server field
+	{ev_float, "button14"}, // server field
+	{ev_float, "button15"}, // server field
+	{ev_float, "button16"}, // server field
+	{ev_float, "buttonchat"}, // server field
+	{ev_float, "buttonuse"}, // server field
+	{ev_float, "clientcolors"}, // server field
+	{ev_float, "cursor_active"}, // server field
+	{ev_float, "disableclientprediction"}, // server field
+	{ev_float, "discardabledemo"}, // server field
+	{ev_float, "dphitcontentsmask"}, // server field
+	{ev_float, "frame1time"}, // server field
+	{ev_float, "frame1time"}, // server field
+	{ev_float, "frame2time"}, // server field
+	{ev_float, "frame2time"}, // server field
+	{ev_float, "frame2"}, // server field
+	{ev_float, "frame2"}, // server field
+	{ev_float, "frame3time"}, // server field
+	{ev_float, "frame3time"}, // server field
+	{ev_float, "frame3"}, // server field
+	{ev_float, "frame3"}, // server field
+	{ev_float, "frame4time"}, // server field
+	{ev_float, "frame4time"}, // server field
+	{ev_float, "frame4"}, // server field
+	{ev_float, "frame4"}, // server field
+	{ev_float, "frame"}, // server field
+	{ev_float, "fullbright"}, // server field
+	{ev_float, "glow_color"}, // server field
+	{ev_float, "glow_size"}, // server field
+	{ev_float, "glow_trail"}, // server field
+	{ev_float, "gravity"}, // server field
+	{ev_float, "gravity"}, // server field
+	{ev_float, "ideal_yaw"}, // server field
+	{ev_float, "idealpitch"}, // server field
+	{ev_float, "items2"}, // server field
+	{ev_float, "jointtype"}, // server field
+	{ev_float, "lerpfrac3"}, // server field
+	{ev_float, "lerpfrac3"}, // server field
+	{ev_float, "lerpfrac4"}, // server field
+	{ev_float, "lerpfrac4"}, // server field
+	{ev_float, "lerpfrac"}, // server field
+	{ev_float, "lerpfrac"}, // server field
+	{ev_float, "light_lev"}, // server field
+	{ev_float, "mass"}, // server field
+	{ev_float, "modelflags"}, // server field
+	{ev_float, "modelindex"}, // server field
+	{ev_float, "movetype"}, // server field
+	{ev_float, "pflags"}, // server field
+	{ev_float, "ping_movementloss"}, // server field
+	{ev_float, "ping_packetloss"}, // server field
+	{ev_float, "ping"}, // server field
+	{ev_float, "pitch_speed"}, // server field
+	{ev_float, "pmodel"}, // server field
+	{ev_float, "renderamt"}, // server field
+	{ev_float, "scale"}, // server field
+	{ev_float, "scale"}, // server field
+	{ev_float, "sendcomplexanimation"}, // server field
+	{ev_float, "skeletonindex"}, // server field
+	{ev_float, "skeletonindex"}, // server field
+	{ev_float, "solid"}, // server field
+	{ev_float, "style"}, // server field
+	{ev_float, "tag_index"}, // server field
+	{ev_float, "viewzoom"}, // server field
+	{ev_float, "yaw_speed"}, // server field
+	{ev_function, "SendEntity"}, // server field
+	{ev_function, "camera_transform"}, // server field
+	{ev_function, "contentstransition"}, // server field
+	{ev_function, "customizeentityforclient"}, // server field
+	{ev_function, "movetypesteplandevent"}, // server field
+	{ev_string, "classname"}, // server field
+	{ev_string, "clientstatus"}, // server field
+	{ev_string, "crypto_encryptmethod"}, // server field
+	{ev_string, "crypto_idfp"}, // server field
+	{ev_string, "crypto_keyfp"}, // server field
+	{ev_string, "crypto_mykeyfp"}, // server field
+	{ev_string, "crypto_signmethod"}, // server field
+	{ev_string, "netaddress"}, // server field
+	{ev_string, "playermodel"}, // server field
+	{ev_string, "playerskin"}, // server field
+	{ev_vector, "angles"}, // server field
+	{ev_vector, "avelocity"}, // server field
+	{ev_vector, "colormod"}, // server field
+	{ev_vector, "color"}, // server field
+	{ev_vector, "cursor_screen"}, // server field
+	{ev_vector, "cursor_trace_endpos"}, // server field
+	{ev_vector, "cursor_trace_start"}, // server field
+	{ev_vector, "glowmod"}, // server field
+	{ev_vector, "maxs"}, // server field
+	{ev_vector, "mins"}, // server field
+	{ev_vector, "movedir"}, // server field
+	{ev_vector, "movement"}, // server field
+	{ev_vector, "origin"}, // server field
+	{ev_vector, "punchvector"}, // server field
+	{ev_vector, "velocity"}, // server field
 };
 
 #define SV_REQGLOBALS (sizeof(sv_reqglobals) / sizeof(prvm_required_field_t))
 
 prvm_required_field_t sv_reqglobals[] =
 {
-	{ev_entity, "self"},
-	{ev_entity, "trace_ent"},
-	{ev_entity, "trace_networkentity"},
-	{ev_float, "coop"},
-	{ev_float, "deathmatch"},
-	{ev_float, "dmg_save"},
-	{ev_float, "dmg_take"},
-	{ev_float, "drawfont"},
-	{ev_float, "drawfontscale"},
-	{ev_float, "gettaginfo_parent"},
-	{ev_float, "intermission"},
-	{ev_float, "particles_alphamax"},
-	{ev_float, "particles_alphamin"},
-	{ev_float, "require_spawnfunc_prefix"},
-	{ev_float, "sb_showscores"},
-	{ev_float, "serverdeltatime"},
-	{ev_float, "serverprevtime"},
-	{ev_float, "servertime"},
-	{ev_float, "time"},
-	{ev_float, "trace_allsolid"},
-	{ev_float, "trace_dphitcontents"},
-	{ev_float, "trace_dphitq3surfaceflags"},
-	{ev_float, "trace_dpstartcontents"},
-	{ev_float, "trace_fraction"},
-	{ev_float, "trace_inopen"},
-	{ev_float, "trace_inwater"},
-	{ev_float, "trace_plane_dist"},
-	{ev_float, "trace_startsolid"},
-	{ev_float, "transparent_offset"},
-	{ev_string, "SV_InitCmd"},
-	{ev_string, "gettaginfo_name"},
-	{ev_string, "trace_dphittexturename"},
-	{ev_string, "worldstatus"},
-	{ev_vector, "dmg_origin"},
-	{ev_vector, "gettaginfo_forward"},
-	{ev_vector, "gettaginfo_offset"},
-	{ev_vector, "gettaginfo_right"},
-	{ev_vector, "gettaginfo_up"},
-	{ev_vector, "particles_colormax"},
-	{ev_vector, "particles_colormin"},
-	{ev_vector, "trace_endpos"},
-	{ev_vector, "trace_plane_normal"},
-	{ev_vector, "v_forward"},
-	{ev_vector, "v_right"},
-	{ev_vector, "v_up"},
-	{ev_vector, "view_angles"},
-	{ev_vector, "view_punchangle"},
-	{ev_vector, "view_punchvector"},
+	{ev_entity, "self"}, // server global
+	{ev_entity, "trace_ent"}, // server global
+	{ev_float, "gettaginfo_parent"}, // server global
+	{ev_float, "require_spawnfunc_prefix"}, // server global
+	{ev_float, "trace_allsolid"}, // server global
+	{ev_float, "trace_dphitcontents"}, // server global
+	{ev_float, "trace_dphitq3surfaceflags"}, // server global
+	{ev_float, "trace_dpstartcontents"}, // server global
+	{ev_float, "trace_fraction"}, // server global
+	{ev_float, "trace_inopen"}, // server global
+	{ev_float, "trace_inwater"}, // server global
+	{ev_float, "trace_plane_dist"}, // server global
+	{ev_float, "trace_startsolid"}, // server global
+	{ev_string, "SV_InitCmd"}, // server global
+	{ev_string, "gettaginfo_name"}, // server global
+	{ev_string, "trace_dphittexturename"}, // server global
+	{ev_string, "worldstatus"}, // server global
+	{ev_vector, "gettaginfo_forward"}, // server global
+	{ev_vector, "gettaginfo_offset"}, // server global
+	{ev_vector, "gettaginfo_right"}, // server global
+	{ev_vector, "gettaginfo_up"}, // server global
+	{ev_vector, "trace_endpos"}, // server global
+	{ev_vector, "trace_plane_normal"}, // server global
+	{ev_vector, "v_forward"}, // server global
+	{ev_vector, "v_right"}, // server global
+	{ev_vector, "v_up"}, // server global
 };
 
 
@@ -972,10 +940,10 @@ void SV_SendServerinfo (client_t *client)
 		}
 
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
-		if (PRVM_GetString(PRVM_GLOBALFIELDSTRING(prog->globaloffsets.SV_InitCmd)))
+		if (PRVM_GetString(PRVM_serverglobalstring(SV_InitCmd)))
 		{
 			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-			MSG_WriteString (&client->netconnection->message, va("%s\n", PRVM_GetString(PRVM_GLOBALFIELDSTRING(prog->globaloffsets.SV_InitCmd))));
+			MSG_WriteString (&client->netconnection->message, va("%s\n", PRVM_GetString(PRVM_serverglobalstring(SV_InitCmd))));
 		}
 	}
 
@@ -1162,7 +1130,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 
 	// fast path for games that do not use legacy entity networking
 	// note: still networks clients even if they are legacy
-	sendentity = PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.SendEntity);
+	sendentity = PRVM_serveredictfunction(ent, SendEntity);
 	if (sv_onlycsqcnetworking.integer && !sendentity && enumber > svs.maxclients)
 		return false;
 
@@ -1182,24 +1150,24 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	modelindex = (i >= 1 && i < MAX_MODELS && ent->fields.server->model && *PRVM_GetString(ent->fields.server->model) && sv.models[i]) ? i : 0;
 
 	flags = 0;
-	i = (int)(PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.glow_size) * 0.25f);
+	i = (int)(PRVM_serveredictfloat(ent, glow_size) * 0.25f);
 	glowsize = (unsigned char)bound(0, i, 255);
-	if (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.glow_trail))
+	if (PRVM_serveredictfloat(ent, glow_trail))
 		flags |= RENDER_GLOWTRAIL;
-	if (PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.viewmodelforclient))
+	if (PRVM_serveredictedict(ent, viewmodelforclient))
 		flags |= RENDER_VIEWMODEL;
 
-	v = PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.color);
+	v = PRVM_serveredictvector(ent, color);
 	f = v[0]*256;
 	light[0] = (unsigned short)bound(0, f, 65535);
 	f = v[1]*256;
 	light[1] = (unsigned short)bound(0, f, 65535);
 	f = v[2]*256;
 	light[2] = (unsigned short)bound(0, f, 65535);
-	f = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.light_lev);
+	f = PRVM_serveredictfloat(ent, light_lev);
 	light[3] = (unsigned short)bound(0, f, 65535);
-	lightstyle = (unsigned char)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.style);
-	lightpflags = (unsigned char)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.pflags);
+	lightstyle = (unsigned char)PRVM_serveredictfloat(ent, style);
+	lightpflags = (unsigned char)PRVM_serveredictfloat(ent, pflags);
 
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -1250,7 +1218,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 
 	// early culling checks
 	// (final culling is done by SV_MarkWriteEntityStateToClient)
-	customizeentityforclient = PRVM_EDICTFIELDFUNCTION(ent, prog->fieldoffsets.customizeentityforclient);
+	customizeentityforclient = PRVM_serveredictfunction(ent, customizeentityforclient);
 	if (!customizeentityforclient && enumber > svs.maxclients && (!modelindex && !specialvisibilityradius))
 		return false;
 
@@ -1265,18 +1233,18 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	cs->modelindex = modelindex;
 	cs->skin = (unsigned)ent->fields.server->skin;
 	cs->frame = (unsigned)ent->fields.server->frame;
-	cs->viewmodelforclient = PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.viewmodelforclient);
-	cs->exteriormodelforclient = PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.exteriormodeltoclient);
-	cs->nodrawtoclient = PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.nodrawtoclient);
-	cs->drawonlytoclient = PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.drawonlytoclient);
+	cs->viewmodelforclient = PRVM_serveredictedict(ent, viewmodelforclient);
+	cs->exteriormodelforclient = PRVM_serveredictedict(ent, exteriormodeltoclient);
+	cs->nodrawtoclient = PRVM_serveredictedict(ent, nodrawtoclient);
+	cs->drawonlytoclient = PRVM_serveredictedict(ent, drawonlytoclient);
 	cs->customizeentityforclient = customizeentityforclient;
-	cs->tagentity = PRVM_EDICTFIELDEDICT(ent, prog->fieldoffsets.tag_entity);
-	cs->tagindex = (unsigned char)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.tag_index);
+	cs->tagentity = PRVM_serveredictedict(ent, tag_entity);
+	cs->tagindex = (unsigned char)PRVM_serveredictfloat(ent, tag_index);
 	cs->glowsize = glowsize;
 
 	// don't need to init cs->colormod because the defaultstate did that for us
 	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
-	v = PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.colormod);
+	v = PRVM_serveredictvector(ent, colormod);
 	if (VectorLength2(v))
 	{
 		i = (int)(v[0] * 32.0f);cs->colormod[0] = bound(0, i, 255);
@@ -1286,7 +1254,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 
 	// don't need to init cs->glowmod because the defaultstate did that for us
 	//cs->glowmod[0] = cs->glowmod[1] = cs->glowmod[2] = 32;
-	v = PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.glowmod);
+	v = PRVM_serveredictvector(ent, glowmod);
 	if (VectorLength2(v))
 	{
 		i = (int)(v[0] * 32.0f);cs->glowmod[0] = bound(0, i, 255);
@@ -1297,14 +1265,14 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	cs->modelindex = modelindex;
 
 	cs->alpha = 255;
-	f = (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.alpha) * 255.0f);
+	f = (PRVM_serveredictfloat(ent, alpha) * 255.0f);
 	if (f)
 	{
 		i = (int)f;
 		cs->alpha = (unsigned char)bound(0, i, 255);
 	}
 	// halflife
-	f = (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.renderamt));
+	f = (PRVM_serveredictfloat(ent, renderamt));
 	if (f)
 	{
 		i = (int)f;
@@ -1312,7 +1280,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	}
 
 	cs->scale = 16;
-	f = (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.scale) * 16.0f);
+	f = (PRVM_serveredictfloat(ent, scale) * 16.0f);
 	if (f)
 	{
 		i = (int)f;
@@ -1320,14 +1288,14 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	}
 
 	cs->glowcolor = 254;
-	f = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.glow_color);
+	f = PRVM_serveredictfloat(ent, glow_color);
 	if (f)
 		cs->glowcolor = (int)f;
 
-	if (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.fullbright))
+	if (PRVM_serveredictfloat(ent, fullbright))
 		cs->effects |= EF_FULLBRIGHT;
 
-	f = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.modelflags);
+	f = PRVM_serveredictfloat(ent, modelflags);
 	if (f)
 		cs->effects |= ((unsigned int)f & 0xff) << 24;
 
@@ -1340,22 +1308,22 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	if (cs->viewmodelforclient)
 		cs->flags |= RENDER_VIEWMODEL; // show relative to the view
 
-	if (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.sendcomplexanimation))
+	if (PRVM_serveredictfloat(ent, sendcomplexanimation))
 	{
 		cs->flags |= RENDER_COMPLEXANIMATION;
-		if (PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.skeletonindex) >= 1)
+		if (PRVM_serveredictfloat(ent, skeletonindex) >= 1)
 			cs->skeletonobject = ent->priv.server->skeleton;
-		cs->framegroupblend[0].frame = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame);
-		cs->framegroupblend[1].frame = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame2);
-		cs->framegroupblend[2].frame = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame3);
-		cs->framegroupblend[3].frame = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame4);
-		cs->framegroupblend[0].start = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame1time);
-		cs->framegroupblend[1].start = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame2time);
-		cs->framegroupblend[2].start = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame3time);
-		cs->framegroupblend[3].start = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.frame4time);
-		cs->framegroupblend[1].lerp = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.lerpfrac);
-		cs->framegroupblend[2].lerp = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.lerpfrac3);
-		cs->framegroupblend[3].lerp = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.lerpfrac4);
+		cs->framegroupblend[0].frame = PRVM_serveredictfloat(ent, frame);
+		cs->framegroupblend[1].frame = PRVM_serveredictfloat(ent, frame2);
+		cs->framegroupblend[2].frame = PRVM_serveredictfloat(ent, frame3);
+		cs->framegroupblend[3].frame = PRVM_serveredictfloat(ent, frame4);
+		cs->framegroupblend[0].start = PRVM_serveredictfloat(ent, frame1time);
+		cs->framegroupblend[1].start = PRVM_serveredictfloat(ent, frame2time);
+		cs->framegroupblend[2].start = PRVM_serveredictfloat(ent, frame3time);
+		cs->framegroupblend[3].start = PRVM_serveredictfloat(ent, frame4time);
+		cs->framegroupblend[1].lerp = PRVM_serveredictfloat(ent, lerpfrac);
+		cs->framegroupblend[2].lerp = PRVM_serveredictfloat(ent, lerpfrac3);
+		cs->framegroupblend[3].lerp = PRVM_serveredictfloat(ent, lerpfrac4);
 		cs->framegroupblend[0].lerp = 1.0f - cs->framegroupblend[1].lerp - cs->framegroupblend[2].lerp - cs->framegroupblend[3].lerp;
 	}
 
@@ -1432,10 +1400,10 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// (to let the QC know that they've been read)
 	if (sendentity)
 	{
-		sendflags = (unsigned int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.SendFlags);
-		PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.SendFlags) = 0;
+		sendflags = (unsigned int)PRVM_serveredictfloat(ent, SendFlags);
+		PRVM_serveredictfloat(ent, SendFlags) = 0;
 		// legacy self.Version system
-		if ((version = (unsigned int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.Version)))
+		if ((version = (unsigned int)PRVM_serveredictfloat(ent, Version)))
 		{
 			if (sv.csqcentityversion[enumber] != version)
 				sendflags = 0xFFFFFF;
@@ -1538,7 +1506,7 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 		if (!model || !model->brush.TraceLineOfSight)
 			continue;
 		// skip obviously transparent entities
-		alpha = PRVM_EDICTFIELDFLOAT(touch, prog->fieldoffsets.alpha);
+		alpha = PRVM_serveredictfloat(touch, alpha);
 		if (alpha && alpha < 1)
 			continue;
 		if ((int)touch->fields.server->effects & EF_ADDITIVE)
@@ -1725,9 +1693,6 @@ void SV_AddCameraEyes(void)
 	int n_cameras = 0;
 	vec3_t mi, ma;
 
-	if(!prog->fieldoffsets.camera_transform)
-		return;
-
 	for(i = 0; i < sv.writeentitiestoclient_numeyes; ++i)
 		eye_levels[i] = 0;
 
@@ -1736,17 +1701,17 @@ void SV_AddCameraEyes(void)
 	{
 		if (!ed->priv.server->free)
 		{
-			if(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform))
+			if(PRVM_serveredictfunction(ed, camera_transform))
 			{
 				prog->globals.server->self = e;
 				prog->globals.server->other = sv.writeentitiestoclient_cliententitynumber;
-				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos));
+				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_serverglobalvector(trace_endpos));
 				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_G_VECTOR(OFS_PARM0));
 				VectorClear(PRVM_G_VECTOR(OFS_PARM1));
-				PRVM_ExecuteProgram(PRVM_EDICTFIELDFUNCTION(ed, prog->fieldoffsets.camera_transform), "QC function e.camera_transform is missing");
-				if(!VectorCompare(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos), sv.writeentitiestoclient_eyes[0]))
+				PRVM_ExecuteProgram(PRVM_serveredictfunction(ed, camera_transform), "QC function e.camera_transform is missing");
+				if(!VectorCompare(PRVM_serverglobalvector(trace_endpos), sv.writeentitiestoclient_eyes[0]))
 				{
-					VectorCopy(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos), camera_origins[n_cameras]);
+					VectorCopy(PRVM_serverglobalvector(trace_endpos), camera_origins[n_cameras]);
 					cameras[n_cameras] = e;
 					++n_cameras;
 					if(n_cameras >= MAX_LEVELNETWORKEYES)
@@ -1990,11 +1955,11 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	// stuff the sigil bits into the high bits of items for sbar, or else
 	// mix in items2
 	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-		items = (int)ent->fields.server->items | ((int)PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.items2) << 23);
+		items = (int)ent->fields.server->items | ((int)PRVM_serveredictfloat(ent, items2) << 23);
 	else
 		items = (int)ent->fields.server->items | ((int)prog->globals.server->serverflags << 28);
 
-	VectorCopy(PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.punchvector), punchvector);
+	VectorCopy(PRVM_serveredictvector(ent, punchvector), punchvector);
 
 	// cache weapon model name and index in client struct to save time
 	// (this search can be almost 1% of cpu time!)
@@ -2005,7 +1970,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		client->weaponmodelindex = SV_ModelIndex(s, 1);
 	}
 
-	viewzoom = (int)(PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.viewzoom) * 255.0f);
+	viewzoom = (int)(PRVM_serveredictfloat(ent, viewzoom) * 255.0f);
 	if (viewzoom == 0)
 		viewzoom = 255;
 
@@ -2029,7 +1994,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 			bits |= (SU_VELOCITY1<<i);
 	}
 
-	gravity = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.gravity);if (!gravity) gravity = 1.0f;
+	gravity = PRVM_serveredictfloat(ent, gravity);if (!gravity) gravity = 1.0f;
 
 	memset(stats, 0, sizeof(int[MAX_CL_STATS]));
 	stats[STAT_VIEWHEIGHT] = (int)ent->fields.server->view_ofs[2];
@@ -2450,7 +2415,7 @@ static void SV_UpdateToReliableMessages (void)
 		}
 
 		// DP_SV_CLIENTCOLORS
-		host_client->colors = (int)PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.clientcolors);
+		host_client->colors = (int)PRVM_serveredictfloat(host_client->edict, clientcolors);
 		if (host_client->old_colors != host_client->colors)
 		{
 			host_client->old_colors = host_client->colors;
@@ -2461,27 +2426,23 @@ static void SV_UpdateToReliableMessages (void)
 		}
 
 		// NEXUIZ_PLAYERMODEL
-		if( prog->fieldoffsets.playermodel >= 0 ) {
-			model = PRVM_GetString(PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playermodel));
-			if (model == NULL)
-				model = "";
-			// always point the string back at host_client->name to keep it safe
-			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-			PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playermodel) = PRVM_SetEngineString(host_client->playermodel);
-		}
+		model = PRVM_GetString(PRVM_serveredictstring(host_client->edict, playermodel));
+		if (model == NULL)
+			model = "";
+		// always point the string back at host_client->name to keep it safe
+		strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+		PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(host_client->playermodel);
 
 		// NEXUIZ_PLAYERSKIN
-		if( prog->fieldoffsets.playerskin >= 0 ) {
-			skin = PRVM_GetString(PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playerskin));
-			if (skin == NULL)
-				skin = "";
-			// always point the string back at host_client->name to keep it safe
-			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-			PRVM_EDICTFIELDSTRING(host_client->edict, prog->fieldoffsets.playerskin) = PRVM_SetEngineString(host_client->playerskin);
-		}
+		skin = PRVM_GetString(PRVM_serveredictstring(host_client->edict, playerskin));
+		if (skin == NULL)
+			skin = "";
+		// always point the string back at host_client->name to keep it safe
+		strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+		PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(host_client->playerskin);
 
 		// TODO: add an extension name for this [1/17/2008 Black]
-		clientcamera = PRVM_EDICTFIELDEDICT(host_client->edict, prog->fieldoffsets.clientcamera);
+		clientcamera = PRVM_serveredictedict(host_client->edict, clientcamera);
 		if (clientcamera > 0)
 		{
 			int oldclientcamera = host_client->clientcamera;
@@ -3508,60 +3469,39 @@ static void SV_VM_CB_InitEdict(prvm_edict_t *e)
 		// DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS will not immediately
 		// reset them
 		e->fields.server->netname = PRVM_SetEngineString(svs.clients[num].name);
-		PRVM_EDICTFIELDFLOAT(e, prog->fieldoffsets.clientcolors) = svs.clients[num].colors;
+		PRVM_serveredictfloat(e, clientcolors) = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
-		if( prog->fieldoffsets.playermodel >= 0 )
-			PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.playermodel) = PRVM_SetEngineString(svs.clients[num].playermodel);
-		if( prog->fieldoffsets.playerskin >= 0 )
-			PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.playerskin) = PRVM_SetEngineString(svs.clients[num].playerskin);
+		PRVM_serveredictstring(e, playermodel) = PRVM_SetEngineString(svs.clients[num].playermodel);
+		PRVM_serveredictstring(e, playerskin) = PRVM_SetEngineString(svs.clients[num].playerskin);
 		// Assign netaddress (IP Address, etc)
-		if(prog->fieldoffsets.netaddress >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL)
-			{// Valid Address; Assign
-				// Acquire Readable Address
-				LHNETADDRESS_ToString(&svs.clients[num].netconnection->peeraddress, svs.clients[num].netaddress, sizeof(svs.clients[num].netaddress), false);
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.netaddress) = PRVM_SetEngineString(svs.clients[num].netaddress);
-			}
-			else
-				// Invalid / Bot
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.netaddress) = PRVM_SetEngineString("null/botclient");
+		if(svs.clients[num].netconnection != NULL)
+		{
+			// Acquire Readable Address
+			LHNETADDRESS_ToString(&svs.clients[num].netconnection->peeraddress, svs.clients[num].netaddress, sizeof(svs.clients[num].netaddress), false);
+			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString(svs.clients[num].netaddress);
 		}
-		if(prog->fieldoffsets.crypto_idfp >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_idfp[0])
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_idfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_idfp);
-			else
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_idfp) = 0;
-		}
-		if(prog->fieldoffsets.crypto_keyfp >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_keyfp[0])
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_keyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_keyfp);
-			else
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_keyfp) = 0;
-		}
-		if(prog->fieldoffsets.crypto_mykeyfp >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.server_keyfp[0])
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_mykeyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.server_keyfp);
-			else
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_mykeyfp) = 0;
-		}
-		if(prog->fieldoffsets.crypto_encryptmethod >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.use_aes)
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_encryptmethod) = PRVM_SetEngineString("AES128");
-			else
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_encryptmethod) = 0;
-		}
-		if(prog->fieldoffsets.crypto_signmethod >= 0)
-		{ // Valid Field; Process
-			if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated)
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_signmethod) = PRVM_SetEngineString("HMAC-SHA256");
-			else
-				PRVM_EDICTFIELDSTRING(e, prog->fieldoffsets.crypto_signmethod) = 0;
-		}
+		else
+			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString("null/botclient");
+		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_idfp[0])
+			PRVM_serveredictstring(e, crypto_idfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_idfp);
+		else
+			PRVM_serveredictstring(e, crypto_idfp) = 0;
+		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_keyfp[0])
+			PRVM_serveredictstring(e, crypto_keyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_keyfp);
+		else
+			PRVM_serveredictstring(e, crypto_keyfp) = 0;
+		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.server_keyfp[0])
+			PRVM_serveredictstring(e, crypto_mykeyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.server_keyfp);
+		else
+			PRVM_serveredictstring(e, crypto_mykeyfp) = 0;
+		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.use_aes)
+			PRVM_serveredictstring(e, crypto_encryptmethod) = PRVM_SetEngineString("AES128");
+		else
+			PRVM_serveredictstring(e, crypto_encryptmethod) = 0;
+		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated)
+			PRVM_serveredictstring(e, crypto_signmethod) = PRVM_SetEngineString("HMAC-SHA256");
+		else
+			PRVM_serveredictstring(e, crypto_signmethod) = 0;
 	}
 }
 

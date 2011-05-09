@@ -64,17 +64,17 @@ void VM_GenerateFrameGroupBlend(framegroupblend_t *framegroupblend, const prvm_e
 	// self.lerpfrac4 is the interpolation strength for self.frame4
 	// pitch angle on a player model where the animator set up 5 sets of
 	// animations and the csqc simply lerps between sets)
-	framegroupblend[0].frame = (int) PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame     );
-	framegroupblend[1].frame = (int) PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame2    );
-	framegroupblend[2].frame = (int) PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame3    );
-	framegroupblend[3].frame = (int) PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame4    );
-	framegroupblend[0].start =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame1time);
-	framegroupblend[1].start =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame2time);
-	framegroupblend[2].start =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame3time);
-	framegroupblend[3].start =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.frame4time);
-	framegroupblend[1].lerp  =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.lerpfrac  );
-	framegroupblend[2].lerp  =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.lerpfrac3 );
-	framegroupblend[3].lerp  =       PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.lerpfrac4 );
+	framegroupblend[0].frame = (int) PRVM_gameedictfloat(ed, frame     );
+	framegroupblend[1].frame = (int) PRVM_gameedictfloat(ed, frame2    );
+	framegroupblend[2].frame = (int) PRVM_gameedictfloat(ed, frame3    );
+	framegroupblend[3].frame = (int) PRVM_gameedictfloat(ed, frame4    );
+	framegroupblend[0].start =       PRVM_gameedictfloat(ed, frame1time);
+	framegroupblend[1].start =       PRVM_gameedictfloat(ed, frame2time);
+	framegroupblend[2].start =       PRVM_gameedictfloat(ed, frame3time);
+	framegroupblend[3].start =       PRVM_gameedictfloat(ed, frame4time);
+	framegroupblend[1].lerp  =       PRVM_gameedictfloat(ed, lerpfrac  );
+	framegroupblend[2].lerp  =       PRVM_gameedictfloat(ed, lerpfrac3 );
+	framegroupblend[3].lerp  =       PRVM_gameedictfloat(ed, lerpfrac4 );
 	// assume that the (missing) lerpfrac1 is whatever remains after lerpfrac2+lerpfrac3+lerpfrac4 are summed
 	framegroupblend[0].lerp = 1 - framegroupblend[1].lerp - framegroupblend[2].lerp - framegroupblend[3].lerp;
 }
@@ -197,7 +197,7 @@ void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const f
 	{
 		int skeletonindex = -1;
 		skeleton_t *skeleton;
-		skeletonindex = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.skeletonindex) - 1;
+		skeletonindex = (int)PRVM_gameedictfloat(ed, skeletonindex) - 1;
 		if (skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones)
 		{
 			// custom skeleton controlled by the game (FTE_CSQC_SKELETONOBJECTS)
@@ -310,11 +310,8 @@ void VM_error (void)
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf("======%s ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
-	if (prog->globaloffsets.self >= 0)
-	{
-		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self));
-		PRVM_ED_Print(ed, NULL);
-	}
+	ed = PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self));
+	PRVM_ED_Print(ed, NULL);
 
 	PRVM_ERROR ("%s: Program error in function %s:\n%s\nTip: read above for entity information\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
@@ -336,16 +333,9 @@ void VM_objerror (void)
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf("======OBJECT ERROR======\n"); // , PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
-	if (prog->globaloffsets.self >= 0)
-	{
-		ed = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self));
-		PRVM_ED_Print(ed, NULL);
-
-		PRVM_ED_Free (ed);
-	}
-	else
-		// objerror has to display the object fields -> else call
-		PRVM_ERROR ("VM_objecterror: self not defined !");
+	ed = PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self));
+	PRVM_ED_Print(ed, NULL);
+	PRVM_ED_Free (ed);
 	Con_Printf("%s OBJECT ERROR in %s:\n%s\nTip: read above for entity information\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 }
 
@@ -3294,28 +3284,20 @@ void getdrawfontscale(float *sx, float *sy)
 {
 	vec3_t v;
 	*sx = *sy = 1;
-	if(prog->globaloffsets.drawfontscale >= 0)
+	VectorCopy(PRVM_drawglobalvector(drawfontscale), v);
+	if(VectorLength2(v) > 0)
 	{
-		VectorCopy(PRVM_G_VECTOR(prog->globaloffsets.drawfontscale), v);
-		if(VectorLength2(v) > 0)
-		{
-			*sx = v[0];
-			*sy = v[1];
-		}
+		*sx = v[0];
+		*sy = v[1];
 	}
 }
 
 dp_font_t *getdrawfont(void)
 {
-	if(prog->globaloffsets.drawfont >= 0)
-	{
-		int f = (int) PRVM_G_FLOAT(prog->globaloffsets.drawfont);
-		if(f < 0 || f >= dp_fonts.maxsize)
-			return FONT_DEFAULT;
-		return &dp_fonts.f[f];
-	}
-	else
+	int f = (int) PRVM_drawglobalfloat(drawfont);
+	if(f < 0 || f >= dp_fonts.maxsize)
 		return FONT_DEFAULT;
+	return &dp_fonts.f[f];
 }
 
 /*
@@ -4448,7 +4430,7 @@ void makevectors(vector angle)
 void VM_makevectors (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_makevectors);
-	AngleVectors(PRVM_G_VECTOR(OFS_PARM0), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up));
+	AngleVectors(PRVM_G_VECTOR(OFS_PARM0), PRVM_gameglobalvector(v_forward), PRVM_gameglobalvector(v_right), PRVM_gameglobalvector(v_up));
 }
 
 /*
@@ -4462,8 +4444,8 @@ vectorvectors(vector)
 void VM_vectorvectors (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_vectorvectors);
-	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward));
-	VectorVectors(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_forward), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_right), PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.v_up));
+	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), PRVM_gameglobalvector(v_forward));
+	VectorVectors(PRVM_gameglobalvector(v_forward), PRVM_gameglobalvector(v_right), PRVM_gameglobalvector(v_up));
 }
 
 /*
@@ -5243,7 +5225,7 @@ void VM_changeyaw (void)
 	// parameters because they are the parameters to SV_MoveToGoal, not this
 	//VM_SAFEPARMCOUNT(0, VM_changeyaw);
 
-	ent = PRVM_PROG_TO_EDICT(PRVM_GLOBALFIELDEDICT(prog->globaloffsets.self));
+	ent = PRVM_PROG_TO_EDICT(PRVM_gameglobaledict(self));
 	if (ent == prog->edicts)
 	{
 		VM_Warning("changeyaw: can not modify world entity\n");
@@ -5254,15 +5236,10 @@ void VM_changeyaw (void)
 		VM_Warning("changeyaw: can not modify free entity\n");
 		return;
 	}
-	if (prog->fieldoffsets.angles < 0 || prog->fieldoffsets.ideal_yaw < 0 || prog->fieldoffsets.yaw_speed < 0)
-	{
-		VM_Warning("changeyaw: angles, ideal_yaw, or yaw_speed field(s) not found\n");
-		return;
-	}
-	current = PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.angles)[1];
+	current = PRVM_gameedictvector(ent, angles)[1];
 	current = ANGLEMOD(current);
-	ideal = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.ideal_yaw);
-	speed = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.yaw_speed);
+	ideal = PRVM_gameedictfloat(ent, ideal_yaw);
+	speed = PRVM_gameedictfloat(ent, yaw_speed);
 
 	if (current == ideal)
 		return;
@@ -5289,7 +5266,7 @@ void VM_changeyaw (void)
 	}
 
 	current += move;
-	PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.angles)[1] = ANGLEMOD(current);
+	PRVM_gameedictvector(ent, angles)[1] = ANGLEMOD(current);
 }
 
 /*
@@ -5315,15 +5292,10 @@ void VM_changepitch (void)
 		VM_Warning("changepitch: can not modify free entity\n");
 		return;
 	}
-	if (prog->fieldoffsets.angles < 0 || prog->fieldoffsets.idealpitch < 0 || prog->fieldoffsets.pitch_speed < 0)
-	{
-		VM_Warning("changepitch: angles, idealpitch, or pitch_speed field(s) not found\n");
-		return;
-	}
-	current = PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.angles)[0];
+	current = PRVM_gameedictvector(ent, angles)[0];
 	current = ANGLEMOD(current);
-	ideal = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.idealpitch);
-	speed = PRVM_EDICTFIELDFLOAT(ent, prog->fieldoffsets.pitch_speed);
+	ideal = PRVM_gameedictfloat(ent, idealpitch);
+	speed = PRVM_gameedictfloat(ent, pitch_speed);
 
 	if (current == ideal)
 		return;
@@ -5350,7 +5322,7 @@ void VM_changepitch (void)
 	}
 
 	current += move;
-	PRVM_EDICTFIELDVECTOR(ent, prog->fieldoffsets.angles)[0] = ANGLEMOD(current);
+	PRVM_gameedictvector(ent, angles)[0] = ANGLEMOD(current);
 }
 
 
@@ -5673,37 +5645,37 @@ void VM_wasfreed (void)
 
 void VM_SetTraceGlobals(const trace_t *trace)
 {
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_allsolid) = trace->allsolid;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_startsolid) = trace->startsolid;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_fraction) = trace->fraction;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_inwater) = trace->inwater;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_inopen) = trace->inopen;
-	VectorCopy(trace->endpos, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos));
-	VectorCopy(trace->plane.normal, PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_plane_normal));
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_plane_dist) = trace->plane.dist;
-	PRVM_GLOBALFIELDEDICT(prog->globaloffsets.trace_ent) = PRVM_EDICT_TO_PROG(trace->ent ? trace->ent : prog->edicts);
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dpstartcontents) = trace->startsupercontents;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitcontents) = trace->hitsupercontents;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitq3surfaceflags) = trace->hitq3surfaceflags;
-	PRVM_GLOBALFIELDSTRING(prog->globaloffsets.trace_dphittexturename) = trace->hittexture ? PRVM_SetTempString(trace->hittexture->name) : 0;
+	PRVM_gameglobalfloat(trace_allsolid) = trace->allsolid;
+	PRVM_gameglobalfloat(trace_startsolid) = trace->startsolid;
+	PRVM_gameglobalfloat(trace_fraction) = trace->fraction;
+	PRVM_gameglobalfloat(trace_inwater) = trace->inwater;
+	PRVM_gameglobalfloat(trace_inopen) = trace->inopen;
+	VectorCopy(trace->endpos, PRVM_gameglobalvector(trace_endpos));
+	VectorCopy(trace->plane.normal, PRVM_gameglobalvector(trace_plane_normal));
+	PRVM_gameglobalfloat(trace_plane_dist) = trace->plane.dist;
+	PRVM_gameglobaledict(trace_ent) = PRVM_EDICT_TO_PROG(trace->ent ? trace->ent : prog->edicts);
+	PRVM_gameglobalfloat(trace_dpstartcontents) = trace->startsupercontents;
+	PRVM_gameglobalfloat(trace_dphitcontents) = trace->hitsupercontents;
+	PRVM_gameglobalfloat(trace_dphitq3surfaceflags) = trace->hitq3surfaceflags;
+	PRVM_gameglobalstring(trace_dphittexturename) = trace->hittexture ? PRVM_SetTempString(trace->hittexture->name) : 0;
 }
 
 void VM_ClearTraceGlobals(void)
 {
 	// clean up all trace globals when leaving the VM (anti-triggerbot safeguard)
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_allsolid) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_startsolid) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_fraction) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_inwater) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_inopen) = 0;
-	VectorClear(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_endpos));
-	VectorClear(PRVM_GLOBALFIELDVECTOR(prog->globaloffsets.trace_plane_normal));
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_plane_dist) = 0;
-	PRVM_GLOBALFIELDEDICT(prog->globaloffsets.trace_ent) = PRVM_EDICT_TO_PROG(prog->edicts);
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dpstartcontents) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitcontents) = 0;
-	PRVM_GLOBALFIELDFLOAT(prog->globaloffsets.trace_dphitq3surfaceflags) = 0;
-	PRVM_GLOBALFIELDSTRING(prog->globaloffsets.trace_dphittexturename) = 0;
+	PRVM_gameglobalfloat(trace_allsolid) = 0;
+	PRVM_gameglobalfloat(trace_startsolid) = 0;
+	PRVM_gameglobalfloat(trace_fraction) = 0;
+	PRVM_gameglobalfloat(trace_inwater) = 0;
+	PRVM_gameglobalfloat(trace_inopen) = 0;
+	VectorClear(PRVM_gameglobalvector(trace_endpos));
+	VectorClear(PRVM_gameglobalvector(trace_plane_normal));
+	PRVM_gameglobalfloat(trace_plane_dist) = 0;
+	PRVM_gameglobaledict(trace_ent) = PRVM_EDICT_TO_PROG(prog->edicts);
+	PRVM_gameglobalfloat(trace_dpstartcontents) = 0;
+	PRVM_gameglobalfloat(trace_dphitcontents) = 0;
+	PRVM_gameglobalfloat(trace_dphitq3surfaceflags) = 0;
+	PRVM_gameglobalstring(trace_dphittexturename) = 0;
 }
 
 //=============
@@ -6546,7 +6518,7 @@ void animatemodel(dp_model_t *model, prvm_edict_t *ed)
 	VM_GenerateFrameGroupBlend(ed->priv.server->framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
 	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend))) != 0;
-	skeletonindex = (int)PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.skeletonindex) - 1;
+	skeletonindex = (int)PRVM_gameedictfloat(ed, skeletonindex) - 1;
 	if (!(skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
 		skeleton = NULL;
 	need |= (animatemodel_cache.skeleton_p != skeleton);

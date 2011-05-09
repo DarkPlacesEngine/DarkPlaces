@@ -199,7 +199,7 @@ void DropPunchAngle (void)
 		len = 0;
 	VectorScale (host_client->edict->fields.server->punchangle, len, host_client->edict->fields.server->punchangle);
 
-	VectorCopy(PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.punchvector), v);
+	VectorCopy(PRVM_serveredictvector(host_client->edict, punchvector), v);
 	len = VectorNormalizeLength(v);
 	if (len > 0)
 	{
@@ -208,7 +208,7 @@ void DropPunchAngle (void)
 			len = 0;
 		VectorScale(v, len, v);
 	}
-	VectorCopy(v, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.punchvector));
+	VectorCopy(v, PRVM_serveredictvector(host_client->edict, punchvector));
 }
 
 /*
@@ -597,7 +597,7 @@ void SV_ExecuteClientMoves(void)
 	if (ceil(max(sv_readmoves[sv_numreadmoves-1].receivetime - sv_readmoves[sv_numreadmoves-1].time, 0) * 1000.0) < sv_clmovement_minping.integer)
 		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
 	// several conditions govern whether clientside movement prediction is allowed
-	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_inputtimeout.value > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.disableclientprediction)))
+	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_inputtimeout.value > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!PRVM_serveredictfloat(host_client->edict, disableclientprediction)))
 	{
 		// process the moves in order and ignore old ones
 		// but always trust the latest move
@@ -738,31 +738,31 @@ void SV_ApplyClientMove (void)
 	}
 
 	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button3) = ((move->buttons >> 2) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button4) = ((move->buttons >> 3) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button5) = ((move->buttons >> 4) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button6) = ((move->buttons >> 5) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button7) = ((move->buttons >> 6) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button8) = ((move->buttons >> 7) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button9) = ((move->buttons >> 11) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button10) = ((move->buttons >> 12) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button11) = ((move->buttons >> 13) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button12) = ((move->buttons >> 14) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button13) = ((move->buttons >> 15) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button14) = ((move->buttons >> 16) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button15) = ((move->buttons >> 17) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.button16) = ((move->buttons >> 18) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.buttonuse) = ((move->buttons >> 8) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.buttonchat) = ((move->buttons >> 9) & 1);
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.cursor_active) = ((move->buttons >> 10) & 1);
-	VectorSet(PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.movement), move->forwardmove, move->sidemove, move->upmove);
-	VectorCopy(move->cursor_screen, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_screen));
-	VectorCopy(move->cursor_start, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_trace_start));
-	VectorCopy(move->cursor_impact, PRVM_EDICTFIELDVECTOR(host_client->edict, prog->fieldoffsets.cursor_trace_endpos));
-	PRVM_EDICTFIELDEDICT(host_client->edict, prog->fieldoffsets.cursor_trace_ent) = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping) = host_client->ping * 1000.0;
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping_packetloss) = packetloss / (float) NETGRAPH_PACKETS;
-	PRVM_EDICTFIELDFLOAT(host_client->edict, prog->fieldoffsets.ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
+	PRVM_serveredictfloat(host_client->edict, button3) = ((move->buttons >> 2) & 1);
+	PRVM_serveredictfloat(host_client->edict, button4) = ((move->buttons >> 3) & 1);
+	PRVM_serveredictfloat(host_client->edict, button5) = ((move->buttons >> 4) & 1);
+	PRVM_serveredictfloat(host_client->edict, button6) = ((move->buttons >> 5) & 1);
+	PRVM_serveredictfloat(host_client->edict, button7) = ((move->buttons >> 6) & 1);
+	PRVM_serveredictfloat(host_client->edict, button8) = ((move->buttons >> 7) & 1);
+	PRVM_serveredictfloat(host_client->edict, button9) = ((move->buttons >> 11) & 1);
+	PRVM_serveredictfloat(host_client->edict, button10) = ((move->buttons >> 12) & 1);
+	PRVM_serveredictfloat(host_client->edict, button11) = ((move->buttons >> 13) & 1);
+	PRVM_serveredictfloat(host_client->edict, button12) = ((move->buttons >> 14) & 1);
+	PRVM_serveredictfloat(host_client->edict, button13) = ((move->buttons >> 15) & 1);
+	PRVM_serveredictfloat(host_client->edict, button14) = ((move->buttons >> 16) & 1);
+	PRVM_serveredictfloat(host_client->edict, button15) = ((move->buttons >> 17) & 1);
+	PRVM_serveredictfloat(host_client->edict, button16) = ((move->buttons >> 18) & 1);
+	PRVM_serveredictfloat(host_client->edict, buttonuse) = ((move->buttons >> 8) & 1);
+	PRVM_serveredictfloat(host_client->edict, buttonchat) = ((move->buttons >> 9) & 1);
+	PRVM_serveredictfloat(host_client->edict, cursor_active) = ((move->buttons >> 10) & 1);
+	VectorSet(PRVM_serveredictvector(host_client->edict, movement), move->forwardmove, move->sidemove, move->upmove);
+	VectorCopy(move->cursor_screen, PRVM_serveredictvector(host_client->edict, cursor_screen));
+	VectorCopy(move->cursor_start, PRVM_serveredictvector(host_client->edict, cursor_trace_start));
+	VectorCopy(move->cursor_impact, PRVM_serveredictvector(host_client->edict, cursor_trace_endpos));
+	PRVM_serveredictedict(host_client->edict, cursor_trace_ent) = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM(move->cursor_entitynumber));
+	PRVM_serveredictfloat(host_client->edict, ping) = host_client->ping * 1000.0;
+	PRVM_serveredictfloat(host_client->edict, ping_packetloss) = packetloss / (float) NETGRAPH_PACKETS;
+	PRVM_serveredictfloat(host_client->edict, ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
 }
 
 void SV_FrameLost(int framenum)
