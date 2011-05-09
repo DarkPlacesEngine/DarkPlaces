@@ -1952,13 +1952,14 @@ void R_Shadow_RenderMode_Begin(void)
 	CHECKGLERROR
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_AlphaTest(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
 	GL_DepthMask(false);
 	GL_Color(0, 0, 0, 1);
 	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-
+	
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 
 	if (gl_ext_separatestencil.integer && vid.support.ati_separate_stencil)
