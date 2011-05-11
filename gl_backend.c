@@ -1437,7 +1437,7 @@ static void GL_Backend_ResetState(void)
 
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
-		qglDisable((vid_multisampling.integer && r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+		qglDisable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 		qglDisable(GL_BLEND);CHECKGLERROR
 		qglCullFace(gl_state.cullface);CHECKGLERROR
@@ -2134,11 +2134,11 @@ void GL_AlphaTest(int state)
 			CHECKGLERROR
 			if (gl_state.alphatest)
 			{
-				qglEnable((vid_multisampling.integer && r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+				qglEnable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
 			}
 			else
 			{
-				qglDisable((vid_multisampling.integer && r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+				qglDisable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
 			}
 			break;
 		case RENDERPATH_D3D9:
