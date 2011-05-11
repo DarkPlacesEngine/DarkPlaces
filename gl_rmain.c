@@ -2092,12 +2092,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	matrix4x4_t tempmatrix;
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-	{
 		permutation |= SHADERPERMUTATION_ALPHAKILL;
-		GL_AlphaTest(true);
-	}
-	else
-		GL_AlphaTest(false);
 	if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
 		permutation |= SHADERPERMUTATION_NORMALMAPSCROLLBLEND; // todo: make generic
 	if (rsurfacepass == RSURFPASS_BACKGROUND)
@@ -9461,7 +9456,6 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL);
 		RSurf_DrawBatch();
-		return;
 	}
 
 	// bind lightmap texture
@@ -9508,7 +9502,11 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL);
+	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		GL_AlphaTest(true);
 	RSurf_DrawBatch();
+	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+		GL_AlphaTest(false);
 }
 
 static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)

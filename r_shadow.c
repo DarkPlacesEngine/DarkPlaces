@@ -1952,7 +1952,6 @@ void R_Shadow_RenderMode_Begin(void)
 	CHECKGLERROR
 	R_Mesh_ResetTextureState();
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	GL_AlphaTest(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	GL_DepthTest(true);
@@ -3170,10 +3169,16 @@ static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msu
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL);
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+	{
 		GL_DepthFunc(GL_EQUAL);
+		GL_AlphaTest(true);
+	}
 	RSurf_DrawBatch();
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
+	{
 		GL_DepthFunc(GL_LEQUAL);
+		GL_AlphaTest(false);
+	}
 }
 
 static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numvertices, int numtriangles, const int *element3i, vec3_t diffusecolor2, vec3_t ambientcolor2)
