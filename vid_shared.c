@@ -1742,6 +1742,15 @@ void VID_Shared_Init(void)
 int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
 {
 	viddef_mode_t mode;
+
+	// multisampling should set at least 2 samples
+	if (vid.support.arb_multisample)
+	{
+		GL_MultiSampling(false);
+		if (vid_multisampling.integer)
+			samples = max(2, samples);
+	}
+
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
 	mode.width = width;
@@ -1779,6 +1788,10 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		if(vid_userefreshrate.integer)
 			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
 		Cvar_SetValueQuick(&vid_stereobuffer, vid.mode.stereobuffer);
+
+		// activate multisampling
+		if (vid_multisampling.integer)
+			GL_MultiSampling(true);
 
 		return true;
 	}

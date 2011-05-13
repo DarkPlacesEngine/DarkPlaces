@@ -86,7 +86,7 @@ extern char engineversion[128];
 #define MAX_NETWM_ICON 1026 // one 32x32
 
 #define	MAX_WATERPLANES			2
-#define	MAX_CUBEMAPS			64
+#define	MAX_CUBEMAPS			1024
 #define	MAX_EXPLOSIONS			8
 #define	MAX_DLIGHTS				16
 #define	MAX_CACHED_PICS			1024 // this is 144 bytes each (or 152 on 64bit)
@@ -153,7 +153,7 @@ extern char engineversion[128];
 #define MAX_NETWM_ICON 352822 // 16x16, 22x22, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256, 512x512
 
 #define	MAX_WATERPLANES			16 ///< max number of water planes visible (each one causes additional view renders)
-#define	MAX_CUBEMAPS			256 ///< max number of cubemap textures loaded for light filters
+#define	MAX_CUBEMAPS			1024 ///< max number of cubemap textures loaded for light filters
 #define	MAX_EXPLOSIONS			64 ///< max number of explosion shell effects active at once (not particle related)
 #define	MAX_DLIGHTS				256 ///< max number of dynamic lights (rocket flashes, etc) in scene at once
 #define	MAX_CACHED_PICS			1024 ///< max number of 2D pics loaded at once
