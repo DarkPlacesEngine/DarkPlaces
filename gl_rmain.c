@@ -282,7 +282,7 @@ typedef struct cubemapinfo_s
 cubemapinfo_t;
 
 int r_texture_numcubemaps;
-cubemapinfo_t *r_texture_cubemaps[MAX_CUBEMAPS];
+cubemapinfo_t r_texture_cubemaps[MAX_CUBEMAPS];
 
 unsigned int r_queries[MAX_OCCLUSION_QUERIES];
 unsigned int r_numqueries;
@@ -3741,36 +3741,14 @@ rtexture_t *R_GetCubemap(const char *basename)
 {
 	int i;
 	for (i = 0;i < r_texture_numcubemaps;i++)
-		if (r_texture_cubemaps[i] != NULL)
-			if (!strcasecmp(r_texture_cubemaps[i]->basename, basename))
-				return r_texture_cubemaps[i]->texture ? r_texture_cubemaps[i]->texture : r_texture_whitecube;
+		if (!strcasecmp(r_texture_cubemaps[i].basename, basename))
+			return r_texture_cubemaps[i].texture ? r_texture_cubemaps[i].texture : r_texture_whitecube;
 	if (i >= MAX_CUBEMAPS)
 		return r_texture_whitecube;
 	r_texture_numcubemaps++;
-	r_texture_cubemaps[i] = (cubemapinfo_t *)Mem_Alloc(r_main_mempool, sizeof(cubemapinfo_t));
-	strlcpy(r_texture_cubemaps[i]->basename, basename, sizeof(r_texture_cubemaps[i]->basename));
-	r_texture_cubemaps[i]->texture = R_LoadCubemap(r_texture_cubemaps[i]->basename);
-	return r_texture_cubemaps[i]->texture;
-}
-
-void R_FreeCubemap(const char *basename)
-{
-	int i;
-
-	for (i = 0;i < r_texture_numcubemaps;i++)
-	{
-		if (r_texture_cubemaps[i] != NULL)
-		{
-			if (r_texture_cubemaps[i]->texture)
-			{
-				if (developer_loading.integer)
-					Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i]->basename);
-				R_FreeTexture(r_texture_cubemaps[i]->texture);
-				Mem_Free(r_texture_cubemaps[i]);
-				r_texture_cubemaps[i] = NULL;
-			}
-		}
-	}
+	strlcpy(r_texture_cubemaps[i].basename, basename, sizeof(r_texture_cubemaps[i].basename));
+	r_texture_cubemaps[i].texture = R_LoadCubemap(r_texture_cubemaps[i].basename);
+	return r_texture_cubemaps[i].texture;
 }
 
 void R_FreeCubemaps(void)
@@ -3779,13 +3757,9 @@ void R_FreeCubemaps(void)
 	for (i = 0;i < r_texture_numcubemaps;i++)
 	{
 		if (developer_loading.integer)
-			Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i]->basename);
-		if (r_texture_cubemaps[i] != NULL)
-		{
-			if (r_texture_cubemaps[i]->texture)
-				R_FreeTexture(r_texture_cubemaps[i]->texture);
-			Mem_Free(r_texture_cubemaps[i]);
-		}
+			Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i].basename);
+		if (r_texture_cubemaps[i].texture)
+			R_FreeTexture(r_texture_cubemaps[i].texture);
 	}
 	r_texture_numcubemaps = 0;
 }
@@ -3936,9 +3910,6 @@ void gl_main_start(void)
 #endif
 	hlslshaderstring = NULL;
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
-
-	memset(r_texture_cubemaps, 0, sizeof(r_texture_cubemaps));
-	r_texture_numcubemaps = 0;
 
 	r_refdef.fogmasktable_density = 0;
 }

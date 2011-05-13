@@ -2120,35 +2120,6 @@ void GL_CullFace(int state)
 	}
 }
 
-void GL_MultiSampling(qboolean state)
-{
-	switch(vid.renderpath)
-	{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GLES1:
-		case RENDERPATH_GL20:
-		case RENDERPATH_GLES2:
-			if (vid.support.arb_multisample)
-			{
-				if (state)
-					qglEnable(GL_MULTISAMPLE_ARB);
-				else
-					qglDisable(GL_MULTISAMPLE_ARB);
-				CHECKGLERROR
-			}
-			break;
-		case RENDERPATH_D3D9:
-			break;
-		case RENDERPATH_D3D10:
-			break;
-		case RENDERPATH_D3D11:
-			break;
-		case RENDERPATH_SOFT:
-			break;
-	}
-}
-
 void GL_AlphaTest(int state)
 {
 	if (gl_state.alphatest != state)
