@@ -2292,27 +2292,6 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_hasfocus = true;
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
-
-	// enable multisampling
-	if (vid_multisampling.integer)
-	{
-		if (vid.support.arb_multisample)
-		{
-			qglEnable(GL_MULTISAMPLE_ARB);
-			// it seems that enabling GL_MULTISAMPLE_ARB forces antialiasing to always work, fix the cvar as well
-			// make sure vid_sample is at least 2 to make things correct
-			if (vid_samples.integer < 2)
-				Cvar_SetValueQuick(&vid_samples, 0);	
-		}
-		else
-		{
-			Cvar_SetValueQuick(&vid_multisampling, 0);
-			qglDisable(GL_MULTISAMPLE_ARB);
-		}
-	}
-	else
-		qglDisable(GL_MULTISAMPLE_ARB);
-	CHECKGLERROR
 		
 #if SETVIDEOMODE
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
