@@ -2042,7 +2042,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic (loadingscreenpic_number ? va("gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading");
+	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va("gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading", loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
 	w = loadingscreenpic->width;
 	h = loadingscreenpic->height;
@@ -2112,7 +2112,7 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
-	R_SetupShader_Generic(loadingscreenpic->tex, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(Draw_GetPicTexture(loadingscreenpic), NULL, GL_MODULATE, 1);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	SCR_DrawLoadingStack();
 }
