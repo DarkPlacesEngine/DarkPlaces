@@ -188,6 +188,8 @@ void DrawQ_Finish(void);
 void DrawQ_ProcessDrawFlag(int flags, qboolean alpha); // sets GL_DepthMask and GL_BlendFunc
 void DrawQ_RecalcView(void); // use this when changing r_refdef.view.* from e.g. csqc
 
+rtexture_t *Draw_GetPicTexture(cachepic_t *pic);
+
 void R_DrawGamma(void);
 
 extern rtexturepool_t *drawtexturepool; // used by ft2.c
