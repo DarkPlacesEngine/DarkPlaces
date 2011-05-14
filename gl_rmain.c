@@ -3744,7 +3744,7 @@ rtexture_t *R_GetCubemap(const char *basename)
 		if (r_texture_cubemaps[i] != NULL)
 			if (!strcasecmp(r_texture_cubemaps[i]->basename, basename))
 				return r_texture_cubemaps[i]->texture ? r_texture_cubemaps[i]->texture : r_texture_whitecube;
-	if (i >= MAX_CUBEMAPS)
+	if (i >= MAX_CUBEMAPS || !r_main_mempool)
 		return r_texture_whitecube;
 	r_texture_numcubemaps++;
 	r_texture_cubemaps[i] = (cubemapinfo_t *)Mem_Alloc(r_main_mempool, sizeof(cubemapinfo_t));
