@@ -1161,7 +1161,7 @@ float CL_ClientMovement_Physics_AdjustAirAccelQW(float accelqw, float factor)
 		bound(0.000001, 1 - (1 - fabs(accelqw)) * factor, 1);
 }
 
-void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t sidefric, vec_t speedlimit)
+void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t stretchfactor, vec_t sidefric, vec_t speedlimit)
 {
 	vec_t vel_straight;
 	vec_t vel_z;
@@ -1170,10 +1170,16 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	vec3_t vel_xy;
 	vec_t vel_xy_current;
 	vec_t vel_xy_backward, vel_xy_forward;
-	qboolean speedclamp;
+	vec_t speedclamp;
 
-	speedclamp = (accelqw < 0);
-	if(speedclamp)
+	if(stretchfactor > 0)
+		speedclamp = stretchfactor;
+	else if(accelqw < 0)
+		speedclamp = 1;
+	else
+		speedclamp = -1; // no clamping
+
+	if(accelqw < 0)
 		accelqw = -accelqw;
 
 	if(cl.moveflags & MOVEFLAG_Q2AIRACCELERATE)
@@ -1220,13 +1226,15 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 
 	VectorMA(vel_perpend, vel_straight, wishdir, s->velocity);
 
-	if(speedclamp)
+	if(speedclamp >= 0)
 	{
-		vel_xy_current = min(VectorLength(s->velocity), vel_xy_forward);
-		if(vel_xy_current > 0) // prevent division by zero
+		vec_t vel_xy_preclamp;
+		vel_xy_preclamp = VectorLength(s->velocity);
+		if(vel_xy_preclamp > 0) // prevent division by zero
 		{
-			VectorNormalize(s->velocity);
-			VectorScale(s->velocity, vel_xy_current, s->velocity);
+			vel_xy_current += (vel_xy_forward - vel_xy_current) * speedclamp;
+			if(vel_xy_current < vel_xy_preclamp)
+				VectorScale(s->velocity, (vel_xy_current / vel_xy_preclamp), s->velocity);
 		}
 	}
 
@@ -1422,7 +1430,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			if(cl.movevars_warsowbunny_turnaccel && accelerating && s->cmd.sidemove == 0 && s->cmd.forwardmove != 0)
 				CL_ClientMovement_Physics_PM_AirAccelerate(s, wishdir, wishspeed2);
 			else
-				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, wishspeed0, accel, accelqw, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed, cl.movevars_airspeedlimit_nonqw);
+				CL_ClientMovement_Physics_PM_Accelerate(s, wishdir, wishspeed, wishspeed0, accel, accelqw, cl.movevars_airaccel_qw_stretchfactor, cl.movevars_airaccel_sideways_friction / cl.movevars_maxairspeed, cl.movevars_airspeedlimit_nonqw);
 
 			if(cl.movevars_aircontrol)
 				CL_ClientMovement_Physics_CPM_PM_Aircontrol(s, wishdir, wishspeed2);
@@ -1476,6 +1484,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_maxairspeed = cl.statsf[STAT_MOVEVARS_MAXAIRSPEED];
 		cl.movevars_stepheight = cl.statsf[STAT_MOVEVARS_STEPHEIGHT];
 		cl.movevars_airaccel_qw = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW];
+		cl.movevars_airaccel_qw_stretchfactor = cl.statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR];
 		cl.movevars_airaccel_sideways_friction = cl.statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION];
 		cl.movevars_friction = cl.statsf[STAT_MOVEVARS_FRICTION];
 		cl.movevars_wallfriction = cl.statsf[STAT_MOVEVARS_WALLFRICTION];
@@ -1515,6 +1524,7 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_maxairspeed = cl_movement_maxairspeed.value;
 		cl.movevars_stepheight = cl_movement_stepheight.value;
 		cl.movevars_airaccel_qw = cl_movement_airaccel_qw.value;
+		cl.movevars_airaccel_qw_stretchfactor = 0;
 		cl.movevars_airaccel_sideways_friction = cl_movement_airaccel_sideways_friction.value;
 		cl.movevars_airstopaccelerate = 0;
 		cl.movevars_airstrafeaccelerate = 0;

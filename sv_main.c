@@ -53,6 +53,7 @@ cvar_t slowmo = {0, "slowmo", "1.0", "controls game speed, 0.5 is half speed, 2 
 cvar_t sv_accelerate = {0, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
 cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"};
 cvar_t sv_airaccel_qw = {0, "sv_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration; when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
+cvar_t sv_airaccel_qw_stretchfactor = {0, "sv_airaccel_qw_stretchfactor", "0", "when set, the maximum acceleration increase the player may get compared to forward-acceleration when strafejumping"};
 cvar_t sv_airaccel_sideways_friction = {0, "sv_airaccel_sideways_friction", "", "anti-sideways movement stabilization (reduces speed gain when zigzagging); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
 cvar_t sv_airaccelerate = {0, "sv_airaccelerate", "-1", "rate at which a player accelerates to sv_maxairspeed while in the air, if less than 0 the sv_accelerate variable is used instead"};
 cvar_t sv_airstopaccelerate = {0, "sv_airstopaccelerate", "0", "when set, replacement for sv_airaccelerate when moving backwards"};
@@ -453,6 +454,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_airaccel_qw);
+	Cvar_RegisterVariable (&sv_airaccel_qw_stretchfactor);
 	Cvar_RegisterVariable (&sv_airaccel_sideways_friction);
 	Cvar_RegisterVariable (&sv_airaccelerate);
 	Cvar_RegisterVariable (&sv_airstopaccelerate);
@@ -2034,6 +2036,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	statsf[STAT_MOVEVARS_MAXAIRSPEED] = sv_maxairspeed.value;
 	statsf[STAT_MOVEVARS_STEPHEIGHT] = sv_stepheight.value;
 	statsf[STAT_MOVEVARS_AIRACCEL_QW] = sv_airaccel_qw.value;
+	statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR] = sv_airaccel_qw_stretchfactor.value;
 	statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION] = sv_airaccel_sideways_friction.value;
 	statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;
 	statsf[STAT_MOVEVARS_WATERFRICTION] = sv_waterfriction.value >= 0 ? sv_waterfriction.value : sv_friction.value;
