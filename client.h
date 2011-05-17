@@ -1204,6 +1204,7 @@ typedef struct client_state_s
 	float movevars_maxairspeed;
 	float movevars_stepheight;
 	float movevars_airaccel_qw;
+	float movevars_airaccel_qw_stretchfactor;
 	float movevars_airaccel_sideways_friction;
 	float movevars_airstopaccelerate;
 	float movevars_airstrafeaccelerate;
