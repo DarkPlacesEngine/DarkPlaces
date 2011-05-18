@@ -88,6 +88,10 @@ void Sys_SendKeyEvents(void)
 {
 }
 
+void VID_BuildJoyState(vid_joystate_t *joystate)
+{
+}
+
 void IN_Move(void)
 {
 }

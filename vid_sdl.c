@@ -66,30 +66,6 @@ int cl_available = true;
 
 qboolean vid_supportrefreshrate = false;
 
-cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
-cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
-cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple"};
-cvar_t joy_axisforward = {0, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
-cvar_t joy_axisside = {0, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
-cvar_t joy_axisup = {0, "joy_axisup", "-1", "which joystick axis to query for up/down movement"};
-cvar_t joy_axispitch = {0, "joy_axispitch", "3", "which joystick axis to query for looking up/down"};
-cvar_t joy_axisyaw = {0, "joy_axisyaw", "2", "which joystick axis to query for looking right/left"};
-cvar_t joy_axisroll = {0, "joy_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
-cvar_t joy_deadzoneforward = {0, "joy_deadzoneforward", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneside = {0, "joy_deadzoneside", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneup = {0, "joy_deadzoneup", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzonepitch = {0, "joy_deadzonepitch", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneyaw = {0, "joy_deadzoneyaw", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneroll = {0, "joy_deadzoneroll", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_sensitivityforward = {0, "joy_sensitivityforward", "-1", "movement multiplier"};
-cvar_t joy_sensitivityside = {0, "joy_sensitivityside", "1", "movement multiplier"};
-cvar_t joy_sensitivityup = {0, "joy_sensitivityup", "1", "movement multiplier"};
-cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multiplier"};
-cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
-cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
-cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
-cvar_t joy_axiskeyevents_deadzone = {CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
-
 #ifdef USE_GLES2
 # define SETVIDEOMODE 0
 #else
@@ -111,9 +87,7 @@ static qboolean vid_isfullscreen;
 #else
 static qboolean vid_usingvsync = false;
 #endif
-static int vid_numjoysticks = 0;
-#define MAX_JOYSTICKS 8
-static SDL_Joystick *vid_joysticks[MAX_JOYSTICKS];
+static SDL_Joystick *vid_sdljoystick = NULL;
 
 static int win_half_width = 50;
 static int win_half_height = 50;
@@ -129,20 +103,9 @@ static int window_flags;
 #endif
 static SDL_Surface *vid_softsurface;
 
-// joystick axes state
-#define MAX_JOYSTICK_AXES	16
-typedef struct
-{
-	float oldmove;
-	float move;
-	double keytime;
-}joy_axiscache_t;
-static joy_axiscache_t joy_axescache[MAX_JOYSTICK_AXES];
-
 /////////////////////////
 // Input handling
 ////
-//TODO: Add joystick support
 //TODO: Add error checking
 
 #ifndef SDLK_PERCENT
@@ -518,80 +481,6 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 #endif
 }
 
-static double IN_JoystickGetAxis(SDL_Joystick *joy, int axis, double sensitivity, double deadzone)
-{
-	double value;
-	if (axis < 0 || axis >= SDL_JoystickNumAxes(joy))
-		return 0; // no such axis on this joystick
-	value = SDL_JoystickGetAxis(joy, axis) * (1.0 / 32767.0);
-	value = bound(-1, value, 1);
-	if (fabs(value) < deadzone)
-		return 0; // within deadzone around center
-	return value * sensitivity;
-}
-
-/////////////////////
-// Joystick axis keyevents
-// a sort of hack emulating Arrow keys for joystick axises
-// as some drives dont send such keyevents for them
-// additionally we should block drivers that do send arrow keyevents to prevent double events
-////
-
-static void IN_JoystickKeyeventForAxis(SDL_Joystick *joy, int axis, int key_pos, int key_neg)
-{
-	double joytime;
-
-	if (axis < 0 || axis >= SDL_JoystickNumAxes(joy))
-		return; // no such axis on this joystick
-
-	joytime = Sys_DoubleTime();
-	// no key event, continuous keydown event
-	if (joy_axescache[axis].move == joy_axescache[axis].oldmove)
-	{
-		if (joy_axescache[axis].move != 0 && joytime > joy_axescache[axis].keytime)
-		{
-			//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
-			Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
-			joy_axescache[axis].keytime = joytime + 0.5 / 20;
-		}
-		return;
-	}
-	// generate key up event
-	if (joy_axescache[axis].oldmove)
-	{
-		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg), 1, cl.time);
-		Key_Event((joy_axescache[axis].oldmove > 0) ? key_pos : key_neg, 0, 0);
-	}
-	// generate key down event
-	if (joy_axescache[axis].move)
-	{
-		//Con_Printf("joy %s %i %f\n", Key_KeynumToString((joy_axescache[axis].move > 0) ? key_pos : key_neg), 1, cl.time);
-		Key_Event((joy_axescache[axis].move > 0) ? key_pos : key_neg, 0, 1);
-		joy_axescache[axis].keytime = joytime + 0.5;
-	}
-}
-
-static qboolean IN_JoystickBlockDoubledKeyEvents(int keycode)
-{
-	if (!joy_axiskeyevents.integer)
-		return false;
-
-	// block keyevent if it's going to be provided by joystick keyevent system
-	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
-	{
-		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
-
-		if (keycode == K_UPARROW || keycode == K_DOWNARROW)
-			if (IN_JoystickGetAxis(joy, joy_axisforward.integer, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[joy_axisforward.integer].move || joy_axescache[joy_axisforward.integer].oldmove)
-				return true;
-		if (keycode == K_RIGHTARROW || keycode == K_LEFTARROW)
-			if (IN_JoystickGetAxis(joy, joy_axisside.integer, 1, joy_axiskeyevents_deadzone.value) || joy_axescache[joy_axisside.integer].move || joy_axescache[joy_axisside.integer].oldmove)
-				return true;
-	}
-
-	return false;
-}
-
 // multitouch[10][] represents the mouse pointer
 // X and Y coordinates are 0-32767 as per SDL spec
 #define MAXFINGERS 11
@@ -656,16 +545,37 @@ qboolean VID_TouchscreenArea(int corner, float px, float py, float pwidth, float
 	return button;
 }
 
+void VID_BuildJoyState(vid_joystate_t *joystate)
+{
+	VID_Shared_BuildJoyState_Begin(joystate);
+
+	if (vid_sdljoystick)
+	{
+		SDL_Joystick *joy = vid_sdljoystick;
+		int j;
+		int numaxes;
+		int numbuttons;
+		numaxes = SDL_JoystickNumAxes(joy);
+		for (j = 0;j < numaxes;j++)
+			joystate->axis[j] = SDL_JoystickGetAxis(joy, j) * (1.0f / 32767.0f);
+		numbuttons = SDL_JoystickNumButtons(joy);
+		for (j = 0;j < numbuttons;j++)
+			joystate->button[j] = SDL_JoystickGetButton(joy, j);
+	}
+
+	VID_Shared_BuildJoyState_Finish(joystate);
+}
+
 /////////////////////
 // Movement handling
 ////
 
 void IN_Move( void )
 {
-	int j;
 	static int old_x = 0, old_y = 0;
 	static int stuck = 0;
-	int x, y, numaxes, numballs;
+	int x, y;
+	vid_joystate_t joystate;
 
 	scr_numtouchscreenareas = 0;
 	if (vid_touchscreen.integer)
@@ -798,42 +708,8 @@ void IN_Move( void )
 		in_windowmouse_y = y;
 	}
 
-	if (vid_numjoysticks && joy_enable.integer && joy_index.integer >= 0 && joy_index.integer < vid_numjoysticks)
-	{
-		SDL_Joystick *joy = vid_joysticks[joy_index.integer];
-
-		// balls convert to mousemove
-		numballs = SDL_JoystickNumBalls(joy);
-		for (j = 0;j < numballs;j++)
-		{
-			SDL_JoystickGetBall(joy, j, &x, &y);
-			in_mouse_x += x;
-			in_mouse_y += y;
-		}
-
-		// axes
-		cl.cmd.forwardmove += IN_JoystickGetAxis(joy, joy_axisforward.integer, joy_sensitivityforward.value, joy_deadzoneforward.value) * cl_forwardspeed.value;
-		cl.cmd.sidemove    += IN_JoystickGetAxis(joy, joy_axisside.integer, joy_sensitivityside.value, joy_deadzoneside.value) * cl_sidespeed.value;
-		cl.cmd.upmove      += IN_JoystickGetAxis(joy, joy_axisup.integer, joy_sensitivityup.value, joy_deadzoneup.value) * cl_upspeed.value;
-		cl.viewangles[0]   += IN_JoystickGetAxis(joy, joy_axispitch.integer, joy_sensitivitypitch.value, joy_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
-		cl.viewangles[1]   += IN_JoystickGetAxis(joy, joy_axisyaw.integer, joy_sensitivityyaw.value, joy_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
-		//cl.viewangles[2]   += IN_JoystickGetAxis(joy, joy_axisroll.integer, joy_sensitivityroll.value, joy_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
-	
-		// cache state of axes to emulate button events for them
-		numaxes = min(MAX_JOYSTICK_AXES, SDL_JoystickNumAxes(joy));
-		for (j = 0; j < numaxes; j++)
-		{
-			joy_axescache[j].oldmove = joy_axescache[j].move;
-			joy_axescache[j].move = IN_JoystickGetAxis(joy, j, 1, joy_axiskeyevents_deadzone.value);
-		}
-
-		// run keyevents
-		if (joy_axiskeyevents.integer)
-		{
-			IN_JoystickKeyeventForAxis(joy, joy_axisforward.integer, K_DOWNARROW, K_UPARROW);
-			IN_JoystickKeyeventForAxis(joy, joy_axisside.integer, K_RIGHTARROW, K_LEFTARROW);
-		}
-	}
+	VID_BuildJoyState(&joystate);
+	VID_ApplyJoyState(&joystate);
 }
 
 /////////////////////
@@ -886,6 +762,8 @@ void Sys_SendKeyEvents( void )
 	int keycode;
 	SDL_Event event;
 
+	VID_EnableJoystick(true);
+
 	while( SDL_PollEvent( &event ) )
 		switch( event.type ) {
 			case SDL_QUIT:
@@ -894,7 +772,7 @@ void Sys_SendKeyEvents( void )
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 				keycode = MapKey(event.key.keysym.sym);
-				if (!IN_JoystickBlockDoubledKeyEvents(keycode))
+				if (!VID_JoyBlockEmulatedKeys(keycode))
 					Key_Event(keycode, event.key.keysym.unicode, (event.key.state == SDL_PRESSED));
 				break;
 			case SDL_ACTIVEEVENT:
@@ -913,12 +791,7 @@ void Sys_SendKeyEvents( void )
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
 				break;
 			case SDL_JOYBUTTONDOWN:
-				if (!joy_enable.integer)
-					break; // ignore down events if joystick has been disabled
 			case SDL_JOYBUTTONUP:
-				if (event.jbutton.button < 48)
-					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
-				break;
 			case SDL_JOYAXISMOTION:
 			case SDL_JOYBALLMOTION:
 			case SDL_JOYHATMOTION:
@@ -1000,6 +873,8 @@ void Sys_SendKeyEvents( void )
 	int unicode;
 	SDL_Event event;
 
+	VID_EnableJoystick(true);
+
 	while( SDL_PollEvent( &event ) )
 		switch( event.type ) {
 			case SDL_QUIT:
@@ -1008,16 +883,7 @@ void Sys_SendKeyEvents( void )
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
 				keycode = MapKey(event.key.keysym.sym);
-				if (!IN_JoystickBlockDoubledKeyEvents(keycode))
-#ifdef __IPHONEOS__
-				// the virtual keyboard seems to produce no unicode values...
-				if (missingunicodehack && keycode >= ' ' && keycode < 0x7F && event.key.keysym.unicode == 0)
-				{
-					Con_DPrintf("SDL hack: no unicode value reported, substituting ascii value %i\n", keycode);
-					Key_Event(keycode, keycode, (event.key.state == SDL_PRESSED));
-				}
-				else
-#endif
+				if (!VID_JoyBlockEmulatedKeys(keycode))
 					Key_Event(keycode, 0, (event.key.state == SDL_PRESSED));
 				break;
 			case SDL_MOUSEBUTTONDOWN:
@@ -1027,12 +893,7 @@ void Sys_SendKeyEvents( void )
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
 				break;
 			case SDL_JOYBUTTONDOWN:
-				if (!joy_enable.integer)
-					break; // ignore down events if joystick has been disabled
 			case SDL_JOYBUTTONUP:
-				if (event.jbutton.button < 48)
-					Key_Event( event.jbutton.button + (event.jbutton.button < 16 ? K_JOY1 : K_AUX1 - 16), 0, (event.jbutton.state == SDL_PRESSED) );
-				break;
 			case SDL_JOYAXISMOTION:
 			case SDL_JOYBALLMOTION:
 			case SDL_JOYHATMOTION:
@@ -1181,15 +1042,6 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_TOUCHBUTTONUP:
 				// not sure what to do with this...
-				break;
-			case SDL_JOYAXISMOTION:
-				// we poll the joystick instead
-				break;
-			case SDL_JOYBALLMOTION:
-				// we poll the joystick instead
-				break;
-			case SDL_JOYHATMOTION:
-				// we poll the joystick instead
 				break;
 			default:
 				Con_DPrintf("Received unrecognized SDL_Event type 0x%x\n", event.type);
@@ -1778,29 +1630,6 @@ void VID_Init (void)
 	Cvar_RegisterVariable(&apple_mouse_noaccel);
 #endif
 #endif
-	Cvar_RegisterVariable(&joy_detected);
-	Cvar_RegisterVariable(&joy_enable);
-	Cvar_RegisterVariable(&joy_index);
-	Cvar_RegisterVariable(&joy_axisforward);
-	Cvar_RegisterVariable(&joy_axisside);
-	Cvar_RegisterVariable(&joy_axisup);
-	Cvar_RegisterVariable(&joy_axispitch);
-	Cvar_RegisterVariable(&joy_axisyaw);
-	//Cvar_RegisterVariable(&joy_axisroll);
-	Cvar_RegisterVariable(&joy_deadzoneforward);
-	Cvar_RegisterVariable(&joy_deadzoneside);
-	Cvar_RegisterVariable(&joy_deadzoneup);
-	Cvar_RegisterVariable(&joy_deadzonepitch);
-	Cvar_RegisterVariable(&joy_deadzoneyaw);
-	//Cvar_RegisterVariable(&joy_deadzoneroll);
-	Cvar_RegisterVariable(&joy_sensitivityforward);
-	Cvar_RegisterVariable(&joy_sensitivityside);
-	Cvar_RegisterVariable(&joy_sensitivityup);
-	Cvar_RegisterVariable(&joy_sensitivitypitch);
-	Cvar_RegisterVariable(&joy_sensitivityyaw);
-	//Cvar_RegisterVariable(&joy_sensitivityroll);
-	Cvar_RegisterVariable(&joy_axiskeyevents);
-	Cvar_RegisterVariable(&joy_axiskeyevents_deadzone);
 #ifdef __IPHONEOS__
 	Cvar_SetValueQuick(&vid_touchscreen, 1);
 #endif
@@ -1815,6 +1644,53 @@ void VID_Init (void)
 	if (vid_sdl_initjoysticksystem)
 		Con_Printf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
+}
+
+static int vid_sdljoystickindex = -1;
+void VID_EnableJoystick(qboolean enable)
+{
+	int index = joy_enable.integer > 0 ? joy_index.integer : -1;
+	int numsdljoysticks;
+	qboolean success = false;
+	int sharedcount = 0;
+	int sdlindex = -1;
+	sharedcount = VID_Shared_SetJoystick(index);
+	if (index >= 0 && index < sharedcount)
+		success = true;
+	sdlindex = index - sharedcount;
+
+	numsdljoysticks = SDL_NumJoysticks();
+	if (sdlindex < 0 || sdlindex >= numsdljoysticks)
+		sdlindex = -1;
+
+	// update cvar containing count of XInput joysticks + SDL joysticks
+	if (joy_detected.integer != sharedcount + numsdljoysticks)
+		Cvar_SetValueQuick(&joy_detected, sharedcount + numsdljoysticks);
+
+	if (vid_sdljoystickindex != sdlindex)
+	{
+		vid_sdljoystickindex = sdlindex;
+		// close SDL joystick if active
+		if (vid_sdljoystick)
+			SDL_JoystickClose(vid_sdljoystick);
+		vid_sdljoystick = NULL;
+		if (sdlindex >= 0)
+		{
+			vid_sdljoystick = SDL_JoystickOpen(sdlindex);
+			if (vid_sdljoystick)
+				Con_Printf("Joystick %i opened (SDL_Joystick %i is \"%s\" with %i axes, %i buttons, %i balls)\n", index, sdlindex, SDL_JoystickName(sdlindex), (int)SDL_JoystickNumAxes(vid_sdljoystick), (int)SDL_JoystickNumButtons(vid_sdljoystick), (int)SDL_JoystickNumBalls(vid_sdljoystick));
+			else
+			{
+				Con_Printf("Joystick %i failed (SDL_JoystickOpen(%i) returned: %s)\n", index, sdlindex, SDL_GetError());
+				sdlindex = -1;
+			}
+		}
+	}
+
+	if (sdlindex >= 0)
+		success = true;
+
+	Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
 }
 
 #if SETVIDEOMODE
@@ -2270,23 +2146,6 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	GL_Init();
 #endif
 
-	vid_numjoysticks = SDL_NumJoysticks();
-	vid_numjoysticks = bound(0, vid_numjoysticks, MAX_JOYSTICKS);
-	Cvar_SetValueQuick(&joy_detected, vid_numjoysticks);
-	Con_Printf("%d SDL joystick(s) found:\n", vid_numjoysticks);
-	memset(vid_joysticks, 0, sizeof(vid_joysticks));
-	for (i = 0;i < vid_numjoysticks;i++)
-	{
-		SDL_Joystick *joy;
-		joy = vid_joysticks[i] = SDL_JoystickOpen(i);
-		if (!joy)
-		{
-			Con_Printf("joystick #%i: open failed: %s\n", i, SDL_GetError());
-			continue;
-		}
-		Con_Printf("joystick #%i: opened \"%s\" with %i axes, %i buttons, %i balls\n", i, SDL_JoystickName(i), (int)SDL_JoystickNumAxes(joy), (int)SDL_JoystickNumButtons(joy), (int)SDL_JoystickNumBalls(joy));
-	}
-
 	vid_hidden = false;
 	vid_activewindow = false;
 	vid_hasfocus = true;
@@ -2308,7 +2167,6 @@ extern cvar_t gl_info_driver;
 
 qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
-	int i;
 #if SETVIDEOMODE
 	int flags = SDL_HWSURFACE;
 	if(!COM_CheckParm("-noasyncblit")) flags |= SDL_ASYNCBLIT;
@@ -2388,23 +2246,6 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	VID_Soft_SharedSetup();
 
-	vid_numjoysticks = SDL_NumJoysticks();
-	vid_numjoysticks = bound(0, vid_numjoysticks, MAX_JOYSTICKS);
-	Cvar_SetValueQuick(&joy_detected, vid_numjoysticks);
-	Con_Printf("%d SDL joystick(s) found:\n", vid_numjoysticks);
-	memset(vid_joysticks, 0, sizeof(vid_joysticks));
-	for (i = 0;i < vid_numjoysticks;i++)
-	{
-		SDL_Joystick *joy;
-		joy = vid_joysticks[i] = SDL_JoystickOpen(i);
-		if (!joy)
-		{
-			Con_Printf("joystick #%i: open failed: %s\n", i, SDL_GetError());
-			continue;
-		}
-		Con_Printf("joystick #%i: opened \"%s\" with %i axes, %i buttons, %i balls\n", i, SDL_JoystickName(i), (int)SDL_JoystickNumAxes(joy), (int)SDL_JoystickNumButtons(joy), (int)SDL_JoystickNumBalls(joy));
-	}
-
 	vid_hidden = false;
 	vid_activewindow = false;
 	vid_hasfocus = true;
@@ -2431,6 +2272,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 
 void VID_Shutdown (void)
 {
+	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
