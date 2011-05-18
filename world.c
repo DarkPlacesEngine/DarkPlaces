@@ -2296,7 +2296,7 @@ treatasbox:
 	//VectorCopy(PRVM_gameedictvector(ed, spinvelocity), spinvelocity);
 	VectorCopy(PRVM_gameedictvector(ed, angles), angles);
 	VectorCopy(PRVM_gameedictvector(ed, avelocity), avelocity);
-	if (PRVM_gameedictfloat(ed, gravity) != 0.0f && PRVM_EDICTFIELDFLOAT(ed, gravity) < 0.5f) gravity = false;
+	if (PRVM_gameedictfloat(ed, gravity) != 0.0f && PRVM_gameedictfloat(ed, gravity) < 0.5f) gravity = false;
 	if (ed == prog->edicts)
 		gravity = false;
 
