@@ -1743,6 +1743,8 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 {
 	viddef_mode_t mode;
 
+#if 0
+	// LordHavoc: FIXME: VorteX broke vid_restart with this, it is a mystery why it would ever work, commented out
 	// multisampling should set at least 2 samples
 	if (vid.support.arb_multisample)
 	{
@@ -1750,6 +1752,7 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		if (vid_multisampling.integer)
 			samples = max(2, samples);
 	}
+#endif
 
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
