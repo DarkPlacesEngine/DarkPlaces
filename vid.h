@@ -138,6 +138,33 @@ extern viddef_t vid;
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
 
+#define MAXJOYAXIS 16
+// if this is changed, the corresponding code in vid_shared.c must be updated
+#define MAXJOYBUTTON 36
+typedef struct vid_joystate_s
+{
+	float axis[MAXJOYAXIS]; // -1 to +1
+	unsigned char button[MAXJOYBUTTON]; // 0 or 1
+	qboolean is360; // indicates this joystick is a Microsoft Xbox 360 Controller For Windows
+}
+vid_joystate_t;
+
+extern vid_joystate_t vid_joystate;
+
+extern cvar_t joy_index;
+extern cvar_t joy_enable;
+extern cvar_t joy_detected;
+extern cvar_t joy_active;
+
+float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone);
+void VID_ApplyJoyState(vid_joystate_t *joystate);
+void VID_BuildJoyState(vid_joystate_t *joystate);
+void VID_Shared_BuildJoyState_Begin(vid_joystate_t *joystate);
+void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate);
+int VID_Shared_SetJoystick(int index);
+qboolean VID_JoyBlockEmulatedKeys(int keycode);
+void VID_EnableJoystick(qboolean enable);
+
 extern qboolean vid_hidden;
 extern qboolean vid_activewindow;
 extern cvar_t vid_hardwaregammasupported;

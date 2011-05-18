@@ -11,6 +11,63 @@
 LPDIRECT3DDEVICE9 vid_d3d9dev;
 #endif
 
+#ifdef WIN32
+//#include <XInput.h>
+#define XINPUT_GAMEPAD_DPAD_UP          0x0001
+#define XINPUT_GAMEPAD_DPAD_DOWN        0x0002
+#define XINPUT_GAMEPAD_DPAD_LEFT        0x0004
+#define XINPUT_GAMEPAD_DPAD_RIGHT       0x0008
+#define XINPUT_GAMEPAD_START            0x0010
+#define XINPUT_GAMEPAD_BACK             0x0020
+#define XINPUT_GAMEPAD_LEFT_THUMB       0x0040
+#define XINPUT_GAMEPAD_RIGHT_THUMB      0x0080
+#define XINPUT_GAMEPAD_LEFT_SHOULDER    0x0100
+#define XINPUT_GAMEPAD_RIGHT_SHOULDER   0x0200
+#define XINPUT_GAMEPAD_A                0x1000
+#define XINPUT_GAMEPAD_B                0x2000
+#define XINPUT_GAMEPAD_X                0x4000
+#define XINPUT_GAMEPAD_Y                0x8000
+#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  7849
+#define XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
+#define XINPUT_GAMEPAD_TRIGGER_THRESHOLD    30
+#define XUSER_INDEX_ANY                 0x000000FF
+
+typedef struct xinput_gamepad_s
+{
+	WORD wButtons;
+	BYTE bLeftTrigger;
+	BYTE bRightTrigger;
+	SHORT sThumbLX;
+	SHORT sThumbLY;
+	SHORT sThumbRX;
+	SHORT sThumbRY;
+}
+xinput_gamepad_t;
+
+typedef struct xinput_state_s
+{
+	DWORD dwPacketNumber;
+	xinput_gamepad_t Gamepad;
+}
+xinput_state_t;
+
+typedef struct xinput_keystroke_s
+{
+    WORD    VirtualKey;
+    WCHAR   Unicode;
+    WORD    Flags;
+    BYTE    UserIndex;
+    BYTE    HidCode;
+}
+xinput_keystroke_t;
+
+DWORD (WINAPI *qXInputGetState)(DWORD index, xinput_state_t *state);
+DWORD (WINAPI *qXInputGetKeystroke)(DWORD index, DWORD reserved, xinput_keystroke_t *keystroke);
+
+qboolean vid_xinputinitialized = false;
+int vid_xinputindex = -1;
+#endif
+
 // global video state
 viddef_t vid;
 
@@ -30,6 +87,54 @@ qboolean vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 qboolean vid_activewindow = true;
+
+vid_joystate_t vid_joystate;
+
+#ifdef WIN32
+cvar_t joy_xinputavailable = {CVAR_READONLY, "joy_xinputavailable", "0", "indicates which devices are being reported by the Windows XInput API (first controller = 1, second = 2, third = 4, fourth = 8, added together)"};
+#endif
+cvar_t joy_active = {CVAR_READONLY, "joy_active", "0", "indicates that a joystick is active (detected and enabled)"};
+cvar_t joy_detected = {CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
+cvar_t joy_enable = {CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
+cvar_t joy_index = {0, "joy_index", "0", "selects which joystick to use if you have multiple (0 uses the first controller, 1 uses the second, ...)"};
+cvar_t joy_axisforward = {0, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
+cvar_t joy_axisside = {0, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
+cvar_t joy_axisup = {0, "joy_axisup", "-1", "which joystick axis to query for up/down movement"};
+cvar_t joy_axispitch = {0, "joy_axispitch", "3", "which joystick axis to query for looking up/down"};
+cvar_t joy_axisyaw = {0, "joy_axisyaw", "2", "which joystick axis to query for looking right/left"};
+cvar_t joy_axisroll = {0, "joy_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
+cvar_t joy_deadzoneforward = {0, "joy_deadzoneforward", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneside = {0, "joy_deadzoneside", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneup = {0, "joy_deadzoneup", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzonepitch = {0, "joy_deadzonepitch", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneyaw = {0, "joy_deadzoneyaw", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneroll = {0, "joy_deadzoneroll", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_sensitivityforward = {0, "joy_sensitivityforward", "-1", "movement multiplier"};
+cvar_t joy_sensitivityside = {0, "joy_sensitivityside", "1", "movement multiplier"};
+cvar_t joy_sensitivityup = {0, "joy_sensitivityup", "1", "movement multiplier"};
+cvar_t joy_sensitivitypitch = {0, "joy_sensitivitypitch", "1", "movement multiplier"};
+cvar_t joy_sensitivityyaw = {0, "joy_sensitivityyaw", "-1", "movement multiplier"};
+cvar_t joy_sensitivityroll = {0, "joy_sensitivityroll", "1", "movement multiplier"};
+cvar_t joy_axiskeyevents = {CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
+cvar_t joy_axiskeyevents_deadzone = {CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
+cvar_t joy_x360_axisforward = {0, "joy_x360_axisforward", "1", "which joystick axis to query for forward/backward movement"};
+cvar_t joy_x360_axisside = {0, "joy_x360_axisside", "0", "which joystick axis to query for right/left movement"};
+cvar_t joy_x360_axisup = {0, "joy_x360_axisup", "-1", "which joystick axis to query for up/down movement"};
+cvar_t joy_x360_axispitch = {0, "joy_x360_axispitch", "3", "which joystick axis to query for looking up/down"};
+cvar_t joy_x360_axisyaw = {0, "joy_x360_axisyaw", "2", "which joystick axis to query for looking right/left"};
+cvar_t joy_x360_axisroll = {0, "joy_x360_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
+cvar_t joy_x360_deadzoneforward = {0, "joy_x360_deadzoneforward", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneside = {0, "joy_x360_deadzoneside", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneup = {0, "joy_x360_deadzoneup", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzonepitch = {0, "joy_x360_deadzonepitch", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneyaw = {0, "joy_x360_deadzoneyaw", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneroll = {0, "joy_x360_deadzoneroll", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_sensitivityforward = {0, "joy_x360_sensitivityforward", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivityside = {0, "joy_x360_sensitivityside", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivityup = {0, "joy_x360_sensitivityup", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivitypitch = {0, "joy_x360_sensitivitypitch", "-1", "movement multiplier"};
+cvar_t joy_x360_sensitivityyaw = {0, "joy_x360_sensitivityyaw", "-1", "movement multiplier"};
+cvar_t joy_x360_sensitivityroll = {0, "joy_x360_sensitivityroll", "1", "movement multiplier"};
 
 // cvars for DPSOFTRAST
 cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
@@ -1010,6 +1115,271 @@ void VID_CheckExtensions(void)
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 }
 
+float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone)
+{
+	float value;
+	value = (axis >= 0 && axis < MAXJOYAXIS) ? joystate->axis[axis] : 0.0f;
+	value = value > deadzone ? (value - deadzone) : (value < -deadzone ? (value + deadzone) : 0.0f);
+	value *= deadzone > 0 ? (1.0f / (1.0f - deadzone)) : 1.0f;
+	value = bound(-1, value, 1);
+	return value * sensitivity;
+}
+
+qboolean VID_JoyBlockEmulatedKeys(int keycode)
+{
+	int j;
+	vid_joystate_t joystate;
+
+	if (!joy_axiskeyevents.integer)
+		return false;
+	if (vid_joystate.is360)
+		return false;
+	if (keycode != K_UPARROW && keycode != K_DOWNARROW && keycode != K_RIGHTARROW && keycode != K_LEFTARROW)
+		return false;
+
+	// block system-generated key events for arrow keys if we're emulating the arrow keys ourselves
+	VID_BuildJoyState(&joystate);
+	for (j = 32;j < 36;j++)
+		if (vid_joystate.button[j] || joystate.button[j])
+			return true;
+
+	return false;
+}
+
+void VID_Shared_BuildJoyState_Begin(vid_joystate_t *joystate)
+{
+#ifdef WIN32
+	xinput_state_t xinputstate;
+#endif
+	memset(joystate, 0, sizeof(*joystate));
+#ifdef WIN32
+	if (vid_xinputindex >= 0 && qXInputGetState && qXInputGetState(vid_xinputindex, &xinputstate) == S_OK)
+	{
+		joystate->is360 = true;
+		joystate->button[ 0] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) != 0;
+		joystate->button[ 1] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) != 0;
+		joystate->button[ 2] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) != 0;
+		joystate->button[ 3] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) != 0;
+		joystate->button[ 4] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_START) != 0;
+		joystate->button[ 5] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_BACK) != 0;
+		joystate->button[ 6] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB) != 0;
+		joystate->button[ 7] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) != 0;
+		joystate->button[ 8] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
+		joystate->button[ 9] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) != 0;
+		joystate->button[10] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_A) != 0;
+		joystate->button[11] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_B) != 0;
+		joystate->button[12] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_X) != 0;
+		joystate->button[13] = (xinputstate.Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
+		joystate->button[14] = xinputstate.Gamepad.bLeftTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+		joystate->button[15] = xinputstate.Gamepad.bRightTrigger >= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+		joystate->button[16] = xinputstate.Gamepad.sThumbLY < -16384;
+		joystate->button[17] = xinputstate.Gamepad.sThumbLY >  16384;
+		joystate->button[18] = xinputstate.Gamepad.sThumbLX < -16384;
+		joystate->button[19] = xinputstate.Gamepad.sThumbLX >  16384;
+		joystate->button[20] = xinputstate.Gamepad.sThumbRY < -16384;
+		joystate->button[21] = xinputstate.Gamepad.sThumbRY >  16384;
+		joystate->button[22] = xinputstate.Gamepad.sThumbRX < -16384;
+		joystate->button[23] = xinputstate.Gamepad.sThumbRX >  16384;
+		joystate->axis[ 4] = xinputstate.Gamepad.bLeftTrigger * (1.0f / 255.0f);
+		joystate->axis[ 5] = xinputstate.Gamepad.bRightTrigger * (1.0f / 255.0f);
+		joystate->axis[ 0] = xinputstate.Gamepad.sThumbLX * (1.0f / 32767.0f);
+		joystate->axis[ 1] = xinputstate.Gamepad.sThumbLY * (1.0f / 32767.0f);
+		joystate->axis[ 2] = xinputstate.Gamepad.sThumbRX * (1.0f / 32767.0f);
+		joystate->axis[ 3] = xinputstate.Gamepad.sThumbRY * (1.0f / 32767.0f);
+	}
+#endif
+}
+
+void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
+{
+	float f, r;
+	if (!joy_axiskeyevents.integer || joystate->is360)
+		return;
+	// emulate key events for thumbstick
+	f = VID_JoyState_GetAxis(joystate, joy_axisforward.integer, 1, joy_axiskeyevents_deadzone.value) * joy_sensitivityforward.value;
+	r = VID_JoyState_GetAxis(joystate, joy_axisside.integer   , 1, joy_axiskeyevents_deadzone.value) * joy_sensitivityside.value;
+#if MAXJOYBUTTON != 36
+#error this code must be updated if MAXJOYBUTTON changes!
+#endif
+	joystate->button[32] = f > 0.0f;
+	joystate->button[33] = f < 0.0f;
+	joystate->button[34] = r > 0.0f;
+	joystate->button[35] = r < 0.0f;
+
+}
+
+void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
+{
+	if (oldbutton)
+	{
+		if (newbutton)
+		{
+			if (realtime >= *timer)
+			{
+				Key_Event(key, 0, true);
+				*timer = realtime + 0.1;
+			}
+		}
+		else
+		{
+			Key_Event(key, 0, false);
+			*timer = 0;
+		}
+	}
+	else
+	{
+		if (newbutton)
+		{
+			Key_Event(key, 0, true);
+			*timer = realtime + 0.5;
+		}
+	}
+}
+
+#if MAXJOYBUTTON != 36
+#error this code must be updated if MAXJOYBUTTON changes!
+#endif
+static int joybuttonkey[MAXJOYBUTTON] =
+{
+	K_JOY1, K_JOY2, K_JOY3, K_JOY4,	K_JOY5, K_JOY6, K_JOY7, K_JOY8,	K_JOY9, K_JOY10, K_JOY11, K_JOY12,	K_JOY13, K_JOY14, K_JOY15, K_JOY16,
+	K_AUX1, K_AUX2, K_AUX3, K_AUX4,	K_AUX5, K_AUX6, K_AUX7, K_AUX8,	K_AUX9, K_AUX10, K_AUX11, K_AUX12,	K_AUX13, K_AUX14, K_AUX15, K_AUX16,
+	K_UPARROW, K_DOWNARROW, K_RIGHTARROW, K_LEFTARROW
+};
+
+static int joybuttonkey360[] =
+{
+	K_X360_DPAD_UP,
+	K_X360_DPAD_DOWN,
+	K_X360_DPAD_LEFT,
+	K_X360_DPAD_RIGHT,
+	K_X360_START,
+	K_X360_BACK,
+	K_X360_LEFT_THUMB,
+	K_X360_RIGHT_THUMB,
+	K_X360_LEFT_SHOULDER,
+	K_X360_RIGHT_SHOULDER,
+	K_X360_A,
+	K_X360_B,
+	K_X360_X,
+	K_X360_Y,
+	K_X360_LEFT_TRIGGER,
+	K_X360_RIGHT_TRIGGER,
+	K_X360_LEFT_THUMB_DOWN,
+	K_X360_LEFT_THUMB_UP,
+	K_X360_LEFT_THUMB_LEFT,
+	K_X360_LEFT_THUMB_RIGHT,
+	K_X360_RIGHT_THUMB_DOWN,
+	K_X360_RIGHT_THUMB_UP,
+	K_X360_RIGHT_THUMB_LEFT,
+	K_X360_RIGHT_THUMB_RIGHT,
+};
+
+static int joybuttonkey360menu[] =
+{
+	K_UPARROW,
+	K_DOWNARROW,
+	K_LEFTARROW,
+	K_RIGHTARROW,
+	K_PAUSE,
+	K_ESCAPE,
+	0,
+	0,
+	0,
+	0,
+	K_ENTER,
+	K_ESCAPE,
+	0,
+	0,
+	0,
+	0,
+	K_DOWNARROW,
+	K_UPARROW,
+	K_LEFTARROW,
+	K_RIGHTARROW,
+	0,
+	0,
+	0,
+	0,
+};
+
+double vid_joybuttontimer[MAXJOYBUTTON];
+void VID_ApplyJoyState(vid_joystate_t *joystate)
+{
+	int j;
+	if (joystate->is360)
+	{
+#if 0
+		// keystrokes (chatpad)
+		// DOES NOT WORK - no driver support in xinput1_3.dll :(
+		xinput_keystroke_t keystroke;
+		while (qXInputGetKeystroke && qXInputGetKeystroke(XUSER_INDEX_ANY, 0, &keystroke) == S_OK)
+			Con_Printf("XInput KeyStroke: VirtualKey %i, Unicode %i, Flags %x, UserIndex %i, HidCode %i\n", keystroke.VirtualKey, keystroke.Unicode, keystroke.Flags, keystroke.UserIndex, keystroke.HidCode);
+#endif
+
+		// emit key events for buttons
+		for (j = 0;j < (int)(sizeof(joybuttonkey360)/sizeof(joybuttonkey360[0]));j++)
+			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, key_dest == key_menu ? joybuttonkey360menu[j] : joybuttonkey360[j], &vid_joybuttontimer[j]);
+
+		// axes
+		cl.cmd.forwardmove += VID_JoyState_GetAxis(joystate, joy_x360_axisforward.integer, joy_x360_sensitivityforward.value, joy_x360_deadzoneforward.value) * cl_forwardspeed.value;
+		cl.cmd.sidemove    += VID_JoyState_GetAxis(joystate, joy_x360_axisside.integer, joy_x360_sensitivityside.value, joy_x360_deadzoneside.value) * cl_sidespeed.value;
+		cl.cmd.upmove      += VID_JoyState_GetAxis(joystate, joy_x360_axisup.integer, joy_x360_sensitivityup.value, joy_x360_deadzoneup.value) * cl_upspeed.value;
+		cl.viewangles[0]   += VID_JoyState_GetAxis(joystate, joy_x360_axispitch.integer, joy_x360_sensitivitypitch.value, joy_x360_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
+		cl.viewangles[1]   += VID_JoyState_GetAxis(joystate, joy_x360_axisyaw.integer, joy_x360_sensitivityyaw.value, joy_x360_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
+		//cl.viewangles[2]   += VID_JoyState_GetAxis(joystate, joy_x360_axisroll.integer, joy_x360_sensitivityroll.value, joy_x360_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
+	}
+	else
+	{
+		// emit key events for buttons
+		for (j = 0;j < MAXJOYBUTTON;j++)
+			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, joybuttonkey[j], &vid_joybuttontimer[j]);
+
+		// axes
+		cl.cmd.forwardmove += VID_JoyState_GetAxis(joystate, joy_axisforward.integer, joy_sensitivityforward.value, joy_deadzoneforward.value) * cl_forwardspeed.value;
+		cl.cmd.sidemove    += VID_JoyState_GetAxis(joystate, joy_axisside.integer, joy_sensitivityside.value, joy_deadzoneside.value) * cl_sidespeed.value;
+		cl.cmd.upmove      += VID_JoyState_GetAxis(joystate, joy_axisup.integer, joy_sensitivityup.value, joy_deadzoneup.value) * cl_upspeed.value;
+		cl.viewangles[0]   += VID_JoyState_GetAxis(joystate, joy_axispitch.integer, joy_sensitivitypitch.value, joy_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
+		cl.viewangles[1]   += VID_JoyState_GetAxis(joystate, joy_axisyaw.integer, joy_sensitivityyaw.value, joy_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
+		//cl.viewangles[2]   += VID_JoyState_GetAxis(joystate, joy_axisroll.integer, joy_sensitivityroll.value, joy_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
+	}
+
+	vid_joystate = *joystate;
+}
+
+int VID_Shared_SetJoystick(int index)
+{
+#ifdef WIN32
+	int i;
+	int xinputcount = 0;
+	int xinputindex = -1;
+	int xinputavailable = 0;
+	xinput_state_t state;
+	// detect available XInput controllers
+	for (i = 0;i < 4;i++)
+	{
+		if (qXInputGetState && qXInputGetState(i, &state) == S_OK)
+		{
+			xinputavailable |= 1<<i;
+			if (index == xinputcount)
+				xinputindex = i;
+			xinputcount++;
+		}
+	}
+	if (joy_xinputavailable.integer != xinputavailable)
+		Cvar_SetValueQuick(&joy_xinputavailable, xinputavailable);
+	if (vid_xinputindex != xinputindex)
+	{
+		vid_xinputindex = xinputindex;
+		if (xinputindex >= 0)
+			Con_Printf("Joystick %i opened (XInput Device %i)\n", index, xinputindex);
+	}
+	return xinputcount;
+#else
+	return 0;
+#endif
+}
+
+
 void Force_CenterView_f (void)
 {
 	cl.viewangles[PITCH] = 0;
@@ -1232,6 +1602,23 @@ void VID_RestoreSystemGamma(void)
 	}
 }
 
+#ifdef WIN32
+static dllfunction_t xinputdllfuncs[] =
+{
+	{"XInputGetState", (void **) &qXInputGetState},
+	{"XInputGetKeystroke", (void **) &qXInputGetKeystroke},
+	{NULL, NULL}
+};
+static const char* xinputdllnames [] =
+{
+	"xinput1_3.dll",
+	"xinput1_2.dll",
+	"xinput1_1.dll",
+	NULL
+};
+static dllhandle_t xinputdll_dll = NULL;
+#endif
+
 void VID_Shared_Init(void)
 {
 #ifdef SSE_POSSIBLE
@@ -1297,6 +1684,57 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_gl20);
 	Cvar_RegisterVariable(&gl_finish);
 	Cvar_RegisterVariable(&vid_sRGB);
+
+	Cvar_RegisterVariable(&joy_active);
+#ifdef WIN32
+	Cvar_RegisterVariable(&joy_xinputavailable);
+#endif
+	Cvar_RegisterVariable(&joy_detected);
+	Cvar_RegisterVariable(&joy_enable);
+	Cvar_RegisterVariable(&joy_index);
+	Cvar_RegisterVariable(&joy_axisforward);
+	Cvar_RegisterVariable(&joy_axisside);
+	Cvar_RegisterVariable(&joy_axisup);
+	Cvar_RegisterVariable(&joy_axispitch);
+	Cvar_RegisterVariable(&joy_axisyaw);
+	//Cvar_RegisterVariable(&joy_axisroll);
+	Cvar_RegisterVariable(&joy_deadzoneforward);
+	Cvar_RegisterVariable(&joy_deadzoneside);
+	Cvar_RegisterVariable(&joy_deadzoneup);
+	Cvar_RegisterVariable(&joy_deadzonepitch);
+	Cvar_RegisterVariable(&joy_deadzoneyaw);
+	//Cvar_RegisterVariable(&joy_deadzoneroll);
+	Cvar_RegisterVariable(&joy_sensitivityforward);
+	Cvar_RegisterVariable(&joy_sensitivityside);
+	Cvar_RegisterVariable(&joy_sensitivityup);
+	Cvar_RegisterVariable(&joy_sensitivitypitch);
+	Cvar_RegisterVariable(&joy_sensitivityyaw);
+	//Cvar_RegisterVariable(&joy_sensitivityroll);
+	Cvar_RegisterVariable(&joy_axiskeyevents);
+	Cvar_RegisterVariable(&joy_axiskeyevents_deadzone);
+	Cvar_RegisterVariable(&joy_x360_axisforward);
+	Cvar_RegisterVariable(&joy_x360_axisside);
+	Cvar_RegisterVariable(&joy_x360_axisup);
+	Cvar_RegisterVariable(&joy_x360_axispitch);
+	Cvar_RegisterVariable(&joy_x360_axisyaw);
+	//Cvar_RegisterVariable(&joy_x360_axisroll);
+	Cvar_RegisterVariable(&joy_x360_deadzoneforward);
+	Cvar_RegisterVariable(&joy_x360_deadzoneside);
+	Cvar_RegisterVariable(&joy_x360_deadzoneup);
+	Cvar_RegisterVariable(&joy_x360_deadzonepitch);
+	Cvar_RegisterVariable(&joy_x360_deadzoneyaw);
+	//Cvar_RegisterVariable(&joy_x360_deadzoneroll);
+	Cvar_RegisterVariable(&joy_x360_sensitivityforward);
+	Cvar_RegisterVariable(&joy_x360_sensitivityside);
+	Cvar_RegisterVariable(&joy_x360_sensitivityup);
+	Cvar_RegisterVariable(&joy_x360_sensitivitypitch);
+	Cvar_RegisterVariable(&joy_x360_sensitivityyaw);
+	//Cvar_RegisterVariable(&joy_x360_sensitivityroll);
+
+#ifdef WIN32
+	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
+#endif
+
 	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }

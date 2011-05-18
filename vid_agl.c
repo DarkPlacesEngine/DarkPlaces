@@ -396,6 +396,7 @@ void VID_Shutdown(void)
 	if (context == NULL && window == NULL)
 		return;
 
+	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
@@ -1110,8 +1111,34 @@ void Sys_SendKeyEvents(void)
 	}
 }
 
+void VID_BuildJoyState(vid_joystate_t *joystate)
+{
+	VID_Shared_BuildJoyState_Begin(joystate);
+	VID_Shared_BuildJoyState_Finish(joystate);
+}
+
+void VID_EnableJoystick(qboolean enable)
+{
+	int index = joy_enable.integer > 0 ? joy_index.integer : -1;
+	qboolean success = false;
+	int sharedcount = 0;
+	sharedcount = VID_Shared_SetJoystick(index);
+	if (index >= 0 && index < sharedcount)
+		success = true;
+
+	// update cvar containing count of XInput joysticks
+	if (joy_detected.integer != sharedcount)
+		Cvar_SetValueQuick(&joy_detected, sharedcount);
+
+	Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
+}
+
 void IN_Move (void)
 {
+	vid_joystate_t joystate;
+	VID_EnableJoystick(true);
+	VID_BuildJoyState(&joystate);
+	VID_ApplyJoyState(&joystate);
 }
 
 static bool GetDictionaryBoolean(CFDictionaryRef d, const void *key)
