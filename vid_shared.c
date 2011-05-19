@@ -1205,7 +1205,6 @@ void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
 	joystate->button[33] = f < 0.0f;
 	joystate->button[34] = r > 0.0f;
 	joystate->button[35] = r < 0.0f;
-
 }
 
 void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
@@ -1239,73 +1238,46 @@ void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, doub
 #if MAXJOYBUTTON != 36
 #error this code must be updated if MAXJOYBUTTON changes!
 #endif
-static int joybuttonkey[MAXJOYBUTTON] =
+static int joybuttonkey[MAXJOYBUTTON][2] =
 {
-	K_JOY1, K_JOY2, K_JOY3, K_JOY4,	K_JOY5, K_JOY6, K_JOY7, K_JOY8,	K_JOY9, K_JOY10, K_JOY11, K_JOY12,	K_JOY13, K_JOY14, K_JOY15, K_JOY16,
-	K_AUX1, K_AUX2, K_AUX3, K_AUX4,	K_AUX5, K_AUX6, K_AUX7, K_AUX8,	K_AUX9, K_AUX10, K_AUX11, K_AUX12,	K_AUX13, K_AUX14, K_AUX15, K_AUX16,
-	K_UPARROW, K_DOWNARROW, K_RIGHTARROW, K_LEFTARROW
+	{K_JOY1, K_ENTER}, {K_JOY2, K_ESCAPE}, {K_JOY3, 0}, {K_JOY4, 0}, {K_JOY5, 0}, {K_JOY6, 0}, {K_JOY7, 0}, {K_JOY8, 0}, {K_JOY9, 0}, {K_JOY10, 0}, {K_JOY11, 0}, {K_JOY12, 0}, {K_JOY13, 0}, {K_JOY14, 0}, {K_JOY15, 0}, {K_JOY16, 0},
+	{K_AUX1, 0}, {K_AUX2, 0}, {K_AUX3, 0}, {K_AUX4, 0}, {K_AUX5, 0}, {K_AUX6, 0}, {K_AUX7, 0}, {K_AUX8, 0}, {K_AUX9, 0}, {K_AUX10, 0}, {K_AUX11, 0}, {K_AUX12, 0}, {K_AUX13, 0}, {K_AUX14, 0}, {K_AUX15, 0}, {K_AUX16, 0},
+	{K_UPARROW, K_UPARROW}, {K_DOWNARROW, K_DOWNARROW}, {K_RIGHTARROW, K_RIGHTARROW}, {K_LEFTARROW, K_LEFTARROW},
 };
 
-static int joybuttonkey360[] =
+static int joybuttonkey360[][2] =
 {
-	K_X360_DPAD_UP,
-	K_X360_DPAD_DOWN,
-	K_X360_DPAD_LEFT,
-	K_X360_DPAD_RIGHT,
-	K_X360_START,
-	K_X360_BACK,
-	K_X360_LEFT_THUMB,
-	K_X360_RIGHT_THUMB,
-	K_X360_LEFT_SHOULDER,
-	K_X360_RIGHT_SHOULDER,
-	K_X360_A,
-	K_X360_B,
-	K_X360_X,
-	K_X360_Y,
-	K_X360_LEFT_TRIGGER,
-	K_X360_RIGHT_TRIGGER,
-	K_X360_LEFT_THUMB_DOWN,
-	K_X360_LEFT_THUMB_UP,
-	K_X360_LEFT_THUMB_LEFT,
-	K_X360_LEFT_THUMB_RIGHT,
-	K_X360_RIGHT_THUMB_DOWN,
-	K_X360_RIGHT_THUMB_UP,
-	K_X360_RIGHT_THUMB_LEFT,
-	K_X360_RIGHT_THUMB_RIGHT,
-};
-
-static int joybuttonkey360menu[] =
-{
-	K_UPARROW,
-	K_DOWNARROW,
-	K_LEFTARROW,
-	K_RIGHTARROW,
-	K_PAUSE,
-	K_ESCAPE,
-	0,
-	0,
-	0,
-	0,
-	K_ENTER,
-	K_ESCAPE,
-	0,
-	0,
-	0,
-	0,
-	K_DOWNARROW,
-	K_UPARROW,
-	K_LEFTARROW,
-	K_RIGHTARROW,
-	0,
-	0,
-	0,
-	0,
+	{K_X360_DPAD_UP, K_UPARROW},
+	{K_X360_DPAD_DOWN, K_DOWNARROW},
+	{K_X360_DPAD_LEFT, K_LEFTARROW},
+	{K_X360_DPAD_RIGHT, K_RIGHTARROW},
+	{K_X360_START, K_ESCAPE},
+	{K_X360_BACK, K_ESCAPE},
+	{K_X360_LEFT_THUMB, 0},
+	{K_X360_RIGHT_THUMB, 0},
+	{K_X360_LEFT_SHOULDER, 0},
+	{K_X360_RIGHT_SHOULDER, 0},
+	{K_X360_A, K_ENTER},
+	{K_X360_B, K_ESCAPE},
+	{K_X360_X, 0},
+	{K_X360_Y, 0},
+	{K_X360_LEFT_TRIGGER, 0},
+	{K_X360_RIGHT_TRIGGER, 0},
+	{K_X360_LEFT_THUMB_DOWN, K_DOWNARROW},
+	{K_X360_LEFT_THUMB_UP, K_UPARROW},
+	{K_X360_LEFT_THUMB_LEFT, K_LEFTARROW},
+	{K_X360_LEFT_THUMB_RIGHT, K_RIGHTARROW},
+	{K_X360_RIGHT_THUMB_DOWN, 0},
+	{K_X360_RIGHT_THUMB_UP, 0},
+	{K_X360_RIGHT_THUMB_LEFT, 0},
+	{K_X360_RIGHT_THUMB_RIGHT, 0},
 };
 
 double vid_joybuttontimer[MAXJOYBUTTON];
 void VID_ApplyJoyState(vid_joystate_t *joystate)
 {
 	int j;
+	int c = joy_axiskeyevents.integer != 0;
 	if (joystate->is360)
 	{
 #if 0
@@ -1318,7 +1290,7 @@ void VID_ApplyJoyState(vid_joystate_t *joystate)
 
 		// emit key events for buttons
 		for (j = 0;j < (int)(sizeof(joybuttonkey360)/sizeof(joybuttonkey360[0]));j++)
-			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, key_dest == key_menu ? joybuttonkey360menu[j] : joybuttonkey360[j], &vid_joybuttontimer[j]);
+			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, joybuttonkey360[j][c], &vid_joybuttontimer[j]);
 
 		// axes
 		cl.cmd.forwardmove += VID_JoyState_GetAxis(joystate, joy_x360_axisforward.integer, joy_x360_sensitivityforward.value, joy_x360_deadzoneforward.value) * cl_forwardspeed.value;
@@ -1332,7 +1304,7 @@ void VID_ApplyJoyState(vid_joystate_t *joystate)
 	{
 		// emit key events for buttons
 		for (j = 0;j < MAXJOYBUTTON;j++)
-			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, joybuttonkey[j], &vid_joybuttontimer[j]);
+			VID_KeyEventForButton(vid_joystate.button[j] != 0, joystate->button[j] != 0, joybuttonkey[j][c], &vid_joybuttontimer[j]);
 
 		// axes
 		cl.cmd.forwardmove += VID_JoyState_GetAxis(joystate, joy_axisforward.integer, joy_sensitivityforward.value, joy_deadzoneforward.value) * cl_forwardspeed.value;
