@@ -214,6 +214,12 @@ typedef enum keynum_e
 	K_X360_RIGHT_THUMB_LEFT,
 	K_X360_RIGHT_THUMB_RIGHT,
 
+	// generic joystick emulation for menu
+	K_JOY_UP,
+	K_JOY_DOWN,
+	K_JOY_LEFT,
+	K_JOY_RIGHT,
+
 	K_MIDINOTE0 = 896, // to this, the note number is added
 	K_MIDINOTE1,
 	K_MIDINOTE2,
