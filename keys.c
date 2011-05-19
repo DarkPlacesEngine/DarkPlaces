@@ -498,6 +498,11 @@ static const keyname_t   keynames[] = {
 	{"X360_RIGHT_THUMB_LEFT", K_X360_RIGHT_THUMB_LEFT},
 	{"X360_RIGHT_THUMB_RIGHT", K_X360_RIGHT_THUMB_RIGHT},
 
+	{"JOY_UP", K_JOY_UP},
+	{"JOY_DOWN", K_JOY_DOWN},
+	{"JOY_LEFT", K_JOY_LEFT},
+	{"JOY_RIGHT", K_JOY_RIGHT},
+
 	{"SEMICOLON", ';'},			// because a raw semicolon separates commands
 	{"TILDE", '~'},
 	{"BACKQUOTE", '`'},
