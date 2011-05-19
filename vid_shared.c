@@ -1193,7 +1193,7 @@ void VID_Shared_BuildJoyState_Begin(vid_joystate_t *joystate)
 void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
 {
 	float f, r;
-	if (!joy_axiskeyevents.integer || joystate->is360)
+	if (joystate->is360)
 		return;
 	// emulate key events for thumbstick
 	f = VID_JoyState_GetAxis(joystate, joy_axisforward.integer, 1, joy_axiskeyevents_deadzone.value) * joy_sensitivityforward.value;
@@ -1242,7 +1242,7 @@ static int joybuttonkey[MAXJOYBUTTON][2] =
 {
 	{K_JOY1, K_ENTER}, {K_JOY2, K_ESCAPE}, {K_JOY3, 0}, {K_JOY4, 0}, {K_JOY5, 0}, {K_JOY6, 0}, {K_JOY7, 0}, {K_JOY8, 0}, {K_JOY9, 0}, {K_JOY10, 0}, {K_JOY11, 0}, {K_JOY12, 0}, {K_JOY13, 0}, {K_JOY14, 0}, {K_JOY15, 0}, {K_JOY16, 0},
 	{K_AUX1, 0}, {K_AUX2, 0}, {K_AUX3, 0}, {K_AUX4, 0}, {K_AUX5, 0}, {K_AUX6, 0}, {K_AUX7, 0}, {K_AUX8, 0}, {K_AUX9, 0}, {K_AUX10, 0}, {K_AUX11, 0}, {K_AUX12, 0}, {K_AUX13, 0}, {K_AUX14, 0}, {K_AUX15, 0}, {K_AUX16, 0},
-	{K_UPARROW, K_UPARROW}, {K_DOWNARROW, K_DOWNARROW}, {K_RIGHTARROW, K_RIGHTARROW}, {K_LEFTARROW, K_LEFTARROW},
+	{K_JOY_UP, K_UPARROW}, {K_JOY_DOWN, K_DOWNARROW}, {K_JOY_RIGHT, K_RIGHTARROW}, {K_JOY_LEFT, K_LEFTARROW},
 };
 
 static int joybuttonkey360[][2] =
