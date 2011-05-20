@@ -1824,11 +1824,11 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	}
 }
 
-static cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
+cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
 static cvar_t r_drawparticles_drawdistance = {CVAR_SAVE, "r_drawparticles_drawdistance", "2000", "particles further than drawdistance*size will not be drawn"};
 static cvar_t r_drawparticles_nearclip_min = {CVAR_SAVE, "r_drawparticles_nearclip_min", "4", "particles closer than drawnearclip_min will not be drawn"};
 static cvar_t r_drawparticles_nearclip_max = {CVAR_SAVE, "r_drawparticles_nearclip_max", "4", "particles closer than drawnearclip_min will be faded"};
-static cvar_t r_drawdecals = {0, "r_drawdecals", "1", "enables drawing of decals"};
+cvar_t r_drawdecals = {0, "r_drawdecals", "1", "enables drawing of decals"};
 static cvar_t r_drawdecals_drawdistance = {CVAR_SAVE, "r_drawdecals_drawdistance", "500", "decals further than drawdistance*size will not be drawn"};
 
 #define PARTICLETEXTURESIZE 64
