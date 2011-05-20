@@ -458,6 +458,7 @@ vector (vector v) cs_project = #311;
 void(float width, vector pos1, vector pos2, float flag) drawline = #315;
 float(string name) iscachedpic = #316;
 string(string name, float trywad) precache_pic = #317;
+string(string name) precache_cubemap = #317;
 vector(string picname) draw_getimagesize = #318;
 void(string name) freepic = #319;
 float(vector position, float character, vector scale, vector rgb, float alpha, float flag) drawcharacter = #320;
