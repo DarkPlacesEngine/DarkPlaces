@@ -173,6 +173,7 @@ cvar_t r_water_resolutionmultiplier = {CVAR_SAVE, "r_water_resolutionmultiplier"
 cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_water_scissormode = {0, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
+cvar_t r_water_lowquality = {0, "r_water_lowquality", "0", "special option to accelerate water rendering, 1 disables shadows and particles, 2 disables all dynamic lights"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -4164,6 +4165,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_water_refractdistort);
 	Cvar_RegisterVariable(&r_water_reflectdistort);
 	Cvar_RegisterVariable(&r_water_scissormode);
+	Cvar_RegisterVariable(&r_water_lowquality);
+
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_lerplightstyles);
@@ -5545,16 +5548,43 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	}
 }
 
+extern cvar_t r_drawparticles;
+extern cvar_t r_drawdecals;
+
 static void R_Water_ProcessPlanes(void)
 {
 	int myscissor[4];
 	r_refdef_view_t originalview;
 	r_refdef_view_t myview;
-	int planeindex;
+	int planeindex, qualityreduction = 0, old_r_dynamic = 0, old_r_shadows = 0, old_r_worldrtlight = 0, old_r_dlight = 0, old_r_particles = 0, old_r_decals = 0;
 	r_waterstate_waterplane_t *p;
 	vec3_t visorigin;
 
 	originalview = r_refdef.view;
+
+	// lowquality hack, temporarily shut down some cvars and restore afterwards
+	qualityreduction = r_water_lowquality.integer;
+	if (qualityreduction > 0)
+	{
+		if (qualityreduction >= 1)
+		{
+			old_r_shadows = r_shadows.integer;
+			old_r_worldrtlight = r_shadow_realtime_world.integer;
+			old_r_dlight = r_shadow_realtime_dlight.integer;
+			Cvar_SetValueQuick(&r_shadows, 0);
+			Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
+			Cvar_SetValueQuick(&r_shadow_realtime_dlight, 0);
+		}
+		if (qualityreduction >= 2)
+		{
+			old_r_dynamic = r_dynamic.integer;
+			old_r_particles = r_drawparticles.integer;
+			old_r_decals = r_drawdecals.integer;
+			Cvar_SetValueQuick(&r_dynamic, 0);
+			Cvar_SetValueQuick(&r_drawparticles, 0);
+			Cvar_SetValueQuick(&r_drawdecals, 0);
+		}
+	}
 
 	// make sure enough textures are allocated
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
@@ -5735,13 +5765,29 @@ static void R_Water_ProcessPlanes(void)
 	R_ResetViewRendering3D();
 	R_ClearScreen(r_refdef.fogenabled);
 	R_View_Update();
-	return;
+	goto finish;
 error:
 	r_refdef.view = originalview;
 	r_waterstate.renderingscene = false;
 	Cvar_SetValueQuick(&r_water, 0);
 	Con_Printf("R_Water_ProcessPlanes: Error: texture creation failed!  Turned off r_water.\n");
-	return;
+finish:
+	// lowquality hack, restore cvars
+	if (qualityreduction > 0)
+	{
+		if (qualityreduction >= 1)
+		{
+			Cvar_SetValueQuick(&r_shadows, old_r_shadows);
+			Cvar_SetValueQuick(&r_shadow_realtime_world, old_r_worldrtlight);
+			Cvar_SetValueQuick(&r_shadow_realtime_dlight, old_r_dlight);
+		}
+		if (qualityreduction >= 2)
+		{
+			Cvar_SetValueQuick(&r_dynamic, old_r_dynamic);
+			Cvar_SetValueQuick(&r_drawparticles, old_r_particles);
+			Cvar_SetValueQuick(&r_drawdecals, old_r_decals);
+		}
+	}
 }
 
 void R_Bloom_StartFrame(void)

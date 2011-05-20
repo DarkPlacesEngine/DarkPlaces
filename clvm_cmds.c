@@ -4014,7 +4014,7 @@ void VM_CL_RotateMoves(void)
 	 * has to detect input the client sent before it received the origin
 	 * update, but after the warp occurred on the server, and has to adjust
 	 * input appropriately.
-	 */
+    */
 	matrix4x4_t m;
 	vec3_t v = {0, 0, 0};
 	vec3_t x, y, z;
@@ -4022,6 +4022,16 @@ void VM_CL_RotateMoves(void)
 	AngleVectorsFLU(PRVM_G_VECTOR(OFS_PARM0), x, y, z);
 	Matrix4x4_FromVectors(&m, x, y, z, v);
 	CL_RotateMoves(&m);
+}
+
+// #358 void(string cubemapname) loadcubemap
+static void VM_CL_loadcubemap(void)
+{
+	const char *name;
+
+	VM_SAFEPARMCOUNT(1, VM_CL_loadcubemap);
+	name = PRVM_G_STRING(OFS_PARM0);
+	R_GetCubemap(name);
 }
 
 //============================================================================
@@ -4395,7 +4405,7 @@ VM_CL_serverkey,				// #354 string(string key) serverkey (EXT_CSQC)
 VM_CL_videoplaying,				// #355
 VM_findfont,					// #356 float(string fontname) loadfont (DP_GFX_FONTS)
 VM_loadfont,					// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
-NULL,							// #358
+VM_CL_loadcubemap,				// #358 void(string cubemapname) loadcubemap (DP_GFX_)
 NULL,							// #359
 VM_CL_ReadByte,					// #360 float() readbyte (EXT_CSQC)
 VM_CL_ReadChar,					// #361 float() readchar (EXT_CSQC)
