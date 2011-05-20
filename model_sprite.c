@@ -65,6 +65,8 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 		texture->supercontents |= SUPERCONTENTS_OPAQUE;
 }
 
+extern cvar_t gl_texturecompression_sprites;
+
 static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, qboolean additive)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
@@ -77,7 +79,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
-	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_ALPHA | TEXF_CLAMP;
+	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (gl_texturecompression_sprites.integer ? TEXF_COMPRESS : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_ALPHA | TEXF_CLAMP;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
@@ -213,6 +215,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 						else //if (version == SPRITEHL_VERSION || version == SPRITE_VERSION)
 							Image_Copy8bitBGRA(datapointer, pixels, width*height, palette ? palette : palette_bgra_transparent);
 						skinframe = R_SkinFrame_LoadInternalBGRA(name, texflags, pixels, width, height, false);
+						// texflags |= TEXF_COMPRESS;
 						Mem_Free(pixels);
 					}
 				}
