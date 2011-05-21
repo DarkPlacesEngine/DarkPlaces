@@ -206,14 +206,6 @@ cvar_t developer_texturelogging = {0, "developer_texturelogging", "0", "produces
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers)"};
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
-cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* sprites by putting them as indicator at the screen border to rotate to"};
-cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accordingly, 2: Make it a continuous rotation"};
-cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
-cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
-cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "5", "fake perspective effect for SPR_OVERHEAD sprites"};
-cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "15", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
-cvar_t r_overheadsprites_scalex = {CVAR_SAVE, "r_overheadsprites_scalex", "1", "additional scale for overhead sprites for x axis"};
-cvar_t r_overheadsprites_scaley = {CVAR_SAVE, "r_overheadsprites_scaley", "1", "additional scale for overhead sprites for y axis"};
 
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
@@ -4199,15 +4191,6 @@ void GL_Main_Init(void)
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
-
-	Cvar_RegisterVariable(&r_track_sprites);
-	Cvar_RegisterVariable(&r_track_sprites_flags);
-	Cvar_RegisterVariable(&r_track_sprites_scalew);
-	Cvar_RegisterVariable(&r_track_sprites_scaleh);
-	Cvar_RegisterVariable(&r_overheadsprites_perspective);
-	Cvar_RegisterVariable(&r_overheadsprites_pushback);
-	Cvar_RegisterVariable(&r_overheadsprites_scalex);
-	Cvar_RegisterVariable(&r_overheadsprites_scaley);
 }
 
 extern void R_Textures_Init(void);
@@ -4626,6 +4609,8 @@ void R_AnimCache_CacheVisibleEntities(void)
 }
 
 //==================================================================================
+
+extern cvar_t r_overheadsprites_pushback;
 
 static void R_View_UpdateEntityLighting (void)
 {
@@ -5638,7 +5623,6 @@ static void R_Water_ProcessPlanes(void)
 			// update the r_refdef.view.origin because otherwise the sky renders at the wrong location (amongst other problems)
 			Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, r_refdef.view.origin);
 			r_refdef.view.clipplane = p->plane;
-
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
