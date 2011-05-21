@@ -28,6 +28,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1", "mipmaps sprites so they render faster in the distance and do not display noise artifacts"};
 cvar_t r_labelsprites_scale = {CVAR_SAVE, "r_labelsprites_scale", "1", "global scale to apply to label sprites before conversion to HUD coordinates"};
 cvar_t r_labelsprites_roundtopixels = {CVAR_SAVE, "r_labelsprites_roundtopixels", "1", "try to make label sprites sharper by rounding their size to 0.5x or 1x and by rounding their position to whole pixels if possible"};
+cvar_t r_overheadsprites_perspective = {CVAR_SAVE, "r_overheadsprites_perspective", "5", "fake perspective effect for SPR_OVERHEAD sprites"};
+cvar_t r_overheadsprites_pushback = {CVAR_SAVE, "r_overheadsprites_pushback", "15", "how far to pull the SPR_OVERHEAD sprites toward the eye (used to avoid intersections with 3D models)"};
+cvar_t r_overheadsprites_scalex = {CVAR_SAVE, "r_overheadsprites_scalex", "1", "additional scale for overhead sprites for x axis"};
+cvar_t r_overheadsprites_scaley = {CVAR_SAVE, "r_overheadsprites_scaley", "1", "additional scale for overhead sprites for y axis"};
+cvar_t r_track_sprites = {CVAR_SAVE, "r_track_sprites", "1", "track SPR_LABEL* sprites by putting them as indicator at the screen border to rotate to"};
+cvar_t r_track_sprites_flags = {CVAR_SAVE, "r_track_sprites_flags", "1", "1: Rotate sprites accordingly, 2: Make it a continuous rotation"};
+cvar_t r_track_sprites_scalew = {CVAR_SAVE, "r_track_sprites_scalew", "1", "width scaling of tracked sprites"};
+cvar_t r_track_sprites_scaleh = {CVAR_SAVE, "r_track_sprites_scaleh", "1", "height scaling of tracked sprites"};
 
 /*
 ===============
@@ -39,6 +47,14 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_mipsprites);
 	Cvar_RegisterVariable(&r_labelsprites_scale);
 	Cvar_RegisterVariable(&r_labelsprites_roundtopixels);
+	Cvar_RegisterVariable(&r_overheadsprites_perspective);
+	Cvar_RegisterVariable(&r_overheadsprites_pushback);
+	Cvar_RegisterVariable(&r_overheadsprites_scalex);
+	Cvar_RegisterVariable(&r_overheadsprites_scaley);
+	Cvar_RegisterVariable(&r_track_sprites);
+	Cvar_RegisterVariable(&r_track_sprites_flags);
+	Cvar_RegisterVariable(&r_track_sprites_scalew);
+	Cvar_RegisterVariable(&r_track_sprites_scaleh);
 }
 
 static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, qboolean fullbright, qboolean additive)
