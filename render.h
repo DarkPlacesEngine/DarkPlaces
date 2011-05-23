@@ -327,8 +327,8 @@ typedef struct rsurfacestate_s
 	int ent_skinnum;
 	int ent_qwskin;
 	int ent_flags;
-	float ent_shadertime;
 	int ent_alttextures; // used by q1bsp animated textures (pressed buttons)
+	double shadertime; // r_refdef.scene.time - ent->shadertime
 	// transform matrices to render this entity and effects on this entity
 	matrix4x4_t matrix;
 	matrix4x4_t inversematrix;
