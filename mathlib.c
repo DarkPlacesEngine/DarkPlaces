@@ -756,3 +756,12 @@ void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f)
 	}
 }
 
+// LordHavoc: this has to be done right or you get severe precision breakdown
+int LoopingFrameNumberFromDouble(double t, int loopframes)
+{
+	if (loopframes)
+		return (int)(t - floor(t/loopframes)*loopframes);
+	else
+		return (int)t;
+}
+
