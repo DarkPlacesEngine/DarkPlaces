@@ -291,5 +291,7 @@ int Math_atov(const char *s, vec3_t out);
 
 void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f);
 
+int LoopingFrameNumberFromDouble(double t, int loopframes);
+
 #endif
 
