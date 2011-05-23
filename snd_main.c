@@ -1200,6 +1200,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	int first_to_die;
 	int first_life_left, life_left;
 	channel_t* ch;
+	sfx_t *sfx; // use this instead of ch->sfx->, because that is volatile.
 
 // Check for replacement sound, or find the best one to replace
 	first_to_die = -1;
@@ -1224,7 +1225,8 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++)
 	{
 		ch = &channels[ch_idx];
-		if (!ch->sfx)
+		sfx = ch->sfx; // fetch the volatile variable
+		if (!sfx)
 		{
 			// no sound on this channel
 			first_to_die = ch_idx;
@@ -1236,9 +1238,9 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			continue;
 
 		// don't override looped sounds
-		if ((ch->flags & CHANNELFLAG_FORCELOOP) || ch->sfx->loopstart < ch->sfx->total_length)
+		if ((ch->flags & CHANNELFLAG_FORCELOOP) || sfx->loopstart < sfx->total_length)
 			continue;
-		life_left = ch->sfx->total_length - ch->pos;
+		life_left = sfx->total_length - ch->pos;
 
 		if (life_left < first_life_left)
 		{
@@ -1852,6 +1854,7 @@ void S_UpdateAmbientSounds (void)
 	int			ambient_channel;
 	channel_t	*chan;
 	unsigned char		ambientlevels[NUM_AMBIENTS];
+	sfx_t		*sfx;
 
 	memset(ambientlevels, 0, sizeof(ambientlevels));
 	if (cl.worldmodel && cl.worldmodel->brush.AmbientSoundLevelsForPoint)
@@ -1861,7 +1864,8 @@ void S_UpdateAmbientSounds (void)
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
 	{
 		chan = &channels[ambient_channel];
-		if (chan->sfx == NULL || chan->sfx->fetcher == NULL)
+		sfx = chan->sfx; // fetch the volatile variable
+		if (sfx == NULL || sfx->fetcher == NULL)
 			continue;
 
 		vol = (int)ambientlevels[ambient_channel];
