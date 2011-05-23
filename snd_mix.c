@@ -186,6 +186,11 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 	int vol[SND_LISTENERS];
 	const snd_buffer_t *sb;
 	unsigned int i, sb_offset;
+	sfx_t *sfx;
+
+	sfx = ch->sfx; // fetch the volatile variable
+	if (!sfx) // given that this is called by the mixer thread, this never happens, but...
+		return false;
 
 	// move to the stack (do we need to?)
 	for (i = 0;i < SND_LISTENERS;i++)
@@ -199,11 +204,11 @@ static qboolean SND_PaintChannel (channel_t *ch, portable_sampleframe_t *paint, 
 		return false;
 
 	sb_offset = ch->pos;
-	sb = ch->sfx->fetcher->getsb (ch->sfx->fetcher_data, &ch->fetcher_data, &sb_offset, count);
+	sb = sfx->fetcher->getsb (sfx->fetcher_data, &ch->fetcher_data, &sb_offset, count);
 	if (sb == NULL)
 	{
 		Con_DPrintf("SND_PaintChannel: ERROR: can't get sound buffer from sfx \"%s\"\n",
-					ch->sfx->name); // , count); // or add this? FIXME
+					sfx->name); // , count); // or add this? FIXME
 		return false;
 	}
 	else

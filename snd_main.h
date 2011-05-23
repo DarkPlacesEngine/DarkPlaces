@@ -86,7 +86,7 @@ typedef struct channel_s
 {
 	int			listener_volume [SND_LISTENERS];	// 0-65536 volume per speaker
 	int				master_vol;		// 0-65536 master volume
-	sfx_t			*sfx;			// sfx number
+	sfx_t			*sfx;			// pointer to sound sample being used
 	unsigned int	flags;			// cf CHANNELFLAG_* defines
 	int				pos;			// sample position in sfx, negative values delay the start of the sound playback
 	int				entnum;			// to allow overriding a specific sound
