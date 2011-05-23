@@ -7385,7 +7385,7 @@ static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
 static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	double index, f;
-	index = parms[2] + r_refdef.scene.time * parms[3];
+	index = parms[2] + rsurface.shadertime * parms[3];
 	index -= floor(index);
 	switch (func & ((1 << Q3WAVEFUNC_USER_SHIFT) - 1))
 	{
@@ -7421,7 +7421,8 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
 {
 	int w, h, idx;
-	float f;
+	double f;
+	double offsetd[2];
 	float tcmat[12];
 	matrix4x4_t matrix, temp;
 	switch(tcmod->tcmod)
@@ -7440,19 +7441,22 @@ void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *t
 			break;
 		case Q3TCMOD_ROTATE:
 			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * r_refdef.scene.time, 0, 0, 1);
+			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * rsurface.shadertime, 0, 0, 1);
 			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
 			break;
 		case Q3TCMOD_SCALE:
 			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
 			break;
 		case Q3TCMOD_SCROLL:
-			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * r_refdef.scene.time, tcmod->parms[1] * r_refdef.scene.time, 0);
+			// extra care is needed because of precision breakdown with large values of time
+			offsetd[0] = tcmod->parms[0] * rsurface.shadertime;
+			offsetd[1] = tcmod->parms[1] * rsurface.shadertime;
+			Matrix4x4_CreateTranslate(&matrix, offsetd[0] - floor(offsetd[0]), offsetd[1] - floor(offsetd[1]), 0);
 			break;
 		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
 			w = (int) tcmod->parms[0];
 			h = (int) tcmod->parms[1];
-			f = r_refdef.scene.time / (tcmod->parms[2] * w * h);
+			f = rsurface.shadertime / (tcmod->parms[2] * w * h);
 			f = f - floor(f);
 			idx = (int) floor(f * w * h);
 			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
@@ -7530,7 +7534,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		if (model->skinscenes)
 		{
 			if (model->skinscenes[s].framecount > 1)
-				s = model->skinscenes[s].firstframe + (unsigned int) (r_refdef.scene.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+				s = model->skinscenes[s].firstframe + (unsigned int) (rsurface.shadertime * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
 			else
 				s = model->skinscenes[s].firstframe;
 		}
@@ -7541,9 +7545,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
 			if (rsurface.ent_alttextures && t->anim_total[1])
-				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[1]) : 0];
+				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(rsurface.shadertime * 5.0f) % t->anim_total[1]) : 0];
 			else
-				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(r_refdef.scene.time * 5.0f) % t->anim_total[0]) : 0];
+				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(rsurface.shadertime * 5.0f) % t->anim_total[0]) : 0];
 		}
 		texture->currentframe = t;
 	}
@@ -7563,12 +7567,12 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
 		t->currentskinframe = r_qwskincache[i].skinframe;
 		if (t->currentskinframe == NULL)
-			t->currentskinframe = t->skinframes[(unsigned int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
+			t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
 	}
 	else if (t->numskinframes >= 2)
-		t->currentskinframe = t->skinframes[(unsigned int)(t->skinframerate * (cl.time - rsurface.ent_shadertime)) % t->numskinframes];
+		t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
 	if (t->backgroundnumskinframes >= 2)
-		t->backgroundcurrentskinframe = t->backgroundskinframes[(unsigned int)(t->backgroundskinframerate * (cl.time - rsurface.ent_shadertime)) % t->backgroundnumskinframes];
+		t->backgroundcurrentskinframe = t->backgroundskinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundskinframerate, t->backgroundnumskinframes)];
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.colormod[3];
@@ -7813,8 +7817,8 @@ void RSurf_ActiveWorldEntity(void)
 	memset(rsurface.userwavefunc_param, 0, sizeof(rsurface.userwavefunc_param));
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
-	rsurface.ent_shadertime = 0;
 	rsurface.ent_flags = r_refdef.scene.worldentity->flags;
+	rsurface.shadertime = r_refdef.scene.time;
 	rsurface.matrix = identitymatrix;
 	rsurface.inversematrix = identitymatrix;
 	rsurface.matrixscale = 1;
@@ -7924,8 +7928,8 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	memcpy(rsurface.userwavefunc_param, ent->userwavefunc_param, sizeof(rsurface.userwavefunc_param));
 	rsurface.ent_skinnum = ent->skinnum;
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
-	rsurface.ent_shadertime = ent->shadertime;
 	rsurface.ent_flags = ent->flags;
+	rsurface.shadertime = r_refdef.scene.time - ent->shadertime;
 	rsurface.matrix = ent->matrix;
 	rsurface.inversematrix = ent->inversematrix;
 	rsurface.matrixscale = Matrix4x4_ScaleFromMatrix(&rsurface.matrix);
@@ -8093,8 +8097,8 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.skeleton = NULL;
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
-	rsurface.ent_shadertime = shadertime;
 	rsurface.ent_flags = entflags;
+	rsurface.shadertime = r_refdef.scene.time - shadertime;
 	rsurface.modelnumvertices = numvertices;
 	rsurface.modelnumtriangles = numtriangles;
 	rsurface.matrix = *matrix;
@@ -8879,9 +8883,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				float vertex[3];
 				float *normal = rsurface.batchnormal3f + 3*j;
 				VectorScale(rsurface.batchvertex3f + 3*j, 0.98f, vertex);
-				normal[0] = rsurface.batchnormal3f[j*3+0] + deform->parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
-				normal[1] = rsurface.batchnormal3f[j*3+1] + deform->parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
-				normal[2] = rsurface.batchnormal3f[j*3+2] + deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], r_refdef.scene.time * deform->parms[1]);
+				normal[0] = rsurface.batchnormal3f[j*3+0] + deform->parms[0] * noise4f(      vertex[0], vertex[1], vertex[2], rsurface.shadertime * deform->parms[1]);
+				normal[1] = rsurface.batchnormal3f[j*3+1] + deform->parms[0] * noise4f( 98 + vertex[0], vertex[1], vertex[2], rsurface.shadertime * deform->parms[1]);
+				normal[2] = rsurface.batchnormal3f[j*3+2] + deform->parms[0] * noise4f(196 + vertex[0], vertex[1], vertex[2], rsurface.shadertime * deform->parms[1]);
 				VectorNormalize(normal);
 			}
 			if(batchneed & BATCHNEED_ARRAY_VECTOR) // otherwise these can stay NULL
@@ -8945,7 +8949,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 //			rsurface.batchnormal3f_bufferoffset = 0;
 			for (j = 0;j < batchnumvertices;j++)
 			{
-				scale = sin(rsurface.batchtexcoordtexture2f[j*2+0] * deform->parms[0] + r_refdef.scene.time * deform->parms[2]) * deform->parms[1];
+				scale = sin(rsurface.batchtexcoordtexture2f[j*2+0] * deform->parms[0] + rsurface.shadertime * deform->parms[2]) * deform->parms[1];
 				VectorMA(rsurface.batchvertex3f + 3*j, scale, rsurface.batchnormal3f + 3*j, rsurface.batchvertex3f + 3*j);
 			}
 			// if we get here, BATCHNEED_ARRAY_NORMAL is in batchneed, so no need to check
@@ -9039,7 +9043,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
 		amplitude = rsurface.texture->tcmods[0].parms[1];
-		animpos = rsurface.texture->tcmods[0].parms[2] + r_refdef.scene.time * rsurface.texture->tcmods[0].parms[3];
+		animpos = rsurface.texture->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->tcmods[0].parms[3];
 //		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 //		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
 //		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
@@ -10862,10 +10866,10 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 	lifetime = cl_decals_time.value + cl_decals_fadetime.value;
 
 	if (decalsystem->lastupdatetime)
-		frametime = (cl.time - decalsystem->lastupdatetime);
+		frametime = (r_refdef.scene.time - decalsystem->lastupdatetime);
 	else
 		frametime = 0;
-	decalsystem->lastupdatetime = cl.time;
+	decalsystem->lastupdatetime = r_refdef.scene.time;
 	decal = decalsystem->decals;
 	numdecals = decalsystem->numdecals;
 
@@ -10942,7 +10946,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 	else
 		RSurf_ActiveModelEntity(ent, false, false, false);
 
-	decalsystem->lastupdatetime = cl.time;
+	decalsystem->lastupdatetime = r_refdef.scene.time;
 	decal = decalsystem->decals;
 
 	faderate = 1.0f / max(0.001f, cl_decals_fadetime.value);
@@ -11026,7 +11030,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
-		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, rsurface.ent_shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numtris, decalsystem->element3i, decalsystem->element3s, false, false);
+		RSurf_ActiveCustomEntity(&rsurface.matrix, &rsurface.inversematrix, rsurface.ent_flags, ent->shadertime, 1, 1, 1, 1, numdecals*3, decalsystem->vertex3f, decalsystem->texcoord2f, NULL, NULL, NULL, decalsystem->color4f, numtris, decalsystem->element3i, decalsystem->element3s, false, false);
 //		R_Mesh_ResetTextureState();
 		R_Mesh_PrepareVertices_Generic_Arrays(numtris * 3, decalsystem->vertex3f, decalsystem->color4f, decalsystem->texcoord2f);
 		GL_DepthMask(false);
