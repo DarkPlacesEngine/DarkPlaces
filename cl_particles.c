@@ -602,6 +602,12 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	part->color[0] = ((((pcolor1 >> 16) & 0xFF) * l1 + ((pcolor2 >> 16) & 0xFF) * l2) >> 8) & 0xFF;
 	part->color[1] = ((((pcolor1 >>  8) & 0xFF) * l1 + ((pcolor2 >>  8) & 0xFF) * l2) >> 8) & 0xFF;
 	part->color[2] = ((((pcolor1 >>  0) & 0xFF) * l1 + ((pcolor2 >>  0) & 0xFF) * l2) >> 8) & 0xFF;
+	if (vid.sRGB3D)
+	{
+		part->color[0] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[0]) * 256.0f);
+		part->color[1] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[1]) * 256.0f);
+		part->color[2] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[2]) * 256.0f);
+	}
 	part->alpha = palpha;
 	part->alphafade = palphafade;
 	part->staintexnum = staintex;
@@ -758,7 +764,10 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 
 	if (cl_decals_newsystem.integer)
 	{
-		R_DecalSystem_SplatEntities(org, normal, color[0]*(1.0f/255.0f), color[1]*(1.0f/255.0f), color[2]*(1.0f/255.0f), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
+		if (vid.sRGB3D)
+			R_DecalSystem_SplatEntities(org, normal, Image_LinearFloatFromsRGB(color[0]), Image_LinearFloatFromsRGB(color[1]), Image_LinearFloatFromsRGB(color[2]), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
+		else
+			R_DecalSystem_SplatEntities(org, normal, color[0]*(1.0f/255.0f), color[1]*(1.0f/255.0f), color[2]*(1.0f/255.0f), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
 		return;
 	}
 
@@ -780,6 +789,12 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	decal->color[0] = color[0];
 	decal->color[1] = color[1];
 	decal->color[2] = color[2];
+	if (vid.sRGB3D)
+	{
+		decal->color[0] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[0]) * 256.0f);
+		decal->color[1] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[1]) * 256.0f);
+		decal->color[2] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[2]) * 256.0f);
+	}
 	decal->owner = hitent;
 	decal->clusterindex = -1000; // no vis culling unless we're sure
 	if (hitent)

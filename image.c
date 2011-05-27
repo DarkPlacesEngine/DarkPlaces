@@ -804,7 +804,7 @@ void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pi
 	// this math from http://www.opengl.org/registry/specs/EXT/texture_sRGB.txt
 	if (!image_linearfromsrgb[255])
 		for (i = 0;i < 256;i++)
-			image_linearfromsrgb[i] = i < 11 ? (int)(i / 12.92f) : (int)(pow((i/256.0f + 0.055f)/1.0555f, 2.4f)*256.0f);
+			image_linearfromsrgb[i] = (unsigned char)(Image_LinearFloatFromsRGB(i) * 256.0f);
 	for (i = 0;i < numpixels;i++)
 	{
 		pout[i*4+0] = image_linearfromsrgb[pin[i*4+0]];
