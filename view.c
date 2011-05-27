@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#include "image.h"
 
 void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin);
 
@@ -923,10 +924,22 @@ void V_CalcViewBlend(void)
 			a2 = 1 / r_refdef.viewblend[3];
 			VectorScale(r_refdef.viewblend, a2, r_refdef.viewblend);
 		}
-		r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0] * (1.0f/255.0f), 1.0f);
-		r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1] * (1.0f/255.0f), 1.0f);
-		r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2] * (1.0f/255.0f), 1.0f);
+		r_refdef.viewblend[0] = bound(0.0f, r_refdef.viewblend[0], 255.0f);
+		r_refdef.viewblend[1] = bound(0.0f, r_refdef.viewblend[1], 255.0f);
+		r_refdef.viewblend[2] = bound(0.0f, r_refdef.viewblend[2], 255.0f);
 		r_refdef.viewblend[3] = bound(0.0f, r_refdef.viewblend[3] * gl_polyblend.value, 1.0f);
+		if (vid.sRGB3D)
+		{
+			r_refdef.viewblend[0] = Image_LinearFloatFromsRGB(r_refdef.viewblend[0]);
+			r_refdef.viewblend[1] = Image_LinearFloatFromsRGB(r_refdef.viewblend[1]);
+			r_refdef.viewblend[2] = Image_LinearFloatFromsRGB(r_refdef.viewblend[2]);
+		}
+		else
+		{
+			r_refdef.viewblend[0] *= (1.0f/256.0f);
+			r_refdef.viewblend[1] *= (1.0f/256.0f);
+			r_refdef.viewblend[2] *= (1.0f/256.0f);
+		}
 		
 		// Samual: Ugly hack, I know. But it's the best we can do since
 		// there is no way to detect client states from the engine.
