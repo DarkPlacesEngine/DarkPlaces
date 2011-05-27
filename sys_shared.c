@@ -1,14 +1,14 @@
+#ifdef WIN32
+# ifndef DONT_USE_SETDLLDIRECTORY
+#  define _WIN32_WINNT 0x0502
+# endif
+#endif
+
 #include "quakedef.h"
 
 #define SUPPORTDLL
 
 #ifdef WIN32
-# ifdef _WIN64
-#  ifndef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0502
-#  endif
-   // for SetDllDirectory
-# endif
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
@@ -133,13 +133,15 @@ notfound:
 	{
 		Con_DPrintf (" \"%s\"", dllnames[i]);
 #ifdef WIN32
-# ifdef _WIN64
+# ifndef DONT_USE_SETDLLDIRECTORY
+#  ifdef _WIN64
 		SetDllDirectory("bin64");
+#  else
+		SetDllDirectory("bin32");
+#  endif
 # endif
 		dllhandle = LoadLibrary (dllnames[i]);
-# ifdef _WIN64
-		SetDllDirectory(NULL);
-# endif
+		// no need to unset this - we want ALL dlls to be loaded from there, anyway
 #else
 		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
