@@ -108,7 +108,7 @@ cvar_t sv_gameplayfix_multiplethinksperframe = {0, "sv_gameplayfix_multiplethink
 cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses, items, etc) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
 cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems = {0, "sv_gameplayfix_noairborncorpse_allowsuspendeditems", "1", "causes entities sitting ontop of objects that are instantaneously remove to float in midair (special hack to allow a common level design trick for floating items)"};
 cvar_t sv_gameplayfix_nudgeoutofsolid = {0, "sv_gameplayfix_nudgeoutofsolid", "1", "attempts to fix physics errors (where an object ended up in solid for some reason)"};
-cvar_t sv_gameplayfix_nudgeoutofsolid_bias = {0, "sv_gameplayfix_nudgeoutofsolid_bias", "0", "over-correction on nudgeoutofsolid logic, to prevent constant contact"};
+cvar_t sv_gameplayfix_nudgeoutofsolid_separation = {0, "sv_gameplayfix_nudgeoutofsolid_separation", "0.03125", "keep objects this distance apart to prevent collision issues on seams"};
 cvar_t sv_gameplayfix_q2airaccelerate = {0, "sv_gameplayfix_q2airaccelerate", "0", "Quake2-style air acceleration"};
 cvar_t sv_gameplayfix_nogravityonground = {0, "sv_gameplayfix_nogravityonground", "0", "turn off gravity when on ground (to get rid of sliding)"};
 cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1", "fixes a bug in Quake that made setmodel always set the entity box to ('-16 -16 -16', '16 16 16') rather than properly checking the model box, breaks some poorly coded mods"};
@@ -509,7 +509,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse_allowsuspendeditems);
 	Cvar_RegisterVariable (&sv_gameplayfix_nudgeoutofsolid);
-	Cvar_RegisterVariable (&sv_gameplayfix_nudgeoutofsolid_bias);
+	Cvar_RegisterVariable (&sv_gameplayfix_nudgeoutofsolid_separation);
 	Cvar_RegisterVariable (&sv_gameplayfix_q2airaccelerate);
 	Cvar_RegisterVariable (&sv_gameplayfix_nogravityonground);
 	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
