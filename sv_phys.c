@@ -1460,39 +1460,68 @@ Returns true if the push did not result in the entity being teleported by QC cod
 */
 static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink)
 {
+	int solid;
+	int movetype;
 	int type;
 	int bump;
+	vec3_t mins, maxs;
 	vec3_t original, original_velocity;
+	vec3_t start;
 	vec3_t end;
 
-	VectorCopy(ent->fields.server->origin, original);
-	VectorAdd (ent->fields.server->origin, push, end);
+	solid = (int)ent->fields.server->solid;
+	movetype = (int)ent->fields.server->movetype;
+	VectorCopy(ent->fields.server->mins, mins);
+	VectorCopy(ent->fields.server->maxs, maxs);
 
-	if (ent->fields.server->movetype == MOVETYPE_FLYMISSILE)
+	// move start position out of solids
+	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
+	{
+		trace_t stucktrace;
+		vec3_t stuckorigin;
+		vec3_t stuckmins, stuckmaxs;
+		vec_t nudge;
+		vec_t separation = sv_gameplayfix_nudgeoutofsolid_separation.value;
+		if (sv.worldmodel && sv.worldmodel->brushq1.numclipnodes)
+			separation = 0.0f; // when using hulls, it can not be enlarged
+		VectorCopy(ent->fields.server->origin, stuckorigin);
+		VectorCopy(mins, stuckmins);
+		VectorCopy(maxs, stuckmaxs);
+		stuckmins[0] -= separation;
+		stuckmins[1] -= separation;
+		stuckmins[2] -= separation;
+		stuckmaxs[0] += separation;
+		stuckmaxs[1] += separation;
+		stuckmaxs[2] += separation;
+		for (bump = 0;bump < 10;bump++)
+		{
+			stucktrace = SV_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
+			if (!stucktrace.bmodelstartsolid || stucktrace.startdepth >= 0)
+			{
+				// found a good location, use it
+				VectorCopy(stuckorigin, ent->fields.server->origin);
+				break;
+			}
+			nudge = -stucktrace.startdepth;
+			VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
+		}
+	}
+
+	VectorCopy(ent->fields.server->origin, start);
+	VectorAdd(start, push, end);
+
+	if (movetype == MOVETYPE_FLYMISSILE)
 		type = MOVE_MISSILE;
-	else if (ent->fields.server->solid == SOLID_TRIGGER || ent->fields.server->solid == SOLID_NOT)
+	else if (solid == SOLID_TRIGGER || solid == SOLID_NOT)
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else
 		type = MOVE_NORMAL;
 
-	*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
-	bump = 0;
-	while (trace->bmodelstartsolid && sv_gameplayfix_nudgeoutofsolid.integer)
-	{
-		vec_t nudge = -trace->startdepth + sv_gameplayfix_nudgeoutofsolid_bias.value;
-		VectorMA(ent->fields.server->origin, nudge, trace->startdepthnormal, ent->fields.server->origin);
-		*trace = SV_TraceBox(ent->fields.server->origin, ent->fields.server->mins, ent->fields.server->maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
-		bump++;
-		if (bump > 10)
-		{
-			VectorCopy(original, ent->fields.server->origin);
-			break;
-		}
-	}
+	*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent));
 	if (trace->bmodelstartsolid && failonbmodelstartsolid)
 		return true;
 
-	VectorCopy (trace->endpos, ent->fields.server->origin);
+	VectorCopy(trace->endpos, ent->fields.server->origin);
 
 	VectorCopy(ent->fields.server->origin, original);
 	VectorCopy(ent->fields.server->velocity, original_velocity);
