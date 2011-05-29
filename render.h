@@ -54,6 +54,8 @@ extern cvar_t gl_flashblend;
 // vis stuff
 extern cvar_t r_novis;
 
+extern cvar_t r_trippy;
+
 extern cvar_t r_lerpsprites;
 extern cvar_t r_lerpmodels;
 extern cvar_t r_lerplightstyles;
@@ -439,10 +441,10 @@ typedef enum rsurfacepass_e
 }
 rsurfacepass_t;
 
-void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale);
-void R_SetupShader_DepthOrShadow(void);
-void R_SetupShader_ShowDepth(void);
-void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane);
+void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean notrippy);
+void R_SetupShader_DepthOrShadow(qboolean notrippy);
+void R_SetupShader_ShowDepth(qboolean notrippy);
+void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s
