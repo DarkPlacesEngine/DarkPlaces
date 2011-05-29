@@ -2034,7 +2034,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	r_shadow_usingshadowmap2d = false;
 	r_shadow_usingshadowmaportho = false;
 	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
@@ -2056,7 +2056,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 	GL_ColorMask(0, 0, 0, 0);
 	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	GL_CullFace(GL_NONE);
-	R_SetupShader_DepthOrShadow();
+	R_SetupShader_DepthOrShadow(false);
 	r_shadow_rendermode = mode;
 	switch(mode)
 	{
@@ -2168,7 +2168,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	R_Mesh_ResetTextureState();
 	R_Shadow_RenderMode_Reset();
 	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
-	R_SetupShader_DepthOrShadow();
+	R_SetupShader_DepthOrShadow(true);
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
@@ -2968,7 +2968,7 @@ int bboxedges[12][2] =
 
 qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
-	if (!r_shadow_scissor.integer || r_shadow_usingdeferredprepass)
+	if (!r_shadow_scissor.integer || r_shadow_usingdeferredprepass || r_trippy.integer)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
 		r_shadow_lightscissor[1] = r_refdef.view.viewport.y;
@@ -3167,7 +3167,7 @@ static void R_Shadow_RenderLighting_VisibleLighting(int texturenumsurfaces, cons
 static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t lightcolor, float ambientscale, float diffusescale, float specularscale)
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
-	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL);
+	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 	{
 		GL_DepthFunc(GL_EQUAL);
@@ -3637,6 +3637,9 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 	// see rtlight->cached_frustumplanes definition for how much this array
 	// can hold
 	rtlight->cached_numfrustumplanes = 0;
+
+	if (r_trippy.integer)
+		return;
 
 	// haven't implemented a culling path for ortho rendering
 	if (!r_refdef.view.useperspective)
@@ -4918,7 +4921,7 @@ void R_DrawModelShadowMaps(void)
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
 	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
-	R_SetupShader_DepthOrShadow();
+	R_SetupShader_DepthOrShadow(true);
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
@@ -4939,7 +4942,7 @@ void R_DrawModelShadowMaps(void)
 #if 0
 	// debugging
 	R_Mesh_SetMainRenderTargets();
-	R_SetupShader_ShowDepth();
+	R_SetupShader_ShowDepth(true);
 	GL_ColorMask(1,1,1,1);
 	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
 #endif
@@ -5140,7 +5143,7 @@ void R_DrawModelShadows(void)
 
 	// apply the blend to the shadowed areas
 	R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 
 	// restore the viewport
@@ -5370,7 +5373,7 @@ void R_Shadow_DrawCoronas(void)
 			GL_PolygonOffset(0, 0);
 			GL_DepthTest(true);
 			R_Mesh_ResetTextureState();
-			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 		}
 		break;
 	case RENDERPATH_D3D9:

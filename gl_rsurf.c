@@ -362,7 +362,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
 	R_Mesh_PrepareVertices_Generic_Arrays(numpoints, vertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
@@ -446,7 +446,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
-		if (!viewleaf || viewleaf->clusterindex < 0 || forcenovis)
+		if (!viewleaf || viewleaf->clusterindex < 0 || forcenovis || r_trippy.integer)
 		{
 			// no visibility method: (used when floating around in the void)
 			// simply cull each leaf to the frustum (view pyramid)
@@ -454,6 +454,8 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			r_refdef.viewcache.world_novis = true;
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
+				if (leaf->clusterindex < 0)
+					continue;
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (!R_CullBox(leaf->mins, leaf->maxs))
 				{
@@ -475,6 +477,8 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			// similar to quake's RecursiveWorldNode but without cache misses
 			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
+				if (leaf->clusterindex < 0)
+					continue;
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 				{
@@ -506,6 +510,8 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			{
 				leaf = leafstack[--leafstackpos];
 				if (r_refdef.viewcache.world_leafvisible[leaf - model->brush.data_leafs])
+					continue;
+				if (leaf->clusterindex < 0)
 					continue;
 				r_refdef.stats.world_leafs++;
 				r_refdef.viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
@@ -629,7 +635,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 //	R_Mesh_ResetTextureState();
-	R_SetupShader_DepthOrShadow();
+	R_SetupShader_DepthOrShadow(false);
 	if (ent == r_refdef.scene.worldentity)
 		R_DrawWorldSurfaces(false, false, true, false, false);
 	else

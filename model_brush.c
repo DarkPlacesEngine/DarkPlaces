@@ -38,6 +38,7 @@ cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolera
 cvar_t r_subdivisions_collision_mintess = {0, "r_subdivisions_collision_mintess", "0", "minimum number of subdivisions (values above 0 will smooth curves that don't need it)"};
 cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess", "1024", "maximum number of subdivisions (prevents curves beyond a certain detail level, limits smoothing)"};
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
+cvar_t r_trippy = {0, "r_trippy", "0", "easter egg"};
 cvar_t mod_noshader_default_offsetmapping = {CVAR_SAVE, "mod_noshader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces that are not using q3 shader files"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
 cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "16", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
@@ -75,6 +76,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_subdivisions_collision_mintess);
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxtess);
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxvertices);
+	Cvar_RegisterVariable(&r_trippy);
 	Cvar_RegisterVariable(&mod_noshader_default_offsetmapping);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions_stride);
@@ -3567,7 +3569,7 @@ static int Mod_Q1BSP_FatPVS(dp_model_t *model, const vec3_t org, vec_t radius, u
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !model->brush.num_pvsclusters || !Mod_Q1BSP_GetPVS(model, org))
+	if (r_novis.integer || r_trippy.integer || !model->brush.num_pvsclusters || !Mod_Q1BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;

@@ -1610,7 +1610,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			ed = PRVM_EDICT_NUM(s->number);
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !r_novis.integer && sv.writeentitiestoclient_pvsbytes)
+			if (sv_cullentities_pvs.integer && !r_novis.integer && !r_trippy.integer && sv.writeentitiestoclient_pvsbytes)
 			{
 				if (ed->priv.server->pvs_numclusters < 0)
 				{
@@ -1637,7 +1637,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			}
 
 			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel->brush.TraceLineOfSight)
+			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel->brush.TraceLineOfSight && !r_trippy.integer)
 			{
 				int samples =
 					s->number <= svs.maxclients
