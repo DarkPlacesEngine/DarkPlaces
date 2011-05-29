@@ -2006,7 +2006,7 @@ static void SCR_DrawLoadingStack(void)
 		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[12], &colors[13], &colors[14]);  colors[15] = 1;
 
 		R_Mesh_PrepareVertices_Generic_Arrays(4, verts, colors, NULL);
-		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 
 		// make sure everything is cleared, including the progress indicator
@@ -2105,11 +2105,11 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	if(loadingscreentexture)
 	{
 		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
-		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
-	R_SetupShader_Generic(Draw_GetPicTexture(loadingscreenpic), NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(Draw_GetPicTexture(loadingscreenpic), NULL, GL_MODULATE, 1, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	SCR_DrawLoadingStack();
 }

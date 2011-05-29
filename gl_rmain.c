@@ -670,6 +670,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 	{"#define USEBOUNCEGRID\n", " bouncegrid"},
 	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"},
+	{"#define USETRIPPY\n", " trippy"},
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
@@ -1892,15 +1893,29 @@ void R_GLSL_DumpShader_f(void)
 		Con_Printf("failed to write to hlsl/default.hlsl\n");
 }
 
-void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale)
+void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean notrippy)
 {
+	unsigned int permutation = 0;
+	if (r_trippy.integer && !notrippy)
+		permutation |= SHADERPERMUTATION_TRIPPY;
+	permutation |= SHADERPERMUTATION_VIEWTINT;
+	if (first)
+		permutation |= SHADERPERMUTATION_DIFFUSE;
+	if (second)
+		permutation |= SHADERPERMUTATION_SPECULAR;
+	if (texturemode == GL_MODULATE)
+		permutation |= SHADERPERMUTATION_COLORMAPPING;
+	else if (texturemode == GL_ADD)
+		permutation |= SHADERPERMUTATION_GLOW;
+	else if (texturemode == GL_DECAL)
+		permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 	if (!second)
 		texturemode = GL_MODULATE;
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-		R_SetupShader_SetPermutationHLSL(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		R_SetupShader_SetPermutationHLSL(SHADERMODE_GENERIC, permutation);
 		R_Mesh_TexBind(GL20TU_FIRST , first );
 		R_Mesh_TexBind(GL20TU_SECOND, second);
 #endif
@@ -1913,7 +1928,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, permutation);
 		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
 		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
 		break;
@@ -1929,20 +1944,23 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		R_Mesh_TexBind(0, first );
 		break;
 	case RENDERPATH_SOFT:
-		R_SetupShader_SetPermutationSoft(SHADERMODE_GENERIC, SHADERPERMUTATION_VIEWTINT | (first ? SHADERPERMUTATION_DIFFUSE : 0) | (second ? SHADERPERMUTATION_SPECULAR : 0) | (texturemode == GL_MODULATE ? SHADERPERMUTATION_COLORMAPPING : (texturemode == GL_ADD ? SHADERPERMUTATION_GLOW : (texturemode == GL_DECAL ? SHADERPERMUTATION_VERTEXTEXTUREBLEND : 0))));
+		R_SetupShader_SetPermutationSoft(SHADERMODE_GENERIC, permutation);
 		R_Mesh_TexBind(GL20TU_FIRST , first );
 		R_Mesh_TexBind(GL20TU_SECOND, second);
 		break;
 	}
 }
 
-void R_SetupShader_DepthOrShadow(void)
+void R_SetupShader_DepthOrShadow(qboolean notrippy)
 {
+	unsigned int permutation = 0;
+	if (r_trippy.integer && !notrippy)
+		permutation |= SHADERPERMUTATION_TRIPPY;
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-		R_SetupShader_SetPermutationHLSL(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		R_SetupShader_SetPermutationHLSL(SHADERMODE_DEPTH_OR_SHADOW, permutation);
 #endif
 		break;
 	case RENDERPATH_D3D10:
@@ -1953,7 +1971,7 @@ void R_SetupShader_DepthOrShadow(void)
 		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, permutation);
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
@@ -1964,18 +1982,23 @@ void R_SetupShader_DepthOrShadow(void)
 		R_Mesh_TexBind(0, 0);
 		break;
 	case RENDERPATH_SOFT:
-		R_SetupShader_SetPermutationSoft(SHADERMODE_DEPTH_OR_SHADOW, 0);
+		R_SetupShader_SetPermutationSoft(SHADERMODE_DEPTH_OR_SHADOW, permutation);
 		break;
 	}
 }
 
-void R_SetupShader_ShowDepth(void)
+void R_SetupShader_ShowDepth(qboolean notrippy)
 {
+	int permutation = 0;
+	if (r_trippy.integer && !notrippy)
+		permutation |= SHADERPERMUTATION_TRIPPY;
+	if (r_trippy.integer)
+		permutation |= SHADERPERMUTATION_TRIPPY;
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTHLSL
-		R_SetupShader_SetPermutationHLSL(SHADERMODE_SHOWDEPTH, 0);
+		R_SetupShader_SetPermutationHLSL(SHADERMODE_SHOWDEPTH, permutation);
 #endif
 		break;
 	case RENDERPATH_D3D10:
@@ -1986,7 +2009,7 @@ void R_SetupShader_ShowDepth(void)
 		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, 0);
+		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, permutation);
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
@@ -1994,7 +2017,7 @@ void R_SetupShader_ShowDepth(void)
 	case RENDERPATH_GL11:
 		break;
 	case RENDERPATH_SOFT:
-		R_SetupShader_SetPermutationSoft(SHADERMODE_SHOWDEPTH, 0);
+		R_SetupShader_SetPermutationSoft(SHADERMODE_SHOWDEPTH, permutation);
 		break;
 	}
 }
@@ -2070,7 +2093,7 @@ static int R_BlendFuncFlags(int src, int dst)
 	return r;
 }
 
-void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane)
+void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qboolean notrippy)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -2084,6 +2107,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	float m16f[16];
 	matrix4x4_t tempmatrix;
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
+	if (r_trippy.integer && !notrippy)
+		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		permutation |= SHADERPERMUTATION_ALPHAKILL;
 	if (rsurface.texture->r_water_waterscroll[0] && rsurface.texture->r_water_waterscroll[1])
@@ -4261,6 +4286,8 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 {
 	int i;
 	mplane_t *p;
+	if (r_trippy.integer)
+		return false;
 	for (i = 0;i < r_refdef.view.numfrustumplanes;i++)
 	{
 		// skip nearclip plane, it often culls portals when you are very close, and is almost never useful
@@ -4311,6 +4338,8 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 {
 	int i;
 	const mplane_t *p;
+	if (r_trippy.integer)
+		return false;
 	for (i = 0;i < numplanes;i++)
 	{
 		p = planes + i;
@@ -4794,7 +4823,7 @@ static void R_View_UpdateEntityVisible (void)
 			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
 		}
 	}
-	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane)
+	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane && !r_trippy.integer)
 		// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
 	{
 		for (i = 0;i < r_refdef.scene.numentities;i++)
@@ -6019,7 +6048,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 		break;
 	}
 	// TODO: do boxfilter scale-down in shader?
-	R_SetupShader_Generic(r_bloomstate.texture_screen, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(r_bloomstate.texture_screen, NULL, GL_MODULATE, 1, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
@@ -6055,7 +6084,7 @@ void R_Bloom_MakeTexture(void)
 		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 		GL_Color(r,r,r,1);
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_bloomstate.bloomtexcoord2f);
-		R_SetupShader_Generic(r_bloomstate.texture_bloom, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(r_bloomstate.texture_bloom, NULL, GL_MODULATE, 1, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 		r_refdef.stats.bloom_drawpixels += r_bloomstate.bloomwidth * r_bloomstate.bloomheight;
 
@@ -6071,7 +6100,7 @@ void R_Bloom_MakeTexture(void)
 	brighten = sqrt(brighten);
 	if(range >= 1)
 		brighten *= (3 * range) / (2 * range - 1); // compensate for the "dot particle"
-	R_SetupShader_Generic(r_bloomstate.texture_bloom, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(r_bloomstate.texture_bloom, NULL, GL_MODULATE, 1, true);
 
 	for (dir = 0;dir < 2;dir++)
 	{
@@ -6252,7 +6281,7 @@ static void R_BlendView(void)
 						R_Mesh_PrepareVertices_Generic_Arrays(4, r_d3dscreenvertex3f, NULL, r_bloomstate.screentexcoord2f);
 						break;
 					}
-					R_SetupShader_Generic(r_bloomstate.texture_screen, NULL, GL_MODULATE, 1);
+					R_SetupShader_Generic(r_bloomstate.texture_screen, NULL, GL_MODULATE, 1, true);
 					R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 					r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 				}
@@ -6271,7 +6300,7 @@ static void R_BlendView(void)
 				R_ResetViewRendering2D();
 				GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 				R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
-				R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+				R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, true);
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			}
@@ -6379,7 +6408,7 @@ static void R_BlendView(void)
 			R_ResetViewRendering2D();
 			GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
-			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, true);
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 		}
@@ -7031,7 +7060,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(8, vertex3f, color4f, NULL);
 	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
 }
 
@@ -7047,7 +7076,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 		return;
 
 	GL_CullFace(GL_NONE);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 
 	prog = 0;
 	SV_VM_Begin();
@@ -7197,7 +7226,7 @@ void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight
 		}
 	}
 //	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	R_Mesh_PrepareVertices_Generic_Arrays(6, nomodelvertex3f, color4f, NULL);
 	R_Mesh_Draw(0, 6, 0, 8, nomodelelement3i, NULL, 0, nomodelelement3s, NULL, 0);
 }
@@ -7576,7 +7605,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.colormod[3];
-	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer))
+	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer || r_trippy.integer))
 		t->currentalpha *= r_wateralpha.value;
 	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_waterstate.enabled && !r_refdef.view.isoverlay)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW; // we apply wateralpha later
@@ -9501,7 +9530,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	skyrenderlater = true;
 	RSurf_SetupDepthAndCulling();
 	GL_DepthMask(true);
@@ -9511,12 +9540,12 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 	// in Quake3 maps as it causes problems with q3map2 sky tricks,
 	// and skymasking also looks very bad when noclipping outside the
 	// level, so don't use it then either.
-	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_refdef.viewcache.world_novis)
+	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->type == mod_brushq1 && r_q1bsp_skymasking.integer && !r_refdef.viewcache.world_novis && !r_trippy.integer)
 	{
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
 		{
-			R_SetupShader_DepthOrShadow();
+			R_SetupShader_DepthOrShadow(false);
 			// depth-only (masking)
 			GL_ColorMask(0,0,0,0);
 			// just to make sure that braindead drivers don't draw
@@ -9530,7 +9559,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 		}
 		else
 		{
-			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 			// fog sky
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
@@ -9555,7 +9584,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	{
 		// render screenspace normalmap to texture
 		GL_DepthMask(true);
-		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL);
+		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false);
 		RSurf_DrawBatch();
 	}
 
@@ -9582,18 +9611,18 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 			{
 				// render water or distortion background
 				GL_DepthMask(true);
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_waterstate.waterplanes + startplaneindex));
+				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_waterstate.waterplanes + startplaneindex), false);
 				RSurf_DrawBatch();
 				// blend surface on top
 				GL_DepthMask(false);
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL);
+				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL, false);
 				RSurf_DrawBatch();
 			}
 			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION))
 			{
 				// render surface with reflection texture as input
 				GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_waterstate.waterplanes + startplaneindex));
+				R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_waterstate.waterplanes + startplaneindex), false);
 				RSurf_DrawBatch();
 			}
 		}
@@ -9602,7 +9631,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL);
+	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0);
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
 		GL_AlphaTest(true);
 	RSurf_DrawBatch();
@@ -9829,7 +9858,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	float c[4];
 
 //	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 
 	if(rsurface.texture && rsurface.texture->currentskinframe)
 	{
@@ -9935,7 +9964,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		RSurf_DrawBatch_GL11_ClampColor();
 
 		R_Mesh_PrepareVertices_Generic_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.passcolor4f, NULL);
-		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 		RSurf_DrawBatch();
 	}
 	else if (!r_refdef.view.showdebug)
@@ -10137,7 +10166,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_DepthMask(true);
 //				R_Mesh_ResetTextureState();
-				R_SetupShader_DepthOrShadow();
+				R_SetupShader_DepthOrShadow(false);
 			}
 			RSurf_SetupDepthAndCulling();
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, texturenumsurfaces, texturesurfacelist);
@@ -10450,7 +10479,7 @@ void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, in
 			vertex3f[i] = mins[j] + size[j] * locboxvertex3f[i];
 
 	R_Mesh_PrepareVertices_Generic_Arrays(6*4, vertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	R_Mesh_Draw(0, 6*4, 0, 6*2, NULL, NULL, 0, locboxelements, NULL, 0);
 }
 
@@ -11077,7 +11106,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		GL_DepthTest(true);
 		GL_CullFace(GL_NONE);
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-		R_SetupShader_Generic(decalskinframe->base, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(decalskinframe->base, NULL, GL_MODULATE, 1, false);
 		R_Mesh_Draw(0, numtris * 3, 0, numtris, decalsystem->element3i, NULL, 0, decalsystem->element3s, NULL, 0);
 	}
 }
@@ -11134,7 +11163,7 @@ void R_DrawDebugModel(void)
 	{
 		float c = r_refdef.view.colorscale * r_showoverdraw.value * 0.125f;
 		flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
-		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+		R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 		GL_DepthTest(false);
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
@@ -11164,7 +11193,7 @@ void R_DrawDebugModel(void)
 	flagsmask = MATERIALFLAG_SKY | MATERIALFLAG_WALL;
 
 //	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
 	GL_DepthRange(0, 1);
 	GL_DepthTest(!r_showdisabledepthtest.integer);
 	GL_DepthMask(false);

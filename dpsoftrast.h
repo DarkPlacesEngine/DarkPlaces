@@ -196,8 +196,9 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<27, ///< (water) counter-direction normalmaps scrolling
 	SHADERPERMUTATION_BOUNCEGRID = 1<<28, ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
 	SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL = 1<<29, ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
-	SHADERPERMUTATION_LIMIT = 1<<30, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 30 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_TRIPPY = 1<<30, ///< use trippy vertex shader effect
+	SHADERPERMUTATION_LIMIT = 1<<31, ///< size of permutations array
+	SHADERPERMUTATION_COUNT = 31 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
