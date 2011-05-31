@@ -61,7 +61,7 @@ typedef struct iqmjoint_s
 {
 	unsigned int name;
 	signed int parent;
-	float origin[3], rotation[3], scale[3];
+	float origin[3], rotation[4], scale[3];
 }
 iqmjoint_t;
 
@@ -69,7 +69,7 @@ typedef struct iqmpose_s
 {
 	signed int parent;
 	unsigned int channelmask;
-	float channeloffset[9], channelscale[9];
+	float channeloffset[10], channelscale[10];
 }
 iqmpose_t;
 
