@@ -907,7 +907,8 @@ void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 	CL_UpdateRenderEntity(flagrender);
 }
 
-matrix4x4_t viewmodelmatrix;
+matrix4x4_t viewmodelmatrix_withbob;
+matrix4x4_t viewmodelmatrix_nobob;
 
 static const vec3_t muzzleflashorigin = {18, 0, 0};
 
@@ -1010,9 +1011,9 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 	{
 		// view-relative entity (guns and such)
 		if (e->render.effects & EF_NOGUNBOB)
-			matrix = &r_refdef.view.matrix; // really attached to view
+			matrix = &viewmodelmatrix_nobob; // really attached to view
 		else
-			matrix = &viewmodelmatrix; // attached to gun bob matrix
+			matrix = &viewmodelmatrix_withbob; // attached to gun bob matrix
 	}
 	else
 	{
