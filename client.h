@@ -1248,6 +1248,7 @@ typedef struct client_state_s
 	vec3_t csqc_viewangles;
 	vec3_t csqc_vieworiginfromengine;
 	vec3_t csqc_viewanglesfromengine;
+	matrix4x4_t csqc_viewmodelmatrixfromengine;
 	qboolean csqc_usecsqclistener;
 	matrix4x4_t csqc_listenermatrix;
 	char csqc_printtextbuf[MAX_INPUTLINE];

@@ -683,11 +683,14 @@ static void VM_CL_getlight (void)
 //[515]: SCENE MANAGER builtins
 extern qboolean CSQC_AddRenderEdict (prvm_edict_t *ed, int edictnum);//csprogs.c
 
-static void CSQC_R_RecalcView (void)
+void CSQC_R_RecalcView (void)
 {
-	extern matrix4x4_t viewmodelmatrix;
+	extern matrix4x4_t viewmodelmatrix_nobob;
+	extern matrix4x4_t viewmodelmatrix_withbob;
 	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], 1);
-	Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], cl_viewmodel_scale.value);
+	Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
+	Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
+	Matrix4x4_Concat(&viewmodelmatrix_withbob, &r_refdef.view.matrix, &cl.csqc_viewmodelmatrixfromengine);
 }
 
 void CL_RelinkLightFlashes(void);
@@ -720,6 +723,7 @@ void VM_CL_R_ClearScene (void)
 	cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
 	cl.csqc_vidvars.drawenginesbar = false;
 	cl.csqc_vidvars.drawcrosshair = false;
+	CSQC_R_RecalcView();
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)

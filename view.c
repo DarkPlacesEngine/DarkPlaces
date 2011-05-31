@@ -370,7 +370,8 @@ static void V_BonusFlash_f (void)
 ==============================================================================
 */
 
-extern matrix4x4_t viewmodelmatrix;
+extern matrix4x4_t viewmodelmatrix_nobob;
+extern matrix4x4_t viewmodelmatrix_withbob;
 
 #include "cl_collision.h"
 #include "csprogs.h"
@@ -434,6 +435,7 @@ void V_CalcRefdef (void)
 	entity_t *ent;
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
+	matrix4x4_t tmpmatrix;
 	
 	static float viewheightavg;
 	float viewheight;	
@@ -445,7 +447,8 @@ void V_CalcRefdef (void)
 #endif
 	trace_t trace;
 	VectorClear(gunorg);
-	viewmodelmatrix = identitymatrix;
+	viewmodelmatrix_nobob = identitymatrix;
+	viewmodelmatrix_withbob = identitymatrix;
 	r_refdef.view.matrix = identitymatrix;
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
@@ -474,7 +477,9 @@ void V_CalcRefdef (void)
 				r_refdef.view.matrix = ent->render.matrix;
 				Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
 			}
-			viewmodelmatrix = r_refdef.view.matrix;
+			Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
+			Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
+			Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
 		}
 		else
 		{
@@ -800,10 +805,17 @@ void V_CalcRefdef (void)
 				viewangles[2] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
 			}
 			Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 1);
+
 			// calculate a viewmodel matrix for use in view-attached entities
-			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
+			Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
+			Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
+
+			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix_withbob, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
 			VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
 			VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
+
+			Matrix4x4_Invert_Simple(&tmpmatrix, &r_refdef.view.matrix);
+			Matrix4x4_Concat(&cl.csqc_viewmodelmatrixfromengine, &tmpmatrix, &viewmodelmatrix_withbob);
 		}
 	}
 }
