@@ -2973,7 +2973,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header = (iqmheader_t *)buffer;
 	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
-	if (LittleLong(header->version) != 1)
+	if (LittleLong(header->version) != 2)
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 1 models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->modeldatatypestring = "IQM";
@@ -3216,6 +3216,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		pose[i].channeloffset[6] = LittleFloat(pose[i].channeloffset[6]);
 		pose[i].channeloffset[7] = LittleFloat(pose[i].channeloffset[7]);
 		pose[i].channeloffset[8] = LittleFloat(pose[i].channeloffset[8]);
+		pose[i].channeloffset[9] = LittleFloat(pose[i].channeloffset[9]);
 		pose[i].channelscale[0] = LittleFloat(pose[i].channelscale[0]);
 		pose[i].channelscale[1] = LittleFloat(pose[i].channelscale[1]);
 		pose[i].channelscale[2] = LittleFloat(pose[i].channelscale[2]);
@@ -3225,6 +3226,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		pose[i].channelscale[6] = LittleFloat(pose[i].channelscale[6]);
 		pose[i].channelscale[7] = LittleFloat(pose[i].channelscale[7]);
 		pose[i].channelscale[8] = LittleFloat(pose[i].channelscale[8]);
+		pose[i].channelscale[9] = LittleFloat(pose[i].channelscale[9]);
 		f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 		f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
 		f = fabs(pose[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
@@ -3241,16 +3243,24 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		for (j = 0;j < (int)header->num_poses;j++, k++)
 		{
+			float rot[4];
 			loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
 			loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
 			loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
-			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0));
-			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0));
-			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0));
+			rot[0] = pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0);
+			rot[1] = pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0);
+			rot[2] = pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0);
+			rot[3] = pose[j].channeloffset[6] + (pose[j].channelmask&64 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[6] : 0);
+			if (rot[3] > 0)
+				Vector4Negate(rot, rot);
+			Vector4Normalize2(rot, rot);
+			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * rot[0];
+			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * rot[1];
+			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * rot[2];
 			// skip scale data for now
-			if(pose[j].channelmask&64) framedata++;
 			if(pose[j].channelmask&128) framedata++;
 			if(pose[j].channelmask&256) framedata++;
+			if(pose[j].channelmask&512) framedata++;
 		}
 	}
 
