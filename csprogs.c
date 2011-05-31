@@ -240,6 +240,7 @@ void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 }
 
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
+void CSQC_R_RecalcView (void);
 static void CSQC_SetGlobals (void)
 {
 	CSQC_BEGIN
@@ -266,6 +267,8 @@ static void CSQC_SetGlobals (void)
 		VectorCopy(cl.punchangle, PRVM_clientglobalvector(view_punchangle));
 		VectorCopy(cl.punchvector, PRVM_clientglobalvector(view_punchvector));
 		prog->globals.client->maxclients = cl.maxclients;
+
+		CSQC_R_RecalcView();
 	CSQC_END
 }
 
