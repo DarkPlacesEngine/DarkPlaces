@@ -2956,9 +2956,11 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	int i, j, k, meshvertices, meshtriangles;
 	float *vposition = NULL, *vtexcoord = NULL, *vnormal = NULL, *vtangent = NULL;
 	unsigned char *vblendindexes = NULL, *vblendweights = NULL;
-	iqmjoint_t *joint;
+	iqmjoint1_t *joint1 = NULL;
+	iqmjoint_t *joint = NULL;
+	iqmpose1_t *pose1 = NULL;
+	iqmpose_t *pose = NULL;
 	iqmanim_t *anim;
-	iqmpose_t *pose;
 	iqmmesh_t *mesh;
 	iqmbounds_t *bounds;
 	iqmvertexarray_t *va;
@@ -2973,8 +2975,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	header = (iqmheader_t *)buffer;
 	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
-	if (LittleLong(header->version) != 2)
-		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 1 models are currently supported (name = %s)", loadmodel->name);
+	if (LittleLong(header->version) != 1 && LittleLong(header->version) != 2)
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: only version 1 and 2 models are currently supported (name = %s)", loadmodel->name);
 
 	loadmodel->modeldatatypestring = "IQM";
 
@@ -3157,31 +3159,67 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load the bone info
-	joint = (iqmjoint_t *) (pbase + header->ofs_joints);
-	for (i = 0;i < loadmodel->num_bones;i++)
+	if (header->version == 1)
 	{
-		matrix4x4_t relbase, relinvbase, pinvbase, invbase;
-		joint[i].name = LittleLong(joint[i].name);
-		joint[i].parent = LittleLong(joint[i].parent);
-		for (j = 0;j < 3;j++)
+		joint1 = (iqmjoint1_t *) (pbase + header->ofs_joints);
+		for (i = 0;i < loadmodel->num_bones;i++)
 		{
-			joint[i].origin[j] = LittleFloat(joint[i].origin[j]);
-			joint[i].rotation[j] = LittleFloat(joint[i].rotation[j]);
-			joint[i].scale[j] = LittleFloat(joint[i].scale[j]);
+			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
+			joint1[i].name = LittleLong(joint1[i].name);
+			joint1[i].parent = LittleLong(joint1[i].parent);
+			for (j = 0;j < 3;j++)
+			{
+				joint1[i].origin[j] = LittleFloat(joint1[i].origin[j]);
+				joint1[i].rotation[j] = LittleFloat(joint1[i].rotation[j]);
+				joint1[i].scale[j] = LittleFloat(joint1[i].scale[j]);
+			}
+			strlcpy(loadmodel->data_bones[i].name, &text[joint1[i].name], sizeof(loadmodel->data_bones[i].name));
+			loadmodel->data_bones[i].parent = joint1[i].parent;
+			if (loadmodel->data_bones[i].parent >= i)
+				Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
+			Matrix4x4_FromDoom3Joint(&relbase, joint1[i].origin[0], joint1[i].origin[1], joint1[i].origin[2], joint1[i].rotation[0], joint1[i].rotation[1], joint1[i].rotation[2]);
+			Matrix4x4_Invert_Simple(&relinvbase, &relbase);
+			if (loadmodel->data_bones[i].parent >= 0)
+			{
+				Matrix4x4_FromArray12FloatD3D(&pinvbase, loadmodel->data_baseboneposeinverse + 12*loadmodel->data_bones[i].parent);
+				Matrix4x4_Concat(&invbase, &relinvbase, &pinvbase);
+				Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
+			}
+			else Matrix4x4_ToArray12FloatD3D(&relinvbase, loadmodel->data_baseboneposeinverse + 12*i);
 		}
-		strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
-		loadmodel->data_bones[i].parent = joint[i].parent;
-		if (loadmodel->data_bones[i].parent >= i)
-			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
-		Matrix4x4_FromDoom3Joint(&relbase, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
-		Matrix4x4_Invert_Simple(&relinvbase, &relbase);
-		if (loadmodel->data_bones[i].parent >= 0)
+	}
+	else
+	{
+		joint = (iqmjoint_t *) (pbase + header->ofs_joints);
+		for (i = 0;i < loadmodel->num_bones;i++)
 		{
-			Matrix4x4_FromArray12FloatD3D(&pinvbase, loadmodel->data_baseboneposeinverse + 12*loadmodel->data_bones[i].parent);
-			Matrix4x4_Concat(&invbase, &relinvbase, &pinvbase);
-			Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
-		}	
-		else Matrix4x4_ToArray12FloatD3D(&relinvbase, loadmodel->data_baseboneposeinverse + 12*i);
+			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
+			joint[i].name = LittleLong(joint[i].name);
+			joint[i].parent = LittleLong(joint[i].parent);
+			for (j = 0;j < 3;j++)
+			{
+				joint[i].origin[j] = LittleFloat(joint[i].origin[j]);
+				joint[i].rotation[j] = LittleFloat(joint[i].rotation[j]);
+				joint[i].scale[j] = LittleFloat(joint[i].scale[j]);
+			}
+			joint[i].rotation[3] = LittleFloat(joint[i].rotation[3]);
+			strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
+			loadmodel->data_bones[i].parent = joint[i].parent;
+			if (loadmodel->data_bones[i].parent >= i)
+				Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
+            if (joint[i].rotation[3] > 0)
+                Vector4Negate(joint[i].rotation, joint[i].rotation);
+            Vector4Normalize2(joint[i].rotation, joint[i].rotation);
+			Matrix4x4_FromDoom3Joint(&relbase, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
+			Matrix4x4_Invert_Simple(&relinvbase, &relbase);
+			if (loadmodel->data_bones[i].parent >= 0)
+			{
+				Matrix4x4_FromArray12FloatD3D(&pinvbase, loadmodel->data_baseboneposeinverse + 12*loadmodel->data_bones[i].parent);
+				Matrix4x4_Concat(&invbase, &relinvbase, &pinvbase);
+				Matrix4x4_ToArray12FloatD3D(&invbase, loadmodel->data_baseboneposeinverse + 12*i);
+			}	
+			else Matrix4x4_ToArray12FloatD3D(&relinvbase, loadmodel->data_baseboneposeinverse + 12*i);
+		}
 	}
 
 	// set up the animscenes based on the anims
@@ -3200,67 +3238,98 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->animscenes[i].framerate = anim[i].framerate;
 	}
 	
-	pose = (iqmpose_t *) (pbase + header->ofs_poses);
 	biggestorigin = 0;
-	for (i = 0;i < (int)header->num_poses;i++)
+	if (header->version == 1)
 	{
-		float f;
-		pose[i].parent = LittleLong(pose[i].parent);
-		pose[i].channelmask = LittleLong(pose[i].channelmask);
-		pose[i].channeloffset[0] = LittleFloat(pose[i].channeloffset[0]);
-		pose[i].channeloffset[1] = LittleFloat(pose[i].channeloffset[1]);
-		pose[i].channeloffset[2] = LittleFloat(pose[i].channeloffset[2]);	
-		pose[i].channeloffset[3] = LittleFloat(pose[i].channeloffset[3]);
-		pose[i].channeloffset[4] = LittleFloat(pose[i].channeloffset[4]);
-		pose[i].channeloffset[5] = LittleFloat(pose[i].channeloffset[5]);
-		pose[i].channeloffset[6] = LittleFloat(pose[i].channeloffset[6]);
-		pose[i].channeloffset[7] = LittleFloat(pose[i].channeloffset[7]);
-		pose[i].channeloffset[8] = LittleFloat(pose[i].channeloffset[8]);
-		pose[i].channeloffset[9] = LittleFloat(pose[i].channeloffset[9]);
-		pose[i].channelscale[0] = LittleFloat(pose[i].channelscale[0]);
-		pose[i].channelscale[1] = LittleFloat(pose[i].channelscale[1]);
-		pose[i].channelscale[2] = LittleFloat(pose[i].channelscale[2]);
-		pose[i].channelscale[3] = LittleFloat(pose[i].channelscale[3]);
-		pose[i].channelscale[4] = LittleFloat(pose[i].channelscale[4]);
-		pose[i].channelscale[5] = LittleFloat(pose[i].channelscale[5]);
-		pose[i].channelscale[6] = LittleFloat(pose[i].channelscale[6]);
-		pose[i].channelscale[7] = LittleFloat(pose[i].channelscale[7]);
-		pose[i].channelscale[8] = LittleFloat(pose[i].channelscale[8]);
-		pose[i].channelscale[9] = LittleFloat(pose[i].channelscale[9]);
-		f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
-		f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
-		f = fabs(pose[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
-		f = fabs(pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]); biggestorigin = max(biggestorigin, f);
-		f = fabs(pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
-		f = fabs(pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
+		pose1 = (iqmpose1_t *) (pbase + header->ofs_poses);
+		for (i = 0;i < (int)header->num_poses;i++)
+		{
+			float f;
+			pose1[i].parent = LittleLong(pose1[i].parent);
+			pose1[i].channelmask = LittleLong(pose1[i].channelmask);
+			for (j = 0;j < 9;j++)
+			{
+				pose1[i].channeloffset[j] = LittleFloat(pose1[i].channeloffset[j]);
+				pose1[i].channelscale[j] = LittleFloat(pose1[i].channelscale[j]);
+			}
+			f = fabs(pose1[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose1[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose1[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose1[i].channeloffset[0] + 0xFFFF*pose1[i].channelscale[0]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose1[i].channeloffset[1] + 0xFFFF*pose1[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose1[i].channeloffset[2] + 0xFFFF*pose1[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
+		}
+	}
+	else
+	{
+		pose = (iqmpose_t *) (pbase + header->ofs_poses);
+		for (i = 0;i < (int)header->num_poses;i++)
+		{
+			float f;
+			pose[i].parent = LittleLong(pose[i].parent);
+			pose[i].channelmask = LittleLong(pose[i].channelmask);
+			for (j = 0;j < 10;j++)
+			{
+				pose[i].channeloffset[j] = LittleFloat(pose[i].channeloffset[j]);
+				pose[i].channelscale[j] = LittleFloat(pose[i].channelscale[j]);
+			}
+			f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose[i].channeloffset[2]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
+			f = fabs(pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
+		}
 	}
 	loadmodel->num_posescale = biggestorigin / 32767.0f;
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 
 	// load the pose data
 	framedata = (unsigned short *) (pbase + header->ofs_frames);
-	for (i = 0, k = 0;i < (int)header->num_frames;i++)	
+	if (header->version == 1)
 	{
-		for (j = 0;j < (int)header->num_poses;j++, k++)
+		for (i = 0, k = 0;i < (int)header->num_frames;i++)
 		{
-			float rot[4];
-			loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
-			loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
-			loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
-			rot[0] = pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0);
-			rot[1] = pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0);
-			rot[2] = pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0);
-			rot[3] = pose[j].channeloffset[6] + (pose[j].channelmask&64 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[6] : 0);
-			if (rot[3] > 0)
-				Vector4Negate(rot, rot);
-			Vector4Normalize2(rot, rot);
-			loadmodel->data_poses6s[k*6 + 3] = 32767.0f * rot[0];
-			loadmodel->data_poses6s[k*6 + 4] = 32767.0f * rot[1];
-			loadmodel->data_poses6s[k*6 + 5] = 32767.0f * rot[2];
-			// skip scale data for now
-			if(pose[j].channelmask&128) framedata++;
-			if(pose[j].channelmask&256) framedata++;
-			if(pose[j].channelmask&512) framedata++;
+			for (j = 0;j < (int)header->num_poses;j++, k++)
+			{
+				loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[0] + (pose1[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[0] : 0));
+				loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[1] + (pose1[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[1] : 0));
+				loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[2] + (pose1[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[2] : 0));
+				loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose1[j].channeloffset[3] + (pose1[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[3] : 0));
+				loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose1[j].channeloffset[4] + (pose1[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[4] : 0));
+				loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose1[j].channeloffset[5] + (pose1[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[5] : 0));
+				// skip scale data for now
+				if(pose1[j].channelmask&64) framedata++;
+				if(pose1[j].channelmask&128) framedata++;
+				if(pose1[j].channelmask&256) framedata++;
+			}
+		}
+	}
+	else
+	{
+		for (i = 0, k = 0;i < (int)header->num_frames;i++)	
+		{
+			for (j = 0;j < (int)header->num_poses;j++, k++)
+			{
+				float rot[4];
+				loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
+				loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
+				loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
+				rot[0] = pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0);
+				rot[1] = pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0);
+				rot[2] = pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0);
+				rot[3] = pose[j].channeloffset[6] + (pose[j].channelmask&64 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[6] : 0);
+				if (rot[3] > 0)
+					Vector4Negate(rot, rot);
+				Vector4Normalize2(rot, rot);
+				loadmodel->data_poses6s[k*6 + 3] = 32767.0f * rot[0];
+				loadmodel->data_poses6s[k*6 + 4] = 32767.0f * rot[1];
+				loadmodel->data_poses6s[k*6 + 5] = 32767.0f * rot[2];
+				// skip scale data for now
+				if(pose[j].channelmask&128) framedata++;
+				if(pose[j].channelmask&256) framedata++;
+				if(pose[j].channelmask&512) framedata++;
+			}
 		}
 	}
 
