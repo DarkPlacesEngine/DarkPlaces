@@ -324,13 +324,9 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryr
 	}
 	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, true)))
 	{
-		faketrack = S_StartSound_StartPosition (-1, 0, sfx, vec3_origin, cdvolume, 0, startposition);
+		faketrack = S_StartSound_StartPosition_Flags (-1, 0, sfx, vec3_origin, cdvolume, 0, startposition, (looping ? CHANNELFLAG_FORCELOOP : 0) | CHANNELFLAG_FULLVOLUME | CHANNELFLAG_LOCALSOUND);
 		if (faketrack != -1)
 		{
-			if (looping)
-				S_SetChannelFlag (faketrack, CHANNELFLAG_FORCELOOP, true);
-			S_SetChannelFlag (faketrack, CHANNELFLAG_FULLVOLUME, true);
-			S_SetChannelFlag (faketrack, CHANNELFLAG_LOCALSOUND, true); // not pausable
 			if(track >= 1)
 			{
 				if(cdaudio.integer != 0) // we don't need these messages if only fake tracks can be played anyway
