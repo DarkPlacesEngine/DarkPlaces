@@ -229,6 +229,9 @@ static cvar_t snd_speed = {CVAR_SAVE, "snd_speed", "48000", "sound output freque
 static cvar_t snd_width = {CVAR_SAVE, "snd_width", "2", "sound output precision, in bytes (1 and 2 supported)"};
 static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
 
+static cvar_t snd_startloopingsounds = {0, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
+static cvar_t snd_startnonloopingsounds = {0, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
+
 // Ambient sounds
 static sfx_t* ambient_sfxs [2] = { NULL, NULL };
 static const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/wind2.wav" };
@@ -826,6 +829,9 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_width);
 	Cvar_RegisterVariable(&snd_channels);
 	Cvar_RegisterVariable(&snd_mutewhenidle);
+
+	Cvar_RegisterVariable(&snd_startloopingsounds);
+	Cvar_RegisterVariable(&snd_startnonloopingsounds);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound"))
@@ -1560,6 +1566,18 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 		Con_Printf("S_PlaySfxOnChannel called with NULL??\n");
 		return;
 	}
+
+	if ((sfx->loopstart < sfx->total_length) || (flags & CHANNELFLAG_FORCELOOP))
+	{
+		if(!snd_startloopingsounds.integer)
+			return;
+	}
+	else
+	{
+		if(!snd_startnonloopingsounds.integer)
+			return;
+	}
+
 	// Initialize the channel
 	// a crash was reported on an in-use channel, so check here...
 	if (target_chan->sfx)
@@ -1600,7 +1618,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 }
 
 
-int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
+int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags)
 {
 	channel_t *target_chan, *check, *ch;
 	int		ch_idx, startpos;
@@ -1653,9 +1671,14 @@ int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t o
 		}
 	}
 
-	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_NONE, origin, fvol, attenuation, false, entnum, entchannel, startpos);
+	S_PlaySfxOnChannel (sfx, target_chan, flags, origin, fvol, attenuation, false, entnum, entchannel, startpos);
 
 	return (target_chan - channels);
+}
+
+int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
+{
+	return S_StartSound_StartPosition_Flags(entnum, entchannel, sfx, origin, fvol, attenuation, startposition, CHANNELFLAG_NONE);
 }
 
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
