@@ -2180,7 +2180,7 @@ void GL_AlphaTest(int state)
 		case RENDERPATH_D3D11:
 			break;
 		case RENDERPATH_SOFT:
-//			DPSOFTRAST_AlphaTest(gl_state.alphatest);
+			DPSOFTRAST_AlphaTest(gl_state.alphatest);
 			break;
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
