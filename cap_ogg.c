@@ -9,8 +9,8 @@
 
 // video capture cvars
 static cvar_t cl_capturevideo_ogg_theora_vp3compat = {CVAR_SAVE, "cl_capturevideo_ogg_theora_vp3compat", "1", "make VP3 compatible theora streams"};
-static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "42", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
-static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "42", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better; setting both to -1 achieves unlimited quality"};
+static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better; setting both to -1 achieves unlimited quality"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_maxinterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_maxinterval", "64", "maximum keyframe interval (1 to 1000)"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_mininterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mininterval", "8", "minimum keyframe interval (1 to 1000)"};
@@ -1010,33 +1010,30 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 
 		if(ti.target_bitrate <= 0)
 		{
-			if(ti.quality < 0)
+			ti.target_bitrate = -1;
+			ti.keyframe_data_target_bitrate = (unsigned int)-1;
+		}
+		else
+		{
+			ti.target_bitrate = ti.target_bitrate;
+			ti.keyframe_data_target_bitrate = (int) (ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value));
+
+			if(ti.target_bitrate < 45000 || ti.target_bitrate > 2000000)
+				Con_DPrintf("WARNING: requesting an odd bitrate for theora (sensible values range from 45 to 2000 kbps)\n");
+		}
+
+		if(ti.quality < 0)
+		{
+			ti.quality = 63;
+			if(ti.target_bitrate <= 0)
 			{
-				ti.target_bitrate = -1;
-				ti.keyframe_data_target_bitrate = (unsigned int)-1;
-				ti.quality = 63;
-			}
-			else
-			{
-				ti.target_bitrate = -1;
-				ti.keyframe_data_target_bitrate = (unsigned int)-1;
-				ti.quality = bound(0, ti.quality, 63);
+				ti.target_bitrate = 0x7FFFFFFF;
+				ti.keyframe_data_target_bitrate = 0x7FFFFFFF;
 			}
 		}
 		else
 		{
-			if(ti.quality < 0)
-			{
-				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
-				ti.keyframe_data_target_bitrate = (int) (ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value));
-				ti.quality = -1;
-			}
-			else
-			{
-				ti.target_bitrate = bound(45000, ti.target_bitrate, 2000000);
-				ti.keyframe_data_target_bitrate = (int) (ti.target_bitrate * max(1, cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier.value));
-				ti.quality = -1;
-			}
+			ti.quality = bound(0, ti.quality, 63);
 		}
 
 		// this -1 magic is because ti.keyframe_frequency and ti.keyframe_mindistance use different metrics
