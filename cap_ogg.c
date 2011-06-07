@@ -8,7 +8,8 @@
 #include "cap_ogg.h"
 
 // video capture cvars
-static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "32", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_vp3compat = {CVAR_SAVE, "cl_capturevideo_ogg_theora_vp3compat", "1", "make VP3 compatible theora streams"};
+static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "42", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
 static cvar_t cl_capturevideo_ogg_theora_keyframe_maxinterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_maxinterval", "64", "maximum keyframe interval (1 to 1000)"};
@@ -310,6 +311,9 @@ static int (*qvorbis_encode_init_vbr) (vorbis_info *vi,
 // end of vorbisenc.h stuff
 
 // theora.h stuff
+
+#define TH_ENCCTL_SET_VP3_COMPATIBLE (10)
+
 typedef struct {
     int   y_width;      /**< Width of the Y' luminance plane */
     int   y_height;     /**< Height of the luminance plane */
@@ -457,6 +461,7 @@ static void (*qtheora_clear) (theora_state *t);
 static void (*qtheora_comment_init) (theora_comment *tc);
 static void  (*qtheora_comment_clear) (theora_comment *tc);
 static double (*qtheora_granule_time) (theora_state *th,ogg_int64_t granulepos);
+static int (*qtheora_control) (theora_state *th,int req,void *buf,size_t buf_sz);
 // end of theora.h stuff
 
 static dllfunction_t oggfuncs[] =
@@ -512,6 +517,7 @@ static dllfunction_t theorafuncs[] =
 	{"theora_encode_tables", (void **) &qtheora_encode_tables},
 	{"theora_clear", (void **) &qtheora_clear},
 	{"theora_granule_time", (void **) &qtheora_granule_time},
+	{"theora_control", (void **) &qtheora_control},
 	{NULL, NULL}
 };
 
@@ -590,6 +596,7 @@ void SCR_CaptureVideo_Ogg_Init(void)
 {
 	SCR_CaptureVideo_Ogg_OpenLibrary();
 
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_vp3compat);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_quality);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_bitrate);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier);
@@ -945,6 +952,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 		theora_comment tc;
 		vorbis_comment vc;
 		theora_info ti;
+		int vp3compat;
 
 		format->serial1 = rand();
 		qogg_stream_init(&format->to, format->serial1);
@@ -1043,6 +1051,14 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 
 		qtheora_encode_init(&format->ts, &ti);
 		qtheora_info_clear(&ti);
+
+		if(cl_capturevideo_ogg_theora_vp3compat.integer)
+		{
+			vp3compat = 1;
+			qtheora_control(&format->ts, TH_ENCCTL_SET_VP3_COMPATIBLE, &vp3compat, sizeof(vp3compat));
+			if(!vp3compat)
+				Con_DPrintf("Warning: theora stream is not fully VP3 compatible\n");
+		}
 
 		// vorbis?
 		if(cls.capturevideo.soundrate)
