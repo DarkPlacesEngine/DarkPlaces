@@ -67,7 +67,7 @@ void S_UnloadAllSounds_f (void);
 void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serversound);
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean levelsound);
 float S_SoundLength(const char *name);
 void S_ClearUsed (void);
 void S_PurgeUnused (void);
@@ -84,7 +84,7 @@ void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds (void);
 void S_PauseGameSounds (qboolean toggle);
 
-void S_StopChannel (unsigned int channel_ind, qboolean lockmutex);
+void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
 float S_GetChannelPosition (unsigned int ch_ind);

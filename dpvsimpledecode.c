@@ -429,7 +429,7 @@ void dpvsimpledecode_close(void *stream)
 	if (s->videopixels)
 		Z_Free(s->videopixels);
 	if (s->sndchan != -1)
-		S_StopChannel (s->sndchan, true);
+		S_StopChannel (s->sndchan, true, true);
 	if (s->framedatablocks)
 		hz_bitstream_read_blocks_free(s->framedatablocks);
 	if (s->bitstream)

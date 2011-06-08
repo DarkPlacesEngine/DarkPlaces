@@ -510,6 +510,8 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				continue;
 			if (!sfx->total_length)
 				continue;
+			if (sfx->total_length < 0 || sfx->total_length > 1<<30)
+				Sys_Error("S_MixToBuffer: sfx corrupt\n");
 
 			ltime = 0;
 			if (ch->pos < 0)
@@ -525,15 +527,15 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				// paint up to end of buffer or of input, whichever is lower
 				count = sfx->total_length - ch->pos;
 				count = bound(0, count, (int)frames - ltime);
+				// mix the remaining samples
 				if (count)
 				{
 					SND_PaintChannel (ch, paintbuffer + ltime, count);
 					ch->pos += count;
 					ltime += count;
 				}
-
 				// if at end of sfx, loop or stop the channel
-				if (ch->pos >= (int)sfx->total_length)
+				else
 				{
 					if (sfx->loopstart < sfx->total_length)
 						ch->pos = sfx->loopstart;
@@ -541,7 +543,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 						ch->pos = 0;
 					else
 					{
-						S_StopChannel (ch - channels, false);
+						S_StopChannel (ch - channels, false, false);
 						break;
 					}
 				}
