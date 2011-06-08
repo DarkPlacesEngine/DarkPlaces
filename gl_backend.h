@@ -31,6 +31,7 @@ void R_GetViewport(r_viewport_t *v);
 void GL_Finish(void);
 
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
+void GL_BlendEquationSubtract(qboolean negated);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_DepthFunc(int state);

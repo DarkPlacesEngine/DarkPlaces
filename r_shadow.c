@@ -3351,30 +3351,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 	if(negated)
 	{
 		VectorNegate(lightcolor, lightcolor);
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GL20:
-		case RENDERPATH_GLES1:
-		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_SUBTRACT);
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_SOFT:
-			DPSOFTRAST_BlendSubtract(true);
-			break;
-		}
+		GL_BlendEquationSubtract(true);
 	}
 	RSurf_SetupDepthAndCulling();
 	switch (r_shadow_rendermode)
@@ -3397,32 +3374,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		break;
 	}
 	if(negated)
-	{
-		switch(vid.renderpath)
-		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GL20:
-		case RENDERPATH_GLES1:
-		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
-			break;
-		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_ADD);
-#endif
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_SOFT:
-			DPSOFTRAST_BlendSubtract(false);
-			break;
-		}
-	}
+		GL_BlendEquationSubtract(false);
 }
 
 void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, int shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
@@ -5255,61 +5207,13 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		if(negated)
 		{
 			VectorNegate(color, color);
-			switch(vid.renderpath)
-			{
-			case RENDERPATH_GL11:
-			case RENDERPATH_GL13:
-			case RENDERPATH_GL20:
-			case RENDERPATH_GLES1:
-			case RENDERPATH_GLES2:
-				qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
-				break;
-			case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_SUBTRACT);
-#endif
-				break;
-			case RENDERPATH_D3D10:
-				Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-				break;
-			case RENDERPATH_D3D11:
-				Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-				break;
-			case RENDERPATH_SOFT:
-				DPSOFTRAST_BlendSubtract(true);
-				break;
-			}
+			GL_BlendEquationSubtract(true);
 		}
 		R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
 		RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, RENDER_NODEPTHTEST, 0, color[0], color[1], color[2], 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
 		R_DrawCustomSurface(r_shadow_lightcorona, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false);
 		if(negated)
-		{
-			switch(vid.renderpath)
-			{
-			case RENDERPATH_GL11:
-			case RENDERPATH_GL13:
-			case RENDERPATH_GL20:
-			case RENDERPATH_GLES1:
-			case RENDERPATH_GLES2:
-				qglBlendEquationEXT(GL_FUNC_ADD_EXT);
-				break;
-			case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-				IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_ADD);
-#endif
-				break;
-			case RENDERPATH_D3D10:
-				Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-				break;
-			case RENDERPATH_D3D11:
-				Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-				break;
-			case RENDERPATH_SOFT:
-				DPSOFTRAST_BlendSubtract(false);
-				break;
-			}
-		}
+			GL_BlendEquationSubtract(false);
 	}
 }
 

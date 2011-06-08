@@ -4396,3 +4396,61 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 		break;
 	}
 }
+
+void GL_BlendEquationSubtract(qboolean negated)
+{
+	if(negated)
+	{
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
+		case RENDERPATH_GLES2:
+			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_SUBTRACT);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_BlendSubtract(true);
+			break;
+		}
+	}
+	else
+	{
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+		case RENDERPATH_GLES1:
+		case RENDERPATH_GLES2:
+			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
+			break;
+		case RENDERPATH_D3D9:
+#ifdef SUPPORTD3D
+			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_BLENDOP, D3DBLENDOP_ADD);
+#endif
+			break;
+		case RENDERPATH_D3D10:
+			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_D3D11:
+			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
+			break;
+		case RENDERPATH_SOFT:
+			DPSOFTRAST_BlendSubtract(false);
+			break;
+		}
+	}
+}
