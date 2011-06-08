@@ -1006,6 +1006,7 @@ void VID_CheckExtensions(void)
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 	vid.support.ext_texture_srgb = GL_CheckExtension("GL_EXT_texture_sRGB", NULL, "-nosrgb", false);
 	vid.support.arb_multisample = GL_CheckExtension("GL_ARB_multisample", multisamplefuncs, "-nomultisample", false);
+	vid.allowalphatocoverage = false;
 
 // COMMANDLINEOPTION: GL: -noshaders disables use of OpenGL 2.0 shaders (which allow pixel shader effects, can improve per pixel lighting performance and capabilities)
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
@@ -1081,6 +1082,10 @@ void VID_CheckExtensions(void)
 		vid.sRGBcapable2D = false;
 		vid.sRGBcapable3D = true;
 		vid.useinterleavedarrays = false;
+		Con_Printf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
+		Con_Printf("vid.mode.samples %i\n", vid.mode.samples);
+		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
+		vid.allowalphatocoverage = vid.support.arb_multisample && vid_samples.integer > 1 && vid.support.gl20shaders;
 	}
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
 	{
@@ -1105,6 +1110,9 @@ void VID_CheckExtensions(void)
 		vid.sRGBcapable3D = false;
 		vid.useinterleavedarrays = false;
 	}
+	// enable multisample antialiasing if possible
+	if (vid_samples.integer > 1 && vid.support.arb_multisample)
+		qglEnable(GL_MULTISAMPLE_ARB);
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
@@ -1750,11 +1758,6 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		if(vid_userefreshrate.integer)
 			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
 		Cvar_SetValueQuick(&vid_stereobuffer, vid.mode.stereobuffer);
-
-		// LordHavoc: disabled this code because multisampling is on by default if the framebuffer is multisampled
-//		// activate multisampling
-//		if (vid.mode.samples > 1)
-//			GL_MultiSampling(true);
 
 		return true;
 	}

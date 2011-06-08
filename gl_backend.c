@@ -2113,35 +2113,6 @@ void GL_CullFace(int state)
 	}
 }
 
-void GL_MultiSampling(qboolean state)
-{
-	switch(vid.renderpath)
-	{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GLES1:
-		case RENDERPATH_GL20:
-		case RENDERPATH_GLES2:
-			if (vid.support.arb_multisample && vid.mode.samples > 1)
-			{
-				if (state)
-					qglEnable(GL_MULTISAMPLE_ARB);
-				else
-					qglDisable(GL_MULTISAMPLE_ARB);
-				CHECKGLERROR
-			}
-			break;
-		case RENDERPATH_D3D9:
-			break;
-		case RENDERPATH_D3D10:
-			break;
-		case RENDERPATH_D3D11:
-			break;
-		case RENDERPATH_SOFT:
-			break;
-	}
-}
-
 void GL_AlphaTest(int state)
 {
 	if (gl_state.alphatest != state)
@@ -2192,19 +2163,16 @@ void GL_AlphaToCoverage(qboolean state)
 			break;
 		case RENDERPATH_GL20:
 			// alpha to coverage turns the alpha value of the pixel into 0%, 25%, 50%, 75% or 100% by masking the multisample fragments accordingly
-			if (vid.support.arb_multisample && vid.mode.samples > 1)
+			CHECKGLERROR
+			if (gl_state.alphatocoverage)
 			{
-				CHECKGLERROR
-				if (gl_state.alphatocoverage)
-				{
-					qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
-					qglEnable(GL_MULTISAMPLE_ARB);CHECKGLERROR
-				}
-				else
-				{
-					qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
-					qglDisable(GL_MULTISAMPLE_ARB);CHECKGLERROR
-				}
+				qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+//				qglEnable(GL_MULTISAMPLE_ARB);CHECKGLERROR
+			}
+			else
+			{
+				qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+//				qglDisable(GL_MULTISAMPLE_ARB);CHECKGLERROR
 			}
 			break;
 		}
