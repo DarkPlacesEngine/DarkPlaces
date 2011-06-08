@@ -143,7 +143,7 @@ void jam_close(void *stream)
 	Z_Free(s->prevframedata);
 	Z_Free(s->videopixels);
 	if (s->sndchan != -1)
-		S_StopChannel(s->sndchan, true);
+		S_StopChannel(s->sndchan, true, true);
 	if (s->file)
 		FS_Close(s->file);
 	Z_Free(s);

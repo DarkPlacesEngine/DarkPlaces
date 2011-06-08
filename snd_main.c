@@ -310,11 +310,10 @@ static void S_SoundList_f (void)
 
 			size = sfx->memsize;
 			format = sfx->fetcher->getfmt(sfx);
-			Con_Printf ("%c%c%c%c(%2db, %6s) %8i : %s\n",
+			Con_Printf ("%c%c%c(%2db, %6s) %8i : %s\n",
 						(sfx->loopstart < sfx->total_length) ? 'L' : ' ',
 						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',
-						(sfx->locks > 0) ? 'K' : ' ',
-						(sfx->flags & SFXFLAG_PERMANENTLOCK) ? 'P' : ' ',
+						(sfx->flags & SFXFLAG_MENUSOUND) ? 'P' : ' ',
 						format->width * 8,
 						(format->channels == 1) ? "mono" : "stereo",
 						size,
@@ -983,8 +982,8 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 {
 	unsigned int i;
 
-	// Never free a locked sfx unless forced
-	if (!force && (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK)))
+	// Do not free a precached sound during purge
+	if (!force && (sfx->flags & (SFXFLAG_LEVELSOUND | SFXFLAG_MENUSOUND)))
 		return;
 
 	if (developer_loading.integer)
@@ -1012,8 +1011,13 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 
 	// Stop all channels using this sfx
 	for (i = 0; i < total_channels; i++)
+	{
 		if (channels[i].sfx == sfx)
-			S_StopChannel (i, true);
+		{
+			Con_Printf("S_FreeSfx: stopping channel %i for sfx \"%s\"\n", i, sfx->name);
+			S_StopChannel (i, true, false);
+		}
+	}
 
 	// Free it
 	if (sfx->fetcher != NULL && sfx->fetcher->free != NULL)
@@ -1036,28 +1040,21 @@ void S_ClearUsed (void)
 	// Start the ambient sounds and make them loop
 	for (i = 0; i < sizeof (ambient_sfxs) / sizeof (ambient_sfxs[0]); i++)
 	{
-		// Precache it if it's not done (request a lock to make sure it will never be freed)
+		// Precache it if it's not done (and pass false for levelsound because these are permanent)
 		if (ambient_sfxs[i] == NULL)
-			ambient_sfxs[i] = S_PrecacheSound (ambient_names[i], false, true);
+			ambient_sfxs[i] = S_PrecacheSound (ambient_names[i], false, false);
 		if (ambient_sfxs[i] != NULL)
 		{
-			// Add a lock to the SFX while playing. It will be
-			// removed by S_StopAllSounds at the end of the level
-			S_LockSfx (ambient_sfxs[i]);
-
 			channels[i].sfx = ambient_sfxs[i];
+			channels[i].sfx->flags |= SFXFLAG_MENUSOUND;
 			channels[i].flags |= CHANNELFLAG_FORCELOOP;
 			channels[i].master_vol = 0;
 		}
 	}
 
-	// Remove 1 lock from all sfx with the SFXFLAG_SERVERSOUND flag, and remove the flag
+	// Clear SFXFLAG_LEVELSOUND flag so that sounds not precached this level will be purged
 	for (sfx = known_sfx; sfx != NULL; sfx = sfx->next)
-		if (sfx->flags & SFXFLAG_SERVERSOUND)
-		{
-			S_UnlockSfx (sfx);
-			sfx->flags &= ~SFXFLAG_SERVERSOUND;
-		}
+		sfx->flags &= ~SFXFLAG_LEVELSOUND;
 }
 
 /*
@@ -1070,11 +1067,12 @@ void S_PurgeUnused(void)
 	sfx_t *sfx;
 	sfx_t *sfxnext;
 
-	// Free all unlocked sfx
+	// Free all not-precached per-level sfx
 	for (sfx = known_sfx;sfx;sfx = sfxnext)
 	{
 		sfxnext = sfx->next;
-		S_FreeSfx (sfx, false);
+		if (!(sfx->flags & (SFXFLAG_LEVELSOUND | SFXFLAG_MENUSOUND)))
+			S_FreeSfx (sfx, false);
 	}
 }
 
@@ -1084,7 +1082,7 @@ void S_PurgeUnused(void)
 S_PrecacheSound
 ==================
 */
-sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean serversound)
+sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean levelsound)
 {
 	sfx_t *sfx;
 
@@ -1103,11 +1101,11 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean serversoun
 	// previously missing file
 	sfx->flags &= ~ SFXFLAG_FILEMISSING;
 
-	if (serversound && !(sfx->flags & SFXFLAG_SERVERSOUND))
-	{
-		S_LockSfx (sfx);
-		sfx->flags |= SFXFLAG_SERVERSOUND;
-	}
+	// set a flag to indicate this has been precached for this level or permanently
+	if (levelsound)
+		sfx->flags |= SFXFLAG_LEVELSOUND;
+	else
+		sfx->flags |= SFXFLAG_MENUSOUND;
 
 	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);
@@ -1145,31 +1143,6 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx)
 {
 	return (sfx != NULL && sfx->fetcher != NULL) || (sfx == &changevolume_sfx);
 }
-
-/*
-==================
-S_LockSfx
-
-Add a lock to a SFX
-==================
-*/
-void S_LockSfx (sfx_t *sfx)
-{
-	sfx->locks++;
-}
-
-/*
-==================
-S_UnlockSfx
-
-Remove a lock from a SFX
-==================
-*/
-void S_UnlockSfx (sfx_t *sfx)
-{
-	sfx->locks--;
-}
-
 
 /*
 ==================
@@ -1221,7 +1194,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			if (ch->entnum == entnum && (ch->entchannel == entchannel || entchannel == -1) )
 			{
 				// always override sound from same entity
-				S_StopChannel (ch_idx, true);
+				S_StopChannel (ch_idx, true, false);
 				return &channels[ch_idx];
 			}
 		}
@@ -1258,7 +1231,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 	if (first_to_die == -1)
 		return NULL;
 	
-	S_StopChannel (first_to_die, true);
+	S_StopChannel (first_to_die, true, false);
 
 emptychan_found:
 	return &channels[first_to_die];
@@ -1584,7 +1557,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	{
 		int channelindex = (int)(target_chan - channels);
 		Con_Printf("S_PlaySfxOnChannel(%s): channel %i already in use??  Clearing.\n", sfx->name, channelindex);
-		S_StopChannel (channelindex, true);
+		S_StopChannel (channelindex, true, false);
 	}
 	// We MUST set sfx LAST because otherwise we could crash a threaded mixer
 	// (otherwise we'd have to call SndSys_LockRenderBuffer here)
@@ -1608,9 +1581,6 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	// set the listener volumes
 	S_SetChannelVolume(target_chan - channels, fvol);
 	SND_Spatialize_WithSfx (target_chan, isstatic, sfx);
-
-	// Lock the SFX during play
-	S_LockSfx (sfx);
 
 	// finally, set the sfx pointer, so the channel becomes valid for playback
 	// and will be noticed by the mixer
@@ -1686,9 +1656,10 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	return S_StartSound_StartPosition(entnum, entchannel, sfx, origin, fvol, attenuation, 0);
 }
 
-void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
+void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx)
 {
 	channel_t *ch;
+	sfx_t *sfx;
 
 	if (channel_ind >= total_channels)
 		return;
@@ -1701,10 +1672,9 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 		SndSys_LockRenderBuffer();
 	
 	ch = &channels[channel_ind];
+	sfx = ch->sfx;
 	if (ch->sfx != NULL)
 	{
-		sfx_t *sfx = ch->sfx;
-
 		if (sfx->fetcher != NULL)
 		{
 			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
@@ -1712,14 +1682,13 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
 				fetcher_endsb (ch->fetcher_data);
 		}
 
-		// Remove the lock it holds
-		S_UnlockSfx (sfx);
-
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
 	}
 	if (lockmutex && !simsound)
 		SndSys_UnlockRenderBuffer();
+	if (freesfx)
+		S_FreeSfx(sfx, true);
 }
 
 
@@ -1749,7 +1718,7 @@ void S_StopSound(int entnum, int entchannel)
 	for (i = 0; i < MAX_DYNAMIC_CHANNELS; i++)
 		if (channels[i].entnum == entnum && channels[i].entchannel == entchannel)
 		{
-			S_StopChannel (i, true);
+			S_StopChannel (i, true, false);
 			return;
 		}
 }
@@ -1772,7 +1741,8 @@ void S_StopAllSounds (void)
 		size_t memsize;
 
 		for (i = 0; i < total_channels; i++)
-			S_StopChannel (i, false);
+			if (channels[i].sfx)
+				S_StopChannel (i, false, false);
 
 		total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 		memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
@@ -2266,8 +2236,8 @@ qboolean S_LocalSound (const char *sound)
 		return false;
 	}
 
-	// Local sounds must not be freed
-	sfx->flags |= SFXFLAG_PERMANENTLOCK;
+	// menu sounds must not be freed on level change
+	sfx->flags |= SFXFLAG_MENUSOUND;
 
 	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 0);
 	if (ch_ind < 0)
