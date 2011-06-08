@@ -2159,6 +2159,36 @@ void R_DrawGamma(void)
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
+
+	// interpretation of brightness and contrast:
+	//   color range := brightness .. (brightness + contrast)
+	// i.e. "c *= contrast; c += brightness"
+	// plausible values for brightness thus range from -contrast to 1
+
+	// apply pre-brightness (subtractive brightness, for where contrast was >= 1)
+	if (vid.support.ext_blend_subtract)
+	{
+		if (v_color_enable.integer)
+		{
+			c[0] = -v_color_black_r.value / v_color_white_r.value;
+			c[1] = -v_color_black_g.value / v_color_white_g.value;
+			c[2] = -v_color_black_b.value / v_color_white_b.value;
+		}
+		else
+			c[0] = c[1] = c[2] = -v_brightness.value / v_contrast.value;
+		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
+		{
+			// need SUBTRACTIVE blending to do this!
+			GL_BlendEquationSubtract(true);
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_Color(c[0], c[1], c[2], 1);
+			R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
+			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+			GL_BlendEquationSubtract(false);
+		}
+	}
+
+	// apply contrast
 	if (v_color_enable.integer)
 	{
 		c[0] = v_color_white_r.value;
@@ -2167,17 +2197,32 @@ void R_DrawGamma(void)
 	}
 	else
 		c[0] = c[1] = c[2] = v_contrast.value;
-	if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
+	if (c[0] >= 1.003f || c[1] >= 1.003f || c[2] >= 1.003f)
 	{
 		GL_BlendFunc(GL_DST_COLOR, GL_ONE);
-		while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
+		while (c[0] >= 1.003f || c[1] >= 1.003f || c[2] >= 1.003f)
 		{
-			GL_Color(c[0] - 1, c[1] - 1, c[2] - 1, 1);
+			float cc[4];
+			cc[0] = bound(0, c[0] - 1, 1);
+			cc[1] = bound(0, c[1] - 1, 1);
+			cc[2] = bound(0, c[2] - 1, 1);
+			GL_Color(cc[0], cc[1], cc[2], 1);
 			R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
 			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			VectorScale(c, 0.5, c);
+			c[0] /= 1 + cc[0];
+			c[1] /= 1 + cc[1];
+			c[2] /= 1 + cc[2];
 		}
 	}
+	if (c[0] <= 0.997f || c[1] <= 0.997f || c[2] <= 0.997f)
+	{
+		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+		GL_Color(c[0], c[1], c[2], 1);
+		R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
+		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+	}
+
+	// apply post-brightness (additive brightness, for where contrast was <= 1)
 	if (v_color_enable.integer)
 	{
 		c[0] = v_color_black_r.value;
@@ -2189,7 +2234,7 @@ void R_DrawGamma(void)
 	if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
 	{
 		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_Color(c[0] - 1, c[1] - 1, c[2] - 1, 1);
+		GL_Color(c[0], c[1], c[2], 1);
 		R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
 		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}

@@ -1458,8 +1458,8 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		wantgamma = 0;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 	BOUNDCVAR(v_gamma, 0.1, 5);
-	BOUNDCVAR(v_contrast, 1, 5);
-	BOUNDCVAR(v_brightness, 0, 0.8);
+	BOUNDCVAR(v_contrast, 0.2, 5);
+	BOUNDCVAR(v_brightness, -v_contrast.value * 0.8, 0.8);
 	//BOUNDCVAR(v_contrastboost, 0.0625, 16);
 	BOUNDCVAR(v_color_black_r, 0, 0.8);
 	BOUNDCVAR(v_color_black_g, 0, 0.8);
