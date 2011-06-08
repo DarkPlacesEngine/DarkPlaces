@@ -137,6 +137,7 @@ typedef struct gl_state_s
 	int alphatest;
 	int alphafunc;
 	float alphafuncvalue;
+	qboolean alphatocoverage;
 	int scissortest;
 	unsigned int unit;
 	unsigned int clientunit;
@@ -1391,6 +1392,7 @@ static void GL_Backend_ResetState(void)
 	gl_state.alphatest = false;
 	gl_state.alphafunc = GL_GEQUAL;
 	gl_state.alphafuncvalue = 0.5f;
+	gl_state.alphatocoverage = false;
 	gl_state.blendfunc1 = GL_ONE;
 	gl_state.blendfunc2 = GL_ZERO;
 	gl_state.blend = false;
@@ -1412,9 +1414,6 @@ static void GL_Backend_ResetState(void)
 #ifdef SUPPORTD3D
 		{
 			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_COLORWRITEENABLE, gl_state.colormask);
-			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHATESTENABLE, gl_state.alphatest);
-			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAFUNC, d3dcmpforglfunc(gl_state.alphafunc));
-			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHAREF, (int)bound(0, gl_state.alphafuncvalue * 256.0f, 255));
 			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_CULLMODE, D3DCULL_NONE);
 			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZFUNC, d3dcmpforglfunc(gl_state.depthfunc));
 			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ZENABLE, gl_state.depthtest);
@@ -1437,7 +1436,7 @@ static void GL_Backend_ResetState(void)
 
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
-		qglDisable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+		qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 		qglDisable(GL_BLEND);CHECKGLERROR
 		qglCullFace(gl_state.cullface);CHECKGLERROR
@@ -1499,7 +1498,6 @@ static void GL_Backend_ResetState(void)
 		break;
 	case RENDERPATH_SOFT:
 		DPSOFTRAST_ColorMask(1,1,1,1);
-		DPSOFTRAST_AlphaTest(gl_state.alphatest);
 		DPSOFTRAST_BlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);
 		DPSOFTRAST_CullFace(gl_state.cullface);
 		DPSOFTRAST_DepthFunc(gl_state.depthfunc);
@@ -1520,11 +1518,6 @@ static void GL_Backend_ResetState(void)
 		qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 		qglDepthMask(gl_state.depthmask);CHECKGLERROR
 		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
-	//	if (vid.renderpath == RENDERPATH_GL20)
-	//	{
-	//		qglAlphaFunc(gl_state.alphafunc, gl_state.alphafuncvalue);CHECKGLERROR
-	//		qglDisable(GL_ALPHA_TEST);CHECKGLERROR
-	//	}
 		if (vid.support.arb_vertex_buffer_object)
 		{
 			qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
@@ -2129,7 +2122,7 @@ void GL_MultiSampling(qboolean state)
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			if (vid.support.arb_multisample)
+			if (vid.support.arb_multisample && vid.mode.samples > 1)
 			{
 				if (state)
 					qglEnable(GL_MULTISAMPLE_ARB);
@@ -2163,34 +2156,55 @@ void GL_AlphaTest(int state)
 			CHECKGLERROR
 			if (gl_state.alphatest)
 			{
-				qglEnable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+				qglEnable(GL_ALPHA_TEST);CHECKGLERROR
 			}
 			else
 			{
-				qglDisable((r_transparent_alphatocoverage.integer) ? GL_SAMPLE_ALPHA_TO_COVERAGE_ARB : GL_ALPHA_TEST);CHECKGLERROR
+				qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 			}
 			break;
 		case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-//			IDirect3DDevice9_SetRenderState(vid_d3d9dev, D3DRS_ALPHATESTENABLE, gl_state.alphatest);
-#endif
-			break;
 		case RENDERPATH_D3D10:
-			break;
 		case RENDERPATH_D3D11:
-			break;
 		case RENDERPATH_SOFT:
-			DPSOFTRAST_AlphaTest(gl_state.alphatest);
-			break;
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			if (vid_multisampling.integer)
+			break;
+		}
+	}
+}
+
+void GL_AlphaToCoverage(qboolean state)
+{
+	if (gl_state.alphatocoverage != state)
+	{
+		gl_state.alphatocoverage = state;
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GLES1:
+		case RENDERPATH_GLES2:
+		case RENDERPATH_D3D9:
+		case RENDERPATH_D3D10:
+		case RENDERPATH_D3D11:
+		case RENDERPATH_SOFT:
+			break;
+		case RENDERPATH_GL20:
+			// alpha to coverage turns the alpha value of the pixel into 0%, 25%, 50%, 75% or 100% by masking the multisample fragments accordingly
+			if (vid.support.arb_multisample && vid.mode.samples > 1)
 			{
-				if (gl_state.alphatest && r_transparent_alphatocoverage.integer)
-					qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);
-				else
-					qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);
 				CHECKGLERROR
+				if (gl_state.alphatocoverage)
+				{
+					qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+					qglEnable(GL_MULTISAMPLE_ARB);CHECKGLERROR
+				}
+				else
+				{
+					qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
+					qglDisable(GL_MULTISAMPLE_ARB);CHECKGLERROR
+				}
 			}
 			break;
 		}

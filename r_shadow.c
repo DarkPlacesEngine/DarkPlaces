@@ -3168,17 +3168,7 @@ static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msu
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-	{
-		GL_DepthFunc(GL_EQUAL);
-		GL_AlphaTest(true);
-	}
 	RSurf_DrawBatch();
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-	{
-		GL_DepthFunc(GL_LEQUAL);
-		GL_AlphaTest(false);
-	}
 }
 
 static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numvertices, int numtriangles, const int *element3i, vec3_t diffusecolor2, vec3_t ambientcolor2)
