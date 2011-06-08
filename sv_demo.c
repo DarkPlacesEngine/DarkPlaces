@@ -44,7 +44,7 @@ void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clien
 	FS_Write(client->sv_demo_file, &len, 4);
 	for(i = 0; i < 3; ++i)
 	{
-		f = LittleFloat(client->edict->fields.server->v_angle[i]);
+		f = LittleFloat(PRVM_serveredictvector(client->edict, v_angle)[i]);
 		FS_Write(client->sv_demo_file, &f, 4);
 	}
 	FS_Write(client->sv_demo_file, sendbuffer->data, sendbuffer->cursize);

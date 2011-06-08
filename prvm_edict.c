@@ -1972,8 +1972,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 	prog->progs_crc = LittleLong(dprograms->crc);
 	if (prog->progs_version != PROG_VERSION)
 		PRVM_ERROR ("%s: %s has wrong version number (%i should be %i)", PRVM_NAME, filename, prog->progs_version, PROG_VERSION);
-	if (prog->progs_crc != prog->headercrc && prog->progs_crc != prog->headercrc2)
-		PRVM_ERROR ("%s: %s system vars have been modified (CRC of progs.dat systemvars %i != engine %i), progdefs.h is out of date", PRVM_NAME, filename, prog->progs_crc, prog->headercrc);
 	instatements = (dstatement_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_statements));
 	prog->progs_numstatements = LittleLong(dprograms->numstatements);
 	inglobaldefs = (ddef_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_globaldefs));
@@ -3018,21 +3016,20 @@ static qboolean PRVM_IsEdictRelevant(prvm_edict_t *edict)
 	{
 		case PRVM_SERVERPROG:
 			{
-				entvars_t *ev = edict->fields.server;
-				if(ev->solid) // can block other stuff, or is a trigger?
+				if(PRVM_serveredictfloat(edict, solid)) // can block other stuff, or is a trigger?
 					return true;
-				if(ev->modelindex) // visible ent?
+				if(PRVM_serveredictfloat(edict, modelindex)) // visible ent?
 					return true;
-				if(ev->effects) // particle effect?
+				if(PRVM_serveredictfloat(edict, effects)) // particle effect?
 					return true;
-				if(ev->think) // has a think function?
-					if(ev->nextthink > 0) // that actually will eventually run?
+				if(PRVM_serveredictfunction(edict, think)) // has a think function?
+					if(PRVM_serveredictfloat(edict, nextthink) > 0) // that actually will eventually run?
 						return true;
-				if(ev->takedamage)
+				if(PRVM_serveredictfloat(edict, takedamage))
 					return true;
 				if(*prvm_leaktest_ignore_classnames.string)
 				{
-					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(ev->classname))))
+					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(PRVM_serveredictstring(edict, classname)))))
 						return true;
 				}
 			}
@@ -3040,19 +3037,18 @@ static qboolean PRVM_IsEdictRelevant(prvm_edict_t *edict)
 		case PRVM_CLIENTPROG:
 			{
 				// TODO someone add more stuff here
-				cl_entvars_t *ev = edict->fields.client;
-				if(ev->entnum) // csqc networked
+				if(PRVM_clientedictfloat(edict, entnum)) // csqc networked
 					return true;
-				if(ev->modelindex) // visible ent?
+				if(PRVM_clientedictfloat(edict, modelindex)) // visible ent?
 					return true;
-				if(ev->effects) // particle effect?
+				if(PRVM_clientedictfloat(edict, effects)) // particle effect?
 					return true;
-				if(ev->think) // has a think function?
-					if(ev->nextthink > 0) // that actually will eventually run?
+				if(PRVM_clientedictfunction(edict, think)) // has a think function?
+					if(PRVM_clientedictfloat(edict, nextthink) > 0) // that actually will eventually run?
 						return true;
 				if(*prvm_leaktest_ignore_classnames.string)
 				{
-					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(ev->classname))))
+					if(strstr(va(" %s ", prvm_leaktest_ignore_classnames.string), va(" %s ", PRVM_GetString(PRVM_clientedictstring(edict, classname)))))
 						return true;
 				}
 			}
@@ -3073,7 +3069,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 	switch(prog - prog_list)
 	{
 		case PRVM_SERVERPROG:
-			targetname = PRVM_GetString(edict->fields.server->targetname);
+			targetname = PRVM_GetString(PRVM_serveredictstring(edict, targetname));
 			break;
 	}
 
@@ -3099,7 +3095,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 			continue;
 		if(targetname)
 		{
-			const char *target = PRVM_GetString(ed->fields.server->target);
+			const char *target = PRVM_GetString(PRVM_serveredictstring(ed, target));
 			if(target)
 				if(!strcmp(target, targetname))
 					return true;

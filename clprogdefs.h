@@ -4,6 +4,7 @@
 #ifndef CLPROGDEFS_H
 #define CLPROGDEFS_H
 
+/*
 typedef struct cl_globalvars_s
 {
 	int			pad[28];
@@ -92,5 +93,6 @@ typedef struct cl_entvars_s
 } cl_entvars_t;
 
 #define CL_PROGHEADER_CRC 52195
+*/
 
 #endif

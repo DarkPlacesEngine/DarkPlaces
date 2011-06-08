@@ -41,18 +41,18 @@ void SV_SetIdealPitch (void)
 	int		i, j;
 	int		steps;
 
-	if (!((int)host_client->edict->fields.server->flags & FL_ONGROUND))
+	if (!((int)PRVM_serveredictfloat(host_client->edict, flags) & FL_ONGROUND))
 		return;
 
-	angleval = host_client->edict->fields.server->angles[YAW] * M_PI*2 / 360;
+	angleval = PRVM_serveredictvector(host_client->edict, angles)[YAW] * M_PI*2 / 360;
 	sinval = sin(angleval);
 	cosval = cos(angleval);
 
 	for (i=0 ; i<MAX_FORWARD ; i++)
 	{
-		top[0] = host_client->edict->fields.server->origin[0] + cosval*(i+3)*12;
-		top[1] = host_client->edict->fields.server->origin[1] + sinval*(i+3)*12;
-		top[2] = host_client->edict->fields.server->origin[2] + host_client->edict->fields.server->view_ofs[2];
+		top[0] = PRVM_serveredictvector(host_client->edict, origin)[0] + cosval*(i+3)*12;
+		top[1] = PRVM_serveredictvector(host_client->edict, origin)[1] + sinval*(i+3)*12;
+		top[2] = PRVM_serveredictvector(host_client->edict, origin)[2] + PRVM_serveredictvector(host_client->edict, view_ofs)[2];
 
 		bottom[0] = top[0];
 		bottom[1] = top[1];
@@ -88,13 +88,13 @@ void SV_SetIdealPitch (void)
 
 	if (!dir)
 	{
-		host_client->edict->fields.server->idealpitch = 0;
+		PRVM_serveredictfloat(host_client->edict, idealpitch) = 0;
 		return;
 	}
 
 	if (steps < 2)
 		return;
-	host_client->edict->fields.server->idealpitch = -dir * sv_idealpitchscale.value;
+	PRVM_serveredictfloat(host_client->edict, idealpitch) = -dir * sv_idealpitchscale.value;
 }
 
 static vec3_t wishdir, forward, right, up;
@@ -114,14 +114,14 @@ void SV_UserFriction (void)
 	vec3_t start, stop;
 	trace_t trace;
 
-	speed = sqrt(host_client->edict->fields.server->velocity[0]*host_client->edict->fields.server->velocity[0]+host_client->edict->fields.server->velocity[1]*host_client->edict->fields.server->velocity[1]);
+	speed = sqrt(PRVM_serveredictvector(host_client->edict, velocity)[0]*PRVM_serveredictvector(host_client->edict, velocity)[0]+PRVM_serveredictvector(host_client->edict, velocity)[1]*PRVM_serveredictvector(host_client->edict, velocity)[1]);
 	if (!speed)
 		return;
 
 	// if the leading edge is over a dropoff, increase friction
-	start[0] = stop[0] = host_client->edict->fields.server->origin[0] + host_client->edict->fields.server->velocity[0]/speed*16;
-	start[1] = stop[1] = host_client->edict->fields.server->origin[1] + host_client->edict->fields.server->velocity[1]/speed*16;
-	start[2] = host_client->edict->fields.server->origin[2] + host_client->edict->fields.server->mins[2];
+	start[0] = stop[0] = PRVM_serveredictvector(host_client->edict, origin)[0] + PRVM_serveredictvector(host_client->edict, velocity)[0]/speed*16;
+	start[1] = stop[1] = PRVM_serveredictvector(host_client->edict, origin)[1] + PRVM_serveredictvector(host_client->edict, velocity)[1]/speed*16;
+	start[2] = PRVM_serveredictvector(host_client->edict, origin)[2] + PRVM_serveredictvector(host_client->edict, mins)[2];
 	stop[2] = start[2] - 34;
 
 	trace = SV_TraceLine(start, stop, MOVE_NOMONSTERS, host_client->edict, SV_GenericHitSuperContentsMask(host_client->edict));
@@ -140,7 +140,7 @@ void SV_UserFriction (void)
 	else
 		newspeed /= speed;
 
-	VectorScale(host_client->edict->fields.server->velocity, newspeed, host_client->edict->fields.server->velocity);
+	VectorScale(PRVM_serveredictvector(host_client->edict, velocity), newspeed, PRVM_serveredictvector(host_client->edict, velocity));
 }
 
 /*
@@ -153,7 +153,7 @@ void SV_Accelerate (void)
 	int i;
 	float addspeed, accelspeed, currentspeed;
 
-	currentspeed = DotProduct (host_client->edict->fields.server->velocity, wishdir);
+	currentspeed = DotProduct (PRVM_serveredictvector(host_client->edict, velocity), wishdir);
 	addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0)
 		return;
@@ -162,7 +162,7 @@ void SV_Accelerate (void)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		host_client->edict->fields.server->velocity[i] += accelspeed*wishdir[i];
+		PRVM_serveredictvector(host_client->edict, velocity)[i] += accelspeed*wishdir[i];
 }
 
 extern cvar_t sv_gameplayfix_q2airaccelerate;
@@ -174,7 +174,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	wishspd = VectorNormalizeLength (wishveloc);
 	if (wishspd > sv_maxairspeed.value)
 		wishspd = sv_maxairspeed.value;
-	currentspeed = DotProduct (host_client->edict->fields.server->velocity, wishveloc);
+	currentspeed = DotProduct (PRVM_serveredictvector(host_client->edict, velocity), wishveloc);
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
@@ -183,7 +183,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		host_client->edict->fields.server->velocity[i] += accelspeed*wishveloc[i];
+		PRVM_serveredictvector(host_client->edict, velocity)[i] += accelspeed*wishveloc[i];
 }
 
 
@@ -192,12 +192,12 @@ void DropPunchAngle (void)
 	float len;
 	vec3_t v;
 
-	len = VectorNormalizeLength (host_client->edict->fields.server->punchangle);
+	len = VectorNormalizeLength (PRVM_serveredictvector(host_client->edict, punchangle));
 
 	len -= 10*sv.frametime;
 	if (len < 0)
 		len = 0;
-	VectorScale (host_client->edict->fields.server->punchangle, len, host_client->edict->fields.server->punchangle);
+	VectorScale (PRVM_serveredictvector(host_client->edict, punchangle), len, PRVM_serveredictvector(host_client->edict, punchangle));
 
 	VectorCopy(PRVM_serveredictvector(host_client->edict, punchvector), v);
 	len = VectorNormalizeLength(v);
@@ -221,16 +221,16 @@ void SV_FreeMove (void)
 	int i;
 	float wishspeed;
 
-	AngleVectors (host_client->edict->fields.server->v_angle, forward, right, up);
+	AngleVectors (PRVM_serveredictvector(host_client->edict, v_angle), forward, right, up);
 
 	for (i = 0; i < 3; i++)
-		host_client->edict->fields.server->velocity[i] = forward[i] * cmd.forwardmove + right[i] * cmd.sidemove;
+		PRVM_serveredictvector(host_client->edict, velocity)[i] = forward[i] * cmd.forwardmove + right[i] * cmd.sidemove;
 
-	host_client->edict->fields.server->velocity[2] += cmd.upmove;
+	PRVM_serveredictvector(host_client->edict, velocity)[2] += cmd.upmove;
 
-	wishspeed = VectorLength(host_client->edict->fields.server->velocity);
+	wishspeed = VectorLength(PRVM_serveredictvector(host_client->edict, velocity));
 	if (wishspeed > sv_maxspeed.value)
-		VectorScale(host_client->edict->fields.server->velocity, sv_maxspeed.value / wishspeed, host_client->edict->fields.server->velocity);
+		VectorScale(PRVM_serveredictvector(host_client->edict, velocity), sv_maxspeed.value / wishspeed, PRVM_serveredictvector(host_client->edict, velocity));
 }
 
 /*
@@ -246,7 +246,7 @@ void SV_WaterMove (void)
 	float speed, newspeed, wishspeed, addspeed, accelspeed, temp;
 
 	// user intentions
-	AngleVectors (host_client->edict->fields.server->v_angle, forward, right, up);
+	AngleVectors (PRVM_serveredictvector(host_client->edict, v_angle), forward, right, up);
 
 	for (i=0 ; i<3 ; i++)
 		wishvel[i] = forward[i]*cmd.forwardmove + right[i]*cmd.sidemove;
@@ -266,14 +266,14 @@ void SV_WaterMove (void)
 	wishspeed *= 0.7;
 
 	// water friction
-	speed = VectorLength(host_client->edict->fields.server->velocity);
+	speed = VectorLength(PRVM_serveredictvector(host_client->edict, velocity));
 	if (speed)
 	{
 		newspeed = speed - sv.frametime * speed * (sv_waterfriction.value < 0 ? sv_friction.value : sv_waterfriction.value);
 		if (newspeed < 0)
 			newspeed = 0;
 		temp = newspeed/speed;
-		VectorScale(host_client->edict->fields.server->velocity, temp, host_client->edict->fields.server->velocity);
+		VectorScale(PRVM_serveredictvector(host_client->edict, velocity), temp, PRVM_serveredictvector(host_client->edict, velocity));
 	}
 	else
 		newspeed = 0;
@@ -292,18 +292,18 @@ void SV_WaterMove (void)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		host_client->edict->fields.server->velocity[i] += accelspeed * wishvel[i];
+		PRVM_serveredictvector(host_client->edict, velocity)[i] += accelspeed * wishvel[i];
 }
 
 void SV_WaterJump (void)
 {
-	if (sv.time > host_client->edict->fields.server->teleport_time || !host_client->edict->fields.server->waterlevel)
+	if (sv.time > PRVM_serveredictfloat(host_client->edict, teleport_time) || !PRVM_serveredictfloat(host_client->edict, waterlevel))
 	{
-		host_client->edict->fields.server->flags = (int)host_client->edict->fields.server->flags & ~FL_WATERJUMP;
-		host_client->edict->fields.server->teleport_time = 0;
+		PRVM_serveredictfloat(host_client->edict, flags) = (int)PRVM_serveredictfloat(host_client->edict, flags) & ~FL_WATERJUMP;
+		PRVM_serveredictfloat(host_client->edict, teleport_time) = 0;
 	}
-	host_client->edict->fields.server->velocity[0] = host_client->edict->fields.server->movedir[0];
-	host_client->edict->fields.server->velocity[1] = host_client->edict->fields.server->movedir[1];
+	PRVM_serveredictvector(host_client->edict, velocity)[0] = PRVM_serveredictvector(host_client->edict, movedir)[0];
+	PRVM_serveredictvector(host_client->edict, velocity)[1] = PRVM_serveredictvector(host_client->edict, movedir)[1];
 }
 
 
@@ -321,20 +321,20 @@ void SV_AirMove (void)
 
 	// LordHavoc: correct quake movement speed bug when looking up/down
 	wishvel[0] = wishvel[2] = 0;
-	wishvel[1] = host_client->edict->fields.server->angles[1];
+	wishvel[1] = PRVM_serveredictvector(host_client->edict, angles)[1];
 	AngleVectors (wishvel, forward, right, up);
 
 	fmove = cmd.forwardmove;
 	smove = cmd.sidemove;
 
 // hack to not let you back into teleporter
-	if (sv.time < host_client->edict->fields.server->teleport_time && fmove < 0)
+	if (sv.time < PRVM_serveredictfloat(host_client->edict, teleport_time) && fmove < 0)
 		fmove = 0;
 
 	for (i=0 ; i<3 ; i++)
 		wishvel[i] = forward[i]*fmove + right[i]*smove;
 
-	if ((int)host_client->edict->fields.server->movetype != MOVETYPE_WALK)
+	if ((int)PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_WALK)
 		wishvel[2] += cmd.upmove;
 
 	VectorCopy (wishvel, wishdir);
@@ -346,10 +346,10 @@ void SV_AirMove (void)
 		wishspeed = sv_maxspeed.value;
 	}
 
-	if (host_client->edict->fields.server->movetype == MOVETYPE_NOCLIP)
+	if (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_NOCLIP)
 	{
 		// noclip
-		VectorCopy (wishvel, host_client->edict->fields.server->velocity);
+		VectorCopy (wishvel, PRVM_serveredictvector(host_client->edict, velocity));
 	}
 	else if (onground)
 	{
@@ -384,37 +384,37 @@ void SV_ClientThink (void)
 	// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
 	if (PRVM_serverfunction(SV_PlayerPhysics) && sv_playerphysicsqc.integer)
 	{
-		prog->globals.server->time = sv.time;
-		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 		PRVM_ExecuteProgram (PRVM_serverfunction(SV_PlayerPhysics), "QC function SV_PlayerPhysics is missing");
 		SV_CheckVelocity(host_client->edict);
 		return;
 	}
 
-	if (host_client->edict->fields.server->movetype == MOVETYPE_NONE)
+	if (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_NONE)
 		return;
 
-	onground = ((int)host_client->edict->fields.server->flags & FL_ONGROUND) != 0;
+	onground = ((int)PRVM_serveredictfloat(host_client->edict, flags) & FL_ONGROUND) != 0;
 
 	DropPunchAngle ();
 
 	// if dead, behave differently
-	if (host_client->edict->fields.server->health <= 0)
+	if (PRVM_serveredictfloat(host_client->edict, health) <= 0)
 		return;
 
 	cmd = host_client->cmd;
 
 	// angles
 	// show 1/3 the pitch angle and all the roll angle
-	VectorAdd (host_client->edict->fields.server->v_angle, host_client->edict->fields.server->punchangle, v_angle);
-	host_client->edict->fields.server->angles[ROLL] = V_CalcRoll (host_client->edict->fields.server->angles, host_client->edict->fields.server->velocity)*4;
-	if (!host_client->edict->fields.server->fixangle)
+	VectorAdd (PRVM_serveredictvector(host_client->edict, v_angle), PRVM_serveredictvector(host_client->edict, punchangle), v_angle);
+	PRVM_serveredictvector(host_client->edict, angles)[ROLL] = V_CalcRoll (PRVM_serveredictvector(host_client->edict, angles), PRVM_serveredictvector(host_client->edict, velocity))*4;
+	if (!PRVM_serveredictfloat(host_client->edict, fixangle))
 	{
-		host_client->edict->fields.server->angles[PITCH] = -v_angle[PITCH]/3;
-		host_client->edict->fields.server->angles[YAW] = v_angle[YAW];
+		PRVM_serveredictvector(host_client->edict, angles)[PITCH] = -v_angle[PITCH]/3;
+		PRVM_serveredictvector(host_client->edict, angles)[YAW] = v_angle[YAW];
 	}
 
-	if ( (int)host_client->edict->fields.server->flags & FL_WATERJUMP )
+	if ( (int)PRVM_serveredictfloat(host_client->edict, flags) & FL_WATERJUMP )
 	{
 		SV_WaterJump ();
 		SV_CheckVelocity(host_client->edict);
@@ -423,8 +423,8 @@ void SV_ClientThink (void)
 
 	/*
 	// Player is (somehow) outside of the map, or flying, or noclipping
-	if (host_client->edict->fields.server->movetype != MOVETYPE_NOCLIP && (host_client->edict->fields.server->movetype == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict)))
-	//if (host_client->edict->fields.server->movetype == MOVETYPE_NOCLIP || host_client->edict->fields.server->movetype == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict))
+	if (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP && (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict)))
+	//if (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_NOCLIP || PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict))
 	{
 		SV_FreeMove ();
 		return;
@@ -432,7 +432,7 @@ void SV_ClientThink (void)
 	*/
 
 	// walk
-	if ((host_client->edict->fields.server->waterlevel >= 2) && (host_client->edict->fields.server->movetype != MOVETYPE_NOCLIP))
+	if ((PRVM_serveredictfloat(host_client->edict, waterlevel) >= 2) && (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP))
 	{
 		SV_WaterMove ();
 		SV_CheckVelocity(host_client->edict);
@@ -597,7 +597,7 @@ void SV_ExecuteClientMoves(void)
 	if (ceil(max(sv_readmoves[sv_numreadmoves-1].receivetime - sv_readmoves[sv_numreadmoves-1].time, 0) * 1000.0) < sv_clmovement_minping.integer)
 		host_client->clmovement_disabletimeout = realtime + sv_clmovement_minping_disabletime.value / 1000.0;
 	// several conditions govern whether clientside movement prediction is allowed
-	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_inputtimeout.value > 0 && host_client->clmovement_disabletimeout <= realtime && host_client->edict->fields.server->movetype == MOVETYPE_WALK && (!PRVM_serveredictfloat(host_client->edict, disableclientprediction)))
+	if (sv_readmoves[sv_numreadmoves-1].sequence && sv_clmovement_enable.integer && sv_clmovement_inputtimeout.value > 0 && host_client->clmovement_disabletimeout <= realtime && PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_WALK && (!PRVM_serveredictfloat(host_client->edict, disableclientprediction)))
 	{
 		// process the moves in order and ignore old ones
 		// but always trust the latest move
@@ -646,21 +646,21 @@ void SV_ExecuteClientMoves(void)
 				//  determined by the sv_clmovement_inputtimeout cvar)
 				if (moveframetime <= 0)
 					continue;
-				oldframetime = prog->globals.server->frametime;
+				oldframetime = PRVM_serverglobalfloat(frametime);
 				oldframetime2 = sv.frametime;
 				// update ping time for qc to see while executing this move
 				host_client->ping = host_client->cmd.receivetime - host_client->cmd.time;
 				// the server and qc frametime values must be changed temporarily
-				prog->globals.server->frametime = sv.frametime = moveframetime;
+				PRVM_serverglobalfloat(frametime) = sv.frametime = moveframetime;
 				// if move is more than 50ms, split it into two moves (this matches QWSV behavior and the client prediction)
 				if (sv.frametime > 0.05)
 				{
-					prog->globals.server->frametime = sv.frametime = moveframetime * 0.5f;
+					PRVM_serverglobalfloat(frametime) = sv.frametime = moveframetime * 0.5f;
 					SV_Physics_ClientMove();
 				}
 				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
-				prog->globals.server->frametime = oldframetime;
+				PRVM_serverglobalfloat(frametime) = oldframetime;
 				host_client->clmovement_inputtimeout = sv_clmovement_inputtimeout.value;
 			}
 		}
@@ -719,10 +719,10 @@ void SV_ApplyClientMove (void)
 	move->applied = true;
 
 	// set the edict fields
-	host_client->edict->fields.server->button0 = move->buttons & 1;
-	host_client->edict->fields.server->button2 = (move->buttons & 2)>>1;
+	PRVM_serveredictfloat(host_client->edict, button0) = move->buttons & 1;
+	PRVM_serveredictfloat(host_client->edict, button2) = (move->buttons & 2)>>1;
 	if (move->impulse)
-		host_client->edict->fields.server->impulse = move->impulse;
+		PRVM_serveredictfloat(host_client->edict, impulse) = move->impulse;
 	// only send the impulse to qc once
 	move->impulse = 0;
 
@@ -737,7 +737,7 @@ void SV_ApplyClientMove (void)
 				movementloss++;
 	}
 
-	VectorCopy(move->viewangles, host_client->edict->fields.server->v_angle);
+	VectorCopy(move->viewangles, PRVM_serveredictvector(host_client->edict, v_angle));
 	PRVM_serveredictfloat(host_client->edict, button3) = ((move->buttons >> 2) & 1);
 	PRVM_serveredictfloat(host_client->edict, button4) = ((move->buttons >> 3) & 1);
 	PRVM_serveredictfloat(host_client->edict, button5) = ((move->buttons >> 4) & 1);
@@ -868,7 +868,7 @@ void SV_ReadClientMessage(void)
 				int restorevm_tempstringsbuf_cursize;
 				restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s);
-				prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
+				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 				PRVM_ExecuteProgram (PRVM_serverfunction(SV_ParseClientCommand), "QC function SV_ParseClientCommand is missing");
 				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
