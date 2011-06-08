@@ -700,12 +700,17 @@ Host_Savegame_f
 void Host_Savegame_f (void)
 {
 	char	name[MAX_QPATH];
+	qboolean deadflag = false;
 
 	if (!sv.active)
 	{
 		Con_Print("Can't save - no server running.\n");
 		return;
 	}
+
+	SV_VM_Begin();
+	deadflag = cl.islocalgame && svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag);
+	SV_VM_End();
 
 	if (cl.islocalgame)
 	{
@@ -716,7 +721,7 @@ void Host_Savegame_f (void)
 			return;
 		}
 
-		if (svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag))
+		if (deadflag)
 		{
 			Con_Print("Can't savegame with a dead player\n");
 			return;
