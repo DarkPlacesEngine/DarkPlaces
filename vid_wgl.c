@@ -2028,7 +2028,8 @@ void VID_EnableJoystick(qboolean enable)
 	if (joy_detected.integer != sharedcount)
 		Cvar_SetValueQuick(&joy_detected, sharedcount);
 
-	Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
+	if (joy_active.integer != (success ? 1 : 0))
+		Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
 }
 
 #ifdef SUPPORTDIRECTX
