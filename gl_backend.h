@@ -41,7 +41,6 @@ void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
 void GL_AlphaTest(int state);
 void GL_AlphaToCoverage(qboolean state);
-void GL_MultiSampling(qboolean state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ActiveTexture(unsigned int num);
