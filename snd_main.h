@@ -53,9 +53,9 @@ typedef struct snd_ringbuffer_s
 // sfx_t flags
 #define SFXFLAG_NONE			0
 #define SFXFLAG_FILEMISSING		(1 << 0) // wasn't able to load the associated sound file
-#define SFXFLAG_SERVERSOUND		(1 << 1) // the sfx is part of the server precache list
+#define SFXFLAG_LEVELSOUND		(1 << 1) // the sfx is part of the server or client precache list for this level
 #define SFXFLAG_STREAMED		(1 << 2) // informative only. You shouldn't need to know that
-#define SFXFLAG_PERMANENTLOCK	(1 << 3) // can never be freed (ex: used by the client code)
+#define SFXFLAG_MENUSOUND		(1 << 3) // not freed during level change (menu sounds, music, etc)
 
 typedef struct snd_fetcher_s snd_fetcher_t;
 struct sfx_s
@@ -63,11 +63,6 @@ struct sfx_s
 	char				name[MAX_QPATH];
 	sfx_t				*next;
 	size_t				memsize;		// total memory used (including sfx_t and fetcher data)
-
-										// One lock is automatically granted while the sfx is
-										// playing (and removed when stopped). Locks can also be
-	int					locks;			// added by S_PrecacheSound.
-										// A SFX with no lock, no SFXFLAG_PERMANENTLOCK, and not precached after a level change is freed
 
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	unsigned int		loopstart;		// in sample frames. equals total_length if not looped
@@ -153,9 +148,6 @@ extern unsigned char resampling_buffer [48000 * 2 * 2];
 void S_MixToBuffer(void *stream, unsigned int frames);
 
 qboolean S_LoadSound (sfx_t *sfx, qboolean complain);
-
-void S_LockSfx (sfx_t *sfx);
-void S_UnlockSfx (sfx_t *sfx);
 
 snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sampleframes, const snd_format_t* in_format, unsigned int sb_speed);
 qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, unsigned int sampleframes, const snd_format_t* format);

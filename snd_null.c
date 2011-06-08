@@ -79,7 +79,7 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 	return -1;
 }
 
-void S_StopChannel (unsigned int channel_ind, qboolean lockmutex)
+void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx)
 {
 }
 
@@ -100,7 +100,7 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean serversound)
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean levelsound)
 {
 	return NULL;
 }
