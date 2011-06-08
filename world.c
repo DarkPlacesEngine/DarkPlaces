@@ -2553,11 +2553,11 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 
 	if(!strcmp(prog->name, "server"))
 	{
-		if(ed1 && ed1->fields.server->touch)
+		if(ed1 && PRVM_serveredictfunction(ed1, touch))
 		{
 			SV_LinkEdict_TouchAreaGrid_Call(ed1, ed2 ? ed2 : prog->edicts);
 		}
-		if(ed2 && ed2->fields.server->touch)
+		if(ed2 && PRVM_serveredictfunction(ed2, touch))
 		{
 			SV_LinkEdict_TouchAreaGrid_Call(ed2, ed1 ? ed1 : prog->edicts);
 		}

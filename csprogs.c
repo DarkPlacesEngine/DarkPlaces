@@ -244,29 +244,29 @@ void CSQC_R_RecalcView (void);
 static void CSQC_SetGlobals (void)
 {
 	CSQC_BEGIN
-		prog->globals.client->time = cl.time;
-		prog->globals.client->frametime = max(0, cl.time - cl.oldtime);
-		prog->globals.client->servercommandframe = cls.servermovesequence;
-		prog->globals.client->clientcommandframe = cl.movecmd[0].sequence;
-		VectorCopy(cl.viewangles, prog->globals.client->input_angles);
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobalfloat(frametime) = max(0, cl.time - cl.oldtime);
+		PRVM_clientglobalfloat(servercommandframe) = cls.servermovesequence;
+		PRVM_clientglobalfloat(clientcommandframe) = cl.movecmd[0].sequence;
+		VectorCopy(cl.viewangles, PRVM_clientglobalvector(input_angles));
 		// // FIXME: this actually belongs into getinputstate().. [12/17/2007 Black]
-		prog->globals.client->input_buttons = cl.movecmd[0].buttons;
-		VectorSet(prog->globals.client->input_movevalues, cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
+		PRVM_clientglobalfloat(input_buttons) = cl.movecmd[0].buttons;
+		VectorSet(PRVM_clientglobalvector(input_movevalues), cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
 		VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 		VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 
 		// LordHavoc: Spike says not to do this, but without pmove_org the
 		// CSQC is useless as it can't alter the view origin without
 		// completely replacing it
-		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, prog->globals.client->pmove_org);
-		VectorCopy(cl.movement_velocity, prog->globals.client->pmove_vel);
+		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, PRVM_clientglobalvector(pmove_org));
+		VectorCopy(cl.movement_velocity, PRVM_clientglobalvector(pmove_vel));
 		PRVM_clientglobalfloat(pmove_onground) = cl.onground;
 		PRVM_clientglobalfloat(pmove_inwater) = cl.inwater;
 
 		VectorCopy(cl.viewangles, PRVM_clientglobalvector(view_angles));
 		VectorCopy(cl.punchangle, PRVM_clientglobalvector(view_punchangle));
 		VectorCopy(cl.punchvector, PRVM_clientglobalvector(view_punchvector));
-		prog->globals.client->maxclients = cl.maxclients;
+		PRVM_clientglobalfloat(maxclients) = cl.maxclients;
 
 		CSQC_R_RecalcView();
 	CSQC_END
@@ -275,25 +275,25 @@ static void CSQC_SetGlobals (void)
 void CSQC_Predraw (prvm_edict_t *ed)
 {
 	int b;
-	if(!ed->fields.client->predraw)
+	if(!PRVM_clientedictfunction(ed, predraw))
 		return;
-	b = prog->globals.client->self;
-	prog->globals.client->self = PRVM_EDICT_TO_PROG(ed);
-	PRVM_ExecuteProgram(ed->fields.client->predraw, "CSQC_Predraw: NULL function\n");
-	prog->globals.client->self = b;
+	b = PRVM_clientglobaledict(self);
+	PRVM_clientglobaledict(self) = PRVM_EDICT_TO_PROG(ed);
+	PRVM_ExecuteProgram(PRVM_clientedictfunction(ed, predraw), "CSQC_Predraw: NULL function\n");
+	PRVM_clientglobaledict(self) = b;
 }
 
 void CSQC_Think (prvm_edict_t *ed)
 {
 	int b;
-	if(ed->fields.client->think)
-	if(ed->fields.client->nextthink && ed->fields.client->nextthink <= prog->globals.client->time)
+	if(PRVM_clientedictfunction(ed, think))
+	if(PRVM_clientedictfloat(ed, nextthink) && PRVM_clientedictfloat(ed, nextthink) <= PRVM_clientglobalfloat(time))
 	{
-		ed->fields.client->nextthink = 0;
-		b = prog->globals.client->self;
-		prog->globals.client->self = PRVM_EDICT_TO_PROG(ed);
-		PRVM_ExecuteProgram(ed->fields.client->think, "CSQC_Think: NULL function\n");
-		prog->globals.client->self = b;
+		PRVM_clientedictfloat(ed, nextthink) = 0;
+		b = PRVM_clientglobaledict(self);
+		PRVM_clientglobaledict(self) = PRVM_EDICT_TO_PROG(ed);
+		PRVM_ExecuteProgram(PRVM_clientedictfunction(ed, think), "CSQC_Think: NULL function\n");
+		PRVM_clientglobaledict(self) = b;
 	}
 }
 
@@ -339,14 +339,14 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	entrender->userwavefunc_param[3] = PRVM_clientedictfloat(ed, userwavefunc_param3);
 
 	entrender->model = model;
-	entrender->skinnum = (int)ed->fields.client->skin;
+	entrender->skinnum = (int)PRVM_clientedictfloat(ed, skin);
 	entrender->effects |= entrender->model->effects;
 	renderflags = (int)PRVM_clientedictfloat(ed, renderflags);
 	entrender->alpha = PRVM_clientedictfloat(ed, alpha);
 	entrender->scale = scale = PRVM_clientedictfloat(ed, scale);
 	VectorCopy(PRVM_clientedictvector(ed, colormod), entrender->colormod);
 	VectorCopy(PRVM_clientedictvector(ed, glowmod), entrender->glowmod);
-	if(ed->fields.client->effects)	entrender->effects |= (int)ed->fields.client->effects;
+	if(PRVM_clientedictfloat(ed, effects))	entrender->effects |= (int)PRVM_clientedictfloat(ed, effects);
 	if (!entrender->alpha)
 		entrender->alpha = 1.0f;
 	if (!entrender->scale)
@@ -379,7 +379,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		if(renderflags & RF_ADDITIVE)		entrender->flags |= RENDER_ADDITIVE;
 	}
 
-	c = (int)ed->fields.client->colormap;
+	c = (int)PRVM_clientedictfloat(ed, colormap);
 	if (c <= 0)
 		CL_SetEntityColormapColors(entrender, -1);
 	else if (c <= cl.maxclients && cl.scores != NULL)
@@ -439,8 +439,8 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 			r = false;
 		else
 		{
-			prog->globals.client->time = cl.time;
-			prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+			PRVM_clientglobalfloat(time) = cl.time;
+			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
 			PRVM_G_FLOAT(OFS_PARM1) = key;
 			PRVM_G_FLOAT(OFS_PARM2) = ascii;
@@ -463,8 +463,8 @@ qboolean CL_VM_UpdateView (void)
 	R_TimeReport("pre-UpdateView");
 	CSQC_BEGIN
 		//VectorCopy(cl.viewangles, oldangles);
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		CSQC_SetGlobals();
 		// clear renderable entity and light lists to prevent crashes if the
 		// CSQC_UpdateView function does not call R_ClearScene as it should
@@ -492,8 +492,8 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 	CSQC_BEGIN
 	if (PRVM_clientfunction(CSQC_ConsoleCommand))
 	{
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(cmd);
 		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_ConsoleCommand), "QC function CSQC_ConsoleCommand is missing");
@@ -514,8 +514,8 @@ qboolean CL_VM_Parse_TempEntity (void)
 	if(PRVM_clientfunction(CSQC_Parse_TempEntity))
 	{
 		t = msg_readcount;
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_TempEntity), "QC function CSQC_Parse_TempEntity is missing");
 		r = CSQC_RETURNVAL != 0;
 		if(!r)
@@ -596,8 +596,8 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 	CSQC_BEGIN
 	if(PRVM_clientfunction(CSQC_Parse_StuffCmd))
 	{
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_StuffCmd), "QC function CSQC_Parse_StuffCmd is missing");
@@ -611,8 +611,8 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 static void CL_VM_Parse_Print (const char *msg)
 {
 	int restorevm_tempstringsbuf_cursize;
-	prog->globals.client->time = cl.time;
-	prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+	PRVM_clientglobalfloat(time) = cl.time;
+	PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 	PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_Print), "QC function CSQC_Parse_Print is missing");
@@ -663,8 +663,8 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 	CSQC_BEGIN
 	if(PRVM_clientfunction(CSQC_Parse_CenterPrint))
 	{
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
 		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(msg);
 		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Parse_CenterPrint), "QC function CSQC_Parse_CenterPrint is missing");
@@ -701,8 +701,8 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 		CSQC_BEGIN
 		if(PRVM_clientfunction(CSQC_Event_Sound))
 		{
-			prog->globals.client->time = cl.time;
-			prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+			PRVM_clientglobalfloat(time) = cl.time;
+			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = ent;
 			PRVM_G_FLOAT(OFS_PARM1) = channel;
 			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(cl.sound_name[sound_num] );
@@ -757,8 +757,8 @@ float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don't know
 	CSQC_BEGIN
 	if(PRVM_clientfunction(CSQC_Event))
 	{
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		PRVM_G_FLOAT(OFS_PARM0) = event;
 		PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Event), "QC function CSQC_Event is missing");
 		r = CSQC_RETURNVAL;
@@ -777,18 +777,18 @@ void CSQC_ReadEntities (void)
 	}
 
 	CSQC_BEGIN
-		prog->globals.client->time = cl.time;
-		oldself = prog->globals.client->self;
+		PRVM_clientglobalfloat(time) = cl.time;
+		oldself = PRVM_clientglobaledict(self);
 		while(1)
 		{
 			entnum = MSG_ReadShort();
 			if(!entnum || msg_badread)
 				break;
 			realentnum = entnum & 0x7FFF;
-			prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum];
+			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[realentnum];
 			if(entnum & 0x8000)
 			{
-				if(prog->globals.client->self)
+				if(PRVM_clientglobaledict(self))
 				{
 					PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Remove), "QC function CSQC_Ent_Remove is missing");
 					cl.csqc_server2csqcentitynumber[realentnum] = 0;
@@ -804,14 +804,14 @@ void CSQC_ReadEntities (void)
 			}
 			else
 			{
-				if(!prog->globals.client->self)
+				if(!PRVM_clientglobaledict(self))
 				{
 					if(!PRVM_clientfunction(CSQC_Ent_Spawn))
 					{
 						prvm_edict_t	*ed;
 						ed = PRVM_ED_Alloc();
-						ed->fields.client->entnum = realentnum;
-						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
+						PRVM_clientedictfloat(ed, entnum) = realentnum;
+						PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT_TO_PROG(ed);
 					}
 					else
 					{
@@ -819,9 +819,9 @@ void CSQC_ReadEntities (void)
 						// the qc function should set entnum, too (this way it also can return world [2/1/2008 Andreas]
 						PRVM_G_FLOAT(OFS_PARM0) = (float) realentnum;
 						// make sure no one gets wrong ideas
-						prog->globals.client->self = 0;
+						PRVM_clientglobaledict(self) = 0;
 						PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Spawn), "QC function CSQC_Ent_Spawn is missing");
-						prog->globals.client->self = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
+						PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[realentnum] = PRVM_EDICT( PRVM_G_INT( OFS_RETURN ) );
 					}
 					PRVM_G_FLOAT(OFS_PARM0) = 1;
 					PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Ent_Update), "QC function CSQC_Ent_Update is missing");
@@ -832,7 +832,7 @@ void CSQC_ReadEntities (void)
 				}
 			}
 		}
-		prog->globals.client->self = oldself;
+		PRVM_clientglobaledict(self) = oldself;
 	CSQC_END
 }
 
@@ -872,7 +872,7 @@ void CL_VM_CB_FreeEdict(prvm_edict_t *ed)
 	R_DecalSystem_Reset(&entrender->decalsystem);
 	memset(entrender, 0, sizeof(*entrender));
 	World_UnlinkEdict(ed);
-	memset(ed->fields.client, 0, sizeof(*ed->fields.client));
+	memset(ed->fields.vp, 0, prog->entityfields * 4);
 	VM_RemoveEdictSkeleton(ed);
 	World_Physics_RemoveFromEntity(&cl.world, ed);
 	World_Physics_RemoveJointFromEntity(&cl.world, ed);
@@ -890,9 +890,9 @@ void CL_VM_CB_CountEdicts(void)
 		if (ent->priv.server->free)
 			continue;
 		active++;
-		if (ent->fields.client->solid)
+		if (PRVM_clientedictfloat(ent, solid))
 			solid++;
-		if (ent->fields.client->model)
+		if (PRVM_clientedictstring(ent, model))
 			models++;
 	}
 
@@ -1017,7 +1017,6 @@ void CL_VM_Init (void)
 
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);
-	prog->headercrc = CL_PROGHEADER_CRC;
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = CL_NAME;
 	prog->num_edicts = 1;
@@ -1082,16 +1081,16 @@ void CL_VM_Init (void)
 		prog->flag |= PRVM_OP_STATE;
 
 	// set time
-	prog->globals.client->time = cl.time;
-	prog->globals.client->self = 0;
+	PRVM_clientglobalfloat(time) = cl.time;
+	PRVM_clientglobaledict(self) = 0;
 
-	prog->globals.client->mapname = PRVM_SetEngineString(cl.worldname);
-	prog->globals.client->player_localentnum = cl.playerentity;
+	PRVM_clientglobalstring(mapname) = PRVM_SetEngineString(cl.worldname);
+	PRVM_clientglobalfloat(player_localentnum) = cl.playerentity;
 
 	// set map description (use world entity 0)
 	PRVM_clientedictstring(prog->edicts, message) = PRVM_SetEngineString(cl.worldmessage);
-	VectorCopy(cl.world.mins, prog->edicts->fields.client->mins);
-	VectorCopy(cl.world.maxs, prog->edicts->fields.client->maxs);
+	VectorCopy(cl.world.mins, PRVM_clientedictvector(prog->edicts, mins));
+	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, maxs));
 
 	// call the prog init
 	PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
@@ -1114,8 +1113,8 @@ void CL_VM_ShutDown (void)
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
-		prog->globals.client->time = cl.time;
-		prog->globals.client->self = 0;
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = 0;
 		if (PRVM_clientfunction(CSQC_Shutdown))
 			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
 		PRVM_ResetProg();
@@ -1140,7 +1139,7 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	if(!ed->priv.required->free)
 	{
 		mod = CL_GetModelFromEdict(ed);
-		VectorCopy(ed->fields.client->origin, out);
+		VectorCopy(PRVM_clientedictvector(ed, origin), out);
 		if(CL_GetTagMatrix (&matrix, ed, 0) == 0)
 			Matrix4x4_OriginFromMatrix(&matrix, out);
 		if (mod && mod->soundfromcenter)
@@ -1171,8 +1170,8 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 			{
 				Matrix4x4_ToVectors(viewmatrix, forward, left, up, origin);
 				AnglesFromVectors(ang, forward, up, false);
-				prog->globals.client->time = cl.time;
-				prog->globals.client->self = entnum;
+				PRVM_clientglobalfloat(time) = cl.time;
+				PRVM_clientglobaledict(self) = entnum;
 				VectorCopy(origin, PRVM_G_VECTOR(OFS_PARM0));
 				VectorCopy(ang, PRVM_G_VECTOR(OFS_PARM1));
 				VectorCopy(forward, PRVM_clientglobalvector(v_forward));

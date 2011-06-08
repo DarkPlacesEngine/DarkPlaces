@@ -6845,7 +6845,7 @@ void VM_getsurfaceclippedpoint(void)
 	animatemodel(model, ed);
 	applytransform_inverted(PRVM_G_VECTOR(OFS_PARM2), ed, p);
 	clippointtosurface(ed, model, surface, p, out);
-	VectorAdd(out, ed->fields.server->origin, PRVM_G_VECTOR(OFS_RETURN));
+	VectorAdd(out, PRVM_serveredictvector(ed, origin), PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //PF_getsurfacenumtriangles, // #??? float(entity e, float s) getsurfacenumtriangles = #???;
@@ -6924,7 +6924,7 @@ void VM_physics_enable(void)
 		return;
 	}
 	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
-	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	if (PRVM_serveredictfloat(ed, movetype) != MOVETYPE_PHYSICS)
 	{
 		VM_Warning("VM_physics_enable: entity is not MOVETYPE_PHYSICS!\n");
 		return;
@@ -6948,14 +6948,14 @@ void VM_physics_addforce(void)
 		return;
 	}
 	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
-	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	if (PRVM_serveredictfloat(ed, movetype) != MOVETYPE_PHYSICS)
 	{
 		VM_Warning("VM_physics_addforce: entity is not MOVETYPE_PHYSICS!\n");
 		return;
 	}
 	f.type = ODEFUNC_RELFORCEATPOS;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
-	VectorSubtract(ed->fields.server->origin, PRVM_G_VECTOR(OFS_PARM2), f.v2);
+	VectorSubtract(PRVM_serveredictvector(ed, origin), PRVM_G_VECTOR(OFS_PARM2), f.v2);
 	VM_physics_ApplyCmd(ed, &f);
 }
 
@@ -6974,7 +6974,7 @@ void VM_physics_addtorque(void)
 		return;
 	}
 	// entity should have MOVETYPE_PHYSICS already set, this can damage memory (making leaked allocation) so warn about this even if non-developer
-	if (ed->fields.server->movetype != MOVETYPE_PHYSICS)
+	if (PRVM_serveredictfloat(ed, movetype) != MOVETYPE_PHYSICS)
 	{
 		VM_Warning("VM_physics_addtorque: entity is not MOVETYPE_PHYSICS!\n");
 		return;

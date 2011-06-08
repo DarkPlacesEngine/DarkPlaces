@@ -468,11 +468,11 @@ void SV_DropClient(qboolean crash)
 	{
 		// call the prog function for removing a client
 		// this will set the body to a dead frame, among other things
-		int saveSelf = prog->globals.server->self;
+		int saveSelf = PRVM_serverglobaledict(self);
 		host_client->clientconnectcalled = false;
-		prog->globals.server->self = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram(prog->globals.server->ClientDisconnect, "QC function ClientDisconnect is missing");
-		prog->globals.server->self = saveSelf;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+		PRVM_ExecuteProgram(PRVM_serverfunction(ClientDisconnect), "QC function ClientDisconnect is missing");
+		PRVM_serverglobaledict(self) = saveSelf;
 	}
 
 	if (host_client->netconnection)

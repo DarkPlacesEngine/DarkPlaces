@@ -1,13 +1,12 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -d bug darkplaces d3d9: drawsetcliparea not working right - seems to be Y-flipped, this also affects menus in Steelstorm (VorteX)
 -d bug darkplaces d3d9: overbright particles get weird colors (VorteX)
-0 optimize darkplaces renderer: get rid of attenuation texture on lights because math is faster, add fastpath for no normalmap (Lava_Croft)
-0 bug darkplaces filesystem: -game nehahra does not load properly; menu does not work properly - probably not activating gamemode
 0 bug darkplaces client csqc: CSQC_InputEvent is supposed to handle mouse movement, compare to FTEQW code (avirox)
 0 bug darkplaces client csqc: engine prediction function is not implemented - could just return the engine's current cl.movement_origin (Spike)
 0 bug darkplaces client csqc: entities not being drawn with VF_PERSPECTIVE 0? (daemon)
 0 bug darkplaces client csqc: input queue functions needed for csqc prediction aren't implemented (Spike)
 0 bug darkplaces client csqc: precaches on client don't work, have to precache on server - what's going wrong here? (daemon, Urre)
+0 bug darkplaces client csqc: string stats should be sent as a single stat with WriteString (Spike)
 0 bug darkplaces client csqc: there is no WriteFloat, making ReadFloat useless (Urre)
 0 bug darkplaces client csqc: unproject Z handling differs in DP and FTEQW, project also must be directly compatible with unproject (avirox)
 0 bug darkplaces client csqc: world not being drawn with VF_PERSPECTIVE 0? (VorteX)
@@ -33,6 +32,7 @@
 0 bug darkplaces effects: add a cvar to disable colored dlights (leileilol)
 0 bug darkplaces effects: dlights don't look anything like quake ones, bring back lightmap dlights as a cvar - with both classic and old dp falloff modes (leileilol)
 0 bug darkplaces effects: quake mode blood trails don't have the appropriate slight gravity - there may be other effects missing this also (leileilol)
+0 bug darkplaces filesystem: -game nehahra does not load properly; menu does not work properly - probably not activating gamemode
 0 bug darkplaces loader: crash when a mdl model has more replacement skins than the model contains (Lardarse)
 0 bug darkplaces loader: make rtlight entity loader support q3map/q3map2 lights properly, they use a spawnflag for LINEAR mode, by default they use 1/(x*x) falloff (Carni, motorsep)
 0 bug darkplaces loader: mcbsp hull selection is ignoring the custom hulls supported by mcbsp (div0)
@@ -57,6 +57,7 @@
 0 bug darkplaces server: SV_PushMove is ignoring model type in its angles_x handling, where as the renderer checks only model type to determine angles_x handling (Urre)
 0 bug darkplaces server: SV_PushMove's call to SV_ClipMoveToEntity should do a trace, not just a point test, to support hollow pusher models (Urre)
 0 bug darkplaces server: X-Men mod has flying enemies that tend to go through the floor, sometimes preventing a level from being completed.  x1m1 has two alcoves that open to reveal Storm and Archangel but often Storm disappears through the ground of hear alcove and then the level can't be completed.  A similar problem with Storm apears in x1m3 in an alcove.  (ewwfq yahoo com)
+0 bug darkplaces server: savegames do not contain parms for multiple players, restoring a savegame leaves parms for other players as they were at the time of loading the savegame, clearly wrong (daemon)
 0 bug darkplaces server: savegames do not save precaches, which means that automatic precaching frequently results in invalid modelindex values when reloading the savegame, and this bug also exists in many quake mods that randomly choose multiple variants of a monster, each with separate precaches, resulting in a different precache order when reloading the savegame
 0 bug darkplaces wgl client: during video mode setup, sometimes another application's window becomes permanently top most, not darkplaces' fullscreen window, why? (tZork)
 0 bug darkplaces windows sound: freezing on exit sometimes when freeing sound buffer during sound shutdown (Black)
@@ -263,6 +264,7 @@
 0 optimization darkplaces server: implement first unused/last used entity range optimization on entity spawn/remove similar to the client particles (LordHavoc)
 0 optimization darkplaces visibility: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 optimization darkplaces: calculate worldmodel farclip (corner to corner radius) at load
+0 optimize darkplaces renderer: get rid of attenuation texture on lights because math is faster, add fastpath for no normalmap (Lava_Croft)
 1 bug darkplaces WGL client: figure out why for some people GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
 1 bug darkplaces WGL/GLX/SDL client bug: if sound is unavailable (causing a freeze waiting for it to become available), the config is reset (SavageX)
 1 bug darkplaces bsd filesystem: read() is failing (not returning the requested amount) on freebsd when reading files, whether actual files or in a pk3 - somehow it is still able to read the pk3 zip directory though (suminigashi, Elric)
