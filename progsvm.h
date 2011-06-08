@@ -110,8 +110,8 @@ typedef struct prvm_edict_s
 	union
 	{
 		vec_t *vp;
-		entvars_t		*server;
-		cl_entvars_t	*client;
+//		entvars_t		*server;
+//		cl_entvars_t	*client;
 	} fields;
 } prvm_edict_t;
 
@@ -528,8 +528,8 @@ typedef struct prvm_prog_s
 
 	union {
 		vec_t *generic;
-		globalvars_t *server;
-		cl_globalvars_t *client;
+//		globalvars_t *server;
+//		cl_globalvars_t *client;
 	} globals;
 
 	int					maxknownstrings;
@@ -563,9 +563,6 @@ typedef struct prvm_prog_s
 
 	int					localstack[PRVM_LOCALSTACK_SIZE];
 	int					localstack_used;
-
-	unsigned short		headercrc; // [INIT]
-	unsigned short		headercrc2; // [INIT] alternate CRC for tenebrae progs.dat
 
 	unsigned short		filecrc;
 

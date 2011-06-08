@@ -130,7 +130,7 @@ dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
 	if (!ed || ed->priv.server->free)
 		return NULL;
-	return CL_GetModelByIndex((int)ed->fields.client->modelindex);
+	return CL_GetModelByIndex((int)PRVM_clientedictfloat(ed, modelindex));
 }
 
 void CL_LinkEdict(prvm_edict_t *ent)
@@ -145,9 +145,9 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 	// set the abs box
 
-	if (ent->fields.client->solid == SOLID_BSP)
+	if (PRVM_clientedictfloat(ent, solid) == SOLID_BSP)
 	{
-		dp_model_t *model = CL_GetModelByIndex( (int)ent->fields.client->modelindex );
+		dp_model_t *model = CL_GetModelByIndex( (int)PRVM_clientedictfloat(ent, modelindex) );
 		if (model == NULL)
 		{
 			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
@@ -160,39 +160,39 @@ void CL_LinkEdict(prvm_edict_t *ent)
 			if (!model->TraceBox)
 				Con_DPrintf("edict %i: SOLID_BSP with non-collidable model\n", PRVM_NUM_FOR_EDICT(ent));
 
-			if (ent->fields.client->angles[0] || ent->fields.client->angles[2] || ent->fields.client->avelocity[0] || ent->fields.client->avelocity[2])
+			if (PRVM_clientedictvector(ent, angles)[0] || PRVM_clientedictvector(ent, angles)[2] || PRVM_clientedictvector(ent, avelocity)[0] || PRVM_clientedictvector(ent, avelocity)[2])
 			{
-				VectorAdd(ent->fields.client->origin, model->rotatedmins, mins);
-				VectorAdd(ent->fields.client->origin, model->rotatedmaxs, maxs);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->rotatedmins, mins);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->rotatedmaxs, maxs);
 			}
-			else if (ent->fields.client->angles[1] || ent->fields.client->avelocity[1])
+			else if (PRVM_clientedictvector(ent, angles)[1] || PRVM_clientedictvector(ent, avelocity)[1])
 			{
-				VectorAdd(ent->fields.client->origin, model->yawmins, mins);
-				VectorAdd(ent->fields.client->origin, model->yawmaxs, maxs);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->yawmins, mins);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->yawmaxs, maxs);
 			}
 			else
 			{
-				VectorAdd(ent->fields.client->origin, model->normalmins, mins);
-				VectorAdd(ent->fields.client->origin, model->normalmaxs, maxs);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->normalmins, mins);
+				VectorAdd(PRVM_clientedictvector(ent, origin), model->normalmaxs, maxs);
 			}
 		}
 		else
 		{
 			// SOLID_BSP with no model is valid, mainly because some QC setup code does so temporarily
-			VectorAdd(ent->fields.client->origin, ent->fields.client->mins, mins);
-			VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, maxs);
+			VectorAdd(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), mins);
+			VectorAdd(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, maxs), maxs);
 		}
 	}
 	else
 	{
-		VectorAdd(ent->fields.client->origin, ent->fields.client->mins, mins);
-		VectorAdd(ent->fields.client->origin, ent->fields.client->maxs, maxs);
+		VectorAdd(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), mins);
+		VectorAdd(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, maxs), maxs);
 	}
 
-	VectorCopy(mins, ent->fields.client->absmin);
-	VectorCopy(maxs, ent->fields.client->absmax);
+	VectorCopy(mins, PRVM_clientedictvector(ent, absmin));
+	VectorCopy(maxs, PRVM_clientedictvector(ent, absmax));
 
-	World_LinkEdict(&cl.world, ent, ent->fields.client->absmin, ent->fields.client->absmax);
+	World_LinkEdict(&cl.world, ent, PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax));
 }
 
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
@@ -202,16 +202,16 @@ int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 		int dphitcontentsmask = (int)PRVM_clientedictfloat(passedict, dphitcontentsmask);
 		if (dphitcontentsmask)
 			return dphitcontentsmask;
-		else if (passedict->fields.client->solid == SOLID_SLIDEBOX)
+		else if (PRVM_clientedictfloat(passedict, solid) == SOLID_SLIDEBOX)
 		{
-			if ((int)passedict->fields.client->flags & FL_MONSTER)
+			if ((int)PRVM_clientedictfloat(passedict, flags) & FL_MONSTER)
 				return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_MONSTERCLIP;
 			else
 				return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP;
 		}
-		else if (passedict->fields.client->solid == SOLID_CORPSE)
+		else if (PRVM_clientedictfloat(passedict, solid) == SOLID_CORPSE)
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
-		else if (passedict->fields.client->solid == SOLID_TRIGGER)
+		else if (PRVM_clientedictfloat(passedict, solid) == SOLID_TRIGGER)
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY;
 		else
 			return SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_CORPSE;
@@ -297,7 +297,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// precalculate prog value for passedict for comparisons
 	passedictprog = prog != NULL ? PRVM_EDICT_TO_PROG(passedict) : 0;
 	// precalculate passedict's owner edict pointer for comparisons
-	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.client->owner) : NULL;
+	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -382,9 +382,9 @@ skipnetworkplayers:
 	{
 		touch = touchedicts[i];
 
-		if (touch->fields.client->solid < SOLID_BBOX)
+		if (PRVM_clientedictfloat(touch, solid) < SOLID_BBOX)
 			continue;
-		if (type == MOVE_NOMONSTERS && touch->fields.client->solid != SOLID_BSP)
+		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
 			continue;
 
 		if (passedict)
@@ -396,32 +396,32 @@ skipnetworkplayers:
 			if (traceowner == touch)
 				continue;
 			// don't clip owner against owned entities
-			if (passedictprog == touch->fields.client->owner)
+			if (passedictprog == PRVM_clientedictedict(touch, owner))
 				continue;
 			// don't clip points against points (they can't collide)
-			if (VectorCompare(touch->fields.client->mins, touch->fields.client->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.client->flags & FL_MONSTER)))
+			if (VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
 				continue;
 		}
 
-		bodysupercontents = touch->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
+		bodysupercontents = PRVM_clientedictfloat(touch, solid) == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
 
 		// might interact, so do an exact clip
 		model = NULL;
-		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
+		if ((int) PRVM_clientedictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 			model = CL_GetModelFromEdict(touch);
 		if (model)
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2], PRVM_clientedictvector(touch, angles)[0], PRVM_clientedictvector(touch, angles)[1], PRVM_clientedictvector(touch, angles)[2], 1);
 		else
-			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
+			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		if ((int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
+		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
 		else
-			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
-		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.client->solid == SOLID_BSP);
+		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}
 
 finished:
@@ -530,7 +530,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// precalculate prog value for passedict for comparisons
 	passedictprog = prog != NULL ? PRVM_EDICT_TO_PROG(passedict) : 0;
 	// precalculate passedict's owner edict pointer for comparisons
-	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.client->owner) : NULL;
+	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -615,9 +615,9 @@ skipnetworkplayers:
 	{
 		touch = touchedicts[i];
 
-		if (touch->fields.client->solid < SOLID_BBOX)
+		if (PRVM_clientedictfloat(touch, solid) < SOLID_BBOX)
 			continue;
-		if (type == MOVE_NOMONSTERS && touch->fields.client->solid != SOLID_BSP)
+		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
 			continue;
 
 		if (passedict)
@@ -629,32 +629,32 @@ skipnetworkplayers:
 			if (traceowner == touch)
 				continue;
 			// don't clip owner against owned entities
-			if (passedictprog == touch->fields.client->owner)
+			if (passedictprog == PRVM_clientedictedict(touch, owner))
 				continue;
 			// don't clip points against points (they can't collide)
-			if (VectorCompare(touch->fields.client->mins, touch->fields.client->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.client->flags & FL_MONSTER)))
+			if (VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
 				continue;
 		}
 
-		bodysupercontents = touch->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
+		bodysupercontents = PRVM_clientedictfloat(touch, solid) == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
 
 		// might interact, so do an exact clip
 		model = NULL;
-		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
+		if ((int) PRVM_clientedictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 			model = CL_GetModelFromEdict(touch);
 		if (model)
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2], PRVM_clientedictvector(touch, angles)[0], PRVM_clientedictvector(touch, angles)[1], PRVM_clientedictvector(touch, angles)[2], 1);
 		else
-			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
+			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		if (type == MOVE_MISSILE && (int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+		if (type == MOVE_MISSILE && (int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
+			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
-		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.client->solid == SOLID_BSP);
+		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}
 
 finished:
@@ -804,7 +804,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// figure out whether this is a point trace for comparisons
 	pointtrace = VectorCompare(clipmins, clipmaxs);
 	// precalculate passedict's owner edict pointer for comparisons
-	traceowner = passedict ? PRVM_PROG_TO_EDICT(passedict->fields.client->owner) : NULL;
+	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -889,9 +889,9 @@ skipnetworkplayers:
 	{
 		touch = touchedicts[i];
 
-		if (touch->fields.client->solid < SOLID_BBOX)
+		if (PRVM_clientedictfloat(touch, solid) < SOLID_BBOX)
 			continue;
-		if (type == MOVE_NOMONSTERS && touch->fields.client->solid != SOLID_BSP)
+		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
 			continue;
 
 		if (passedict)
@@ -903,32 +903,32 @@ skipnetworkplayers:
 			if (traceowner == touch)
 				continue;
 			// don't clip owner against owned entities
-			if (passedictprog == touch->fields.client->owner)
+			if (passedictprog == PRVM_clientedictedict(touch, owner))
 				continue;
 			// don't clip points against points (they can't collide)
-			if (pointtrace && VectorCompare(touch->fields.client->mins, touch->fields.client->maxs) && (type != MOVE_MISSILE || !((int)touch->fields.client->flags & FL_MONSTER)))
+			if (pointtrace && VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
 				continue;
 		}
 
-		bodysupercontents = touch->fields.client->solid == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
+		bodysupercontents = PRVM_clientedictfloat(touch, solid) == SOLID_CORPSE ? SUPERCONTENTS_CORPSE : SUPERCONTENTS_BODY;
 
 		// might interact, so do an exact clip
 		model = NULL;
-		if ((int) touch->fields.client->solid == SOLID_BSP || type == MOVE_HITMODEL)
+		if ((int) PRVM_clientedictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 			model = CL_GetModelFromEdict(touch);
 		if (model)
-			Matrix4x4_CreateFromQuakeEntity(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2], touch->fields.client->angles[0], touch->fields.client->angles[1], touch->fields.client->angles[2], 1);
+			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2], PRVM_clientedictvector(touch, angles)[0], PRVM_clientedictvector(touch, angles)[1], PRVM_clientedictvector(touch, angles)[2], 1);
 		else
-			Matrix4x4_CreateTranslate(&matrix, touch->fields.client->origin[0], touch->fields.client->origin[1], touch->fields.client->origin[2]);
+			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		if ((int)touch->fields.client->flags & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touch->fields.client->mins, touch->fields.client->maxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
-		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, touch->fields.client->solid == SOLID_BSP);
+		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}
 
 finished:

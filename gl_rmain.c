@@ -7141,7 +7141,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 	for (i = 0;i < numsurfaces;i++)
 	{
 		edict = PRVM_EDICT_NUM(surfacelist[i]);
-		switch ((int)edict->fields.server->solid)
+		switch ((int)PRVM_serveredictfloat(edict, solid))
 		{
 			case SOLID_NOT:      Vector4Set(color, 1, 1, 1, 0.05);break;
 			case SOLID_TRIGGER:  Vector4Set(color, 1, 0, 1, 0.10);break;
