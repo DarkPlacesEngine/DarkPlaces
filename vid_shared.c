@@ -164,7 +164,6 @@ cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32", "how many bits per pixel to render at (32 or 16, 32 is recommended)"};
 cvar_t vid_samples = {CVAR_SAVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
-cvar_t vid_multisampling = {CVAR_SAVE, "vid_multisampling", "0", "Make use of GL_AGB_MULTISAMPLING for advaced anti-aliasing techniques such as Alpha-To-Coverage, not yet finished"};
 cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
 cvar_t vid_userefreshrate = {CVAR_SAVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
 cvar_t vid_stereobuffer = {CVAR_SAVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
@@ -1640,7 +1639,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
 	Cvar_RegisterVariable(&vid_samples);
-	Cvar_RegisterVariable(&vid_multisampling);
 	Cvar_RegisterVariable(&vid_refreshrate);
 	Cvar_RegisterVariable(&vid_userefreshrate);
 	Cvar_RegisterVariable(&vid_stereobuffer);
@@ -1715,17 +1713,6 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 {
 	viddef_mode_t mode;
 
-#if 0
-	// LordHavoc: FIXME: VorteX broke vid_restart with this, it is a mystery why it would ever work, commented out
-	// multisampling should set at least 2 samples
-	if (vid.support.arb_multisample)
-	{
-		GL_MultiSampling(false);
-		if (vid_multisampling.integer)
-			samples = max(2, samples);
-	}
-#endif
-
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
 	mode.width = width;
@@ -1764,9 +1751,10 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
 		Cvar_SetValueQuick(&vid_stereobuffer, vid.mode.stereobuffer);
 
-		// activate multisampling
-		if (vid_multisampling.integer)
-			GL_MultiSampling(true);
+		// LordHavoc: disabled this code because multisampling is on by default if the framebuffer is multisampled
+//		// activate multisampling
+//		if (vid.mode.samples > 1)
+//			GL_MultiSampling(true);
 
 		return true;
 	}

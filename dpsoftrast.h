@@ -65,8 +65,6 @@ void DPSOFTRAST_DepthFunc(int comparemode);
 void DPSOFTRAST_DepthRange(float range0, float range1);
 void DPSOFTRAST_PolygonOffset(float alongnormal, float intoview);
 void DPSOFTRAST_CullFace(int mode);
-void DPSOFTRAST_AlphaTest(int enable);
-void DPSOFTRAST_AlphaFunc(int alphafunc, float alphavalue);
 void DPSOFTRAST_Color4f(float r, float g, float b, float a);
 void DPSOFTRAST_GetPixelsBGRA(int blockx, int blocky, int blockwidth, int blockheight, unsigned char *outpixels);
 void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int sx, int sy, int width, int height);

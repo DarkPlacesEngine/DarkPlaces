@@ -249,9 +249,6 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 	int depthtest;
 	int depthfunc;
 	int scissortest;
-	int alphatest;
-	int alphafunc;
-	float alphavalue;
 	int viewport[4];
 	int scissor[4];
 	float depthrange[2];
@@ -1168,30 +1165,6 @@ void DPSOFTRAST_CullFace(int mode)
 	command->mode = mode;
 }
 
-DEFCOMMAND(15, AlphaTest, int enable;)
-static void DPSOFTRAST_Interpret_AlphaTest(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_AlphaTest *command)
-{
-	thread->alphatest = command->enable;
-}
-void DPSOFTRAST_AlphaTest(int enable)
-{
-	DPSOFTRAST_Command_AlphaTest *command = DPSOFTRAST_ALLOCATECOMMAND(AlphaTest);
-	command->enable = enable;
-}
-
-DEFCOMMAND(16, AlphaFunc, int func; float ref;)
-static void DPSOFTRAST_Interpret_AlphaFunc(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_AlphaFunc *command)
-{
-	thread->alphafunc = command->func;
-	thread->alphavalue = command->ref;
-}
-void DPSOFTRAST_AlphaFunc(int func, float ref)
-{
-	DPSOFTRAST_Command_AlphaFunc *command = DPSOFTRAST_ALLOCATECOMMAND(AlphaFunc);
-	command->func = func;
-	command->ref = ref;
-}
-
 void DPSOFTRAST_Color4f(float r, float g, float b, float a)
 {
 	dpsoftrast.color[0] = r;
@@ -2076,7 +2049,7 @@ void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, const DPS
 	pixel += (span->y * dpsoftrast.fb_width + span->x) * 4;
 	pixeli += span->y * dpsoftrast.fb_width + span->x;
 	// handle alphatest now (this affects depth writes too)
-	if (thread->alphatest)
+	if (thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL)
 		for (x = startx;x < endx;x++)
 			if (in4ub[x*4+3] < 128)
 				pixelmask[x] = false;
@@ -3333,7 +3306,7 @@ void DPSOFTRAST_PixelShader_FlatColor(DPSOFTRAST_State_Thread *thread, const DPS
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
-	if (thread->alphatest || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+	if ((thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL) || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
 		pixel = buffer_FragColorbgra8;
 	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
 	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
@@ -3386,7 +3359,7 @@ void DPSOFTRAST_PixelShader_VertexColor(DPSOFTRAST_State_Thread *thread, const D
 	int arrayindex = DPSOFTRAST_ARRAY_COLOR;
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_colorbgra8, GL20TU_COLOR, 2, buffer_z);
-	if (thread->alphatest || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+	if ((thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL) || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
 		pixel = buffer_FragColorbgra8;
 	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
 	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
@@ -3461,7 +3434,7 @@ void DPSOFTRAST_PixelShader_Lightmap(DPSOFTRAST_State_Thread *thread, const DPSO
 	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_colorbgra8, GL20TU_COLOR, DPSOFTRAST_ARRAY_TEXCOORD0, buffer_z);
 	DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(thread, triangle, span, buffer_texture_lightmapbgra8, GL20TU_LIGHTMAP, DPSOFTRAST_ARRAY_TEXCOORD4, buffer_z);
-	if (thread->alphatest || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
+	if ((thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL) || thread->fb_blendmode != DPSOFTRAST_BLENDMODE_OPAQUE)
 		pixel = buffer_FragColorbgra8;
 	Color_Ambientm = _mm_shuffle_epi32(_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(&thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4]), _mm_set1_ps(256.0f))), _MM_SHUFFLE(3, 0, 1, 2));
 	Color_Ambientm = _mm_and_si128(Color_Ambientm, _mm_setr_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0));
@@ -5486,8 +5459,6 @@ static void DPSOFTRAST_Draw_InterpretCommands(DPSOFTRAST_State_Thread *thread, i
 		INTERPCOMMAND(DepthRange)
 		INTERPCOMMAND(PolygonOffset)
 		INTERPCOMMAND(CullFace)
-		INTERPCOMMAND(AlphaTest)
-		INTERPCOMMAND(AlphaFunc)
 		INTERPCOMMAND(SetTexture)
 		INTERPCOMMAND(SetShader)
 		INTERPCOMMAND(Uniform4f)
@@ -5643,9 +5614,6 @@ int DPSOFTRAST_Init(int width, int height, int numthreads, int interlace, unsign
 		thread->depthtest = true;
 		thread->depthfunc = GL_LEQUAL;
 		thread->scissortest = false;
-		thread->alphatest = false;
-		thread->alphafunc = GL_GREATER;
-		thread->alphavalue = 0.5f;
 		thread->viewport[0] = 0;
 		thread->viewport[1] = 0;
 		thread->viewport[2] = dpsoftrast.fb_width;

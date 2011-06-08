@@ -72,7 +72,7 @@ cvar_t r_farclip_world = {0, "r_farclip_world", "2", "adds map size to farclip m
 cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip plane" };
 cvar_t r_deformvertexes = {0, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
 cvar_t r_transparent = {0, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
-cvar_t r_transparent_alphatocoverage = {0, "r_transparent_alphatocoverage", "0", "enables alpha-to-coverage antialiasing technique on alphatest surfaces, this is not yet finished as multisampling is not used"};
+cvar_t r_transparent_alphatocoverage = {0, "r_transparent_alphatocoverage", "0", "enables alpha-to-coverage antialiasing technique on alphatest surfaces when using vid_samples 2 or higher"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -1911,6 +1911,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 	if (!second)
 		texturemode = GL_MODULATE;
+	GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
@@ -1956,6 +1957,7 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy)
 	unsigned int permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
+	GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
@@ -1994,6 +1996,7 @@ void R_SetupShader_ShowDepth(qboolean notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (r_trippy.integer)
 		permutation |= SHADERPERMUTATION_TRIPPY;
+	GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
@@ -2145,6 +2148,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
 		}
+		GL_AlphaToCoverage(false);
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
 	{
@@ -2164,6 +2168,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		mode = SHADERMODE_DEFERREDGEOMETRY;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
+		GL_AlphaToCoverage(false);
 	}
 	else if (rsurfacepass == RSURFPASS_RTLIGHT)
 	{
@@ -2208,6 +2213,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE);
+		GL_AlphaToCoverage(false);
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
@@ -2250,6 +2256,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		GL_AlphaToCoverage(r_transparent_alphatocoverage.integer && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT_DIRECTIONAL)
 	{
@@ -2302,6 +2309,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		GL_AlphaToCoverage(r_transparent_alphatocoverage.integer && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
@@ -2351,6 +2359,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		GL_AlphaToCoverage(r_transparent_alphatocoverage.integer && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
 	}
 	else
 	{
@@ -2436,6 +2445,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		GL_BlendFunc(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
 		blendfuncflags = R_BlendFuncFlags(rsurface.texture->currentlayers[0].blendfunc1, rsurface.texture->currentlayers[0].blendfunc2);
+		GL_AlphaToCoverage(r_transparent_alphatocoverage.integer && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST));
 	}
 	if(!(blendfuncflags & BLENDFUNC_ALLOWS_COLORMOD))
 		colormod = dummy_colormod;
@@ -2936,6 +2946,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		else if (r_shadow_shadowmappcf)
 			permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 	}
+	GL_AlphaToCoverage(false);
 	Matrix4x4_Transform(&r_refdef.view.viewport.viewmatrix, rtlight->shadoworigin, viewlightorigin);
 	Matrix4x4_Concat(&lighttoview, &r_refdef.view.viewport.viewmatrix, &rtlight->matrix_lighttoworld);
 	Matrix4x4_Invert_Simple(&viewtolight, &lighttoview);
@@ -9632,11 +9643,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
 	R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0);
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-		GL_AlphaTest(true);
 	RSurf_DrawBatch();
-	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
-		GL_AlphaTest(false);
 }
 
 static void R_DrawTextureSurfaceList_GL13(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
