@@ -329,7 +329,7 @@ int matchpattern_with_separator(const char *in, const char *pattern, int caseins
 void stringlistinit(stringlist_t *list);
 void stringlistfreecontents(stringlist_t *list);
 void stringlistappend(stringlist_t *list, const char *text);
-void stringlistsort(stringlist_t *list);
+void stringlistsort(stringlist_t *list, qboolean uniq);
 void listdirectory(stringlist_t *list, const char *basepath, const char *path);
 
 char *SearchInfostring(const char *infostring, const char *key);

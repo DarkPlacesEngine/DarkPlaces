@@ -4515,7 +4515,7 @@ void ModList_RebuildList(void)
 
 	stringlistinit(&list);
 	listdirectory(&list, fs_basedir, "");
-	stringlistsort(&list);
+	stringlistsort(&list, true);
 	modlist_count = 0;
 	modlist_numenabled = fs_numgamedirs;
 	for (i = 0;i < list.numstrings;i++)
