@@ -450,24 +450,10 @@ void Cmd_StuffCmds_f (void)
 	Cbuf_InsertText (build);
 }
 
-
-/*
-===============
-Cmd_Exec_f
-===============
-*/
-static void Cmd_Exec_f (void)
+static void Cmd_Exec(const char *filename)
 {
 	char *f;
-	const char *filename;
 
-	if (Cmd_Argc () != 2)
-	{
-		Con_Print("exec <filename> : execute a script file\n");
-		return;
-	}
-
-	filename = Cmd_Argv(1);
 	if (!strcmp(filename, "config.cfg"))
 	{
 		filename = CONFIGFILENAME;
@@ -512,6 +498,35 @@ static void Cmd_Exec_f (void)
 		Cbuf_InsertText("\nsv_gameplayfix_q2airaccelerate 1\nsv_gameplayfix_stepmultipletimes 1\n\n");
 	if (gamemode == GAME_TENEBRAE)
 		Cbuf_InsertText("\nr_shadow_gloss 2\nr_shadow_bumpscale_basetexture 4\n\n");
+}
+
+/*
+===============
+Cmd_Exec_f
+===============
+*/
+static void Cmd_Exec_f (void)
+{
+	fssearch_t *s;
+	int i;
+
+	if (Cmd_Argc () != 2)
+	{
+		Con_Print("exec <filename> : execute a script file\n");
+		return;
+	}
+
+	s = FS_Search(Cmd_Argv(1), true, true);
+	if(!s || !s->numfilenames)
+	{
+		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));
+		return;
+	}
+
+	for(i = 0; i < s->numfilenames; ++i)
+		Cmd_Exec(s->filenames[i]);
+
+	FS_FreeSearch(s);
 }
 
 
