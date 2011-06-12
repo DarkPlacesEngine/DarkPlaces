@@ -117,22 +117,35 @@ void stringlistappend(stringlist_t *list, const char *text)
 	list->numstrings++;
 }
 
-void stringlistsort(stringlist_t *list)
+static int stringlistsort_cmp(const void *a, const void *b)
+{
+	return strcasecmp(*(const char **)a, *(const char **)b);
+}
+
+void stringlistsort(stringlist_t *list, qboolean uniq)
 {
 	int i, j;
-	char *temp;
-	// this is a selection sort (finds the best entry for each slot)
-	for (i = 0;i < list->numstrings - 1;i++)
+	qsort(&list->strings[0], list->numstrings, sizeof(list->strings[0]), stringlistsort_cmp);
+	if(uniq)
 	{
-		for (j = i + 1;j < list->numstrings;j++)
+		// i: the item to read
+		// j: the item last written
+		for (i = 1, j = 0; i < list->numstrings; ++i)
 		{
-			if (strcasecmp(list->strings[i], list->strings[j]) > 0)
-			{
-				temp = list->strings[i];
-				list->strings[i] = list->strings[j];
-				list->strings[j] = temp;
-			}
+			char *save;
+			if(!strcasecmp(list->strings[i], list->strings[j]))
+				continue;
+			++j;
+			save = list->strings[j];
+			list->strings[j] = list->strings[i];
+			list->strings[i] = save;
 		}
+		for(i = j+1; i < list->numstrings; ++i)
+		{
+			if (list->strings[i])
+				Z_Free(list->strings[i]);
+		}
+		list->numstrings = j+1;
 	}
 }
 

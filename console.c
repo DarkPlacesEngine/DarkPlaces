@@ -2822,7 +2822,7 @@ void Con_CompleteCommandLine (void)
 					}
 					else
 					{
-						stringlistsort(&resultbuf); // dirbuf is already sorted
+						stringlistsort(&resultbuf, true); // dirbuf is already sorted
 						Con_Printf("\n%i possible filenames\n", resultbuf.numstrings + dirbuf.numstrings);
 						for(i = 0; i < dirbuf.numstrings; ++i)
 						{

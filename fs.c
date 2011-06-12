@@ -1206,7 +1206,7 @@ void FS_AddGameDirectory (const char *dir)
 
 	stringlistinit(&list);
 	listdirectory(&list, "", dir);
-	stringlistsort(&list);
+	stringlistsort(&list, false);
 
 	// add any PAK package in the directory
 	for (i = 0;i < list.numstrings;i++)
@@ -1647,7 +1647,7 @@ static void FS_ListGameDirs(void)
 	stringlistinit(&list);
 	listdirectory(&list, va("%s/", fs_basedir), "");
 	listdirectory(&list, va("%s/", fs_userdir), "");
-	stringlistsort(&list);
+	stringlistsort(&list, false);
 
 	stringlistinit(&list2);
 	for(i = 0; i < list.numstrings; ++i)
@@ -3512,7 +3512,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 
 	if (resultlist.numstrings)
 	{
-		stringlistsort(&resultlist);
+		stringlistsort(&resultlist, true);
 		numfiles = resultlist.numstrings;
 		numchars = 0;
 		for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
@@ -3616,7 +3616,7 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 static void FS_ListDirectoryCmd (const char* cmdname, int oneperline)
 {
 	const char *pattern;
-	if (Cmd_Argc() > 3)
+	if (Cmd_Argc() >= 3)
 	{
 		Con_Printf("usage:\n%s [path/pattern]\n", cmdname);
 		return;
