@@ -588,14 +588,7 @@ void CL_Input (void)
 		}
 		else
 		{
-			/*
-			f = log(averagespeed);
-			mi = log(mi);
-			ma = log(ma);
-			*/
 			f = averagespeed;
-			mi = mi;
-			ma = ma;
 			f = (f - mi) / (ma - mi) * (m_accelerate.value - 1) + 1;
 		}
 

@@ -250,7 +250,7 @@ readframe:
 		{
 			compsize = LittleLong(*(frameHead + 8)) - 16;
 			outsize = LittleLong(*(frameHead + 12));
-			if (compsize < 0 || compsize > s->framesize || outsize < 0 || outsize > s->framesize)
+			if (compsize > s->framesize || outsize > s->framesize)
 				s->error = JAMDECODEERROR_BAD_FRAME_HEADER;
 			else if (FS_Read(s->file, s->compressed, compsize))
 			{
