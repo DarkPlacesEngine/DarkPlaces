@@ -4566,9 +4566,9 @@ void DPSOFTRAST_PixelShader_Water(DPSOFTRAST_State_Thread *thread, const DPSOFTR
 	float EyeVectorslope[4];
 
 	// uniforms
-	float ScreenScaleRefractReflect[2];
-	float ScreenCenterRefractReflect[2];
-	float DistortScaleRefractReflect[2];
+	float ScreenScaleRefractReflect[4];
+	float ScreenCenterRefractReflect[4];
+	float DistortScaleRefractReflect[4];
 	float RefractColor[4];
 	float ReflectColor[4];
 	float ReflectFactor;
