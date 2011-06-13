@@ -493,12 +493,12 @@ float MSG_ReadBigFloat (void)
 char *MSG_ReadString (void)
 {
 	static char string[MAX_INPUTLINE];
-	int l,c;
-	for (l = 0;l < (int) sizeof(string) - 1 && (c = MSG_ReadByte()) != -1 && c != 0;l++)
-		string[l] = c;
-	// read the rest of the string anyway
-	while(c != -1 && c != 0)
-		c = MSG_ReadByte();
+	const int maxstring = sizeof(string);
+	int l = 0,c;
+	// read string into buffer, but only store as many characters as will fit
+	while ((c = MSG_ReadByte()) > 0)
+		if (l < maxstring - 1)
+			string[l++] = c;
 	string[l] = 0;
 	return string;
 }
