@@ -1085,7 +1085,7 @@ void VID_CheckExtensions(void)
 		Con_Printf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
 		Con_Printf("vid.mode.samples %i\n", vid.mode.samples);
 		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
-		vid.allowalphatocoverage = vid.support.arb_multisample && vid_samples.integer > 1 && vid.support.gl20shaders;
+		vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
 	}
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
 	{
@@ -1110,9 +1110,19 @@ void VID_CheckExtensions(void)
 		vid.sRGBcapable3D = false;
 		vid.useinterleavedarrays = false;
 	}
+
 	// enable multisample antialiasing if possible
-	if (vid_samples.integer > 1 && vid.support.arb_multisample)
-		qglEnable(GL_MULTISAMPLE_ARB);
+	if(vid.support.arb_multisample)
+	{
+		int samples = 0;
+		qglGetIntegerv(GL_SAMPLES_ARB, &samples);
+		if (samples > 1)
+			qglEnable(GL_MULTISAMPLE_ARB);
+		else
+			vid.allowalphatocoverage = false;
+	}
+	else
+		vid.allowalphatocoverage = false;
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
