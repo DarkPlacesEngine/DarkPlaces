@@ -496,6 +496,9 @@ char *MSG_ReadString (void)
 	int l,c;
 	for (l = 0;l < (int) sizeof(string) - 1 && (c = MSG_ReadByte()) != -1 && c != 0;l++)
 		string[l] = c;
+	// read the rest of the string anyway
+	while(c != -1 && c != 0)
+		c = MSG_ReadByte();
 	string[l] = 0;
 	return string;
 }
