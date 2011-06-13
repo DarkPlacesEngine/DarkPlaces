@@ -7490,7 +7490,9 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 		index *= 4;
 		f = index - floor(index);
 		if (index < 1)
-			f = f;
+		{
+			// f = f;
+		}
 		else if (index < 2)
 			f = 1 - f;
 		else if (index < 3)

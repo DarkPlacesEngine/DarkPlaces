@@ -510,7 +510,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				continue;
 			if (!sfx->total_length)
 				continue;
-			if (sfx->total_length < 0 || sfx->total_length > 1<<30)
+			if (sfx->total_length > 1<<30)
 				Sys_Error("S_MixToBuffer: sfx corrupt\n");
 
 			ltime = 0;
