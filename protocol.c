@@ -2063,13 +2063,13 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	//dp_model_t *model;
 	ENTITYSIZEPROFILING_START(msg, s->number);
 
-	if (PRVM_serveredictfunction((&prog->edicts[s->number]), SendEntity))
-		return;
-
 	if (s->active != ACTIVE_NETWORK)
 		MSG_WriteShort(msg, number | 0x8000);
 	else
 	{
+		if (PRVM_serveredictfunction((&prog->edicts[s->number]), SendEntity))
+			return;
+
 		bits = changedbits;
 		if ((bits & E5_ORIGIN) && (!(s->flags & RENDER_LOWPRECISION) || s->exteriormodelforclient || s->tagentity || s->viewmodelforclient || (s->number >= 1 && s->number <= svs.maxclients) || s->origin[0] <= -4096.0625 || s->origin[0] >= 4095.9375 || s->origin[1] <= -4096.0625 || s->origin[1] >= 4095.9375 || s->origin[2] <= -4096.0625 || s->origin[2] >= 4095.9375))
 		// maybe also add: ((model = SV_GetModelByIndex(s->modelindex)) != NULL && model->name[0] == '*')
