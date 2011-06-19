@@ -34,7 +34,7 @@ cvar_t gl_texturecompression_reflectmask = {CVAR_SAVE, "gl_texturecompression_re
 cvar_t gl_texturecompression_sprites = {CVAR_SAVE, "gl_texturecompression_sprites", "1", "whether to compress sprites"};
 cvar_t gl_nopartialtextureupdates = {CVAR_SAVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 cvar_t r_texture_dds_load_alphamode = {0, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
-cvar_t r_texture_dds_load_logfailure = {0, "r_texture_dds_load_logfailure", "1", "log missing DDS textures to ddstexturefailures.log"};
+cvar_t r_texture_dds_load_logfailure = {0, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log"};
 cvar_t r_texture_dds_swdecode = {0, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
 
 qboolean	gl_filter_force = false;
