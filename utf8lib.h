@@ -59,4 +59,7 @@ extern Uchar u8_quake2utf8map[256];
 #define u8_getnchar_noendptr(c,n) (utf8_enable.integer ? u8_getnchar_utf8_enabled(c,NULL,n) : ((n) <= 0 ? 0  : (u8_quake2utf8map[(unsigned char)*(c)])))
 #define u8_getnchar_check(c,e,n) ((e) ? u8_getchar((c),(e),(n)) : u8_getchar_noendptr((c),(n)))
 
+Uchar u8_toupper(Uchar ch);
+Uchar u8_tolower(Uchar ch);
+
 #endif // UTF8LIB_H__
