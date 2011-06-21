@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #include "quakedef.h"
+#include "utf8lib.h"
 
 cvar_t registered = {0, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
 cvar_t cmdline = {0, "cmdline","0", "contains commandline the engine was launched with"};
@@ -1690,6 +1691,22 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 	if (size_out == 0)
 		return;
 
+	if(utf8_enable.integer)
+	{
+		while(*in && size_out > 1)
+		{
+			int n;
+			Uchar ch = u8_getchar_utf8_enabled(in, &in);
+			ch = u8_tolower(ch);
+			n = u8_fromchar(ch, out, size_out);
+			if(n <= 0)
+				break;
+			out += n;
+			size_out -= n;
+		}
+		return;
+	}
+
 	while (*in && size_out > 1)
 	{
 		if (*in >= 'A' && *in <= 'Z')
@@ -1705,6 +1722,22 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 {
 	if (size_out == 0)
 		return;
+
+	if(utf8_enable.integer)
+	{
+		while(*in && size_out > 1)
+		{
+			int n;
+			Uchar ch = u8_getchar_utf8_enabled(in, &in);
+			ch = u8_toupper(ch);
+			n = u8_fromchar(ch, out, size_out);
+			if(n <= 0)
+				break;
+			out += n;
+			size_out -= n;
+		}
+		return;
+	}
 
 	while (*in && size_out > 1)
 	{
