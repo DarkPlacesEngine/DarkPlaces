@@ -3697,7 +3697,10 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
-	mod->TraceLine = Mod_Q1BSP_TraceLineAgainstSurfaces; // LordHavoc: use the surface-hitting version of TraceLine in all cases
+	if (sv_gameplayfix_q1bsptracelinereportstexture.integer)
+		mod->TraceLine = Mod_Q1BSP_TraceLineAgainstSurfaces; // LordHavoc: use the surface-hitting version of TraceLine in all cases
+	else
+		mod->TraceLine = Mod_Q1BSP_TraceLine;
 	mod->TracePoint = Mod_Q1BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q1BSP_PointSuperContents;
 	mod->TraceLineAgainstSurfaces = Mod_Q1BSP_TraceLineAgainstSurfaces;
