@@ -120,6 +120,7 @@ cvar_t sv_gameplayfix_nostepmoveonsteepslopes = {0, "sv_gameplayfix_nostepmoveon
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1", "causes pointcontents (used to determine if you are in a liquid) to check bmodel entities as well as the world model, so you can swim around in (possibly moving) water bmodel entities"};
 cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag = {0, "sv_gameplayfix_upwardvelocityclearsongroundflag", "1", "prevents monsters, items, and most other objects from being stuck to the floor when pushed around by damage, and other situations in mods"};
 cvar_t sv_gameplayfix_downtracesupportsongroundflag = {0, "sv_gameplayfix_downtracesupportsongroundflag", "1", "prevents very short moves from clearing onground (which may make the player stick to the floor at high netfps)"};
+cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {0, "sv_gameplayfix_q1bsptracelinereportstexture", "1", "enables mods to get accurate trace_texture results on q1bsp by using a surface-hitting traceline implementation rather than the standard solidbsp method, q3bsp always reports texture accurately"};
 cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping (sv_gameplayfix_stepwhilejumping must also be 1)"};
@@ -521,6 +522,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
 	Cvar_RegisterVariable (&sv_gameplayfix_upwardvelocityclearsongroundflag);
 	Cvar_RegisterVariable (&sv_gameplayfix_downtracesupportsongroundflag);
+	Cvar_RegisterVariable (&sv_gameplayfix_q1bsptracelinereportstexture);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_jumpstep);
