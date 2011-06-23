@@ -326,15 +326,17 @@ cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_boun
 cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
 cvar_t r_shadow_bouncegrid_includedirectlighting = {CVAR_SAVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
 cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "10", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "5", "maximum number of bounces for a particle (minimum is 1)"};
-cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
+cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "4", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "2", "maximum number of bounces for a particle (minimum is 0)"};
+cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
 cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "1", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_photons = {CVAR_SAVE, "r_shadow_bouncegrid_photons", "2000", "total photons to shoot per update, divided proportionately between lights"};
 cvar_t r_shadow_bouncegrid_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_spacing", "64", "unit size of bouncegrid pixel"};
 cvar_t r_shadow_bouncegrid_stablerandom = {CVAR_SAVE, "r_shadow_bouncegrid_stablerandom", "1", "make particle distribution consistent from frame to frame"};
 cvar_t r_shadow_bouncegrid_static = {CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
 cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
+cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "10", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
+cvar_t r_shadow_bouncegrid_static_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
 cvar_t r_shadow_bouncegrid_static_photons = {CVAR_SAVE, "r_shadow_bouncegrid_static_photons", "25000", "photons value to use when in static mode"};
 cvar_t r_shadow_bouncegrid_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
 cvar_t r_shadow_bouncegrid_x = {CVAR_SAVE, "r_shadow_bouncegrid_x", "64", "maximum texture size of bouncegrid on X axis"};
@@ -752,6 +754,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_stablerandom);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_directionalshading);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_lightradiusscale);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_maxbounce);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_photons);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_updateinterval);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_x);
@@ -2343,6 +2347,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	vec3_t lightcolor;
 	vec3_t steppos;
 	vec3_t stepdelta;
+	vec3_t cullmins, cullmaxs;
 	vec_t radius;
 	vec_t s;
 	vec_t lightintensity;
@@ -2439,8 +2444,8 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	settings.dlightparticlemultiplier      = r_shadow_bouncegrid_dlightparticlemultiplier.value;
 	settings.hitmodels                     = r_shadow_bouncegrid_hitmodels.integer != 0;
 	settings.includedirectlighting         = r_shadow_bouncegrid_includedirectlighting.integer != 0 || r_shadow_bouncegrid.integer == 2;
-	settings.lightradiusscale              = r_shadow_bouncegrid_lightradiusscale.value;
-	settings.maxbounce                     = r_shadow_bouncegrid_maxbounce.integer;
+	settings.lightradiusscale              = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_lightradiusscale.value : r_shadow_bouncegrid_lightradiusscale.value);
+	settings.maxbounce                     = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_maxbounce.integer : r_shadow_bouncegrid_maxbounce.integer);
 	settings.particlebounceintensity       = r_shadow_bouncegrid_particlebounceintensity.value;
 	settings.particleintensity             = r_shadow_bouncegrid_particleintensity.value * 16384.0f * (settings.directionalshading ? 4.0f : 1.0f) / (r_shadow_bouncegrid_spacing.value * r_shadow_bouncegrid_spacing.value);
 	settings.photons                       = r_shadow_bouncegrid_static.integer ? r_shadow_bouncegrid_static_photons.integer : r_shadow_bouncegrid_photons.integer;
@@ -2604,22 +2609,27 @@ void R_Shadow_UpdateBounceGridTexture(void)
 				if (rtlight->style > 0 && r_shadow_bouncegrid.integer != 2)
 					continue;
 			}
-			else
-			{
-				// draw only visible lights (major speedup)
-				//if (!rtlight->draw)
-				//	continue;
-			}
 		}
 		else
 		{
 			rtlight = r_refdef.scene.lights[lightindex - range];
 			VectorClear(rtlight->photoncolor);
 			rtlight->photons = 0;
-			// draw only visible lights (major speedup)
-			//if (!rtlight->draw)
-			//	continue;
 		}
+		// draw only visible lights (major speedup)
+		radius = rtlight->radius * settings.lightradiusscale;
+		cullmins[0] = rtlight->shadoworigin[0] - radius;
+		cullmins[1] = rtlight->shadoworigin[1] - radius;
+		cullmins[2] = rtlight->shadoworigin[2] - radius;
+		cullmaxs[0] = rtlight->shadoworigin[0] + radius;
+		cullmaxs[1] = rtlight->shadoworigin[1] + radius;
+		cullmaxs[2] = rtlight->shadoworigin[2] + radius;
+		if (R_CullBox(cullmins, cullmaxs))
+			continue;
+		if (r_refdef.scene.worldmodel
+		 && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
+		 && !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, cullmins, cullmaxs))
+			continue;
 		w = r_shadow_lightintensityscale.value * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
 		if (w * VectorLength2(rtlight->color) == 0.0f)
 			continue;
@@ -2632,7 +2642,6 @@ void R_Shadow_UpdateBounceGridTexture(void)
 		// vary with lightstyle, otherwise we get randomized particle
 		// distribution, the seeded random is only consistent for a
 		// consistent number of particles on this light...
-		radius = rtlight->radius * settings.lightradiusscale;
 		s = rtlight->radius;
 		lightintensity = VectorLength(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
 		if (lightindex >= range)
