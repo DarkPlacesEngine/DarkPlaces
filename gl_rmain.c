@@ -6763,10 +6763,6 @@ void R_RenderView(void)
 	}
 	r_refdef.view.clear = true;
 
-	R_Shadow_UpdateBounceGridTexture();
-	if (r_timereport_active && r_shadow_bouncegrid.integer)
-		R_TimeReport("bouncegrid");
-
 	// this produces a bloom texture to be used in R_BlendView() later
 	if (r_bloomstate.hdr)
 	{
@@ -6780,6 +6776,10 @@ void R_RenderView(void)
 	R_View_Update();
 	if (r_timereport_active)
 		R_TimeReport("visibility");
+
+	R_Shadow_UpdateBounceGridTexture();
+	if (r_timereport_active && r_shadow_bouncegrid.integer)
+		R_TimeReport("bouncegrid");
 
 	r_waterstate.numwaterplanes = 0;
 	if (r_waterstate.enabled)
