@@ -812,7 +812,7 @@ void Sbar_DrawInventory (void)
 			else
 				flashon = (flashon%5) + 2;
 
-			Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], sbar_alpha_bg.value);
+			Sbar_DrawPic (i*24, -16, sb_weapons[flashon][i]);
 		}
 	}
 
