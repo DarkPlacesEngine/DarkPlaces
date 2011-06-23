@@ -215,6 +215,10 @@ typedef struct rtlight_s
 	int particlecache_maxparticles;
 	int particlecache_updateparticle;
 	rtlight_particle_t *particlecache_particles;
+
+	/// bouncegrid light info
+	float photoncolor[3];
+	float photons;
 }
 rtlight_t;
 

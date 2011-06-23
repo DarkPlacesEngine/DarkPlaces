@@ -6686,6 +6686,8 @@ R_RenderView
 ================
 */
 int dpsoftrast_test;
+extern void R_Shadow_UpdateBounceGridTexture(void);
+extern cvar_t r_shadow_bouncegrid;
 void R_RenderView(void)
 {
 	matrix4x4_t originalmatrix = r_refdef.view.matrix, offsetmatrix;
@@ -6760,6 +6762,10 @@ void R_RenderView(void)
 			R_TimeReport("viewclear");
 	}
 	r_refdef.view.clear = true;
+
+	R_Shadow_UpdateBounceGridTexture();
+	if (r_timereport_active && r_shadow_bouncegrid.integer)
+		R_TimeReport("bouncegrid");
 
 	// this produces a bloom texture to be used in R_BlendView() later
 	if (r_bloomstate.hdr)
