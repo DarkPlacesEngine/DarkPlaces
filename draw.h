@@ -39,6 +39,8 @@ typedef struct cachepic_s
 	rtexture_t *tex;
 	// used for hash lookups
 	struct cachepic_s *chain;
+	// flags - CACHEPICFLAG_NEWPIC for example
+	unsigned int flags;
 	// has alpha?
 	qboolean hasalpha;
 	// name of pic
@@ -51,7 +53,8 @@ typedef enum cachepicflags_e
 	CACHEPICFLAG_NOTPERSISTENT = 1,
 	CACHEPICFLAG_QUIET = 2,
 	CACHEPICFLAG_NOCOMPRESSION = 4,
-	CACHEPICFLAG_NOCLAMP = 8
+	CACHEPICFLAG_NOCLAMP = 8,
+	CACHEPICFLAG_NEWPIC = 16 // disables matching texflags check, because a pic created with Draw_NewPic should not be subject to that
 }
 cachepicflags_t;
 
