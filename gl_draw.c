@@ -334,8 +334,13 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	crc = CRC_Block((unsigned char *)path, strlen(path));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
+	{
 		if (!strcmp (path, pic->name))
-			if(!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag
+		{
+			// if it was created (or replaced) by Draw_NewPic, just return it
+			if(pic->flags & CACHEPICFLAG_NEWPIC)
+				return pic;
+			if (!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag
 			{
 				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 				{
@@ -346,6 +351,8 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 				}
 				return pic;
 			}
+		}
+	}
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
@@ -361,6 +368,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 
 reload:
 	// check whether it is an dynamic texture (if so, we can directly use its texture handler)
+	pic->flags = cachepicflags;
 	pic->tex = CL_GetDynTexture( path );
 	// if so, set the width/height, too
 	if( pic->tex ) {
@@ -551,7 +559,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 
 	if (pic)
 	{
-		if (pic->tex && pic->width == width && pic->height == height)
+		if (pic->flags == CACHEPICFLAG_NEWPIC && pic->tex && pic->width == width && pic->height == height)
 		{
 			R_UpdateTexture(pic->tex, pixels_bgra, 0, 0, 0, width, height, 1);
 			return pic;
@@ -575,6 +583,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 		}
 	}
 
+	pic->flags = CACHEPICFLAG_NEWPIC; // disable texflags checks in Draw_CachePic
 	pic->width = width;
 	pic->height = height;
 	if (pic->tex)
