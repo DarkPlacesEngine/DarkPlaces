@@ -2856,6 +2856,7 @@ qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_datab
 					packetlog = d->packetlog + packetlognumber;
 					packetlog->packetnumber = framenum;
 					packetlog->numstates = 0;
+					memset(packetlog->statsdeltabits, 0, sizeof(packetlog->statsdeltabits));
 				}
 				packetlog->statsdeltabits[i>>3] |= (1<<(i&7));
 				if (host_client->stats[i] >= 0 && host_client->stats[i] < 256)
@@ -2886,6 +2887,7 @@ qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_datab
 		packetlog = d->packetlog + packetlognumber;
 		packetlog->packetnumber = framenum;
 		packetlog->numstates = 0;
+		memset(packetlog->statsdeltabits, 0, sizeof(packetlog->statsdeltabits));
 	}
 
 	// write state updates
