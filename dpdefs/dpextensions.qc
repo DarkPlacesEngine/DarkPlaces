@@ -278,6 +278,16 @@ float EF_LOWPRECISION = 4194304;
 //description:
 //controls rendering scale of the object, 0 is forced to be 1, darkplaces uses 1/16th accuracy and a limit of 15.9375, can be used to make an object larger or smaller.
 
+//DP_ENT_TRAILEFFECTNUM
+//idea: LordHavoc
+//darkplaces implementation: LordHavoc
+//field definitions:
+.float traileffectnum;
+//description:
+//use a custom effectinfo.txt effect on this entity, assign it like this:
+//self.traileffectnum = particleeffectnum("mycustomeffect");
+//this will do both the dlight and particle trail as described in the effect, basically equivalent to trailparticles() in CSQC but performed on a server entity.
+
 //DP_ENT_VIEWMODEL
 //idea: LordHavoc
 //darkplaces implementation: LordHavoc

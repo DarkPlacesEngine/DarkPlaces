@@ -1261,6 +1261,8 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 	// do trails
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
+	if (e->state_current.traileffectnum)
+		trailtype = e->state_current.traileffectnum;
 	// check if a trail is allowed (it is not after a teleport for example)
 	if (trailtype && e->persistent.trail_allowed)
 	{
@@ -1558,6 +1560,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 	// do trail light
 	if (e->render.flags & RENDER_GLOWTRAIL)
 		trailtype = EFFECT_TR_GLOWTRAIL;
+	if (e->state_current.traileffectnum)
+		trailtype = e->state_current.traileffectnum;
 	if (trailtype)
 		CL_ParticleTrail(trailtype, 1, origin, origin, vec3_origin, vec3_origin, NULL, e->state_current.glowcolor, true, false, NULL, NULL);
 
