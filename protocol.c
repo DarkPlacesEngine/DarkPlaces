@@ -29,6 +29,7 @@ entity_state_t defaultstate =
 	0,//unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
 	0,//unsigned short nodrawtoclient; // !
 	0,//unsigned short drawonlytoclient; // !
+	0,//unsigned short traileffectnum;
 	{0,0,0,0},//unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
 	ACTIVE_NOT,//unsigned char active; // true if a valid state
 	0,//unsigned char lightstyle;
@@ -2271,6 +2272,8 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
 			}
 		}
+		if (bits & E5_TRAILEFFECTNUM)
+			MSG_WriteShort(msg, s->traileffectnum);
 	}
 
 	ENTITYSIZEPROFILING_END(msg, s->number);
@@ -2492,6 +2495,8 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			break;
 		}
 	}
+	if (bits & E5_TRAILEFFECTNUM)
+		s->traileffectnum = (unsigned short) MSG_ReadShort();
 
 
 	if (developer_networkentities.integer >= 2)
@@ -2592,6 +2597,8 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 			bits |= E5_GLOWMOD;
 		if (n->flags & RENDER_COMPLEXANIMATION)
 			bits |= E5_COMPLEXANIMATION;
+		if (o->traileffectnum != n->traileffectnum)
+			bits |= E5_TRAILEFFECTNUM;
 	}
 	else
 		if (o->active == ACTIVE_NETWORK)
