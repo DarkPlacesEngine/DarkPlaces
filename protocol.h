@@ -393,6 +393,7 @@ typedef struct entity_state_s
 	unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
 	unsigned short nodrawtoclient; // !
 	unsigned short drawonlytoclient; // !
+	unsigned short traileffectnum;
 	unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
 	unsigned char active; // true if a valid state
 	unsigned char lightstyle;
@@ -746,8 +747,8 @@ void EntityFrame4_CL_ReadFrame(void);
 // byte type=4 short modelindex byte numbones {short pose6s[6]}
 // see also RENDER_COMPLEXANIMATION
 #define E5_COMPLEXANIMATION (1<<25)
-// unused
-#define E5_UNUSED26 (1<<26)
+// ushort traileffectnum
+#define E5_TRAILEFFECTNUM (1<<26)
 // unused
 #define E5_UNUSED27 (1<<27)
 // unused

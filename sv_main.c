@@ -1240,6 +1240,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	cs->tagentity = PRVM_serveredictedict(ent, tag_entity);
 	cs->tagindex = (unsigned char)PRVM_serveredictfloat(ent, tag_index);
 	cs->glowsize = glowsize;
+	cs->traileffectnum = PRVM_serveredictfloat(ent, traileffectnum);
 
 	// don't need to init cs->colormod because the defaultstate did that for us
 	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
