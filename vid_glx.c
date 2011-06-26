@@ -278,9 +278,9 @@ static int XLateKey(XKeyEvent *ev, Uchar *ascii)
 		case XK_KP_Subtract: key = K_KP_MINUS; break;
 		case XK_KP_Divide: key = K_KP_SLASH; break;
 
-		case XK_asciicircum:	key = '^'; break; // for some reason, XLookupString returns "" on this one for Grunt|2
+		case XK_asciicircum:	*ascii = key = '^'; break; // for some reason, XLookupString returns "" on this one for Grunt|2
 
-		case XK_section:	key = '~'; break;
+		case XK_section:	*ascii = key = '~'; break;
 
 		default:
 			if (keysym < 32)
