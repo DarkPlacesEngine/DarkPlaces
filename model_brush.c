@@ -1816,20 +1816,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (skinframe)
 					tx->skinframes[0] = skinframe;
 			}
-			if (tx->name[0] == '*')
-			{
-				// LordHavoc: some turbulent textures should not be affected by wateralpha
-				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-				{
-					// replace the texture with transparent black
-					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
-				}
-			}
+			// LordHavoc: some Tenebrae textures get replaced by black
+			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
+				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-			{
-				// replace the texture with black
 				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
-			}
 		}
 
 		tx->basematerialflags = MATERIALFLAG_WALL;
