@@ -1816,8 +1816,6 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				if (skinframe)
 					tx->skinframes[0] = skinframe;
 			}
-
-			tx->basematerialflags = MATERIALFLAG_WALL;
 			if (tx->name[0] == '*')
 			{
 				// LordHavoc: some turbulent textures should not be affected by wateralpha
@@ -1825,34 +1823,48 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				{
 					// replace the texture with transparent black
 					tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
-					tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
 				}
-				else if (!strncmp(tx->name,"*lava",5)
-				 || !strncmp(tx->name,"*teleport",9)
-				 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
-				else
-					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
-				if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
-					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 			}
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 			{
 				// replace the texture with black
 				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
-				tx->basematerialflags |= MATERIALFLAG_REFLECTION;
 			}
-			else if (!strncmp(tx->name, "sky", 3))
-				tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
-			else if (!strcmp(tx->name, "caulk"))
-				tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-			else if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
-				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-
-			// start out with no animation
-			tx->currentframe = tx;
-			tx->currentskinframe = tx->skinframes[0];
 		}
+
+		tx->basematerialflags = MATERIALFLAG_WALL;
+		if (tx->name[0] == '*')
+		{
+			// LordHavoc: some turbulent textures should not be affected by wateralpha
+			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
+			{
+				// replace the texture with transparent black
+				tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
+			}
+			else if (!strncmp(tx->name,"*lava",5)
+			 || !strncmp(tx->name,"*teleport",9)
+			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
+				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
+			else
+				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
+			if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+		}
+		else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
+		{
+			// replace the texture with black
+			tx->basematerialflags |= MATERIALFLAG_REFLECTION;
+		}
+		else if (!strncmp(tx->name, "sky", 3))
+			tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+		else if (!strcmp(tx->name, "caulk"))
+			tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+		else if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+
+		// start out with no animation
+		tx->currentframe = tx;
+		tx->currentskinframe = tx->skinframes[0];
 	}
 
 	// sequence the animations
