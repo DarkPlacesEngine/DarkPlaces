@@ -1828,10 +1828,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		{
 			// LordHavoc: some turbulent textures should not be affected by wateralpha
 			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-			{
-				// replace the texture with transparent black
 				tx->basematerialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_REFLECTION;
-			}
 			else if (!strncmp(tx->name,"*lava",5)
 			 || !strncmp(tx->name,"*teleport",9)
 			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
@@ -1856,6 +1853,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		// start out with no animation
 		tx->currentframe = tx;
 		tx->currentskinframe = tx->skinframes[0];
+		tx->currentmaterialflags = tx->basematerialflags;
 	}
 
 	// sequence the animations
