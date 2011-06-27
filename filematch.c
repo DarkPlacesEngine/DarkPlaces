@@ -125,6 +125,8 @@ static int stringlistsort_cmp(const void *a, const void *b)
 void stringlistsort(stringlist_t *list, qboolean uniq)
 {
 	int i, j;
+	if(list->numstrings < 1)
+		return;
 	qsort(&list->strings[0], list->numstrings, sizeof(list->strings[0]), stringlistsort_cmp);
 	if(uniq)
 	{
