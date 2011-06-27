@@ -2525,6 +2525,7 @@ nothing                GL_ZERO GL_ONE
 		if(cls.state == ca_dedicated)
 		{
 			texture->skinframes[0] = NULL;
+			success = false;
 		}
 		else
 		{
