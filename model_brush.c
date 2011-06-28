@@ -1659,7 +1659,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->reflectfactor = 1;
 		Vector4Set(tx->reflectcolor4f, 1, 1, 1, 1);
 		tx->r_water_wateralpha = 1;
-		tx->offsetmapping = OFFSETMAPPING_OFF;
+		tx->offsetmapping = OFFSETMAPPING_DEFAULT;
 		tx->offsetscale = 1;
 		tx->specularscalemod = 1;
 		tx->specularpowermod = 1;
@@ -1788,6 +1788,8 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
 					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
+				if (skinframe)
+					tx->offsetmapping = OFFSETMAPPING_DEFAULT; // allow offsetmapping on external textures without a q3 shader
 				if (!skinframe)
 				{
 					// did not find external texture, load it from the bsp or wad3
