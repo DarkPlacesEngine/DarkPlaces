@@ -1690,7 +1690,8 @@ void VID_EnableJoystick(qboolean enable)
 	if (sdlindex >= 0)
 		success = true;
 
-	Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
+	if (joy_active.integer != (success ? 1 : 0))
+		Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
 }
 
 #if SETVIDEOMODE
