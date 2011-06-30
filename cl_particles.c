@@ -192,6 +192,81 @@ static const int tex_bubble = 62;
 static const int tex_raindrop = 61;
 static const int tex_beam = 60;
 
+particleeffectinfo_t baselineparticleeffectinfo =
+{
+	0, //int effectnameindex; // which effect this belongs to
+	// PARTICLEEFFECT_* bits
+	0, //int flags;
+	// blood effects may spawn very few particles, so proper fraction-overflow
+	// handling is very important, this variable keeps track of the fraction
+	0.0, //double particleaccumulator;
+	// the math is: countabsolute + requestedcount * countmultiplier * quality
+	// absolute number of particles to spawn, often used for decals
+	// (unaffected by quality and requestedcount)
+	0.0f, //float countabsolute;
+	// multiplier for the number of particles CL_ParticleEffect was told to
+	// spawn, most effects do not really have a count and hence use 1, so
+	// this is often the actual count to spawn, not merely a multiplier
+	0.0f, //float countmultiplier;
+	// if > 0 this causes the particle to spawn in an evenly spaced line from
+	// originmins to originmaxs (causing them to describe a trail, not a box)
+	0.0f, //float trailspacing;
+	// type of particle to spawn (defines some aspects of behavior)
+	pt_alphastatic, //ptype_t particletype;
+	// blending mode used on this particle type
+	PBLEND_ALPHA, //pblend_t blendmode;
+	// orientation of this particle type (BILLBOARD, SPARK, BEAM, etc)
+	PARTICLE_BILLBOARD, //porientation_t orientation;
+	// range of colors to choose from in hex RRGGBB (like HTML color tags),
+	// randomly interpolated at spawn
+	{0xFFFFFF, 0xFFFFFF}, //unsigned int color[2];
+	// a random texture is chosen in this range (note the second value is one
+	// past the last choosable, so for example 8,16 chooses any from 8 up and
+	// including 15)
+	// if start and end of the range are the same, no randomization is done
+	{63, 63 /* tex_particle */}, //int tex[2];
+	// range of size values randomly chosen when spawning, plus size increase over time
+	{1, 1, 1}, //float size[3];
+	// range of alpha values randomly chosen when spawning, plus alpha fade
+	{0.0f, 256.0f, 256.0f}, //float alpha[3];
+	// how long the particle should live (note it is also removed if alpha drops to 0)
+	{16777216.0f, 16777216.0f}, //float time[2];
+	// how much gravity affects this particle (negative makes it fly up!)
+	1.0f, //float gravity;
+	// how much bounce the particle has when it hits a surface
+	// if negative the particle is removed on impact
+	0.0f, //float bounce;
+	// if in air this friction is applied
+	// if negative the particle accelerates
+	0.0f, //float airfriction;
+	// if in liquid (water/slime/lava) this friction is applied
+	// if negative the particle accelerates
+	0.0f, //float liquidfriction;
+	// these offsets are added to the values given to particleeffect(), and
+	// then an ellipsoid-shaped jitter is added as defined by these
+	// (they are the 3 radii)
+	1.0f, //float stretchfactor;
+	// stretch velocity factor (used for sparks)
+	{0.0f, 0.0f, 0.0f}, //float originoffset[3];
+	{0.0f, 0.0f, 0.0f}, //float velocityoffset[3];
+	{0.0f, 0.0f, 0.0f}, //float originjitter[3];
+	{0.0f, 0.0f, 0.0f}, //float velocityjitter[3];
+	1.0f, //float velocitymultiplier;
+	// an effect can also spawn a dlight
+	0.0f, //float lightradiusstart;
+	0.0f, //float lightradiusfade;
+	16777216.0f, //float lighttime;
+	{1.0f, 1.0f, 1.0f}, //float lightcolor[3];
+	true, //qboolean lightshadow;
+	0, //int lightcubemapnum;
+	{(unsigned int)-1, (unsigned int)-1}, //unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
+	{-1, -1}, //int staintex[2];
+	{1.0f, 1.0f}, //float stainalpha[2];
+	{2.0f, 2.0f}, //float stainsize[2];
+	// other parameters
+	{0.0f, 360.0f, 0.0f, 0.0f}, //float rotate[4]; // min/max base angle, min/max rotation over time
+};
+
 cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1", "enables particle effects"};
 cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles"};
 cvar_t cl_particles_alpha = {CVAR_SAVE, "cl_particles_alpha", "1", "multiplies opacity of particles"};
@@ -289,37 +364,9 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 				break;
 			}
 			info = particleeffectinfo + numparticleeffectinfo++;
+			// copy entire info from baseline, then fix up the nameindex
+			*info = baselineparticleeffectinfo;
 			info->effectnameindex = effectnameindex;
-			info->particletype = pt_alphastatic;
-			info->blendmode = particletype[info->particletype].blendmode;
-			info->orientation = particletype[info->particletype].orientation;
-			info->tex[0] = tex_particle;
-			info->tex[1] = tex_particle;
-			info->color[0] = 0xFFFFFF;
-			info->color[1] = 0xFFFFFF;
-			info->size[0] = 1;
-			info->size[1] = 1;
-			info->alpha[0] = 0;
-			info->alpha[1] = 256;
-			info->alpha[2] = 256;
-			info->time[0] = 9999;
-			info->time[1] = 9999;
-			VectorSet(info->lightcolor, 1, 1, 1);
-			info->lightshadow = true;
-			info->lighttime = 9999;
-			info->stretchfactor = 1;
-			info->staincolor[0] = (unsigned int)-1;
-			info->staincolor[1] = (unsigned int)-1;
-			info->staintex[0] = -1;
-			info->staintex[1] = -1;
-			info->stainalpha[0] = 1;
-			info->stainalpha[1] = 1;
-			info->stainsize[0] = 2;
-			info->stainsize[1] = 2;
-			info->rotate[0] = 0;
-			info->rotate[1] = 360;
-			info->rotate[2] = 0;
-			info->rotate[3] = 0;
 		}
 		else if (info == NULL)
 		{
