@@ -226,13 +226,13 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	// if start and end of the range are the same, no randomization is done
 	{63, 63 /* tex_particle */}, //int tex[2];
 	// range of size values randomly chosen when spawning, plus size increase over time
-	{1, 1, 1}, //float size[3];
+	{1, 1, 0.0f}, //float size[3];
 	// range of alpha values randomly chosen when spawning, plus alpha fade
 	{0.0f, 256.0f, 256.0f}, //float alpha[3];
 	// how long the particle should live (note it is also removed if alpha drops to 0)
 	{16777216.0f, 16777216.0f}, //float time[2];
 	// how much gravity affects this particle (negative makes it fly up!)
-	1.0f, //float gravity;
+	0.0f, //float gravity;
 	// how much bounce the particle has when it hits a surface
 	// if negative the particle is removed on impact
 	0.0f, //float bounce;
