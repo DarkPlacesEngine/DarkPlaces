@@ -367,6 +367,9 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 			// copy entire info from baseline, then fix up the nameindex
 			*info = baselineparticleeffectinfo;
 			info->effectnameindex = effectnameindex;
+			// Nexuiz had some busted effects that didn't specify this...
+			if (gamemode == GAME_NEXUIZ)
+				info->velocitymultiplier = 0.0f;
 		}
 		else if (info == NULL)
 		{
