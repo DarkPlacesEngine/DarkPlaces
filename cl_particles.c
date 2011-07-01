@@ -251,7 +251,7 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	{0.0f, 0.0f, 0.0f}, //float velocityoffset[3];
 	{0.0f, 0.0f, 0.0f}, //float originjitter[3];
 	{0.0f, 0.0f, 0.0f}, //float velocityjitter[3];
-	1.0f, //float velocitymultiplier;
+	0.0f, //float velocitymultiplier;
 	// an effect can also spawn a dlight
 	0.0f, //float lightradiusstart;
 	0.0f, //float lightradiusfade;
@@ -367,9 +367,6 @@ void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, co
 			// copy entire info from baseline, then fix up the nameindex
 			*info = baselineparticleeffectinfo;
 			info->effectnameindex = effectnameindex;
-			// Nexuiz had some busted effects that didn't specify this...
-			if (gamemode == GAME_NEXUIZ)
-				info->velocitymultiplier = 0.0f;
 		}
 		else if (info == NULL)
 		{
