@@ -465,3 +465,27 @@ string(float i) crypto_getmyidfp = #637; // retrieves the ID fingerprint of a gi
 float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
 //description:
 //use -1 as buffer handle to justs end delim as postdata
+
+//DP_GECKO_SUPPORT
+//idea: Res2k, BlackHC
+//darkplaces implementation: Res2k, BlackHC
+//constant definitions:
+float GECKO_BUTTON_DOWN         = 0;
+float GECKO_BUTTON_UP           = 1;
+// either use down and up or just press but not all of them!
+float GECKO_BUTTON_PRESS        = 2;
+// use this for mouse events if needed?
+float GECKO_BUTTON_DOUBLECLICK  = 3;
+//builtin definitions:
+float gecko_create( string name ) = #487;
+void gecko_destroy( string name ) = #488;
+void gecko_navigate( string name, string URI ) = #489;
+float gecko_keyevent( string name, float key, float eventtype ) = #490;
+void gecko_mousemove( string name, float x, float y ) = #491;
+void gecko_resize( string name, float w, float h ) = #492;
+vector gecko_get_texture_extent( string name ) = #493;
+//engine-called QC prototypes:
+//string(string name, string query) Qecko_Query;
+//description:
+//provides an interface to the offscreengecko library and allows for internet browsing in games
+
