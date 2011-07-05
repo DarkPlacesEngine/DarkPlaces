@@ -693,9 +693,12 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation)
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable)
 {
+	sizebuf_t *dest;
 	int sound_num, field_mask, i, ent;
+
+	dest = (reliable ? &sv.reliable_datagram : &sv.datagram);
 
 	if (volume < 0 || volume > 255)
 	{
@@ -709,11 +712,13 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		return;
 	}
 
-	if (channel < 0 || channel > 7)
+	if (!IS_CHAN(channel))
 	{
 		Con_Printf ("SV_StartSound: channel = %i\n", channel);
 		return;
 	}
+
+	channel = CHAN_ENGINE2NET(channel);
 
 	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-21)
 		return;
@@ -730,32 +735,35 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		field_mask |= SND_VOLUME;
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
-	if (ent >= 8192)
+	if (ent >= 8192 || channel < 0 || channel > 7)
 		field_mask |= SND_LARGEENTITY;
-	if (sound_num >= 256 || channel >= 8)
+	if (sound_num >= 256)
 		field_mask |= SND_LARGESOUND;
 
 // directed messages go only to the entity they are targeted on
-	MSG_WriteByte (&sv.datagram, svc_sound);
-	MSG_WriteByte (&sv.datagram, field_mask);
+	MSG_WriteByte (dest, svc_sound);
+	MSG_WriteByte (dest, field_mask);
 	if (field_mask & SND_VOLUME)
-		MSG_WriteByte (&sv.datagram, volume);
+		MSG_WriteByte (dest, volume);
 	if (field_mask & SND_ATTENUATION)
-		MSG_WriteByte (&sv.datagram, (int)(attenuation*64));
+		MSG_WriteByte (dest, (int)(attenuation*64));
 	if (field_mask & SND_LARGEENTITY)
 	{
-		MSG_WriteShort (&sv.datagram, ent);
-		MSG_WriteByte (&sv.datagram, channel);
+		MSG_WriteShort (dest, ent);
+		MSG_WriteChar (dest, channel);
 	}
 	else
-		MSG_WriteShort (&sv.datagram, (ent<<3) | channel);
+		MSG_WriteShort (dest, (ent<<3) | channel);
 	if ((field_mask & SND_LARGESOUND) || sv.protocol == PROTOCOL_NEHAHRABJP2)
-		MSG_WriteShort (&sv.datagram, sound_num);
+		MSG_WriteShort (dest, sound_num);
 	else
-		MSG_WriteByte (&sv.datagram, sound_num);
+		MSG_WriteByte (dest, sound_num);
 	for (i = 0;i < 3;i++)
-		MSG_WriteCoord (&sv.datagram, PRVM_serveredictvector(entity, origin)[i]+0.5*(PRVM_serveredictvector(entity, mins)[i]+PRVM_serveredictvector(entity, maxs)[i]), sv.protocol);
-	SV_FlushBroadcastMessages();
+		MSG_WriteCoord (dest, PRVM_serveredictvector(entity, origin)[i]+0.5*(PRVM_serveredictvector(entity, mins)[i]+PRVM_serveredictvector(entity, maxs)[i]), sv.protocol);
+
+	// TODO do we have to do anything here when dest is &sv.reliable_datagram?
+	if(!reliable)
+		SV_FlushBroadcastMessages();
 }
 
 /*

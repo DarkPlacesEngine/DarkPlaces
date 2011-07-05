@@ -704,11 +704,13 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 			PRVM_clientglobalfloat(time) = cl.time;
 			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = ent;
-			PRVM_G_FLOAT(OFS_PARM1) = channel;
+			PRVM_G_FLOAT(OFS_PARM1) = CHAN_ENGINE2USER(channel);
 			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(cl.sound_name[sound_num] );
 			PRVM_G_FLOAT(OFS_PARM3) = volume;
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
+			PRVM_G_FLOAT(OFS_PARM6) = 0; // pitch shift not supported yet
+			PRVM_G_FLOAT(OFS_PARM7) = 0; // flags - none can come in at this point yet
 			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Event_Sound), "QC function CSQC_Event_Sound is missing");
 			r = CSQC_RETURNVAL != 0;
 		}
