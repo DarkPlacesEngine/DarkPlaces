@@ -247,7 +247,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 		if (field_mask & SND_LARGEENTITY)
 		{
 			ent = (unsigned short) MSG_ReadShort ();
-			channel = MSG_ReadByte ();
+			channel = MSG_ReadChar ();
 		}
 		else
 		{
@@ -261,6 +261,8 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 		else
 			sound_num = MSG_ReadByte ();
 	}
+
+	channel = CHAN_NET2ENGINE(channel);
 
 	MSG_ReadVector(pos, cls.protocol);
 

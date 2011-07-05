@@ -161,9 +161,11 @@ static void VM_CL_sound (void)
 	prvm_edict_t		*entity;
 	float 				volume;
 	float				attenuation;
+	float pitchchange;
+	int flags;
 	vec3_t				org;
 
-	VM_SAFEPARMCOUNT(5, VM_CL_sound);
+	VM_SAFEPARMCOUNTRANGE(5, 7, VM_CL_sound);
 
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -183,9 +185,22 @@ static void VM_CL_sound (void)
 		return;
 	}
 
-	if (channel < 0 || channel > 7)
+	if (prog->argc < 6)
+		pitchchange = 0;
+	else
+		pitchchange = PRVM_G_FLOAT(OFS_PARM5);
+	// ignoring prog->argc < 7 for now (no flags supported yet)
+
+	if (prog->argc < 7)
+		flags = 0;
+	else
+		flags = PRVM_G_FLOAT(OFS_PARM6);
+
+	channel = CHAN_USER2ENGINE(channel);
+
+	if (!IS_CHAN(channel))
 	{
-		VM_Warning("VM_CL_sound: channel must be in range 0-7\n");
+		VM_Warning("VM_CL_sound: channel must be in range 0-127\n");
 		return;
 	}
 
