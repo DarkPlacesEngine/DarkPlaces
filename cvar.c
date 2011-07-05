@@ -105,30 +105,39 @@ cvar_t *Cvar_FindVarLink (const char *var_name, cvar_t **parent, cvar_t ***link,
 Cvar_VariableValue
 ============
 */
-float Cvar_VariableValue (const char *var_name)
+float Cvar_VariableValueOr (const char *var_name, float def)
 {
 	cvar_t *var;
 
 	var = Cvar_FindVar (var_name);
 	if (!var)
-		return 0;
+		return def;
 	return atof (var->string);
 }
 
+float Cvar_VariableValue (const char *var_name)
+{
+	return Cvar_VariableValueOr(var_name, 0);
+}
 
 /*
 ============
 Cvar_VariableString
 ============
 */
-const char *Cvar_VariableString (const char *var_name)
+const char *Cvar_VariableStringOr (const char *var_name, const char *def)
 {
 	cvar_t *var;
 
 	var = Cvar_FindVar (var_name);
 	if (!var)
-		return cvar_null_string;
+		return def;
 	return var->string;
+}
+
+const char *Cvar_VariableString (const char *var_name)
+{
+	return Cvar_VariableStringOr(var_name, cvar_null_string);
 }
 
 /*

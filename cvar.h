@@ -165,8 +165,14 @@ void Cvar_SetValue (const char *var_name, float value);
 void Cvar_SetQuick (cvar_t *var, const char *value);
 void Cvar_SetValueQuick (cvar_t *var, float value);
 
+float Cvar_VariableValueOr (const char *var_name, float def);
+// returns def if not defined
+
 float Cvar_VariableValue (const char *var_name);
 // returns 0 if not defined or non numeric
+
+const char *Cvar_VariableStringOr (const char *var_name, const char *def);
+// returns def if not defined
 
 const char *Cvar_VariableString (const char *var_name);
 // returns an empty string if not defined

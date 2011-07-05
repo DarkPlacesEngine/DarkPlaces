@@ -73,6 +73,28 @@ void S_ClearUsed (void);
 void S_PurgeUnused (void);
 qboolean S_IsSoundPrecached (const sfx_t *sfx);
 
+// for sound() builtins
+#define CHANFLAG_RELIABLE 1
+
+// these define the "engine" channel namespace
+#define CHAN_MIN_AUTO       -128
+#define CHAN_MAX_AUTO          0
+#define CHAN_MIN_SINGLE        1
+#define CHAN_MAX_SINGLE      127
+#define IS_CHAN_AUTO(n)        ((n) >= CHAN_MIN_AUTO && (n) <= CHAN_MAX_AUTO)
+#define IS_CHAN_SINGLE(n)      ((n) >= CHAN_MIN_SINGLE && (n) <= CHAN_MAX_SINGLE)
+#define IS_CHAN(n)             (IS_CHAN_AUTO(n) || IS_CHAN_SINGLE(n))
+
+// engine channel == network channel
+#define CHAN_ENGINE2NET(c)     (c)
+#define CHAN_NET2ENGINE(c)     (c)
+
+// engine view of channel encodes the auto flag into the channel number (see CHAN_ constants below)
+// user view uses the flags bitmask for it
+#define CHAN_USER2ENGINE(c)    (c)
+#define CHAN_ENGINE2USER(c)    (c)
+#define CHAN_ENGINE2CVAR(c)    (abs(c))
+
 // S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition);

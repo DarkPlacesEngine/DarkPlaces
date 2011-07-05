@@ -140,6 +140,7 @@ const char *vm_sv_extensions =
 "DP_SKELETONOBJECTS "
 "DP_SND_DIRECTIONLESSATTNNONE "
 "DP_SND_FAKETRACKS "
+"DP_SND_SOUND7_WIP1 "
 "DP_SND_OGGVORBIS "
 "DP_SND_SETPARAMS "
 "DP_SND_STEREOWAV "
@@ -510,20 +511,39 @@ static void VM_SV_sound (void)
 	int			channel;
 	prvm_edict_t		*entity;
 	int 		volume;
+	int flags;
 	float attenuation;
+	float pitchchange;
 
-	VM_SAFEPARMCOUNTRANGE(4, 5, VM_SV_sound);
+	VM_SAFEPARMCOUNTRANGE(4, 7, VM_SV_sound);
 
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
 	volume = (int)(PRVM_G_FLOAT(OFS_PARM3) * 255);
-	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 	if (prog->argc < 5)
 	{
 		Con_DPrintf("VM_SV_sound: given only 4 parameters, expected 5, assuming attenuation = ATTN_NORMAL\n");
 		attenuation = 1;
 	}
+	else
+		attenuation = PRVM_G_FLOAT(OFS_PARM4);
+	if (prog->argc < 6)
+		pitchchange = 0;
+	else
+		pitchchange = PRVM_G_FLOAT(OFS_PARM5);
+
+	if (prog->argc < 7)
+	{
+		flags = 0;
+		if(channel >= 8 && channel <= 15) // weird QW feature
+		{
+			flags |= CHANFLAG_RELIABLE;
+			channel -= 8;
+		}
+	}
+	else
+		flags = PRVM_G_FLOAT(OFS_PARM6);
 
 	if (volume < 0 || volume > 255)
 	{
@@ -537,13 +557,15 @@ static void VM_SV_sound (void)
 		return;
 	}
 
-	if (channel < 0 || channel > 7)
+	channel = CHAN_USER2ENGINE(channel);
+
+	if (!IS_CHAN(channel))
 	{
-		VM_Warning("SV_StartSound: channel must be in range 0-7\n");
+		VM_Warning("SV_StartSound: channel must be in range 0-127\n");
 		return;
 	}
 
-	SV_StartSound (entity, channel, sample, volume, attenuation);
+	SV_StartSound (entity, channel, sample, volume, attenuation, flags & CHANFLAG_RELIABLE);
 }
 
 /*

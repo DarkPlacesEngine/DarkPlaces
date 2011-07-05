@@ -1206,6 +1206,33 @@ float(string name, string value) registercvar = #93;
 //the engine plays sound/cdtracks/track001.wav instead of cd track 1 and so on if found, this allows games and mods to have music tracks without using ambientsound.
 //Note: also plays .ogg with DP_SND_OGGVORBIS extension.
 
+//DP_SND_SOUND7_WIP1
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+void(entity e, float chan, string samp, float vol, float atten, float speed, float flags) sound7 = #8;
+float SOUNDFLAG_RELIABLE = 1;
+//description:
+//plays a sound, with some more flags
+//extensions to sound():
+//- channel may be in the range from -128 to 127; channels -128 to 0 are "auto",
+//  i.e. support multiple sounds at once, but cannot be stopped/restarted
+//- a speed parameter has been reserved for later addition of pitch shifting.
+//  it MUST be set to 0 for now, meaning "no pitch change"
+//- the flag SOUNDFLAG_RELIABLE can be specified, which makes the sound send
+//  to MSG_ALL (reliable) instead of MSG_BROADCAST (unreliable, default);
+//  similarily, SOUNDFLAG_RELIABLE_TO_ONE sends to MSG_ONE
+//- channel 0 is controlled by snd_channel0volume; channel 1 and -1 by
+//  snd_channel1volume, etc. (so, a channel shares the cvar with its respective
+//  auto-channel); however, the mod MUST define snd_channel8volume and upwards
+//  in default.cfg if they are to be used, as the engine does not create them
+//  to not litter the cvar list
+//- this extension applies to CSQC as well; CSQC_Event_Sound will get speed and
+//  flags as extra 7th and 8th argument
+//- WIP2 ideas: SOUNDFLAG_RELIABLE_TO_ONE, SOUNDFLAG_NOPHS, SOUNDFLAG_FORCELOOP
+//- NOTE: to check for this, ALSO OR a check with DP_SND_SOUND7 to also support
+//  the finished extension once done
+
 //DP_SND_OGGVORBIS
 //idea: Transfusion
 //darkplaces implementation: Elric

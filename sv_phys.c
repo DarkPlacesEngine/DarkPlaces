@@ -2440,7 +2440,7 @@ void SV_CheckWaterTransition (prvm_edict_t *ent)
 	{ // Contents Transition Function Invalid; Potentially Play Water Sound
 		// check if the entity crossed into or out of water
 		if (sv_sound_watersplash.string && ((PRVM_serveredictfloat(ent, watertype) == CONTENTS_WATER || PRVM_serveredictfloat(ent, watertype) == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
-			SV_StartSound (ent, 0, sv_sound_watersplash.string, 255, 1);
+			SV_StartSound (ent, 0, sv_sound_watersplash.string, 255, 1, false);
 	}
 
 	if (cont <= CONTENTS_WATER)
@@ -2683,7 +2683,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 				else
 				// Check for Engine Landing Sound
 				if(sv_sound_land.string)
-					SV_StartSound(ent, 0, sv_sound_land.string, 255, 1);
+					SV_StartSound(ent, 0, sv_sound_land.string, 255, 1, false);
 			}
 			ent->priv.server->waterposition_forceupdate = true;
 		}
