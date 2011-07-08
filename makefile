@@ -47,6 +47,12 @@ else
 	UNIX_X11LIBPATH:=/usr/X11R6/lib
 endif
 
+# default targets
+TARGETS_DEBUG=sv-debug cl-debug sdl-debug
+TARGETS_PROFILE=sv-profile cl-profile sdl-profile
+TARGETS_RELEASE=sv-release cl-release sdl-release
+TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
+TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
 
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
@@ -109,6 +115,14 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	# we don't currently link to libjpeg on Mac because the OS does not have an easy way to load libjpeg and we provide our own in the .app
 	CFLAGS_LIBJPEG=
 	LIB_JPEG=
+
+	# on OS X, we don't build the CL by default because it uses deprecated
+	# and not-implemented-in-64bit Carbon
+	TARGETS_DEBUG=sv-debug sdl-debug
+	TARGETS_PROFILE=sv-profile sdl-profile
+	TARGETS_RELEASE=sv-release sdl-release
+	TARGETS_RELEASE_PROFILE=sv-release-profile sdl-release-profile
+	TARGETS_NEXUIZ=sv-nexuiz sdl-nexuiz
 endif
 
 # SunOS configuration (Solaris)

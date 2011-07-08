@@ -358,19 +358,19 @@ help:
 	@echo
 
 debug :
-	$(MAKE) sv-debug cl-debug sdl-debug
+	$(MAKE) $(TARGETS_DEBUG)
 
 profile :
-	$(MAKE) sv-profile cl-profile sdl-profile
+	$(MAKE) $(TARGETS_PROFILE)
 
 release :
-	$(MAKE) sv-release cl-release sdl-release
+	$(MAKE) $(TARGETS_RELEASE)
 
 release-profile :
-	$(MAKE) sv-release-profile cl-release-profile sdl-release-profile
+	$(MAKE) $(TARGETS_RELEASE_PROFILE)
 
 nexuiz :
-	$(MAKE) sv-nexuiz cl-nexuiz sdl-nexuiz
+	$(MAKE) $(TARGETS_NEXUIZ)
 
 cl-debug :
 	$(MAKE) bin-debug \
