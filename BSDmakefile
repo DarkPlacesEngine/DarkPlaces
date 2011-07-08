@@ -10,6 +10,14 @@ DP_ARCH != uname
 # Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
 
+# default targets
+TARGETS_DEBUG=sv-debug cl-debug sdl-debug
+TARGETS_PROFILE=sv-profile cl-profile sdl-profile
+TARGETS_RELEASE=sv-release cl-release sdl-release
+TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
+TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
+
+# X11 libs
 UNIX_X11LIBPATH=/usr/X11R6/lib
 
 # BSD configuration
