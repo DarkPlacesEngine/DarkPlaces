@@ -2717,120 +2717,200 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				unsigned int i, j, element;
 				const GLfloat *p;
 				qglBegin(GL_TRIANGLES);
-				for (i = 0;i < (unsigned int) numtriangles * 3;i++)
+				if(vid.renderpath == RENDERPATH_GL20)
 				{
-					if (element3i)
-						element = element3i[i];
-					else if (element3s)
-						element = element3s[i];
-					else
-						element = firstvertex + i;
-					for (j = 0;j < vid.texarrayunits;j++)
+					for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 					{
-						if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
-						{
-							if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
-							{
-								p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-								if (vid.texarrayunits > 1)
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
-									else
-										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
-								}
-								else
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglTexCoord4f(p[0], p[1], p[2], p[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglTexCoord3f(p[0], p[1], p[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglTexCoord2f(p[0], p[1]);
-									else
-										qglTexCoord1f(p[0]);
-								}
-							}
-							else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
-							{
-								const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-								if (vid.texarrayunits > 1)
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
-									else if (gl_state.units[j].pointer_texcoord_components == 1)
-										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
-								}
-								else
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglTexCoord4f(s[0], s[1], s[2], s[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglTexCoord3f(s[0], s[1], s[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglTexCoord2f(s[0], s[1]);
-									else if (gl_state.units[j].pointer_texcoord_components == 1)
-										qglTexCoord1f(s[0]);
-								}
-							}
-							else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
-							{
-								const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
-								if (vid.texarrayunits > 1)
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
-									else if (gl_state.units[j].pointer_texcoord_components == 1)
-										qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
-								}
-								else
-								{
-									if (gl_state.units[j].pointer_texcoord_components == 4)
-										qglTexCoord4f(sb[0], sb[1], sb[2], sb[3]);
-									else if (gl_state.units[j].pointer_texcoord_components == 3)
-										qglTexCoord3f(sb[0], sb[1], sb[2]);
-									else if (gl_state.units[j].pointer_texcoord_components == 2)
-										qglTexCoord2f(sb[0], sb[1]);
-									else if (gl_state.units[j].pointer_texcoord_components == 1)
-										qglTexCoord1f(sb[0]);
-								}
-							}
-						}
-					}
-					if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
-					{
-						if (gl_state.pointer_color_gltype == GL_FLOAT)
-						{
-							p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-							qglColor4f(p[0], p[1], p[2], p[3]);
-						}
-						else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
-						{
-							const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
-							qglColor4ub(ub[0], ub[1], ub[2], ub[3]);
-						}
-					}
-					if (gl_state.pointer_vertex_gltype == GL_FLOAT)
-					{
-						p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
-						if (gl_state.pointer_vertex_components == 4)
-							qglVertex4f(p[0], p[1], p[2], p[3]);
-						else if (gl_state.pointer_vertex_components == 3)
-							qglVertex3f(p[0], p[1], p[2]);
+						if (element3i)
+							element = element3i[i];
+						else if (element3s)
+							element = element3s[i];
 						else
-							qglVertex2f(p[0], p[1]);
+							element = firstvertex + i;
+						for (j = 0;j < vid.texarrayunits;j++)
+						{
+							if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
+							{
+								if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
+								{
+									p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, p[0], p[1], p[2], p[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglVertexAttrib3f(GLSLATTRIB_TEXCOORD0 + j, p[0], p[1], p[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglVertexAttrib2f(GLSLATTRIB_TEXCOORD0 + j, p[0], p[1]);
+									else
+										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, p[0]);
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
+								{
+									const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, s[0], s[1], s[2], s[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglVertexAttrib3f(GLSLATTRIB_TEXCOORD0 + j, s[0], s[1], s[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglVertexAttrib2f(GLSLATTRIB_TEXCOORD0 + j, s[0], s[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, s[0]);
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
+								{
+									const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, sb[0], sb[1], sb[2], sb[3]);
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglVertexAttrib3f(GLSLATTRIB_TEXCOORD0 + j, sb[0], sb[1], sb[2]);
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglVertexAttrib2f(GLSLATTRIB_TEXCOORD0 + j, sb[0], sb[1]);
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, sb[0]);
+								}
+							}
+						}
+						if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
+						{
+							if (gl_state.pointer_color_gltype == GL_FLOAT)
+							{
+								p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+								qglVertexAttrib4f(GLSLATTRIB_COLOR, p[0], p[1], p[2], p[3]);
+							}
+							else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
+							{
+								const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+								qglVertexAttrib4Nub(GLSLATTRIB_COLOR, ub[0], ub[1], ub[2], ub[3]);
+							}
+						}
+						if (gl_state.pointer_vertex_gltype == GL_FLOAT)
+						{
+							p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
+							if (gl_state.pointer_vertex_components == 4)
+								qglVertexAttrib4f(GLSLATTRIB_POSITION, p[0], p[1], p[2], p[3]);
+							else if (gl_state.pointer_vertex_components == 3)
+								qglVertexAttrib3f(GLSLATTRIB_POSITION, p[0], p[1], p[2]);
+							else
+								qglVertexAttrib2f(GLSLATTRIB_POSITION, p[0], p[1]);
+						}
+					}
+				}
+				else
+				{
+					for (i = 0;i < (unsigned int) numtriangles * 3;i++)
+					{
+						if (element3i)
+							element = element3i[i];
+						else if (element3s)
+							element = element3s[i];
+						else
+							element = firstvertex + i;
+						for (j = 0;j < vid.texarrayunits;j++)
+						{
+							if (gl_state.units[j].pointer_texcoord_pointer && gl_state.units[j].arrayenabled)
+							{
+								if (gl_state.units[j].pointer_texcoord_gltype == GL_FLOAT)
+								{
+									p = (const GLfloat *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (vid.texarrayunits > 1)
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
+										else
+											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
+									}
+									else
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglTexCoord4f(p[0], p[1], p[2], p[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglTexCoord3f(p[0], p[1], p[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglTexCoord2f(p[0], p[1]);
+										else
+											qglTexCoord1f(p[0]);
+									}
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
+								{
+									const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (vid.texarrayunits > 1)
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
+										else if (gl_state.units[j].pointer_texcoord_components == 1)
+											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
+									}
+									else
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglTexCoord4f(s[0], s[1], s[2], s[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglTexCoord3f(s[0], s[1], s[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglTexCoord2f(s[0], s[1]);
+										else if (gl_state.units[j].pointer_texcoord_components == 1)
+											qglTexCoord1f(s[0]);
+									}
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
+								{
+									const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (vid.texarrayunits > 1)
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
+										else if (gl_state.units[j].pointer_texcoord_components == 1)
+											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
+									}
+									else
+									{
+										if (gl_state.units[j].pointer_texcoord_components == 4)
+											qglTexCoord4f(sb[0], sb[1], sb[2], sb[3]);
+										else if (gl_state.units[j].pointer_texcoord_components == 3)
+											qglTexCoord3f(sb[0], sb[1], sb[2]);
+										else if (gl_state.units[j].pointer_texcoord_components == 2)
+											qglTexCoord2f(sb[0], sb[1]);
+										else if (gl_state.units[j].pointer_texcoord_components == 1)
+											qglTexCoord1f(sb[0]);
+									}
+								}
+							}
+						}
+						if (gl_state.pointer_color_pointer && gl_state.pointer_color_enabled && gl_state.pointer_color_components == 4)
+						{
+							if (gl_state.pointer_color_gltype == GL_FLOAT)
+							{
+								p = (const GLfloat *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+								qglColor4f(p[0], p[1], p[2], p[3]);
+							}
+							else if (gl_state.pointer_color_gltype == GL_UNSIGNED_BYTE)
+							{
+								const GLubyte *ub = (const GLubyte *)((const unsigned char *)gl_state.pointer_color_pointer + element * gl_state.pointer_color_stride);
+								qglColor4ub(ub[0], ub[1], ub[2], ub[3]);
+							}
+						}
+						if (gl_state.pointer_vertex_gltype == GL_FLOAT)
+						{
+							p = (const GLfloat *)((const unsigned char *)gl_state.pointer_vertex_pointer + element * gl_state.pointer_vertex_stride);
+							if (gl_state.pointer_vertex_components == 4)
+								qglVertex4f(p[0], p[1], p[2], p[3]);
+							else if (gl_state.pointer_vertex_components == 3)
+								qglVertex3f(p[0], p[1], p[2]);
+							else
+								qglVertex2f(p[0], p[1]);
+						}
 					}
 				}
 				qglEnd();
