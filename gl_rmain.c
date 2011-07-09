@@ -6293,31 +6293,37 @@ static void R_BlendView(void)
 			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 			{
 				// declare variables
-				float speed;
-				static float avgspeed;
+				float blur_factor, blur_mouseaccel, blur_velocity;
+				static float blur_average; 
+				static vec3_t blur_oldangles; // used to see how quickly the mouse is moving
 
-				speed = VectorLength(cl.movement_velocity);
-
+				blur_velocity = VectorLength(cl.movement_velocity);
+				blur_mouseaccel = fabs(VectorLength(cl.viewangles) - VectorLength(blur_oldangles));
+				
+				// set a goal for the factoring
+				blur_factor = (blur_velocity + (blur_mouseaccel * 10));
+				
+				// from the goal, pick an averaged value between goal and last value
 				cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
-				avgspeed = avgspeed * (1 - cl.motionbluralpha) + speed * cl.motionbluralpha;
+				blur_average *= (1 - cl.motionbluralpha) + blur_factor * cl.motionbluralpha;
 
-				speed = (avgspeed - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value);
-				speed = bound(0, speed, 1);
-				speed = speed * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
+				blur_factor = bound(0, (blur_average - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value), 1);
+				//blur_factor = blur_factor * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
 
 				// calculate values into a standard alpha
 				cl.motionbluralpha = 1 - exp(-
 						(
-						 (r_motionblur.value * speed / 80)
+						 (r_motionblur.value * blur_factor / 80)
 						 +
 						 (r_damageblur.value * (cl.cshifts[CSHIFT_DAMAGE].percent / 1600))
 						)
 						/
 						max(0.0001, cl.time - cl.oldtime) // fps independent
-					   );
+					  );
 
 				cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
 				cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
+				
 				// apply the blur
 				if (cl.motionbluralpha > 0 && !r_refdef.envmap)
 				{
@@ -6343,6 +6349,9 @@ static void R_BlendView(void)
 					R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 					r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 				}
+				
+				// updates old view angles for next pass 
+				VectorCopy(cl.viewangles, blur_oldangles);
 			}
 
 			// copy view into the screen texture
