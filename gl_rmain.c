@@ -6297,23 +6297,19 @@ static void R_BlendView(void)
 				static float blur_average; 
 				static vec3_t blur_oldangles; // used to see how quickly the mouse is moving
 
-				blur_velocity = VectorLength(cl.movement_velocity);
-				blur_mouseaccel = fabs(VectorLength(cl.viewangles) - VectorLength(blur_oldangles));
-				
 				// set a goal for the factoring
-				blur_factor = (blur_velocity + (blur_mouseaccel * 10));
-				
+				blur_velocity = bound(0, (VectorLength(cl.movement_velocity) - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value), 1);
+				blur_mouseaccel = bound(0, (fabs(VectorLength(cl.viewangles) - VectorLength(blur_oldangles)) - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value), 1);
+				blur_factor = (blur_velocity + blur_mouseaccel) * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
+
 				// from the goal, pick an averaged value between goal and last value
 				cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_vcoeff.value), 1);
-				blur_average *= (1 - cl.motionbluralpha) + blur_factor * cl.motionbluralpha;
-
-				blur_factor = bound(0, (blur_average - r_motionblur_vmin.value) / max(1, r_motionblur_vmax.value - r_motionblur_vmin.value), 1);
-				//blur_factor = blur_factor * (1 - r_motionblur_bmin.value) + r_motionblur_bmin.value;
+				blur_average = blur_average * (1 - cl.motionbluralpha) + blur_factor * cl.motionbluralpha;
 
 				// calculate values into a standard alpha
 				cl.motionbluralpha = 1 - exp(-
 						(
-						 (r_motionblur.value * blur_factor / 80)
+						 (r_motionblur.value * blur_average / 80)
 						 +
 						 (r_damageblur.value * (cl.cshifts[CSHIFT_DAMAGE].percent / 1600))
 						)
