@@ -2459,7 +2459,7 @@ qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, cons
 	qglCompileShader(shaderobject);CHECKGLERROR
 	qglGetShaderiv(shaderobject, GL_COMPILE_STATUS, &shadercompiled);CHECKGLERROR
 	qglGetShaderInfoLog(shaderobject, sizeof(compilelog), NULL, compilelog);CHECKGLERROR
-	if (compilelog[0] && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning")))
+	if (compilelog[0] && (strstr(compilelog, "error") || strstr(compilelog, "ERROR") || strstr(compilelog, "Error") || strstr(compilelog, "WARNING") || strstr(compilelog, "warning") || strstr(compilelog, "Warning") || developer_extra.integer))
 	{
 		int i, j, pretextlines = 0;
 		for (i = 0;i < numstrings - 1;i++)
@@ -2518,7 +2518,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglGetProgramInfoLog(programobject, sizeof(linklog), NULL, linklog);CHECKGLERROR
 	if (linklog[0])
 	{
-		if (strstr(linklog, "error") || strstr(linklog, "ERROR") || strstr(linklog, "Error") || strstr(linklog, "WARNING") || strstr(linklog, "warning") || strstr(linklog, "Warning"))
+		if (strstr(linklog, "error") || strstr(linklog, "ERROR") || strstr(linklog, "Error") || strstr(linklog, "WARNING") || strstr(linklog, "warning") || strstr(linklog, "Warning") || developer_extra.integer)
 			Con_DPrintf("program link log:\n%s\n", linklog);
 		// software vertex shader is ok but software fragment shader is WAY
 		// too slow, fail program if so.
