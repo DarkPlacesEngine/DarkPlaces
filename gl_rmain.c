@@ -197,7 +197,8 @@ cvar_t r_hdr_irisadaptation_multiplier = {CVAR_SAVE, "r_hdr_irisadaptation_multi
 cvar_t r_hdr_irisadaptation_minvalue = {CVAR_SAVE, "r_hdr_irisadaptation_minvalue", "0.5", "minimum value that can result from multiplier / brightness"};
 cvar_t r_hdr_irisadaptation_maxvalue = {CVAR_SAVE, "r_hdr_irisadaptation_maxvalue", "4", "maximum value that can result from multiplier / brightness"};
 cvar_t r_hdr_irisadaptation_value = {0, "r_hdr_irisadaptation_value", "1", "current value as scenebrightness multiplier, changes continuously when irisadaptation is active"};
-cvar_t r_hdr_irisadaptation_fade = {CVAR_SAVE, "r_hdr_irisadaptation_fade", "1", "fade rate at which value adjusts"};
+cvar_t r_hdr_irisadaptation_fade_up = {CVAR_SAVE, "r_hdr_irisadaptation_fade_up", "0.1", "fade rate at which value adjusts to darkness"};
+cvar_t r_hdr_irisadaptation_fade_down = {CVAR_SAVE, "r_hdr_irisadaptation_fade_down", "0.5", "fade rate at which value adjusts to brightness"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
@@ -4262,7 +4263,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_minvalue);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_maxvalue);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_value);
-	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade_up);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade_down);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
@@ -5007,19 +5009,17 @@ void R_HDR_UpdateIrisAdaptation(const vec3_t point)
 		vec3_t diffusenormal;
 		vec_t brightness;
 		vec_t goal;
-		vec_t adjust;
 		vec_t current;
 		R_CompleteLightPoint(ambient, diffuse, diffusenormal, point, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 		brightness = (ambient[0] + ambient[1] + ambient[2] + diffuse[0] + diffuse[1] + diffuse[2]) * (1.0f / 3.0f);
 		brightness = max(0.0000001f, brightness);
 		goal = r_hdr_irisadaptation_multiplier.value / brightness;
 		goal = bound(r_hdr_irisadaptation_minvalue.value, goal, r_hdr_irisadaptation_maxvalue.value);
-		adjust = r_hdr_irisadaptation_fade.value * cl.realframetime;
 		current = r_hdr_irisadaptation_value.value;
 		if (current < goal)
-			current = min(current + adjust, goal);
+			current = min(current + r_hdr_irisadaptation_fade_up.value * cl.realframetime, goal);
 		else if (current > goal)
-			current = max(current - adjust, goal);
+			current = max(current - r_hdr_irisadaptation_fade_down.value * cl.realframetime, goal);
 		if (fabs(r_hdr_irisadaptation_value.value - current) > 0.0001f)
 			Cvar_SetValueQuick(&r_hdr_irisadaptation_value, current);
 	}
