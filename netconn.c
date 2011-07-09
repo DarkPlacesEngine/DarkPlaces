@@ -62,7 +62,7 @@ static cvar_t sv_qwmasters [] =
 	{0, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
 	{0, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
 	{0, "sv_qwmasterextra4", "masterserver.exhale.de:27000", "German master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra5", "kubus.rulez.pl:27000", "Poland master server. (admin: unknown)"},
+	{0, "sv_qwmasterextra5", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 
