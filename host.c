@@ -1082,7 +1082,7 @@ static void Host_Init (void)
 		developer.string = "1";
 	}
 
-	if (COM_CheckParm("-developer2"))
+	if (COM_CheckParm("-developer2") || COM_CheckParm("-developer3"))
 	{
 		developer.value = developer.integer = 1;
 		developer.string = "1";
@@ -1094,6 +1094,12 @@ static void Host_Init (void)
 		developer_memory.string = "1";
 		developer_memorydebug.value = developer_memorydebug.integer = 1;
 		developer_memorydebug.string = "1";
+	}
+
+	if (COM_CheckParm("-developer3"))
+	{
+		gl_paranoid.integer = 1;gl_paranoid.string = "1";
+		gl_printcheckerror.integer = 1;gl_printcheckerror.string = "1";
 	}
 
 // COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
