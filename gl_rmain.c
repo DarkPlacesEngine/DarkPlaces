@@ -55,13 +55,13 @@ cvar_t r_damageblur = {CVAR_SAVE, "r_damageblur", "0", "screen motionblur based 
 cvar_t r_motionblur_averaging = {CVAR_SAVE, "r_motionblur_averaging", "0.1", "sliding average reaction time for velocity (higher = slower adaption to change)"};
 cvar_t r_motionblur_randomize = {CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
 cvar_t r_motionblur_minblur = {CVAR_SAVE, "r_motionblur_minblur", "0.5", "factor of blur to apply at all times (always have this amount of blur no matter what the other factors are)"};
-cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.88", "maxmimum amount of blur"};
+cvar_t r_motionblur_maxblur = {CVAR_SAVE, "r_motionblur_maxblur", "0.9", "maxmimum amount of blur"};
 cvar_t r_motionblur_velocityfactor = {CVAR_SAVE, "r_motionblur_velocityfactor", "1", "factoring in of player velocity to the blur equation - the faster the player moves around the map, the more blur they get"};
 cvar_t r_motionblur_velocityfactor_minspeed = {CVAR_SAVE, "r_motionblur_velocityfactor_minspeed", "400", "lower value of velocity when it starts to factor into blur equation"};
 cvar_t r_motionblur_velocityfactor_maxspeed = {CVAR_SAVE, "r_motionblur_velocityfactor_maxspeed", "800", "upper value of velocity when it reaches the peak factor into blur equation"};
-cvar_t r_motionblur_mousefactor = {CVAR_SAVE, "r_motionblur_mousefactor", "1", "factoring in of mouse acceleration to the blur equation - the faster the player turns their mouse, the more blur they get"};
-cvar_t r_motionblur_mousefactor_minspeed = {CVAR_SAVE, "r_motionblur_mousefactor_minspeed", "10", "lower value of mouse acceleration when it starts to factor into blur equation"};
-cvar_t r_motionblur_mousefactor_maxspeed = {CVAR_SAVE, "r_motionblur_mousefactor_maxspeed", "100", "upper value of mouse acceleration when it reaches the peak factor into blur equation"};
+cvar_t r_motionblur_mousefactor = {CVAR_SAVE, "r_motionblur_mousefactor", "2", "factoring in of mouse acceleration to the blur equation - the faster the player turns their mouse, the more blur they get"};
+cvar_t r_motionblur_mousefactor_minspeed = {CVAR_SAVE, "r_motionblur_mousefactor_minspeed", "0", "lower value of mouse acceleration when it starts to factor into blur equation"};
+cvar_t r_motionblur_mousefactor_maxspeed = {CVAR_SAVE, "r_motionblur_mousefactor_maxspeed", "50", "upper value of mouse acceleration when it reaches the peak factor into blur equation"};
 
 // TODO do we want a r_equalize_entities cvar that works on all ents, or would that be a cheat?
 cvar_t r_equalize_entities_fullbright = {CVAR_SAVE, "r_equalize_entities_fullbright", "0", "render fullbright entities by equalizing their lightness, not by not rendering light"};
