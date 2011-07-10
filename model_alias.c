@@ -3226,9 +3226,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->data_bones[i].parent = joint[i].parent;
 			if (loadmodel->data_bones[i].parent >= i)
 				Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
-            if (joint[i].rotation[3] > 0)
-                Vector4Negate(joint[i].rotation, joint[i].rotation);
-            Vector4Normalize2(joint[i].rotation, joint[i].rotation);
+			if (joint[i].rotation[3] > 0)
+				Vector4Negate(joint[i].rotation, joint[i].rotation);
+			Vector4Normalize2(joint[i].rotation, joint[i].rotation);
 			Matrix4x4_FromDoom3Joint(&relbase, joint[i].origin[0], joint[i].origin[1], joint[i].origin[2], joint[i].rotation[0], joint[i].rotation[1], joint[i].rotation[2]);
 			Matrix4x4_Invert_Simple(&relinvbase, &relbase);
 			if (loadmodel->data_bones[i].parent >= 0)
