@@ -3037,11 +3037,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		Con_Printf("%s has no geometry\n", loadmodel->name);
 		return;
 	}
-	if (header->num_frames < 1 || header->num_anims < 1)
-	{
-		Con_Printf("%s has no animations\n", loadmodel->name);
-		return;
-	}
 
 	if (pbase + header->ofs_text + header->num_text > pend ||
 		pbase + header->ofs_meshes + header->num_meshes*sizeof(iqmmesh_t) > pend ||
@@ -3134,9 +3129,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->numskins < 1)
 		loadmodel->numskins = 1;
 
-	loadmodel->numframes = header->num_anims;
+	loadmodel->numframes = max(header->num_anims, 1);
 	loadmodel->num_bones = header->num_joints;
-	loadmodel->num_poses = header->num_frames;
+	loadmodel->num_poses = max(header->num_frames, 1);
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header->num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
@@ -3261,7 +3256,15 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->animscenes[i].loop = ((anim[i].flags & IQM_LOOP) != 0);
 		loadmodel->animscenes[i].framerate = anim[i].framerate;
 	}
-	
+	if (header->num_anims <= 0)
+	{
+		strlcpy(loadmodel->animscenes[0].name, "static", sizeof(loadmodel->animscenes[0].name));
+		loadmodel->animscenes[0].firstframe = 0;
+		loadmodel->animscenes[0].framecount = 1;
+		loadmodel->animscenes[0].loop = true;
+		loadmodel->animscenes[0].framerate = 10;
+	}
+
 	biggestorigin = 0;
 	if (header->version == 1)
 	{
@@ -3283,6 +3286,16 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			f = fabs(pose1[i].channeloffset[1] + 0xFFFF*pose1[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose1[i].channeloffset[2] + 0xFFFF*pose1[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
 		}
+		if (header->num_frames <= 0)
+		{
+			for (i = 0;i < loadmodel->num_bones;i++)
+			{
+				float f;
+				f = fabs(joint1[i].origin[0]); biggestorigin = max(biggestorigin, f);
+				f = fabs(joint1[i].origin[1]); biggestorigin = max(biggestorigin, f);
+				f = fabs(joint1[i].origin[2]); biggestorigin = max(biggestorigin, f);
+			}
+		}
 	}
 	else
 	{
@@ -3303,6 +3316,16 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			f = fabs(pose[i].channeloffset[0] + 0xFFFF*pose[i].channelscale[0]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose[i].channeloffset[1] + 0xFFFF*pose[i].channelscale[1]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose[i].channeloffset[2] + 0xFFFF*pose[i].channelscale[2]); biggestorigin = max(biggestorigin, f);
+		}
+		if (header->num_frames <= 0)
+		{
+			for (i = 0;i < loadmodel->num_bones;i++)
+			{
+				float f;
+				f = fabs(joint[i].origin[0]); biggestorigin = max(biggestorigin, f);
+				f = fabs(joint[i].origin[1]); biggestorigin = max(biggestorigin, f);
+				f = fabs(joint[i].origin[2]); biggestorigin = max(biggestorigin, f);
+			}
 		}
 	}
 	loadmodel->num_posescale = biggestorigin / 32767.0f;
@@ -3326,6 +3349,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if(pose1[j].channelmask&64) framedata++;
 				if(pose1[j].channelmask&128) framedata++;
 				if(pose1[j].channelmask&256) framedata++;
+			}
+		}
+		if (header->num_frames <= 0)
+		{
+			for (i = 0;i < loadmodel->num_bones;i++)
+			{
+				loadmodel->data_poses6s[i*6 + 0] = loadmodel->num_poseinvscale * joint1[i].origin[0];
+				loadmodel->data_poses6s[i*6 + 1] = loadmodel->num_poseinvscale * joint1[i].origin[1];
+				loadmodel->data_poses6s[i*6 + 2] = loadmodel->num_poseinvscale * joint1[i].origin[2];
+				loadmodel->data_poses6s[i*6 + 3] = 32767.0f * joint1[i].rotation[0];
+				loadmodel->data_poses6s[i*6 + 4] = 32767.0f * joint1[i].rotation[1];
+				loadmodel->data_poses6s[i*6 + 5] = 32767.0f * joint1[i].rotation[2];
 			}
 		}
 	}
@@ -3353,6 +3388,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if(pose[j].channelmask&128) framedata++;
 				if(pose[j].channelmask&256) framedata++;
 				if(pose[j].channelmask&512) framedata++;
+			}
+		}
+		if (header->num_frames <= 0)
+		{
+			for (i = 0;i < loadmodel->num_bones;i++)
+			{
+				loadmodel->data_poses6s[i*6 + 0] = loadmodel->num_poseinvscale * joint[i].origin[0];
+				loadmodel->data_poses6s[i*6 + 1] = loadmodel->num_poseinvscale * joint[i].origin[1];
+				loadmodel->data_poses6s[i*6 + 2] = loadmodel->num_poseinvscale * joint[i].origin[2];
+				loadmodel->data_poses6s[i*6 + 3] = 32767.0f * joint[i].rotation[0];
+				loadmodel->data_poses6s[i*6 + 4] = 32767.0f * joint[i].rotation[1];
+				loadmodel->data_poses6s[i*6 + 5] = 32767.0f * joint[i].rotation[2];
 			}
 		}
 	}
