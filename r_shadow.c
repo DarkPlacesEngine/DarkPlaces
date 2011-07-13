@@ -6828,6 +6828,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 			intensity *= VectorLength(color);
 			VectorMA(sample + 12, intensity, relativepoint, sample + 12);
 		}
+		// FIXME: sample bouncegrid too!
 	}
 
 	if (flags & LP_DYNLIGHT)
