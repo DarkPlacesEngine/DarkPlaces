@@ -1911,11 +1911,11 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	if(hasalpha)
 		dds_format_flags |= 0x1; // DDPF_ALPHAPIXELS
 	memcpy(dds, "DDS ", 4);
-	StoreLittleLong(dds+4, ddssize);
+	StoreLittleLong(dds+4, 124); // http://msdn.microsoft.com/en-us/library/bb943982%28v=vs.85%29.aspx says so
 	StoreLittleLong(dds+8, dds_flags);
 	StoreLittleLong(dds+12, mipinfo[0][1]); // height
 	StoreLittleLong(dds+16, mipinfo[0][0]); // width
-	StoreLittleLong(dds+24, 1); // depth
+	StoreLittleLong(dds+24, 0); // depth
 	StoreLittleLong(dds+28, mipmaps); // mipmaps
 	StoreLittleLong(dds+76, 32); // format size
 	StoreLittleLong(dds+80, dds_format_flags);
