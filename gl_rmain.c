@@ -2001,8 +2001,6 @@ void R_SetupShader_ShowDepth(qboolean notrippy)
 	int permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
-	if (r_trippy.integer)
-		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (vid.allowalphatocoverage)
 		GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
