@@ -34,6 +34,7 @@ cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, an
 cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
 cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
 cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
+cvar_t sv_namechangetimer = {CVAR_SAVE, "sv_namechangetimer", "5", "how often to allow name changes, in seconds (prevents people from using animated names and other tricks"};
 cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
 cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure_challengetimeout = {0, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
@@ -1126,11 +1127,11 @@ void Host_Name_f (void)
 
 	if (realtime < host_client->nametime)
 	{
-		SV_ClientPrintf("You can't change name more than once every 5 seconds!\n");
+		SV_ClientPrintf("You can't change name more than once every %.1f seconds!\n", max(0.0f, sv_namechangetimer.value));
 		return;
 	}
 
-	host_client->nametime = realtime + 5;
+	host_client->nametime = realtime + max(0.0f, sv_namechangetimer.value);
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
@@ -2968,6 +2969,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&sv_adminnick);
 	Cvar_RegisterVariable(&sv_status_privacy);
 	Cvar_RegisterVariable(&sv_status_show_qcstatus);
+	Cvar_RegisterVariable(&sv_namechangetimer);
 }
 
 void Host_NoOperation_f(void)
