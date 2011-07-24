@@ -362,7 +362,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	for (i = 0, v = vertex3f;i < numpoints;i++, v += 3)
 		VectorCopy(portal->points[i].position, v);
 	R_Mesh_PrepareVertices_Generic_Arrays(numpoints, vertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false);
+	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, false);
 	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 

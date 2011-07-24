@@ -213,7 +213,7 @@ static void R_DrawExplosion_TransparentCallback(const entity_render_t *ent, cons
 	R_EntityMatrix(&identitymatrix);
 
 //	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic(explosiontexture, NULL, GL_MODULATE, 1, false);
+	R_SetupShader_Generic(explosiontexture, NULL, GL_MODULATE, 1, false, false);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		const explosion_t *e = explosion + surfacelist[surfacelistindex];

@@ -95,7 +95,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	const void			*startframes;
-	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | (gl_texturecompression_sprites.integer ? TEXF_COMPRESS : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_ALPHA | TEXF_CLAMP;
+	int                 texflags = (r_mipsprites.integer ? TEXF_MIPMAP : 0) | ((gl_texturecompression.integer && gl_texturecompression_sprites.integer) ? TEXF_COMPRESS : 0) | TEXF_ISSPRITE | TEXF_PICMIP | TEXF_ALPHA | TEXF_CLAMP;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
