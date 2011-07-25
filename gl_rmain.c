@@ -1910,8 +1910,9 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		permutation |= SHADERPERMUTATION_SPECULAR;
 	if (texturemode == GL_MODULATE)
 		permutation |= SHADERPERMUTATION_COLORMAPPING;
-	if (usegamma && r_texture_gammaramps && v_glslgamma.integer && !vid_gammatables_trivial)
-		permutation |= SHADERPERMUTATION_GAMMARAMPS;
+// LordHavoc: VorteX broke the game by doing this, and did not cvar it properly, and did not add the proper checks (r_texture_sRGB_2d.integer would need to be checked), and it breaks with vid_sRGB where the gamma ramps are altered...
+//	if (usegamma && r_texture_gammaramps && v_glslgamma.integer && !vid_gammatables_trivial)
+//		permutation |= SHADERPERMUTATION_GAMMARAMPS;
 	else if (texturemode == GL_ADD)
 		permutation |= SHADERPERMUTATION_GLOW;
 	else if (texturemode == GL_DECAL)
