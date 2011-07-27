@@ -634,7 +634,7 @@ void Mem_ExpandableArray_FreeArray(memexpandablearray_t *l)
 void *Mem_ExpandableArray_AllocRecordAtIndex(memexpandablearray_t *l, size_t index)
 {
 	size_t j;
-	if (index == l->numarrays)
+	if (index >= l->numarrays)
 	{
 		if (l->numarrays == l->maxarrays)
 		{
