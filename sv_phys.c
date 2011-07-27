@@ -1449,6 +1449,120 @@ PUSHMOVE
 ===============================================================================
 */
 
+static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
+{
+	int bump;
+	trace_t stucktrace;
+	vec3_t stuckorigin;
+	vec3_t stuckmins, stuckmaxs;
+	vec3_t goodmins, goodmaxs;
+	vec3_t testorigin;
+	vec_t nudge;
+	vec3_t move;
+	VectorCopy(PRVM_serveredictvector(ent, origin), stuckorigin);
+	VectorCopy(PRVM_serveredictvector(ent, mins), stuckmins);
+	VectorCopy(PRVM_serveredictvector(ent, maxs), stuckmaxs);
+	VectorCopy(pivot, goodmins);
+	VectorCopy(pivot, goodmaxs);
+	for (bump = 0;bump < 6;bump++)
+	{
+		int coord = 2-(bump >> 1);
+		//int coord = (bump >> 1);
+		int dir = (bump & 1);
+		int subbump;
+
+		for(subbump = 0; ; ++subbump)
+		{
+			VectorCopy(stuckorigin, testorigin);
+			if(dir)
+			{
+				// pushing maxs
+				testorigin[coord] += stuckmaxs[coord] - goodmaxs[coord];
+			}
+			else
+			{
+				// pushing mins
+				testorigin[coord] += stuckmins[coord] - goodmins[coord];
+			}
+
+			stucktrace = SV_TraceBox(stuckorigin, goodmins, goodmaxs, testorigin, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
+			if (stucktrace.bmodelstartsolid)
+			{
+				// BAD BAD, can't fix that
+				return false;
+			}
+
+			if (stucktrace.fraction >= 1)
+				break; // it WORKS!
+
+			if(subbump >= 10)
+			{
+				// BAD BAD, can't fix that
+				return false;
+			}
+
+			// we hit something... let's move out of it
+			VectorSubtract(stucktrace.endpos, testorigin, move);
+			nudge = DotProduct(stucktrace.plane.normal, move) + 0.03125f; // FIXME cvar this constant
+			VectorMA(stuckorigin, nudge, stucktrace.plane.normal, stuckorigin);
+		}
+		/*
+		if(subbump > 0)
+			Con_Printf("subbump: %d\n", subbump);
+		*/
+
+		if(dir)
+		{
+			// pushing maxs
+			goodmaxs[coord] = stuckmaxs[coord];
+		}
+		else
+		{
+			// pushing mins
+			goodmins[coord] = stuckmins[coord];
+		}
+	}
+
+	// WE WIN
+	VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
+
+	return true;
+}
+
+static qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
+{
+	int bump;
+	trace_t stucktrace;
+	vec3_t stuckorigin;
+	vec3_t stuckmins, stuckmaxs;
+	vec_t nudge;
+	vec_t separation = sv_gameplayfix_nudgeoutofsolid_separation.value;
+	if (sv.worldmodel && sv.worldmodel->brushq1.numclipnodes)
+		separation = 0.0f; // when using hulls, it can not be enlarged
+	VectorCopy(PRVM_serveredictvector(ent, origin), stuckorigin);
+	VectorCopy(PRVM_serveredictvector(ent, mins), stuckmins);
+	VectorCopy(PRVM_serveredictvector(ent, maxs), stuckmaxs);
+	stuckmins[0] -= separation;
+	stuckmins[1] -= separation;
+	stuckmins[2] -= separation;
+	stuckmaxs[0] += separation;
+	stuckmaxs[1] += separation;
+	stuckmaxs[2] += separation;
+	for (bump = 0;bump < 10;bump++)
+	{
+		stucktrace = SV_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
+		if (!stucktrace.bmodelstartsolid || stucktrace.startdepth >= 0)
+		{
+			// found a good location, use it
+			VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
+			return true;
+		}
+		nudge = -stucktrace.startdepth;
+		VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
+	}
+	return false;
+}
+
 /*
 ============
 SV_PushEntity
@@ -1463,7 +1577,6 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	int solid;
 	int movetype;
 	int type;
-	int bump;
 	vec3_t mins, maxs;
 	vec3_t original, original_velocity;
 	vec3_t start;
@@ -1477,34 +1590,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	// move start position out of solids
 	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
 	{
-		trace_t stucktrace;
-		vec3_t stuckorigin;
-		vec3_t stuckmins, stuckmaxs;
-		vec_t nudge;
-		vec_t separation = sv_gameplayfix_nudgeoutofsolid_separation.value;
-		if (sv.worldmodel && sv.worldmodel->brushq1.numclipnodes)
-			separation = 0.0f; // when using hulls, it can not be enlarged
-		VectorCopy(PRVM_serveredictvector(ent, origin), stuckorigin);
-		VectorCopy(mins, stuckmins);
-		VectorCopy(maxs, stuckmaxs);
-		stuckmins[0] -= separation;
-		stuckmins[1] -= separation;
-		stuckmins[2] -= separation;
-		stuckmaxs[0] += separation;
-		stuckmaxs[1] += separation;
-		stuckmaxs[2] += separation;
-		for (bump = 0;bump < 10;bump++)
-		{
-			stucktrace = SV_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent));
-			if (!stucktrace.bmodelstartsolid || stucktrace.startdepth >= 0)
-			{
-				// found a good location, use it
-				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
-				break;
-			}
-			nudge = -stucktrace.startdepth;
-			VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
-		}
+		SV_NudgeOutOfSolid(ent);
 	}
 
 	VectorCopy(PRVM_serveredictvector(ent, origin), start);
@@ -1567,6 +1653,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	trace_t trace, trace2;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 	static unsigned short moved_edicts[MAX_EDICTS];
+	vec3_t pivot;
 
 	if (!PRVM_serveredictvector(pusher, velocity)[0] && !PRVM_serveredictvector(pusher, velocity)[1] && !PRVM_serveredictvector(pusher, velocity)[2] && !PRVM_serveredictvector(pusher, avelocity)[0] && !PRVM_serveredictvector(pusher, avelocity)[1] && !PRVM_serveredictvector(pusher, avelocity)[2])
 	{
@@ -1728,10 +1815,14 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			}
 		}
 
+		VectorLerp(PRVM_serveredictvector(check, mins), 0.5f, PRVM_serveredictvector(check, maxs), pivot);
+		//VectorClear(pivot);
+
 		if (rotated)
 		{
 			vec3_t org2;
 			VectorSubtract (PRVM_serveredictvector(check, origin), PRVM_serveredictvector(pusher, origin), org);
+			VectorAdd (org, pivot, org);
 			org2[0] = DotProduct (org, forward);
 			org2[1] = DotProduct (org, left);
 			org2[2] = DotProduct (org, up);
@@ -1780,72 +1871,55 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, PRVM_serveredictvector(pusher, mins), PRVM_serveredictvector(pusher, maxs), SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, PRVM_serveredictvector(check, origin), PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs), PRVM_serveredictvector(check, origin), checkcontents);
 		if (trace.startsolid)
 		{
-			// try moving the contacted entity a tiny bit further to account for precision errors
 			vec3_t move2;
-			PRVM_serveredictfloat(pusher, solid) = SOLID_NOT;
-			VectorScale(move, 1.1, move2);
-			VectorCopy (check->priv.server->moved_from, PRVM_serveredictvector(check, origin));
-			VectorCopy (check->priv.server->moved_fromangles, PRVM_serveredictvector(check, angles));
-			if(!SV_PushEntity (&trace2, check, move2, true, true))
+			if(SV_NudgeOutOfSolid_PivotIsKnownGood(check, pivot))
 			{
-				// entity "check" got teleported
-				continue;
-			}
-			PRVM_serveredictfloat(pusher, solid) = savesolid;
-			Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, PRVM_serveredictvector(pusher, mins), PRVM_serveredictvector(pusher, maxs), SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, PRVM_serveredictvector(check, origin), PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs), PRVM_serveredictvector(check, origin), checkcontents);
-			if (trace.startsolid)
-			{
-				// try moving the contacted entity a tiny bit less to account for precision errors
-				PRVM_serveredictfloat(pusher, solid) = SOLID_NOT;
-				VectorScale(move, 0.9, move2);
-				VectorCopy (check->priv.server->moved_from, PRVM_serveredictvector(check, origin));
-				VectorCopy (check->priv.server->moved_fromangles, PRVM_serveredictvector(check, angles));
-				if(!SV_PushEntity (&trace2, check, move2, true, true))
+				// hack to invoke all necessary movement triggers
+				VectorClear(move2);
+				if(!SV_PushEntity(&trace2, check, move2, true, true))
 				{
 					// entity "check" got teleported
 					continue;
 				}
-				PRVM_serveredictfloat(pusher, solid) = savesolid;
-				Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, PRVM_serveredictvector(pusher, mins), PRVM_serveredictvector(pusher, maxs), SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, PRVM_serveredictvector(check, origin), PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs), PRVM_serveredictvector(check, origin), checkcontents);
-				if (trace.startsolid)
-				{
-					// still inside pusher, so it's really blocked
-
-					// fail the move
-					if (PRVM_serveredictvector(check, mins)[0] == PRVM_serveredictvector(check, maxs)[0])
-						continue;
-					if (PRVM_serveredictfloat(check, solid) == SOLID_NOT || PRVM_serveredictfloat(check, solid) == SOLID_TRIGGER)
-					{
-						// corpse
-						PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
-						VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
-						continue;
-					}
-
-					VectorCopy (pushorig, PRVM_serveredictvector(pusher, origin));
-					VectorCopy (pushang, PRVM_serveredictvector(pusher, angles));
-					PRVM_serveredictfloat(pusher, ltime) = pushltime;
-					SV_LinkEdict(pusher);
-
-					// move back any entities we already moved
-					for (i = 0;i < num_moved;i++)
-					{
-						prvm_edict_t *ed = PRVM_EDICT_NUM(moved_edicts[i]);
-						VectorCopy (ed->priv.server->moved_from, PRVM_serveredictvector(ed, origin));
-						VectorCopy (ed->priv.server->moved_fromangles, PRVM_serveredictvector(ed, angles));
-						SV_LinkEdict(ed);
-					}
-
-					// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
-					if (PRVM_serveredictfunction(pusher, blocked))
-					{
-						PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(pusher);
-						PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(check);
-						PRVM_ExecuteProgram (PRVM_serveredictfunction(pusher, blocked), "QC function self.blocked is missing");
-					}
-					break;
-				}
+				// we could fix it
+				continue;
 			}
+
+			// still inside pusher, so it's really blocked
+
+			// fail the move
+			if (PRVM_serveredictvector(check, mins)[0] == PRVM_serveredictvector(check, maxs)[0])
+				continue;
+			if (PRVM_serveredictfloat(check, solid) == SOLID_NOT || PRVM_serveredictfloat(check, solid) == SOLID_TRIGGER)
+			{
+				// corpse
+				PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
+				VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
+				continue;
+			}
+
+			VectorCopy (pushorig, PRVM_serveredictvector(pusher, origin));
+			VectorCopy (pushang, PRVM_serveredictvector(pusher, angles));
+			PRVM_serveredictfloat(pusher, ltime) = pushltime;
+			SV_LinkEdict(pusher);
+
+			// move back any entities we already moved
+			for (i = 0;i < num_moved;i++)
+			{
+				prvm_edict_t *ed = PRVM_EDICT_NUM(moved_edicts[i]);
+				VectorCopy (ed->priv.server->moved_from, PRVM_serveredictvector(ed, origin));
+				VectorCopy (ed->priv.server->moved_fromangles, PRVM_serveredictvector(ed, angles));
+				SV_LinkEdict(ed);
+			}
+
+			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
+			if (PRVM_serveredictfunction(pusher, blocked))
+			{
+				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(pusher);
+				PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(check);
+				PRVM_ExecuteProgram (PRVM_serveredictfunction(pusher, blocked), "QC function self.blocked is missing");
+			}
+			break;
 		}
 	}
 	PRVM_serveredictvector(pusher, angles)[0] -= 360.0 * floor(PRVM_serveredictvector(pusher, angles)[0] * (1.0 / 360.0));
