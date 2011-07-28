@@ -1693,6 +1693,7 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 
 	if(utf8_enable.integer)
 	{
+		*out = 0;
 		while(*in && size_out > 1)
 		{
 			int n;
@@ -1725,6 +1726,7 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 
 	if(utf8_enable.integer)
 	{
+		*out = 0;
 		while(*in && size_out > 1)
 		{
 			int n;
