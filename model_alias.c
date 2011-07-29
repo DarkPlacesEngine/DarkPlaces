@@ -2970,29 +2970,41 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	unsigned char *data;
 	const char *text;
-	unsigned char *pbase, *pend;
-	iqmheader_t *header;
+	const unsigned char *pbase, *pend;
+	iqmheader_t lheader, *header = &lheader;
 	skinfile_t *skinfiles;
 	int i, j, k, meshvertices, meshtriangles;
-	float *vposition = NULL, *vtexcoord = NULL, *vnormal = NULL, *vtangent = NULL;
-	unsigned char *vblendindexes = NULL, *vblendweights = NULL;
-	iqmjoint1_t *joint1 = NULL;
-	iqmjoint_t *joint = NULL;
-	iqmpose1_t *pose1 = NULL;
-	iqmpose_t *pose = NULL;
-	iqmanim_t *anim;
-	iqmmesh_t *mesh;
-	iqmbounds_t *bounds;
-	iqmvertexarray_t *va;
-	unsigned short *framedata;
 	float biggestorigin;
 	const int *inelements;
 	int *outelements;
 	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
+	// temporary memory allocations (because the data in the file may be misaligned)
+	float *vnormal = NULL;
+	float *vposition = NULL;
+	float *vtangent = NULL;
+	float *vtexcoord = NULL;
+	iqmanim_t *anim = NULL;
+	iqmbounds_t *bounds = NULL;
+	iqmjoint1_t *joint1 = NULL;
+	iqmjoint_t *joint = NULL;
+	iqmmesh_t *mesh = NULL;
+	iqmpose1_t *pose1 = NULL;
+	iqmpose_t *pose = NULL;
+	iqmvertexarray_t *va = NULL;
+	unsigned char *vblendindexes = NULL;
+	unsigned char *vblendweights = NULL;
+	unsigned short *framedata = NULL;
 
 	pbase = (unsigned char *)buffer;
 	pend = (unsigned char *)bufferend;
-	header = (iqmheader_t *)buffer;
+
+	if (buffer + sizeof(iqmheader_t) > bufferend)
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
+
+	// copy struct (otherwise it may be misaligned)
+	// LordHavoc: okay it's definitely not misaligned here, but for consistency...
+	memcpy(header, pbase, sizeof(header));
+
 	if (memcmp(header->id, "INTERQUAKEMODEL", 16))
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model", loadmodel->name);
 	if (LittleLong(header->version) != 1 && LittleLong(header->version) != 2)
@@ -3038,13 +3050,29 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
+	if (header->version == 1)
+	{
+		if (pbase + header->ofs_joints + header->num_joints*sizeof(iqmjoint1_t) > pend ||
+			pbase + header->ofs_poses + header->num_poses*sizeof(iqmpose1_t) > pend)
+		{
+			Con_Printf("%s has invalid size or offset information\n", loadmodel->name);
+			return;
+		}
+	}
+	else
+	{
+		if (pbase + header->ofs_joints + header->num_joints*sizeof(iqmjoint_t) > pend ||
+			pbase + header->ofs_poses + header->num_poses*sizeof(iqmpose_t) > pend)
+		{
+			Con_Printf("%s has invalid size or offset information\n", loadmodel->name);
+			return;
+		}
+	}
 	if (pbase + header->ofs_text + header->num_text > pend ||
 		pbase + header->ofs_meshes + header->num_meshes*sizeof(iqmmesh_t) > pend ||
 		pbase + header->ofs_vertexarrays + header->num_vertexarrays*sizeof(iqmvertexarray_t) > pend ||
 		pbase + header->ofs_triangles + header->num_triangles*sizeof(int[3]) > pend ||
 		(header->ofs_neighbors && pbase + header->ofs_neighbors + header->num_triangles*sizeof(int[3]) > pend) ||
-		pbase + header->ofs_joints + header->num_joints*sizeof(iqmjoint_t) > pend ||
-		pbase + header->ofs_poses + header->num_poses*sizeof(iqmpose_t) > pend ||
 		pbase + header->ofs_anims + header->num_anims*sizeof(iqmanim_t) > pend ||
 		pbase + header->ofs_frames + header->num_frames*header->num_framechannels*sizeof(unsigned short) > pend ||
 		(header->ofs_bounds && pbase + header->ofs_bounds + header->num_frames*sizeof(iqmbounds_t) > pend) ||
@@ -3054,7 +3082,63 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
-	va = (iqmvertexarray_t *)(pbase + header->ofs_vertexarrays);
+	// copy structs to make them aligned in memory (otherwise we crash on Sparc and PowerPC and others)
+	if (header->num_vertexarrays)
+	{
+		va = (iqmvertexarray_t *)Mem_Alloc(loadmodel->mempool, header->num_vertexarrays * sizeof(iqmvertexarray_t));
+		memcpy(va, pbase + header->ofs_vertexarrays, header->num_vertexarrays * sizeof(iqmvertexarray_t));
+	}
+	if (header->version == 1)
+	{
+		if (loadmodel->num_bones)
+		{
+			joint1 = (iqmjoint1_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(iqmjoint1_t));
+			memcpy(joint1, pbase + header->ofs_joints, loadmodel->num_bones * sizeof(iqmjoint1_t));
+		}
+		if (header->num_poses)
+		{
+			pose1 = (iqmpose1_t *)Mem_Alloc(loadmodel->mempool, header->num_poses * sizeof(iqmpose1_t));
+			memcpy(pose1, pbase + header->ofs_poses, header->num_poses * sizeof(iqmpose1_t));
+		}
+	}
+	else
+	{
+		if (loadmodel->num_bones)
+		{
+			joint = (iqmjoint_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(iqmjoint_t));
+			memcpy(joint, pbase + header->ofs_joints, loadmodel->num_bones * sizeof(iqmjoint_t));
+		}
+		if (header->num_poses)
+		{
+			pose = (iqmpose_t *)Mem_Alloc(loadmodel->mempool, header->num_poses * sizeof(iqmpose_t));
+			memcpy(pose, pbase + header->ofs_poses, header->num_poses * sizeof(iqmpose_t));
+		}
+	}
+	if (header->num_anims)
+	{
+		anim = (iqmanim_t *)Mem_Alloc(loadmodel->mempool, header->num_anims * sizeof(iqmanim_t));
+		memcpy(anim, pbase + header->ofs_anims, header->num_anims * sizeof(iqmanim_t));
+	}
+	if (header->num_framechannels)
+	{
+		framedata = (unsigned short *)Mem_Alloc(loadmodel->mempool, sizeof(unsigned short) * header->num_framechannels);
+		memcpy(framedata, pbase + header->ofs_frames, sizeof(unsigned short) * header->num_framechannels);
+	}
+	if (header->ofs_bounds)
+	{
+		bounds = (iqmbounds_t *)Mem_Alloc(loadmodel->mempool, header->num_frames*sizeof(iqmbounds_t));
+		memcpy(bounds, pbase + header->ofs_bounds, header->num_frames*sizeof(iqmbounds_t));
+	}
+	if (header->num_triangles)
+		memcpy(loadmodel->surfmesh.data_element3i, pbase + header->ofs_triangles, sizeof(unsigned int[3]) * header->num_triangles);
+	if (header->ofs_neighbors && loadmodel->surfmesh.data_neighbor3i)
+		memcpy(loadmodel->surfmesh.data_neighbor3i, pbase + header->ofs_neighbors, sizeof(int[3]) * header->num_triangles);
+	if (header->num_meshes)
+	{
+		mesh = Mem_Alloc(loadmodel->mempool, header->num_meshes * sizeof(iqmmesh_t));
+		memcpy(mesh, pbase + header->ofs_meshes, header->num_meshes * sizeof(iqmmesh_t));
+	}
+
 	for (i = 0;i < (int)header->num_vertexarrays;i++)
 	{
 		size_t vsize;
@@ -3076,31 +3160,49 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 		case IQM_POSITION:
 			if (va[i].format == IQM_FLOAT && va[i].size == 3)
-				vposition = (float *)(pbase + va[i].offset);
+			{
+				vposition = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * header->num_vertexes);
+				memcpy(vposition, pbase + va[i].offset, sizeof(float[3]) * header->num_vertexes);
+			}
 			break;
 		case IQM_TEXCOORD:
 			if (va[i].format == IQM_FLOAT && va[i].size == 2)
-				vtexcoord = (float *)(pbase + va[i].offset);
+			{
+				vtexcoord = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * header->num_vertexes);
+				memcpy(vtexcoord, pbase + va[i].offset, sizeof(float[2]) * header->num_vertexes);
+			}
 			break;
 		case IQM_NORMAL:
 			if (va[i].format == IQM_FLOAT && va[i].size == 3)
-				vnormal = (float *)(pbase + va[i].offset);
+			{
+				vnormal = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * header->num_vertexes);
+				memcpy(vnormal, pbase + va[i].offset, sizeof(float[3]) * header->num_vertexes);
+			}
 			break;
 		case IQM_TANGENT:
 			if (va[i].format == IQM_FLOAT && va[i].size == 4)
-				vtangent = (float *)(pbase + va[i].offset);
+			{
+				vtangent = Mem_Alloc(loadmodel->mempool, sizeof(float[4]) * header->num_vertexes);
+				memcpy(vtangent, pbase + va[i].offset, sizeof(float[4]) * header->num_vertexes);
+			}
 			break;
 		case IQM_BLENDINDEXES:
 			if (va[i].format == IQM_UBYTE && va[i].size == 4)
-				vblendindexes = (unsigned char *)(pbase + va[i].offset);
+			{
+				vblendindexes = Mem_Alloc(loadmodel->mempool, sizeof(unsigned char[4]) * header->num_vertexes);
+				memcpy(vblendindexes, pbase + va[i].offset, sizeof(unsigned char[4]) * header->num_vertexes);
+			}
 			break;
 		case IQM_BLENDWEIGHTS:
 			if (va[i].format == IQM_UBYTE && va[i].size == 4)
-				vblendweights = (unsigned char *)(pbase + va[i].offset);
+			{
+				vblendweights = Mem_Alloc(loadmodel->mempool, sizeof(unsigned char[4]) * header->num_vertexes);
+				memcpy(vblendweights, pbase + va[i].offset, sizeof(unsigned char[4]) * header->num_vertexes);
+			}
 			break;
 		}
 	}
-	if (!vposition || !vtexcoord || ((header->num_frames > 0 || header->num_anims > 0) && (!vblendindexes || !vblendweights)))
+	if (header->num_vertexes > 0 && (!vposition || !vtexcoord || ((header->num_frames > 0 || header->num_anims > 0) && (!vblendindexes || !vblendweights))))
 	{
 		Con_Printf("%s is missing vertex array data\n", loadmodel->name);
 		return;
@@ -3184,7 +3286,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// load the bone info
 	if (header->version == 1)
 	{
-		joint1 = (iqmjoint1_t *) (pbase + header->ofs_joints);
 		for (i = 0;i < loadmodel->num_bones;i++)
 		{
 			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
@@ -3213,7 +3314,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
-		joint = (iqmjoint_t *) (pbase + header->ofs_joints);
 		for (i = 0;i < loadmodel->num_bones;i++)
 		{
 			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
@@ -3246,7 +3346,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// set up the animscenes based on the anims
-	anim = (iqmanim_t *) (pbase + header->ofs_anims);
 	for (i = 0;i < (int)header->num_anims;i++)
 	{
 		anim[i].name = LittleLong(anim[i].name);
@@ -3272,7 +3371,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	biggestorigin = 0;
 	if (header->version == 1)
 	{
-		pose1 = (iqmpose1_t *) (pbase + header->ofs_poses);
 		for (i = 0;i < (int)header->num_poses;i++)
 		{
 			float f;
@@ -3303,7 +3401,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
-		pose = (iqmpose_t *) (pbase + header->ofs_poses);
 		for (i = 0;i < (int)header->num_poses;i++)
 		{
 			float f;
@@ -3336,7 +3433,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 
 	// load the pose data
-	framedata = (unsigned short *) (pbase + header->ofs_frames);
 	if (header->version == 1)
 	{
 		for (i = 0, k = 0;i < (int)header->num_frames;i++)
@@ -3412,7 +3508,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (header->ofs_bounds)
 	{
 		float xyradius = 0, radius = 0;
-		bounds = (iqmbounds_t *) (pbase + header->ofs_bounds);
 		VectorClear(loadmodel->normalmins);
 		VectorClear(loadmodel->normalmaxs);
 		for (i = 0; i < (int)header->num_frames;i++)
@@ -3455,11 +3550,11 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load triangle data
-	inelements = (const int *) (pbase + header->ofs_triangles);
+	inelements = loadmodel->surfmesh.data_element3i;
 	outelements = loadmodel->surfmesh.data_element3i;
 	for (i = 0;i < (int)header->num_triangles;i++)
 	{
-		outelements[0] = LittleLong(inelements[0]);		
+		outelements[0] = LittleLong(inelements[0]);
 		outelements[1] = LittleLong(inelements[1]);
 		outelements[2] = LittleLong(inelements[2]);
 		outelements += 3;
@@ -3469,7 +3564,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	if (header->ofs_neighbors && loadmodel->surfmesh.data_neighbor3i)
 	{
-		inelements = (const int *) (pbase + header->ofs_neighbors);
+		inelements = loadmodel->surfmesh.data_neighbor3i;
 		outelements = loadmodel->surfmesh.data_neighbor3i;
 		for (i = 0;i < (int)header->num_triangles;i++)
 		{
@@ -3535,16 +3630,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
-	if (vblendindexes && vblendweights) for (i = 0; i < (int)header->num_vertexes;i++)
+	if (vblendindexes && vblendweights)
 	{
-		blendweights_t weights;
-		memcpy(weights.index, vblendindexes + i*4, 4);
-		memcpy(weights.influence, vblendweights + i*4, 4);
-		loadmodel->surfmesh.blends[i] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+		for (i = 0; i < (int)header->num_vertexes;i++)
+		{
+			blendweights_t weights;
+			memcpy(weights.index, vblendindexes + i*4, 4);
+			memcpy(weights.influence, vblendweights + i*4, 4);
+			loadmodel->surfmesh.blends[i] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+		}
 	}
 
 	// load meshes
-	mesh = (iqmmesh_t *) (pbase + header->ofs_meshes);
 	for (i = 0;i < (int)header->num_meshes;i++)
 	{
 		msurface_t *surface;
@@ -3594,6 +3691,20 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-}
 
-			
+	if (anim         ) Mem_Free(anim         );anim          = NULL;
+	if (bounds       ) Mem_Free(bounds       );bounds        = NULL;
+	if (framedata    ) Mem_Free(framedata    );framedata     = NULL;
+	if (joint        ) Mem_Free(joint        );joint         = NULL;
+	if (joint1       ) Mem_Free(joint1       );joint1        = NULL;
+	if (mesh         ) Mem_Free(mesh         );mesh          = NULL;
+	if (pose         ) Mem_Free(pose         );pose          = NULL;
+	if (pose1        ) Mem_Free(pose1        );pose1         = NULL;
+	if (va           ) Mem_Free(va           );va            = NULL;
+	if (vblendindexes) Mem_Free(vblendindexes);vblendindexes = NULL;
+	if (vblendweights) Mem_Free(vblendweights);vblendweights = NULL;
+	if (vnormal      ) Mem_Free(vnormal      );vnormal       = NULL;
+	if (vposition    ) Mem_Free(vposition    );vposition     = NULL;
+	if (vtangent     ) Mem_Free(vtangent     );vtangent      = NULL;
+	if (vtexcoord    ) Mem_Free(vtexcoord    );vtexcoord     = NULL;
+}
