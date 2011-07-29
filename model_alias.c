@@ -3318,20 +3318,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	biggestorigin = 0;
 	if (header.version == 1)
 	{
+		iqmpose1_t *inpose1 = (iqmpose1_t *)(pbase + header.ofs_poses);
 		if (header.num_poses)
-		{
 			pose1 = (iqmpose1_t *)Mem_Alloc(loadmodel->mempool, header.num_poses * sizeof(iqmpose1_t));
-			memcpy(pose1, pbase + header.ofs_poses, header.num_poses * sizeof(iqmpose1_t));
-		}
 		for (i = 0;i < (int)header.num_poses;i++)
 		{
 			float f;
-			pose1[i].parent = LittleLong(pose1[i].parent);
-			pose1[i].channelmask = LittleLong(pose1[i].channelmask);
+			pose1[i].parent = LittleLong(inpose1[i].parent);
+			pose1[i].channelmask = LittleLong(inpose1[i].channelmask);
 			for (j = 0;j < 9;j++)
 			{
-				pose1[i].channeloffset[j] = LittleFloat(pose1[i].channeloffset[j]);
-				pose1[i].channelscale[j] = LittleFloat(pose1[i].channelscale[j]);
+				pose1[i].channeloffset[j] = LittleFloat(inpose1[i].channeloffset[j]);
+				pose1[i].channelscale[j] = LittleFloat(inpose1[i].channelscale[j]);
 			}
 			f = fabs(pose1[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose1[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
@@ -3353,20 +3351,18 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
+		iqmpose_t *inpose = (iqmpose_t *)(pbase + header.ofs_poses);
 		if (header.num_poses)
-		{
 			pose = (iqmpose_t *)Mem_Alloc(loadmodel->mempool, header.num_poses * sizeof(iqmpose_t));
-			memcpy(pose, pbase + header.ofs_poses, header.num_poses * sizeof(iqmpose_t));
-		}
 		for (i = 0;i < (int)header.num_poses;i++)
 		{
 			float f;
-			pose[i].parent = LittleLong(pose[i].parent);
-			pose[i].channelmask = LittleLong(pose[i].channelmask);
+			pose[i].parent = LittleLong(inpose[i].parent);
+			pose[i].channelmask = LittleLong(inpose[i].channelmask);
 			for (j = 0;j < 10;j++)
 			{
-				pose[i].channeloffset[j] = LittleFloat(pose[i].channeloffset[j]);
-				pose[i].channelscale[j] = LittleFloat(pose[i].channelscale[j]);
+				pose[i].channeloffset[j] = LittleFloat(inpose[i].channeloffset[j]);
+				pose[i].channelscale[j] = LittleFloat(inpose[i].channelscale[j]);
 			}
 			f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
