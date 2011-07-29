@@ -2975,14 +2975,20 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles;
 	int i, j, k, meshvertices, meshtriangles;
 	float biggestorigin;
-	const int *inelements;
-	int *outelements;
+	const unsigned int *inelements;
+	unsigned int *outelements;
+	const int *inneighbors;
+	int *outneighbors;
 	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
+	// this pointers into the file data are read only through Little* functions so they can be unaligned memory
+	const float *vnormal = NULL;
+	const float *vposition = NULL;
+	const float *vtangent = NULL;
+	const float *vtexcoord = NULL;
+	const unsigned char *vblendindexes = NULL;
+	const unsigned char *vblendweights = NULL;
+	const unsigned short *framedata = NULL;
 	// temporary memory allocations (because the data in the file may be misaligned)
-	float *vnormal = NULL;
-	float *vposition = NULL;
-	float *vtangent = NULL;
-	float *vtexcoord = NULL;
 	iqmanim_t *anim = NULL;
 	iqmbounds_t *bounds = NULL;
 	iqmjoint1_t *joint1 = NULL;
@@ -2991,9 +2997,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	iqmpose1_t *pose1 = NULL;
 	iqmpose_t *pose = NULL;
 	iqmvertexarray_t *va = NULL;
-	unsigned char *vblendindexes = NULL;
-	unsigned char *vblendweights = NULL;
-	unsigned short *framedata = NULL;
 
 	pbase = (unsigned char *)buffer;
 	pend = (unsigned char *)bufferend;
@@ -3119,20 +3122,11 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		anim = (iqmanim_t *)Mem_Alloc(loadmodel->mempool, header->num_anims * sizeof(iqmanim_t));
 		memcpy(anim, pbase + header->ofs_anims, header->num_anims * sizeof(iqmanim_t));
 	}
-	if (header->num_framechannels)
-	{
-		framedata = (unsigned short *)Mem_Alloc(loadmodel->mempool, sizeof(unsigned short) * header->num_framechannels);
-		memcpy(framedata, pbase + header->ofs_frames, sizeof(unsigned short) * header->num_framechannels);
-	}
 	if (header->ofs_bounds)
 	{
 		bounds = (iqmbounds_t *)Mem_Alloc(loadmodel->mempool, header->num_frames*sizeof(iqmbounds_t));
 		memcpy(bounds, pbase + header->ofs_bounds, header->num_frames*sizeof(iqmbounds_t));
 	}
-	if (header->num_triangles)
-		memcpy(loadmodel->surfmesh.data_element3i, pbase + header->ofs_triangles, sizeof(unsigned int[3]) * header->num_triangles);
-	if (header->ofs_neighbors && loadmodel->surfmesh.data_neighbor3i)
-		memcpy(loadmodel->surfmesh.data_neighbor3i, pbase + header->ofs_neighbors, sizeof(int[3]) * header->num_triangles);
 	if (header->num_meshes)
 	{
 		mesh = Mem_Alloc(loadmodel->mempool, header->num_meshes * sizeof(iqmmesh_t));
@@ -3155,50 +3149,33 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		default: continue;
 		}
 		if (pbase + va[i].offset + vsize > pend)
-		  continue;
+			continue;
+		// no need to copy the vertex data for alignment because LittleLong/LittleShort will be invoked on reading them, and the destination is aligned
 		switch (va[i].type)
 		{
 		case IQM_POSITION:
 			if (va[i].format == IQM_FLOAT && va[i].size == 3)
-			{
-				vposition = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * header->num_vertexes);
-				memcpy(vposition, pbase + va[i].offset, sizeof(float[3]) * header->num_vertexes);
-			}
+				vposition = (const float *)(pbase + va[i].offset);
 			break;
 		case IQM_TEXCOORD:
 			if (va[i].format == IQM_FLOAT && va[i].size == 2)
-			{
-				vtexcoord = Mem_Alloc(loadmodel->mempool, sizeof(float[2]) * header->num_vertexes);
-				memcpy(vtexcoord, pbase + va[i].offset, sizeof(float[2]) * header->num_vertexes);
-			}
+				vtexcoord = (const float *)(pbase + va[i].offset);
 			break;
 		case IQM_NORMAL:
 			if (va[i].format == IQM_FLOAT && va[i].size == 3)
-			{
-				vnormal = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * header->num_vertexes);
-				memcpy(vnormal, pbase + va[i].offset, sizeof(float[3]) * header->num_vertexes);
-			}
+				vnormal = (const float *)(pbase + va[i].offset);
 			break;
 		case IQM_TANGENT:
 			if (va[i].format == IQM_FLOAT && va[i].size == 4)
-			{
-				vtangent = Mem_Alloc(loadmodel->mempool, sizeof(float[4]) * header->num_vertexes);
-				memcpy(vtangent, pbase + va[i].offset, sizeof(float[4]) * header->num_vertexes);
-			}
+				vtangent = (const float *)(pbase + va[i].offset);
 			break;
 		case IQM_BLENDINDEXES:
 			if (va[i].format == IQM_UBYTE && va[i].size == 4)
-			{
-				vblendindexes = Mem_Alloc(loadmodel->mempool, sizeof(unsigned char[4]) * header->num_vertexes);
-				memcpy(vblendindexes, pbase + va[i].offset, sizeof(unsigned char[4]) * header->num_vertexes);
-			}
+				vblendindexes = (const unsigned char *)(pbase + va[i].offset);
 			break;
 		case IQM_BLENDWEIGHTS:
 			if (va[i].format == IQM_UBYTE && va[i].size == 4)
-			{
-				vblendweights = Mem_Alloc(loadmodel->mempool, sizeof(unsigned char[4]) * header->num_vertexes);
-				memcpy(vblendweights, pbase + va[i].offset, sizeof(unsigned char[4]) * header->num_vertexes);
-			}
+				vblendweights = (const unsigned char *)(pbase + va[i].offset);
 			break;
 		}
 	}
@@ -3433,6 +3410,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 
 	// load the pose data
+	// this unaligned memory access is safe (LittleShort reads as bytes)
+	framedata = (const unsigned short *)(pbase + header->ofs_frames);
 	if (header->version == 1)
 	{
 		for (i = 0, k = 0;i < (int)header->num_frames;i++)
@@ -3550,7 +3529,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// load triangle data
-	inelements = loadmodel->surfmesh.data_element3i;
+	// this unaligned memory access is safe (LittleLong reads as bytes)
+	inelements = (const unsigned int *)(pbase + header->ofs_triangles);
 	outelements = loadmodel->surfmesh.data_element3i;
 	for (i = 0;i < (int)header->num_triangles;i++)
 	{
@@ -3564,19 +3544,21 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	if (header->ofs_neighbors && loadmodel->surfmesh.data_neighbor3i)
 	{
-		inelements = loadmodel->surfmesh.data_neighbor3i;
-		outelements = loadmodel->surfmesh.data_neighbor3i;
+		// this unaligned memory access is safe (LittleLong reads as bytes)
+		inneighbors = (const int *)(pbase + header->ofs_neighbors);
+		outneighbors = loadmodel->surfmesh.data_neighbor3i;
 		for (i = 0;i < (int)header->num_triangles;i++)
 		{
-			outelements[0] = LittleLong(inelements[0]);
-			outelements[1] = LittleLong(inelements[1]);
-			outelements[2] = LittleLong(inelements[2]);
-			outelements += 3;
-			inelements += 3;
+			outneighbors[0] = LittleLong(inneighbors[0]);
+			outneighbors[1] = LittleLong(inneighbors[1]);
+			outneighbors[2] = LittleLong(inneighbors[2]);
+			outneighbors += 3;
+			inneighbors += 3;
 		}
 	}
 
 	// load vertex data
+	// this unaligned memory access is safe (LittleFloat reads as bytes)
 	outvertex = loadmodel->surfmesh.data_vertex3f;
 	for (i = 0;i < (int)header->num_vertexes;i++)
 	{
@@ -3588,6 +3570,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	outtexcoord = loadmodel->surfmesh.data_texcoordtexture2f;
+	// this unaligned memory access is safe (LittleFloat reads as bytes)
 	for (i = 0;i < (int)header->num_vertexes;i++)
 	{
 		outtexcoord[0] = LittleFloat(vtexcoord[0]);
@@ -3596,6 +3579,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		outtexcoord += 2;
 	}
 
+	// this unaligned memory access is safe (LittleFloat reads as bytes)
 	if(vnormal)
 	{
 		outnormal = loadmodel->surfmesh.data_normal3f;
@@ -3609,6 +3593,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
+	// this unaligned memory access is safe (LittleFloat reads as bytes)
 	if(vnormal && vtangent)
 	{
 		outnormal = loadmodel->surfmesh.data_normal3f;
@@ -3630,6 +3615,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 	}
 
+	// this unaligned memory access is safe (all bytes)
 	if (vblendindexes && vblendweights)
 	{
 		for (i = 0; i < (int)header->num_vertexes;i++)
@@ -3694,17 +3680,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	if (anim         ) Mem_Free(anim         );anim          = NULL;
 	if (bounds       ) Mem_Free(bounds       );bounds        = NULL;
-	if (framedata    ) Mem_Free(framedata    );framedata     = NULL;
 	if (joint        ) Mem_Free(joint        );joint         = NULL;
 	if (joint1       ) Mem_Free(joint1       );joint1        = NULL;
 	if (mesh         ) Mem_Free(mesh         );mesh          = NULL;
 	if (pose         ) Mem_Free(pose         );pose          = NULL;
 	if (pose1        ) Mem_Free(pose1        );pose1         = NULL;
 	if (va           ) Mem_Free(va           );va            = NULL;
-	if (vblendindexes) Mem_Free(vblendindexes);vblendindexes = NULL;
-	if (vblendweights) Mem_Free(vblendweights);vblendweights = NULL;
-	if (vnormal      ) Mem_Free(vnormal      );vnormal       = NULL;
-	if (vposition    ) Mem_Free(vposition    );vposition     = NULL;
-	if (vtangent     ) Mem_Free(vtangent     );vtangent      = NULL;
-	if (vtexcoord    ) Mem_Free(vtexcoord    );vtexcoord     = NULL;
 }
