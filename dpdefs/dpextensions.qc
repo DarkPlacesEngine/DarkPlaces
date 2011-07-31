@@ -1606,6 +1606,7 @@ const float MOVETYPE_PHYSICS = 32; // need to be set before any physics_* builti
 const float SOLID_PHYSICS_BOX = 32;
 const float SOLID_PHYSICS_SPHERE = 33;
 const float SOLID_PHYSICS_CAPSULE = 34;
+const float SOLID_PHYSICS_TRIMESH = 35;
 //SOLID_BSP;
 //joint types:
 const float JOINTTYPE_POINT = 1;

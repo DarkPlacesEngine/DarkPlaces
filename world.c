@@ -341,6 +341,7 @@ cvar_t physics_ode_world_damping_linear = {0, "physics_ode_world_damping_linear"
 cvar_t physics_ode_world_damping_linear_threshold = {0, "physics_ode_world_damping_linear_threshold", "0.01", "world linear damping threshold (see ODE User Guide); use defaults when set to -1"};
 cvar_t physics_ode_world_damping_angular = {0, "physics_ode_world_damping_angular", "0.005", "world angular damping scale (see ODE User Guide); use defaults when set to -1"};
 cvar_t physics_ode_world_damping_angular_threshold = {0, "physics_ode_world_damping_angular_threshold", "0.01", "world angular damping threshold (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_gravitymod = {0, "physics_ode_world_gravitymod", "1", "multiplies gravity got from sv_gravity, this may be needed to tweak if strong damping is used"};
 cvar_t physics_ode_iterationsperframe = {0, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
 cvar_t physics_ode_constantstep = {0, "physics_ode_constantstep", "1", "use constant step (sys_ticrate value) instead of variable step which tends to increase stability"};
 cvar_t physics_ode_autodisable = {0, "physics_ode_autodisable", "1", "automatic disabling of objects which dont move for long period of time, makes object stacking a lot faster"};
@@ -1495,6 +1496,7 @@ static void World_Physics_Init(void)
 	Cvar_RegisterVariable(&physics_ode_world_damping_linear_threshold);
 	Cvar_RegisterVariable(&physics_ode_world_damping_angular);
 	Cvar_RegisterVariable(&physics_ode_world_damping_angular_threshold);
+	Cvar_RegisterVariable(&physics_ode_world_gravitymod);
 	Cvar_RegisterVariable(&physics_ode_iterationsperframe);
 	Cvar_RegisterVariable(&physics_ode_constantstep);
 	Cvar_RegisterVariable(&physics_ode_movelimit);
@@ -2084,6 +2086,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	switch(solid)
 	{
 	case SOLID_BSP:
+	case SOLID_PHYSICS_TRIMESH:
 		modelindex = (int)PRVM_gameedictfloat(ed, modelindex);
 		if (world == &sv.world)
 			model = SV_GetModelByIndex(modelindex);
@@ -2159,6 +2162,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		switch(solid)
 		{
 		case SOLID_BSP:
+		case SOLID_PHYSICS_TRIMESH:
 			ed->priv.server->ode_offsetmatrix = identitymatrix;
 			if (!model)
 			{
@@ -2636,7 +2640,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 		for (i = 0;i < world->physics.ode_iterations;i++)
 		{
 			// set the gravity
-			dWorldSetGravity((dWorldID)world->physics.ode_world, 0, 0, -gravity);
+			dWorldSetGravity((dWorldID)world->physics.ode_world, 0, 0, -gravity * physics_ode_world_gravitymod.value);
 			// set the tolerance for closeness of objects
 			dWorldSetContactSurfaceLayer((dWorldID)world->physics.ode_world, max(0, physics_ode_contactsurfacelayer.value));
 
