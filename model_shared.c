@@ -2155,6 +2155,10 @@ void Mod_LoadQ3Shaders(void)
 				{
 					shader.specularpowermod = atof(parameter[1]);
 				}
+				else if (!strcasecmp(parameter[0], "dprtlightambient") && numparameters >= 2)
+				{
+					shader.rtlightambient = atof(parameter[1]);
+				}
 				else if (!strcasecmp(parameter[0], "dpoffsetmapping") && numparameters >= 3)
 				{
 					if (!strcasecmp(parameter[1], "disable") || !strcasecmp(parameter[1], "none") || !strcasecmp(parameter[1], "off"))
@@ -2437,6 +2441,7 @@ nothing                GL_ZERO GL_ONE
 		texture->offsetscale = shader->offsetscale;
 		texture->specularscalemod = shader->specularscalemod;
 		texture->specularpowermod = shader->specularpowermod;
+		texture->rtlightambient = shader->rtlightambient;
 		if (shader->dpreflectcube[0])
 			texture->reflectcubetexture = R_GetCubemap(shader->dpreflectcube);
 
