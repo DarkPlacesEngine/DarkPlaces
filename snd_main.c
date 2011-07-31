@@ -977,6 +977,15 @@ sfx_t *S_FindName (const char *name)
 		if(!strcmp (sfx->name, name))
 			return sfx;
 
+	// check for # in the beginning, try lookup by soundindex
+	if (name[0] == '#' && name[1])
+	{
+		int soundindex = atoi(name + 1);
+		if (soundindex > 0 && soundindex < MAX_SOUNDS)
+			if (cl.sound_precache[soundindex]->name[0])
+				return cl.sound_precache[soundindex];
+	}
+
 	// Add a sfx_t struct for this sound
 	sfx = (sfx_t *)Mem_Alloc (snd_mempool, sizeof (*sfx));
 	memset (sfx, 0, sizeof(*sfx));

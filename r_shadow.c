@@ -3321,8 +3321,8 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 	qboolean negated;
 	float lightcolor[3];
 	VectorCopy(rsurface.rtlight->currentcolor, lightcolor);
-	ambientscale = rsurface.rtlight->ambientscale;
-	diffusescale = rsurface.rtlight->diffusescale;
+	ambientscale = rsurface.rtlight->ambientscale + rsurface.texture->rtlightambient;
+	diffusescale = rsurface.rtlight->diffusescale * max(0, 1.0 - rsurface.texture->rtlightambient);
 	specularscale = rsurface.rtlight->specularscale * rsurface.texture->specularscale;
 	if (!r_shadow_usenormalmap.integer)
 	{
