@@ -1959,6 +1959,21 @@ Key_Event (int key, int ascii, qboolean down)
 	}
 }
 
+// a helper to simulate release of ALL keys
+void
+Key_ReleaseAll (void)
+{
+	int key;
+	// clear the event queue first
+	eventqueue_idx = 0;
+	// then send all down events (possibly into the event queue)
+	for(key = 0; key < MAX_KEYS; ++key)
+		if(keydown[key])
+			Key_Event(key, 0, false);
+	// now all keys are guaranteed down (once the event queue is unblocked)
+	// and only future events count
+}
+
 /*
 ===================
 Key_ClearStates
