@@ -267,7 +267,9 @@ char r_shadow_mapname[MAX_QPATH];
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
-static const GLenum r_shadow_prepasslightingdrawbuffers[2] = {GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT};
+#ifndef USE_GLES2
+static const GLenum r_shadow_prepasslightingdrawbuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+#endif
 
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0", "generate fake bumpmaps from diffuse textures at this bumpyness, try 4 to match tenebrae, higher values increase depth, requires r_restart to take effect"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
@@ -2112,6 +2114,7 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 		return;
 	}
 
+#ifndef USE_GLES2
 	// render depth into the fbo, do not render color at all
 	// validate the fbo now
 	if (qglDrawBuffer)
@@ -2119,14 +2122,15 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 		int status;
 		qglDrawBuffer(GL_NONE);CHECKGLERROR
 		qglReadBuffer(GL_NONE);CHECKGLERROR
-		status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-		if (status != GL_FRAMEBUFFER_COMPLETE_EXT && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
+		status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+		if (status != GL_FRAMEBUFFER_COMPLETE && (r_shadow_shadowmapping.integer || r_shadow_deferred.integer))
 		{
 			Con_Printf("R_Shadow_MakeShadowMap: glCheckFramebufferStatusEXT returned %i\n", status);
 			Cvar_SetValueQuick(&r_shadow_shadowmapping, 0);
 			Cvar_SetValueQuick(&r_shadow_deferred, 0);
 		}
 	}
+#endif
 }
 
 void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
@@ -4511,7 +4515,7 @@ void R_Shadow_PrepareLights(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES2:
+#ifndef USE_GLES2
 		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
@@ -4547,10 +4551,10 @@ void R_Shadow_PrepareLights(void)
 			// render depth into one texture and normalmap into the other
 			if (qglDrawBuffersARB)
 			{
-				qglDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
 				qglReadBuffer(GL_NONE);CHECKGLERROR
-				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-				if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+				if (status != GL_FRAMEBUFFER_COMPLETE)
 				{
 					Con_Printf("R_PrepareRTLights: glCheckFramebufferStatusEXT returned %i\n", status);
 					Cvar_SetValueQuick(&r_shadow_deferred, 0);
@@ -4568,8 +4572,8 @@ void R_Shadow_PrepareLights(void)
 			{
 				qglDrawBuffersARB(2, r_shadow_prepasslightingdrawbuffers);CHECKGLERROR
 				qglReadBuffer(GL_NONE);CHECKGLERROR
-				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-				if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+				if (status != GL_FRAMEBUFFER_COMPLETE)
 				{
 					Con_Printf("R_PrepareRTLights: glCheckFramebufferStatusEXT returned %i\n", status);
 					Cvar_SetValueQuick(&r_shadow_deferred, 0);
@@ -4585,10 +4589,10 @@ void R_Shadow_PrepareLights(void)
 			// with depth bound as attachment as well
 			if (qglDrawBuffersARB)
 			{
-				qglDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);CHECKGLERROR
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
 				qglReadBuffer(GL_NONE);CHECKGLERROR
-				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-				if (status != GL_FRAMEBUFFER_COMPLETE_EXT)
+				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+				if (status != GL_FRAMEBUFFER_COMPLETE)
 				{
 					Con_Printf("R_PrepareRTLights: glCheckFramebufferStatusEXT returned %i\n", status);
 					Cvar_SetValueQuick(&r_shadow_deferred, 0);
@@ -4596,10 +4600,12 @@ void R_Shadow_PrepareLights(void)
 				}
 			}
 		}
+#endif
 		break;
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+	case RENDERPATH_GLES2:
 		r_shadow_usingdeferredprepass = false;
 		break;
 	}
@@ -5109,6 +5115,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
+#ifdef GL_SAMPLES_PASSED_ARB
 			CHECKGLERROR
 			// NOTE: GL_DEPTH_TEST must be enabled or ATI won't count samples, so use GL_DepthFunc instead
 			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
@@ -5124,6 +5131,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 			CHECKGLERROR
+#endif
 			break;
 		case RENDERPATH_D3D9:
 			Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
@@ -5158,10 +5166,12 @@ void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
+#ifdef GL_SAMPLES_PASSED_ARB
 			CHECKGLERROR
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
 			CHECKGLERROR
+#endif
 			break;
 		case RENDERPATH_D3D9:
 			Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
@@ -5235,6 +5245,7 @@ void R_Shadow_DrawCoronas(void)
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
+#ifdef GL_SAMPLES_PASSED_ARB
 		if (usequery)
 		{
 			GL_ColorMask(0,0,0,0);
@@ -5258,6 +5269,7 @@ void R_Shadow_DrawCoronas(void)
 			R_Mesh_ResetTextureState();
 			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, false);
 		}
+#endif
 		break;
 	case RENDERPATH_D3D9:
 		usequery = false;

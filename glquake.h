@@ -21,6 +21,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef GLQUAKE_H
 #define GLQUAKE_H
 
+#ifdef USE_GLES2
+#ifdef __IPHONEOS__
+#include <OpenGLES/ES2/gl.h>
+#else
+#include <SDL_opengles2.h>
+#endif
+// used in R_SetupShader_Generic calls, not actually passed to GL
+#ifndef GL_MODULATE
+#define GL_MODULATE				0x2100
+#define GL_DECAL                          0x2101
+#define GL_ADD                            0x0104
+#endif
+#endif
+
 // disable data conversion warnings
 
 #ifdef _MSC_VER
@@ -40,6 +54,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //====================================================
 
+#ifndef USE_GLES2
 // wgl uses APIENTRY
 #ifndef APIENTRY
 #define APIENTRY
@@ -307,68 +322,68 @@ extern void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat)
 extern void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
-#ifndef GL_ACTIVE_TEXTURE_ARB
-#define GL_ACTIVE_TEXTURE_ARB			0x84E0
-#define GL_CLIENT_ACTIVE_TEXTURE_ARB	0x84E1
-#define GL_MAX_TEXTURE_UNITS_ARB		0x84E2
-#define GL_TEXTURE0_ARB					0x84C0
-#define GL_TEXTURE1_ARB					0x84C1
-#define GL_TEXTURE2_ARB					0x84C2
-#define GL_TEXTURE3_ARB					0x84C3
-#define GL_TEXTURE4_ARB					0x84C4
-#define GL_TEXTURE5_ARB					0x84C5
-#define GL_TEXTURE6_ARB					0x84C6
-#define GL_TEXTURE7_ARB					0x84C7
-#define GL_TEXTURE8_ARB					0x84C8
-#define GL_TEXTURE9_ARB					0x84C9
-#define GL_TEXTURE10_ARB				0x84CA
-#define GL_TEXTURE11_ARB				0x84CB
-#define GL_TEXTURE12_ARB				0x84CC
-#define GL_TEXTURE13_ARB				0x84CD
-#define GL_TEXTURE14_ARB				0x84CE
-#define GL_TEXTURE15_ARB				0x84CF
-#define GL_TEXTURE16_ARB				0x84D0
-#define GL_TEXTURE17_ARB				0x84D1
-#define GL_TEXTURE18_ARB				0x84D2
-#define GL_TEXTURE19_ARB				0x84D3
-#define GL_TEXTURE20_ARB				0x84D4
-#define GL_TEXTURE21_ARB				0x84D5
-#define GL_TEXTURE22_ARB				0x84D6
-#define GL_TEXTURE23_ARB				0x84D7
-#define GL_TEXTURE24_ARB				0x84D8
-#define GL_TEXTURE25_ARB				0x84D9
-#define GL_TEXTURE26_ARB				0x84DA
-#define GL_TEXTURE27_ARB				0x84DB
-#define GL_TEXTURE28_ARB				0x84DC
-#define GL_TEXTURE29_ARB				0x84DD
-#define GL_TEXTURE30_ARB				0x84DE
-#define GL_TEXTURE31_ARB				0x84DF
+#ifndef GL_ACTIVE_TEXTURE
+#define GL_ACTIVE_TEXTURE			0x84E0
+#define GL_CLIENT_ACTIVE_TEXTURE	0x84E1
+#define GL_MAX_TEXTURE_UNITS		0x84E2
+#define GL_TEXTURE0					0x84C0
+#define GL_TEXTURE1					0x84C1
+#define GL_TEXTURE2					0x84C2
+#define GL_TEXTURE3					0x84C3
+#define GL_TEXTURE4					0x84C4
+#define GL_TEXTURE5					0x84C5
+#define GL_TEXTURE6					0x84C6
+#define GL_TEXTURE7					0x84C7
+#define GL_TEXTURE8					0x84C8
+#define GL_TEXTURE9					0x84C9
+#define GL_TEXTURE10				0x84CA
+#define GL_TEXTURE11				0x84CB
+#define GL_TEXTURE12				0x84CC
+#define GL_TEXTURE13				0x84CD
+#define GL_TEXTURE14				0x84CE
+#define GL_TEXTURE15				0x84CF
+#define GL_TEXTURE16				0x84D0
+#define GL_TEXTURE17				0x84D1
+#define GL_TEXTURE18				0x84D2
+#define GL_TEXTURE19				0x84D3
+#define GL_TEXTURE20				0x84D4
+#define GL_TEXTURE21				0x84D5
+#define GL_TEXTURE22				0x84D6
+#define GL_TEXTURE23				0x84D7
+#define GL_TEXTURE24				0x84D8
+#define GL_TEXTURE25				0x84D9
+#define GL_TEXTURE26				0x84DA
+#define GL_TEXTURE27				0x84DB
+#define GL_TEXTURE28				0x84DC
+#define GL_TEXTURE29				0x84DD
+#define GL_TEXTURE30				0x84DE
+#define GL_TEXTURE31				0x84DF
 #endif
 
 // GL_ARB_texture_env_combine
-#ifndef GL_COMBINE_ARB
-#define GL_COMBINE_ARB					0x8570
-#define GL_COMBINE_RGB_ARB				0x8571
-#define GL_COMBINE_ALPHA_ARB			0x8572
-#define GL_SOURCE0_RGB_ARB				0x8580
-#define GL_SOURCE1_RGB_ARB				0x8581
-#define GL_SOURCE2_RGB_ARB				0x8582
-#define GL_SOURCE0_ALPHA_ARB			0x8588
-#define GL_SOURCE1_ALPHA_ARB			0x8589
-#define GL_SOURCE2_ALPHA_ARB			0x858A
-#define GL_OPERAND0_RGB_ARB				0x8590
-#define GL_OPERAND1_RGB_ARB				0x8591
-#define GL_OPERAND2_RGB_ARB				0x8592
-#define GL_OPERAND0_ALPHA_ARB			0x8598
-#define GL_OPERAND1_ALPHA_ARB			0x8599
-#define GL_OPERAND2_ALPHA_ARB			0x859A
-#define GL_RGB_SCALE_ARB				0x8573
-#define GL_ADD_SIGNED_ARB				0x8574
-#define GL_INTERPOLATE_ARB				0x8575
-#define GL_SUBTRACT_ARB					0x84E7
-#define GL_CONSTANT_ARB					0x8576
-#define GL_PRIMARY_COLOR_ARB			0x8577
-#define GL_PREVIOUS_ARB					0x8578
+#ifndef GL_COMBINE
+#define GL_COMBINE					0x8570
+#define GL_COMBINE_RGB				0x8571
+#define GL_COMBINE_ALPHA			0x8572
+#define GL_SOURCE0_RGB				0x8580
+#define GL_SOURCE1_RGB				0x8581
+#define GL_SOURCE2_RGB				0x8582
+#define GL_SOURCE0_ALPHA			0x8588
+#define GL_SOURCE1_ALPHA			0x8589
+#define GL_SOURCE2_ALPHA			0x858A
+#define GL_OPERAND0_RGB				0x8590
+#define GL_OPERAND1_RGB				0x8591
+#define GL_OPERAND2_RGB				0x8592
+#define GL_OPERAND0_ALPHA			0x8598
+#define GL_OPERAND1_ALPHA			0x8599
+#define GL_OPERAND2_ALPHA			0x859A
+#define GL_RGB_SCALE				0x8573
+#define GL_ADD_SIGNED				0x8574
+#define GL_INTERPOLATE				0x8575
+#define GL_SUBTRACT					0x84E7
+#define GL_CONSTANT					0x8576
+#define GL_PRIMARY_COLOR			0x8577
+#define GL_PREVIOUS					0x8578
 #endif
 
 #ifndef GL_MAX_ELEMENTS_VERTICES
@@ -395,19 +410,19 @@ extern void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xof
 extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 #endif
 
-#ifndef GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB
-#define GL_NORMAL_MAP_ARB			    0x8511
-#define GL_REFLECTION_MAP_ARB		    0x8512
-#define GL_TEXTURE_CUBE_MAP_ARB		    0x8513
-#define GL_TEXTURE_BINDING_CUBE_MAP_ARB	    0x8514
-#define GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB     0x8515
-#define GL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB     0x8516
-#define GL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB     0x8517
-#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB     0x8518
-#define GL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB     0x8519
-#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB     0x851A
-#define GL_PROXY_TEXTURE_CUBE_MAP_ARB	    0x851B
-#define GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB		0x851C
+#ifndef GL_TEXTURE_CUBE_MAP_POSITIVE_X
+#define GL_NORMAL_MAP			    0x8511
+#define GL_REFLECTION_MAP		    0x8512
+#define GL_TEXTURE_CUBE_MAP		    0x8513
+#define GL_TEXTURE_BINDING_CUBE_MAP	    0x8514
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_X     0x8515
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_X     0x8516
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Y     0x8517
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y     0x8518
+#define GL_TEXTURE_CUBE_MAP_POSITIVE_Z     0x8519
+#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z     0x851A
+#define GL_PROXY_TEXTURE_CUBE_MAP	    0x851B
+#define GL_MAX_CUBE_MAP_TEXTURE_SIZE		0x851C
 #endif
 
 #ifndef GL_DEPTH_COMPONENT16_ARB
@@ -444,56 +459,56 @@ extern void (GLAPIENTRY *qglStencilFuncSeparate)(GLenum, GLenum, GLint, GLuint);
 extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
 //GL_EXT_blend_minmax
-#ifndef GL_FUNC_ADD_EXT
-#define GL_FUNC_ADD_EXT                   0x8006 // also supplied by GL_EXT_blend_subtract
-#define GL_MIN_EXT                        0x8007
-#define GL_MAX_EXT                        0x8008
-#define GL_BLEND_EQUATION_EXT             0x8009 // also supplied by GL_EXT_blend_subtract
-extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EXT_blend_subtract
+#ifndef GL_FUNC_ADD
+#define GL_FUNC_ADD                   0x8006 // also supplied by GL_blend_subtract
+#define GL_MIN                        0x8007
+#define GL_MAX                        0x8008
+#define GL_BLEND_EQUATION             0x8009 // also supplied by GL_blend_subtract
+extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_blend_subtract
 #endif
 
 //GL_EXT_blend_subtract
-#ifndef GL_FUNC_SUBTRACT_EXT
-#define GL_FUNC_SUBTRACT_EXT              0x800A
-#define GL_FUNC_REVERSE_SUBTRACT_EXT      0x800B
-extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_EXT_blend_subtract
+#ifndef GL_FUNC_SUBTRACT
+#define GL_FUNC_SUBTRACT              0x800A
+#define GL_FUNC_REVERSE_SUBTRACT      0x800B
+extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_blend_subtract
 #endif
 
 //GL_ARB_texture_non_power_of_two
 
 //GL_ARB_vertex_buffer_object
-#ifndef GL_ARRAY_BUFFER_ARB
-#define GL_ARRAY_BUFFER_ARB               0x8892
-#define GL_ELEMENT_ARRAY_BUFFER_ARB       0x8893
-#define GL_ARRAY_BUFFER_BINDING_ARB       0x8894
-#define GL_ELEMENT_ARRAY_BUFFER_BINDING_ARB 0x8895
-#define GL_VERTEX_ARRAY_BUFFER_BINDING_ARB 0x8896
-#define GL_NORMAL_ARRAY_BUFFER_BINDING_ARB 0x8897
-#define GL_COLOR_ARRAY_BUFFER_BINDING_ARB 0x8898
-#define GL_INDEX_ARRAY_BUFFER_BINDING_ARB 0x8899
-#define GL_TEXTURE_COORD_ARRAY_BUFFER_BINDING_ARB 0x889A
-#define GL_EDGE_FLAG_ARRAY_BUFFER_BINDING_ARB 0x889B
-#define GL_SECONDARY_COLOR_ARRAY_BUFFER_BINDING_ARB 0x889C
-#define GL_FOG_COORDINATE_ARRAY_BUFFER_BINDING_ARB 0x889D
-#define GL_WEIGHT_ARRAY_BUFFER_BINDING_ARB 0x889E
-#define GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING_ARB 0x889F
-#define GL_STREAM_DRAW_ARB                0x88E0
-#define GL_STREAM_READ_ARB                0x88E1
-#define GL_STREAM_COPY_ARB                0x88E2
-#define GL_STATIC_DRAW_ARB                0x88E4
-#define GL_STATIC_READ_ARB                0x88E5
-#define GL_STATIC_COPY_ARB                0x88E6
-#define GL_DYNAMIC_DRAW_ARB               0x88E8
-#define GL_DYNAMIC_READ_ARB               0x88E9
-#define GL_DYNAMIC_COPY_ARB               0x88EA
-#define GL_READ_ONLY_ARB                  0x88B8
-#define GL_WRITE_ONLY_ARB                 0x88B9
-#define GL_READ_WRITE_ARB                 0x88BA
-#define GL_BUFFER_SIZE_ARB                0x8764
-#define GL_BUFFER_USAGE_ARB               0x8765
-#define GL_BUFFER_ACCESS_ARB              0x88BB
-#define GL_BUFFER_MAPPED_ARB              0x88BC
-#define GL_BUFFER_MAP_POINTER_ARB         0x88BD
+#ifndef GL_ARRAY_BUFFER
+#define GL_ARRAY_BUFFER               0x8892
+#define GL_ELEMENT_ARRAY_BUFFER       0x8893
+#define GL_ARRAY_BUFFER_BINDING       0x8894
+#define GL_ELEMENT_ARRAY_BUFFER_BINDING 0x8895
+#define GL_VERTEX_ARRAY_BUFFER_BINDING 0x8896
+#define GL_NORMAL_ARRAY_BUFFER_BINDING 0x8897
+#define GL_COLOR_ARRAY_BUFFER_BINDING 0x8898
+#define GL_INDEX_ARRAY_BUFFER_BINDING 0x8899
+#define GL_TEXTURE_COORD_ARRAY_BUFFER_BINDING 0x889A
+#define GL_EDGE_FLAG_ARRAY_BUFFER_BINDING 0x889B
+#define GL_SECONDARY_COLOR_ARRAY_BUFFER_BINDING 0x889C
+#define GL_FOG_COORDINATE_ARRAY_BUFFER_BINDING 0x889D
+#define GL_WEIGHT_ARRAY_BUFFER_BINDING 0x889E
+#define GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING 0x889F
+#define GL_STREAM_DRAW                0x88E0
+#define GL_STREAM_READ                0x88E1
+#define GL_STREAM_COPY                0x88E2
+#define GL_STATIC_DRAW                0x88E4
+#define GL_STATIC_READ                0x88E5
+#define GL_STATIC_COPY                0x88E6
+#define GL_DYNAMIC_DRAW               0x88E8
+#define GL_DYNAMIC_READ               0x88E9
+#define GL_DYNAMIC_COPY               0x88EA
+#define GL_READ_ONLY                  0x88B8
+#define GL_WRITE_ONLY                 0x88B9
+#define GL_READ_WRITE                 0x88BA
+#define GL_BUFFER_SIZE                0x8764
+#define GL_BUFFER_USAGE               0x8765
+#define GL_BUFFER_ACCESS              0x88BB
+#define GL_BUFFER_MAPPED              0x88BC
+#define GL_BUFFER_MAP_POINTER         0x88BD
 #endif
 extern void (GLAPIENTRY *qglBindBufferARB) (GLenum target, GLuint buffer);
 extern void (GLAPIENTRY *qglDeleteBuffersARB) (GLsizei n, const GLuint *buffers);
@@ -505,58 +520,58 @@ extern void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, c
 extern void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
 //GL_EXT_framebuffer_object
-#ifndef GL_FRAMEBUFFER_EXT
-#define GL_FRAMEBUFFER_EXT                                   0x8D40
-#define GL_RENDERBUFFER_EXT                                  0x8D41
-#define GL_STENCIL_INDEX1_EXT                                0x8D46
-#define GL_STENCIL_INDEX4_EXT                                0x8D47
-#define GL_STENCIL_INDEX8_EXT                                0x8D48
-#define GL_STENCIL_INDEX16_EXT                               0x8D49
-#define GL_RENDERBUFFER_WIDTH_EXT                            0x8D42
-#define GL_RENDERBUFFER_HEIGHT_EXT                           0x8D43
-#define GL_RENDERBUFFER_INTERNAL_FORMAT_EXT                  0x8D44
-#define GL_RENDERBUFFER_RED_SIZE_EXT                         0x8D50
-#define GL_RENDERBUFFER_GREEN_SIZE_EXT                       0x8D51
-#define GL_RENDERBUFFER_BLUE_SIZE_EXT                        0x8D52
-#define GL_RENDERBUFFER_ALPHA_SIZE_EXT                       0x8D53
-#define GL_RENDERBUFFER_DEPTH_SIZE_EXT                       0x8D54
-#define GL_RENDERBUFFER_STENCIL_SIZE_EXT                     0x8D55
-#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT            0x8CD0
-#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT            0x8CD1
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL_EXT          0x8CD2
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE_EXT  0x8CD3
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET_EXT     0x8CD4
-#define GL_COLOR_ATTACHMENT0_EXT                             0x8CE0
-#define GL_COLOR_ATTACHMENT1_EXT                             0x8CE1
-#define GL_COLOR_ATTACHMENT2_EXT                             0x8CE2
-#define GL_COLOR_ATTACHMENT3_EXT                             0x8CE3
-#define GL_COLOR_ATTACHMENT4_EXT                             0x8CE4
-#define GL_COLOR_ATTACHMENT5_EXT                             0x8CE5
-#define GL_COLOR_ATTACHMENT6_EXT                             0x8CE6
-#define GL_COLOR_ATTACHMENT7_EXT                             0x8CE7
-#define GL_COLOR_ATTACHMENT8_EXT                             0x8CE8
-#define GL_COLOR_ATTACHMENT9_EXT                             0x8CE9
-#define GL_COLOR_ATTACHMENT10_EXT                            0x8CEA
-#define GL_COLOR_ATTACHMENT11_EXT                            0x8CEB
-#define GL_COLOR_ATTACHMENT12_EXT                            0x8CEC
-#define GL_COLOR_ATTACHMENT13_EXT                            0x8CED
-#define GL_COLOR_ATTACHMENT14_EXT                            0x8CEE
-#define GL_COLOR_ATTACHMENT15_EXT                            0x8CEF
-#define GL_DEPTH_ATTACHMENT_EXT                              0x8D00
-#define GL_STENCIL_ATTACHMENT_EXT                            0x8D20
-#define GL_FRAMEBUFFER_COMPLETE_EXT                          0x8CD5
-#define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT             0x8CD6
-#define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT     0x8CD7
-#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT             0x8CD9
-#define GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT                0x8CDA
-#define GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT            0x8CDB
-#define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT            0x8CDC
-#define GL_FRAMEBUFFER_UNSUPPORTED_EXT                       0x8CDD
-#define GL_FRAMEBUFFER_BINDING_EXT                           0x8CA6
-#define GL_RENDERBUFFER_BINDING_EXT                          0x8CA7
-#define GL_MAX_COLOR_ATTACHMENTS_EXT                         0x8CDF
-#define GL_MAX_RENDERBUFFER_SIZE_EXT                         0x84E8
-#define GL_INVALID_FRAMEBUFFER_OPERATION_EXT                 0x0506
+#ifndef GL_FRAMEBUFFER
+#define GL_FRAMEBUFFER                                   0x8D40
+#define GL_RENDERBUFFER                                  0x8D41
+#define GL_STENCIL_INDEX1                                0x8D46
+#define GL_STENCIL_INDEX4                                0x8D47
+#define GL_STENCIL_INDEX8                                0x8D48
+#define GL_STENCIL_INDEX16                               0x8D49
+#define GL_RENDERBUFFER_WIDTH                            0x8D42
+#define GL_RENDERBUFFER_HEIGHT                           0x8D43
+#define GL_RENDERBUFFER_INTERNAL_FORMAT                  0x8D44
+#define GL_RENDERBUFFER_RED_SIZE                         0x8D50
+#define GL_RENDERBUFFER_GREEN_SIZE                       0x8D51
+#define GL_RENDERBUFFER_BLUE_SIZE                        0x8D52
+#define GL_RENDERBUFFER_ALPHA_SIZE                       0x8D53
+#define GL_RENDERBUFFER_DEPTH_SIZE                       0x8D54
+#define GL_RENDERBUFFER_STENCIL_SIZE                     0x8D55
+#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE            0x8CD0
+#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME            0x8CD1
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL          0x8CD2
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE  0x8CD3
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET     0x8CD4
+#define GL_COLOR_ATTACHMENT0                             0x8CE0
+#define GL_COLOR_ATTACHMENT1                             0x8CE1
+#define GL_COLOR_ATTACHMENT2                             0x8CE2
+#define GL_COLOR_ATTACHMENT3                             0x8CE3
+#define GL_COLOR_ATTACHMENT4                             0x8CE4
+#define GL_COLOR_ATTACHMENT5                             0x8CE5
+#define GL_COLOR_ATTACHMENT6                             0x8CE6
+#define GL_COLOR_ATTACHMENT7                             0x8CE7
+#define GL_COLOR_ATTACHMENT8                             0x8CE8
+#define GL_COLOR_ATTACHMENT9                             0x8CE9
+#define GL_COLOR_ATTACHMENT10                            0x8CEA
+#define GL_COLOR_ATTACHMENT11                            0x8CEB
+#define GL_COLOR_ATTACHMENT12                            0x8CEC
+#define GL_COLOR_ATTACHMENT13                            0x8CED
+#define GL_COLOR_ATTACHMENT14                            0x8CEE
+#define GL_COLOR_ATTACHMENT15                            0x8CEF
+#define GL_DEPTH_ATTACHMENT                              0x8D00
+#define GL_STENCIL_ATTACHMENT                            0x8D20
+#define GL_FRAMEBUFFER_COMPLETE                          0x8CD5
+#define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT             0x8CD6
+#define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT     0x8CD7
+#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS             0x8CD9
+#define GL_FRAMEBUFFER_INCOMPLETE_FORMATS                0x8CDA
+#define GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER            0x8CDB
+#define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER            0x8CDC
+#define GL_FRAMEBUFFER_UNSUPPORTED                       0x8CDD
+#define GL_FRAMEBUFFER_BINDING                           0x8CA6
+#define GL_RENDERBUFFER_BINDING                          0x8CA7
+#define GL_MAX_COLOR_ATTACHMENTS                         0x8CDF
+#define GL_MAX_RENDERBUFFER_SIZE                         0x84E8
+#define GL_INVALID_FRAMEBUFFER_OPERATION                 0x0506
 #endif
 extern GLboolean (GLAPIENTRY *qglIsRenderbufferEXT)(GLuint renderbuffer);
 extern void (GLAPIENTRY *qglBindRenderbufferEXT)(GLenum target, GLuint renderbuffer);
@@ -667,6 +682,7 @@ extern void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 extern void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 extern void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
 extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+extern void (GLAPIENTRY *qglDepthRangef)(GLclampf near_val, GLclampf far_val);
 extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
@@ -1002,6 +1018,7 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 extern void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
 
 extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
+#endif
 
 #define DEBUGGL
 
@@ -1011,6 +1028,227 @@ extern int errornumber;
 void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
 #define CHECKGLERROR
+#endif
+
+#ifdef USE_GLES2
+#define qglIsBufferARB glIsBuffer
+#define qglIsEnabled glIsEnabled
+#define qglIsFramebufferEXT glIsFramebuffer
+//#define qglIsQueryARB glIsQuery
+#define qglIsRenderbufferEXT glIsRenderbuffer
+//#define qglUnmapBufferARB glUnmapBuffer
+#define qglCheckFramebufferStatusEXT glCheckFramebufferStatus
+#define qglGetError glGetError
+#define qglCreateProgram glCreateProgram
+#define qglCreateShader glCreateShader
+//#define qglGetHandleARB glGetHandle
+#define qglGetAttribLocation glGetAttribLocation
+#define qglGetUniformLocation glGetUniformLocation
+//#define qglMapBufferARB glMapBuffer
+#define qglGetString glGetString
+//#define qglActiveStencilFaceEXT glActiveStencilFace
+#define qglActiveTexture glActiveTexture
+#define qglAlphaFunc glAlphaFunc
+#define qglArrayElement glArrayElement
+#define qglAttachShader glAttachShader
+//#define qglBegin glBegin
+//#define qglBeginQueryARB glBeginQuery
+#define qglBindAttribLocation glBindAttribLocation
+//#define qglBindFragDataLocation glBindFragDataLocation
+#define qglBindBufferARB glBindBuffer
+#define qglBindFramebufferEXT glBindFramebuffer
+#define qglBindRenderbufferEXT glBindRenderbuffer
+#define qglBindTexture glBindTexture
+#define qglBlendEquationEXT glBlendEquation
+#define qglBlendFunc glBlendFunc
+#define qglBufferDataARB glBufferData
+#define qglBufferSubDataARB glBufferSubData
+#define qglClear glClear
+#define qglClearColor glClearColor
+#define qglClearDepthf glClearDepthf
+#define qglClearStencil glClearStencil
+#define qglClientActiveTexture glClientActiveTexture
+#define qglColor4f glColor4f
+#define qglColor4ub glColor4ub
+#define qglColorMask glColorMask
+#define qglColorPointer glColorPointer
+#define qglCompileShader glCompileShader
+#define qglCompressedTexImage2DARB glCompressedTexImage2D
+#define qglCompressedTexImage3DARB glCompressedTexImage3D
+#define qglCompressedTexSubImage2DARB glCompressedTexSubImage2D
+#define qglCompressedTexSubImage3DARB glCompressedTexSubImage3D
+#define qglCopyTexImage2D glCopyTexImage2D
+#define qglCopyTexSubImage2D glCopyTexSubImage2D
+#define qglCopyTexSubImage3D glCopyTexSubImage3D
+#define qglCullFace glCullFace
+#define qglDeleteBuffersARB glDeleteBuffers
+#define qglDeleteFramebuffersEXT glDeleteFramebuffers
+#define qglDeleteProgram glDeleteProgram
+#define qglDeleteShader glDeleteShader
+//#define qglDeleteQueriesARB glDeleteQueries
+#define qglDeleteRenderbuffersEXT glDeleteRenderbuffers
+#define qglDeleteTextures glDeleteTextures
+#define qglDepthFunc glDepthFunc
+#define qglDepthMask glDepthMask
+#define qglDepthRangef glDepthRangef
+#define qglDetachShader glDetachShader
+#define qglDisable glDisable
+#define qglDisableClientState glDisableClientState
+#define qglDisableVertexAttribArray glDisableVertexAttribArray
+#define qglDrawArrays glDrawArrays
+//#define qglDrawBuffer glDrawBuffer
+//#define qglDrawBuffersARB glDrawBuffers
+#define qglDrawElements glDrawElements
+//#define qglDrawRangeElements glDrawRangeElements
+#define qglEnable glEnable
+#define qglEnableClientState glEnableClientState
+#define qglEnableVertexAttribArray glEnableVertexAttribArray
+//#define qglEnd glEnd
+//#define qglEndQueryARB glEndQuery
+#define qglFinish glFinish
+#define qglFlush glFlush
+#define qglFramebufferRenderbufferEXT glFramebufferRenderbuffer
+#define qglFramebufferTexture2DEXT glFramebufferTexture2D
+#define qglFramebufferTexture3DEXT glFramebufferTexture3D
+#define qglGenBuffersARB glGenBuffers
+#define qglGenFramebuffersEXT glGenFramebuffers
+//#define qglGenQueriesARB glGenQueries
+#define qglGenRenderbuffersEXT glGenRenderbuffers
+#define qglGenTextures glGenTextures
+#define qglGenerateMipmapEXT glGenerateMipmap
+#define qglGetActiveAttrib glGetActiveAttrib
+#define qglGetActiveUniform glGetActiveUniform
+#define qglGetAttachedShaders glGetAttachedShaders
+#define qglGetBooleanv glGetBooleanv
+//#define qglGetCompressedTexImageARB glGetCompressedTexImage
+#define qglGetDoublev glGetDoublev
+#define qglGetFloatv glGetFloatv
+#define qglGetFramebufferAttachmentParameterivEXT glGetFramebufferAttachmentParameteriv
+#define qglGetProgramInfoLog glGetProgramInfoLog
+#define qglGetShaderInfoLog glGetShaderInfoLog
+#define qglGetIntegerv glGetIntegerv
+#define qglGetShaderiv glGetShaderiv
+#define qglGetProgramiv glGetProgramiv
+//#define qglGetQueryObjectivARB glGetQueryObjectiv
+//#define qglGetQueryObjectuivARB glGetQueryObjectuiv
+//#define qglGetQueryivARB glGetQueryiv
+#define qglGetRenderbufferParameterivEXT glGetRenderbufferParameteriv
+#define qglGetShaderSource glGetShaderSource
+#define qglGetTexImage glGetTexImage
+#define qglGetTexLevelParameterfv glGetTexLevelParameterfv
+#define qglGetTexLevelParameteriv glGetTexLevelParameteriv
+#define qglGetTexParameterfv glGetTexParameterfv
+#define qglGetTexParameteriv glGetTexParameteriv
+#define qglGetUniformfv glGetUniformfv
+#define qglGetUniformiv glGetUniformiv
+#define qglHint glHint
+#define qglLineWidth glLineWidth
+#define qglLinkProgram glLinkProgram
+#define qglLoadIdentity glLoadIdentity
+#define qglLoadMatrixf glLoadMatrixf
+#define qglMatrixMode glMatrixMode
+#define qglMultiTexCoord1f glMultiTexCoord1f
+#define qglMultiTexCoord2f glMultiTexCoord2f
+#define qglMultiTexCoord3f glMultiTexCoord3f
+#define qglMultiTexCoord4f glMultiTexCoord4f
+#define qglNormalPointer glNormalPointer
+#define qglPixelStorei glPixelStorei
+#define qglPointSize glPointSize
+//#define qglPolygonMode glPolygonMode
+#define qglPolygonOffset glPolygonOffset
+//#define qglPolygonStipple glPolygonStipple
+#define qglReadBuffer glReadBuffer
+#define qglReadPixels glReadPixels
+#define qglRenderbufferStorageEXT glRenderbufferStorage
+#define qglScissor glScissor
+#define qglShaderSource glShaderSource
+#define qglStencilFunc glStencilFunc
+#define qglStencilFuncSeparate glStencilFuncSeparate
+#define qglStencilMask glStencilMask
+#define qglStencilOp glStencilOp
+#define qglStencilOpSeparate glStencilOpSeparate
+#define qglTexCoord1f glTexCoord1f
+#define qglTexCoord2f glTexCoord2f
+#define qglTexCoord3f glTexCoord3f
+#define qglTexCoord4f glTexCoord4f
+#define qglTexCoordPointer glTexCoordPointer
+#define qglTexEnvf glTexEnvf
+#define qglTexEnvfv glTexEnvfv
+#define qglTexEnvi glTexEnvi
+#define qglTexImage2D glTexImage2D
+#define qglTexImage3D glTexImage3D
+#define qglTexParameterf glTexParameterf
+#define qglTexParameterfv glTexParameterfv
+#define qglTexParameteri glTexParameteri
+#define qglTexSubImage2D glTexSubImage2D
+#define qglTexSubImage3D glTexSubImage3D
+#define qglUniform1f glUniform1f
+#define qglUniform1fv glUniform1fv
+#define qglUniform1i glUniform1i
+#define qglUniform1iv glUniform1iv
+#define qglUniform2f glUniform2f
+#define qglUniform2fv glUniform2fv
+#define qglUniform2i glUniform2i
+#define qglUniform2iv glUniform2iv
+#define qglUniform3f glUniform3f
+#define qglUniform3fv glUniform3fv
+#define qglUniform3i glUniform3i
+#define qglUniform3iv glUniform3iv
+#define qglUniform4f glUniform4f
+#define qglUniform4fv glUniform4fv
+#define qglUniform4i glUniform4i
+#define qglUniform4iv glUniform4iv
+#define qglUniformMatrix2fv glUniformMatrix2fv
+#define qglUniformMatrix3fv glUniformMatrix3fv
+#define qglUniformMatrix4fv glUniformMatrix4fv
+#define qglUseProgram glUseProgram
+#define qglValidateProgram glValidateProgram
+#define qglVertex2f glVertex2f
+#define qglVertex3f glVertex3f
+#define qglVertex4f glVertex4f
+#define qglVertexAttribPointer glVertexAttribPointer
+#define qglVertexPointer glVertexPointer
+#define qglViewport glViewport
+#define qglVertexAttrib1f glVertexAttrib1f
+//#define qglVertexAttrib1s glVertexAttrib1s
+//#define qglVertexAttrib1d glVertexAttrib1d
+#define qglVertexAttrib2f glVertexAttrib2f
+//#define qglVertexAttrib2s glVertexAttrib2s
+//#define qglVertexAttrib2d glVertexAttrib2d
+#define qglVertexAttrib3f glVertexAttrib3f
+//#define qglVertexAttrib3s glVertexAttrib3s
+//#define qglVertexAttrib3d glVertexAttrib3d
+#define qglVertexAttrib4f glVertexAttrib4f
+//#define qglVertexAttrib4s glVertexAttrib4s
+//#define qglVertexAttrib4d glVertexAttrib4d
+//#define qglVertexAttrib4Nub glVertexAttrib4Nub
+#define qglVertexAttrib1fv glVertexAttrib1fv
+//#define qglVertexAttrib1sv glVertexAttrib1sv
+//#define qglVertexAttrib1dv glVertexAttrib1dv
+#define qglVertexAttrib2fv glVertexAttrib2fv
+//#define qglVertexAttrib2sv glVertexAttrib2sv
+//#define qglVertexAttrib2dv glVertexAttrib2dv
+#define qglVertexAttrib3fv glVertexAttrib3fv
+//#define qglVertexAttrib3sv glVertexAttrib3sv
+//#define qglVertexAttrib3dv glVertexAttrib3dv
+#define qglVertexAttrib4fv glVertexAttrib4fv
+//#define qglVertexAttrib4sv glVertexAttrib4sv
+//#define qglVertexAttrib4dv glVertexAttrib4dv
+//#define qglVertexAttrib4iv glVertexAttrib4iv
+//#define qglVertexAttrib4bv glVertexAttrib4bv
+//#define qglVertexAttrib4ubv glVertexAttrib4ubv
+//#define qglVertexAttrib4usv glVertexAttrib4usv
+//#define qglVertexAttrib4uiv glVertexAttrib4uiv
+//#define qglVertexAttrib4Nbv glVertexAttrib4Nbv
+//#define qglVertexAttrib4Nsv glVertexAttrib4Nsv
+//#define qglVertexAttrib4Niv glVertexAttrib4Niv
+//#define qglVertexAttrib4Nubv glVertexAttrib4Nubv
+//#define qglVertexAttrib4Nusv glVertexAttrib4Nusv
+//#define qglVertexAttrib4Nuiv glVertexAttrib4Nuiv
+//#define qglGetVertexAttribdv glGetVertexAttribdv
+#define qglGetVertexAttribfv glGetVertexAttribfv
+#define qglGetVertexAttribiv glGetVertexAttribiv
+#define qglGetVertexAttribPointerv glGetVertexAttribPointerv
 #endif
 
 #endif

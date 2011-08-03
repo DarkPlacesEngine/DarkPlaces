@@ -521,6 +521,7 @@ void CL_DrawVideo(void)
 	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
 		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
 
+#ifndef USE_GLES2
 	// enable video-only polygon stipple (of global stipple is not active)
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
 	{
@@ -538,13 +539,16 @@ void CL_DrawVideo(void)
 		}
 		qglPolygonStipple(stipple);CHECKGLERROR
 	}
+#endif
 
 	// draw video
 	DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
 
+#ifndef USE_GLES2
 	// disable video-only stipple
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
 		qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
+#endif
 
 	// VorteX: draw subtitle_text
 	if (!video->subtitles || !cl_video_subtitles.integer)

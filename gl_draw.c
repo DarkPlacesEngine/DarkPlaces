@@ -413,8 +413,10 @@ reload:
 		if (!pic->autoload)
 		{
 			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, vid.sRGB2D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
+#ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+#endif
 		}
 	}
 	if (!loaded)
@@ -511,14 +513,18 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 		if (pic->tex == NULL)
 		{
 			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, vid.sRGB2D);
+#ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+#endif
 		}
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
 		{
 			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, vid.sRGB2D);
+#ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
 				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+#endif
 		}
 		if (pic->tex == NULL)
 			pic->tex = draw_generatepic(pic->name, true);
@@ -1963,6 +1969,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+#ifndef USE_GLES2
 		CHECKGLERROR
 		qglBegin(GL_LINE_LOOP);
 		for (num = 0;num < mesh->num_vertices;num++)
@@ -1973,6 +1980,7 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 		}
 		qglEnd();
 		CHECKGLERROR
+#endif
 		break;
 	case RENDERPATH_D3D9:
 		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
@@ -2007,6 +2015,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
+#ifndef USE_GLES2
 		CHECKGLERROR
 
 		//qglLineWidth(width);CHECKGLERROR
@@ -2018,6 +2027,7 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 		qglVertex2f(x2, y2);
 		qglEnd();
 		CHECKGLERROR
+#endif
 		break;
 	case RENDERPATH_D3D9:
 		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);

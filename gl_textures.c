@@ -10,6 +10,10 @@ extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 #include "intoverflow.h"
 #include "dpsoftrast.h"
 
+#ifndef GL_TEXTURE_3D
+#define GL_TEXTURE_3D				0x806F
+#endif
+
 cvar_t gl_max_size = {CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
 cvar_t gl_max_lightmapsize = {CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
 cvar_t gl_picmip = {CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
@@ -76,6 +80,24 @@ typedef struct textypeinfo_s
 }
 textypeinfo_t;
 
+#ifdef USE_GLES2
+// framebuffer texture formats
+// GLES2 devices rarely support depth textures, so we actually use a renderbuffer there
+static textypeinfo_t textype_shadowmap16                 = {"shadowmap16",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16                  , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_shadowmap24                 = {"shadowmap24",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16                  , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER   ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F,  8,  8,  8.0f, GL_RGBA                               , GL_RGBA           , GL_FLOAT         };
+static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F, 16, 16, 16.0f, GL_RGBA                               , GL_RGBA           , GL_FLOAT         };
+
+// image formats:
+static textypeinfo_t textype_alpha                       = {"alpha",                    TEXTYPE_ALPHA         ,  1,  4,  4.0f, GL_ALPHA                              , GL_ALPHA          , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_palette                     = {"palette",                  TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_palette_alpha               = {"palette_alpha",            TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_rgba                        = {"rgba",                     TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_RGBA                               , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_rgba_alpha                  = {"rgba_alpha",               TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_RGBA                               , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_bgra                        = {"bgra",                     TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_bgra_alpha                  = {"bgra_alpha",               TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+#else
 // framebuffer texture formats
 static textypeinfo_t textype_shadowmap16                 = {"shadowmap16",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16_ARB              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_shadowmap24                 = {"shadowmap24",              TEXTYPE_SHADOWMAP     ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24_ARB              , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
@@ -113,6 +135,7 @@ static textypeinfo_t textype_sRGB_dxt1                   = {"sRGB_dxt1",        
 static textypeinfo_t textype_sRGB_dxt1a                  = {"sRGB_dxt1a",               TEXTYPE_DXT1A         ,  4,  0,  0.5f, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT, 0                 , 0                };
 static textypeinfo_t textype_sRGB_dxt3                   = {"sRGB_dxt3",                TEXTYPE_DXT3          ,  4,  0,  1.0f, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT, 0                 , 0                };
 static textypeinfo_t textype_sRGB_dxt5                   = {"sRGB_dxt5",                TEXTYPE_DXT5          ,  4,  0,  1.0f, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, 0                 , 0                };
+#endif
 
 typedef enum gltexturetype_e
 {
@@ -123,16 +146,16 @@ typedef enum gltexturetype_e
 }
 gltexturetype_t;
 
-static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB};
+static int gltexturetypeenums[GLTEXTURETYPE_TOTAL] = {GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP};
 static int gltexturetypedimensions[GLTEXTURETYPE_TOTAL] = {2, 3, 2};
 static int cubemapside[6] =
 {
-	GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB,
-	GL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB,
-	GL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB,
-	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB
+	GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 };
 
 typedef struct gltexture_s
@@ -229,6 +252,22 @@ static const unsigned char *texturebuffer;
 
 static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 {
+#ifdef USE_GLES2
+	switch(textype)
+	{
+	case TEXTYPE_PALETTE: return (flags & TEXF_ALPHA) ? &textype_palette_alpha : &textype_palette;
+	case TEXTYPE_RGBA: return ((flags & TEXF_ALPHA) ? &textype_rgba_alpha : &textype_rgba);
+	case TEXTYPE_BGRA: return ((flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra);
+	case TEXTYPE_ALPHA: return &textype_alpha;
+	case TEXTYPE_SHADOWMAP: return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
+	case TEXTYPE_COLORBUFFER: return &textype_colorbuffer;
+	case TEXTYPE_COLORBUFFER16F: return &textype_colorbuffer16f;
+	case TEXTYPE_COLORBUFFER32F: return &textype_colorbuffer32f;
+	default:
+		Host_Error("R_GetTexTypeInfo: unknown texture format");
+		break;
+	}
+#else
 	switch(textype)
 	{
 	case TEXTYPE_DXT1: return &textype_dxt1;
@@ -254,6 +293,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 		Host_Error("R_GetTexTypeInfo: unknown texture format");
 		break;
 	}
+#endif
 	return NULL;
 }
 
@@ -1004,10 +1044,12 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 	}
 	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);CHECKGLERROR
 	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);CHECKGLERROR
+#ifdef GL_TEXTURE_WRAP_R
 	if (gltexturetypedimensions[texturetype] >= 3)
 	{
 		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_R, wrapmode);CHECKGLERROR
 	}
+#endif
 
 	CHECKGLERROR
 	if (!gl_filter_force && flags & TEXF_FORCENEAREST)
@@ -1054,6 +1096,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
 	}
 
+#ifndef USE_GLES2
 	if (textype == TEXTYPE_SHADOWMAP)
 	{
 		if (vid.support.arb_shadow)
@@ -1070,6 +1113,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 		}
 		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE);CHECKGLERROR
 	}
+#endif
 
 	CHECKGLERROR
 }
@@ -1221,6 +1265,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		oldbindtexnum = R_Mesh_TexBound(0, gltexturetypeenums[glt->texturetype]);
 		qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
+#ifdef GL_TEXTURE_COMPRESSION_HINT_ARB
 		if (qglGetCompressedTexImageARB)
 		{
 			if (gl_texturecompression.integer >= 2)
@@ -1229,6 +1274,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
 			CHECKGLERROR
 		}
+#endif
 		switch(glt->texturetype)
 		{
 		case GLTEXTURETYPE_2D:
@@ -1244,6 +1290,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 			}
 			break;
 		case GLTEXTURETYPE_3D:
+#ifndef USE_GLES2
 			qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)
 			{
@@ -1254,6 +1301,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
 				}
 			}
+#endif
 			break;
 		case GLTEXTURETYPE_CUBEMAP:
 			// convert and upload each side in turn,
@@ -1508,6 +1556,27 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		return NULL;
 
 	// see if we need to swap red and blue (BGRA <-> RGBA conversion)
+	if (textype == TEXTYPE_PALETTE && vid.forcetextype == TEXTYPE_RGBA)
+	{
+		int numpixels = width * height * depth * sides;
+		size = numpixels * 4;
+		temppixels = (unsigned char *)Mem_Alloc(tempmempool, size);
+		if (data)
+		{
+			const unsigned char *p;
+			unsigned char *o = temppixels;
+			for (i = 0;i < numpixels;i++, o += 4)
+			{
+				p = (const unsigned char *)palette + 4*data[i];
+				o[0] = p[2];
+				o[1] = p[1];
+				o[2] = p[0];
+				o[3] = p[3];
+			}
+		}
+		data = temppixels;
+		textype = TEXTYPE_RGBA;
+	}
 	swaprb = false;
 	switch(textype)
 	{
@@ -1523,7 +1592,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		static int rgbaswapindices[4] = {2, 1, 0, 3};
 		size = width * height * depth * sides * 4;
 		temppixels = (unsigned char *)Mem_Alloc(tempmempool, size);
-		Image_CopyMux(temppixels, data, width, height*depth*sides, false, false, false, 4, 4, rgbaswapindices);
+		if (data)
+			Image_CopyMux(temppixels, data, width, height*depth*sides, false, false, false, 4, 4, rgbaswapindices);
 		data = temppixels;
 	}
 
@@ -1819,6 +1889,9 @@ rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *i
 
 int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)
 {
+#ifdef USE_GLES2
+	return -1; // unsupported on this platform
+#else
 	gltexture_t *glt = (gltexture_t *)rt;
 	unsigned char *dds;
 	int oldbindtexnum;
@@ -1944,6 +2017,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	ret = FS_WriteFile(filename, dds, ddssize);
 	Mem_Free(dds);
 	return ret ? ddssize : -5;
+#endif
 }
 
 rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
@@ -2432,11 +2506,13 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
+#ifdef GL_TEXTURE_MAX_LEVEL
 		if (dds_miplevels >= 1 && !mipcomplete)
 		{
 			// need to set GL_TEXTURE_MAX_LEVEL
 			qglTexParameteri(gltexturetypeenums[glt->texturetype], GL_TEXTURE_MAX_LEVEL, dds_miplevels - 1);CHECKGLERROR
 		}
+#endif
 		GL_SetupTextureParameters(glt->flags, glt->textype->textype, glt->texturetype);
 		qglBindTexture(gltexturetypeenums[glt->texturetype], oldbindtexnum);CHECKGLERROR
 		break;

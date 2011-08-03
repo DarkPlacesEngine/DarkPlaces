@@ -1546,8 +1546,10 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				data[x*4+2] = b;
 			}
 			Image_WriteTGABGRA(va("%s.tga", map_identifier), w, h, data);
+#ifndef USE_GLES2
 			if (r_font_compress.integer && qglGetCompressedTexImageARB && tex)
 				R_SaveTextureDDSFile(tex, va("dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
+#endif
 		}
 	}
 

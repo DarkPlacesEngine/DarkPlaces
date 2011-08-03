@@ -3002,7 +3002,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	pend = (unsigned char *)bufferend;
 
 	if (pbase + sizeof(iqmheader_t) > pend)
-		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model %d", loadmodel->name, pend - pbase);
+		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model %d", loadmodel->name, (int)(pend - pbase));
 
 	// copy struct (otherwise it may be misaligned)
 	// LordHavoc: okay it's definitely not misaligned here, but for consistency...
