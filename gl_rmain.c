@@ -7504,7 +7504,7 @@ static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
 	if(parms[0] == 0 && parms[1] == 0)
 		return false;
 	if(func >> Q3WAVEFUNC_USER_SHIFT) // assumes rsurface to be set!
-		if(rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT)] == 0)
+		if(rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT - 1)] == 0)
 			return false;
 	return true;
 }
@@ -7543,7 +7543,7 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 	}
 	f = parms[0] + parms[1] * f;
 	if(func >> Q3WAVEFUNC_USER_SHIFT) // assumes rsurface to be set!
-		f *= rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT)];
+		f *= rsurface.userwavefunc_param[bound(0, (func >> Q3WAVEFUNC_USER_SHIFT) - 1, Q3WAVEFUNC_USER_COUNT - 1)];
 	return (float) f;
 }
 
