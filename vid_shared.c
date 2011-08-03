@@ -218,6 +218,7 @@ const char *gl_platformextensions;
 // name of driver library (opengl32.dll, libGL.so.1, or whatever)
 char gl_driver[256];
 
+#ifndef USE_GLES2
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
@@ -259,6 +260,7 @@ void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
 void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+void (GLAPIENTRY *qglDepthRangef)(GLclampf near_val, GLclampf far_val);
 void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
@@ -505,6 +507,7 @@ void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *param
 void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
 
 void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
+#endif
 
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
@@ -585,6 +588,7 @@ qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *fun
 	return true;
 }
 
+#ifndef USE_GLES2
 static dllfunction_t opengl110funcs[] =
 {
 	{"glClearColor", (void **) &qglClearColor},
@@ -919,6 +923,7 @@ static dllfunction_t multisamplefuncs[] =
 	{"glSampleCoverageARB",          (void **) &qglSampleCoverageARB},
 	{NULL, NULL}
 };
+#endif
 
 void VID_ClearExtensions(void)
 {
@@ -941,6 +946,7 @@ void VID_ClearExtensions(void)
 	vid.max_anisotropy = 1;
 	vid.maxdrawbuffers = 1;
 
+#ifndef USE_GLES2
 	// this is a complete list of all functions that are directly checked in the renderer
 	qglDrawRangeElements = NULL;
 	qglDrawBuffer = NULL;
@@ -950,8 +956,10 @@ void VID_ClearExtensions(void)
 	qglGetCompressedTexImageARB = NULL;
 	qglFramebufferTexture2DEXT = NULL;
 	qglDrawBuffersARB = NULL;
+#endif
 }
 
+#ifndef USE_GLES2
 void VID_CheckExtensions(void)
 {
 	if (!GL_CheckExtension("glbase", opengl110funcs, NULL, false))
@@ -1057,7 +1065,7 @@ void VID_CheckExtensions(void)
 	if (vid.support.ext_texture_filter_anisotropic)
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
 	if (vid.support.arb_texture_cube_map)
-		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE_ARB, (GLint*)&vid.maxtexturesize_cubemap);
+		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
 	if (vid.support.ext_texture_3d)
 		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
@@ -1070,10 +1078,10 @@ void VID_CheckExtensions(void)
 
 	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
 	if (vid.support.arb_multitexture)
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 	if (vid_gl20.integer && vid.support.gl20shaders)
 	{
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
 		qglGetIntegerv(GL_MAX_TEXTURE_COORDS, (int *)&vid.texarrayunits);CHECKGLERROR
 		vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
@@ -1091,7 +1099,7 @@ void VID_CheckExtensions(void)
 	}
 	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
 	{
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint*)&vid.texunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
 		vid.teximageunits = vid.texunits;
 		vid.texarrayunits = vid.texunits;
@@ -1133,6 +1141,7 @@ void VID_CheckExtensions(void)
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 }
+#endif
 
 float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone)
 {

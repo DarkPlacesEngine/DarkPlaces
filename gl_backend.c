@@ -8,6 +8,94 @@ extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 extern D3DCAPS9 vid_d3d9caps;
 #endif
 
+// on GLES we have to use some proper #define's
+#ifndef GL_FRAMEBUFFER
+#define GL_FRAMEBUFFER                                   0x8D40
+#define GL_DEPTH_ATTACHMENT                              0x8D00
+#define GL_COLOR_ATTACHMENT0                             0x8CE0
+#define GL_INVALID_FRAMEBUFFER_OPERATION                 0x0506
+#endif
+#ifndef GL_COLOR_ATTACHMENT1
+#define GL_COLOR_ATTACHMENT1                             0x8CE1
+#define GL_COLOR_ATTACHMENT2                             0x8CE2
+#define GL_COLOR_ATTACHMENT3                             0x8CE3
+#define GL_COLOR_ATTACHMENT4                             0x8CE4
+#define GL_COLOR_ATTACHMENT5                             0x8CE5
+#define GL_COLOR_ATTACHMENT6                             0x8CE6
+#define GL_COLOR_ATTACHMENT7                             0x8CE7
+#define GL_COLOR_ATTACHMENT8                             0x8CE8
+#define GL_COLOR_ATTACHMENT9                             0x8CE9
+#define GL_COLOR_ATTACHMENT10                            0x8CEA
+#define GL_COLOR_ATTACHMENT11                            0x8CEB
+#define GL_COLOR_ATTACHMENT12                            0x8CEC
+#define GL_COLOR_ATTACHMENT13                            0x8CED
+#define GL_COLOR_ATTACHMENT14                            0x8CEE
+#define GL_COLOR_ATTACHMENT15                            0x8CEF
+#endif
+#ifndef GL_ARRAY_BUFFER
+#define GL_ARRAY_BUFFER               0x8892
+#define GL_ELEMENT_ARRAY_BUFFER       0x8893
+#endif
+//#ifndef GL_VERTEX_ARRAY
+//#define GL_VERTEX_ARRAY				0x8074
+//#define GL_COLOR_ARRAY				0x8076
+//#define GL_TEXTURE_COORD_ARRAY			0x8078
+//#endif
+#ifndef GL_TEXTURE0
+#define GL_TEXTURE0					0x84C0
+#define GL_TEXTURE1					0x84C1
+#define GL_TEXTURE2					0x84C2
+#define GL_TEXTURE3					0x84C3
+#define GL_TEXTURE4					0x84C4
+#define GL_TEXTURE5					0x84C5
+#define GL_TEXTURE6					0x84C6
+#define GL_TEXTURE7					0x84C7
+#define GL_TEXTURE8					0x84C8
+#define GL_TEXTURE9					0x84C9
+#define GL_TEXTURE10				0x84CA
+#define GL_TEXTURE11				0x84CB
+#define GL_TEXTURE12				0x84CC
+#define GL_TEXTURE13				0x84CD
+#define GL_TEXTURE14				0x84CE
+#define GL_TEXTURE15				0x84CF
+#define GL_TEXTURE16				0x84D0
+#define GL_TEXTURE17				0x84D1
+#define GL_TEXTURE18				0x84D2
+#define GL_TEXTURE19				0x84D3
+#define GL_TEXTURE20				0x84D4
+#define GL_TEXTURE21				0x84D5
+#define GL_TEXTURE22				0x84D6
+#define GL_TEXTURE23				0x84D7
+#define GL_TEXTURE24				0x84D8
+#define GL_TEXTURE25				0x84D9
+#define GL_TEXTURE26				0x84DA
+#define GL_TEXTURE27				0x84DB
+#define GL_TEXTURE28				0x84DC
+#define GL_TEXTURE29				0x84DD
+#define GL_TEXTURE30				0x84DE
+#define GL_TEXTURE31				0x84DF
+#endif
+
+#ifndef GL_TEXTURE_3D
+#define GL_TEXTURE_3D				0x806F
+#endif
+#ifndef GL_TEXTURE_CUBE_MAP
+#define GL_TEXTURE_CUBE_MAP		    0x8513
+#endif
+//#ifndef GL_MODELVIEW
+//#define GL_MODELVIEW				0x1700
+//#endif
+//#ifndef GL_PROJECTION
+//#define GL_PROJECTION				0x1701
+//#endif
+//#ifndef GL_DECAL
+//#define GL_DECAL				0x2101
+//#endif
+//#ifndef GL_INTERPOLATE
+//#define GL_INTERPOLATE				0x8575
+//#endif
+
+
 #define MAX_RENDERTARGETS 4
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
@@ -84,8 +172,8 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber)
 		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
 		break;
 #endif
-#ifdef GL_INVALID_FRAMEBUFFER_OPERATION_EXT
-	case GL_INVALID_FRAMEBUFFER_OPERATION_EXT:
+#ifdef GL_INVALID_FRAMEBUFFER_OPERATION
+	case GL_INVALID_FRAMEBUFFER_OPERATION:
 		Con_Printf("GL_INVALID_FRAMEBUFFER_OPERATION at %s:%i\n", filename, linenumber);
 		break;
 #endif
@@ -331,7 +419,7 @@ static void gl_backend_start(void)
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
 		if (vid.support.ext_framebuffer_object)
-			qglGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &gl_state.defaultframebufferobject);
+			qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -1091,6 +1179,7 @@ void R_SetViewport(const r_viewport_t *v)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL11:
 	case RENDERPATH_GLES1:
+#ifdef GL_PROJECTION
 		CHECKGLERROR
 		qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
 		// Load the projection matrix into OpenGL
@@ -1098,6 +1187,7 @@ void R_SetViewport(const r_viewport_t *v)
 		Matrix4x4_ToArrayFloatGL(&gl_projectionmatrix, m);
 		qglLoadMatrixf(m);CHECKGLERROR
 		qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+#endif
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -1145,7 +1235,7 @@ static void GL_BindVBO(int bufferobject)
 	{
 		gl_state.vertexbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ARRAY_BUFFER_ARB, bufferobject);CHECKGLERROR
+		qglBindBufferARB(GL_ARRAY_BUFFER, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -1155,7 +1245,7 @@ static void GL_BindEBO(int bufferobject)
 	{
 		gl_state.elementbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, bufferobject);CHECKGLERROR
+		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -1173,11 +1263,11 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			return 0;
 		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
 		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
-		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
-		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
-		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
-		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR
-		if (colortexture4) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT3_EXT, colortexture4->gltexturetypeenum, R_GetTexture(colortexture4), 0);CHECKGLERROR
+		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
+		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
+		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
+		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR
+		if (colortexture4) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, colortexture4->gltexturetypeenum, R_GetTexture(colortexture4), 0);CHECKGLERROR
 		return temp;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -1258,7 +1348,7 @@ void R_Mesh_ResetRenderTargets(void)
 		if (gl_state.framebufferobject)
 		{
 			gl_state.framebufferobject = 0;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1302,7 +1392,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		if (gl_state.framebufferobject != fbo)
 		{
 			gl_state.framebufferobject = fbo;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1432,6 +1522,7 @@ static void GL_Backend_ResetState(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+#ifdef GL_ALPHA_TEST
 		CHECKGLERROR
 
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
@@ -1448,14 +1539,14 @@ static void GL_Backend_ResetState(void)
 
 		if (vid.support.arb_vertex_buffer_object)
 		{
-			qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+			qglBindBufferARB(GL_ARRAY_BUFFER, 0);
+			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 
 		if (vid.support.ext_framebuffer_object)
 		{
-			//qglBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+			//qglBindRenderbufferEXT(GL_RENDERBUFFER, 0);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER, 0);
 		}
 
 		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
@@ -1466,7 +1557,7 @@ static void GL_Backend_ResetState(void)
 		qglColor4f(1, 1, 1, 1);CHECKGLERROR
 
 		if (vid.support.ext_framebuffer_object)
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.framebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.framebufferobject);
 
 		gl_state.unit = MAX_TEXTUREUNITS;
 		gl_state.clientunit = MAX_TEXTUREUNITS;
@@ -1483,8 +1574,8 @@ static void GL_Backend_ResetState(void)
 			}
 			if (vid.support.arb_texture_cube_map)
 			{
-				qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
+				qglDisable(GL_TEXTURE_CUBE_MAP);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);CHECKGLERROR
 			}
 			GL_BindVBO(0);
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
@@ -1495,6 +1586,7 @@ static void GL_Backend_ResetState(void)
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		}
 		CHECKGLERROR
+#endif
 		break;
 	case RENDERPATH_SOFT:
 		DPSOFTRAST_ColorMask(1,1,1,1);
@@ -1520,11 +1612,11 @@ static void GL_Backend_ResetState(void)
 		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
 		if (vid.support.arb_vertex_buffer_object)
 		{
-			qglBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
-			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
+			qglBindBufferARB(GL_ARRAY_BUFFER, 0);
+			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 		if (vid.support.ext_framebuffer_object)
-			qglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gl_state.defaultframebufferobject);
+			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
 		qglEnableVertexAttribArray(GLSLATTRIB_POSITION);
 		qglVertexAttribPointer(GLSLATTRIB_POSITION, 3, GL_FLOAT, false, sizeof(float[3]), NULL);CHECKGLERROR
 		qglDisableVertexAttribArray(GLSLATTRIB_COLOR);
@@ -1542,7 +1634,7 @@ static void GL_Backend_ResetState(void)
 			}
 			if (vid.support.arb_texture_cube_map)
 			{
-				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);CHECKGLERROR
 			}
 		}
 		for (i = 0;i < vid.texarrayunits;i++)
@@ -1571,7 +1663,7 @@ void GL_ActiveTexture(unsigned int num)
 			if (qglActiveTexture)
 			{
 				CHECKGLERROR
-				qglActiveTexture(GL_TEXTURE0_ARB + gl_state.unit);
+				qglActiveTexture(GL_TEXTURE0 + gl_state.unit);
 				CHECKGLERROR
 			}
 			break;
@@ -1598,7 +1690,7 @@ void GL_ClientActiveTexture(unsigned int num)
 			if (qglActiveTexture)
 			{
 				CHECKGLERROR
-				qglClientActiveTexture(GL_TEXTURE0_ARB + gl_state.clientunit);
+				qglClientActiveTexture(GL_TEXTURE0 + gl_state.clientunit);
 				CHECKGLERROR
 			}
 			break;
@@ -1811,7 +1903,11 @@ void GL_DepthRange(float nearfrac, float farfrac)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
+#ifdef USE_GLES2
+			qglDepthRangef(gl_state.depthrange[0], gl_state.depthrange[1]);
+#else
 			qglDepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
+#endif
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -1867,6 +1963,7 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 		}
 		else if (vid.support.ext_stencil_two_side)
 		{
+#ifdef GL_STENCIL_TEST_TWO_SIDE_EXT
 			qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
 			qglActiveStencilFaceEXT(GL_FRONT);CHECKGLERROR
 			qglStencilMask(writemask);CHECKGLERROR
@@ -1876,6 +1973,7 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 			qglStencilMask(writemask);CHECKGLERROR
 			qglStencilOp(backfail, backzfail, backzpass);CHECKGLERROR
 			qglStencilFunc(backcompare, comparereference, comparemask);CHECKGLERROR
+#endif
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1927,7 +2025,9 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 		}
 		if (vid.support.ext_stencil_two_side)
 		{
+#ifdef GL_STENCIL_TEST_TWO_SIDE_EXT
 			qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
+#endif
 		}
 		qglStencilMask(writemask);CHECKGLERROR
 		qglStencilOp(fail, zfail, zpass);CHECKGLERROR
@@ -2123,6 +2223,7 @@ void GL_AlphaTest(int state)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GLES1:
+#ifdef GL_ALPHA_TEST
 			// only fixed function uses alpha test, other paths use pixel kill capability in shaders
 			CHECKGLERROR
 			if (gl_state.alphatest)
@@ -2133,6 +2234,7 @@ void GL_AlphaTest(int state)
 			{
 				qglDisable(GL_ALPHA_TEST);CHECKGLERROR
 			}
+#endif
 			break;
 		case RENDERPATH_D3D9:
 		case RENDERPATH_D3D10:
@@ -2162,6 +2264,7 @@ void GL_AlphaToCoverage(qboolean state)
 		case RENDERPATH_SOFT:
 			break;
 		case RENDERPATH_GL20:
+#ifdef GL_SAMPLE_ALPHA_TO_COVERAGE_ARB
 			// alpha to coverage turns the alpha value of the pixel into 0%, 25%, 50%, 75% or 100% by masking the multisample fragments accordingly
 			CHECKGLERROR
 			if (gl_state.alphatocoverage)
@@ -2174,6 +2277,7 @@ void GL_AlphaToCoverage(qboolean state)
 				qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
 //				qglDisable(GL_MULTISAMPLE_ARB);CHECKGLERROR
 			}
+#endif
 			break;
 		}
 	}
@@ -2346,7 +2450,11 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 		}
 		if (mask & GL_DEPTH_BUFFER_BIT)
 		{
+#ifdef USE_GLES2
+			qglClearDepthf(depthvalue);CHECKGLERROR
+#else
 			qglClearDepth(depthvalue);CHECKGLERROR
+#endif
 		}
 		if (mask & GL_STENCIL_BUFFER_BIT)
 		{
@@ -2499,8 +2607,10 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD5, "Attrib_TexCoord5");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD6, "Attrib_TexCoord6");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD7, "Attrib_TexCoord7");
+#ifndef USE_GLES2
 	if(vid.support.gl20shaders130)
 		qglBindFragDataLocation(programobject, 0, "dp_FragColor");
+#endif
 
 	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER, "vertex", vertexstrings_count, vertexstrings_list))
 		goto cleanup;
@@ -2714,6 +2824,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			CHECKGLERROR
 			if (gl_mesh_testmanualfeeding.integer)
 			{
+#ifndef USE_GLES2
 				unsigned int i, j, element;
 				const GLfloat *p;
 				qglBegin(GL_TRIANGLES);
@@ -2814,13 +2925,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 									if (vid.texarrayunits > 1)
 									{
 										if (gl_state.units[j].pointer_texcoord_components == 4)
-											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2], p[3]);
+											qglMultiTexCoord4f(GL_TEXTURE0 + j, p[0], p[1], p[2], p[3]);
 										else if (gl_state.units[j].pointer_texcoord_components == 3)
-											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, p[0], p[1], p[2]);
+											qglMultiTexCoord3f(GL_TEXTURE0 + j, p[0], p[1], p[2]);
 										else if (gl_state.units[j].pointer_texcoord_components == 2)
-											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, p[0], p[1]);
+											qglMultiTexCoord2f(GL_TEXTURE0 + j, p[0], p[1]);
 										else
-											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, p[0]);
+											qglMultiTexCoord1f(GL_TEXTURE0 + j, p[0]);
 									}
 									else
 									{
@@ -2840,13 +2951,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 									if (vid.texarrayunits > 1)
 									{
 										if (gl_state.units[j].pointer_texcoord_components == 4)
-											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2], s[3]);
+											qglMultiTexCoord4f(GL_TEXTURE0 + j, s[0], s[1], s[2], s[3]);
 										else if (gl_state.units[j].pointer_texcoord_components == 3)
-											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, s[0], s[1], s[2]);
+											qglMultiTexCoord3f(GL_TEXTURE0 + j, s[0], s[1], s[2]);
 										else if (gl_state.units[j].pointer_texcoord_components == 2)
-											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, s[0], s[1]);
+											qglMultiTexCoord2f(GL_TEXTURE0 + j, s[0], s[1]);
 										else if (gl_state.units[j].pointer_texcoord_components == 1)
-											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, s[0]);
+											qglMultiTexCoord1f(GL_TEXTURE0 + j, s[0]);
 									}
 									else
 									{
@@ -2866,13 +2977,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 									if (vid.texarrayunits > 1)
 									{
 										if (gl_state.units[j].pointer_texcoord_components == 4)
-											qglMultiTexCoord4f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2], sb[3]);
+											qglMultiTexCoord4f(GL_TEXTURE0 + j, sb[0], sb[1], sb[2], sb[3]);
 										else if (gl_state.units[j].pointer_texcoord_components == 3)
-											qglMultiTexCoord3f(GL_TEXTURE0_ARB + j, sb[0], sb[1], sb[2]);
+											qglMultiTexCoord3f(GL_TEXTURE0 + j, sb[0], sb[1], sb[2]);
 										else if (gl_state.units[j].pointer_texcoord_components == 2)
-											qglMultiTexCoord2f(GL_TEXTURE0_ARB + j, sb[0], sb[1]);
+											qglMultiTexCoord2f(GL_TEXTURE0 + j, sb[0], sb[1]);
 										else if (gl_state.units[j].pointer_texcoord_components == 1)
-											qglMultiTexCoord1f(GL_TEXTURE0_ARB + j, sb[0]);
+											qglMultiTexCoord1f(GL_TEXTURE0 + j, sb[0]);
 									}
 									else
 									{
@@ -2915,16 +3026,19 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				}
 				qglEnd();
 				CHECKGLERROR
+#endif
 			}
 			else if (bufferobject3s)
 			{
 				GL_BindEBO(bufferobject3s);
+#ifndef USE_GLES2
 				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 				{
 					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
 					CHECKGLERROR
 				}
 				else
+#endif
 				{
 					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)(firsttriangle * sizeof(unsigned short[3])));
 					CHECKGLERROR
@@ -2933,12 +3047,14 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			else if (bufferobject3i)
 			{
 				GL_BindEBO(bufferobject3i);
+#ifndef USE_GLES2
 				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 				{
 					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
 					CHECKGLERROR
 				}
 				else
+#endif
 				{
 					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)(firsttriangle * sizeof(unsigned int[3])));
 					CHECKGLERROR
@@ -2947,12 +3063,14 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			else if (element3s)
 			{
 				GL_BindEBO(0);
+#ifndef USE_GLES2
 				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 				{
 					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, element3s);
 					CHECKGLERROR
 				}
 				else
+#endif
 				{
 					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
 					CHECKGLERROR
@@ -2961,12 +3079,14 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			else if (element3i)
 			{
 				GL_BindEBO(0);
+#ifndef USE_GLES2
 				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 				{
 					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, element3i);
 					CHECKGLERROR
 				}
 				else
+#endif
 				{
 					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
 					CHECKGLERROR
@@ -3028,8 +3148,8 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 				GLint 		attribsize;
 				GLenum		attribtype;
 				GLchar		attribname[1024];
-				r = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);CHECKGLERROR
-				if (r != GL_FRAMEBUFFER_COMPLETE_EXT)
+				r = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+				if (r != GL_FRAMEBUFFER_COMPLETE)
 					Con_DPrintf("fbo %i not complete (default %i)\n", gl_state.framebufferobject, gl_state.defaultframebufferobject);
 #ifndef GL_CURRENT_PROGRAM
 #define GL_CURRENT_PROGRAM 0x8B8D
@@ -3119,7 +3239,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			GL_BindEBO(buffer->bufferobject);
 		else
 			GL_BindVBO(buffer->bufferobject);
-		qglBufferDataARB(buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER_ARB : GL_ARRAY_BUFFER_ARB, size, data, buffer->isdynamic ? GL_STREAM_DRAW_ARB : GL_STATIC_DRAW_ARB);
+		qglBufferDataARB(buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -3297,6 +3417,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+#ifdef GL_MODELVIEW
 		CHECKGLERROR
 		if (pointer)
 		{
@@ -3333,6 +3454,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 				qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);CHECKGLERROR
 			}
 		}
+#endif
 		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
@@ -3392,6 +3514,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+#ifdef GL_MODELVIEW
 		CHECKGLERROR
 		if (pointer)
 		{
@@ -3427,6 +3550,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
 		}
+#endif
 		break;
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
@@ -3480,7 +3604,7 @@ int R_Mesh_TexBound(unsigned int unitnum, int id)
 		return unit->t2d;
 	if (id == GL_TEXTURE_3D)
 		return unit->t3d;
-	if (id == GL_TEXTURE_CUBE_MAP_ARB)
+	if (id == GL_TEXTURE_CUBE_MAP)
 		return unit->tcubemap;
 	return 0;
 }
@@ -3583,7 +3707,7 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 		{
 		case GL_TEXTURE_2D: if (unit->t2d != texnum) {GL_ActiveTexture(unitnum);unit->t2d = texnum;qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR}break;
 		case GL_TEXTURE_3D: if (unit->t3d != texnum) {GL_ActiveTexture(unitnum);unit->t3d = texnum;qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR}break;
-		case GL_TEXTURE_CUBE_MAP_ARB: if (unit->tcubemap != texnum) {GL_ActiveTexture(unitnum);unit->tcubemap = texnum;qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR}break;
+		case GL_TEXTURE_CUBE_MAP: if (unit->tcubemap != texnum) {GL_ActiveTexture(unitnum);unit->tcubemap = texnum;qglBindTexture(GL_TEXTURE_CUBE_MAP, unit->tcubemap);CHECKGLERROR}break;
 		}
 		break;
 	case RENDERPATH_GL11:
@@ -3604,7 +3728,7 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 			case GL_TEXTURE_3D:
 				tex3d = texnum;
 				break;
-			case GL_TEXTURE_CUBE_MAP_ARB:
+			case GL_TEXTURE_CUBE_MAP:
 				texcubemap = texnum;
 				break;
 			}
@@ -3659,18 +3783,18 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 			{
 				if (unit->tcubemap == 0)
 				{
-					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+					qglEnable(GL_TEXTURE_CUBE_MAP);CHECKGLERROR
 				}
 			}
 			else
 			{
 				if (unit->tcubemap)
 				{
-					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+					qglDisable(GL_TEXTURE_CUBE_MAP);CHECKGLERROR
 				}
 			}
 			unit->tcubemap = texcubemap;
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_CUBE_MAP, unit->tcubemap);CHECKGLERROR
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -3737,6 +3861,7 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
+#ifdef GL_MODELVIEW
 		if (matrix && matrix->m[3][3])
 		{
 			// texmatrix specified, check if it is different
@@ -3767,6 +3892,7 @@ void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix)
 				qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 			}
 		}
+#endif
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -3789,6 +3915,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+#ifdef GL_TEXTURE_ENV
 		// GL_ARB_texture_env_combine
 		if (!combinergb)
 			combinergb = GL_MODULATE;
@@ -3801,31 +3928,31 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 		if (combinergb != combinealpha || rgbscale != 1 || alphascale != 1)
 		{
 			if (combinergb == GL_DECAL)
-				combinergb = GL_INTERPOLATE_ARB;
-			if (unit->combine != GL_COMBINE_ARB)
+				combinergb = GL_INTERPOLATE;
+			if (unit->combine != GL_COMBINE)
 			{
-				unit->combine = GL_COMBINE_ARB;
+				unit->combine = GL_COMBINE;
 				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
-				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE_ARB mode
+				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB, GL_TEXTURE);CHECKGLERROR // for GL_INTERPOLATE mode
 			}
 			if (unit->combinergb != combinergb)
 			{
 				unit->combinergb = combinergb;
 				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, unit->combinergb);CHECKGLERROR
 			}
 			if (unit->combinealpha != combinealpha)
 			{
 				unit->combinealpha = combinealpha;
 				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, unit->combinealpha);CHECKGLERROR
 			}
 			if (unit->rgbscale != rgbscale)
 			{
 				unit->rgbscale = rgbscale;
 				GL_ActiveTexture(unitnum);
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, unit->rgbscale);CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE, unit->rgbscale);CHECKGLERROR
 			}
 			if (unit->alphascale != alphascale)
 			{
@@ -3843,9 +3970,11 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 			}
 		}
+#endif
 		break;
 	case RENDERPATH_GL11:
 		// normal GL texenv
+#ifdef GL_TEXTURE_ENV
 		if (!combinergb)
 			combinergb = GL_MODULATE;
 		if (unit->combine != combinergb)
@@ -3854,6 +3983,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 			GL_ActiveTexture(unitnum);
 			qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combine);CHECKGLERROR
 		}
+#endif
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -4488,7 +4618,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT_EXT);
+			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT);
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -4515,7 +4645,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_ADD_EXT);
+			qglBlendEquationEXT(GL_FUNC_ADD);
 			break;
 		case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D

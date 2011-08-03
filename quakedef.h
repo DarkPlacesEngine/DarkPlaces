@@ -392,10 +392,6 @@ extern char engineversion[128];
 #include "console.h"
 #include "menu.h"
 
-#include "glquake.h"
-
-#include "palette.h"
-
 extern qboolean noclip_anglehack;
 
 extern cvar_t developer;
@@ -492,6 +488,10 @@ qboolean Sys_HaveSSE2(void);
 #define Sys_HaveSSE() false
 #define Sys_HaveSSE2() false
 #endif
+
+#include "glquake.h"
+
+#include "palette.h"
 
 /// incremented every frame, never reset
 extern int host_framecount;
