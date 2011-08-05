@@ -2045,6 +2045,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	notfirstvideomode = true;
 #endif
 
+#ifndef USE_GLES2
 	// SDL usually knows best
 	drivername = NULL;
 
@@ -2057,6 +2058,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		Con_Printf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
+#endif
 
 #ifdef __IPHONEOS__
 	// mobile platforms are always fullscreen, we'll get the resolution after opening the window
