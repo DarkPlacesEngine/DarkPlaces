@@ -66,18 +66,18 @@ int cl_available = true;
 
 qboolean vid_supportrefreshrate = false;
 
-#ifdef USE_GLES2
-# define SETVIDEOMODE 0
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+# define SETVIDEOMODE 1
 #else
-# if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-#  define SETVIDEOMODE 1
+# ifdef USE_GLES2
+#  define SETVIDEOMODE 0
 # else
 // LordHavoc: SDL 1.3's SDL_CreateWindow API is not finished enough to use yet, but you can set this to 0 if you want to try it...
-#  ifndef SETVIDEOMODE
-#   define SETVIDEOMODE 1
+#   ifndef SETVIDEOMODE
+#    define SETVIDEOMODE 1
+#   endif
 #  endif
 # endif
-#endif
 
 static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
@@ -1303,6 +1303,10 @@ void wrapglVertexAttrib4fv(GLuint index, const GLfloat *v) {PRECALL;glVertexAttr
 void wrapglGetVertexAttribfv(GLuint index, GLenum pname, GLfloat *params) {PRECALL;glGetVertexAttribfv(index, pname, params);POSTCALL;}
 void wrapglGetVertexAttribiv(GLuint index, GLenum pname, GLint *params) {PRECALL;glGetVertexAttribiv(index, pname, params);POSTCALL;}
 void wrapglGetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer) {PRECALL;glGetVertexAttribPointerv(index, pname, pointer);POSTCALL;}
+#endif
+
+#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#define SDL_GL_ExtensionSupported(x) (strstr(gl_extensions, x) || strstr(gl_platformextensions, x))
 #endif
 
 void GLES_Init(void)
