@@ -352,7 +352,7 @@ static void SCR_CaptureVideo_ConvertFrame_BGRA_to_I420_flip(int width, int heigh
 			blockb = b[0];
 			*out = cls.capturevideo.yuvnormalizetable[0][cls.capturevideo.rgbtoyuvscaletable[0][0][blockr] + cls.capturevideo.rgbtoyuvscaletable[0][1][blockg] + cls.capturevideo.rgbtoyuvscaletable[0][2][blockb]];
 		}
-		if ((y & 1) == 0)
+		if ((y & 1) == 0 && y/2 < h/2) // if h is odd, this skips the last row
 		{
 			// 2x2 Cr and Cb planes
 			int inpitch = width*4;

@@ -847,7 +847,7 @@ static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV(void)
 			b += 4;
 		}
 
-		if((y & 1) == 0)
+		if ((y & 1) == 0 && y/2 < h/2) // if h is odd, this skips the last row
 		{
 			for(b = cls.capturevideo.outbuffer + (h-2-y)*w*4, x = 0; x < w/2; ++x)
 			{
