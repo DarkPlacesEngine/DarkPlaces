@@ -2331,7 +2331,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (r_shadow_bouncegridtexture)
+		if (r_shadow_bouncegridtexture && cl.csqc_vidvars.drawworld)
 		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 			if (r_shadow_bouncegriddirectional)
@@ -2391,7 +2391,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (r_shadow_bouncegridtexture)
+		if (r_shadow_bouncegridtexture && cl.csqc_vidvars.drawworld)
 		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 			if (r_shadow_bouncegriddirectional)
@@ -2490,7 +2490,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			// ordinary vertex coloring (q3bsp)
 			mode = SHADERMODE_VERTEXCOLOR;
 		}
-		if (r_shadow_bouncegridtexture)
+		if (r_shadow_bouncegridtexture && cl.csqc_vidvars.drawworld)
 		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 			if (r_shadow_bouncegriddirectional)
