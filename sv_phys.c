@@ -919,7 +919,7 @@ static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 	trace_t trace;
 	contents = SV_GenericHitSuperContentsMask(ent);
 	VectorAdd(PRVM_serveredictvector(ent, origin), offset, org);
-	trace = SV_TraceBox(org, PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), PRVM_serveredictvector(ent, origin), MOVE_NOMONSTERS, ent, contents);
+	trace = SV_TraceBox(org, PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), PRVM_serveredictvector(ent, origin), ((PRVM_serveredictfloat(ent, movetype) == MOVETYPE_FLY_WORLDONLY) ? MOVE_WORLDONLY : MOVE_NOMONSTERS), ent, contents);
 	if (trace.startsupercontents & contents)
 		return true;
 	else
@@ -987,7 +987,8 @@ void SV_CheckAllEnts (void)
 		if (PRVM_serveredictfloat(check, movetype) == MOVETYPE_PUSH
 		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_NONE
 		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_FOLLOW
-		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_NOCLIP)
+		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_NOCLIP
+		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_FLY_WORLDONLY)
 			continue;
 
 		if (SV_TestEntityPosition (check, vec3_origin))
@@ -1598,6 +1599,8 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 
 	if (movetype == MOVETYPE_FLYMISSILE)
 		type = MOVE_MISSILE;
+	else if (movetype == MOVETYPE_FLY_WORLDONLY)
+		type = MOVE_WORLDONLY;
 	else if (solid == SOLID_TRIGGER || solid == SOLID_NOT)
 		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else
@@ -1785,6 +1788,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		case MOVETYPE_PUSH:
 		case MOVETYPE_FOLLOW:
 		case MOVETYPE_NOCLIP:
+		case MOVETYPE_FLY_WORLDONLY:
 			continue;
 		default:
 			break;
@@ -2286,6 +2290,8 @@ void SV_WalkMove (prvm_edict_t *ent)
 		VectorSet(downmove, PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2] - 1);
 		if (PRVM_serveredictfloat(ent, movetype) == MOVETYPE_FLYMISSILE)
 			type = MOVE_MISSILE;
+		else if (PRVM_serveredictfloat(ent, movetype) == MOVETYPE_FLY_WORLDONLY)
+			type = MOVE_WORLDONLY;
 		else if (PRVM_serveredictfloat(ent, solid) == SOLID_TRIGGER || PRVM_serveredictfloat(ent, solid) == SOLID_NOT)
 			type = MOVE_NOMONSTERS; // only clip against bmodels
 		else
@@ -2826,6 +2832,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	case MOVETYPE_BOUNCEMISSILE:
 	case MOVETYPE_FLYMISSILE:
 	case MOVETYPE_FLY:
+	case MOVETYPE_FLY_WORLDONLY:
 		// regular thinking
 		if (SV_RunThink (ent))
 			SV_Physics_Toss (ent);
@@ -2998,6 +3005,7 @@ static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_Physics_Toss (ent);
 		break;
 	case MOVETYPE_FLY:
+	case MOVETYPE_FLY_WORLDONLY:
 		SV_RunThink (ent);
 		SV_WalkMove (ent);
 		break;
