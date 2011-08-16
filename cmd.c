@@ -453,6 +453,7 @@ void Cmd_StuffCmds_f (void)
 static void Cmd_Exec(const char *filename)
 {
 	char *f;
+	qboolean isdefaultcfg = strlen(filename) >= 11 && !strcmp(filename + strlen(filename) - 11, "default.cfg");
 
 	if (!strcmp(filename, "config.cfg"))
 	{
@@ -472,7 +473,7 @@ static void Cmd_Exec(const char *filename)
 	// if executing default.cfg for the first time, lock the cvar defaults
 	// it may seem backwards to insert this text BEFORE the default.cfg
 	// but Cbuf_InsertText inserts before, so this actually ends up after it.
-	if (strlen(filename) >= 11 && !strcmp(filename + strlen(filename) - 11, "default.cfg"))
+	if (isdefaultcfg)
 		Cbuf_InsertText("\ncvar_lockdefaults\n");
 
 	// insert newline after the text to make sure the last line is terminated (some text editors omit the trailing newline)
@@ -481,23 +482,29 @@ static void Cmd_Exec(const char *filename)
 	Cbuf_InsertText (f);
 	Mem_Free(f);
 
-	// special defaults for specific games go here, these execute before default.cfg
-	// Nehahra pushable crates malfunction in some levels if this is on
-	// Nehahra NPC AI is confused by blowupfallenzombies
-	if (gamemode == GAME_NEHAHRA)
-		Cbuf_InsertText("\nsv_gameplayfix_upwardvelocityclearsongroundflag 0\nsv_gameplayfix_blowupfallenzombies 0\n\n");
-	// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
-	// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
-	// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
-	if (gamemode == GAME_HIPNOTIC)
-		Cbuf_InsertText("\nsv_gameplayfix_blowupfallenzombies 0\nsys_ticrate 0.02\nsv_gameplayfix_slidemoveprojectiles 0\n\n");
-	// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
-	if (gamemode == GAME_ROGUE)
-		Cbuf_InsertText("\nsv_gameplayfix_findradiusdistancetobox 0\n\n");
-	if (gamemode == GAME_NEXUIZ)
-		Cbuf_InsertText("\nsv_gameplayfix_q2airaccelerate 1\nsv_gameplayfix_stepmultipletimes 1\n\n");
-	if (gamemode == GAME_TENEBRAE)
-		Cbuf_InsertText("\nr_shadow_gloss 2\nr_shadow_bumpscale_basetexture 4\n\n");
+	if (isdefaultcfg)
+	{
+		// special defaults for specific games go here, these execute before default.cfg
+		// Nehahra pushable crates malfunction in some levels if this is on
+		// Nehahra NPC AI is confused by blowupfallenzombies
+		if (gamemode == GAME_NEHAHRA)
+			Cbuf_InsertText("\nsv_gameplayfix_upwardvelocityclearsongroundflag 0\nsv_gameplayfix_blowupfallenzombies 0\n\n");
+		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
+		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
+		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
+		if (gamemode == GAME_HIPNOTIC)
+			Cbuf_InsertText("\nsv_gameplayfix_blowupfallenzombies 0\nsys_ticrate 0.02\nsv_gameplayfix_slidemoveprojectiles 0\n\n");
+		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
+		if (gamemode == GAME_ROGUE)
+			Cbuf_InsertText("\nsv_gameplayfix_findradiusdistancetobox 0\n\n");
+		if (gamemode == GAME_NEXUIZ)
+			Cbuf_InsertText("\nsv_gameplayfix_q2airaccelerate 1\nsv_gameplayfix_stepmultipletimes 1\n\n");
+		if (gamemode == GAME_TENEBRAE)
+			Cbuf_InsertText("\nr_shadow_gloss 2\nr_shadow_bumpscale_basetexture 4\n\n");
+		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
+		if (gamemode == GAME_STEELSTORM)
+			Cbuf_InsertText("\ncl_csqc_generatemousemoveevents 0\n\n");
+	}
 }
 
 /*

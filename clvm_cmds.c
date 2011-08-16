@@ -1318,7 +1318,7 @@ static void VM_CL_setpause(void)
 		cl.csqc_paused = false;
 }
 
-//#343 void(float usecursor) setcursormode (EXT_CSQC)
+//#343 void(float usecursor) setcursormode (DP_CSQC)
 static void VM_CL_setcursormode (void)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_setcursormode);
@@ -1326,7 +1326,7 @@ static void VM_CL_setcursormode (void)
 	cl_ignoremousemoves = 2;
 }
 
-//#344 vector() getmousepos (EXT_CSQC)
+//#344 vector() getmousepos (DP_CSQC)
 static void VM_CL_getmousepos(void)
 {
 	VM_SAFEPARMCOUNT(0,VM_CL_getmousepos);
@@ -4409,8 +4409,8 @@ VM_print,						// #339 void(string s, ...) print (EXT_CSQC, DP_SV_PRINT)
 VM_keynumtostring,				// #340 string(float keynum) keynumtostring (EXT_CSQC)
 VM_stringtokeynum,				// #341 float(string keyname) stringtokeynum (EXT_CSQC)
 VM_getkeybind,					// #342 string(float keynum[, float bindmap]) getkeybind (EXT_CSQC)
-VM_CL_setcursormode,			// #343 void(float usecursor) setcursormode (EXT_CSQC)
-VM_CL_getmousepos,				// #344 vector() getmousepos (EXT_CSQC)
+VM_CL_setcursormode,			// #343 void(float usecursor) setcursormode (DP_CSQC)
+VM_CL_getmousepos,				// #344 vector() getmousepos (DP_CSQC)
 VM_CL_getinputstate,			// #345 float(float framenum) getinputstate (EXT_CSQC)
 VM_CL_setsensitivityscale,		// #346 void(float sens) setsensitivityscale (EXT_CSQC)
 VM_CL_runplayerphysics,			// #347 void() runstandardplayerphysics (EXT_CSQC)
