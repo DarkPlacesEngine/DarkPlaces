@@ -457,6 +457,8 @@ cvar_t cl_netimmediatebuttons = {CVAR_SAVE, "cl_netimmediatebuttons", "1", "send
 
 cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
+cvar_t cl_csqc_generatemousemoveevents = {0, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
+
 extern cvar_t v_flipped;
 
 /*
@@ -516,6 +518,7 @@ CL_Input
 Send the intended movement message to the server
 ================
 */
+extern qboolean CL_VM_InputEvent (int eventtype, int x, int y);
 void CL_Input (void)
 {
 	float mx, my;
@@ -561,6 +564,27 @@ void CL_Input (void)
 
 	// allow mice or other external controllers to add to the move
 	IN_Move ();
+
+	// send mouse move to csqc
+	if (cl.csqc_loaded && cl_csqc_generatemousemoveevents.integer)
+	{
+		if (cl.csqc_wantsmousemove)
+		{
+			// event type 3 is a DP_CSQC thing
+			static int oldwindowmouse[2];
+			if (oldwindowmouse[0] != in_windowmouse_x || oldwindowmouse[1] != in_windowmouse_y)
+			{
+				CL_VM_InputEvent(3, in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height);
+				oldwindowmouse[0] = in_windowmouse_x;
+				oldwindowmouse[1] = in_windowmouse_y;
+			}
+		}
+		else
+		{
+			if (in_mouse_x || in_mouse_y)
+				CL_VM_InputEvent(2, in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height);
+		}
+	}
 
 	// apply m_accelerate if it is on
 	if(m_accelerate.value > 1)
@@ -2234,5 +2258,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_netimmediatebuttons);
 
 	Cvar_RegisterVariable(&cl_nodelta);
+
+	Cvar_RegisterVariable(&cl_csqc_generatemousemoveevents);
 }
 
