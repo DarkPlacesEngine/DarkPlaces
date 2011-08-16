@@ -1771,7 +1771,10 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 // see if any solid entities are inside the final position
 	num_moved = 0;
 
-	numcheckentities = World_EntitiesInBox(&sv.world, mins, maxs, MAX_EDICTS, checkentities);
+	if (PRVM_serveredictfloat(pusher, movetype) == MOVETYPE_FAKEPUSH) // Tenebrae's MOVETYPE_PUSH variant that doesn't push...
+		numcheckentities = 0;
+	else // MOVETYPE_PUSH
+		numcheckentities = World_EntitiesInBox(&sv.world, mins, maxs, MAX_EDICTS, checkentities);
 	for (e = 0;e < numcheckentities;e++)
 	{
 		prvm_edict_t *check = checkentities[e];
@@ -1782,7 +1785,6 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		case MOVETYPE_PUSH:
 		case MOVETYPE_FOLLOW:
 		case MOVETYPE_NOCLIP:
-		case MOVETYPE_FAKEPUSH:
 			continue;
 		default:
 			break;
