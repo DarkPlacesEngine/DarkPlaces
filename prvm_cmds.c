@@ -3355,22 +3355,23 @@ void VM_drawcharacter(void)
 =========
 VM_drawstring
 
-float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
+float	drawstring(vector position, string text, vector scale, vector rgb, float alpha[, float flag])
 =========
 */
 void VM_drawstring(void)
 {
 	float *pos,*scale,*rgb;
 	const char  *string;
-	int flag;
+	int flag = 0;
 	float sx, sy;
-	VM_SAFEPARMCOUNT(6,VM_drawstring);
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawstring);
 
 	string = PRVM_G_STRING(OFS_PARM1);
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
-	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	if (prog->argc >= 6)
+		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
