@@ -645,7 +645,7 @@
 "uniform highp float FogHeightFade;\n"
 "vec3 FogVertex(vec4 surfacecolor)\n"
 "{\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE) || defined(USEBOUNCEGRIDDIRECTIONAL)\n"
 "	vec3 EyeVectorModelSpace = vec3(VectorS.w, VectorT.w, VectorR.w);\n"
 "#endif\n"
 "	float FogPlaneVertexDist = EyeVectorFogDepth.w;\n"
