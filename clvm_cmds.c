@@ -790,6 +790,8 @@ void VM_CL_R_AddEntity (void)
 //#303 float(float property, ...) setproperty (EXT_CSQC)
 //#303 float(float property) getproperty
 //#303 vector(float property) getpropertyvec
+//#309 float(float property) getproperty
+//#309 vector(float property) getpropertyvec
 // VorteX: make this function be able to return previously set property if new value is not given
 void VM_CL_R_SetView (void)
 {
@@ -4375,7 +4377,7 @@ VM_CL_R_AddDynamicLight,		// #305 void(vector org, float radius, vector lightcol
 VM_CL_R_PolygonBegin,			// #306 void(string texturename, float flag, float is2d[NYI: , float lines]) R_BeginPolygon
 VM_CL_R_PolygonVertex,			// #307 void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
 VM_CL_R_PolygonEnd,				// #308 void() R_EndPolygon
-NULL /* R_LoadWorldModel in menu VM, should stay unassigned in client*/, // #309
+VM_CL_R_SetView,				// #309 float(float property) getproperty (EXT_CSQC)
 VM_CL_unproject,				// #310 vector (vector v) cs_unproject (EXT_CSQC)
 VM_CL_project,					// #311 vector (vector v) cs_project (EXT_CSQC)
 NULL,							// #312
