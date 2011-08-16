@@ -4390,7 +4390,7 @@ VM_getimagesize,				// #318 vector(string picname) draw_getimagesize (EXT_CSQC)
 VM_freepic,						// #319 void(string name) freepic (EXT_CSQC)
 VM_drawcharacter,				// #320 float(vector position, float character, vector scale, vector rgb, float alpha, float flag) drawcharacter (EXT_CSQC)
 VM_drawstring,					// #321 float(vector position, string text, vector scale, vector rgb, float alpha[, float flag]) drawstring (EXT_CSQC, DP_CSQC)
-VM_drawpic,						// #322 float(vector position, string pic, vector size, vector rgb, float alpha, float flag) drawpic (EXT_CSQC)
+VM_drawpic,						// #322 float(vector position, string pic, vector size, vector rgb, float alpha[, float flag]) drawpic (EXT_CSQC)
 VM_drawfill,					// #323 float(vector position, vector size, vector rgb, float alpha, float flag) drawfill (EXT_CSQC)
 VM_drawsetcliparea,				// #324 void(float x, float y, float width, float height) drawsetcliparea
 VM_drawresetcliparea,			// #325 void(void) drawresetcliparea
