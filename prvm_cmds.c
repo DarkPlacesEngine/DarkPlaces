@@ -3699,9 +3699,9 @@ void VM_drawpic(void)
 {
 	const char *picname;
 	float *size, *pos, *rgb;
-	int flag;
+	int flag = 0;
 
-	VM_SAFEPARMCOUNT(6,VM_drawpic);
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawpic);
 
 	picname = PRVM_G_STRING(OFS_PARM1);
 	VM_CheckEmptyString (picname);
@@ -3717,7 +3717,8 @@ void VM_drawpic(void)
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	size = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
-	flag = (int) PRVM_G_FLOAT(OFS_PARM5);
+	if (prog->argc >= 6)
+		flag = (int) PRVM_G_FLOAT(OFS_PARM5);
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
