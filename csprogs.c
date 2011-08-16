@@ -427,7 +427,11 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	return true;
 }
 
-qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
+// 0 = keydown, key, character (EXT_CSQC)
+// 1 = keyup, key, character (EXT_CSQC)
+// 2 = mousemove relative, x, y (EXT_CSQC)
+// 3 = mousemove absolute, x, y (DP_CSQC)
+qboolean CL_VM_InputEvent (int eventtype, int x, int y)
 {
 	qboolean r;
 
@@ -441,9 +445,9 @@ qboolean CL_VM_InputEvent (qboolean down, int key, int ascii)
 		{
 			PRVM_clientglobalfloat(time) = cl.time;
 			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
-			PRVM_G_FLOAT(OFS_PARM0) = !down; // 0 is down, 1 is up
-			PRVM_G_FLOAT(OFS_PARM1) = key;
-			PRVM_G_FLOAT(OFS_PARM2) = ascii;
+			PRVM_G_FLOAT(OFS_PARM0) = eventtype;
+			PRVM_G_FLOAT(OFS_PARM1) = x; // key or x
+			PRVM_G_FLOAT(OFS_PARM2) = y; // ascii or y
 			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_InputEvent), "QC function CSQC_InputEvent is missing");
 			r = CSQC_RETURNVAL != 0;
 		}
