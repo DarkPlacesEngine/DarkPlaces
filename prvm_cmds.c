@@ -5884,7 +5884,7 @@ void VM_uri_get (void)
 	handle->prognr = PRVM_GetProgNr();
 	handle->starttime = prog->starttime;
 	handle->id = id;
-	if(postseparator)
+	if(postseparator && posttype && *posttype)
 	{
 		size_t l = strlen(postseparator);
 		if(poststringbuffer >= 0)
