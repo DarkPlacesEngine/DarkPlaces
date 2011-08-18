@@ -782,7 +782,7 @@ static void Crypto_LoadKeys(void)
 						len2 = FP64_SIZE;
 						if(qd0_blind_id_fingerprint64_public_id(pubkeys[i], pubkeys_priv_fp64[i], &len2)) // keeps final NUL
 						{
-							Con_Printf("Loaded private ID key_%d.d0si for key_%d.d0pk (fingerprint: %s)\n", i, i, pubkeys_priv_fp64[i]);
+							Con_Printf("Loaded private ID key_%d.d0si for key_%d.d0pk (public key fingerprint: %s)\n", i, i, pubkeys_priv_fp64[i]);
 							pubkeys_havepriv[i] = true;
 							strlcat(crypto_idstring_buf, va(" %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
 						}
@@ -1043,7 +1043,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	len2 = FP64_SIZE;
 	if(qd0_blind_id_fingerprint64_public_id(pubkeys[keygen_i], pubkeys_priv_fp64[keygen_i], &len2)) // keeps final NUL
 	{
-		Con_Printf("Received private ID key_%d.d0pk (fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
+		Con_Printf("Received private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
 		pubkeys_havepriv[keygen_i] = true;
 		strlcat(crypto_idstring_buf, va(" %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
 		crypto_idstring = crypto_idstring_buf;
@@ -1185,7 +1185,7 @@ static void Crypto_Keys_f(void)
 		{
 			Con_Printf("%2d: public key key_%d.d0pk (fingerprint: %s)\n", i, i, pubkeys_fp64[i]);
 			if(pubkeys_havepriv[i])
-				Con_Printf("    private ID key_%d.d0si (fingerprint: %s)\n", i, pubkeys_priv_fp64[i]);
+				Con_Printf("    private ID key_%d.d0si (public key fingerprint: %s)\n", i, pubkeys_priv_fp64[i]);
 		}
 	}
 }
