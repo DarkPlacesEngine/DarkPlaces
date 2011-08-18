@@ -263,7 +263,7 @@ static cvar_t sys_usequeryperformancecounter = {CVAR_SAVE, "sys_usequeryperforma
 static cvar_t sys_useclockgettime = {CVAR_SAVE, "sys_useclockgettime", "0", "use POSIX clock_gettime function (which has issues if the system clock speed is far off, as it can't get fixed by NTP) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
 #endif
 
-static unsigned long benchmark_time;
+static double benchmark_time; // actually always contains an integer amount of milliseconds, will eventually "overflow"
 
 void Sys_Init_Commands (void)
 {
@@ -291,8 +291,11 @@ double Sys_DoubleTime(void)
 	double newtime;
 	if(sys_usenoclockbutbenchmark.integer)
 	{
+		double old_benchmark_time = benchmark_time;
 		benchmark_time += 1;
-		return ((double) benchmark_time) / 1e6;
+		if(benchmark_time == old_benchmark_time)
+			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
+		return benchmark_time * 0.000001;
 	}
 
 	// first all the OPTIONAL timers
@@ -417,7 +420,13 @@ void Sys_Sleep(int microseconds)
 	double t = 0;
 	if(sys_usenoclockbutbenchmark.integer)
 	{
-		benchmark_time += microseconds;
+		if(microseconds)
+		{
+			double old_benchmark_time = benchmark_time;
+			benchmark_time += microseconds;
+			if(benchmark_time == old_benchmark_time)
+				Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
+		}
 		return;
 	}
 	if(sys_debugsleep.integer)
