@@ -951,10 +951,11 @@ qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t le
 	return false;
 }
 
+extern cvar_t csqc_usedemoprogs;
 void CL_VM_Init (void)
 {
 	const char* csprogsfn;
-	unsigned char *csprogsdata;
+	unsigned char *csprogsdata = NULL;
 	fs_offset_t csprogsdatasize;
 	int csprogsdatacrc, requiredcrc;
 	int requiredsize;
@@ -972,8 +973,11 @@ void CL_VM_Init (void)
 
 	// see if the requested csprogs.dat file matches the requested crc
 	csprogsdatacrc = -1;
-	csprogsfn = va("dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc);
-	csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
+	if (!cls.demoplayback || csqc_usedemoprogs.integer)
+	{
+		csprogsfn = va("dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc);
+		csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
+	}
 	if (!csprogsdata)
 	{
 		csprogsfn = csqc_progname.string;
