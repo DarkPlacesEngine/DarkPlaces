@@ -452,6 +452,9 @@ typedef struct q3shaderinfo_s
 	// add collisions to all triangles of the surface
 	qboolean dpmeshcollisions;
 
+	// kill shader based on cvar checks
+	qboolean dpshaderkill;
+
 	// fake reflection
 	char dpreflectcube[Q3PATHLENGTH];
 
