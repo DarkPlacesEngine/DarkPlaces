@@ -1573,15 +1573,31 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	{
 		if (strcasecmp (entry->shader.name, shader->name) == 0)
 		{
-			unsigned char *start, *end, *start2;
-			start = (unsigned char *) (&shader->Q3SHADERINFO_COMPARE_START);
-			end = ((unsigned char *) (&shader->Q3SHADERINFO_COMPARE_END)) + sizeof(shader->Q3SHADERINFO_COMPARE_END);
-			start2 = (unsigned char *) (&entry->shader.Q3SHADERINFO_COMPARE_START);
-			if(memcmp(start, start2, end - start))
-				Con_DPrintf("Shader '%s' already defined, ignoring mismatching redeclaration\n", shader->name);
+			// redeclaration
+			if(shader->dpshaderkill)
+			{
+				// killed shader is a redeclarion? we can safely ignore it
+				return;
+			}
+			else if(entry->shader.dpshaderkill)
+			{
+				// replace the old shader!
+				// this will skip the entry allocating part
+				// below and just replace the shader
+				break;
+			}
 			else
-				Con_DPrintf("Shader '%s' already defined\n", shader->name);
-			return;
+			{
+				unsigned char *start, *end, *start2;
+				start = (unsigned char *) (&shader->Q3SHADERINFO_COMPARE_START);
+				end = ((unsigned char *) (&shader->Q3SHADERINFO_COMPARE_END)) + sizeof(shader->Q3SHADERINFO_COMPARE_END);
+				start2 = (unsigned char *) (&entry->shader.Q3SHADERINFO_COMPARE_START);
+				if(memcmp(start, start2, end - start))
+					Con_DPrintf("Shader '%s' already defined, ignoring mismatching redeclaration\n", shader->name);
+				else
+					Con_DPrintf("Shader '%s' already defined\n", shader->name);
+				return;
+			}
 		}
 		lastEntry = entry;
 		entry = entry->chain;
@@ -1623,6 +1639,7 @@ void Mod_LoadQ3Shaders(void)
 	char *custsurfaceparmnames[256]; // VorteX: q3map2 has 64 but well, someone will need more
 	unsigned long custsurfaceparms[256]; 
 	int numcustsurfaceparms;
+	qboolean dpshaderkill;
 
 	Mod_FreeQ3Shaders();
 
@@ -2079,15 +2096,57 @@ void Mod_LoadQ3Shaders(void)
 					strlcpy(shader.dpreflectcube, parameter[1], sizeof(shader.dpreflectcube));
 				else if (!strcasecmp(parameter[0], "dpmeshcollisions"))
 					shader.dpmeshcollisions = true;
-				else if (!strcasecmp(parameter[0], "dpshaderkillifcvarzero") && numparameters >= 2)
+				// this sets dpshaderkill to true if dpshaderkillifcvarzero was used, and to false if dpnoshaderkillifcvarzero was used
+				else if (((dpshaderkill = !strcasecmp(parameter[0], "dpshaderkillifcvarzero")) || !strcasecmp(parameter[0], "dpnoshaderkillifcvarzero")) && numparameters >= 2)
 				{
 					if (Cvar_VariableValue(parameter[1]) == 0.0f)
-						shader.dpshaderkill = true;
+						shader.dpshaderkill = dpshaderkill;
 				}
-				else if (!strcasecmp(parameter[0], "dpshaderkillifcvar") && numparameters >= 2)
+				// this sets dpshaderkill to true if dpshaderkillifcvar was used, and to false if dpnoshaderkillifcvar was used
+				else if (((dpshaderkill = !strcasecmp(parameter[0], "dpshaderkillifcvar")) || !strcasecmp(parameter[0], "dpnoshaderkillifcvar")) && numparameters >= 2)
 				{
-					if (Cvar_VariableValue(parameter[1]) != 0.0f)
-						shader.dpshaderkill = true;
+					const char *operator = NULL;
+					if (numparameters >= 3)
+						operator = parameter[2];
+					if(!operator)
+					{
+						if (Cvar_VariableValue(parameter[1]) != 0.0f)
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, "=="))
+					{
+						if (Cvar_VariableValue(parameter[1]) == atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, "!="))
+					{
+						if (Cvar_VariableValue(parameter[1]) != atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, ">"))
+					{
+						if (Cvar_VariableValue(parameter[1]) > atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, "<"))
+					{
+						if (Cvar_VariableValue(parameter[1]) < atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, ">="))
+					{
+						if (Cvar_VariableValue(parameter[1]) >= atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else if (numparameters >= 4 && !strcmp(operator, "<="))
+					{
+						if (Cvar_VariableValue(parameter[1]) <= atof(parameter[3]))
+							shader.dpshaderkill = dpshaderkill;
+					}
+					else
+					{
+						Con_DPrintf("%s parsing warning: unknown dpshaderkillifcvar operator \"%s\", or not enough arguments\n", search->filenames[fileindex], operator);
+					}
 				}
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
