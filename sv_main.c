@@ -426,6 +426,7 @@ void SV_Init (void)
 	extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 	extern cvar_t csqc_progcrc;
 	extern cvar_t csqc_progsize;
+	extern cvar_t csqc_usedemoprogs;
 
 	Cvar_RegisterVariable(&sv_worldmessage);
 	Cvar_RegisterVariable(&sv_worldname);
@@ -435,6 +436,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_progname);
 	Cvar_RegisterVariable (&csqc_progcrc);
 	Cvar_RegisterVariable (&csqc_progsize);
+	Cvar_RegisterVariable (&csqc_usedemoprogs);
 
 	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
 	Cmd_AddCommand("sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
