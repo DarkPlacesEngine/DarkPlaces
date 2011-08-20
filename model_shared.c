@@ -2079,6 +2079,16 @@ void Mod_LoadQ3Shaders(void)
 					strlcpy(shader.dpreflectcube, parameter[1], sizeof(shader.dpreflectcube));
 				else if (!strcasecmp(parameter[0], "dpmeshcollisions"))
 					shader.dpmeshcollisions = true;
+				else if (!strcasecmp(parameter[0], "dpshaderkillifcvarzero") && numparameters >= 2)
+				{
+					if (Cvar_VariableValue(parameter[1]) == 0.0f)
+						shader.dpshaderkill = true;
+				}
+				else if (!strcasecmp(parameter[0], "dpshaderkillifcvar") && numparameters >= 2)
+				{
+					if (Cvar_VariableValue(parameter[1]) != 0.0f)
+						shader.dpshaderkill = true;
+				}
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
 				{
 					// some q3 skies don't have the sky parm set
@@ -2211,6 +2221,9 @@ void Mod_LoadQ3Shaders(void)
 					}
 				}
 			}
+			// hide this shader if a cvar said it should be killed
+			if (shader.dpshaderkill)
+				shader.numlayers = 0;
 			// pick the primary layer to render with
 			if (shader.numlayers)
 			{
@@ -2490,6 +2503,8 @@ nothing                GL_ZERO GL_ONE
 
 		if (shader->dpmeshcollisions)
 			texture->basematerialflags |= MATERIALFLAG_MESHCOLLISIONS;
+		if (shader->dpshaderkill && developer_extra.integer)
+			Con_DPrintf("^1%s:^7 killing shader ^3\"%s\" because of cvar\n", loadmodel->name, name);
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
