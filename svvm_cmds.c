@@ -1101,6 +1101,7 @@ VM_SV_droptofloor
 void() droptofloor
 ===============
 */
+
 static void VM_SV_droptofloor (void)
 {
 	prvm_edict_t		*ent;
@@ -1128,7 +1129,8 @@ static void VM_SV_droptofloor (void)
 	end[2] -= 256;
 
 	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
-		SV_UnstickEntity(ent);
+		if (sv_gameplayfix_unstickentities.integer)
+			SV_UnstickEntity(ent);
 
 	trace = SV_TraceBox(PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 	if (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer)
@@ -1141,7 +1143,8 @@ static void VM_SV_droptofloor (void)
 		if (trace.startsolid)
 		{
 			Con_DPrintf("droptofloor at %f %f %f - COULD NOT FIX BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
-			SV_UnstickEntity(ent);
+			if (sv_gameplayfix_unstickentities.integer)
+				SV_UnstickEntity(ent);
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = 0;
@@ -1151,7 +1154,8 @@ static void VM_SV_droptofloor (void)
 		{
 			Con_DPrintf("droptofloor at %f %f %f - FIXED BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
 			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
-			SV_UnstickEntity(ent);
+			if (sv_gameplayfix_unstickentities.integer)
+				SV_UnstickEntity(ent);
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);

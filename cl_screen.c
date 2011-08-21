@@ -1612,17 +1612,16 @@ static void SCR_DrawTouchscreenOverlay(void)
 	}
 }
 
-extern void R_UpdateFogColor(void);
+extern void R_UpdateFog(void);
 void R_ClearScreen(qboolean fogcolor)
 {
 	float clearcolor[4];
 	// clear to black
 	Vector4Clear(clearcolor);
-	if (fogcolor)
+	if (fogcolor && r_fog_clear.integer)
 	{
-		R_UpdateFogColor();
-		if (r_fog_clear.integer)
-			VectorCopy(r_refdef.fogcolor, clearcolor);
+		R_UpdateFog();
+		VectorCopy(r_refdef.fogcolor, clearcolor);
 	}
 	// clear depth is 1.0
 	// LordHavoc: we use a stencil centered around 128 instead of 0,

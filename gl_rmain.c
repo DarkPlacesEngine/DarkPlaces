@@ -127,6 +127,7 @@ cvar_t r_fog_exp2 = {0, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rat
 cvar_t r_fog_clear = {0, "r_fog_clear", "1", "clears renderbuffer with fog color before render starts"};
 cvar_t r_drawfog = {CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
 cvar_t r_transparentdepthmasking = {CVAR_SAVE, "r_transparentdepthmasking", "0", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
+cvar_t r_transparent_sortmindist = {CVAR_SAVE, "r_transparent_sortmindist", "0", "lower distance limit for transparent sorting"};
 cvar_t r_transparent_sortmaxdist = {CVAR_SAVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
 cvar_t r_transparent_sortarraysize = {CVAR_SAVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
 
@@ -4285,6 +4286,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fog_clear);
 	Cvar_RegisterVariable(&r_drawfog);
 	Cvar_RegisterVariable(&r_transparentdepthmasking);
+	Cvar_RegisterVariable(&r_transparent_sortmindist);
 	Cvar_RegisterVariable(&r_transparent_sortmaxdist);
 	Cvar_RegisterVariable(&r_transparent_sortarraysize);
 	Cvar_RegisterVariable(&r_texture_dds_load);
@@ -6578,8 +6580,70 @@ static void R_BlendView(void)
 
 matrix4x4_t r_waterscrollmatrix;
 
-void R_UpdateFogColor(void) // needs to be called before HDR subrender too, as that changes colorscale!
+void R_UpdateFog(void) // needs to be called before HDR subrender too, as that changes colorscale!
 {
+	// Nehahra fog
+	if (gamemode == GAME_NEHAHRA)
+	{
+		if (gl_fogenable.integer)
+		{
+			r_refdef.oldgl_fogenable = true;
+			r_refdef.fog_density = gl_fogdensity.value;
+			r_refdef.fog_red = gl_fogred.value;
+			r_refdef.fog_green = gl_foggreen.value;
+			r_refdef.fog_blue = gl_fogblue.value;
+			r_refdef.fog_alpha = 1;
+			r_refdef.fog_start = 0;
+			r_refdef.fog_end = gl_skyclip.value;
+			r_refdef.fog_height = 1<<30;
+			r_refdef.fog_fadedepth = 128;
+		}
+		else if (r_refdef.oldgl_fogenable)
+		{
+			r_refdef.oldgl_fogenable = false;
+			r_refdef.fog_density = 0;
+			r_refdef.fog_red = 0;
+			r_refdef.fog_green = 0;
+			r_refdef.fog_blue = 0;
+			r_refdef.fog_alpha = 0;
+			r_refdef.fog_start = 0;
+			r_refdef.fog_end = 0;
+			r_refdef.fog_height = 1<<30;
+			r_refdef.fog_fadedepth = 128;
+		}
+	}
+
+	// fog parms
+	r_refdef.fog_alpha = bound(0, r_refdef.fog_alpha, 1);
+	r_refdef.fog_start = max(0, r_refdef.fog_start);
+	r_refdef.fog_end = max(r_refdef.fog_start + 0.01, r_refdef.fog_end);
+
+	if (r_refdef.fog_density && r_drawfog.integer)
+	{
+		r_refdef.fogenabled = true;
+		// this is the point where the fog reaches 0.9986 alpha, which we
+		// consider a good enough cutoff point for the texture
+		// (0.9986 * 256 == 255.6)
+		if (r_fog_exp2.integer)
+			r_refdef.fogrange = 32 / (r_refdef.fog_density * r_refdef.fog_density) + r_refdef.fog_start;
+		else
+			r_refdef.fogrange = 2048 / r_refdef.fog_density + r_refdef.fog_start;
+		r_refdef.fogrange = bound(r_refdef.fog_start, r_refdef.fogrange, r_refdef.fog_end);
+		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
+		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
+		if (strcmp(r_refdef.fogheighttexturename, r_refdef.fog_height_texturename))
+			R_BuildFogHeightTexture();
+		// fog color was already set
+		// update the fog texture
+		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha || r_refdef.fogmasktable_density != r_refdef.fog_density || r_refdef.fogmasktable_range != r_refdef.fogrange)
+			R_BuildFogTexture();
+		r_refdef.fog_height_texcoordscale = 1.0f / max(0.125f, r_refdef.fog_fadedepth);
+		r_refdef.fog_height_tablescale = r_refdef.fog_height_tablesize * r_refdef.fog_height_texcoordscale;
+	}
+	else
+		r_refdef.fogenabled = false;
+
+	// fog color
 	if (r_refdef.fog_density)
 	{
 		r_refdef.fogcolor[0] = r_refdef.fog_red;
@@ -6638,67 +6702,6 @@ void R_UpdateVariables(void)
 		r_refdef.scene.rtdlightshadows = false;
 		r_refdef.lightmapintensity = 0;
 	}
-
-	if (gamemode == GAME_NEHAHRA)
-	{
-		if (gl_fogenable.integer)
-		{
-			r_refdef.oldgl_fogenable = true;
-			r_refdef.fog_density = gl_fogdensity.value;
-			r_refdef.fog_red = gl_fogred.value;
-			r_refdef.fog_green = gl_foggreen.value;
-			r_refdef.fog_blue = gl_fogblue.value;
-			r_refdef.fog_alpha = 1;
-			r_refdef.fog_start = 0;
-			r_refdef.fog_end = gl_skyclip.value;
-			r_refdef.fog_height = 1<<30;
-			r_refdef.fog_fadedepth = 128;
-		}
-		else if (r_refdef.oldgl_fogenable)
-		{
-			r_refdef.oldgl_fogenable = false;
-			r_refdef.fog_density = 0;
-			r_refdef.fog_red = 0;
-			r_refdef.fog_green = 0;
-			r_refdef.fog_blue = 0;
-			r_refdef.fog_alpha = 0;
-			r_refdef.fog_start = 0;
-			r_refdef.fog_end = 0;
-			r_refdef.fog_height = 1<<30;
-			r_refdef.fog_fadedepth = 128;
-		}
-	}
-
-	r_refdef.fog_alpha = bound(0, r_refdef.fog_alpha, 1);
-	r_refdef.fog_start = max(0, r_refdef.fog_start);
-	r_refdef.fog_end = max(r_refdef.fog_start + 0.01, r_refdef.fog_end);
-
-	// R_UpdateFogColor(); // why? R_RenderScene does it anyway
-
-	if (r_refdef.fog_density && r_drawfog.integer)
-	{
-		r_refdef.fogenabled = true;
-		// this is the point where the fog reaches 0.9986 alpha, which we
-		// consider a good enough cutoff point for the texture
-		// (0.9986 * 256 == 255.6)
-		if (r_fog_exp2.integer)
-			r_refdef.fogrange = 32 / (r_refdef.fog_density * r_refdef.fog_density) + r_refdef.fog_start;
-		else
-			r_refdef.fogrange = 2048 / r_refdef.fog_density + r_refdef.fog_start;
-		r_refdef.fogrange = bound(r_refdef.fog_start, r_refdef.fogrange, r_refdef.fog_end);
-		r_refdef.fograngerecip = 1.0f / r_refdef.fogrange;
-		r_refdef.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * r_refdef.fograngerecip;
-		if (strcmp(r_refdef.fogheighttexturename, r_refdef.fog_height_texturename))
-			R_BuildFogHeightTexture();
-		// fog color was already set
-		// update the fog texture
-		if (r_refdef.fogmasktable_start != r_refdef.fog_start || r_refdef.fogmasktable_alpha != r_refdef.fog_alpha || r_refdef.fogmasktable_density != r_refdef.fog_density || r_refdef.fogmasktable_range != r_refdef.fogrange)
-			R_BuildFogTexture();
-		r_refdef.fog_height_texcoordscale = 1.0f / max(0.125f, r_refdef.fog_fadedepth);
-		r_refdef.fog_height_tablescale = r_refdef.fog_height_tablesize * r_refdef.fog_height_texcoordscale;
-	}
-	else
-		r_refdef.fogenabled = false;
 
 	switch(vid.renderpath)
 	{
@@ -6980,7 +6983,7 @@ void R_RenderScene(void)
 
 	r_refdef.stats.renders++;
 
-	R_UpdateFogColor();
+	R_UpdateFog();
 
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)

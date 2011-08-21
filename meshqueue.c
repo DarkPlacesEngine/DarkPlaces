@@ -17,6 +17,7 @@ int trans_sortarraysize;
 meshqueue_t **trans_hash = NULL;
 meshqueue_t ***trans_hashpointer = NULL;
 extern cvar_t r_transparent_sortarraysize;
+extern cvar_t r_transparent_sortmindist;
 extern cvar_t r_transparent_sortmaxdist;
 
 float mqt_viewplanedist;
@@ -73,8 +74,10 @@ void R_MeshQueue_RenderTransparent(void)
 	// check for bad cvars
 	if (r_transparent_sortarraysize.integer < 1 || r_transparent_sortarraysize.integer > 32768)
 		Cvar_SetValueQuick(&r_transparent_sortarraysize, bound(1, r_transparent_sortarraysize.integer, 32768));
-	if (r_transparent_sortmaxdist.integer < 1 || r_transparent_sortmaxdist.integer > 32768)
-		Cvar_SetValueQuick(&r_transparent_sortmaxdist, bound(1, r_transparent_sortmaxdist.integer, 32768));
+	if (r_transparent_sortmindist.integer < 1 || r_transparent_sortmindist.integer >= r_transparent_sortmaxdist.integer)
+		Cvar_SetValueQuick(&r_transparent_sortmindist, 0);
+	if (r_transparent_sortmaxdist.integer < r_transparent_sortmindist.integer || r_transparent_sortmaxdist.integer > 32768)
+		Cvar_SetValueQuick(&r_transparent_sortmaxdist, bound(r_transparent_sortmindist.integer, r_transparent_sortmaxdist.integer, 32768));
 
 	// update hash array
 	if (trans_sortarraysize != r_transparent_sortarraysize.integer)
@@ -96,7 +99,7 @@ void R_MeshQueue_RenderTransparent(void)
 	maxhashindex = trans_sortarraysize - 1;
 	for (i = 0, mqt = mqt_array; i < mqt_count; i++, mqt++)
 	{
-		hashindex = bound(0, (int)(min(mqt->dist, r_transparent_sortmaxdist.integer) * distscale), maxhashindex);
+		hashindex = bound(0, (int)(bound(0, mqt->dist - r_transparent_sortmindist.integer, r_transparent_sortmaxdist.integer) * distscale), maxhashindex);
 		// link to tail of hash chain (to preserve render order)
 		mqt->next = NULL;
 		*trans_hashpointer[hashindex] = mqt;
