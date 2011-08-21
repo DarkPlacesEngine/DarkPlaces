@@ -889,6 +889,38 @@ void VM_CL_R_SetView (void)
 		case VF_CLEARSCREEN:
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.isoverlay;
 			break;
+		case VF_FOG_DENSITY:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_density;
+			break;
+		case VF_FOG_COLOR:
+			PRVM_G_VECTOR(OFS_RETURN)[0] = r_refdef.fog_red;
+			PRVM_G_VECTOR(OFS_RETURN)[1] = r_refdef.fog_green;
+			PRVM_G_VECTOR(OFS_RETURN)[2] = r_refdef.fog_blue;
+			break;
+		case VF_FOG_COLOR_R:
+			PRVM_G_VECTOR(OFS_RETURN)[0] = r_refdef.fog_red;
+			break;
+		case VF_FOG_COLOR_G:
+			PRVM_G_VECTOR(OFS_RETURN)[1] = r_refdef.fog_green;
+			break;
+		case VF_FOG_COLOR_B:
+			PRVM_G_VECTOR(OFS_RETURN)[2] = r_refdef.fog_blue;
+			break;
+		case VF_FOG_ALPHA:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_alpha;
+			break;
+		case VF_FOG_START:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_start;
+			break;
+		case VF_FOG_END:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_end;
+			break;
+		case VF_FOG_HEIGHT:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_height;
+			break;
+		case VF_FOG_FADEDEPTH:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_fadedepth;
+			break;
 		default:
 			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			VM_Warning("VM_CL_R_GetView : unknown parm %i\n", c);
@@ -1003,6 +1035,38 @@ void VM_CL_R_SetView (void)
 		break;
 	case VF_CLEARSCREEN:
 		r_refdef.view.isoverlay = !k;
+		break;
+	case VF_FOG_DENSITY:
+		r_refdef.fog_density = k;
+		break;
+	case VF_FOG_COLOR:
+		r_refdef.fog_red = f[0];
+		r_refdef.fog_green = f[1];
+		r_refdef.fog_blue = f[2];
+		break;
+	case VF_FOG_COLOR_R:
+		r_refdef.fog_red = k;
+		break;
+	case VF_FOG_COLOR_G:
+		r_refdef.fog_green = k;
+		break;
+	case VF_FOG_COLOR_B:
+		r_refdef.fog_blue = k;
+		break;
+	case VF_FOG_ALPHA:
+		r_refdef.fog_alpha = k;
+		break;
+	case VF_FOG_START:
+		r_refdef.fog_start = k;
+		break;
+	case VF_FOG_END:
+		r_refdef.fog_end = k;
+		break;
+	case VF_FOG_HEIGHT:
+		r_refdef.fog_height = k;
+		break;
+	case VF_FOG_FADEDEPTH:
+		r_refdef.fog_fadedepth = k;
 		break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -3034,6 +3098,7 @@ void VM_CL_R_RenderScene (void)
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
 	CL_UpdateViewEntities();
+
 	// now draw stuff!
 	R_RenderView();
 

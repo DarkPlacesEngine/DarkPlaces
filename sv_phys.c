@@ -2264,7 +2264,8 @@ void SV_WalkMove (prvm_edict_t *ent)
 	if (sv.frametime <= 0)
 		return;
 
-	SV_CheckStuck (ent);
+	if (sv_gameplayfix_unstickplayers.integer)
+		SV_CheckStuck (ent);
 
 	applygravity = !SV_CheckWater (ent) && PRVM_serveredictfloat(ent, movetype) == MOVETYPE_WALK && ! ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP);
 
@@ -2544,6 +2545,7 @@ SV_Physics_Toss
 Toss, bounce, and fly movement.  When onground, do nothing.
 =============
 */
+
 void SV_Physics_Toss (prvm_edict_t *ent)
 {
 	trace_t trace;
@@ -2604,7 +2606,8 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		if (trace.bmodelstartsolid)
 		{
 			// try to unstick the entity
-			SV_UnstickEntity(ent);
+			if (sv_gameplayfix_unstickentities.integer)
+				SV_UnstickEntity(ent);
 			if(!SV_PushEntity (&trace, ent, move, false, true))
 				return; // teleported
 			if (ent->priv.server->free)
