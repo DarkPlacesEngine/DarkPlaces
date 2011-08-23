@@ -413,8 +413,8 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 		!(
 			   gameversion_min.integer >= 0 // min/max range set by user/mod?
 			&& gameversion_max.integer >= 0
-			&& gameversion_min.integer >= entry->info.gameversion // version of server in min/max range?
-			&& gameversion_max.integer <= entry->info.gameversion
+			&& gameversion_min.integer <= entry->info.gameversion // version of server in min/max range?
+			&& gameversion_max.integer >= entry->info.gameversion
 		 )
 	)
 		return;
@@ -1498,8 +1498,8 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 			 !(
 				    gameversion_min.integer >= 0 // min/max range set by user/mod?
 				 && gameversion_max.integer >= 0
-				 && gameversion_min.integer >= info->gameversion // version of server in min/max range?
-				 && gameversion_max.integer <= info->gameversion
+				 && gameversion_min.integer <= info->gameversion // version of server in min/max range?
+				 && gameversion_max.integer >= info->gameversion
 			  )
 			) ? '1' : '4',
 			info->mod, info->map);
