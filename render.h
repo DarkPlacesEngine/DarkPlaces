@@ -191,6 +191,8 @@ extern cvar_t r_textureunits;
 extern cvar_t r_glsl_offsetmapping;
 extern cvar_t r_glsl_offsetmapping_reliefmapping;
 extern cvar_t r_glsl_offsetmapping_scale;
+extern cvar_t r_glsl_offsetmapping_lod;
+extern cvar_t r_glsl_offsetmapping_lod_distance;
 extern cvar_t r_glsl_deluxemapping;
 
 extern cvar_t gl_polyblend;
