@@ -99,6 +99,7 @@ cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "
 cvar_t r_cullentities_trace_tempentitysamples = {0, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
 cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+cvar_t r_sortentities = {0, "r_sortentities", "0", "sort entities before drawing (might be faster)"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
 cvar_t r_fullbright = {0, "r_fullbright","0", "makes map very bright and renders faster"};
 
@@ -4213,6 +4214,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_cullentities_trace_tempentitysamples);
 	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
 	Cvar_RegisterVariable(&r_cullentities_trace_delay);
+	Cvar_RegisterVariable(&r_sortentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_drawexteriormodel);
 	Cvar_RegisterVariable(&r_speeds);
@@ -6734,6 +6736,37 @@ r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
 	}
 }
 
+int R_SortEntities_Compare(const void *ap, const void *bp)
+{
+	const entity_render_t *a = *(const entity_render_t **)ap;
+	const entity_render_t *b = *(const entity_render_t **)bp;
+
+	// 1. compare model
+	if(a->model < b->model)
+		return -1;
+	if(a->model > b->model)
+		return +1;
+
+	// 2. compare skin
+	// TODO possibly calculate the REAL skinnum here first using
+	// skinscenes?
+	if(a->skinnum < b->skinnum)
+		return -1;
+	if(a->skinnum > b->skinnum)
+		return +1;
+
+	// everything we compared is equal
+	return 0;
+}
+void R_SortEntities(void)
+{
+	// below or equal 2 ents, sorting never gains anything
+	if(r_refdef.scene.numentities <= 2)
+		return;
+	// sort
+	qsort(r_refdef.scene.entities, r_refdef.scene.numentities, sizeof(*r_refdef.scene.entities), R_SortEntities_Compare);
+}
+
 /*
 ================
 R_RenderView
@@ -6758,6 +6791,8 @@ void R_RenderView(void)
 
 	if (!r_drawentities.integer)
 		r_refdef.scene.numentities = 0;
+	else if (r_sortentities.integer)
+		R_SortEntities();
 
 	R_AnimCache_ClearCache();
 	R_FrameData_NewFrame();
