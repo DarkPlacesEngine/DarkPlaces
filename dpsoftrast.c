@@ -167,7 +167,7 @@ typedef ALIGN(struct DPSOFTRAST_State_Command_Pool_s
 {
 	int freecommand;
 	int usedcommands;
-	ATOMIC(unsigned char commands[DPSOFTRAST_DRAW_MAXCOMMANDPOOL]);
+	ALIGN(unsigned char commands[DPSOFTRAST_DRAW_MAXCOMMANDPOOL]);
 }
 DPSOFTRAST_State_Command_Pool);
 
