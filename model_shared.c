@@ -2105,47 +2105,47 @@ void Mod_LoadQ3Shaders(void)
 				// this sets dpshaderkill to true if dpshaderkillifcvar was used, and to false if dpnoshaderkillifcvar was used
 				else if (((dpshaderkill = !strcasecmp(parameter[0], "dpshaderkillifcvar")) || !strcasecmp(parameter[0], "dpnoshaderkillifcvar")) && numparameters >= 2)
 				{
-					const char *operator = NULL;
+					const char *op = NULL;
 					if (numparameters >= 3)
-						operator = parameter[2];
-					if(!operator)
+						op = parameter[2];
+					if(!op)
 					{
 						if (Cvar_VariableValue(parameter[1]) != 0.0f)
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, "=="))
+					else if (numparameters >= 4 && !strcmp(op, "=="))
 					{
 						if (Cvar_VariableValue(parameter[1]) == atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, "!="))
+					else if (numparameters >= 4 && !strcmp(op, "!="))
 					{
 						if (Cvar_VariableValue(parameter[1]) != atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, ">"))
+					else if (numparameters >= 4 && !strcmp(op, ">"))
 					{
 						if (Cvar_VariableValue(parameter[1]) > atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, "<"))
+					else if (numparameters >= 4 && !strcmp(op, "<"))
 					{
 						if (Cvar_VariableValue(parameter[1]) < atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, ">="))
+					else if (numparameters >= 4 && !strcmp(op, ">="))
 					{
 						if (Cvar_VariableValue(parameter[1]) >= atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
-					else if (numparameters >= 4 && !strcmp(operator, "<="))
+					else if (numparameters >= 4 && !strcmp(op, "<="))
 					{
 						if (Cvar_VariableValue(parameter[1]) <= atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else
 					{
-						Con_DPrintf("%s parsing warning: unknown dpshaderkillifcvar operator \"%s\", or not enough arguments\n", search->filenames[fileindex], operator);
+						Con_DPrintf("%s parsing warning: unknown dpshaderkillifcvar op \"%s\", or not enough arguments\n", search->filenames[fileindex], op);
 					}
 				}
 				else if (!strcasecmp(parameter[0], "sky") && numparameters >= 2)
