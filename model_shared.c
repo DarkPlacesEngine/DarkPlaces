@@ -2364,6 +2364,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	texture->offsetscale = 1;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1; 
+	texture->rtlightambient = 0;
 	// WHEN ADDING DEFAULTS HERE, REMEMBER TO SYNC TO SHADER LOADING ABOVE
 	// HERE, AND Q1BSP LOADING
 	// JUST GREP FOR "specularscalemod = 1".
