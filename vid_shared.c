@@ -199,7 +199,6 @@ cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of w
 cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "0", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above), values are 0 = off, 1 = attempt to use hardware gamma, 2 = use hardware gamma whether it works or not"};
 cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
 cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
-
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
 
 // brand of graphics chip

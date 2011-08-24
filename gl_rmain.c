@@ -714,8 +714,8 @@ shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_FAKELIGHT\n", " fakelight"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
+	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
 	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_REFRACTION\n", " refraction"},
@@ -1916,12 +1916,12 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		permutation |= SHADERPERMUTATION_SPECULAR;
 	if (texturemode == GL_MODULATE)
 		permutation |= SHADERPERMUTATION_COLORMAPPING;
-	if (usegamma && v_glslgamma.integer && v_glslgamma_2d.integer && !vid.sRGB2D && r_texture_gammaramps && !vid_gammatables_trivial)
-		permutation |= SHADERPERMUTATION_GAMMARAMPS;
 	else if (texturemode == GL_ADD)
 		permutation |= SHADERPERMUTATION_GLOW;
 	else if (texturemode == GL_DECAL)
 		permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+	if (usegamma && v_glslgamma.integer && v_glslgamma_2d.integer && !vid.sRGB2D && r_texture_gammaramps && !vid_gammatables_trivial)
+		permutation |= SHADERPERMUTATION_GAMMARAMPS;
 	if (!second)
 		texturemode = GL_MODULATE;
 	if (vid.allowalphatocoverage)
@@ -7877,6 +7877,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	}
 	t->specularscale *= t->specularscalemod;
 	t->specularpower *= t->specularpowermod;
+	t->rtlightambient = 0;
 
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
 	// off the colormap and glossmap, but leave the normalmap on as it still
