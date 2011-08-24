@@ -15,13 +15,13 @@ typedef qboolean bool;
 #endif
 
 #define ALIGN_SIZE 16
-#define ATOMIC_SIZE 32
+#define ATOMIC_SIZE 4
 
 #ifdef SSE_POSSIBLE
 	#if defined(__APPLE__)
 		#include <libkern/OSAtomic.h>
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
-		#define ATOMIC(var) var __attribute__((__aligned__(32)))
+		#define ATOMIC(var) var __attribute__((__aligned__(4)))
 		#define MEMORY_BARRIER (_mm_sfence())
 		#define ATOMIC_COUNTER volatile int32_t 
 		#define ATOMIC_INCREMENT(counter) (OSAtomicIncrement32Barrier(&(counter)))
@@ -29,7 +29,7 @@ typedef qboolean bool;
 		#define ATOMIC_ADD(counter, val) ((void)OSAtomicAdd32Barrier((val), &(counter)))
 	#elif defined(__GNUC__) && defined(WIN32)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
-		#define ATOMIC(var) var __attribute__((__aligned__(32)))
+		#define ATOMIC(var) var __attribute__((__aligned__(4)))
 		#define MEMORY_BARRIER (_mm_sfence())
 		//(__sync_synchronize())
 		#define ATOMIC_COUNTER volatile LONG
@@ -43,7 +43,7 @@ typedef qboolean bool;
 		#define ATOMIC_ADD(counter, val) ((void)InterlockedExchangeAdd((LONG *) &(counter), (val)))
 	#elif defined(__GNUC__)
 		#define ALIGN(var) var __attribute__((__aligned__(16)))
-		#define ATOMIC(var) var __attribute__((__aligned__(32)))
+		#define ATOMIC(var) var __attribute__((__aligned__(4)))
 		#define MEMORY_BARRIER (_mm_sfence())
 		//(__sync_synchronize())
 		#define ATOMIC_COUNTER volatile int
@@ -52,7 +52,7 @@ typedef qboolean bool;
 		#define ATOMIC_ADD(counter, val) ((void)__sync_fetch_and_add(&(counter), (val)))
 	#elif defined(_MSC_VER)
 		#define ALIGN(var) __declspec(align(16)) var
-		#define ATOMIC(var) __declspec(align(32)) var
+		#define ATOMIC(var) __declspec(align(4)) var
 		#define MEMORY_BARRIER (_mm_sfence())
 		//(MemoryBarrier())
 		#define ATOMIC_COUNTER volatile LONG
@@ -91,11 +91,11 @@ typedef qboolean bool;
 	#define _mm_cvtss_f32(val) (__builtin_ia32_vec_ext_v4sf ((__v4sf)(val), 0))
 #endif
 
-#define MM_MALLOC(size) _mm_malloc(size, ATOMIC_SIZE)
+#define MM_MALLOC(size) _mm_malloc(size, ALIGNED_SIZE)
 
 static void *MM_CALLOC(size_t nmemb, size_t size)
 {
-	void *ptr = _mm_malloc(nmemb*size, ATOMIC_SIZE);
+	void *ptr = _mm_malloc(nmemb*size, ALIGNED_SIZE);
 	if (ptr != NULL) memset(ptr, 0, nmemb*size);
 	return ptr;
 }
@@ -163,7 +163,7 @@ enum { DPSOFTRAST_OPCODE_Reset = 0 };
 #define DPSOFTRAST_DRAW_MAXCOMMANDPOOL 2097152
 #define DPSOFTRAST_DRAW_MAXCOMMANDSIZE 16384
 
-typedef ATOMIC(struct DPSOFTRAST_State_Command_Pool_s
+typedef ALIGN(struct DPSOFTRAST_State_Command_Pool_s
 {
 	int freecommand;
 	int usedcommands;
@@ -171,7 +171,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Command_Pool_s
 }
 DPSOFTRAST_State_Command_Pool);
 
-typedef ATOMIC(struct DPSOFTRAST_State_Triangle_s
+typedef ALIGN(struct DPSOFTRAST_State_Triangle_s
 {
 	unsigned char mip[DPSOFTRAST_MAXTEXTUREUNITS]; // texcoord to screen space density values (for picking mipmap of textures)
 	float w[3];
@@ -236,7 +236,7 @@ typedef enum DPSOFTRAST_BLENDMODE_e
 }
 DPSOFTRAST_BLENDMODE;
 
-typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
+typedef ALIGN(struct DPSOFTRAST_State_Thread_s
 {
 	void *thread;
 	int index;
@@ -302,7 +302,7 @@ typedef ATOMIC(struct DPSOFTRAST_State_Thread_s
 }
 DPSOFTRAST_State_Thread);
 
-typedef ATOMIC(struct DPSOFTRAST_State_s
+typedef ALIGN(struct DPSOFTRAST_State_s
 {
 	int fb_width;
 	int fb_height;
