@@ -91,11 +91,11 @@ typedef qboolean bool;
 	#define _mm_cvtss_f32(val) (__builtin_ia32_vec_ext_v4sf ((__v4sf)(val), 0))
 #endif
 
-#define MM_MALLOC(size) _mm_malloc(size, ALIGNED_SIZE)
+#define MM_MALLOC(size) _mm_malloc(size, ALIGN_SIZE)
 
 static void *MM_CALLOC(size_t nmemb, size_t size)
 {
-	void *ptr = _mm_malloc(nmemb*size, ALIGNED_SIZE);
+	void *ptr = _mm_malloc(nmemb*size, ALIGN_SIZE);
 	if (ptr != NULL) memset(ptr, 0, nmemb*size);
 	return ptr;
 }
