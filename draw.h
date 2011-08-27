@@ -45,6 +45,8 @@ typedef struct cachepic_s
 	qboolean hasalpha;
 	// name of pic
 	char name[MAX_QPATH];
+	// allow to override/free the texture
+	qboolean allow_free_tex;
 }
 cachepic_t;
 

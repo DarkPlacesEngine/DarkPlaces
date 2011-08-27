@@ -361,22 +361,30 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		return cachepics; // return the first one
 	}
 	pic = cachepics + (numcachepics++);
+	memset(pic, 0, sizeof(*pic));
 	strlcpy (pic->name, path, sizeof(pic->name));
 	// link into list
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;
 
 reload:
+	// TODO why does this crash?
+	if(pic->allow_free_tex && pic->tex)
+		R_PurgeTexture(pic->tex);
+
 	// check whether it is an dynamic texture (if so, we can directly use its texture handler)
 	pic->flags = cachepicflags;
 	pic->tex = CL_GetDynTexture( path );
 	// if so, set the width/height, too
 	if( pic->tex ) {
+		pic->allow_free_tex = false;
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
 		// we're done now (early-out)
 		return pic;
 	}
+
+	pic->allow_free_tex = true;
 
 	pic->hasalpha = true; // assume alpha unless we know it has none
 	pic->texflags = texflags;
@@ -490,6 +498,7 @@ reload:
 		pic->tex = draw_generatepic(pic->name, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
 		pic->width = R_TextureWidth(pic->tex);
 		pic->height = R_TextureHeight(pic->tex);
+		pic->allow_free_tex = (pic->tex != r_texture_notexture);
 	}
 
 	return pic;
@@ -573,26 +582,24 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 	}
 	else
 	{
-		if (pic == NULL)
+		if (numcachepics == MAX_CACHED_PICS)
 		{
-			if (numcachepics == MAX_CACHED_PICS)
-			{
-				Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS\n");
-				// FIXME: support NULL in callers?
-				return cachepics; // return the first one
-			}
-			pic = cachepics + (numcachepics++);
-			strlcpy (pic->name, picname, sizeof(pic->name));
-			// link into list
-			pic->chain = cachepichash[hashkey];
-			cachepichash[hashkey] = pic;
+			Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS\n");
+			// FIXME: support NULL in callers?
+			return cachepics; // return the first one
 		}
+		pic = cachepics + (numcachepics++);
+		memset(pic, 0, sizeof(*pic));
+		strlcpy (pic->name, picname, sizeof(pic->name));
+		// link into list
+		pic->chain = cachepichash[hashkey];
+		cachepichash[hashkey] = pic;
 	}
 
 	pic->flags = CACHEPICFLAG_NEWPIC; // disable texflags checks in Draw_CachePic
 	pic->width = width;
 	pic->height = height;
-	if (pic->tex)
+	if (pic->allow_free_tex && pic->tex)
 		R_FreeTexture(pic->tex);
 	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, (alpha ? TEXF_ALPHA : 0), -1, NULL);
 	return pic;
