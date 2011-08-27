@@ -3195,7 +3195,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 
 	hashindex = CRC_Block((unsigned char *)basename, strlen(basename)) & (SKINFRAME_HASH - 1);
 	for (item = r_skinframe.hash[hashindex];item;item = item->next)
-		if (!strcmp(item->basename, basename) && item->textureflags == textureflags && item->comparewidth == comparewidth && item->compareheight == compareheight && item->comparecrc == comparecrc)
+		if (!strcmp(item->basename, basename) && (comparecrc < 0 || (item->textureflags == textureflags && item->comparewidth == comparewidth && item->compareheight == compareheight && item->comparecrc == comparecrc)))
 			break;
 
 	if (!item) {
@@ -3208,12 +3208,34 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		memset(item, 0, sizeof(*item));
 		strlcpy(item->basename, basename, sizeof(item->basename));
 		item->base = dyntexture; // either NULL or dyntexture handle
-		item->textureflags = textureflags;
+		item->textureflags = textureflags & ~TEXF_FORCE_RELOAD;
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
 		item->comparecrc = comparecrc;
 		item->next = r_skinframe.hash[hashindex];
 		r_skinframe.hash[hashindex] = item;
+	}
+	else if (textureflags & TEXF_FORCE_RELOAD)
+	{
+		rtexture_t *dyntexture;
+		// check whether its a dynamic texture
+		dyntexture = CL_GetDynTexture( basename );
+		if (!add && !dyntexture)
+			return NULL;
+		if (item->merged == item->base)
+			item->merged = NULL;
+		// FIXME: maybe pass a pointer to the pointer to R_PurgeTexture and reset it to NULL inside? [11/29/2007 Black]
+		R_PurgeTexture(item->stain );item->stain  = NULL;
+		R_PurgeTexture(item->merged);item->merged = NULL;
+		R_PurgeTexture(item->base  );item->base   = NULL;
+		R_PurgeTexture(item->pants );item->pants  = NULL;
+		R_PurgeTexture(item->shirt );item->shirt  = NULL;
+		R_PurgeTexture(item->nmap  );item->nmap   = NULL;
+		R_PurgeTexture(item->gloss );item->gloss  = NULL;
+		R_PurgeTexture(item->glow  );item->glow   = NULL;
+		R_PurgeTexture(item->fog   );item->fog    = NULL;
+	R_PurgeTexture(item->reflect);item->reflect = NULL;
+		item->loadsequence = 0;
 	}
 	else if( item->base == NULL )
 	{
@@ -3309,6 +3331,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	// we've got some pixels to store, so really allocate this new texture now
 	if (!skinframe)
 		skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, true);
+	textureflags &= ~TEXF_FORCE_RELOAD;
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
 	skinframe->base = NULL;
@@ -3492,9 +3515,10 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height*4) : 0, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (textureflags & TEXF_FORCE_RELOAD) ? -1 : skindata ? CRC_Block(skindata, width*height*4) : 0, true);
 	if (skinframe && skinframe->base)
 		return skinframe;
+	textureflags &= ~TEXF_FORCE_RELOAD;
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
@@ -3564,6 +3588,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
 	if (skinframe && skinframe->base)
 		return skinframe;
+	textureflags &= ~TEXF_FORCE_RELOAD;
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
@@ -3685,6 +3710,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
 	if (skinframe && skinframe->base)
 		return skinframe;
+	textureflags &= ~TEXF_FORCE_RELOAD;
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
