@@ -34,6 +34,8 @@
 #define TEXF_RENDERTARGET 0x0010000
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_RGBMULTIPLYBYALPHA | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR | TEXF_PICMIP | TEXF_COMPRESS | TEXF_COMPARE | TEXF_LOWPRECISION | TEXF_RENDERTARGET)
+// set as a flag to force the texture to be reloaded
+#define TEXF_FORCE_RELOAD 0x80000000
 
 typedef enum textype_e
 {
