@@ -3842,7 +3842,6 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				DPSOFTRAST_Vector3Normalize(eyenormal);
 
 				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
-				specular = pow(specular, 0.25f + SpecularPower * glosstex[3]);
 			}
 			else
 			{
@@ -3857,8 +3856,8 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
 				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
-				specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 			}
+			specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 
 			if (thread->shader_permutation & SHADERPERMUTATION_GLOW)
 			{
@@ -4252,7 +4251,6 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 				DPSOFTRAST_Vector3Normalize(eyenormal);
 
 				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
-				specular = pow(specular, 0.25f + SpecularPower * glosstex[3]);
 			}
 			else
 			{
@@ -4267,8 +4265,8 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
 				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
-				specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 			}
+			specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 
 			if (thread->shader_permutation & SHADERPERMUTATION_CUBEFILTER)
 			{
