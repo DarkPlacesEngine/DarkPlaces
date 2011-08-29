@@ -107,8 +107,6 @@ static void *MM_CALLOC(size_t nmemb, size_t size)
 #define MM_FREE free
 #endif
 
-#define DPSOFTRAST_FLT_MIN 0.000000000000000001f
-
 typedef enum DPSOFTRAST_ARRAY_e
 {
 	DPSOFTRAST_ARRAY_POSITION,
@@ -3844,6 +3842,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				DPSOFTRAST_Vector3Normalize(eyenormal);
 
 				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = pow(specular, 0.25f + SpecularPower * glosstex[3]);
 			}
 			else
 			{
@@ -3857,10 +3856,10 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				specularnormal[2] = lightnormal[2] + eyenormal[2];
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
-				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < DPSOFTRAST_FLT_MIN) specular = DPSOFTRAST_FLT_MIN;
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 			}
 
-			specular = pow(specular, SpecularPower * glosstex[3]);
 			if (thread->shader_permutation & SHADERPERMUTATION_GLOW)
 			{
 				d[0] = (int)(buffer_texture_glowbgra8[x*4+0] * Color_Glow[0] + diffusetex[0] * Color_Ambient[0] + (diffusetex[0] * Color_Diffuse[0] * diffuse + glosstex[0] * Color_Specular[0] * specular) * LightColor[0]);if (d[0] > 255) d[0] = 255;
@@ -4253,6 +4252,7 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 				DPSOFTRAST_Vector3Normalize(eyenormal);
 
 				specular = DPSOFTRAST_Vector3Dot(eyenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = pow(specular, 0.25f + SpecularPower * glosstex[3]);
 			}
 			else
 			{
@@ -4266,9 +4266,9 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 				specularnormal[2] = lightnormal[2] + eyenormal[2];
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
-				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < DPSOFTRAST_FLT_MIN) specular = DPSOFTRAST_FLT_MIN;
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = pow(specular, 1.0f + SpecularPower * glosstex[3]);
 			}
-			specular = pow(specular, SpecularPower * glosstex[3]);
 
 			if (thread->shader_permutation & SHADERPERMUTATION_CUBEFILTER)
 			{
