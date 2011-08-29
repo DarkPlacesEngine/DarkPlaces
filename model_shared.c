@@ -1623,6 +1623,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 
 extern cvar_t mod_noshader_default_offsetmapping;
 extern cvar_t mod_q3shader_default_offsetmapping;
+extern cvar_t mod_q3shader_default_offsetmapping_bias;
 extern cvar_t mod_q3shader_default_polygonoffset;
 extern cvar_t mod_q3shader_default_polygonfactor;
 void Mod_LoadQ3Shaders(void)
@@ -1714,6 +1715,7 @@ void Mod_LoadQ3Shaders(void)
 			shader.r_water_wateralpha = 1;
 			shader.offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
 			shader.offsetscale = 1;
+			shader.offsetbias = bound(0, mod_q3shader_default_offsetmapping_bias.integer, 255);
 			shader.specularscalemod = 1;
 			shader.specularpowermod = 1;
 			shader.biaspolygonoffset = mod_q3shader_default_polygonoffset.value;
@@ -2228,17 +2230,20 @@ void Mod_LoadQ3Shaders(void)
 				{
 					shader.rtlightambient = atof(parameter[1]);
 				}
-				else if (!strcasecmp(parameter[0], "dpoffsetmapping") && numparameters >= 3)
+				else if (!strcasecmp(parameter[0], "dpoffsetmapping") && numparameters >= 2)
 				{
 					if (!strcasecmp(parameter[1], "disable") || !strcasecmp(parameter[1], "none") || !strcasecmp(parameter[1], "off"))
 						shader.offsetmapping = OFFSETMAPPING_OFF;
-					else if (!strcasecmp(parameter[1], "default"))
+					else if (!strcasecmp(parameter[1], "default") || !strcasecmp(parameter[1], "normal"))
 						shader.offsetmapping = OFFSETMAPPING_DEFAULT;
 					else if (!strcasecmp(parameter[1], "linear"))
 						shader.offsetmapping = OFFSETMAPPING_LINEAR;
 					else if (!strcasecmp(parameter[1], "relief"))
 						shader.offsetmapping = OFFSETMAPPING_RELIEF;
-					shader.offsetscale = atof(parameter[2]);
+					if (numparameters >= 3)
+						shader.offsetscale = atof(parameter[2]);
+					if (numparameters >= 4)
+						shader.offsetbias = bound(0, atoi(parameter[3]), 255);
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
@@ -2362,6 +2367,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	// unless later loaded from the shader
 	texture->offsetmapping = (mod_noshader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
 	texture->offsetscale = 1;
+	texture->offsetbias = 0;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1; 
 	texture->rtlightambient = 0;
@@ -2512,6 +2518,7 @@ nothing                GL_ZERO GL_ONE
 		Vector2Copy(shader->r_water_waterscroll, texture->r_water_waterscroll);
 		texture->offsetmapping = shader->offsetmapping;
 		texture->offsetscale = shader->offsetscale;
+		texture->offsetbias = shader->offsetbias;
 		texture->specularscalemod = shader->specularscalemod;
 		texture->specularpowermod = shader->specularpowermod;
 		texture->rtlightambient = shader->rtlightambient;

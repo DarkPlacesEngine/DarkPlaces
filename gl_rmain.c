@@ -828,6 +828,7 @@ typedef struct r_glsl_permutation_s
 	int loc_LightPosition;
 	int loc_OffsetMapping_ScaleSteps;
 	int loc_OffsetMapping_LodDistance;
+	int loc_OffsetMapping_Bias;
 	int loc_PixelSize;
 	int loc_ReflectColor;
 	int loc_ReflectFactor;
@@ -1150,6 +1151,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_LightPosition              = qglGetUniformLocation(p->program, "LightPosition");
 		p->loc_OffsetMapping_ScaleSteps   = qglGetUniformLocation(p->program, "OffsetMapping_ScaleSteps");
 		p->loc_OffsetMapping_LodDistance  = qglGetUniformLocation(p->program, "OffsetMapping_LodDistance");
+		p->loc_OffsetMapping_Bias         = qglGetUniformLocation(p->program, "OffsetMapping_Bias");
 		p->loc_PixelSize                  = qglGetUniformLocation(p->program, "PixelSize");
 		p->loc_ReflectColor               = qglGetUniformLocation(p->program, "ReflectColor");
 		p->loc_ReflectFactor              = qglGetUniformLocation(p->program, "ReflectFactor");
@@ -1390,6 +1392,7 @@ typedef enum D3DPSREGISTER_e
 	D3DPSREGISTER_ModelToReflectCube = 48, // float4x4
 	D3DPSREGISTER_NormalmapScrollBlend = 52,
 	D3DPSREGISTER_OffsetMapping_LodDistance = 53,
+	D3DPSREGISTER_OffsetMapping_Bias = 54,
 	// next at 54
 }
 D3DPSREGISTER_t;
@@ -2629,6 +2632,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
 			);
 		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer)
+		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_Bias, rsurface.texture->offsetbias / 255)
 		hlslPSSetParameter2f(D3DPSREGISTER_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
 
@@ -2790,6 +2794,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
 			);
 		if (r_glsl_permutation->loc_OffsetMapping_LodDistance >= 0) qglUniform1f(r_glsl_permutation->loc_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer);
+		if (r_glsl_permutation->loc_OffsetMapping_Bias >= 0) qglUniform1f(r_glsl_permutation->loc_OffsetMapping_Bias, rsurface.texture->offsetbias / 255);
 		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2f(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 		if (r_glsl_permutation->loc_BounceGridMatrix >= 0) {Matrix4x4_Concat(&tempmatrix, &r_shadow_bouncegridmatrix, &rsurface.matrix);Matrix4x4_ToArrayFloatGL(&tempmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BounceGridMatrix, 1, false, m16f);}
@@ -2935,6 +2940,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				1.0 / max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
 			);
+		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer);
+		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_OffsetMapping_Bias, rsurface.texture->offsetbias / 255);
 		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
