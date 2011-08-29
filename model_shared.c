@@ -1969,7 +1969,23 @@ void Mod_LoadQ3Shaders(void)
 							shader.textureblendalpha = true;
 						}
 					}
-					layer->texflags = TEXF_ALPHA;
+					layer->texflags = 0;
+					if (layer->alphatest)
+						layer->texflags |= TEXF_ALPHA;
+					switch(layer->blendfunc[0])
+					{
+						case GL_SRC_ALPHA:
+						case GL_ONE_MINUS_SRC_ALPHA:
+							layer->texflags |= TEXF_ALPHA;
+							break;
+					}
+					switch(layer->blendfunc[1])
+					{
+						case GL_SRC_ALPHA:
+						case GL_ONE_MINUS_SRC_ALPHA:
+							layer->texflags |= TEXF_ALPHA;
+							break;
+					}
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
 					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
