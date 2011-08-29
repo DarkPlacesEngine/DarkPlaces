@@ -107,6 +107,8 @@ static void *MM_CALLOC(size_t nmemb, size_t size)
 #define MM_FREE free
 #endif
 
+#define DPSOFTRAST_FLT_MIN 0.000000000000000001f
+
 typedef enum DPSOFTRAST_ARRAY_e
 {
 	DPSOFTRAST_ARRAY_POSITION,
@@ -3855,7 +3857,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 				specularnormal[2] = lightnormal[2] + eyenormal[2];
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
-				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < DPSOFTRAST_FLT_MIN) specular = DPSOFTRAST_FLT_MIN;
 			}
 
 			specular = pow(specular, SpecularPower * glosstex[3]);
@@ -4264,7 +4266,7 @@ void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, const D
 				specularnormal[2] = lightnormal[2] + eyenormal[2];
 				DPSOFTRAST_Vector3Normalize(specularnormal);
 
-				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < 0.0f) specular = 0.0f;
+				specular = DPSOFTRAST_Vector3Dot(surfacenormal, specularnormal);if (specular < DPSOFTRAST_FLT_MIN) specular = DPSOFTRAST_FLT_MIN;
 			}
 			specular = pow(specular, SpecularPower * glosstex[3]);
 
