@@ -787,6 +787,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	texture->currentmaterialflags = texture->basematerialflags;
 	texture->offsetmapping = OFFSETMAPPING_DEFAULT;
 	texture->offsetscale = 1;
+	texture->offsetbias = 0;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1;
 	texture->surfaceflags = 0;
