@@ -63,6 +63,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 		skinframe = R_SkinFrame_LoadMissing();
 	texture->offsetmapping = OFFSETMAPPING_OFF;
 	texture->offsetscale = 1;
+	texture->offsetbias = 0;
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1;
 	texture->basematerialflags = MATERIALFLAG_WALL;
