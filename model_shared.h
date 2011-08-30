@@ -616,7 +616,7 @@ typedef struct texture_s
 	// offsetmapping
 	dpoffsetmapping_technique_t offsetmapping;
 	float offsetscale;
-	unsigned char offsetbias;
+	float offsetbias;
 
 	// gloss
 	float specularscalemod;
