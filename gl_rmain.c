@@ -2631,8 +2631,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				1.0 / max(1, (permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) ? r_glsl_offsetmapping_reliefmapping_steps.integer : r_glsl_offsetmapping_steps.integer),
 				max(1, r_glsl_offsetmapping_reliefmapping_refinesteps.integer)
 			);
-		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer)
-		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_Bias, rsurface.texture->offsetbias)
+		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer);
+		hlslPSSetParameter1f(D3DPSREGISTER_OffsetMapping_Bias, rsurface.texture->offsetbias);
 		hlslPSSetParameter2f(D3DPSREGISTER_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
 
