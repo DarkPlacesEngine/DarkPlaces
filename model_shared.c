@@ -1623,6 +1623,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 
 extern cvar_t mod_noshader_default_offsetmapping;
 extern cvar_t mod_q3shader_default_offsetmapping;
+extern cvar_t mod_q3shader_default_offsetmapping_scale;
 extern cvar_t mod_q3shader_default_offsetmapping_bias;
 extern cvar_t mod_q3shader_default_polygonoffset;
 extern cvar_t mod_q3shader_default_polygonfactor;
@@ -1714,8 +1715,8 @@ void Mod_LoadQ3Shaders(void)
 			Vector4Set(shader.reflectcolor4f, 1, 1, 1, 1);
 			shader.r_water_wateralpha = 1;
 			shader.offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
-			shader.offsetscale = 1;
-			shader.offsetbias = bound(0, mod_q3shader_default_offsetmapping_bias.integer, 255);
+			shader.offsetscale = mod_q3shader_default_offsetmapping_scale.value;
+			shader.offsetbias = mod_q3shader_default_offsetmapping_bias.value;
 			shader.specularscalemod = 1;
 			shader.specularpowermod = 1;
 			shader.biaspolygonoffset = mod_q3shader_default_polygonoffset.value;
@@ -2259,7 +2260,7 @@ void Mod_LoadQ3Shaders(void)
 					if (numparameters >= 3)
 						shader.offsetscale = atof(parameter[2]);
 					if (numparameters >= 4)
-						shader.offsetbias = bound(0, atoi(parameter[3]), 255);
+						shader.offsetbias = atof(parameter[3]);
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
 				{
