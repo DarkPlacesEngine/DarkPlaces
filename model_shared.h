@@ -471,7 +471,7 @@ typedef struct q3shaderinfo_s
 	// offsetmapping
 	dpoffsetmapping_technique_t offsetmapping;
 	float offsetscale;
-	unsigned char offsetbias;
+	float offsetbias; // 0 is normal, 1 leads to alpha 0 being neutral and alpha 1 pushing "out"
 
 	// polygonoffset (only used if Q3TEXTUREFLAG_POLYGONOFFSET)
 	float biaspolygonoffset, biaspolygonfactor;
