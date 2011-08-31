@@ -1881,19 +1881,34 @@ int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsiz
 	if (userdirmode == USERDIRMODE_NOHOME && strcmp(gamedirname1, "id1"))
 		return 0; // don't bother checking if the basedir folder is writable, it's annoying...  unless it is Quake on Windows where NOHOME is the default preferred and we have to check for an error case
 #endif
+
 	// see if we can write to this path (note: won't create path)
-#if _MSC_VER >= 1400
+#ifdef WIN32
+# if _MSC_VER >= 1400
 	_sopen_s(&fd, va("%s%s/config.cfg", userdir, gamedirname1), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
-#else
+# else
 	fd = open (va("%s%s/config.cfg", userdir, gamedirname1), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
+# endif
+	if(fd >= 0)
+		close(fd);
+#else
+	// on Unix, we don't need to ACTUALLY attempt to open the file
+	if(access(va("%s%s/", userdir, gamedirname1), W_OK | X_OK) >= 0)
+		fd = 1;
+	else
+		fd = 0;
 #endif
 	if(fd >= 0)
 	{
-		close(fd);
 		return 1; // good choice - the path exists and is writable
 	}
 	else
-		return 0; // probably good - failed to write but maybe we need to create path
+	{
+		if (userdirmode == USERDIRMODE_NOHOME)
+			return -1; // path usually already exists, we lack permissions
+		else
+			return 0; // probably good - failed to write but maybe we need to create path
+	}
 }
 
 /*
