@@ -2262,13 +2262,13 @@ void Mod_LoadQ3Shaders(void)
 					if (numparameters >= 5)
 					{
 						if(!strcasecmp(parameter[3], "bias"))
-							shader.offsetbias = atof(parameter[3]);
+							shader.offsetbias = atof(parameter[4]);
 						else if(!strcasecmp(parameter[3], "match"))
-							shader.offsetbias = 1.0f - atof(parameter[3]);
+							shader.offsetbias = 1.0f - atof(parameter[4]);
 						else if(!strcasecmp(parameter[3], "match8"))
-							shader.offsetbias = 1.0f - atof(parameter[3]) / 255.0f;
+							shader.offsetbias = 1.0f - atof(parameter[4]) / 255.0f;
 						else if(!strcasecmp(parameter[3], "match16"))
-							shader.offsetbias = 1.0f - atof(parameter[3]) / 65535.0f;
+							shader.offsetbias = 1.0f - atof(parameter[4]) / 65535.0f;
 					}
 				}
 				else if (!strcasecmp(parameter[0], "deformvertexes") && numparameters >= 2)
