@@ -596,6 +596,10 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f (void)
 {
+	if (COM_CheckParm ("-noconsole"))
+		if (!(key_consoleactive & KEY_CONSOLEACTIVE_USER))
+			return; // only allow the key bind to turn off console
+
 	// toggle the 'user wants console' bit
 	key_consoleactive ^= KEY_CONSOLEACTIVE_USER;
 	Con_ClearNotify();
