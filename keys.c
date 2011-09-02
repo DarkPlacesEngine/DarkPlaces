@@ -1899,6 +1899,10 @@ Key_Event (int key, int ascii, qboolean down)
 			Con_ToggleConsole_f ();
 			return;
 		}
+
+		if (COM_CheckParm ("-noconsole"))
+			return; // only allow the key bind to turn off console
+
 		Key_Console (key, ascii);
 		return;
 	}
