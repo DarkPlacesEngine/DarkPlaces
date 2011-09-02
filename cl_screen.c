@@ -966,6 +966,10 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);
 	Cvar_RegisterVariable(&vid_touchscreen_overlayalpha);
 
+	// if we want no console, turn it off here too
+	if (COM_CheckParm ("-noconsole"))
+		Cvar_SetQuick(&scr_conforcewhiledisconnected, "0");
+
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
