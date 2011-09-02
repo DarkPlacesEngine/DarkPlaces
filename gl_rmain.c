@@ -2184,7 +2184,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else if (rsurfacepass == RSURFPASS_DEFERREDGEOMETRY)
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
@@ -2205,7 +2205,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else if (rsurfacepass == RSURFPASS_RTLIGHT)
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
@@ -2251,7 +2251,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
@@ -2304,7 +2304,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT_DIRECTIONAL)
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
@@ -2367,7 +2367,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
@@ -2427,7 +2427,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	}
 	else
 	{
-		if (r_glsl_offsetmapping.integer)
+		if (r_glsl_offsetmapping.integer && (rsurface.texture->nmaptexture != r_texture_blanknormalmap || rsurface.texture->offsetbias != 0.0f))
 		{
 			switch(rsurface.texture->offsetmapping)
 			{
