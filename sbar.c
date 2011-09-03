@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "time.h"
+#include "cl_collision.h"
 
 cachepic_t *sb_disc;
 
@@ -97,6 +98,7 @@ cvar_t showtime = {CVAR_SAVE, "showtime", "0", "shows current time of day (usefu
 cvar_t showtime_format = {CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
 cvar_t showdate = {CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
 cvar_t showdate_format = {CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format string for date"};
+cvar_t showtex = {0, "showtex", "0", "shows the name of the texture on the crosshair (for map debugging)"};
 cvar_t sbar_alpha_bg = {CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
 cvar_t sbar_alpha_fg = {CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 cvar_t sbar_hudselector = {CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
@@ -386,6 +388,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&showtime_format);
 	Cvar_RegisterVariable(&showdate);
 	Cvar_RegisterVariable(&showdate_format);
+	Cvar_RegisterVariable(&showtex);
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
 	Cvar_RegisterVariable(&sbar_hudselector);
@@ -1114,6 +1117,7 @@ void Sbar_ShowFPS(void)
 	char speedstring[32];
 	char blurstring[32];
 	char topspeedstring[48];
+	char texstring[MAX_QPATH];
 	qboolean red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
@@ -1123,6 +1127,7 @@ void Sbar_ShowFPS(void)
 	datestring[0] = 0;
 	speedstring[0] = 0;
 	blurstring[0] = 0;
+	texstring[0] = 0;
 	topspeedstring[0] = 0;
 	if (showfps.integer)
 	{
@@ -1200,6 +1205,22 @@ void Sbar_ShowFPS(void)
 			fps_strings++;
 		}
 	}
+	if (showtex.integer)
+	{
+		vec3_t dest;
+		trace_t trace;
+
+		VectorMA(r_refdef.view.origin, 65536, r_refdef.view.forward, dest);
+		trace.hittexture = NULL; // to make sure
+		// TODO change this trace to be stopped by anything "visible" (i.e. with a drawsurface), but not stuff like weapclip
+		// probably needs adding a new SUPERCONTENTS type
+		trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, true, false, NULL, true, true);
+		if(trace.hittexture)
+			strlcpy(texstring, trace.hittexture->name, sizeof(texstring));
+		else
+			strlcpy(texstring, "(no texture hit)", sizeof(texstring));
+		fps_strings++;
+	}
 	if (fps_strings)
 	{
 		fps_scalex = 12;
@@ -1273,6 +1294,13 @@ void Sbar_ShowFPS(void)
 			fps_x = vid_conwidth.integer - DrawQ_TextWidth(blurstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, blurstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			fps_y += fps_scaley;
+		}
+		if (texstring[0])
+		{
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth(texstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String(fps_x, fps_y, texstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 	}
