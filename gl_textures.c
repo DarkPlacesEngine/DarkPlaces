@@ -2584,6 +2584,11 @@ int R_TextureHeight(rtexture_t *rt)
 	return rt ? ((gltexture_t *)rt)->inputheight : 0;
 }
 
+int R_TextureFlags(rtexture_t *rt)
+{
+	return rt ? ((gltexture_t *)rt)->flags : 0;
+}
+
 void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth)
 {
 	gltexture_t *glt = (gltexture_t *)rt;

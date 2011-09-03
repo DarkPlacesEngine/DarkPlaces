@@ -179,6 +179,9 @@ int R_TextureWidth(rtexture_t *rt);
 // returns height of texture, as was specified when it was uploaded
 int R_TextureHeight(rtexture_t *rt);
 
+// returns flags of texture, as was specified when it was uploaded
+int R_TextureFlags(rtexture_t *rt);
+
 // only frees the texture if TEXF_PERSISTENT is not set
 // also resets the variable
 void R_PurgeTexture(rtexture_t *prt);
