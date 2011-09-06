@@ -1988,10 +1988,6 @@ void Mod_LoadQ3Shaders(void)
 							break;
 					}
 
-					// nasty hack because DP treats this the same as GL_SRC_ALPHA GL_ONE
-					if(layer->blendfunc[0] == GL_ONE && layer->blendfunc[1] == GL_ONE)
-						layer->texflags |= TEXF_ALPHA;
-
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
 					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
