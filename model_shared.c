@@ -1627,6 +1627,7 @@ extern cvar_t mod_q3shader_default_offsetmapping_scale;
 extern cvar_t mod_q3shader_default_offsetmapping_bias;
 extern cvar_t mod_q3shader_default_polygonoffset;
 extern cvar_t mod_q3shader_default_polygonfactor;
+extern cvar_t mod_q3shader_force_addalpha;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1970,6 +1971,15 @@ void Mod_LoadQ3Shaders(void)
 							shader.textureblendalpha = true;
 						}
 					}
+
+					if(mod_q3shader_force_addalpha.integer)
+					{
+						// for a long while, DP treated GL_ONE GL_ONE as GL_SRC_ALPHA GL_ONE
+						// this cvar brings back this behaviour
+						if(layer->blendfunc[0] == GL_ONE && layer->blendfunc[1] == GL_ONE)
+							layer->blendfunc[0] = GL_SRC_ALPHA;
+					}
+
 					layer->texflags = 0;
 					if (layer->alphatest)
 						layer->texflags |= TEXF_ALPHA;
@@ -1987,7 +1997,6 @@ void Mod_LoadQ3Shaders(void)
 							layer->texflags |= TEXF_ALPHA;
 							break;
 					}
-
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
 					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
