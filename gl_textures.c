@@ -2199,6 +2199,18 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		return NULL;
 	}
 
+	// when requesting a non-alpha texture and we have DXT3/5, convert to DXT1
+	if(!(flags & TEXF_ALPHA) && (textype == TEXTYPE_DXT3 || textype == TEXTYPE_DXT5))
+	{
+		textype = TEXTYPE_DXT1;
+		bytesperblock = 8;
+		ddssize -= 128;
+		ddssize /= 2;
+		for (i = 0;i < ddssize;i += bytesperblock)
+			memcpy(&ddspixels[i], &ddspixels[(i<<1)+8], 8);
+		ddssize += 128;
+	}
+
 	force_swdecode = false;
 	if(bytesperblock)
 	{
