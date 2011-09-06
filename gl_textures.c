@@ -2033,7 +2033,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	int mip, mipwidth, mipheight, mipsize, mipsize_total;
 	unsigned int c;
 	GLint oldbindtexnum = 0;
-	const unsigned char *mippixels, *ddspixels, *mippixels_start;
+	const unsigned char *mippixels;
+	const unsigned char *mippixels_start;
+	unsigned char *ddspixels;
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;
 	unsigned int ddssize;
