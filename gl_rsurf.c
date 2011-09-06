@@ -1494,8 +1494,52 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				;
 			// now figure out what to do with this particular range of surfaces
 			// VorteX: added MATERIALFLAG_NORTLIGHT
-			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL + MATERIALFLAG_NORTLIGHT)) != MATERIALFLAG_WALL)
+			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NORTLIGHT)) != MATERIALFLAG_WALL)
 				continue;
+
+			// divVerent:
+			// rtlights basically add diffusetex * Color_Diffuse to the output
+			// so intended outcome is originalcolor_out * (lightmapcolor + rtlightcolor)
+			//
+			// for MATERIALFLAG_ADD, this calculation is obviously right (linear map of input, output depending on src alpha)
+			// for MATERIALFLAG_ALPHA, obviously too (linear map of input, output depending on src alpha)
+			// for blendfuncs where the output is NOT linear in input, output, possibly depending on src alpha, this is WRONG!
+			// furthermore, output MUST have GL_SRC_ALPHA or GL_ONE as blending factor, or the maths rtlights use are wrong
+			//
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
+			{
+				// source side MUST be using GL_SRC_ALPHA or GL_ONE
+				// as nothing else is handled right by the rtlight pass
+				if(rsurface.texture->currentlayers[0].blendfunc1 != GL_SRC_ALPHA)
+				if(rsurface.texture->currentlayers[0].blendfunc1 != GL_ONE)
+					continue;
+
+				// dest side MUST NOT depend on src color
+				// or the assumptions how rtlights change src are wrong
+				if(rsurface.texture->currentlayers[0].blendfunc2 == GL_SRC_COLOR)
+					continue;
+				if(rsurface.texture->currentlayers[0].blendfunc2 == GL_ONE_MINUS_SRC_COLOR)
+					continue;
+
+				// customblends that can get through this:
+				// GL_SRC_ALPHA GL_ONE (cannot happen, handled by MATERIALFLAG_ADD)
+				// GL_SRC_ALPHA GL_ZERO (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_SRC_ALPHA (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_DST_COLOR (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_DST_ALPHA (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_ONE_MINUS_DST_COLOR (stupid but handled correctly)
+				// GL_SRC_ALPHA GL_ONE_MINUS_DST_ALPHA (stupid but handled correctly)
+				// GL_ONE GL_ONE (cannot happen, handled by MATERIALFLAG_ADD)
+				// GL_ONE GL_ZERO (cannot happen, handled by default mode)
+				// GL_ONE GL_SRC_ALPHA (inverse premultiplied alpha - and correct)
+				// GL_ONE GL_DST_COLOR (stupid but handled correctly)
+				// GL_ONE GL_DST_ALPHA (stupid but handled correctly)
+				// GL_ONE GL_ONE_MINUS_SRC_ALPHA (premultiplied alpha - and correct)
+				// GL_ONE GL_ONE_MINUS_DST_COLOR (stupid but handled correctly)
+				// GL_ONE GL_ONE_MINUS_DST_ALPHA (stupid but handled correctly)
+			}
+
 			if (r_waterstate.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 				continue;
 			if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
