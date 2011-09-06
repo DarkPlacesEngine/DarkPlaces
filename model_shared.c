@@ -1970,10 +1970,6 @@ void Mod_LoadQ3Shaders(void)
 							shader.textureblendalpha = true;
 						}
 					}
-#if 1
-					// LordHavoc: use this code until divVerent is able to fix the other code
-					layer->texflags = TEXF_ALPHA;
-#else
 					layer->texflags = 0;
 					if (layer->alphatest)
 						layer->texflags |= TEXF_ALPHA;
@@ -1995,7 +1991,6 @@ void Mod_LoadQ3Shaders(void)
 					// nasty hack because DP treats this the same as GL_SRC_ALPHA GL_ONE
 					if(layer->blendfunc[0] == GL_ONE && layer->blendfunc[1] == GL_ONE)
 						layer->texflags |= TEXF_ALPHA;
-#endif
 
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
 						layer->texflags |= TEXF_MIPMAP;
