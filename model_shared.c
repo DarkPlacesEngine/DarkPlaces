@@ -1816,7 +1816,7 @@ void Mod_LoadQ3Shaders(void)
 									else if (!strcasecmp(parameter[k+1], "GL_DST_COLOR"))
 										layer->blendfunc[k] = GL_DST_COLOR;
 									else if (!strcasecmp(parameter[k+1], "GL_DST_ALPHA"))
-										layer->blendfunc[k] = GL_ONE_MINUS_DST_ALPHA;
+										layer->blendfunc[k] = GL_DST_ALPHA;
 									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_SRC_COLOR"))
 										layer->blendfunc[k] = GL_ONE_MINUS_SRC_COLOR;
 									else if (!strcasecmp(parameter[k+1], "GL_ONE_MINUS_SRC_ALPHA"))
