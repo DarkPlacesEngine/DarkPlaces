@@ -1790,6 +1790,11 @@ void Mod_LoadQ3Shaders(void)
 									layer->blendfunc[0] = GL_ONE;
 									layer->blendfunc[1] = GL_ONE;
 								}
+								else if (!strcasecmp(parameter[1], "addalpha"))
+								{
+									layer->blendfunc[0] = GL_SRC_ALPHA;
+									layer->blendfunc[1] = GL_ONE;
+								}
 								else if (!strcasecmp(parameter[1], "filter"))
 								{
 									layer->blendfunc[0] = GL_DST_COLOR;
