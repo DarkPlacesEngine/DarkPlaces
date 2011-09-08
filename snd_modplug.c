@@ -493,7 +493,7 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 	sfx->fetcher_data = per_sfx;
 	sfx->fetcher = &modplug_fetcher;
 	sfx->flags |= SFXFLAG_STREAMED;
-	sfx->total_length = 2147384647; // they always loop
+	sfx->total_length = 1<<30; // 2147384647; // they always loop (FIXME this breaks after 6 hours, we need support for a real "infinite" value!)
 	sfx->loopstart = sfx->total_length; // modplug does it
 
 	return true;
