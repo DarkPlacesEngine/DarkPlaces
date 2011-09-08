@@ -1553,7 +1553,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 				if (vslog)
 				{
 					strlcpy(temp, (const char *)vslog->GetBufferPointer(), min(sizeof(temp), vslog->GetBufferSize()));
-					Con_Printf("HLSL vertex shader compile output for %s follows:\n%s\n", cachename, temp);
+					Con_DPrintf("HLSL vertex shader compile output for %s follows:\n%s\n", cachename, temp);
 					vslog->Release();
 				}
 			}
@@ -1578,23 +1578,23 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 				if (pslog)
 				{
 					strlcpy(temp, (const char *)pslog->GetBufferPointer(), min(sizeof(temp), pslog->GetBufferSize()));
-					Con_Printf("HLSL pixel shader compile output for %s follows:\n%s\n", cachename, temp);
+					Con_DPrintf("HLSL pixel shader compile output for %s follows:\n%s\n", cachename, temp);
 					pslog->Release();
 				}
 			}
 			Sys_UnloadLibrary(&d3dx9_dll);
 		}
 		else
-			Con_Printf("Unable to compile shader - D3DXCompileShader function not found\n");
+			Con_DPrintf("Unable to compile shader - D3DXCompileShader function not found\n");
 	}
 	if (vsbin && psbin)
 	{
 		vsresult = IDirect3DDevice9_CreateVertexShader(vid_d3d9dev, vsbin, &p->vertexshader);
 		if (FAILED(vsresult))
-			Con_Printf("HLSL CreateVertexShader failed for %s (hresult = %8x)\n", cachename, vsresult);
+			Con_DPrintf("HLSL CreateVertexShader failed for %s (hresult = %8x)\n", cachename, vsresult);
 		psresult = IDirect3DDevice9_CreatePixelShader(vid_d3d9dev, psbin, &p->pixelshader);
 		if (FAILED(psresult))
-			Con_Printf("HLSL CreatePixelShader failed for %s (hresult = %8x)\n", cachename, psresult);
+			Con_DPrintf("HLSL CreatePixelShader failed for %s (hresult = %8x)\n", cachename, psresult);
 	}
 	// free the shader data
 	vsbin = (DWORD *)Mem_Realloc(tempmempool, vsbin, 0);
