@@ -1610,6 +1610,8 @@ void CL_ClientMovement_Replay(void)
 			s.cmd = cl.movecmd[i];
 			if (i < CL_MAX_USERCMDS - 1)
 				s.cmd.canjump = cl.movecmd[i+1].canjump;
+				// FIXME doesn't this read from unused slots? shouldn't this rather be limited to the initial value of i?
+
 			// if a move is more than 50ms, do it as two moves (matching qwsv)
 			//Con_Printf("%i ", s.cmd.msec);
 			if(s.cmd.frametime > 0.0005)
