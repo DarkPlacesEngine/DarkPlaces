@@ -1329,7 +1329,7 @@ void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	// released at least once since the last jump
 	if (s->cmd.jump)
 	{
-		if (s->onground && (s->cmd.canjump || !cl_movement_track_canjump.integer)) // FIXME remove this cvar again when canjump logic actually works, or maybe keep it for mods that allow "pogo-ing"
+		if (s->onground && (s->cmd.canjump || !cl_movement_track_canjump.integer))
 		{
 			s->velocity[2] += cl.movevars_jumpvelocity;
 			s->onground = false;
@@ -1610,7 +1610,6 @@ void CL_ClientMovement_Replay(void)
 			s.cmd = cl.movecmd[i];
 			if (i < CL_MAX_USERCMDS - 1)
 				s.cmd.canjump = cl.movecmd[i+1].canjump;
-				// FIXME doesn't this read from unused slots? shouldn't this rather be limited to the initial value of i?
 
 			// if a move is more than 50ms, do it as two moves (matching qwsv)
 			//Con_Printf("%i ", s.cmd.msec);
@@ -1623,6 +1622,12 @@ void CL_ClientMovement_Replay(void)
 				}
 				CL_ClientMovement_PlayerMove(&s);
 				cl.movecmd[i].canjump = s.cmd.canjump;
+			}
+			else
+			{
+				// we REALLY need this handling to happen, even if the move is not executed
+				if (!cl.movecmd[i].jump)
+					cl.movecmd[i].canjump = true;
 			}
 		}
 		//Con_Printf("\n");
