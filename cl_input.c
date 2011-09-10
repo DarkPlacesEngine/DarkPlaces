@@ -1837,6 +1837,7 @@ void CL_SendMove(void)
 		cl.cmd.forwardmove = cl.cmd.sidemove = cl.cmd.upmove = cl.cmd.impulse = cl.cmd.buttons = 0;
 
 	cl.cmd.jump = (cl.cmd.buttons & 2) != 0;
+	cl.cmd.canjump = cl.movecmd[0].canjump;
 	cl.cmd.crouch = 0;
 	switch (cls.protocol)
 	{
