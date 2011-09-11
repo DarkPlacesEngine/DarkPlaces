@@ -1621,14 +1621,14 @@ void CL_ClientMovement_Replay(void)
 					CL_ClientMovement_PlayerMove(&s);
 				}
 				CL_ClientMovement_PlayerMove(&s);
-				cl.movecmd[i].canjump = s.cmd.canjump;
 			}
 			else
 			{
 				// we REALLY need this handling to happen, even if the move is not executed
-				if (!cl.movecmd[i].jump)
-					cl.movecmd[i].canjump = true;
+				if (!s.cmd.jump)
+					s.cmd.canjump = true;
 			}
+			cl.movecmd[i].canjump = s.cmd.canjump;
 		}
 		//Con_Printf("\n");
 		CL_ClientMovement_UpdateStatus(&s);
@@ -1837,7 +1837,6 @@ void CL_SendMove(void)
 		cl.cmd.forwardmove = cl.cmd.sidemove = cl.cmd.upmove = cl.cmd.impulse = cl.cmd.buttons = 0;
 
 	cl.cmd.jump = (cl.cmd.buttons & 2) != 0;
-	cl.cmd.canjump = cl.movecmd[0].canjump;
 	cl.cmd.crouch = 0;
 	switch (cls.protocol)
 	{
