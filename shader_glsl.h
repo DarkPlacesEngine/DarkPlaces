@@ -32,7 +32,7 @@
 "# define dp_texture2D texture2D\n"
 "# define dp_texture3D texture3D\n"
 "# define dp_textureCube textureCube\n"
-"# define dp_shadow2D(a,b) float(shadow2D(a,b))\n"
+"# define dp_shadow2D(a,b) (shadow2D(a,b).r)\n"
 "#endif\n"
 "\n"
 "// GL ES and GLSL130 shaders use precision modifiers, standard GL does not\n"
