@@ -883,6 +883,7 @@ qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 
 void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 {
+	vec_t f;
 	vec3_t origin1, origin2;
 	trace_t trace;
 
@@ -922,7 +923,17 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + 1);
 	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 1); // -2 causes clientside doublejump bug at above 150fps, raising that to 300fps :)
 	trace = CL_TraceBox(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, false);
-	s->onground = trace.fraction < 1 && trace.plane.normal[2] > 0.7;
+	if(trace.fraction < 1 && trace.plane.normal[2] > 0.7)
+	{
+		s->onground = true;
+
+		// this code actually "predicts" an impact; so let's clip velocity first
+		f = DotProduct(s->velocity, trace.plane.normal);
+		if(f < 0) // only if moving downwards actually
+			VectorMA(s->velocity, -f, trace.plane.normal, s->velocity);
+	}
+	else
+		s->onground = false;
 
 	// set watertype/waterlevel
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + s->mins[2] + 1);
