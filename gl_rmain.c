@@ -4801,8 +4801,8 @@ static void R_View_UpdateEntityLighting (void)
 	{
 		ent = r_refdef.scene.entities[i];
 
-		// skip unseen models
-		if (!r_refdef.viewcache.entityvisible[i] && skipunseen)
+		// skip unseen models and models that updated by CSQC
+		if ((!r_refdef.viewcache.entityvisible[i] && skipunseen) || ent->flags & RENDER_CUSTOMIZEDMODELLIGHT)
 			continue;
 
 		// skip bsp models
@@ -4958,7 +4958,7 @@ static void R_View_UpdateEntityVisible (void)
 			ent = r_refdef.scene.entities[i];
 			if (!(ent->flags & renderimask))
 			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
-			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
+			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_WORLDOBJECT | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
@@ -4979,7 +4979,7 @@ static void R_View_UpdateEntityVisible (void)
 			if (!r_refdef.viewcache.entityvisible[i])
 				continue;
 			ent = r_refdef.scene.entities[i];
-			if(!(ent->flags & (RENDER_VIEWMODEL | RENDER_NOCULL | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
+			if(!(ent->flags & (RENDER_VIEWMODEL | RENDER_WORLDOBJECT | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
 			{
 				samples = ent->entitynumber ? r_cullentities_trace_samples.integer : r_cullentities_trace_tempentitysamples.integer;
 				if (samples < 0)
@@ -7673,8 +7673,9 @@ void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *t
 			Matrix4x4_CreateTranslate(&matrix, 0, 0, 0);
 			break;
 		case Q3TCMOD_ROTATE:
+			f = tcmod->parms[0] * rsurface.shadertime;
 			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * rsurface.shadertime, 0, 0, 1);
+			Matrix4x4_ConcatRotate(&matrix, (f / 360 - floor(f / 360)) * 360, 0, 0, 1);
 			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
 			break;
 		case Q3TCMOD_SCALE:
@@ -7695,7 +7696,7 @@ void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *t
 			Matrix4x4_CreateTranslate(&matrix, (idx % w) / tcmod->parms[0], (idx / w) / tcmod->parms[1], 0);
 			break;
 		case Q3TCMOD_STRETCH:
-			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);
+			f = 1.0f / R_EvaluateQ3WaveFunc(tcmod->wavefunc, tcmod->waveparms);ClientTime
 			Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5f * (1 - f), 0.5 * (1 - f), 0, 0, 0, 0, f);
 			break;
 		case Q3TCMOD_TRANSFORM:
