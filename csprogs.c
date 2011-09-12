@@ -370,13 +370,22 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	if (renderflags & RF_USETRANSPARENTOFFSET)
 		entrender->transparent_offset = PRVM_clientglobalfloat(transparent_offset);
 
+	// model light
+	if (renderflags & RF_MODELLIGHT)
+	{
+		if(PRVM_clientedictvector(ed, modellight_ambient)) VectorCopy(PRVM_clientedictvector(ed, modellight_ambient), entrender->modellight_ambient);
+		if(PRVM_clientedictvector(ed, modellight_diffuse)) VectorCopy(PRVM_clientedictvector(ed, modellight_diffuse), entrender->modellight_diffuse);
+		if(PRVM_clientedictvector(ed, modellight_dir))     VectorCopy(PRVM_clientedictvector(ed, modellight_dir), entrender->modellight_lightdir);
+		entrender->flags |= RENDER_CUSTOMIZEDMODELLIGHT;
+	}
+
 	if(renderflags)
 	{
-		if(renderflags & RF_VIEWMODEL)	entrender->flags |= RENDER_VIEWMODEL | RENDER_NODEPTHTEST;
-		if(renderflags & RF_EXTERNALMODEL)entrender->flags |= RENDER_EXTERIORMODEL;
-		if(renderflags & RF_NOCULL)		entrender->flags |= RENDER_NOCULL;
-		if(renderflags & RF_DEPTHHACK)	entrender->flags |= RENDER_NODEPTHTEST;
-		if(renderflags & RF_ADDITIVE)		entrender->flags |= RENDER_ADDITIVE;
+		if(renderflags & RF_VIEWMODEL) entrender->flags |= RENDER_VIEWMODEL | RENDER_NODEPTHTEST;
+		if(renderflags & RF_EXTERNALMODEL) entrender->flags |= RENDER_EXTERIORMODEL;
+		if(renderflags & RF_WORLDOBJECT) entrender->flags |= RENDER_WORLDOBJECT;
+		if(renderflags & RF_DEPTHHACK) entrender->flags |= RENDER_NODEPTHTEST;
+		if(renderflags & RF_ADDITIVE) entrender->flags |= RENDER_ADDITIVE;
 	}
 
 	c = (int)PRVM_clientedictfloat(ed, colormap);

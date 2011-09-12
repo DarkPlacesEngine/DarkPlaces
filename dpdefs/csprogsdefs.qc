@@ -734,13 +734,21 @@ float transparent_offset; // should be set before entity is added
 // example: transparent_offset = 1000000; // entity always appear on background of other transparents
 // note: offset is done in view forward axis
 
-// DP_CSQC_ENTITYNOCULL
+// DP_CSQC_ENTITYWORLDOBJECT
 // idea: VorteX
 // darkplaces implementation: VorteX
-const float RF_NOCULL = 128;
+const float RF_WORLDOBJECT = 128;
 // description: when renderflag is set, engine will not use culling methods for this entity, e.g. it will always be drawn
-// useful for large outdoor objects (like asteriods on sky horizont or sky models)
-// also useful when culling is done at CSQC side
+// useful for large outdoor objects (like asteroids on sky horizon or sky models)
+
+// DP_CSQC_ENTITYMODELLIGHT
+// idea: VorteX
+// darkplaces implementation: VorteX
+const float RF_MODELLIGHT = 4096;
+.vector modellight_ambient;
+.vector modellight_diffuse;
+.vector modellight_dir;
+// description: allows CSQC to override directional model lightning on entity
 
 // DP_CSQC_SETPAUSE
 // idea: VorteX
