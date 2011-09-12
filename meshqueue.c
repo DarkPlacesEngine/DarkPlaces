@@ -53,7 +53,10 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const enti
 	mq->ent = ent;
 	mq->surfacenumber = surfacenumber;
 	mq->rtlight = rtlight;
-	mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
+	if (ent && (ent->flags & RENDER_WORLDOBJECT))
+		mq->dist = mqt_viewmaxdist;
+	else
+		mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
 }

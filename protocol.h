@@ -332,7 +332,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_EXTERIORMODEL 8
 #define RENDER_LOWPRECISION 16 // send as low precision coordinates to save bandwidth
 #define RENDER_COLORMAPPED 32
-#define RENDER_NOCULL 64 // do not cull this entity with r_cullentities
+#define RENDER_WORLDOBJECT 64 // do not cull this entity with r_cullentities
 #define RENDER_COMPLEXANIMATION 128
 
 #define RENDER_SHADOW 65536 // cast shadow
@@ -343,6 +343,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_NODEPTHTEST 1048576
 #define RENDER_ADDITIVE 2097152
 #define RENDER_DOUBLESIDED 4194304
+#define RENDER_CUSTOMIZEDMODELLIGHT 4096
 
 #define MAX_FRAMEGROUPBLENDS 4
 typedef struct framegroupblend_s
