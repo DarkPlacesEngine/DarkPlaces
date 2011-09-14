@@ -674,6 +674,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 	vorbis_comment *vc;
 	ogg_int64_t len, buff_len;
 	double peak, gaindb;
+	qboolean want_stream;
 
 #ifndef LINK_TO_LIBVORBIS
 	if (!vf_dll)
@@ -718,7 +719,25 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *sfx)
 
 	// Decide if we go for a stream or a simple PCM cache
 	buff_len = (int)ceil (STREAM_BUFFER_DURATION * snd_renderbuffer->format.speed) * 2 * vi->channels;
-	if (snd_streaming.integer && (len > (ogg_int64_t)filesize + 3 * buff_len || snd_streaming.integer >= 2))
+
+	if(snd_streaming.integer)
+	{
+		want_stream = true;
+
+		// don't stream if we would need more RAM when streaming
+		if(snd_streaming.integer < 2)
+			if(len <= (ogg_int64_t)filesize + 3 * buff_len)
+				want_stream = false;
+
+		// if streaming length is set, do NOT stream if below the length
+		if(snd_streaming_length.value > 0)
+			if(len <= snd_streaming_length.value * vi->channels * 2)
+				want_stream = false;
+	}
+	else
+		want_stream = false;
+	
+	if (want_stream)
 	{
 		ogg_stream_persfx_t* per_sfx;
 
