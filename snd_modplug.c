@@ -205,57 +205,46 @@ typedef struct
 {
 	unsigned char	*file;
 	size_t			filesize;
-	snd_format_t	format;
-	unsigned int	total_length;
-	char			name[128];
-	sfx_t           *sfx;
 } modplug_stream_persfx_t;
 
 // Per-channel data structure
 typedef struct
 {
 	ModPlugFile 	*mf;
-	unsigned int	sb_offset;
 	int				bs;
-	snd_buffer_t	sb;		// must be at the end due to its dynamically allocated size
+	int				buffer_firstframe;
+	int				buffer_numframes;
+	unsigned char	buffer[STREAM_BUFFERSIZE*4];
 } modplug_stream_perchannel_t;
 
 
 /*
 ====================
-ModPlug_FetchSound
+ModPlug_GetSamplesFloat
 ====================
 */
-static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetcherpointer, unsigned int *start, unsigned int nbsampleframes)
+static void ModPlug_GetSamplesFloat(channel_t *ch, sfx_t *sfx, int firstsampleframe, int numsampleframes, float *outsamplesfloat)
 {
-	modplug_stream_perchannel_t* per_ch = (modplug_stream_perchannel_t *)*chfetcherpointer;
-	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfxfetcher;
-	snd_buffer_t* sb;
+	modplug_stream_perchannel_t* per_ch = (modplug_stream_perchannel_t *)ch->fetcher_data;
+	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfx->fetcher_data;
 	int newlength, done, ret;
-	unsigned int real_start;
-	unsigned int factor;
+	int f = sfx->format.width * sfx->format.channels; // bytes per frame
+	short *buf;
+	int i, len;
 
 	// If there's no fetcher structure attached to the channel yet
 	if (per_ch == NULL)
 	{
-		size_t buff_len, memsize;
-		snd_format_t sb_format;
-
-		sb_format.speed = snd_renderbuffer->format.speed;
-		sb_format.width = per_sfx->format.width;
-		sb_format.channels = per_sfx->format.channels;
-
-		buff_len = STREAM_BUFFER_SIZE(&sb_format);
-		memsize = sizeof (*per_ch) - sizeof (per_ch->sb.samples) + buff_len;
-		per_ch = (modplug_stream_perchannel_t *)Mem_Alloc (snd_mempool, memsize);
+		per_ch = (modplug_stream_perchannel_t *)Mem_Alloc(snd_mempool, sizeof(*per_ch));
 
 		// Open it with the modplugFile API
 		per_ch->mf = qModPlug_Load(per_sfx->file, per_sfx->filesize);
 		if (!per_ch->mf)
 		{
-			Con_Printf("error while reading ModPlug stream \"%s\"\n", per_sfx->name);
-			Mem_Free (per_ch);
-			return NULL;
+			// we can't call Con_Printf here, not thread safe
+//			Con_Printf("error while reading ModPlug stream \"%s\"\n", per_sfx->name);
+			Mem_Free(per_ch);
+			return;
 		}
 
 #ifndef SND_MODPLUG_STATIC
@@ -265,130 +254,88 @@ static const snd_buffer_t* ModPlug_FetchSound (void *sfxfetcher, void **chfetche
 
 		per_ch->bs = 0;
 
-		per_ch->sb_offset = 0;
-		per_ch->sb.format = sb_format;
-		per_ch->sb.nbframes = 0;
-		per_ch->sb.maxframes = buff_len / (per_ch->sb.format.channels * per_ch->sb.format.width);
-
-		*chfetcherpointer = per_ch;
+		per_ch->buffer_firstframe = 0;
+		per_ch->buffer_numframes = 0;
+		ch->fetcher_data = per_ch;
 	}
 
-	real_start = *start;
-
-	sb = &per_ch->sb;
-	factor = per_sfx->format.width * per_sfx->format.channels;
-
-	// If the stream buffer can't contain that much samples anyway
-	if (nbsampleframes > sb->maxframes)
+	// if the request is too large for our buffer, loop...
+	while (numsampleframes * f > (int)sizeof(per_ch->buffer))
 	{
-		Con_Printf ("ModPlug_FetchSound: stream buffer too small (%u sample frames required)\n", nbsampleframes);
-		return NULL;
+		done = sizeof(per_ch->buffer) / f;
+		ModPlug_GetSamplesFloat(ch, sfx, firstsampleframe, done, outsamplesfloat);
+		firstsampleframe += done;
+		numsampleframes -= done;
+		outsamplesfloat += done * sfx->format.channels;
 	}
 
-	// If the data we need has already been decompressed in the sfxbuffer, just return it
-	if (per_ch->sb_offset <= real_start && per_ch->sb_offset + sb->nbframes >= real_start + nbsampleframes)
+	// seek if the request is before the current buffer (loop back)
+	// seek if the request starts beyond the current buffer by at least one frame (channel was zero volume for a while)
+	// do not seek if the request overlaps the buffer end at all (expected behavior)
+	if (per_ch->buffer_firstframe > firstsampleframe || per_ch->buffer_firstframe + per_ch->buffer_numframes < firstsampleframe)
 	{
-		*start = per_ch->sb_offset;
-		return sb;
+		// we expect to decode forward from here so this will be our new buffer start
+		per_ch->buffer_firstframe = firstsampleframe;
+		per_ch->buffer_numframes = 0;
+		// we don't actually seek - we don't care much about timing on silent mod music streams and looping never happens
+		//qModPlug_Seek(per_ch->mf, firstsampleframe * 1000.0 / sfx->format.speed);
 	}
 
-	newlength = (int)(per_ch->sb_offset + sb->nbframes) - real_start;
-
-	// If we need to skip some data before decompressing the rest, or if the stream has looped
-	if (newlength < 0 || per_ch->sb_offset > real_start)
+	// decompress the file as needed
+	if (firstsampleframe + numsampleframes > per_ch->buffer_firstframe + per_ch->buffer_numframes)
 	{
-		unsigned int time_start;
-		unsigned int modplug_start;
-
-		/*
-		MODs loop on their own, so any position is valid!
-		if (real_start > (unsigned int)per_sfx->total_length)
+		// first slide the buffer back, discarding any data preceding the range we care about
+		int offset = firstsampleframe - per_ch->buffer_firstframe;
+		int keeplength = per_ch->buffer_numframes - offset;
+		if (keeplength > 0)
+			memmove(per_ch->buffer, per_ch->buffer + offset * sfx->format.width * sfx->format.channels, keeplength * sfx->format.width * sfx->format.channels);
+		per_ch->buffer_firstframe = firstsampleframe;
+		per_ch->buffer_numframes -= offset;
+		// decompress as much as we can fit in the buffer
+		newlength = sizeof(per_ch->buffer) - per_ch->buffer_numframes * f;
+		done = 0;
+		while (newlength > done && (ret = qModPlug_Read(per_ch->mf, (void *)((unsigned char *)per_ch->buffer + done), (int)(newlength - done))) > 0)
+			done += ret;
+		// clear the missing space if any
+		if (done < newlength)
 		{
-			Con_Printf ("ModPlug_FetchSound: asked for a start position after the end of the sfx! (%u > %u)\n",
-						real_start, per_sfx->total_length);
-			return NULL;
+			memset(per_ch->buffer + done, 0, newlength - done);
+			// Argh. We didn't get as many samples as we wanted. Probably
+			// libmodplug forgot what mLoopCount==-1 means... basically, this means
+			// we can't loop like this. Try to let DP fix it later...
+			sfx->total_length = firstsampleframe + done / f;
+			sfx->loopstart = 0;
+			// can't Con_Printf from this thread
+			//if (newlength != done)
+			//	Con_DPrintf("ModPlug_Fetch: wanted: %d, got: %d\n", newlength, done);
 		}
-		*/
-
-		// We work with 200ms (1/5 sec) steps to avoid rounding errors
-		time_start = real_start * 5 / snd_renderbuffer->format.speed;
-		modplug_start = time_start * (1000 / 5);
-
-		Con_DPrintf("warning: mod file needed to seek (to %d)\n", modplug_start);
-
-		qModPlug_Seek(per_ch->mf, modplug_start);
-		sb->nbframes = 0;
-
-		real_start = (unsigned int) ((float)modplug_start / 1000 * snd_renderbuffer->format.speed);
-		if (*start - real_start + nbsampleframes > sb->maxframes)
-		{
-			Con_Printf ("ModPlug_FetchSound: stream buffer too small after seek (%u sample frames required)\n",
-						*start - real_start + nbsampleframes);
-			per_ch->sb_offset = real_start;
-			return NULL;
-		}
-	}
-	// Else, move forward the samples we need to keep in the sound buffer
-	else
-	{
-		memmove (sb->samples, sb->samples + (real_start - per_ch->sb_offset) * factor, newlength * factor);
-		sb->nbframes = newlength;
+		// we now have more data in the buffer
+		per_ch->buffer_numframes += done / f;
 	}
 
-	per_ch->sb_offset = real_start;
-
-	// We add more than one frame of sound to the buffer:
-	// 1- to ensure we won't lose many samples during the resampling process
-	// 2- to reduce calls to ModPlug_FetchSound to regulate workload
-	newlength = (int)(per_sfx->format.speed*STREAM_BUFFER_FILL);
-	if ((size_t) ((double) newlength * (double)sb->format.speed / (double)per_sfx->format.speed) + sb->nbframes > sb->maxframes)
-	{
-		Con_Printf ("ModPlug_FetchSound: stream buffer overflow (%u + %u = %u sample frames / %u)\n",
-					(unsigned int) ((double) newlength * (double)sb->format.speed / (double)per_sfx->format.speed), sb->nbframes, (unsigned int) ((double) newlength * (double)sb->format.speed / (double)per_sfx->format.speed) + sb->nbframes, sb->maxframes);
-		return NULL;
-	}
-	newlength *= factor; // convert from sample frames to bytes
-	if(newlength > (int)sizeof(resampling_buffer))
-		newlength = sizeof(resampling_buffer);
-
-	// Decompress in the resampling_buffer
-	done = 0;
-	while ((ret = qModPlug_Read (per_ch->mf, (char *)&resampling_buffer[done], (int)(newlength - done))) > 0)
-		done += ret;
-	if(done < newlength)
-	{
-		// Argh. We didn't get as many samples as we wanted. Probably
-		// libmodplug forgot what mLoopCount==-1 means... basically, this means
-		// we can't loop like this. Try to let DP fix it later...
-		per_sfx->sfx->total_length = (real_start + ((size_t)done / (size_t)factor));
-		per_sfx->sfx->loopstart = 0;
-
-		if(newlength != done)
-			Con_DPrintf("ModPlug_Fetch: wanted: %d, got: %d\n", newlength, done);
-	}
-
-	Snd_AppendToSndBuffer (sb, resampling_buffer, (size_t)done / (size_t)factor, &per_sfx->format);
-
-	*start = per_ch->sb_offset;
-	return sb;
+	// convert the sample format for the caller
+	buf = (short *)(per_ch->buffer + (firstsampleframe - per_ch->buffer_firstframe) * f);
+	len = numsampleframes * sfx->format.channels;
+	for (i = 0;i < len;i++)
+		outsamplesfloat[i] = buf[i] * (1.0f / 32768.0f);
 }
 
 
 /*
 ====================
-ModPlug_FetchEnd
+ModPlug_StopChannel
 ====================
 */
-static void ModPlug_FetchEnd (void *chfetcherdata)
+static void ModPlug_StopChannel(channel_t *ch)
 {
-	modplug_stream_perchannel_t* per_ch = (modplug_stream_perchannel_t *)chfetcherdata;
+	modplug_stream_perchannel_t *per_ch = (modplug_stream_perchannel_t *)ch->fetcher_data;
 
 	if (per_ch != NULL)
 	{
 		// Free the modplug decoder
-		qModPlug_Unload (per_ch->mf);
+		qModPlug_Unload(per_ch->mf);
 
-		Mem_Free (per_ch);
+		Mem_Free(per_ch);
 	}
 }
 
@@ -398,9 +345,9 @@ static void ModPlug_FetchEnd (void *chfetcherdata)
 ModPlug_FreeSfx
 ====================
 */
-static void ModPlug_FreeSfx (void *sfxfetcherdata)
+static void ModPlug_FreeSfx (sfx_t *sfx)
 {
-	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfxfetcherdata;
+	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfx->fetcher_data;
 
 	// Free the modplug file
 	Mem_Free(per_sfx->file);
@@ -410,18 +357,7 @@ static void ModPlug_FreeSfx (void *sfxfetcherdata)
 }
 
 
-/*
-====================
-ModPlug_GetFormat
-====================
-*/
-static const snd_format_t* qModPlug_GetFormat (sfx_t* sfx)
-{
-	modplug_stream_persfx_t* per_sfx = (modplug_stream_persfx_t *)sfx->fetcher_data;
-	return &per_sfx->format;
-}
-
-static const snd_fetcher_t modplug_fetcher = { ModPlug_FetchSound, ModPlug_FetchEnd, ModPlug_FreeSfx, qModPlug_GetFormat };
+static const snd_fetcher_t modplug_fetcher = { ModPlug_GetSamplesFloat, ModPlug_StopChannel, ModPlug_FreeSfx };
 
 
 /*
@@ -479,17 +415,13 @@ qboolean ModPlug_LoadModPlugFile (const char *filename, sfx_t *sfx)
 	if (developer_loading.integer >= 2)
 		Con_Printf ("\"%s\" will be streamed\n", filename);
 	per_sfx = (modplug_stream_persfx_t *)Mem_Alloc (snd_mempool, sizeof (*per_sfx));
-	strlcpy(per_sfx->name, sfx->name, sizeof(per_sfx->name));
-	sfx->memsize += sizeof (*per_sfx);
 	per_sfx->file = data;
 	per_sfx->filesize = filesize;
+	sfx->memsize += sizeof(*per_sfx);
 	sfx->memsize += filesize;
-
-	per_sfx->format.speed = 44100; // modplug always works at that rate
-	per_sfx->format.width = 2;  // We always work with 16 bits samples
-	per_sfx->format.channels = 2; // stereo rulez ;) (MAYBE default to mono because Amiga MODs sound better then?)
-	per_sfx->sfx = sfx;
-
+	sfx->format.speed = 44100; // modplug always works at that rate
+	sfx->format.width = 2;  // We always work with 16 bits samples
+	sfx->format.channels = 2; // stereo rulez ;) (MAYBE default to mono because Amiga MODs sound better then?)
 	sfx->fetcher_data = per_sfx;
 	sfx->fetcher = &modplug_fetcher;
 	sfx->flags |= SFXFLAG_STREAMED;

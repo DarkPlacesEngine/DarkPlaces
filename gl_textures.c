@@ -2208,7 +2208,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		bytesperblock = 8;
 		ddssize -= 128;
 		ddssize /= 2;
-		for (i = 0;i < ddssize;i += bytesperblock)
+		for (i = 0;i < (int)ddssize;i += bytesperblock)
 			memcpy(&ddspixels[i], &ddspixels[(i<<1)+8], 8);
 		ddssize += 128;
 	}

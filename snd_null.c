@@ -74,7 +74,7 @@ int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t o
 	return -1;
 }
 
-int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags)
+int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed)
 {
 	return -1;
 }

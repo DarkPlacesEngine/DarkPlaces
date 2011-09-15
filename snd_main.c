@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define SND_MIN_SPEED 8000
-#define SND_MAX_SPEED 96000
+#define SND_MAX_SPEED 192000
 #define SND_MIN_WIDTH 1
 #define SND_MAX_WIDTH 2
 #define SND_MIN_CHANNELS 1
@@ -178,7 +178,7 @@ cvar_t snd_spatialization_occlusion = {CVAR_SAVE, "snd_spatialization_occlusion"
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
-cvar_t snd_streaming_length = { CVAR_SAVE, "snd_streaming_length", "0", "When set, sound files are only streamed if longer than the given length in seconds"};
+cvar_t snd_streaming_length = { CVAR_SAVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
 cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
@@ -315,16 +315,15 @@ static void S_SoundList_f (void)
 		if (sfx->fetcher != NULL)
 		{
 			unsigned int size;
-			const snd_format_t* format;
 
 			size = sfx->memsize;
-			format = sfx->fetcher->getfmt(sfx);
-			Con_Printf ("%c%c%c(%2db, %6s) %8i : %s\n",
+			Con_Printf ("%c%c%c(%5iHz %2db %6s) %8i : %s\n",
 						(sfx->loopstart < sfx->total_length) ? 'L' : ' ',
 						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',
 						(sfx->flags & SFXFLAG_MENUSOUND) ? 'P' : ' ',
-						format->width * 8,
-						(format->channels == 1) ? "mono" : "stereo",
+						sfx->format.speed,
+						sfx->format.width * 8,
+						(sfx->format.channels == 1) ? "mono" : "stereo",
 						size,
 						sfx->name);
 			total += size;
@@ -615,6 +614,8 @@ void S_Startup (void)
 		fixed_width = true;
 	}
 
+#if 0
+	// LordHavoc: now you can with the resampler...
 	// You can't change sound speed after start time (not yet supported)
 	if (prev_render_format.speed != 0)
 	{
@@ -626,6 +627,7 @@ void S_Startup (void)
 			chosen_fmt.speed = prev_render_format.speed;
 		}
 	}
+#endif
 
 	// Sanity checks
 	if (chosen_fmt.speed < SND_MIN_SPEED)
@@ -1047,8 +1049,8 @@ void S_FreeSfx (sfx_t *sfx, qboolean force)
 	}
 
 	// Free it
-	if (sfx->fetcher != NULL && sfx->fetcher->free != NULL)
-		sfx->fetcher->free (sfx->fetcher_data);
+	if (sfx->fetcher != NULL && sfx->fetcher->freesfx != NULL)
+		sfx->fetcher->freesfx(sfx);
 	Mem_Free (sfx);
 }
 
@@ -1075,7 +1077,8 @@ void S_ClearUsed (void)
 			channels[i].sfx = ambient_sfxs[i];
 			channels[i].sfx->flags |= SFXFLAG_MENUSOUND;
 			channels[i].flags |= CHANNELFLAG_FORCELOOP;
-			channels[i].master_vol = 0;
+			channels[i].basevolume = 0.0f;
+			channels[i].basespeed = channels[i].mixspeed = 1.0f;
 		}
 	}
 
@@ -1247,7 +1250,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 		// don't override looped sounds
 		if ((ch->flags & CHANNELFLAG_FORCELOOP) || sfx->loopstart < sfx->total_length)
 			continue;
-		life_left = sfx->total_length - ch->pos;
+		life_left = (int)((double)sfx->total_length - ch->position);
 
 		if (life_left < first_life_left)
 		{
@@ -1277,8 +1280,8 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 {
 	int i;
 	double f;
-	float angle_side, angle_front, angle_factor;
-	vec_t dist, mastervol, intensity, vol;
+	float angle_side, angle_front, angle_factor, mixspeed;
+	vec_t dist, mastervol, intensity;
 	vec3_t source_vec;
 
 	// update sound origin if we know about the entity
@@ -1304,7 +1307,10 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		}
 	}
 
-	mastervol = ch->master_vol;
+	mastervol = ch->basevolume;
+	mixspeed = ch->basespeed;
+
+	// TODO: implement doppler based on origin change relative to viewer and time of recent origin changes
 
 	// Adjust volume of static sounds
 	if (isstatic)
@@ -1392,7 +1398,7 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		mastervol *= volume.value;
 
 	// clamp HERE to allow to go at most 10dB past mastervolume (before clamping), when mastervolume < -10dB (so relative volumes don't get too messy)
-	mastervol = bound(0, mastervol, 655360);
+	mastervol = bound(0.0f, mastervol, 10.0f);
 
 	// always apply "master"
 	mastervol *= mastervolume.value;
@@ -1404,35 +1410,32 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		// Replaygain support
 		// Con_DPrintf("Setting volume on ReplayGain-enabled track... %f -> ", fvol);
 		mastervol *= sfx->volume_mult;
-		if(mastervol * sfx->volume_peak > 65536)
-			mastervol = 65536 / sfx->volume_peak;
+		if(mastervol * sfx->volume_peak > 1.0f)
+			mastervol = 1.0f / sfx->volume_peak;
 		// Con_DPrintf("%f\n", fvol);
 	}
 
 	// clamp HERE to keep relative volumes of the channels correct
-	mastervol = bound(0, mastervol, 65536);
+	mastervol = bound(0.0f, mastervol, 1.0f);
+
+	ch->mixspeed = mixspeed;
 
 	// anything coming from the view entity will always be full volume
 	// LordHavoc: make sounds with ATTN_NONE have no spatialization
-	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
+	if (ch->entnum == cl.viewentity || ch->distfade == 0)
 	{
 		ch->prologic_invert = 1;
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			vol = mastervol * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5);
-			ch->listener_volume[0] = (int)bound(0, vol, 65536);
-			vol = mastervol * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5);
-			ch->listener_volume[1] = (int)bound(0, vol, 65536);
+			ch->volume[0] = mastervol * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5);
+			ch->volume[1] = mastervol * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5);
 			for (i = 2;i < SND_LISTENERS;i++)
-				ch->listener_volume[i] = 0;
+				ch->volume[i] = 0;
 		}
 		else
 		{
 			for (i = 0;i < SND_LISTENERS;i++)
-			{
-				vol = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
-				ch->listener_volume[i] = (int)bound(0, vol, 65536);
-			}
+				ch->volume[i] = mastervol * snd_speakerlayout.listeners[i].ambientvolume;
 		}
 	}
 	else
@@ -1440,7 +1443,7 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		// calculate stereo seperation and distance attenuation
 		VectorSubtract(listener_origin, ch->origin, source_vec);
 		dist = VectorLength(source_vec);
-		intensity = mastervol * (1.0 - dist * ch->dist_mult);
+		intensity = mastervol * (1.0f - dist * ch->distfade);
 		if (intensity > 0)
 		{
 			qboolean occluded = false;
@@ -1460,13 +1463,13 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 							occluded = true;
 			}
 			if(occluded)
-				intensity *= 0.5;
+				intensity *= 0.5f;
 
 			ch->prologic_invert = 1;
 			if (snd_spatialization_prologic.integer != 0)
 			{
 				if (dist == 0)
-					angle_factor = 0.5;
+					angle_factor = 0.5f;
 				else
 				{
 					Matrix4x4_Transform(&listener_basematrix, ch->origin, source_vec);
@@ -1515,12 +1518,10 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 						//angle_factor is between 0 and 1 and represents the angle range from the front left to the center to the front right speaker
 				}
 
-				vol = intensity * sqrt(angle_factor);
-				ch->listener_volume[0] = (int)bound(0, vol, 65536);
-				vol = intensity * sqrt(1 - angle_factor);
-				ch->listener_volume[1] = (int)bound(0, vol, 65536);
+				ch->volume[0] = intensity * sqrt(angle_factor);
+				ch->volume[1] = intensity * sqrt(1 - angle_factor);
 				for (i = 2;i < SND_LISTENERS;i++)
-					ch->listener_volume[i] = 0;
+					ch->volume[i] = 0;
 			}
 			else
 			{
@@ -1552,15 +1553,13 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 							break;
 					}
 
-					vol = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
-
-					ch->listener_volume[i] = (int)bound(0, vol, 65536);
+					ch->volume[i] = intensity * max(0, source_vec[0] * snd_speakerlayout.listeners[i].dotscale + snd_speakerlayout.listeners[i].dotbias);
 				}
 			}
 		}
 		else
 			for (i = 0;i < SND_LISTENERS;i++)
-				ch->listener_volume[i] = 0;
+				ch->volume[i] = 0;
 	}
 }
 void SND_Spatialize(channel_t *ch, qboolean isstatic)
@@ -1574,7 +1573,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 // Start a sound effect
 // =======================================================================
 
-void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos)
+void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos, float fspeed)
 {
 	if (!sfx)
 	{
@@ -1606,7 +1605,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	memset (target_chan, 0, sizeof (*target_chan));
 	VectorCopy (origin, target_chan->origin);
 	target_chan->flags = flags;
-	target_chan->pos = startpos; // start of the sound
+	target_chan->position = startpos; // start of the sound
 	target_chan->entnum = entnum;
 	target_chan->entchannel = entchannel;
 
@@ -1615,13 +1614,14 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 	{
 		if (sfx->loopstart >= sfx->total_length && (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEWORLD))
 			Con_DPrintf("Quake compatibility warning: Static sound \"%s\" is not looped\n", sfx->name);
-		target_chan->dist_mult = attenuation / (64.0f * snd_soundradius.value);
+		target_chan->distfade = attenuation / (64.0f * snd_soundradius.value);
 	}
 	else
-		target_chan->dist_mult = attenuation / snd_soundradius.value;
+		target_chan->distfade = attenuation / snd_soundradius.value;
 
 	// set the listener volumes
 	S_SetChannelVolume(target_chan - channels, fvol);
+	S_SetChannelSpeed(target_chan - channels, fspeed);
 	SND_Spatialize_WithSfx (target_chan, isstatic, sfx);
 
 	// finally, set the sfx pointer, so the channel becomes valid for playback
@@ -1630,7 +1630,7 @@ void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags,
 }
 
 
-int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags)
+int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed)
 {
 	channel_t *target_chan, *check, *ch;
 	int		ch_idx, startpos;
@@ -1648,7 +1648,8 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 			if (ch->entnum == entnum && ch->entchannel == entchannel)
 			{
 				S_SetChannelVolume(ch_idx, fvol);
-				ch->dist_mult = attenuation / snd_soundradius.value;
+				S_SetChannelSpeed(ch_idx, fspeed);
+				ch->distfade = attenuation / snd_soundradius.value;
 				SND_Spatialize(ch, false);
 				return ch_idx;
 			}
@@ -1667,14 +1668,14 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 	// if an identical sound has also been started this frame, offset the pos
 	// a bit to keep it from just making the first one louder
 	check = &channels[NUM_AMBIENTS];
-	startpos = (int)(startposition * S_GetSoundRate());
+	startpos = (int)(startposition * sfx->format.speed);
 	if (startpos == 0)
 	{
 		for (ch_idx=NUM_AMBIENTS ; ch_idx < NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS ; ch_idx++, check++)
 		{
 			if (check == target_chan)
 				continue;
-			if (check->sfx == sfx && check->pos == 0)
+			if (check->sfx == sfx && check->position == 0)
 			{
 				// use negative pos offset to delay this sound effect
 				startpos = (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
@@ -1683,14 +1684,14 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 		}
 	}
 
-	S_PlaySfxOnChannel (sfx, target_chan, flags, origin, fvol, attenuation, false, entnum, entchannel, startpos);
+	S_PlaySfxOnChannel (sfx, target_chan, flags, origin, fvol, attenuation, false, entnum, entchannel, startpos, fspeed);
 
 	return (target_chan - channels);
 }
 
 int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
 {
-	return S_StartSound_StartPosition_Flags(entnum, entchannel, sfx, origin, fvol, attenuation, startposition, CHANNELFLAG_NONE);
+	return S_StartSound_StartPosition_Flags(entnum, entchannel, sfx, origin, fvol, attenuation, startposition, CHANNELFLAG_NONE, 1.0f);
 }
 
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
@@ -1717,13 +1718,8 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean frees
 	sfx = ch->sfx;
 	if (ch->sfx != NULL)
 	{
-		if (sfx->fetcher != NULL)
-		{
-			snd_fetcher_endsb_t fetcher_endsb = sfx->fetcher->endsb;
-			if (fetcher_endsb != NULL)
-				fetcher_endsb (ch->fetcher_data);
-		}
-
+		if (sfx->fetcher != NULL && sfx->fetcher->stopchannel != NULL)
+			sfx->fetcher->stopchannel(ch);
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
 	}
@@ -1815,24 +1811,29 @@ void S_PauseGameSounds (qboolean toggle)
 
 void S_SetChannelVolume(unsigned int ch_ind, float fvol)
 {
-	channels[ch_ind].master_vol = (int)(fvol * 65536.0f);
+	channels[ch_ind].basevolume = fvol;
+}
+
+void S_SetChannelSpeed(unsigned int ch_ind, float fspeed)
+{
+	channels[ch_ind].basespeed = fspeed;
 }
 
 float S_GetChannelPosition (unsigned int ch_ind)
 {
 	// note: this is NOT accurate yet
-	int s;
+	double s;
 	channel_t *ch = &channels[ch_ind];
 	sfx_t *sfx = ch->sfx;
 	if (!sfx)
 		return -1;
 
-	s = ch->pos;
+	s = ch->position / sfx->format.speed;
 	/*
 	if(!snd_usethreadedmixing)
-		s += _snd_mixahead.value * S_GetSoundRate();
+		s += _snd_mixahead.value;
 	*/
-	return (s % sfx->total_length) / (float) S_GetSoundRate();
+	return (float)s;
 }
 
 float S_GetEntChannelPosition(int entnum, int entchannel)
@@ -1873,7 +1874,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 	}
 
 	target_chan = &channels[total_channels++];
-	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_FORCELOOP, origin, fvol, attenuation, true, 0, 0, 0);
+	S_PlaySfxOnChannel (sfx, target_chan, CHANNELFLAG_FORCELOOP, origin, fvol, attenuation, true, 0, 0, 0, 1.0f);
 }
 
 
@@ -1885,7 +1886,8 @@ S_UpdateAmbientSounds
 void S_UpdateAmbientSounds (void)
 {
 	int			i;
-	int			vol;
+	float		vol;
+	float		fade = (float)max(0.0, cl.time - cl.oldtime) * ambient_fade.value / 256.0f;
 	int			ambient_channel;
 	channel_t	*chan;
 	unsigned char		ambientlevels[NUM_AMBIENTS];
@@ -1903,40 +1905,36 @@ void S_UpdateAmbientSounds (void)
 		if (sfx == NULL || sfx->fetcher == NULL)
 			continue;
 
-		vol = (int)ambientlevels[ambient_channel];
-		if (vol < 8)
-			vol = 0;
-		vol *= 256;
+		i = ambientlevels[ambient_channel];
+		if (i < 8)
+			i = 0;
+		vol = i * (1.0f / 256.0f);
 
 		// Don't adjust volume too fast
-		// FIXME: this rounds off to an int each frame, meaning there is little to no fade at extremely high framerates!
-		if (cl.time > cl.oldtime)
+		if (chan->basevolume < vol)
 		{
-			if (chan->master_vol < vol)
-			{
-				chan->master_vol += (int)((cl.time - cl.oldtime) * 256.0 * ambient_fade.value);
-				if (chan->master_vol > vol)
-					chan->master_vol = vol;
-			}
-			else if (chan->master_vol > vol)
-			{
-				chan->master_vol -= (int)((cl.time - cl.oldtime) * 256.0 * ambient_fade.value);
-				if (chan->master_vol < vol)
-					chan->master_vol = vol;
-			}
+			chan->basevolume += fade;
+			if (chan->basevolume > vol)
+				chan->basevolume = vol;
+		}
+		else if (chan->basevolume > vol)
+		{
+			chan->basevolume -= fade;
+			if (chan->basevolume < vol)
+				chan->basevolume = vol;
 		}
 
 		if (snd_spatialization_prologic.integer != 0)
 		{
-			chan->listener_volume[0] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5), 65536);
-			chan->listener_volume[1] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5), 65536);
+			chan->volume[0] = chan->basevolume * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[0].ambientvolume * sqrt(0.5);
+			chan->volume[1] = chan->basevolume * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[1].ambientvolume * sqrt(0.5);
 			for (i = 2;i < SND_LISTENERS;i++)
-				chan->listener_volume[i] = 0;
+				chan->volume[i] = 0.0f;
 		}
 		else
 		{
 			for (i = 0;i < SND_LISTENERS;i++)
-				chan->listener_volume[i] = (int)bound(0, chan->master_vol * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume, 65536);
+				chan->volume[i] = chan->basevolume * ambient_level.value * volume.value * mastervolume.value * snd_speakerlayout.listeners[i].ambientvolume;
 		}
 	}
 }
@@ -2211,7 +2209,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		{
 			// no need to merge silent channels
 			for (j = 0;j < SND_LISTENERS;j++)
-				if (ch->listener_volume[j])
+				if (ch->volume[j])
 					break;
 			if (j == SND_LISTENERS)
 				continue;
@@ -2233,13 +2231,13 @@ void S_Update(const matrix4x4_t *listenermatrix)
 			{
 				for (j = 0;j < SND_LISTENERS;j++)
 				{
-					combine->listener_volume[j] = bound(0, combine->listener_volume[j] + ch->listener_volume[j], 65536);
-					ch->listener_volume[j] = 0;
+					combine->volume[j] += ch->volume[j];
+					ch->volume[j] = 0;
 				}
 			}
 		}
 		for (k = 0;k < SND_LISTENERS;k++)
-			if (ch->listener_volume[k])
+			if (ch->volume[k])
 				break;
 		if (k < SND_LISTENERS)
 			cls.soundstats.mixedsounds++;
