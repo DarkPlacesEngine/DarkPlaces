@@ -226,13 +226,24 @@ static wavinfo_t GetWavinfo (char *name, unsigned char *wav, int wavlength)
 
 /*
 ====================
-WAV_FetchSound
+WAV_GetSamplesFloat
 ====================
 */
-static const snd_buffer_t* WAV_FetchSound (void *sfxfetcher, void **chfetcherpointer, unsigned int *start, unsigned int nbsampleframes)
+static void WAV_GetSamplesFloat(channel_t *ch, sfx_t *sfx, int firstsampleframe, int numsampleframes, float *outsamplesfloat)
 {
-	*start = 0;
-	return (snd_buffer_t *)sfxfetcher;
+	int i, len = numsampleframes * sfx->format.channels;
+	if (sfx->format.width == 2)
+	{
+		const short *bufs = (const short *)sfx->fetcher_data + firstsampleframe * sfx->format.channels;
+		for (i = 0;i < len;i++)
+			outsamplesfloat[i] = bufs[i] * (1.0f / 32768.0f);
+	}
+	else
+	{
+		const signed char *bufb = (const signed char *)sfx->fetcher_data + firstsampleframe * sfx->format.channels;
+		for (i = 0;i < len;i++)
+			outsamplesfloat[i] = bufb[i] * (1.0f / 128.0f);
+	}
 }
 
 /*
@@ -240,25 +251,13 @@ static const snd_buffer_t* WAV_FetchSound (void *sfxfetcher, void **chfetcherpoi
 WAV_FreeSfx
 ====================
 */
-static void WAV_FreeSfx (void *sfxfetcherdata)
+static void WAV_FreeSfx(sfx_t *sfx)
 {
-	snd_buffer_t* sb = (snd_buffer_t *)sfxfetcherdata;
-	// Free the sound buffer
-	Mem_Free(sb);
+	// free the loaded sound data
+	Mem_Free(sfx->fetcher_data);
 }
 
-/*
-====================
-WAV_GetFormat
-====================
-*/
-static const snd_format_t* WAV_GetFormat (sfx_t* sfx)
-{
-	snd_buffer_t* sb = (snd_buffer_t *)sfx->fetcher_data;
-	return &sb->format;
-}
-
-const snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL, WAV_FreeSfx, WAV_GetFormat };
+const snd_fetcher_t wav_fetcher = { WAV_GetSamplesFloat, NULL, WAV_FreeSfx };
 
 
 /*
@@ -271,8 +270,9 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 	fs_offset_t filesize;
 	unsigned char *data;
 	wavinfo_t info;
-	snd_format_t wav_format;
-	snd_buffer_t* sb;
+	int i, len;
+	const unsigned char *inb;
+	unsigned char *outb;
 
 	// Already loaded?
 	if (sfx->fetcher != NULL)
@@ -316,28 +316,46 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 			ptr[i] = LittleShort (ptr[i]);
 	}
 
-	wav_format.speed = info.rate;
-	wav_format.width = info.width;
-	wav_format.channels = info.channels;
-	sb = Snd_CreateSndBuffer (data + info.dataofs, info.samples, &wav_format, snd_renderbuffer->format.speed);
-	if (sb == NULL)
-	{
-		Mem_Free(data);
-		return false;
-	}
+	sfx->format.speed = info.rate;
+	sfx->format.width = info.width;
+	sfx->format.channels = info.channels;
 	sfx->fetcher = &wav_fetcher;
-	sfx->fetcher_data = sb;
-
-	sfx->total_length = sb->nbframes;
-	sfx->memsize += sb->maxframes * sb->format.channels * sb->format.width + sizeof (*sb) - sizeof (sb->samples);
+	sfx->fetcher_data = Mem_Alloc(snd_mempool, info.samples * sfx->format.width * sfx->format.channels);
+	sfx->total_length = info.samples;
+	sfx->memsize += filesize;
+	len = info.samples * sfx->format.channels * sfx->format.width;
+	inb = data + info.dataofs;
+	outb = (unsigned char *)sfx->fetcher_data;
+	if (info.width == 2)
+	{
+		if (mem_bigendian)
+		{
+			// we have to byteswap the data at load (better than doing it while mixing)
+			for (i = 0;i < len;i += 2)
+			{
+				outb[i] = inb[i+1];
+				outb[i+1] = inb[i];
+			}
+		}
+		else
+		{
+			// we can just copy it straight
+			memcpy(outb, inb, len);
+		}
+	}
+	else
+	{
+		// convert unsigned byte sound data to signed bytes for quicker mixing
+		for (i = 0;i < len;i++)
+			outb[i] = inb[i] - 0x80;
+	}
 
 	if (info.loopstart < 0)
 		sfx->loopstart = sfx->total_length;
 	else
-		sfx->loopstart = (unsigned int) ((double)info.loopstart * (double)sb->format.speed / (double)info.rate);
+		sfx->loopstart = info.loopstart;
 	sfx->loopstart = min(sfx->loopstart, sfx->total_length);
 	sfx->flags &= ~SFXFLAG_STREAMED;
 
-	Mem_Free (data);
 	return true;
 }

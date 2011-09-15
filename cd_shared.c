@@ -324,7 +324,7 @@ void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryr
 	}
 	if (FS_FileExists(filename) && (sfx = S_PrecacheSound (filename, false, false)))
 	{
-		faketrack = S_StartSound_StartPosition_Flags (-1, 0, sfx, vec3_origin, cdvolume, 0, startposition, (looping ? CHANNELFLAG_FORCELOOP : 0) | CHANNELFLAG_FULLVOLUME | CHANNELFLAG_LOCALSOUND);
+		faketrack = S_StartSound_StartPosition_Flags (-1, 0, sfx, vec3_origin, cdvolume, 0, startposition, (looping ? CHANNELFLAG_FORCELOOP : 0) | CHANNELFLAG_FULLVOLUME | CHANNELFLAG_LOCALSOUND, 1.0f);
 		if (faketrack != -1)
 		{
 			if(track >= 1)

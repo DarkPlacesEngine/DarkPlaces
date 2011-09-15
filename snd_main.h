@@ -64,6 +64,7 @@ struct sfx_s
 	sfx_t				*next;
 	size_t				memsize;		// total memory used (including sfx_t and fetcher data)
 
+	snd_format_t		format;			// format describing the audio data that fetcher->getsamplesfloat will return
 	unsigned int		flags;			// cf SFXFLAG_* defines
 	unsigned int		loopstart;		// in sample frames. equals total_length if not looped
 	unsigned int		total_length;	// in sample frames
@@ -79,31 +80,39 @@ struct sfx_s
 
 typedef struct channel_s
 {
-	int			listener_volume [SND_LISTENERS];	// 0-65536 volume per speaker
-	int				master_vol;		// 0-65536 master volume
+	// provided sound information
 	sfx_t			*sfx;			// pointer to sound sample being used
+	float			basevolume;		// 0-1 master volume
 	unsigned int	flags;			// cf CHANNELFLAG_* defines
-	int				pos;			// sample position in sfx, negative values delay the start of the sound playback
-	int				entnum;			// to allow overriding a specific sound
-	int				entchannel;
+	int				entnum;			// makes sound follow entity origin (allows replacing interrupting existing sound on same id)
+	int				entchannel;		// which channel id on the entity
 	vec3_t			origin;			// origin of sound effect
-	vec_t			dist_mult;		// distance multiplier (attenuation/clipK)
+	vec_t			distfade;		// distance multiplier (attenuation/clipK)
 	void			*fetcher_data;	// Per-channel data for the sound fetching function
 	int				prologic_invert;// whether a sound is played on the surround channels in prologic
+	float			basespeed;		// playback rate multiplier for pitch variation
+
+	// these are often updated while mixer is running, glitching should be minimized (mismatched channel volumes from spatialization is okay)
+	// spatialized playback speed (speed * doppler ratio)
+	float			mixspeed;
+	// spatialized volume per speaker (mastervol * distanceattenuation * channelvolume cvars)
+	float			volume[SND_LISTENERS];
+
+	// updated ONLY by mixer
+	// position in sfx, starts at 0, loops or stops at sfx->total_length
+	double			position;
 } channel_t;
 
 // Sound fetching functions
 // "start" is both an input and output parameter: it returns the actual start time of the sound buffer
-typedef const snd_buffer_t* (*snd_fetcher_getsb_t) (void *sfxfetcher, void **chfetcherpointer, unsigned int *start, unsigned int nbsampleframes);
-typedef void (*snd_fetcher_endsb_t) (void *chfetcherdata);
-typedef void (*snd_fetcher_free_t) (void *sfxfetcherdata);
-typedef const snd_format_t* (*snd_fetcher_getfmt_t) (sfx_t* sfx);
+typedef void (*snd_fetcher_getsamplesfloat_t) (channel_t *ch, sfx_t *sfx, int firstsampleframe, int numsampleframes, float *outsamplesfloat);
+typedef void (*snd_fetcher_stopchannel_t) (channel_t *ch);
+typedef void (*snd_fetcher_freesfx_t) (sfx_t *sfx);
 struct snd_fetcher_s
 {
-	snd_fetcher_getsb_t		getsb;
-	snd_fetcher_endsb_t		endsb;
-	snd_fetcher_free_t		free;
-	snd_fetcher_getfmt_t	getfmt;
+	snd_fetcher_getsamplesfloat_t		getsamplesfloat;
+	snd_fetcher_stopchannel_t		stopchannel;
+	snd_fetcher_freesfx_t		freesfx;
 };
 
 extern unsigned int total_channels;
@@ -133,13 +142,7 @@ extern mempool_t *snd_mempool;
 extern qboolean simsound;
 
 
-#define STREAM_BUFFER_DURATION 0.3f // in seconds
-#define STREAM_BUFFER_FILL 0.2f // in seconds
-#define STREAM_BUFFER_SIZE(format_ptr) ((int)ceil (STREAM_BUFFER_DURATION * (format_ptr)->speed) * (format_ptr)->width * (format_ptr)->channels)
-
-// We work with 1 sec sequences, so this buffer must be able to contain
-// 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
-extern unsigned char resampling_buffer [48000 * 2 * 2];
+#define STREAM_BUFFERSIZE 16384 // in sampleframes
 
 
 // ====================================================================
@@ -187,7 +190,7 @@ void SndSys_SendKeyEvents(void);
 // exported for capturevideo so ogg can see all channels
 typedef struct portable_samplepair_s
 {
-	int sample[SND_LISTENERS];
+	float sample[SND_LISTENERS];
 } portable_sampleframe_t;
 
 typedef struct listener_s
