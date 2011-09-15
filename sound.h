@@ -98,7 +98,7 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx);
 // S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition);
-int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags);
+int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed);
 qboolean S_LocalSound (const char *s);
 
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
@@ -109,6 +109,7 @@ void S_PauseGameSounds (qboolean toggle);
 void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
+void S_SetChannelSpeed (unsigned int ch_ind, float fspeed);
 float S_GetChannelPosition (unsigned int ch_ind);
 float S_GetEntChannelPosition(int entnum, int entchannel);
 
