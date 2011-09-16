@@ -5675,7 +5675,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	{
 		if(p->camera_entity == t->camera_entity)
 		{
-			planescore = 100.0f - 100.0f * DotProduct(plane.normal, p->plane.normal) + fabs(plane.dist - p->plane.dist) * 25.0f;
+			planescore = 1.0f - DotProduct(plane.normal, p->plane.normal) + fabs(plane.dist - p->plane.dist) * 0.001f;
 			if (bestplaneindex < 0 || bestplanescore > planescore)
 			{
 				bestplaneindex = planeindex;
@@ -5687,7 +5687,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	p = r_waterstate.waterplanes + planeindex;
 
 	// if this surface does not fit any known plane rendered this frame, add one
-	if ((planeindex < 0 || bestplanescore > 100.0f) && r_waterstate.numwaterplanes < r_waterstate.maxwaterplanes)
+	if ((planeindex < 0 || bestplanescore > 0.001f) && r_waterstate.numwaterplanes < r_waterstate.maxwaterplanes)
 	{
 		// store the new plane
 		planeindex = r_waterstate.numwaterplanes;
