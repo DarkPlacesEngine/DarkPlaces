@@ -210,6 +210,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	int 	volume;
 	int 	field_mask;
 	float 	attenuation;
+	float	speed;
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
@@ -224,6 +225,8 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 			attenuation = MSG_ReadByte () / 64.0;
 		else
 			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
+	
+		speed = 1.0f;
 
 		ent = (channel>>3)&1023;
 		channel &= 7;
@@ -243,6 +246,11 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 			attenuation = MSG_ReadByte () / 64.0;
 		else
 			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
+
+		if (field_mask & SND_SPEEDUSHORT4000)
+			speed = ((unsigned short)MSG_ReadShort ()) / 4000.0f;
+		else
+			speed = 1.0f;
 
 		if (field_mask & SND_LARGEENTITY)
 		{

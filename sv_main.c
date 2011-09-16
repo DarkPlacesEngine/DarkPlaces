@@ -699,10 +699,10 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable)
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable, float speed)
 {
 	sizebuf_t *dest;
-	int sound_num, field_mask, i, ent;
+	int sound_num, field_mask, i, ent, speed4000;
 
 	dest = (reliable ? &sv.reliable_datagram : &sv.datagram);
 
@@ -736,6 +736,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 
 	ent = PRVM_NUM_FOR_EDICT(entity);
 
+	speed4000 = (int)(speed * 40.0f);
 	field_mask = 0;
 	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
@@ -745,6 +746,8 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		field_mask |= SND_LARGEENTITY;
 	if (sound_num >= 256)
 		field_mask |= SND_LARGESOUND;
+	if (speed4000 && speed4000 != 4000)
+		field_mask |= SND_SPEEDUSHORT4000;
 
 // directed messages go only to the entity they are targeted on
 	MSG_WriteByte (dest, svc_sound);
@@ -753,6 +756,8 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		MSG_WriteByte (dest, volume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (dest, (int)(attenuation*64));
+	if (field_mask & SND_SPEEDUSHORT4000)
+		MSG_WriteShort (dest, speed4000);
 	if (field_mask & SND_LARGEENTITY)
 	{
 		MSG_WriteShort (dest, ent);
@@ -785,9 +790,9 @@ function, therefore the check for it is omitted.
 
 ==================
 */
-void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation)
+void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation, float speed)
 {
-	int sound_num, field_mask, i;
+	int sound_num, field_mask, i, speed4000;
 
 	if (volume < 0 || volume > 255)
 	{
@@ -809,6 +814,7 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 	if (!sound_num)
 		return;
 
+	speed4000 = (int)(speed * 40.0f);
 	field_mask = 0;
 	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
@@ -816,6 +822,8 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 		field_mask |= SND_ATTENUATION;
 	if (sound_num >= 256)
 		field_mask |= SND_LARGESOUND;
+	if (speed4000 && speed4000 != 4000)
+		field_mask |= SND_SPEEDUSHORT4000;
 
 // directed messages go only to the entity they are targeted on
 	MSG_WriteByte (&sv.datagram, svc_sound);
@@ -824,6 +832,8 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 		MSG_WriteByte (&sv.datagram, volume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (&sv.datagram, (int)(attenuation*64));
+	if (field_mask & SND_SPEEDUSHORT4000)
+		MSG_WriteShort (&sv.datagram, speed4000);
 	// Always write entnum 0 for the world entity
 	MSG_WriteShort (&sv.datagram, (0<<3) | 0);
 	if (field_mask & SND_LARGESOUND)
