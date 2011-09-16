@@ -1192,6 +1192,15 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+	}
 }
 
 void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -1454,6 +1463,15 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+	}
 }
 
 void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -1640,6 +1658,15 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 	}
 }
 
@@ -2020,6 +2047,15 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+	}
 }
 
 void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -2376,6 +2412,15 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 	}
 }
 
@@ -2964,6 +3009,15 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
+	}
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
 	}
 }
 
@@ -3661,4 +3715,13 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (joint1       ) Mem_Free(joint1       );joint1        = NULL;
 	if (pose         ) Mem_Free(pose         );pose          = NULL;
 	if (pose1        ) Mem_Free(pose1        );pose1         = NULL;
+
+	// because shaders can do somewhat unexpected things, check for unusual features now
+	for (i = 0;i < loadmodel->num_textures;i++)
+	{
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
+			mod->DrawSky = R_Q1BSP_DrawSky;
+		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+	}
 }
