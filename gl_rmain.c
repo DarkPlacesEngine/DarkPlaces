@@ -5627,7 +5627,7 @@ static void R_Water_StartFrame(void)
 void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 {
 	int planeindex, bestplaneindex, vertexindex;
-	vec3_t mins, maxs, normal, center;
+	vec3_t mins, maxs, normal, center, v, n;
 	vec_t planescore, bestplanescore;
 	mplane_t plane;
 	r_waterstate_waterplane_t *p;
@@ -5640,13 +5640,15 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	VectorCopy(rsurface.batchvertex3f, maxs);
 	for (vertexindex = 0;vertexindex < rsurface.batchnumvertices;vertexindex++)
 	{
-		VectorAdd(normal, rsurface.batchnormal3f + vertexindex*3, normal);
-		mins[0] = min(mins[0], rsurface.batchvertex3f[vertexindex*3+0]);
-		mins[1] = min(mins[1], rsurface.batchvertex3f[vertexindex*3+1]);
-		mins[2] = min(mins[2], rsurface.batchvertex3f[vertexindex*3+2]);
-		maxs[0] = max(maxs[0], rsurface.batchvertex3f[vertexindex*3+0]);
-		maxs[1] = max(maxs[1], rsurface.batchvertex3f[vertexindex*3+1]);
-		maxs[2] = max(maxs[2], rsurface.batchvertex3f[vertexindex*3+2]);
+		Matrix4x4_Transform(&rsurface.matrix, rsurface.batchvertex3f + vertexindex*3, v);
+		Matrix4x4_Transform3x3(&rsurface.matrix, rsurface.batchnormal3f + vertexindex*3, n);
+		VectorAdd(normal, n, normal);
+		mins[0] = min(mins[0], v[0]);
+		mins[1] = min(mins[1], v[1]);
+		mins[2] = min(mins[2], v[2]);
+		maxs[0] = max(maxs[0], v[0]);
+		maxs[1] = max(maxs[1], v[1]);
+		maxs[2] = max(maxs[2], v[2]);
 	}
 	VectorNormalize(normal);
 	VectorMAM(0.5f, mins, 0.5f, maxs, center);
