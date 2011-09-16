@@ -5626,30 +5626,34 @@ static void R_Water_StartFrame(void)
 
 void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 {
-	int triangleindex, planeindex;
-	const int *e;
-	vec3_t vert[3];
-	vec3_t normal;
-	vec3_t center;
+	int planeindex, bestplaneindex, vertexindex;
+	vec3_t mins, maxs, normal, center;
+	vec_t planescore, bestplanescore;
 	mplane_t plane;
 	r_waterstate_waterplane_t *p;
 	texture_t *t = R_GetCurrentTexture(surface->texture);
 
-	// just use the first triangle with a valid normal for any decisions
+	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_NOGAPS, 1, ((const msurface_t **)&surface));
+	// average the vertex normals, find the surface bounds (after deformvertexes)
 	VectorClear(normal);
-	for (triangleindex = 0, e = rsurface.modelelement3i + surface->num_firsttriangle * 3;triangleindex < surface->num_triangles;triangleindex++, e += 3)
+	VectorCopy(rsurface.batchvertex3f, mins);
+	VectorCopy(rsurface.batchvertex3f, maxs);
+	for (vertexindex = 0;vertexindex < rsurface.batchnumvertices;vertexindex++)
 	{
-		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[0]*3, vert[0]);
-		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[1]*3, vert[1]);
-		Matrix4x4_Transform(&rsurface.matrix, rsurface.modelvertex3f + e[2]*3, vert[2]);
-		TriangleNormal(vert[0], vert[1], vert[2], normal);
-		if (VectorLength2(normal) >= 0.001)
-			break;
+		VectorAdd(normal, rsurface.batchnormal3f + vertexindex*3, normal);
+		mins[0] = min(mins[0], rsurface.batchvertex3f[vertexindex*3+0]);
+		mins[1] = min(mins[1], rsurface.batchvertex3f[vertexindex*3+1]);
+		mins[2] = min(mins[2], rsurface.batchvertex3f[vertexindex*3+2]);
+		maxs[0] = max(maxs[0], rsurface.batchvertex3f[vertexindex*3+0]);
+		maxs[1] = max(maxs[1], rsurface.batchvertex3f[vertexindex*3+1]);
+		maxs[2] = max(maxs[2], rsurface.batchvertex3f[vertexindex*3+2]);
 	}
+	VectorNormalize(normal);
+	VectorMAM(0.5f, mins, 0.5f, maxs, center);
 
 	VectorCopy(normal, plane.normal);
 	VectorNormalize(plane.normal);
-	plane.dist = DotProduct(vert[0], plane.normal);
+	plane.dist = DotProduct(center, plane.normal);
 	PlaneClassify(&plane);
 	if (PlaneDiff(r_refdef.view.origin, &plane) < 0)
 	{
@@ -5663,42 +5667,53 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 
 
 	// find a matching plane if there is one
+	bestplaneindex = -1;
+	bestplanescore = 1048576.0f;
 	for (planeindex = 0, p = r_waterstate.waterplanes;planeindex < r_waterstate.numwaterplanes;planeindex++, p++)
+	{
 		if(p->camera_entity == t->camera_entity)
-			if (fabs(PlaneDiff(vert[0], &p->plane)) < 1 && fabs(PlaneDiff(vert[1], &p->plane)) < 1 && fabs(PlaneDiff(vert[2], &p->plane)) < 1)
-				break;
-	if (planeindex >= r_waterstate.maxwaterplanes)
-		return; // nothing we can do, out of planes
+		{
+			planescore = 100.0f - 100.0f * DotProduct(plane.normal, p->plane.normal) + fabs(plane.dist - p->plane.dist) * 25.0f;
+			if (bestplaneindex < 0 || bestplanescore > planescore)
+			{
+				bestplaneindex = planeindex;
+				bestplanescore = planescore;
+			}
+		}
+	}
+	planeindex = bestplaneindex;
+	p = r_waterstate.waterplanes + planeindex;
 
-	// if this triangle does not fit any known plane rendered this frame, add one
-	if (planeindex >= r_waterstate.numwaterplanes)
+	// if this surface does not fit any known plane rendered this frame, add one
+	if ((planeindex < 0 || bestplanescore > 100.0f) && r_waterstate.numwaterplanes < r_waterstate.maxwaterplanes)
 	{
 		// store the new plane
+		planeindex = r_waterstate.numwaterplanes;
+		p = r_waterstate.waterplanes + planeindex;
 		r_waterstate.numwaterplanes++;
 		p->plane = plane;
 		// clear materialflags and pvs
 		p->materialflags = 0;
 		p->pvsvalid = false;
 		p->camera_entity = t->camera_entity;
-		VectorCopy(surface->mins, p->mins);
-		VectorCopy(surface->maxs, p->maxs);
+		VectorCopy(mins, p->mins);
+		VectorCopy(maxs, p->maxs);
 	}
 	else
 	{
-		// merge mins/maxs
-		p->mins[0] = min(p->mins[0], surface->mins[0]);
-		p->mins[1] = min(p->mins[1], surface->mins[1]);
-		p->mins[2] = min(p->mins[2], surface->mins[2]);
-		p->maxs[0] = max(p->maxs[0], surface->maxs[0]);
-		p->maxs[1] = max(p->maxs[1], surface->maxs[1]);
-		p->maxs[2] = max(p->maxs[2], surface->maxs[2]);
+		// merge mins/maxs when we're adding this surface to the plane
+		p->mins[0] = min(p->mins[0], mins[0]);
+		p->mins[1] = min(p->mins[1], mins[1]);
+		p->mins[2] = min(p->mins[2], mins[2]);
+		p->maxs[0] = max(p->maxs[0], maxs[0]);
+		p->maxs[1] = max(p->maxs[1], maxs[1]);
+		p->maxs[2] = max(p->maxs[2], maxs[2]);
 	}
 	// merge this surface's materialflags into the waterplane
 	p->materialflags |= t->currentmaterialflags;
 	if(!(p->materialflags & MATERIALFLAG_CAMERA))
 	{
 		// merge this surface's PVS into the waterplane
-		VectorMAM(0.5f, surface->mins, 0.5f, surface->maxs, center);
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
 		 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
 		{
