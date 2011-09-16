@@ -51,6 +51,7 @@ cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png inst
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
 cvar_t scr_screenshot_alpha = {CVAR_SAVE, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
+cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
@@ -935,6 +936,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
 	Cvar_RegisterVariable (&scr_screenshot_alpha);
+	Cvar_RegisterVariable (&scr_screenshot_timestamp);
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
 	Cvar_RegisterVariable (&cl_capturevideo_width);
@@ -1023,14 +1025,41 @@ void SCR_ScreenShot_f (void)
 			return;
 		}
 	}
+	else if (scr_screenshot_timestamp.integer)
+	{
+		int shotnumber100;
+
+		// TODO maybe make capturevideo and screenshot use similar name patterns?
+		if (scr_screenshot_name_in_mapdir.integer && cl.worldbasename[0])
+			dpsnprintf(prefix_name, sizeof(prefix_name), "%s/%s%s", cl.worldbasename, scr_screenshot_name.string, Sys_TimeString("%Y%m%d%H%M%S"));
+		else
+			dpsnprintf(prefix_name, sizeof(prefix_name), "%s%s", scr_screenshot_name.string, Sys_TimeString("%Y%m%d%H%M%S"));
+
+		// find a file name to save it to
+		for (shotnumber100 = 0;shotnumber100 < 100;shotnumber100++)
+			if (!FS_SysFileExists(va("%s/screenshots/%s-%02d.tga", fs_gamedir, prefix_name, shotnumber100))
+			 && !FS_SysFileExists(va("%s/screenshots/%s-%02d.jpg", fs_gamedir, prefix_name, shotnumber100))
+			 && !FS_SysFileExists(va("%s/screenshots/%s-%02d.png", fs_gamedir, prefix_name, shotnumber100)))
+				break;
+		if (shotnumber100 >= 100)
+		{
+			Con_Print("Couldn't create the image file - already 100 shots taken this second!\n");
+			return;
+		}
+
+		dpsnprintf(filename, sizeof(filename), "screenshots/%s-%02d.%s", prefix_name, shotnumber100, jpeg ? "jpg" : png ? "png" : "tga");
+	}
 	else
 	{
 		// TODO maybe make capturevideo and screenshot use similar name patterns?
 		if (scr_screenshot_name_in_mapdir.integer && cl.worldbasename[0])
-			dpsnprintf (prefix_name, sizeof(prefix_name), "%s/%s", cl.worldbasename, Sys_TimeString(scr_screenshot_name.string));
+			dpsnprintf(prefix_name, sizeof(prefix_name), "%s/%s", cl.worldbasename, Sys_TimeString(scr_screenshot_name.string));
 		else
-			dpsnprintf (prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
+			dpsnprintf(prefix_name, sizeof(prefix_name), "%s", Sys_TimeString(scr_screenshot_name.string));
 
+		// if prefix changed, gamedir or map changed, reset the shotnumber so
+		// we scan again
+		// FIXME: should probably do this whenever FS_Rescan or something like that occurs?
 		if (strcmp(old_prefix_name, prefix_name))
 		{
 			dpsnprintf(old_prefix_name, sizeof(old_prefix_name), "%s", prefix_name );
@@ -1039,15 +1068,19 @@ void SCR_ScreenShot_f (void)
 
 		// find a file name to save it to
 		for (;shotnumber < 1000000;shotnumber++)
-			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber)) && !FS_SysFileExists(va("%s/screenshots/%s%06d.png", fs_gamedir, prefix_name, shotnumber)))
+			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber))
+			 && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber))
+			 && !FS_SysFileExists(va("%s/screenshots/%s%06d.png", fs_gamedir, prefix_name, shotnumber)))
 				break;
 		if (shotnumber >= 1000000)
 		{
-			Con_Print("Couldn't create the image file\n");
+			Con_Print("Couldn't create the image file - you already have 1000000 screenshots!\n");
 			return;
 		}
 
 		dpsnprintf(filename, sizeof(filename), "screenshots/%s%06d.%s", prefix_name, shotnumber, jpeg ? "jpg" : png ? "png" : "tga");
+
+		shotnumber++;
 	}
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
@@ -1070,8 +1103,6 @@ void SCR_ScreenShot_f (void)
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
-
-	shotnumber++;
 }
 
 void SCR_CaptureVideo_BeginVideo(void)
