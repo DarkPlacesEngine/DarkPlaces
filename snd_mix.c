@@ -201,8 +201,8 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 	int loopstart;
 	int indexfrac;
 	int indexfracstep;
-	const int fetchsampleframesmax = 1024;
-	float fetchsampleframes[1024*2];
+#define S_FETCHBUFFERSIZE 4096
+	float fetchsampleframes[S_FETCHBUFFERSIZE*2];
 	const float *fetchsampleframe;
 	float vol[SND_LISTENERS];
 	float lerp[2];
@@ -262,33 +262,29 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			// do the actual paint now (may skip work if silent)
 			paint = paintbuffer;
 			wantframes = totalmixframes;
-			while (wantframes > 0)
+			for (wantframes = totalmixframes;wantframes > 0;posd += count * speedd, wantframes -= count)
 			{
-				// mix full output length (if possible)
-				count = wantframes;
+				// check if this is a delayed sound
 				if (posd < 0)
 				{
 					// for a delayed sound we have to eat into the delay first
-					count = (int)-posd;
-					if (count > wantframes)
-						count = wantframes;
-					posd += count;
-					wantframes -= count;
+					count = (int)floor(-posd / speedd) + 1;
+					count = bound(1, count, wantframes);
+					// let the for loop iterator apply the skip
 					continue;
 				}
 
-				// get fetch size
-				istartframe = (int)floor(posd);
-				iendframe = (int)floor(posd + count * speedd);
-				ilengthframes = iendframe + 2 - istartframe;
-				// don't overflow fetch buffer
-				while (ilengthframes > fetchsampleframesmax)
+				// compute a fetch size that won't overflow our buffer
+				count = wantframes;
+				for (;;)
 				{
-					count /= 2;
-					iendframe = (int)floor(posd + count * speedd);
-					ilengthframes = iendframe + 2 - istartframe;
-					if (count < 2)
-						ilengthframes = 2;
+					istartframe = (int)floor(posd);
+					iendframe = (int)floor(posd + (count-1) * speedd);
+					ilengthframes = count > 1 ? (iendframe - istartframe + 2) : 2;
+					if (ilengthframes <= S_FETCHBUFFERSIZE)
+						break;
+					// reduce count by 25% and try again
+					count -= count >> 2;
 				}
 
 				// zero whole fetch buffer for safety
@@ -301,7 +297,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				fetched = 0;
 				for (;;)
 				{
-					fetch = min(ilengthframes, totallength - istartframe);
+					fetch = min(ilengthframes - fetched, totallength - istartframe);
 					if (fetch > 0)
 					{
 						if (!silent)
@@ -316,7 +312,9 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 						istartframe = loopstart;
 					}
 					else
+					{
 						break;
+					}
 				}
 
 				// set up our fixedpoint resampling variables (float to int conversions are expensive so do not do one per sampleframe)
@@ -415,8 +413,6 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 						}
 					}
 				}
-				posd += count * speedd;
-				wantframes -= count;
 			}
 			ch->position = posd;
 			if (!looping && istartframe == totallength)

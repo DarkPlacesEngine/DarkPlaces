@@ -1678,7 +1678,7 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 			if (check->sfx == sfx && check->position == 0)
 			{
 				// use negative pos offset to delay this sound effect
-				startpos = (int)lhrandom(0, -0.1 * snd_renderbuffer->format.speed);
+				startpos = lhrandom(0, -0.1 * sfx->format.speed);
 				break;
 			}
 		}
