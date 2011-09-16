@@ -165,6 +165,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	SND_LOOPING		(1<<2)		// a long
 #define	SND_LARGEENTITY	(1<<3)		// a short and a byte (instead of a short)
 #define	SND_LARGESOUND	(1<<4)		// a short (instead of a byte)
+#define	SND_SPEEDUSHORT4000	(1<<5)		// ushort speed*4000 (speed is usually 1.0, a value of 0.0 is the same as 1.0)
 
 
 // defaults for clientinfo messages

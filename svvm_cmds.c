@@ -533,7 +533,7 @@ static void VM_SV_sound (void)
 	if (prog->argc < 6)
 		pitchchange = 0;
 	else
-		pitchchange = PRVM_G_FLOAT(OFS_PARM5);
+		pitchchange = PRVM_G_FLOAT(OFS_PARM5) * 0.01f;
 
 	if (prog->argc < 7)
 	{
@@ -567,7 +567,7 @@ static void VM_SV_sound (void)
 		return;
 	}
 
-	SV_StartSound (entity, channel, sample, volume, attenuation, flags & CHANFLAG_RELIABLE);
+	SV_StartSound (entity, channel, sample, volume, attenuation, flags & CHANFLAG_RELIABLE, pitchchange);
 }
 
 /*
@@ -585,14 +585,16 @@ static void VM_SV_pointsound(void)
 	const char	*sample;
 	int 		volume;
 	float		attenuation;
+	float		pitchchange;
 	vec3_t		org;
 
-	VM_SAFEPARMCOUNT(4, VM_SV_pointsound);
+	VM_SAFEPARMCOUNTRANGE(4, 5, VM_SV_pointsound);
 
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	sample = PRVM_G_STRING(OFS_PARM1);
 	volume = (int)(PRVM_G_FLOAT(OFS_PARM2) * 255);
 	attenuation = PRVM_G_FLOAT(OFS_PARM3);
+	pitchchange = prog->argc < 5 ? 0 : PRVM_G_FLOAT(OFS_PARM4) * 0.01f;
 
 	if (volume < 0 || volume > 255)
 	{
@@ -606,7 +608,7 @@ static void VM_SV_pointsound(void)
 		return;
 	}
 
-	SV_StartPointSound (org, sample, volume, attenuation);
+	SV_StartPointSound (org, sample, volume, attenuation, pitchchange);
 }
 
 /*
