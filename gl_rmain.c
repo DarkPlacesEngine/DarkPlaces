@@ -5633,6 +5633,10 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	r_waterstate_waterplane_t *p;
 	texture_t *t = R_GetCurrentTexture(surface->texture);
 
+	// if the model has no normals, it's probably off-screen and they were not generated, so don't add it anyway
+	if (!rsurface.modelnormal3f)
+		return;
+
 	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_NOGAPS, 1, ((const msurface_t **)&surface));
 	// average the vertex normals, find the surface bounds (after deformvertexes)
 	VectorClear(normal);
