@@ -5325,6 +5325,7 @@ void R_View_UpdateWithScissor(const int *myscissor)
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
 	R_View_UpdateEntityLighting();
+	R_AnimCache_CacheVisibleEntities();
 }
 
 void R_View_Update(void)
@@ -5334,6 +5335,7 @@ void R_View_Update(void)
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
 	R_View_UpdateEntityLighting();
+	R_AnimCache_CacheVisibleEntities();
 }
 
 float viewscalefpsadjusted = 1.0f;
@@ -5633,16 +5635,18 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	r_waterstate_waterplane_t *p;
 	texture_t *t = R_GetCurrentTexture(surface->texture);
 
-	// if the model has no normals, it's probably off-screen and they were not generated, so don't add it anyway
-	if (!rsurface.modelnormal3f)
-		return;
-
+	rsurface.texture = t;
 	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_NOGAPS, 1, ((const msurface_t **)&surface));
+	// if the model has no normals, it's probably off-screen and they were not generated, so don't add it anyway
+	if (!rsurface.batchnormal3f || rsurface.batchnumvertices < 1)
+		return;
 	// average the vertex normals, find the surface bounds (after deformvertexes)
-	VectorClear(normal);
-	VectorCopy(rsurface.batchvertex3f, mins);
-	VectorCopy(rsurface.batchvertex3f, maxs);
-	for (vertexindex = 0;vertexindex < rsurface.batchnumvertices;vertexindex++)
+	Matrix4x4_Transform(&rsurface.matrix, rsurface.batchvertex3f, v);
+	Matrix4x4_Transform3x3(&rsurface.matrix, rsurface.batchnormal3f, n);
+	VectorCopy(n, normal);
+	VectorCopy(v, mins);
+	VectorCopy(v, maxs);
+	for (vertexindex = 1;vertexindex < rsurface.batchnumvertices;vertexindex++)
 	{
 		Matrix4x4_Transform(&rsurface.matrix, rsurface.batchvertex3f + vertexindex*3, v);
 		Matrix4x4_Transform3x3(&rsurface.matrix, rsurface.batchnormal3f + vertexindex*3, n);
@@ -5664,8 +5668,8 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	if (PlaneDiff(r_refdef.view.origin, &plane) < 0)
 	{
 		// skip backfaces (except if nocullface is set)
-		if (!(t->currentmaterialflags & MATERIALFLAG_NOCULLFACE))
-			return;
+//		if (!(t->currentmaterialflags & MATERIALFLAG_NOCULLFACE))
+//			return;
 		VectorNegate(plane.normal, plane.normal);
 		plane.dist *= -1;
 		PlaneClassify(&plane);
@@ -5694,9 +5698,8 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	if ((planeindex < 0 || bestplanescore > 0.001f) && r_waterstate.numwaterplanes < r_waterstate.maxwaterplanes)
 	{
 		// store the new plane
-		planeindex = r_waterstate.numwaterplanes;
+		planeindex = r_waterstate.numwaterplanes++;
 		p = r_waterstate.waterplanes + planeindex;
-		r_waterstate.numwaterplanes++;
 		p->plane = plane;
 		// clear materialflags and pvs
 		p->materialflags = 0;
@@ -7045,10 +7048,6 @@ void R_RenderScene(void)
 				R_TimeReport("sky");
 		}
 	}
-
-	R_AnimCache_CacheVisibleEntities();
-	if (r_timereport_active)
-		R_TimeReport("animation");
 
 	R_Shadow_PrepareLights();
 	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
