@@ -581,7 +581,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	if (ent == r_refdef.scene.worldentity)
 		RSurf_ActiveWorldEntity();
 	else
-		RSurf_ActiveModelEntity(ent, false, false, false);
+		RSurf_ActiveModelEntity(ent, true, false, false);
 
 	surfaces = model->data_surfaces;
 	flagsmask = MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA;
