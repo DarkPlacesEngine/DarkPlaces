@@ -462,12 +462,12 @@ void SCR_CaptureVideo_Avi_SoundFrame(const portable_sampleframe_t *paintbuffer, 
 	{
 		int n0, n1;
 
-		n0 = paintbuffer[i].sample[0];
+		n0 = paintbuffer[i].sample[0] * 32768.0f;
 		n0 = bound(-32768, n0, 32767);
 		out_ptr[0] = (unsigned char)n0;
 		out_ptr[1] = (unsigned char)(n0 >> 8);
 
-		n1 = paintbuffer[i].sample[1];
+		n1 = paintbuffer[i].sample[1] * 32768.0f;
 		n1 = bound(-32768, n1, 32767);
 		out_ptr[2] = (unsigned char)n1;
 		out_ptr[3] = (unsigned char)(n1 >> 8);
