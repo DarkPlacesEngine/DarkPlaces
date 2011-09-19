@@ -919,7 +919,7 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 	{
 		float *b = vorbis_buffer[map[j]];
 		for(i = 0; i < length; ++i)
-			b[i] = paintbuffer[i].sample[j] / 32768.0f;
+			b[i] = paintbuffer[i].sample[j];
 	}
 	qvorbis_analysis_wrote(&format->vd, length);
 
