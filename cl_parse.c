@@ -305,6 +305,7 @@ so the server doesn't disconnect.
 static unsigned char olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (qboolean readmessages)
 {
+	static qboolean recursive = false;
 	float time;
 	static double nextmsg = -1;
 	static double nextupdate = -1;
@@ -315,18 +316,29 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	qboolean oldbadread;
 	sizebuf_t old;
 
-	if(cls.state != ca_dedicated)
+	qboolean thisrecursive;
+
+	thisrecursive = recursive;
+	recursive = true;
+
+	if(!thisrecursive)
 	{
-		if((time = Sys_DoubleTime()) >= nextupdate)
+		if(cls.state != ca_dedicated)
 		{
-			SCR_UpdateLoadingScreenIfShown();
-			nextupdate = time + 2;
+			if((time = Sys_DoubleTime()) >= nextupdate)
+			{
+				SCR_UpdateLoadingScreenIfShown();
+				nextupdate = time + 2;
+			}
 		}
 	}
 
 	// no need if server is local and definitely not if this is a demo
 	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
+	{
+		recursive = thisrecursive;
 		return;
+	}
 
 	if (readmessages)
 	{
@@ -366,6 +378,8 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		MSG_WriteChar(&msg, clc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg, cls.protocol, 10000, false);
 	}
+
+	recursive = thisrecursive;
 }
 
 void CL_ParseEntityLump(char *entdata)
