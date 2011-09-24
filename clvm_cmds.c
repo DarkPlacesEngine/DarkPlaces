@@ -681,7 +681,7 @@ static void VM_CL_getlight (void)
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
 	vec_t *p;
 
-	VM_SAFEPARMCOUNTRANGE(1, 2, VM_CL_getlight);
+	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getlight);
 
 	p = PRVM_G_VECTOR(OFS_PARM0);
 	VectorClear(ambientcolor);
@@ -692,6 +692,12 @@ static void VM_CL_getlight (void)
 	else if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
 		cl.worldmodel->brush.LightPoint(cl.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
 	VectorMA(ambientcolor, 0.5, diffusecolor, PRVM_G_VECTOR(OFS_RETURN));
+	if (PRVM_clientglobalvector(getlight_ambient))
+		VectorCopy(ambientcolor, PRVM_clientglobalvector(getlight_ambient));
+	if (PRVM_clientglobalvector(getlight_diffuse))
+		VectorCopy(diffusecolor, PRVM_clientglobalvector(getlight_diffuse));
+	if (PRVM_clientglobalvector(getlight_dir))
+		VectorCopy(diffusenormal, PRVM_clientglobalvector(getlight_dir));
 }
 
 //============================================================================
