@@ -399,6 +399,9 @@ void(vector v1, vector min, vector max, vector v2, float nomonsters, entity fore
 vector() randomvec = #91;
 vector(vector org) getlight = #92;
 vector(vector org, float lpflags) getlight2 = #92;
+vector getlight_dir;
+vector getlight_ambient;
+vector getlight_diffuse;
 const float LP_LIGHTMAP	= 1;
 const float LP_RTWORLD = 2;
 const float LP_DYNLIGHT = 4;
