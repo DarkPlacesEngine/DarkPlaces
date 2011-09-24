@@ -1215,6 +1215,7 @@ float(string name, string value) registercvar = #93;
 //Note: also plays .ogg with DP_SND_OGGVORBIS extension.
 
 //DP_SND_SOUND7_WIP1
+//DP_SND_SOUND7_WIP2
 //idea: divVerent
 //darkplaces implementation: divVerent
 //builtin definitions:
@@ -1225,8 +1226,9 @@ float SOUNDFLAG_RELIABLE = 1;
 //extensions to sound():
 //- channel may be in the range from -128 to 127; channels -128 to 0 are "auto",
 //  i.e. support multiple sounds at once, but cannot be stopped/restarted
-//- a speed parameter has been reserved for later addition of pitch shifting.
-//  it MUST be set to 0 for now, meaning "no pitch change"
+//- a value 0 in the speed parameter means no change; otherwise, it is a
+//  percentage of playback speed ("pitch shifting"). 100 is normal pitch, 50 is
+//  half speed, 200 is double speed, etc. (DP_SND_SOUND7_WIP2)
 //- the flag SOUNDFLAG_RELIABLE can be specified, which makes the sound send
 //  to MSG_ALL (reliable) instead of MSG_BROADCAST (unreliable, default);
 //  similarily, SOUNDFLAG_RELIABLE_TO_ONE sends to MSG_ONE
