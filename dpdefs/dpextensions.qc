@@ -1615,6 +1615,7 @@ const float SOLID_PHYSICS_BOX = 32;
 const float SOLID_PHYSICS_SPHERE = 33;
 const float SOLID_PHYSICS_CAPSULE = 34;
 const float SOLID_PHYSICS_TRIMESH = 35;
+const float SOLID_PHYSICS_CYLINDER = 36;
 //SOLID_BSP;
 //joint types:
 const float JOINTTYPE_POINT = 1;
@@ -1637,6 +1638,8 @@ const float JOINTTYPE_FIXED = -1;
 //   note that ODE does not support both in one anyway
 //field definitions:
 .float mass; // ODE mass, standart value is 1
+.vector massofs; // offsets a mass center out of object center, if not set a center of model bounds is used
+.float friction;
 .float bouncefactor;
 .float bouncestop;
 .float jointtype;
@@ -1647,7 +1650,6 @@ void(entity e, vector torque) physics_addtorque = #542; // add relative torque
 //description: provides Open Dynamics Engine support, requires extenal dll to be present or engine compiled with statical link option
 //be sure to checkextension for it to know if library is loaded and ready, also to enable physics set "physics_ode" cvar to 1
 //note: this extension is highly experimental and may be unstable
-//note: use SOLID_BSP on entities to get a trimesh collision models on them
 
 //DP_SV_PRINT
 //idea: id Software (QuakeWorld Server)

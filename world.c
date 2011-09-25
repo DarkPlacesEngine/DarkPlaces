@@ -559,7 +559,7 @@ void            (ODE_API *dMassSetSphereTotal)(dMass *, dReal total_mass, dReal 
 //void            (ODE_API *dMassSetCapsule)(dMass *, dReal density, int direction, dReal radius, dReal length);
 void            (ODE_API *dMassSetCapsuleTotal)(dMass *, dReal total_mass, int direction, dReal radius, dReal length);
 //void            (ODE_API *dMassSetCylinder)(dMass *, dReal density, int direction, dReal radius, dReal length);
-//void            (ODE_API *dMassSetCylinderTotal)(dMass *, dReal total_mass, int direction, dReal radius, dReal length);
+void            (ODE_API *dMassSetCylinderTotal)(dMass *, dReal total_mass, int direction, dReal radius, dReal length);
 //void            (ODE_API *dMassSetBox)(dMass *, dReal density, dReal lx, dReal ly, dReal lz);
 void            (ODE_API *dMassSetBoxTotal)(dMass *, dReal total_mass, dReal lx, dReal ly, dReal lz);
 //void            (ODE_API *dMassSetTrimesh)(dMass *, dReal density, dGeomID g);
@@ -950,7 +950,7 @@ dGeomID         (ODE_API *dCreateCapsule)(dSpaceID space, dReal radius, dReal le
 //void            (ODE_API *dGeomCapsuleGetParams)(dGeomID ccylinder, dReal *radius, dReal *length);
 //dReal           (ODE_API *dGeomCapsulePointDepth)(dGeomID ccylinder, dReal x, dReal y, dReal z);
 //
-//dGeomID         (ODE_API *dCreateCylinder)(dSpaceID space, dReal radius, dReal length);
+dGeomID         (ODE_API *dCreateCylinder)(dSpaceID space, dReal radius, dReal length);
 //void            (ODE_API *dGeomCylinderSetParams)(dGeomID cylinder, dReal radius, dReal length);
 //void            (ODE_API *dGeomCylinderGetParams)(dGeomID cylinder, dReal *radius, dReal *length);
 //
@@ -1026,7 +1026,7 @@ static dllfunction_t odefuncs[] =
 //	{"dMassSetCapsule",								(void **) &dMassSetCapsule},
 	{"dMassSetCapsuleTotal",						(void **) &dMassSetCapsuleTotal},
 //	{"dMassSetCylinder",							(void **) &dMassSetCylinder},
-//	{"dMassSetCylinderTotal",						(void **) &dMassSetCylinderTotal},
+	{"dMassSetCylinderTotal",						(void **) &dMassSetCylinderTotal},
 //	{"dMassSetBox",									(void **) &dMassSetBox},
 	{"dMassSetBoxTotal",							(void **) &dMassSetBoxTotal},
 //	{"dMassSetTrimesh",								(void **) &dMassSetTrimesh},
@@ -1408,7 +1408,7 @@ static dllfunction_t odefuncs[] =
 //	{"dGeomCapsuleSetParams",						(void **) &dGeomCapsuleSetParams},
 //	{"dGeomCapsuleGetParams",						(void **) &dGeomCapsuleGetParams},
 //	{"dGeomCapsulePointDepth",						(void **) &dGeomCapsulePointDepth},
-//	{"dCreateCylinder",								(void **) &dCreateCylinder},
+	{"dCreateCylinder",								(void **) &dCreateCylinder},
 //	{"dGeomCylinderSetParams",						(void **) &dGeomCylinderSetParams},
 //	{"dGeomCylinderGetParams",						(void **) &dGeomCylinderGetParams},
 //	{"dCreateRay",									(void **) &dCreateRay},
@@ -2134,6 +2134,12 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	if (movetype != MOVETYPE_PHYSICS)
 		massval = 1.0f;
 
+	// get friction from entity
+	if (PRVM_gameedictfloat(ed, friction))
+		ed->priv.server->ode_friction = PRVM_gameedictfloat(ed, friction);
+	else
+		ed->priv.server->ode_friction = 1.0;
+		
 	// check if we need to create or replace the geom
 	if (!ed->priv.server->ode_physics
 	 || !VectorCompare(ed->priv.server->ode_mins, entmins)
@@ -2149,8 +2155,11 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		ed->priv.server->ode_mass = massval;
 		ed->priv.server->ode_modelindex = modelindex;
 		VectorMAM(0.5f, entmins, 0.5f, entmaxs, geomcenter);
+		if (PRVM_gameedictvector(ed, massofs))
+			VectorCopy(geomcenter, PRVM_gameedictvector(ed, massofs));
+		else
+			VectorMAM(0.5f, entmins, 0.5f, entmaxs, geomcenter);
 		ed->priv.server->ode_movelimit = min(geomsize[0], min(geomsize[1], geomsize[2]));
-
 		if (massval * geomsize[0] * geomsize[1] * geomsize[2] == 0)
 		{
 			if (movetype == MOVETYPE_PHYSICS)
@@ -2221,6 +2230,7 @@ treatasbox:
 			dMassSetSphereTotal(&mass, massval, geomsize[0] * 0.5f);
 			break;
 		case SOLID_PHYSICS_CAPSULE:
+		case SOLID_PHYSICS_CYLINDER:
 			axisindex = 0;
 			if (geomsize[axisindex] < geomsize[1])
 				axisindex = 1;
@@ -2242,8 +2252,16 @@ treatasbox:
 			// because we want to support more than one axisindex, we have to
 			// create a transform, and turn on its cleanup setting (which will
 			// cause the child to be destroyed when it is destroyed)
-			ed->priv.server->ode_geom = (void *)dCreateCapsule((dSpaceID)world->physics.ode_space, radius, length);
-			dMassSetCapsuleTotal(&mass, massval, axisindex+1, radius, length);
+			if (solid == SOLID_PHYSICS_CAPSULE)
+			{
+				ed->priv.server->ode_geom = (void *)dCreateCapsule((dSpaceID)world->physics.ode_space, radius, length);
+				dMassSetCapsuleTotal(&mass, massval, axisindex+1, radius, length);
+			}
+			else
+			{
+				ed->priv.server->ode_geom = (void *)dCreateCylinder((dSpaceID)world->physics.ode_space, radius, length);
+				dMassSetCylinderTotal(&mass, massval, axisindex+1, radius, length);
+			}
 			break;
 		default:
 			Sys_Error("World_Physics_BodyFromEntity: unrecognized solid value %i was accepted by filter\n", solid);
@@ -2257,7 +2275,7 @@ treatasbox:
 		memcpy(ed->priv.server->ode_massbuf, &mass, sizeof(dMass));
 	}
 
-	if(ed->priv.server->ode_geom)
+	if (ed->priv.server->ode_geom)
 		dGeomSetData((dGeomID)ed->priv.server->ode_geom, (void*)ed);
 	if (movetype == MOVETYPE_PHYSICS && ed->priv.server->ode_geom)
 	{
@@ -2405,7 +2423,6 @@ treatasbox:
 		if(gravity != ed->priv.server->ode_gravity)
 			Con_Printf("  gravity: %i -> %i\n", ed->priv.server->ode_gravity, gravity);
 #endif
-
 		// values for BodyFromEntity to check if the qc modified anything later
 		VectorCopy(origin, ed->priv.server->ode_origin);
 		VectorCopy(velocity, ed->priv.server->ode_velocity);
@@ -2593,7 +2610,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	for (i = 0;i < numcontacts;i++)
 	{
 		contact[i].surface.mode = (physics_ode_contact_mu.value != -1 ? dContactApprox1 : 0) | (physics_ode_contact_erp.value != -1 ? dContactSoftERP : 0) | (physics_ode_contact_cfm.value != -1 ? dContactSoftCFM : 0) | (bouncefactor1 > 0 ? dContactBounce : 0);
-		contact[i].surface.mu = physics_ode_contact_mu.value;
+		contact[i].surface.mu = physics_ode_contact_mu.value * ed1->priv.server->ode_friction * ed2->priv.server->ode_friction;
 		contact[i].surface.soft_erp = physics_ode_contact_erp.value;
 		contact[i].surface.soft_cfm = physics_ode_contact_cfm.value;
 		contact[i].surface.bounce = bouncefactor1;
