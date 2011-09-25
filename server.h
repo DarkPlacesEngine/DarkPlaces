@@ -332,6 +332,7 @@ typedef struct client_s
 #define	SOLID_PHYSICS_SPHERE	33		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
 #define	SOLID_PHYSICS_CAPSULE	34		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
 #define	SOLID_PHYSICS_TRIMESH	35		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
+#define	SOLID_PHYSICS_CYLINDER	36		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
 
 // edict->deadflag values
 #define	DEAD_NO					0
