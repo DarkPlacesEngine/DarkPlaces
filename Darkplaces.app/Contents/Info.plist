@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>darkplaces-sdl</string>
+	<string>darkplaces-osx-sdl</string>
 	<key>CFBundleIconFile</key>
 	<string>Darkplaces</string>
 	<key>CFBundlePackageType</key>
