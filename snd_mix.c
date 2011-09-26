@@ -246,6 +246,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				vol[i] = ch->volume[i];
 
 			// check total volume level, because we can skip some code on silent sounds but other code must still run (position updates mainly)
+			sum = 0;
 			for (i = 0;i < SND_LISTENERS;i++)
 				sum += vol[i]*vol[i];
 			silent = sum < 0.001f;
@@ -262,6 +263,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			// do the actual paint now (may skip work if silent)
 			paint = paintbuffer;
 			wantframes = totalmixframes;
+			istartframe = 0;
 			for (wantframes = totalmixframes;wantframes > 0;posd += count * speedd, wantframes -= count)
 			{
 				// check if this is a delayed sound
