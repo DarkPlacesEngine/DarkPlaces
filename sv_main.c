@@ -742,12 +742,12 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 		field_mask |= SND_VOLUME;
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
+	if (speed4000 && speed4000 != 4000)
+		field_mask |= SND_SPEEDUSHORT4000;
 	if (ent >= 8192 || channel < 0 || channel > 7)
 		field_mask |= SND_LARGEENTITY;
 	if (sound_num >= 256)
 		field_mask |= SND_LARGESOUND;
-	if (speed4000 && speed4000 != 4000)
-		field_mask |= SND_SPEEDUSHORT4000;
 
 // directed messages go only to the entity they are targeted on
 	MSG_WriteByte (dest, svc_sound);
