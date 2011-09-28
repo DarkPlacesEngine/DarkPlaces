@@ -736,7 +736,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 
 	ent = PRVM_NUM_FOR_EDICT(entity);
 
-	speed4000 = (int)(speed * 40.0f);
+	speed4000 = (int)(speed * 4000.0f);
 	field_mask = 0;
 	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
