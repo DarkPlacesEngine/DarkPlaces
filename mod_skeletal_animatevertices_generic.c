@@ -16,18 +16,6 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 	float m[12];
 	const blendweights_t * RESTRICT weights;
 
-	if (!model->surfmesh.num_vertices)
-		return;
-
-	if (!model->num_bones)
-	{
-		if (vertex3f) memcpy(vertex3f, model->surfmesh.data_vertex3f, model->surfmesh.num_vertices*sizeof(float[3]));
-		if (normal3f) memcpy(normal3f, model->surfmesh.data_normal3f, model->surfmesh.num_vertices*sizeof(float[3]));
-		if (svector3f) memcpy(svector3f, model->surfmesh.data_svector3f, model->surfmesh.num_vertices*sizeof(float[3]));
-		if (tvector3f) memcpy(tvector3f, model->surfmesh.data_tvector3f, model->surfmesh.num_vertices*sizeof(float[3]));
-		return;
-	}
-
 	//unsigned long long ts = rdtsc();
 	bonepose = (float12_t *) Mod_Skeletal_AnimateVertices_AllocBuffers(sizeof(float12_t) * (model->num_bones*2 + model->surfmesh.num_blends));
 	boneposerelative = bonepose + model->num_bones;
