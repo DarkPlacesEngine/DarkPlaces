@@ -23,6 +23,15 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	if (!model->surfmesh.num_vertices)
 		return;
 
+	if (!model->num_bones)
+	{
+		if (vertex3f) memcpy(vertex3f, model->surfmesh.data_vertex3f, model->surfmesh.num_vertices*sizeof(float[3]));
+		if (normal3f) memcpy(normal3f, model->surfmesh.data_normal3f, model->surfmesh.num_vertices*sizeof(float[3]));
+		if (svector3f) memcpy(svector3f, model->surfmesh.data_svector3f, model->surfmesh.num_vertices*sizeof(float[3]));
+		if (tvector3f) memcpy(tvector3f, model->surfmesh.data_tvector3f, model->surfmesh.num_vertices*sizeof(float[3]));
+		return;
+	}
+
 	num_vertices_minus_one = model->surfmesh.num_vertices - 1;
 
 	//unsigned long long ts = rdtsc();
