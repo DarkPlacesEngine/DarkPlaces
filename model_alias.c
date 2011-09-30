@@ -40,25 +40,25 @@ cvar_t mod_alias_supporttagscale = {0, "mod_alias_supporttagscale", "1", "suppor
 
 float mod_md3_sin[320];
 
-static size_t Mod_Skeltal_AnimateVertices_maxbonepose = 0;
-static void *Mod_Skeltal_AnimateVertices_bonepose = NULL;
+static size_t Mod_Skeletal_AnimateVertices_maxbonepose = 0;
+static void *Mod_Skeletal_AnimateVertices_bonepose = NULL;
 void Mod_Skeletal_FreeBuffers(void)
 {
-	if(Mod_Skeltal_AnimateVertices_bonepose)
-		Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
-	Mod_Skeltal_AnimateVertices_maxbonepose = 0;
-	Mod_Skeltal_AnimateVertices_bonepose = NULL;
+	if(Mod_Skeletal_AnimateVertices_bonepose)
+		Mem_Free(Mod_Skeletal_AnimateVertices_bonepose);
+	Mod_Skeletal_AnimateVertices_maxbonepose = 0;
+	Mod_Skeletal_AnimateVertices_bonepose = NULL;
 }
 void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes)
 {
-	if(Mod_Skeltal_AnimateVertices_maxbonepose < nbytes)
+	if(Mod_Skeletal_AnimateVertices_maxbonepose < nbytes)
 	{
-		if(Mod_Skeltal_AnimateVertices_bonepose)
-			Mem_Free(Mod_Skeltal_AnimateVertices_bonepose);
-		Mod_Skeltal_AnimateVertices_bonepose = Z_Malloc(nbytes);
-		Mod_Skeltal_AnimateVertices_maxbonepose = nbytes;
+		if(Mod_Skeletal_AnimateVertices_bonepose)
+			Mem_Free(Mod_Skeletal_AnimateVertices_bonepose);
+		Mod_Skeletal_AnimateVertices_bonepose = Z_Malloc(nbytes);
+		Mod_Skeletal_AnimateVertices_maxbonepose = nbytes;
 	}
-	return Mod_Skeltal_AnimateVertices_bonepose;
+	return Mod_Skeletal_AnimateVertices_bonepose;
 }
 
 void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
