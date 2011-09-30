@@ -882,6 +882,30 @@ float GETTIME_CDTRACK = 4;
 //returns the playing time of the current cdtrack when passed to gettime()
 //see DP_END_GETSOUNDTIME for similar functionality but for entity sound channels
 
+//DP_QC_I18N
+//idea: divVerent
+//darkplaces implementation: divVerent
+//description:
+//
+//The engine supports translating by gettext compatible .po files.
+//progs.dat uses progs.dat.<LANGUAGE>.po
+//menu.dat uses menu.dat.<LANGUAGE>.po
+//csprogs.dat uses csprogs.dat.<LANGUAGE>.po
+//
+//To create a string that can be translated, define it as
+//  string dotranslate_FILENOTFOUND = "File not found";
+//Note: if the compiler does constant folding, this will only work if there is
+//no other "File not found" string in the progs!
+//
+//Alternatively, if using the Xonotic patched fteqcc compiler, you can simplify
+//this by using _("File not found") directly in the source code.
+//
+//The language is set by the "prvm_language" cvar: if prvm_language is set to
+//"de", it will read progs.dat.de.po for translating strings in progs.dat.
+//
+//If prvm_language is set to to the special name "dump", progs.dat.pot which is
+//a translation template to be edited by filling out the msgstr entries.
+
 //DP_QC_LOG
 //darkplaces implementation: divVerent
 //builtin definitions:
