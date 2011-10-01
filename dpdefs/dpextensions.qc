@@ -928,8 +928,9 @@ float GETTIME_CDTRACK = 4;
 //The language is set by the "prvm_language" cvar: if prvm_language is set to
 //"de", it will read progs.dat.de.po for translating strings in progs.dat.
 //
-//If prvm_language is set to to the special name "dump", progs.dat.pot which is
-//a translation template to be edited by filling out the msgstr entries.
+//If prvm_language is set to the special name "dump", progs.dat.pot will be
+//written, which is a translation template to be edited by filling out the
+//msgstr entries.
 
 //DP_QC_LOG
 //darkplaces implementation: divVerent
