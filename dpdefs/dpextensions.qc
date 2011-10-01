@@ -668,12 +668,13 @@ float CVAR_TYPEFLAG_READONLY = 32;
 //idea: motorsep, Spike
 //DarkPlaces implementation: divVerent
 //builtin definitions:
-string(string digest, string data, ...) digest_hex = #638;
+string(string digest, string data, ...) digest_hex = #639;
 //description:
 //returns a given hex digest of given data
-//digest is always encoded in hexadecimal
+//the returned digest is always encoded in hexadecimal
 //only the "MD4" digest is always supported!
 //if the given digest is not supported, string_null is returned
+//the digest string is matched case sensitively, use "MD4", not "md4"!
 
 //DP_QC_DIGEST_SHA256
 //idea: motorsep, Spike
@@ -1257,6 +1258,7 @@ float(string name, string value) registercvar = #93;
 
 //DP_SND_FAKETRACKS
 //idea: requested
+
 //darkplaces implementation: Elric
 //description:
 //the engine plays sound/cdtracks/track001.wav instead of cd track 1 and so on if found, this allows games and mods to have music tracks without using ambientsound.
