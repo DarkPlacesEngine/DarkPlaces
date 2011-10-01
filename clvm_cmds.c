@@ -4779,7 +4779,8 @@ NULL,							// #635
 NULL,							// #636
 NULL,							// #637
 VM_CL_RotateMoves,					// #638
-NULL,							// #639
+VM_digest_hex,						// #639
+NULL,							// #640
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

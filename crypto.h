@@ -32,6 +32,8 @@ crypto_t;
 void Crypto_Init(void);
 void Crypto_Init_Commands(void);
 void Crypto_Shutdown(void);
+qboolean Crypto_Available(void);
+void sha256(unsigned char *out, const unsigned char *in, int n); // may ONLY be called if Crypto_Available()
 const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t len_src, void *data_dst, size_t *len_dst, size_t len);
 const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t len_src, void *data_dst, size_t *len_dst, size_t len);
 #define CRYPTO_NOMATCH 0        // process as usual (packet was not used)
