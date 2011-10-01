@@ -664,6 +664,23 @@ float CVAR_TYPEFLAG_ENGINE = 8;
 float CVAR_TYPEFLAG_HASDESCRIPTION = 16;
 float CVAR_TYPEFLAG_READONLY = 32;
 
+//DP_QC_DIGEST
+//idea: motorsep, Spike
+//DarkPlaces implementation: divVerent
+//builtin definitions:
+string(string digest, string data, ...) digest_hex = #638;
+//description:
+//returns a given hex digest of given data
+//digest is always encoded in hexadecimal
+//only the "MD4" digest is always supported!
+//if the given digest is not supported, string_null is returned
+
+//DP_QC_DIGEST_SHA256
+//idea: motorsep, Spike
+//DarkPlaces implementation: divVerent
+//description:
+//"SHA256" is also an allowed digest type
+
 //DP_QC_EDICT_NUM
 //idea: 515
 //DarkPlaces implementation: LordHavoc
