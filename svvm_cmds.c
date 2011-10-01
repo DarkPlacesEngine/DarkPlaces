@@ -88,6 +88,8 @@ const char *vm_sv_extensions =
 "DP_QC_CVAR_DESCRIPTION "
 "DP_QC_CVAR_STRING "
 "DP_QC_CVAR_TYPE "
+"DP_QC_DIGEST "
+"DP_QC_DIGEST_SHA256 "
 "DP_QC_EDICT_NUM "
 "DP_QC_ENTITYDATA "
 "DP_QC_ENTITYSTRING "
@@ -3788,6 +3790,16 @@ VM_sprintf,                     // #627 string sprintf(string format, ...)
 VM_getsurfacenumtriangles,		// #628 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACETRIANGLE)
 VM_getsurfacetriangle,			// #629 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACETRIANGLE)
 NULL,							// #630
+NULL,							// #631
+NULL,							// #632
+NULL,							// #633
+NULL,							// #634
+NULL,							// #635
+NULL,							// #636
+NULL,							// #637
+NULL,							// #638
+VM_digest_hex,						// #639
+NULL,							// #640
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

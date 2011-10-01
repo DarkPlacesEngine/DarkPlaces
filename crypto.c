@@ -914,6 +914,13 @@ void Crypto_Init(void)
 }
 // end
 
+qboolean Crypto_Available(void)
+{
+	if(!d0_blind_id_dll)
+		return false;
+	return true;
+}
+
 // keygen code
 static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned char *buffer, void *cbdata)
 {

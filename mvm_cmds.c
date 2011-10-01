@@ -26,6 +26,8 @@ const char *vm_m_extensions =
 "DP_QC_CRC16 "
 "DP_QC_CVAR_TYPE "
 "DP_QC_CVAR_DESCRIPTION "
+"DP_QC_DIGEST "
+"DP_QC_DIGEST_SHA256 "
 "DP_QC_FINDCHAIN_TOFIELD "
 "DP_QC_I18N "
 "DP_QC_LOG "
@@ -1512,6 +1514,8 @@ VM_M_crypto_getidfp,					// #634 string(string addr) crypto_getidfp
 VM_M_crypto_getencryptlevel,				// #635 string(string addr) crypto_getencryptlevel
 VM_M_crypto_getmykeyfp,					// #636 string(float addr) crypto_getmykeyfp
 VM_M_crypto_getmyidfp,					// #637 string(float addr) crypto_getmyidfp
+NULL,							// #638
+VM_digest_hex,						// #639
 NULL
 };
 

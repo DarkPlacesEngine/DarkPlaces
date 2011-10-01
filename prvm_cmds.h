@@ -430,6 +430,7 @@ void VM_strreplace (void);
 void VM_strireplace (void);
 
 void VM_crc16(void);
+void VM_digest_hex(void);
 
 void VM_SetTraceGlobals(const trace_t *trace);
 void VM_ClearTraceGlobals(void);

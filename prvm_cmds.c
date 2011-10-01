@@ -280,6 +280,13 @@ static qboolean checkextension(const char *name)
 				return false;
 #endif
 			}
+
+			// special sheck for d0_blind_id
+			if (!strcasecmp("DP_CRYPTO", name))
+				return Crypto_Available();
+			if (!strcasecmp("DP_QC_DIGEST_SHA256", name))
+				return Crypto_Available();
+
 			return true;
 		}
 	}
@@ -5634,10 +5641,59 @@ void VM_crc16(void)
 {
 	float insensitive;
 	static char s[VM_STRINGTEMP_LENGTH];
-	VM_SAFEPARMCOUNTRANGE(2, 8, VM_hash);
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_crc16);
 	insensitive = PRVM_G_FLOAT(OFS_PARM0);
 	VM_VarString(1, s, sizeof(s));
 	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, strlen(s)));
+}
+
+// #639 float(string digest, string data, ...) digest_hex
+void VM_digest_hex(void)
+{
+	const char *digest;
+
+	static char out[32];
+	static char outhex[65];
+	int outlen;
+
+	static char s[VM_STRINGTEMP_LENGTH];
+	int len;
+
+	VM_SAFEPARMCOUNTRANGE(2, 8, VM_digest_hex);
+	digest = PRVM_G_STRING(OFS_PARM0);
+	if(!digest)
+		digest = "";
+	VM_VarString(1, s, sizeof(s));
+	len = strlen(s);
+
+	outlen = 0;
+
+	if(!strcmp(digest, "MD4"))
+	{
+		outlen = 16;
+		mdfour(&out, s, len);
+	}
+	else if(!strcmp(digest, "SHA256") && Crypto_Available())
+	{
+		outlen = 32;
+		sha256(&out, s, len);
+	}
+	// no warning needed on mismatch - we return string_null to QC
+
+	if(outlen)
+	{
+		int i;
+		static const char *hexmap = "0123456789abcdef";
+		for(i = 0; i < outlen; ++i)
+		{
+			outhex[2*i]   = hexmap[(out[i] >> 4) & 15];
+			outhex[2*i+1] = hexmap[(out[i] >> 0) & 15];
+		}
+		outhex[2*i] = 0;
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(outhex);
+	}
+	else
+		PRVM_G_INT(OFS_RETURN) = 0;
 }
 
 void VM_wasfreed (void)
