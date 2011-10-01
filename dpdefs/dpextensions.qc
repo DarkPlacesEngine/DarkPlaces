@@ -621,6 +621,13 @@ void(entity from, entity to) copyentity = #400;
 //description:
 //copies all data in the entity to another entity.
 
+//DP_QC_CRC16
+//idea: divVerent
+//darkplaces implementation: divVerent
+//Some hash function to build hash tables with. This has to be be the CRC-16-CCITT that is also required for the QuakeWorld download protocol.
+//When caseinsensitive is set, the CRC is calculated of the lower cased string.
+float(float caseinsensitive, string s, ...) crc16 = #494;
+
 //DP_QC_CVAR_DEFSTRING
 //idea: id Software (Doom3), LordHavoc
 //darkplaces implementation: LordHavoc
@@ -2426,13 +2433,6 @@ string(string search, string replace, string subject) strireplace = #485;
 //description:
 //strreplace replaces all occurrences of 'search' with 'replace' in the string 'subject', and returns the result as a tempstring.
 //strireplace does the same but uses case-insensitive matching of the 'search' term
-//
-//DP_QC_CRC16
-//idea: divVerent
-//darkplaces implementation: divVerent
-//Some hash function to build hash tables with. This has to be be the CRC-16-CCITT that is also required for the QuakeWorld download protocol.
-//When caseinsensitive is set, the CRC is calculated of the lower cased string.
-float(float caseinsensitive, string s, ...) crc16 = #494;
 
 //DP_SV_SHUTDOWN
 //idea: divVerent
