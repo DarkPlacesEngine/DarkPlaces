@@ -706,7 +706,7 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 		CSQC_END
 	}
 }
-qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos)
+qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, float speed)
 {
 	qboolean r = false;
 	if(cl.csqc_loaded)
@@ -722,7 +722,7 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 			PRVM_G_FLOAT(OFS_PARM3) = volume;
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
-			PRVM_G_FLOAT(OFS_PARM6) = 0; // pitch shift not supported yet
+			PRVM_G_FLOAT(OFS_PARM6) = speed * 100.0f;
 			PRVM_G_FLOAT(OFS_PARM7) = 0; // flags - none can come in at this point yet
 			PRVM_ExecuteProgram(PRVM_clientfunction(CSQC_Event_Sound), "QC function CSQC_Event_Sound is missing");
 			r = CSQC_RETURNVAL != 0;
