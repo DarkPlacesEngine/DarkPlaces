@@ -13,6 +13,7 @@
 #include "cl_collision.h"
 #include "clvm_cmds.h"
 #include "ft2.h"
+#include "mdfour.h"
 
 extern cvar_t prvm_backtraceforwarnings;
 
@@ -5671,12 +5672,12 @@ void VM_digest_hex(void)
 	if(!strcmp(digest, "MD4"))
 	{
 		outlen = 16;
-		mdfour(&out, s, len);
+		mdfour((unsigned char *) out, (unsigned char *) s, len);
 	}
 	else if(!strcmp(digest, "SHA256") && Crypto_Available())
 	{
 		outlen = 32;
-		sha256(&out, s, len);
+		sha256((unsigned char *) out, (unsigned char *) s, len);
 	}
 	// no warning needed on mismatch - we return string_null to QC
 
