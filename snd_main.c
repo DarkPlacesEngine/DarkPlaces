@@ -242,7 +242,7 @@ static cvar_t snd_startloopingsounds = {0, "snd_startloopingsounds", "1", "wheth
 static cvar_t snd_startnonloopingsounds = {0, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
 
 // randomization
-static cvar_t snd_identicalsoundrandomization_time = {0, "snd_identicalsoundrandomization_time", "-0.1", "how much seconds to randomly skip (positive) or delay (negative) sounds when multiple identical sounds are started on the same frame"};
+static cvar_t snd_identicalsoundrandomization_time = {0, "snd_identicalsoundrandomization_time", "0.1", "how much seconds to randomly skip (positive) or delay (negative) sounds when multiple identical sounds are started on the same frame"};
 static cvar_t snd_identicalsoundrandomization_tics = {0, "snd_identicalsoundrandomization_tics", "0", "if nonzero, how many tics to limit sound randomization as defined by snd_identicalsoundrandomization_time"};
 
 // Ambient sounds
