@@ -1689,7 +1689,7 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 				float maxtics = snd_identicalsoundrandomization_tics.value;
 				float maxticsdelta = ((cls.state == ca_connected) ? (maxtics * (cl.mtime[0] - cl.mtime[1])) : 0);
 				float maxdelta = 0;
-				if(maxtics == 0 || fabs(maxticsdelta) > fabs(maxtime))
+				if(maxticsdelta == 0 || fabs(maxticsdelta) > fabs(maxtime))
 					maxdelta = maxtime;
 				else
 					maxdelta = fabs(maxticsdelta) * ((maxtime > 0) ? 1 : -1);
