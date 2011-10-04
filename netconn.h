@@ -229,10 +229,7 @@ extern mempool_t *netconn_mempool;
 extern cvar_t hostname;
 extern cvar_t developer_networking;
 
-#define SERVERLIST_TOTALSIZE		2048
 #define SERVERLIST_VIEWLISTSIZE		SERVERLIST_TOTALSIZE
-#define SERVERLIST_ANDMASKCOUNT		5
-#define SERVERLIST_ORMASKCOUNT		5
 
 typedef enum serverlist_maskop_e
 {

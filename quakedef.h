@@ -116,6 +116,9 @@ extern char engineversion[128];
 #define	MAX_EFFECTS				16
 #define	MAX_BEAMS				16
 #define	MAX_TEMPENTITIES		256
+#define SERVERLIST_TOTALSIZE		1024
+#define SERVERLIST_ANDMASKCOUNT		5
+#define SERVERLIST_ORMASKCOUNT		5
 #else
 #define	MAX_INPUTLINE			16384 ///< maximum length of console commandline, QuakeC strings, and many other text processing buffers
 #define	CON_TEXTSIZE			1048576 ///< max scrollback buffer characters in console
@@ -186,6 +189,9 @@ extern char engineversion[128];
 #define	MAX_EFFECTS				256 ///< limit on size of cl.effects
 #define	MAX_BEAMS				256 ///< limit on size of cl.beams
 #define	MAX_TEMPENTITIES		4096 ///< max number of temporary models visible per frame (certain sprite effects, certain types of CSQC entities also use this)
+#define SERVERLIST_TOTALSIZE		2048 ///< max servers in the server list
+#define SERVERLIST_ANDMASKCOUNT		16 ///< max items in server list AND mask
+#define SERVERLIST_ORMASKCOUNT		16 ///< max items in server list OR mask
 #endif
 
 
