@@ -241,6 +241,10 @@ static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channel
 static cvar_t snd_startloopingsounds = {0, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
 static cvar_t snd_startnonloopingsounds = {0, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
 
+// randomization
+static cvar_t snd_identicalsoundrandomization_time = {0, "snd_identicalsoundrandomization_time", "-0.1", "how much seconds to randomly skip (positive) or delay (negative) sounds when multiple identical sounds are started on the same frame"};
+static cvar_t snd_identicalsoundrandomization_tics = {0, "snd_identicalsoundrandomization_tics", "0", "if nonzero, how many tics to limit sound randomization as defined by snd_identicalsoundrandomization_time"};
+
 // Ambient sounds
 static sfx_t* ambient_sfxs [2] = { NULL, NULL };
 static const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/wind2.wav" };
@@ -850,6 +854,9 @@ void S_Init(void)
 
 	Cvar_RegisterVariable(&snd_startloopingsounds);
 	Cvar_RegisterVariable(&snd_startnonloopingsounds);
+
+	Cvar_RegisterVariable(&snd_identicalsoundrandomization_time);
+	Cvar_RegisterVariable(&snd_identicalsoundrandomization_tics);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
 	if (COM_CheckParm("-nosound"))
@@ -1677,8 +1684,18 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 				continue;
 			if (check->sfx == sfx && check->position == 0 && check->basespeed == fspeed)
 			{
+				// calculate max offset
+				float maxtime = snd_identicalsoundrandomization_time.value;
+				float maxtics = snd_identicalsoundrandomization_tics.value;
+				float maxticsdelta = ((cls.state == ca_connected) ? (maxtics * (cl.mtime[0] - cl.mtime[1])) : 0);
+				float maxdelta = 0;
+				if(maxtics == 0 || fabs(maxticsdelta) > fabs(maxtime))
+					maxdelta = maxtime;
+				else
+					maxdelta = fabs(maxticsdelta) * ((maxtime > 0) ? 1 : -1);
+
 				// use negative pos offset to delay this sound effect
-				startpos = lhrandom(0, -0.1 * sfx->format.speed);
+				startpos = lhrandom(0, maxdelta * sfx->format.speed);
 				break;
 			}
 		}
