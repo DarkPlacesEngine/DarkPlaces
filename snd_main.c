@@ -1450,7 +1450,13 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		// calculate stereo seperation and distance attenuation
 		VectorSubtract(listener_origin, ch->origin, source_vec);
 		dist = VectorLength(source_vec);
-		intensity = mastervol * (1.0f - dist * ch->distfade);
+		f = dist * ch->distfade;
+
+		// TODO falloff formulas
+		f = (1.0 - f); // Quake
+		//f = (1.0 - f) / (1.0 + f * f); // same as rtlights use
+
+		intensity = mastervol * f;
 		if (intensity > 0)
 		{
 			qboolean occluded = false;
