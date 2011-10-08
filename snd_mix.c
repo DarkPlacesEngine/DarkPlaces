@@ -249,7 +249,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			sum = 0;
 			for (i = 0;i < SND_LISTENERS;i++)
 				sum += vol[i]*vol[i];
-			silent = sum < 0.001f;
+			silent = sum < (1.0f / (65536.0f * 65536.0f)); // so silent it has zero effect
 
 			// when doing prologic mixing, some channels invert one side
 			if (ch->prologic_invert == -1)
