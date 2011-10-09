@@ -209,7 +209,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 	float sample[3];
 	double posd;
 	double speedd;
-	float sum;
+	float maxvol;
 	qboolean looping;
 	qboolean silent;
 
@@ -246,10 +246,31 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 				vol[i] = ch->volume[i];
 
 			// check total volume level, because we can skip some code on silent sounds but other code must still run (position updates mainly)
-			sum = 0;
+			maxvol = 0;
 			for (i = 0;i < SND_LISTENERS;i++)
-				sum += vol[i]*vol[i];
-			silent = sum < (1.0f / (65536.0f * 65536.0f)); // so silent it has zero effect
+				if(vol[i] > maxvol)
+					maxvol = vol[i];
+			switch(snd_renderbuffer->format.width)
+			{
+				case 1: // 8bpp
+					silent = maxvol < (1.0f / (256.0f));
+					// so silent it has zero effect
+					break;
+				case 2: // 16bpp
+					silent = maxvol < (1.0f / (65536.0f));
+					// so silent it has zero effect
+					break;
+				default: // floating point
+					silent = maxvol < 1.0e-13f;
+					// 130 dB is difference between hearing
+					// threshold and a jackhammer from
+					// working distance.
+					// therefore, anyone who turns up
+					// volume so much they notice this
+					// cutoff, likely already has their
+					// ear-drums blown out anyway.
+					break;
+			}
 
 			// when doing prologic mixing, some channels invert one side
 			if (ch->prologic_invert == -1)
