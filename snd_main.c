@@ -165,6 +165,8 @@ cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_soundradius = {CVAR_SAVE, "snd_soundradius", "1200", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
+cvar_t snd_attenuation_exponent = {CVAR_SAVE, "snd_attenuation_exponent", "1", "Exponent of (1-radius) in sound attenuation formula"};
+cvar_t snd_attenuation_decibel = {CVAR_SAVE, "snd_attenuation_decibel", "0", "Decibel sound attenuation per sound radius distance"};
 cvar_t snd_spatialization_min_radius = {CVAR_SAVE, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
 cvar_t snd_spatialization_max_radius = {CVAR_SAVE, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
 cvar_t snd_spatialization_min = {CVAR_SAVE, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
@@ -837,6 +839,9 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_channel6volume);
 	Cvar_RegisterVariable(&snd_channel7volume);
 
+	Cvar_RegisterVariable(&snd_attenuation_exponent);
+	Cvar_RegisterVariable(&snd_attenuation_decibel);
+
 	Cvar_RegisterVariable(&snd_spatialization_min_radius);
 	Cvar_RegisterVariable(&snd_spatialization_max_radius);
 	Cvar_RegisterVariable(&snd_spatialization_min);
@@ -1452,9 +1457,10 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		dist = VectorLength(source_vec);
 		f = dist * ch->distfade;
 
-		// TODO falloff formulas
-		f = (1.0 - f); // Quake
-		//f = (1.0 - f) / (1.0 + f * f); // same as rtlights use
+		f =
+			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), snd_attenuation_exponent.value))
+			*
+			((snd_attenuation_decibel.value == 0) ? 1.0 : pow(0.1, 0.1 * snd_attenuation_decibel.value * f));
 
 		intensity = mastervol * f;
 		if (intensity > 0)
