@@ -2505,21 +2505,24 @@ SV_CheckWaterTransition
 */
 void SV_CheckWaterTransition (prvm_edict_t *ent)
 {
+	// LordHavoc: bugfixes in this function are keyed to the sv_gameplayfix_bugfixedcheckwatertransition cvar - if this cvar is 0 then all the original bugs should be reenabled for compatibility
 	int cont;
 	cont = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(PRVM_serveredictvector(ent, origin)));
 	if (!PRVM_serveredictfloat(ent, watertype))
 	{
 		// just spawned here
-		PRVM_serveredictfloat(ent, watertype) = cont;
-		PRVM_serveredictfloat(ent, waterlevel) = 1;
-		return;
+		if (!sv_gameplayfix_fixedcheckwatertransition.integer)
+		{
+			PRVM_serveredictfloat(ent, watertype) = cont;
+			PRVM_serveredictfloat(ent, waterlevel) = 1;
+			return;
+		}
 	}
-
 	// DRESK - Support for Entity Contents Transition Event
 	// NOTE: Call here BEFORE updating the watertype below,
 	// and suppress watersplash sound if a valid function
 	// call was made to allow for custom "splash" sounds.
-	if( !SV_CheckContentsTransition(ent, cont) )
+	else if( !SV_CheckContentsTransition(ent, cont) )
 	{ // Contents Transition Function Invalid; Potentially Play Water Sound
 		// check if the entity crossed into or out of water
 		if (sv_sound_watersplash.string && ((PRVM_serveredictfloat(ent, watertype) == CONTENTS_WATER || PRVM_serveredictfloat(ent, watertype) == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME)))
@@ -2534,7 +2537,7 @@ void SV_CheckWaterTransition (prvm_edict_t *ent)
 	else
 	{
 		PRVM_serveredictfloat(ent, watertype) = CONTENTS_EMPTY;
-		PRVM_serveredictfloat(ent, waterlevel) = 0;
+		PRVM_serveredictfloat(ent, waterlevel) = sv_gameplayfix_fixedcheckwatertransition.integer ? 0 : cont;
 	}
 }
 
