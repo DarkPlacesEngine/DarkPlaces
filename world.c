@@ -173,30 +173,37 @@ void World_UnlinkEdict(prvm_edict_t *ent)
 	}
 }
 
-int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, prvm_edict_t **list)
+int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t requestmaxs, int maxlist, prvm_edict_t **list)
 {
 	int numlist;
 	link_t *grid;
 	link_t *l;
 	prvm_edict_t *ent;
+	vec3_t paddedmins, paddedmaxs;
 	int igrid[3], igridmins[3], igridmaxs[3];
+
+	VectorSet(paddedmins, requestmins[0] - 1.0f, requestmins[1] - 1.0f, requestmins[2] - 1.0f);
+	VectorSet(paddedmaxs, requestmaxs[0] + 1.0f, requestmaxs[1] + 1.0f, requestmaxs[2] + 1.0f);
 
 	// FIXME: if areagrid_marknumber wraps, all entities need their
 	// ent->priv.server->areagridmarknumber reset
 	world->areagrid_stats_calls++;
 	world->areagrid_marknumber++;
-	igridmins[0] = (int) floor((mins[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]);
-	igridmins[1] = (int) floor((mins[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]);
-	//igridmins[2] = (int) ((mins[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]);
-	igridmaxs[0] = (int) floor((maxs[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) floor((maxs[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) ((maxs[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]) + 1;
+	igridmins[0] = (int) floor((paddedmins[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]);
+	igridmins[1] = (int) floor((paddedmins[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]);
+	//igridmins[2] = (int) ((paddedmins[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]);
+	igridmaxs[0] = (int) floor((paddedmaxs[0] + world->areagrid_bias[0]) * world->areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) floor((paddedmaxs[1] + world->areagrid_bias[1]) * world->areagrid_scale[1]) + 1;
+	//igridmaxs[2] = (int) ((paddedmaxs[2] + world->areagrid_bias[2]) * world->areagrid_scale[2]) + 1;
 	igridmins[0] = max(0, igridmins[0]);
 	igridmins[1] = max(0, igridmins[1]);
 	//igridmins[2] = max(0, igridmins[2]);
 	igridmaxs[0] = min(AREA_GRID, igridmaxs[0]);
 	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
 	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
+
+	// paranoid debugging
+	//VectorSet(igridmins, 0, 0, 0);VectorSet(igridmaxs, AREA_GRID, AREA_GRID, AREA_GRID);
 
 	numlist = 0;
 	// add entities not linked into areagrid because they are too big or
@@ -210,7 +217,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, in
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
 				ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
-				if (!ent->priv.server->free && BoxesOverlap(mins, maxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
+				if (!ent->priv.server->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
 				{
 					if (numlist < maxlist)
 						list[numlist] = ent;
@@ -234,7 +241,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, in
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{
 						ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
-						if (!ent->priv.server->free && BoxesOverlap(mins, maxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
+						if (!ent->priv.server->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
 						{
 							if (numlist < maxlist)
 								list[numlist] = ent;

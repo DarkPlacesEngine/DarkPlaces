@@ -174,7 +174,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// clip to entities
 	// because this uses World_EntitiestoBox, we know all entity boxes overlap
 	// the clip region, so we can skip culling checks in the loop below
-	numtouchedicts = World_EntitiesInBox(&sv.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -340,7 +340,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// clip to entities
 	// because this uses World_EntitiestoBox, we know all entity boxes overlap
 	// the clip region, so we can skip culling checks in the loop below
-	numtouchedicts = World_EntitiesInBox(&sv.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -553,7 +553,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// clip to entities
 	// because this uses World_EntitiestoBox, we know all entity boxes overlap
 	// the clip region, so we can skip culling checks in the loop below
-	numtouchedicts = World_EntitiesInBox(&sv.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -662,7 +662,7 @@ int SV_PointSuperContents(const vec3_t point)
 		return supercontents;
 
 	// get list of entities at this point
-	numtouchedicts = World_EntitiesInBox(&sv.world, point, point, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(point, point, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -698,6 +698,34 @@ Linking entities into the world culling system
 
 ===============================================================================
 */
+
+int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_edict_t **resultedicts)
+{
+	vec3_t paddedmins, paddedmaxs;
+	if (maxedicts < 1 || resultedicts == NULL)
+		return 0;
+	VectorSet(paddedmins, mins[0] - 10, mins[1] - 10, mins[2] - 1);
+	VectorSet(paddedmaxs, maxs[0] + 10, maxs[1] + 10, maxs[2] + 1);
+	if (sv_areadebug.integer)
+	{
+		int numresultedicts = 0;
+		int edictindex;
+		prvm_edict_t *ed;
+		for (edictindex = 1;edictindex < prog->num_edicts;edictindex++)
+		{
+			ed = PRVM_EDICT_NUM(edictindex);
+			if (!ed->priv.required->free && BoxesOverlap(PRVM_serveredictvector(ed, absmin), PRVM_serveredictvector(ed, absmax), paddedmins, paddedmaxs))
+			{
+				resultedicts[numresultedicts++] = ed;
+				if (numresultedicts == maxedicts)
+					break;
+			}
+		}
+		return numresultedicts;
+	}
+	else
+		return World_EntitiesInBox(&sv.world, paddedmins, paddedmaxs, maxedicts, resultedicts);
+}
 
 void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 {
@@ -737,7 +765,7 @@ void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 
 	// build a list of edicts to touch, because the link loop can be corrupted
 	// by IncreaseEdicts called during touch functions
-	numtouchedicts = World_EntitiesInBox(&sv.world, ent->priv.server->areamins, ent->priv.server->areamaxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(ent->priv.server->areamins, ent->priv.server->areamaxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
@@ -1777,7 +1805,7 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	if (PRVM_serveredictfloat(pusher, movetype) == MOVETYPE_FAKEPUSH) // Tenebrae's MOVETYPE_PUSH variant that doesn't push...
 		numcheckentities = 0;
 	else // MOVETYPE_PUSH
-		numcheckentities = World_EntitiesInBox(&sv.world, mins, maxs, MAX_EDICTS, checkentities);
+	        numcheckentities = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, checkentities);
 	for (e = 0;e < numcheckentities;e++)
 	{
 		prvm_edict_t *check = checkentities[e];
