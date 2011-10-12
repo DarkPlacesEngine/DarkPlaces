@@ -799,7 +799,7 @@ void R_TimeReport_EndFrame(void)
 		loc = CL_Locs_FindNearest(cl.movement_origin);
 		viewleaf = (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.PointInLeaf) ? r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, r_refdef.view.origin) : NULL;
 		dpsnprintf(string, sizeof(string),
-"%6.0fus rendertime %3.0f%% viewscale %s%s %.3f cl.time\n"
+"%6.0fus rendertime %3.0f%% viewscale %s%s %.3f cl.time%2.4f brightness\n"
 "%3i renders org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n"
 "%5i viewleaf%5i cluster%3i area%4i brushes%4i surfaces(%7i triangles)\n"
 "%7i surfaces%7i triangles %5i entities (%7i surfaces%7i triangles)\n"
@@ -811,7 +811,7 @@ void R_TimeReport_EndFrame(void)
 "%6i draws%8i vertices%8i triangles bloompixels%8i copied%8i drawn\n"
 "updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "%s"
-, r_refdef.lastdrawscreentime * 1000000.0, r_viewscale.value * sqrt(viewscalefpsadjusted) * 100.0f, loc ? "Location: " : "", loc ? loc->name : "", cl.time
+, r_refdef.lastdrawscreentime * 1000000.0, r_viewscale.value * sqrt(viewscalefpsadjusted) * 100.0f, loc ? "Location: " : "", loc ? loc->name : "", cl.time, r_refdef.view.colorscale
 , r_refdef.stats.renders, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], r_refdef.view.forward[0], r_refdef.view.forward[1], r_refdef.view.forward[2]
 , viewleaf ? (int)(viewleaf - r_refdef.scene.worldmodel->brush.data_leafs) : -1, viewleaf ? viewleaf->clusterindex : -1, viewleaf ? viewleaf->areaindex : -1, viewleaf ? viewleaf->numleafbrushes : 0, viewleaf ? viewleaf->numleafsurfaces : 0, viewleaf ? R_CountLeafTriangles(r_refdef.scene.worldmodel, viewleaf) : 0
 , r_refdef.stats.world_surfaces, r_refdef.stats.world_triangles, r_refdef.stats.entities, r_refdef.stats.entities_surfaces, r_refdef.stats.entities_triangles
