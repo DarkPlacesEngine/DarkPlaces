@@ -1718,14 +1718,9 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 	return (target_chan - channels);
 }
 
-int S_StartSound_StartPosition (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition)
-{
-	return S_StartSound_StartPosition_Flags(entnum, entchannel, sfx, origin, fvol, attenuation, startposition, CHANNELFLAG_NONE, 1.0f);
-}
-
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
-	return S_StartSound_StartPosition(entnum, entchannel, sfx, origin, fvol, attenuation, 0);
+	return S_StartSound_StartPosition_Flags(entnum, entchannel, sfx, origin, fvol, attenuation, 0, CHANNELFLAG_NONE, 1.0f);
 }
 
 void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx)
