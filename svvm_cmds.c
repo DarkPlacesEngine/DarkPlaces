@@ -994,7 +994,7 @@ static void VM_SV_findradius (void)
 	maxs[0] = org[0] + (radius + 1);
 	maxs[1] = org[1] + (radius + 1);
 	maxs[2] = org[2] + (radius + 1);
-	numtouchedicts = World_EntitiesInBox(&sv.world, mins, maxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens
