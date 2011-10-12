@@ -207,6 +207,7 @@ cvar_t r_hdr_irisadaptation_maxvalue = {CVAR_SAVE, "r_hdr_irisadaptation_maxvalu
 cvar_t r_hdr_irisadaptation_value = {0, "r_hdr_irisadaptation_value", "1", "current value as scenebrightness multiplier, changes continuously when irisadaptation is active"};
 cvar_t r_hdr_irisadaptation_fade_up = {CVAR_SAVE, "r_hdr_irisadaptation_fade_up", "0.1", "fade rate at which value adjusts to darkness"};
 cvar_t r_hdr_irisadaptation_fade_down = {CVAR_SAVE, "r_hdr_irisadaptation_fade_down", "0.5", "fade rate at which value adjusts to brightness"};
+cvar_t r_hdr_irisadaptation_radius = {CVAR_SAVE, "r_hdr_irisadaptation_radius", "15", "lighting within this many units of the eye is averaged"};
 
 cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
@@ -4351,6 +4352,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_value);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade_up);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_fade_down);
+	Cvar_RegisterVariable(&r_hdr_irisadaptation_radius);
 	Cvar_RegisterVariable(&r_smoothnormals_areaweighting);
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
@@ -5088,19 +5090,36 @@ static void R_DrawModelsAddWaterPlanes(void)
 	}
 }
 
+static float irisvecs[7][3] = {{0, 0, 0}, {-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
+
 void R_HDR_UpdateIrisAdaptation(const vec3_t point)
 {
 	if (r_hdr_irisadaptation.integer)
 	{
+		vec3_t p;
 		vec3_t ambient;
 		vec3_t diffuse;
 		vec3_t diffusenormal;
-		vec_t brightness;
+		vec3_t forward;
+		vec_t brightness = 0.0f;
 		vec_t goal;
 		vec_t current;
-		R_CompleteLightPoint(ambient, diffuse, diffusenormal, point, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
-		brightness = (ambient[0] + ambient[1] + ambient[2] + diffuse[0] + diffuse[1] + diffuse[2]) * (1.0f / 3.0f);
-		brightness = max(0.0000001f, brightness);
+		vec_t d;
+		int c;
+		VectorCopy(r_refdef.view.forward, forward);
+		for (c = 0;c < (int)(sizeof(irisvecs)/sizeof(irisvecs[0]));c++)
+		{
+			p[0] = point[0] + irisvecs[c][0] * r_hdr_irisadaptation_radius.value;
+			p[1] = point[1] + irisvecs[c][1] * r_hdr_irisadaptation_radius.value;
+			p[2] = point[2] + irisvecs[c][2] * r_hdr_irisadaptation_radius.value;
+			R_CompleteLightPoint(ambient, diffuse, diffusenormal, p, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+			d = DotProduct(forward, diffusenormal);
+			brightness += VectorLength(ambient);
+			if (d > 0)
+				brightness += d * VectorLength(diffuse);
+		}
+		brightness *= 1.0f / c;
+		brightness += 0.00001f; // make sure it's never zero
 		goal = r_hdr_irisadaptation_multiplier.value / brightness;
 		goal = bound(r_hdr_irisadaptation_minvalue.value, goal, r_hdr_irisadaptation_maxvalue.value);
 		current = r_hdr_irisadaptation_value.value;
