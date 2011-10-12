@@ -28,7 +28,7 @@ cvar_t r_ambient = {0, "r_ambient", "0", "brightens map, value is 0-128"};
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
-cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "improve framerate by culling offscreen surfaces"};
+cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
 /*
@@ -397,6 +397,29 @@ void R_DrawPortals(void)
 	}
 }
 
+static void R_View_WorldVisibility_CullSurfaces(void)
+{
+	int surfaceindex;
+	int surfaceindexstart;
+	int surfaceindexend;
+	unsigned char *surfacevisible;
+	msurface_t *surfaces;
+	dp_model_t *model = r_refdef.scene.worldmodel;
+	if (!model)
+		return;
+	if (r_trippy.integer)
+		return;
+	if (r_usesurfaceculling.integer < 1)
+		return;
+	surfaceindexstart = model->firstmodelsurface;
+	surfaceindexend = surfaceindexstart + model->nummodelsurfaces;
+	surfaces = model->data_surfaces;
+	surfacevisible = r_refdef.viewcache.world_surfacevisible;
+	for (surfaceindex = surfaceindexstart;surfaceindex < surfaceindexend;surfaceindex++)
+		if (surfacevisible[surfaceindex] && R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs))
+			surfacevisible[surfaceindex] = 0;
+}
+
 void R_View_WorldVisibility(qboolean forcenovis)
 {
 	int i, j, *mark;
@@ -427,6 +450,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 			}
 		}
+		R_View_WorldVisibility_CullSurfaces();
 		return;
 	}
 
@@ -540,23 +564,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 		}
 	}
 
-	if (r_usesurfaceculling.integer)
-	{
-		int k = model->firstmodelsurface;
-		int l = k + model->nummodelsurfaces;
-		unsigned char *visible = r_refdef.viewcache.world_surfacevisible;
-		msurface_t *surfaces = model->data_surfaces;
-		msurface_t *surface;
-		for (;k < l;k++)
-		{
-			if (visible[k])
-			{
-				surface = surfaces + k;
-				if (R_CullBox(surface->mins, surface->maxs))
-					visible[k] = false;
-			}
-		}
-}
+        R_View_WorldVisibility_CullSurfaces();
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
