@@ -706,6 +706,13 @@ qboolean OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 		if (developer_loading.integer >= 2)
 			Con_Printf ("Ogg sound file \"%s\" uses ReplayGain (gain %f, peak %f)\n", filename, sfx->volume_mult, sfx->volume_peak);
 	}
+	else if(gaindb != 0)
+	{
+		sfx->volume_mult = min(1.0f / peak, exp(gaindb * 0.05f * log(10.0f)));
+		sfx->volume_peak = 1.0; // if peak is not defined, we won't trust it
+		if (developer_loading.integer >= 2)
+			Con_Printf ("Ogg sound file \"%s\" uses ReplayGain (gain %f, peak not defined and assumed to be %f)\n", filename, sfx->volume_mult, sfx->volume_peak);
+	}
 
 	return true;
 }
