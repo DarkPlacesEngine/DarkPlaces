@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "snd_main.h"
 
+extern cvar_t snd_softclip;
 
 static portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
 static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
@@ -47,9 +48,85 @@ static void S_CaptureAVISound(const portable_sampleframe_t *paintbuffer, size_t 
 	SCR_CaptureVideo_SoundFrame(paintbuffer_unswapped, length);
 }
 
-static void S_ConvertPaintBuffer(const portable_sampleframe_t *painted_ptr, void *rb_ptr, int nbframes, int width, int channels)
+extern cvar_t snd_softclip;
+
+static void S_SoftClipPaintBuffer(portable_sampleframe_t *painted_ptr, int nbframes, int width, int channels)
+{
+	int i;
+
+	if((snd_softclip.integer == 1 && width <= 2) || snd_softclip.integer > 1)
+	{
+#if 0
+/* Soft clipping, the sound of a dream, thanks to Jon Wattes
+   post to Musicdsp.org */
+#define SOFTCLIP(x) (x) = sin(bound(-M_PI/2, (x), M_PI/2)) * 0.25
+#endif
+
+		// let's do a simple limiter instead, seems to sound better
+		static float maxvol = 0;
+		maxvol = max(1.0f, maxvol * (1.0f - nbframes / snd_renderbuffer->format.speed));
+#define SOFTCLIP(x) if((x)>maxvol) maxvol=(x); (x) /= maxvol;
+
+		portable_sampleframe_t *p = painted_ptr;
+		if (channels == 8)  // 7.1 surround
+		{
+			for (i = 0;i < nbframes;i++, p++)
+			{
+				SOFTCLIP(p->sample[0]);
+				SOFTCLIP(p->sample[1]);
+				SOFTCLIP(p->sample[2]);
+				SOFTCLIP(p->sample[3]);
+				SOFTCLIP(p->sample[4]);
+				SOFTCLIP(p->sample[5]);
+				SOFTCLIP(p->sample[6]);
+				SOFTCLIP(p->sample[7]);
+			}
+		}
+		else if (channels == 6)  // 5.1 surround
+		{
+			for (i = 0; i < nbframes; i++, p++)
+			{
+				SOFTCLIP(p->sample[0]);
+				SOFTCLIP(p->sample[1]);
+				SOFTCLIP(p->sample[2]);
+				SOFTCLIP(p->sample[3]);
+				SOFTCLIP(p->sample[4]);
+				SOFTCLIP(p->sample[5]);
+			}
+		}
+		else if (channels == 4)  // 4.0 surround
+		{
+			for (i = 0; i < nbframes; i++, p++)
+			{
+				SOFTCLIP(p->sample[0]);
+				SOFTCLIP(p->sample[1]);
+				SOFTCLIP(p->sample[2]);
+				SOFTCLIP(p->sample[3]);
+			}
+		}
+		else if (channels == 2)  // 2.0 stereo
+		{
+			for (i = 0; i < nbframes; i++, p++)
+			{
+				SOFTCLIP(p->sample[0]);
+				SOFTCLIP(p->sample[1]);
+			}
+		}
+		else if (channels == 1)  // 1.0 mono
+		{
+			for (i = 0; i < nbframes; i++, p++)
+			{
+				SOFTCLIP(p->sample[0]);
+			}
+		}
+#undef SOFTCLIP
+	}
+}
+
+static void S_ConvertPaintBuffer(portable_sampleframe_t *painted_ptr, void *rb_ptr, int nbframes, int width, int channels)
 {
 	int i, val;
+
 	// FIXME: add 24bit and 32bit float formats
 	// FIXME: optimize with SSE intrinsics?
 	if (width == 2)  // 16bit
@@ -441,6 +518,8 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 			if (!looping && istartframe == totallength)
 				S_StopChannel(ch - channels, false, false);
 		}
+
+		S_SoftClipPaintBuffer(paintbuffer, totalmixframes, snd_renderbuffer->format.width, snd_renderbuffer->format.channels);
 
 		if (!snd_usethreadedmixing)
 			S_CaptureAVISound(paintbuffer, totalmixframes);
