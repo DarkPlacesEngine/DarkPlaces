@@ -37,9 +37,6 @@ The code uses void pointers instead.
 #define PROFILING
 #endif
 
-// forward declaration of clgecko_t
-struct clgecko_s;
-
 typedef struct prvm_stack_s
 {
 	int				s;
@@ -226,14 +223,12 @@ extern prvm_eval_t prvm_badvalue;
 
 #define PRVM_MAX_OPENFILES 16
 #define PRVM_MAX_OPENSEARCHES 8
-#define PRVM_MAX_GECKOINSTANCES 1
 #else
 #define	PRVM_MAX_STACK_DEPTH		1024
 #define	PRVM_LOCALSTACK_SIZE		16384
 
 #define PRVM_MAX_OPENFILES 256
 #define PRVM_MAX_OPENSEARCHES 128
-#define PRVM_MAX_GECKOINSTANCES 32
 #endif
 
 typedef void (*prvm_builtin_t) (void);
@@ -573,7 +568,6 @@ typedef struct prvm_prog_s
 	const char *         openfiles_origin[PRVM_MAX_OPENFILES];
 	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
 	const char *         opensearches_origin[PRVM_MAX_OPENSEARCHES];
-	struct clgecko_s		*opengeckoinstances[PRVM_MAX_GECKOINSTANCES];
 	skeleton_t			*skeletons[MAX_EDICTS];
 
 	// copies of some vars that were former read from sv

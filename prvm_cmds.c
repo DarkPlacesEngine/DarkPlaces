@@ -4195,8 +4195,7 @@ VM_Gecko_Init
 ========================
 */
 void VM_Gecko_Init( void ) {
-	// the prog struct is memset to 0 by Initprog? [12/6/2007 Black]
-	// FIXME: remove the other _Init functions then, too? [12/6/2007 Black]
+	// REMOVED
 }
 
 /*
@@ -4205,14 +4204,7 @@ VM_Gecko_Destroy
 ========================
 */
 void VM_Gecko_Destroy( void ) {
-	int i;
-	for( i = 0 ; i < PRVM_MAX_GECKOINSTANCES ; i++ ) {
-		clgecko_t **instance = &prog->opengeckoinstances[ i ];
-		if( *instance ) {
-			CL_Gecko_DestroyBrowser( *instance );
-		}
-		*instance = NULL;
-	}
+	// REMOVED
 }
 
 /*
@@ -4223,34 +4215,8 @@ float[bool] gecko_create( string name )
 ========================
 */
 void VM_gecko_create( void ) {
-	const char *name;
-	int i;
-	clgecko_t *instance;
-   	
-	VM_SAFEPARMCOUNT( 1, VM_gecko_create );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-
-	// find an empty slot for this gecko browser..
-	for( i = 0 ; i < PRVM_MAX_GECKOINSTANCES ; i++ ) {
-		if( prog->opengeckoinstances[ i ] == NULL ) {
-			break;
-		}
-	}
-	if( i == PRVM_MAX_GECKOINSTANCES ) {
-			VM_Warning("VM_gecko_create: %s ran out of gecko handles (%i)\n", PRVM_NAME, PRVM_MAX_GECKOINSTANCES);
-			PRVM_G_FLOAT( OFS_RETURN ) = 0;
-			return;
-	}
-
-	instance = prog->opengeckoinstances[ i ] = CL_Gecko_CreateBrowser( name, PRVM_GetProgNr() );
-   if( !instance ) {
-		// TODO: error handling [12/3/2007 Black]
-		PRVM_G_FLOAT( OFS_RETURN ) = 0;
-		return;
-	}
-	PRVM_G_FLOAT( OFS_RETURN ) = 1;
+	// REMOVED
+	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 }
 
 /*
@@ -4261,18 +4227,7 @@ void gecko_destroy( string name )
 ========================
 */
 void VM_gecko_destroy( void ) {
-	const char *name;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 1, VM_gecko_destroy );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-	instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		return;
-	}
-	CL_Gecko_DestroyBrowser( instance );
+	// REMOVED
 }
 
 /*
@@ -4283,22 +4238,7 @@ void gecko_navigate( string name, string URI )
 ========================
 */
 void VM_gecko_navigate( void ) {
-	const char *name;
-	const char *URI;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 2, VM_gecko_navigate );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	URI = PRVM_G_STRING( OFS_PARM1 );
-	VM_CheckEmptyString( name );
-	VM_CheckEmptyString( URI );
-
-   instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		return;
-	}
-	CL_Gecko_NavigateToURI( instance, URI );
+	// REMOVED
 }
 
 /*
@@ -4309,42 +4249,8 @@ float[bool] gecko_keyevent( string name, float key, float eventtype )
 ========================
 */
 void VM_gecko_keyevent( void ) {
-	const char *name;
-	unsigned int key;
-	clgecko_buttoneventtype_t eventtype;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 3, VM_gecko_keyevent );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-	key = (unsigned int) PRVM_G_FLOAT( OFS_PARM1 );
-	switch( (unsigned int) PRVM_G_FLOAT( OFS_PARM2 ) ) {
-	case 0:
-		eventtype = CLG_BET_DOWN;
-		break;
-	case 1:
-		eventtype = CLG_BET_UP;
-		break;
-	case 2:
-		eventtype = CLG_BET_PRESS;
-		break;
-	case 3:
-		eventtype = CLG_BET_DOUBLECLICK;
-		break;
-	default:
-		// TODO: console printf? [12/3/2007 Black]
-		PRVM_G_FLOAT( OFS_RETURN ) = 0;
-		return;
-	}
-
-	instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		PRVM_G_FLOAT( OFS_RETURN ) = 0;
-		return;
-	}
-
-	PRVM_G_FLOAT( OFS_RETURN ) = (CL_Gecko_Event_Key( instance, (keynum_t) key, eventtype ) == true);
+	// REMOVED
+	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 }
 
 /*
@@ -4355,22 +4261,7 @@ void gecko_mousemove( string name, float x, float y )
 ========================
 */
 void VM_gecko_movemouse( void ) {
-	const char *name;
-	float x, y;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 3, VM_gecko_movemouse );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-	x = PRVM_G_FLOAT( OFS_PARM1 );
-	y = PRVM_G_FLOAT( OFS_PARM2 );
-	
-	instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		return;
-	}
-	CL_Gecko_Event_CursorMove( instance, x, y );
+	// REMOVED
 }
 
 
@@ -4382,22 +4273,7 @@ void gecko_resize( string name, float w, float h )
 ========================
 */
 void VM_gecko_resize( void ) {
-	const char *name;
-	float w, h;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 3, VM_gecko_movemouse );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-	w = PRVM_G_FLOAT( OFS_PARM1 );
-	h = PRVM_G_FLOAT( OFS_PARM2 );
-	
-	instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		return;
-	}
-	CL_Gecko_Resize( instance, (int) w, (int) h );
+	// REMOVED
 }
 
 
@@ -4409,23 +4285,9 @@ vector gecko_get_texture_extent( string name )
 ========================
 */
 void VM_gecko_get_texture_extent( void ) {
-	const char *name;
-	clgecko_t *instance;
-
-	VM_SAFEPARMCOUNT( 1, VM_gecko_movemouse );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( name );
-	
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
-	instance = CL_Gecko_FindBrowser( name );
-	if( !instance ) {
-		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
-		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
-		return;
-	}
-	CL_Gecko_GetTextureExtent( instance, 
-		PRVM_G_VECTOR(OFS_RETURN), PRVM_G_VECTOR(OFS_RETURN)+1 );
+	// REMOVED
+	PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
 }
 
 
@@ -5745,7 +5607,6 @@ void VM_Cmd_Init(void)
 	// only init the stuff for the current prog
 	VM_Files_Init();
 	VM_Search_Init();
-	VM_Gecko_Init();
 //	VM_BufStr_Init();
 }
 
@@ -5754,7 +5615,6 @@ void VM_Cmd_Reset(void)
 	CL_PurgeOwner( MENUOWNER );
 	VM_Search_Reset();
 	VM_Files_CloseAll();
-	VM_Gecko_Destroy();
 //	VM_BufStr_ShutDown();
 }
 
