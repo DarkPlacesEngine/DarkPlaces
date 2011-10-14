@@ -5924,6 +5924,8 @@ static void R_Water_ProcessPlanes(void)
 			r_refdef.view.height = r_waterstate.cameraheight;
 			r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
 			r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
+			r_refdef.view.ortho_x = 90; // abused as angle by VM_CL_R_SetView
+			r_refdef.view.ortho_y = 90; // abused as angle by VM_CL_R_SetView
 
 			if(p->camera_entity)
 			{

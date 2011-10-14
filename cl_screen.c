@@ -1453,6 +1453,8 @@ static void R_Envmap_f (void)
 
 	r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
 	r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
+	r_refdef.view.ortho_x = 90; // abused as angle by VM_CL_R_SetView
+	r_refdef.view.ortho_y = 90; // abused as angle by VM_CL_R_SetView
 
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 4);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
@@ -1743,6 +1745,8 @@ void SCR_DrawScreen (void)
 
 		r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
 		r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+		r_refdef.view.ortho_x = atan(r_refdef.view.frustum_x) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
+		r_refdef.view.ortho_y = atan(r_refdef.view.frustum_y) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
 
 		if(!CL_VM_UpdateView())
 			R_RenderView();
@@ -1764,6 +1768,9 @@ void SCR_DrawScreen (void)
 
 			r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
 			r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+
+			r_refdef.view.ortho_x = atan(r_refdef.view.frustum_x) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
+			r_refdef.view.ortho_y = atan(r_refdef.view.frustum_y) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
 
 			if(!CL_VM_UpdateView())
 				R_RenderView();
