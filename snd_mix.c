@@ -56,6 +56,8 @@ static void S_SoftClipPaintBuffer(portable_sampleframe_t *painted_ptr, int nbfra
 
 	if((snd_softclip.integer == 1 && width <= 2) || snd_softclip.integer > 1)
 	{
+		portable_sampleframe_t *p = painted_ptr;
+
 #if 0
 /* Soft clipping, the sound of a dream, thanks to Jon Wattes
    post to Musicdsp.org */
@@ -67,7 +69,6 @@ static void S_SoftClipPaintBuffer(portable_sampleframe_t *painted_ptr, int nbfra
 		maxvol = max(1.0f, maxvol * (1.0f - nbframes / (0.4f * snd_renderbuffer->format.speed)));
 #define SOFTCLIP(x) if(fabs(x)>maxvol) maxvol=fabs(x); (x) /= maxvol;
 
-		portable_sampleframe_t *p = painted_ptr;
 		if (channels == 8)  // 7.1 surround
 		{
 			for (i = 0;i < nbframes;i++, p++)
