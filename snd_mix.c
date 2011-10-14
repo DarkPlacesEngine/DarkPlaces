@@ -64,7 +64,7 @@ static void S_SoftClipPaintBuffer(portable_sampleframe_t *painted_ptr, int nbfra
 
 		// let's do a simple limiter instead, seems to sound better
 		static float maxvol = 0;
-		maxvol = max(1.0f, maxvol * (1.0f - nbframes / snd_renderbuffer->format.speed));
+		maxvol = max(1.0f, maxvol * (1.0f - nbframes / (0.4f * snd_renderbuffer->format.speed)));
 #define SOFTCLIP(x) if((x)>maxvol) maxvol=(x); (x) /= maxvol;
 
 		portable_sampleframe_t *p = painted_ptr;
