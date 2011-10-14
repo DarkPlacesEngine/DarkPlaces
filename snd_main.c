@@ -185,6 +185,9 @@ cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right spe
 extern cvar_t v_flipped;
 cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
 cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
+cvar_t snd_maxchannelvolume = {CVAR_SAVE, "snd_maxchannelvolume", "10", "maximum volume of a single sound"};
+cvar_t snd_softclip = {CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping. Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
+//cvar_t snd_softclip = {CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping (when set to 2, use it even if output is floating point). Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
 cvar_t snd_entchannel0volume = {CVAR_SAVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of regular entities (DEPRECATED)"};
 cvar_t snd_entchannel1volume = {CVAR_SAVE, "snd_entchannel1volume", "1", "volume multiplier of the 1st entity channel of regular entities (DEPRECATED)"};
 cvar_t snd_entchannel2volume = {CVAR_SAVE, "snd_entchannel2volume", "1", "volume multiplier of the 2nd entity channel of regular entities (DEPRECATED)"};
@@ -856,6 +859,8 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_width);
 	Cvar_RegisterVariable(&snd_channels);
 	Cvar_RegisterVariable(&snd_mutewhenidle);
+	Cvar_RegisterVariable(&snd_maxchannelvolume);
+	Cvar_RegisterVariable(&snd_softclip);
 
 	Cvar_RegisterVariable(&snd_startloopingsounds);
 	Cvar_RegisterVariable(&snd_startnonloopingsounds);
@@ -1409,8 +1414,11 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
 		mastervol *= volume.value;
 
-	// clamp HERE to allow to go at most 10dB past mastervolume (before clamping), when mastervolume < -10dB (so relative volumes don't get too messy)
-	mastervol = bound(0.0f, mastervol, 10.0f);
+	if(snd_maxchannelvolume.value > 0)
+	{
+		// clamp HERE to allow to go at most 10dB past mastervolume (before clamping), when mastervolume < -10dB (so relative volumes don't get too messy)
+		mastervol = bound(0.0f, mastervol, 10.0f * snd_maxchannelvolume.value);
+	}
 
 	// always apply "master"
 	mastervol *= mastervolume.value;
@@ -1422,13 +1430,21 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		// Replaygain support
 		// Con_DPrintf("Setting volume on ReplayGain-enabled track... %f -> ", fvol);
 		mastervol *= sfx->volume_mult;
-		if(mastervol * sfx->volume_peak > 1.0f)
-			mastervol = 1.0f / sfx->volume_peak;
+		if(snd_maxchannelvolume.value > 0)
+		{
+			if(mastervol * sfx->volume_peak > snd_maxchannelvolume.value)
+				mastervol = snd_maxchannelvolume.value / sfx->volume_peak;
+		}
 		// Con_DPrintf("%f\n", fvol);
 	}
 
-	// clamp HERE to keep relative volumes of the channels correct
-	mastervol = bound(0.0f, mastervol, 1.0f);
+	if(snd_maxchannelvolume.value > 0)
+	{
+		// clamp HERE to keep relative volumes of the channels correct
+		mastervol = min(mastervol, snd_maxchannelvolume.value);
+	}
+
+	mastervol = max(0.0f, mastervol);
 
 	ch->mixspeed = mixspeed;
 
