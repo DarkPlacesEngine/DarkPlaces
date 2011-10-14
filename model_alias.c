@@ -529,19 +529,51 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	qboolean firstvertex = true;
 	float dist, yawradius, radius;
 	float *v;
-	float *vertex3f;
-	frameblend_t frameblend[MAX_FRAMEBLENDS];
-	memset(frameblend, 0, sizeof(frameblend));
-	frameblend[0].lerp = 1;
-	vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
 	VectorClear(loadmodel->normalmins);
 	VectorClear(loadmodel->normalmaxs);
 	yawradius = 0;
 	radius = 0;
-	for (frameblend[0].subframe = 0;frameblend[0].subframe < loadmodel->num_poses;frameblend[0].subframe++)
+	if (loadmodel->AnimateVertices)
 	{
-		loadmodel->AnimateVertices(loadmodel, frameblend, NULL, vertex3f, NULL, NULL, NULL);
-		for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
+		float *vertex3f;
+		frameblend_t frameblend[MAX_FRAMEBLENDS];
+		memset(frameblend, 0, sizeof(frameblend));
+		frameblend[0].lerp = 1;
+		vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		for (frameblend[0].subframe = 0;frameblend[0].subframe < loadmodel->num_poses;frameblend[0].subframe++)
+		{
+			loadmodel->AnimateVertices(loadmodel, frameblend, NULL, vertex3f, NULL, NULL, NULL);
+			for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
+			{
+				if (firstvertex)
+				{
+					firstvertex = false;
+					VectorCopy(v, loadmodel->normalmins);
+					VectorCopy(v, loadmodel->normalmaxs);
+				}
+				else
+				{
+					if (loadmodel->normalmins[0] > v[0]) loadmodel->normalmins[0] = v[0];
+					if (loadmodel->normalmins[1] > v[1]) loadmodel->normalmins[1] = v[1];
+					if (loadmodel->normalmins[2] > v[2]) loadmodel->normalmins[2] = v[2];
+					if (loadmodel->normalmaxs[0] < v[0]) loadmodel->normalmaxs[0] = v[0];
+					if (loadmodel->normalmaxs[1] < v[1]) loadmodel->normalmaxs[1] = v[1];
+					if (loadmodel->normalmaxs[2] < v[2]) loadmodel->normalmaxs[2] = v[2];
+				}
+				dist = v[0] * v[0] + v[1] * v[1];
+				if (yawradius < dist)
+					yawradius = dist;
+				dist += v[2] * v[2];
+				if (radius < dist)
+					radius = dist;
+			}
+		}
+		if (vertex3f)
+			Mem_Free(vertex3f);
+	}
+	else
+	{
+		for (vnum = 0, v = loadmodel->surfmesh.data_vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
 		{
 			if (firstvertex)
 			{
@@ -566,8 +598,6 @@ static void Mod_Alias_CalculateBoundingBox(void)
 				radius = dist;
 		}
 	}
-	if (vertex3f)
-		Mem_Free(vertex3f);
 	radius = sqrt(radius);
 	yawradius = sqrt(yawradius);
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -yawradius;
@@ -1071,10 +1101,13 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	}
 	Mod_MDL_LoadFrames (startframes, numverts, vertremap);
+	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
+	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_MorphMesh_CompileFrames();
+	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
 
 	Mem_Free(vertst);
 	Mem_Free(vertremap);
@@ -1453,12 +1486,12 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mem_Free(vertremap);
 
 	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
-
+	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_MorphMesh_CompileFrames();
+	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
 
 	surface = loadmodel->data_surfaces;
 	surface->texture = loadmodel->data_textures;
@@ -1588,8 +1621,6 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MD3_AnimateVertices : NULL;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[2]) + meshvertices * loadmodel->numframes * sizeof(md3vertex_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -1654,12 +1685,15 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->surfmesh.data_element3s)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
+	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
+	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_MorphMesh_CompileFrames();
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 	Mod_MakeSortedSurfaces(loadmodel);
+	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -3042,14 +3076,16 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	int *outelements;
 	const int *inneighbors;
 	int *outneighbors;
-	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector;
+	float *outvertex, *outnormal, *outtexcoord, *outsvector, *outtvector, *outcolor;
 	// this pointers into the file data are read only through Little* functions so they can be unaligned memory
 	const float *vnormal = NULL;
 	const float *vposition = NULL;
 	const float *vtangent = NULL;
 	const float *vtexcoord = NULL;
+	const float *vcolor4f = NULL;
 	const unsigned char *vblendindexes = NULL;
 	const unsigned char *vblendweights = NULL;
+	const unsigned char *vcolor4ub = NULL;
 	const unsigned short *framedata = NULL;
 	// temporary memory allocations (because the data in the file may be misaligned)
 	iqmanim_t *anims = NULL;
@@ -3197,6 +3233,12 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (va.format == IQM_UBYTE && va.size == 4)
 				vblendweights = (const unsigned char *)(pbase + va.offset);
 			break;
+		case IQM_COLOR:
+			if (va.format == IQM_FLOAT && va.size == 4)
+				vcolor4f = (const float *)(pbase + va.offset);
+			if (va.format == IQM_UBYTE && va.size == 4)
+				vcolor4ub = (const unsigned char *)(pbase + va.offset);
+			break;
 		}
 	}
 	if (header.num_vertexes > 0 && (!vposition || !vtexcoord || ((header.num_frames > 0 || header.num_anims > 0) && (!vblendindexes || !vblendweights))))
@@ -3240,7 +3282,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = header.num_triangles;
 
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * sizeof(float[14]) + (vblendindexes && vblendweights ? meshvertices * sizeof(unsigned short) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * sizeof(unsigned short) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -3256,6 +3298,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
+	if (vcolor4f || vcolor4ub)
+	{
+		loadmodel->surfmesh.data_lightmapcolor4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	}
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
@@ -3659,6 +3705,35 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			memcpy(weights.index, vblendindexes + i*4, 4);
 			memcpy(weights.influence, vblendweights + i*4, 4);
 			loadmodel->surfmesh.blends[i] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+		}
+	}
+
+	if (vcolor4f)
+	{
+		outcolor = loadmodel->surfmesh.data_lightmapcolor4f;
+		// this unaligned memory access is safe (LittleFloat reads as bytes)
+		for (i = 0;i < (int)header.num_vertexes;i++)
+		{
+			outcolor[0] = LittleFloat(vcolor4f[0]);
+			outcolor[1] = LittleFloat(vcolor4f[1]);
+			outcolor[2] = LittleFloat(vcolor4f[2]);
+			outcolor[3] = LittleFloat(vcolor4f[3]);
+			vcolor4f += 4;
+			outcolor += 4;
+		}
+	}
+	else if (vcolor4ub)
+	{
+		outcolor = loadmodel->surfmesh.data_lightmapcolor4f;
+		// this unaligned memory access is safe (all bytes)
+		for (i = 0;i < (int)header.num_vertexes;i++)
+		{
+			outcolor[0] = vcolor4ub[0] * (1.0f / 128.0f);
+			outcolor[1] = vcolor4ub[1] * (1.0f / 128.0f);
+			outcolor[2] = vcolor4ub[2] * (1.0f / 128.0f);
+			outcolor[3] = vcolor4ub[3] * (1.0f / 128.0f);
+			vcolor4ub += 4;
+			outcolor += 4;
 		}
 	}
 
