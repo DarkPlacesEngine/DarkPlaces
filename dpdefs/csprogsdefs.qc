@@ -145,11 +145,11 @@ void		end_sys_fields;			// flag for structure dumping
 */
 
 // Additional OPTIONAL Fields and Globals
-float		intermission;
+float		intermission; // indicates intermission state (0 = normal, 1 = scores, 2 = finale text)
 
 vector		view_angles; // same as input_angles
-vector		view_punchangle;
-vector		view_punchvector;
+vector		view_punchangle; // from server
+vector		view_punchvector; // from server
 
 /*
 ==============================================================================
@@ -448,6 +448,8 @@ void() clearscene = #300;
 void(float mask) addentities = #301;
 void(entity ent) addentity = #302;
 float(float property, ...) setproperty = #303;
+float(float property) getproperty = #309;
+vector(float property) getpropertyvec = #309;
 void() renderscene = #304;
 void(vector org, float radius, vector lightcolours) adddynamiclight = #305;
 void(vector org, float radius, vector lightcolours, float style, string cubemapname, float pflags) adddynamiclight2 = #305;
