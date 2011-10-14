@@ -1578,13 +1578,13 @@ void Host_Color(int changetop, int changebottom)
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
 
-	if (host_client->edict && PRVM_clientfunction(SV_ChangeTeam))
+	if (host_client->edict && PRVM_serverfunction(SV_ChangeTeam))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
 		PRVM_serverglobalfloat(time) = sv.time;
 		prog->globals.generic[OFS_PARM0] = playercolor;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram(PRVM_clientfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
+		PRVM_ExecuteProgram(PRVM_serverfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
