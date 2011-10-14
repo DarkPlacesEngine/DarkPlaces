@@ -23,6 +23,8 @@
 extern cvar_t v_flipped;
 extern cvar_t r_equalize_entities_fullbright;
 
+r_refdef_view_t csqc_original_r_refdef_view;
+
 sfx_t *S_FindName(const char *name);
 int Sbar_GetSortedPlayerIndex (int index);
 void Sbar_SortFrags (void);
@@ -722,23 +724,8 @@ void VM_CL_R_ClearScene (void)
 	// clear renderable entity and light lists
 	r_refdef.scene.numentities = 0;
 	r_refdef.scene.numlights = 0;
-	// FIXME: restore these to the values from VM_CL_UpdateView
-	r_refdef.view.x = 0;
-	r_refdef.view.y = 0;
-	r_refdef.view.z = 0;
-	r_refdef.view.width = vid.width;
-	r_refdef.view.height = vid.height;
-	r_refdef.view.depth = 1;
-	// FIXME: restore frustum_x/frustum_y
-	r_refdef.view.useperspective = true;
-	r_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-	r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
-	r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
-	r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
-	r_refdef.view.ortho_x = scr_fov.value * (3.0 / 4.0) * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
-	r_refdef.view.ortho_y = scr_fov.value * (3.0 / 4.0);
-	r_refdef.view.clear = true;
-	r_refdef.view.isoverlay = false;
+	// restore the view settings to the values that VM_CL_UpdateView received from the client code
+	r_refdef.view = csqc_original_r_refdef_view;
 	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 	cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
