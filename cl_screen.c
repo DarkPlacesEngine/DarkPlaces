@@ -72,10 +72,6 @@ cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo
 cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
 cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
 cvar_t r_stereo_angle = {0, "r_stereo_angle", "0", "separation angle of eyes (makes the views look different directions, as an example, 90 gives a 90 degree separation where the views are 45 degrees left and 45 degrees right)"};
-cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0", "displays a zoomed in overlay window"};
-cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20", "horizontal viewsize of zoom window"};
-cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20", "vertical viewsize of zoom window"};
-cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20", "fov of zoom window"};
 cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
@@ -956,10 +952,6 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_stereo_redcyan);
 	Cvar_RegisterVariable(&r_stereo_redgreen);
 	Cvar_RegisterVariable(&r_stereo_angle);
-	Cvar_RegisterVariable(&scr_zoomwindow);
-	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
-	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
-	Cvar_RegisterVariable(&scr_zoomwindow_fov);
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
 	Cvar_RegisterVariable(&shownetgraph);
@@ -1750,31 +1742,6 @@ void SCR_DrawScreen (void)
 
 		if(!CL_VM_UpdateView())
 			R_RenderView();
-
-		if (scr_zoomwindow.integer)
-		{
-			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
-			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
-			r_refdef.view.width = (int)(vid.width * sizex);
-			r_refdef.view.height = (int)(vid.height * sizey);
-			r_refdef.view.depth = 1;
-			r_refdef.view.x = (int)((vid.width - r_refdef.view.width)/2);
-			r_refdef.view.y = 0;
-			r_refdef.view.z = 0;
-
-			r_refdef.view.useperspective = true;
-			r_refdef.view.frustum_y = tan(scr_zoomwindow_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-			r_refdef.view.frustum_x = r_refdef.view.frustum_y * vid_pixelheight.value * (float)r_refdef.view.width / (float)r_refdef.view.height;
-
-			r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
-			r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
-
-			r_refdef.view.ortho_x = atan(r_refdef.view.frustum_x) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
-			r_refdef.view.ortho_y = atan(r_refdef.view.frustum_y) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
-
-			if(!CL_VM_UpdateView())
-				R_RenderView();
-		}
 	}
 
 	if (!r_stereo_sidebyside.integer && !r_stereo_horizontal.integer && !r_stereo_vertical.integer)
