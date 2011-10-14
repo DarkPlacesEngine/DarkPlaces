@@ -464,6 +464,7 @@ qboolean CL_VM_InputEvent (int eventtype, int x, int y)
 	return r;
 }
 
+extern r_refdef_view_t csqc_original_r_refdef_view;
 qboolean CL_VM_UpdateView (void)
 {
 	vec3_t emptyvector;
@@ -475,6 +476,7 @@ qboolean CL_VM_UpdateView (void)
 		return false;
 	R_TimeReport("pre-UpdateView");
 	CSQC_BEGIN
+		csqc_original_r_refdef_view = r_refdef.view;
 		//VectorCopy(cl.viewangles, oldangles);
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
@@ -490,6 +492,7 @@ qboolean CL_VM_UpdateView (void)
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here
 		CL_VM_UpdateDmgGlobals(0, 0, emptyvector);
+		r_refdef.view = csqc_original_r_refdef_view;
 	CSQC_END
 	R_TimeReport("UpdateView");
 	return true;
