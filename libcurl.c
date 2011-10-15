@@ -308,20 +308,22 @@ static void Curl_CheckCommandWhenDone(void)
 {
 	if(!curl_dll)
 		return;
-	if(numdownloads_added && (numdownloads_success == numdownloads_added) && *command_when_done)
+	if(numdownloads_added && ((numdownloads_success + numdownloads_fail) == numdownloads_added))
 	{
-		Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
-		Cbuf_AddText("\n");
-		Cbuf_AddText(command_when_done);
-		Cbuf_AddText("\n");
-		Curl_Clear_forthismap();
-	}
-	else if(numdownloads_added && numdownloads_fail && *command_when_error)
-	{
-		Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
-		Cbuf_AddText("\n");
-		Cbuf_AddText(command_when_error);
-		Cbuf_AddText("\n");
+		if(numdownloads_fail == 0)
+		{
+			Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
+			Cbuf_AddText("\n");
+			Cbuf_AddText(command_when_done);
+			Cbuf_AddText("\n");
+		}
+		else
+		{
+			Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
+			Cbuf_AddText("\n");
+			Cbuf_AddText(command_when_error);
+			Cbuf_AddText("\n");
+		}
 		Curl_Clear_forthismap();
 	}
 }
