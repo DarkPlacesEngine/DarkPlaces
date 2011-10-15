@@ -1686,14 +1686,14 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
+	loadmodel->AnimateVertices = Mod_MD3_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_MorphMesh_CompileFrames();
 	Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 	Mod_MakeSortedSurfaces(loadmodel);
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
+	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MD3_AnimateVertices : NULL;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -3275,8 +3275,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header.num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || loadmodel->animscenes[0].framecount > 1;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices; // updated later
 
 	meshvertices = header.num_vertexes;
 	meshtriangles = header.num_triangles;
@@ -3418,6 +3417,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->animscenes[0].loop = true;
 		loadmodel->animscenes[0].framerate = 10;
 	}
+
+	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
+	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 
 	biggestorigin = 0;
 	if (header.version == 1)
