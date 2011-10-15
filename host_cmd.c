@@ -2178,19 +2178,19 @@ void Host_Viewmodel_f (void)
 
 	SV_VM_Begin();
 	e = FindViewthing ();
-	SV_VM_End();
-	if (!e)
-		return;
-
-	m = Mod_ForName (Cmd_Argv(1), false, true, NULL);
-	if (!m || !m->loaded || !m->Draw)
+	if (e)
 	{
-		Con_Printf("viewmodel: can't load %s\n", Cmd_Argv(1));
-		return;
+		m = Mod_ForName (Cmd_Argv(1), false, true, NULL);
+		if (m && m->loaded && m->Draw)
+		{
+			PRVM_serveredictfloat(e, frame) = 0;
+			cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)] = m;
+		}
+		else
+			Con_Printf("viewmodel: can't load %s\n", Cmd_Argv(1));
+	
 	}
-
-	PRVM_serveredictfloat(e, frame) = 0;
-	cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)] = m;
+	SV_VM_End();
 }
 
 /*
@@ -2209,16 +2209,17 @@ void Host_Viewframe_f (void)
 
 	SV_VM_Begin();
 	e = FindViewthing ();
+	if (e)
+	{
+		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
+
+		f = atoi(Cmd_Argv(1));
+		if (f >= m->numframes)
+			f = m->numframes-1;
+
+		PRVM_serveredictfloat(e, frame) = f;
+	}
 	SV_VM_End();
-	if (!e)
-		return;
-	m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
-
-	f = atoi(Cmd_Argv(1));
-	if (f >= m->numframes)
-		f = m->numframes-1;
-
-	PRVM_serveredictfloat(e, frame) = f;
 }
 
 
@@ -2246,15 +2247,16 @@ void Host_Viewnext_f (void)
 	SV_VM_Begin();
 	e = FindViewthing ();
 	SV_VM_End();
-	if (!e)
-		return;
-	m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
+	if (e)
+	{
+		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
 
-	PRVM_serveredictfloat(e, frame) = PRVM_serveredictfloat(e, frame) + 1;
-	if (PRVM_serveredictfloat(e, frame) >= m->numframes)
-		PRVM_serveredictfloat(e, frame) = m->numframes - 1;
+		PRVM_serveredictfloat(e, frame) = PRVM_serveredictfloat(e, frame) + 1;
+		if (PRVM_serveredictfloat(e, frame) >= m->numframes)
+			PRVM_serveredictfloat(e, frame) = m->numframes - 1;
 
-	PrintFrameName (m, (int)PRVM_serveredictfloat(e, frame));
+		PrintFrameName (m, (int)PRVM_serveredictfloat(e, frame));
+	}
 }
 
 /*
@@ -2272,17 +2274,17 @@ void Host_Viewprev_f (void)
 
 	SV_VM_Begin();
 	e = FindViewthing ();
+	if (e)
+	{
+		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
+
+		PRVM_serveredictfloat(e, frame) = PRVM_serveredictfloat(e, frame) - 1;
+		if (PRVM_serveredictfloat(e, frame) < 0)
+			PRVM_serveredictfloat(e, frame) = 0;
+
+		PrintFrameName (m, (int)PRVM_serveredictfloat(e, frame));
+	}
 	SV_VM_End();
-	if (!e)
-		return;
-
-	m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
-
-	PRVM_serveredictfloat(e, frame) = PRVM_serveredictfloat(e, frame) - 1;
-	if (PRVM_serveredictfloat(e, frame) < 0)
-		PRVM_serveredictfloat(e, frame) = 0;
-
-	PrintFrameName (m, (int)PRVM_serveredictfloat(e, frame));
 }
 
 /*
