@@ -466,11 +466,6 @@ r_waterstate_waterplane_t;
 
 typedef struct r_waterstate_s
 {
-	qboolean enabled;
-
-	qboolean renderingscene; // true while rendering a refraction or reflection texture, disables water surfaces
-	qboolean hideplayer;
-
 	int waterwidth, waterheight;
 	int texturewidth, textureheight;
 	int camerawidth, cameraheight;
@@ -482,13 +477,16 @@ typedef struct r_waterstate_s
 
 	float screenscale[2];
 	float screencenter[2];
+
+	qboolean enabled;
+
+	qboolean renderingscene; // true while rendering a refraction or reflection texture, disables water surfaces
+	qboolean hideplayer;
 }
 r_waterstate_t;
 
 typedef struct r_framebufferstate_s
 {
-	int viewfbo; // copy of r_viewfbo cvar (to cause reallocation of textures if needed)
-
 	textype_t textype; // type of color buffer we're using (dependent on r_viewfbo cvar)
 	int fbo; // non-zero if r_viewfbo is enabled and working
 	int screentexturewidth, screentextureheight; // dimensions of texture
