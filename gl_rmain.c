@@ -5338,15 +5338,7 @@ void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
 	*outheight = (int)ceil(height * scale);
 }
 
-void R_Mesh_SetMainRenderTargets(void)
-{
-	if (r_fb.fbo_framebuffer)
-		R_Mesh_SetRenderTargets(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor, NULL, NULL, NULL);
-	else
-		R_Mesh_ResetRenderTargets();
-}
-
-void R_SetupView(qboolean allowwaterclippingplane)
+void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	const float *customclipplane = NULL;
 	float plane[4];
@@ -5372,7 +5364,7 @@ void R_SetupView(qboolean allowwaterclippingplane)
 		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
 		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_SetRenderTargets(fbo, depthtexture, colortexture, NULL, NULL, NULL);
 	R_SetViewport(&r_refdef.view.viewport);
 	if (r_refdef.view.useclipplane && allowwaterclippingplane && vid.renderpath == RENDERPATH_SOFT)
 	{
@@ -5429,14 +5421,14 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 	}
 }
 
-void R_ResetViewRendering2D(void)
+void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	r_viewport_t viewport;
 	DrawQ_Finish();
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height, 0, 0, 1, 1, -10, 100, NULL);
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetRenderTargets(fbo, depthtexture, colortexture, NULL, NULL, NULL);
 	R_SetViewport(&viewport);
 	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 	GL_Color(1, 1, 1, 1);
@@ -5469,11 +5461,11 @@ void R_ResetViewRendering2D(void)
 	GL_CullFace(GL_NONE);
 }
 
-void R_ResetViewRendering3D(void)
+void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	DrawQ_Finish();
 
-	R_SetupView(true);
+	R_SetupView(true, fbo, depthtexture, colortexture);
 	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
@@ -5521,8 +5513,8 @@ static void R_RenderView_UpdateViewVectors(void)
 	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 }
 
-void R_RenderScene(void);
-void R_RenderWaterPlanes(void);
+void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_RenderWaterPlanes(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 
 static void R_Water_StartFrame(void)
 {
@@ -5725,7 +5717,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 extern cvar_t r_drawparticles;
 extern cvar_t r_drawdecals;
 
-static void R_Water_ProcessPlanes(void)
+static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	int myscissor[4];
 	r_refdef_view_t originalview;
@@ -5802,7 +5794,7 @@ static void R_Water_ProcessPlanes(void)
 			r_refdef.view = myview;
 			if(r_water_scissormode.integer)
 			{
-				R_SetupView(true);
+				R_SetupView(true, fbo, depthtexture, colortexture);
 				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
@@ -5825,7 +5817,7 @@ static void R_Water_ProcessPlanes(void)
 			}
 
 			r_fb.water.hideplayer = r_water_hideplayer.integer >= 2;
-			R_ResetViewRendering3D();
+			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
@@ -5833,7 +5825,7 @@ static void R_Water_ProcessPlanes(void)
 				R_View_Update();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
-			R_RenderScene();
+			R_RenderScene(fbo, depthtexture, colortexture);
 
 			R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
@@ -5846,7 +5838,7 @@ static void R_Water_ProcessPlanes(void)
 			r_refdef.view = myview;
 			if(r_water_scissormode.integer)
 			{
-				R_SetupView(true);
+				R_SetupView(true, fbo, depthtexture, colortexture);
 				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
@@ -5872,7 +5864,7 @@ static void R_Water_ProcessPlanes(void)
 
 			PlaneClassify(&r_refdef.view.clipplane);
 
-			R_ResetViewRendering3D();
+			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
@@ -5880,7 +5872,7 @@ static void R_Water_ProcessPlanes(void)
 				R_View_Update();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
-			R_RenderScene();
+			R_RenderScene(fbo, depthtexture, colortexture);
 
 			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
@@ -5928,10 +5920,10 @@ static void R_Water_ProcessPlanes(void)
 
 			r_fb.water.hideplayer = false;
 
-			R_ResetViewRendering3D();
+			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 			R_ClearScreen(r_refdef.fogenabled);
 			R_View_Update();
-			R_RenderScene();
+			R_RenderScene(fbo, depthtexture, colortexture);
 
 			R_Mesh_CopyToTexture(p->texture_camera, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
@@ -5941,7 +5933,7 @@ static void R_Water_ProcessPlanes(void)
 	if(vid.renderpath==RENDERPATH_SOFT) DPSOFTRAST_ClipPlane(0, 0, 0, 1);
 	r_fb.water.renderingscene = false;
 	r_refdef.view = originalview;
-	R_ResetViewRendering3D();
+	R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 	R_ClearScreen(r_refdef.fogenabled);
 	R_View_Update();
 	goto finish;
@@ -6027,8 +6019,8 @@ void R_Bloom_StartFrame(void)
 	}
 	else
 	{
-		for (screentexturewidth  = 1;screentexturewidth  < vid.width               ;screentexturewidth  *= 2);
-		for (screentextureheight = 1;screentextureheight < vid.height              ;screentextureheight *= 2);
+		for (screentexturewidth  = 1;screentexturewidth  < vid.width       ;screentexturewidth  *= 2);
+		for (screentextureheight = 1;screentextureheight < vid.height      ;screentextureheight *= 2);
 		for (bloomtexturewidth   = 1;bloomtexturewidth   < r_fb.bloomwidth ;bloomtexturewidth   *= 2);
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_fb.bloomheight;bloomtextureheight  *= 2);
 	}
@@ -6122,7 +6114,7 @@ void R_Bloom_StartFrame(void)
 		r_fb.texturetype = textype;
 	}
 
-	// when doing a reduced render (HDR) we want to use a smaller area
+	// bloom texture is a different resolution
 	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, r_refdef.view.height);
 	r_fb.bloomheight = r_fb.bloomwidth * r_refdef.view.height / r_refdef.view.width;
 	r_fb.bloomheight = bound(1, r_fb.bloomheight, r_refdef.view.height);
@@ -6194,7 +6186,7 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 
 	// scale down screen texture to the bloom texture size
 	CHECKGLERROR
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_SetRenderTargets(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor, NULL, NULL, NULL);
 	R_SetViewport(&r_fb.viewport);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(colorscale, colorscale, colorscale, 1);
@@ -6239,7 +6231,7 @@ void R_Bloom_MakeTexture(void)
 
 	r_refdef.stats.bloom++;
 
-	R_ResetViewRendering2D();
+	R_ResetViewRendering2D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 
 	// we have a bloom image in the framebuffer
 	CHECKGLERROR
@@ -6335,7 +6327,7 @@ void R_HDR_RenderBloomTexture(void)
 	r_refdef.view.showdebug = false;
 	r_refdef.view.colorscale *= r_bloom_colorscale.value / bound(1, r_hdr_range.value, 16);
 
-	R_ResetViewRendering3D();
+	R_ResetViewRendering3D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 
 	R_ClearScreen(r_refdef.fogenabled);
 	if (r_timereport_active)
@@ -6348,13 +6340,13 @@ void R_HDR_RenderBloomTexture(void)
 	// only do secondary renders with HDR if r_hdr is 2 or higher
 	r_fb.water.numwaterplanes = 0;
 	if (r_fb.water.enabled)
-		R_RenderWaterPlanes();
+		R_RenderWaterPlanes(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 
 	r_refdef.view.showdebug = true;
-	R_RenderScene();
+	R_RenderScene(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 	r_fb.water.numwaterplanes = 0;
 
-	R_ResetViewRendering2D();
+	R_ResetViewRendering2D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 
 	R_Bloom_CopyHDRTexture();
 	R_Bloom_MakeTexture();
@@ -6365,14 +6357,14 @@ void R_HDR_RenderBloomTexture(void)
 	r_refdef.view.height = oldheight;
 	r_refdef.view.colorscale = oldcolorscale;
 
-	R_ResetViewRendering3D();
+	R_ResetViewRendering3D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
 
 	R_ClearScreen(r_refdef.fogenabled);
 	if (r_timereport_active)
 		R_TimeReport("viewclear");
 }
 
-static void R_BlendView(void)
+static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	unsigned int permutation;
 	float uservecs[4][4];
@@ -6397,8 +6389,7 @@ static void R_BlendView(void)
 			// make sure the buffer is available
 			if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
 
-			R_ResetViewRendering2D();
-			R_Mesh_SetMainRenderTargets();
+			R_ResetViewRendering2D(fbo, depthtexture, colortexture);
 
 			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 			{
@@ -6473,13 +6464,13 @@ static void R_BlendView(void)
 			R_Mesh_CopyToTexture(r_fb.texture_screen, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 		}
-		else if (!r_fb.texture_bloom)
+		else
 		{
 			// we may still have to do view tint...
 			if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 			{
 				// apply a color tint to the whole view
-				R_ResetViewRendering2D();
+				R_ResetViewRendering2D(0, NULL, NULL);
 				GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 				R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
 				R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, true);
@@ -6511,7 +6502,7 @@ static void R_BlendView(void)
 		if (r_glsl_postprocess_uservec4_enable.integer)
 			sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &uservecs[3][0], &uservecs[3][1], &uservecs[3][2], &uservecs[3][3]);
 
-		R_ResetViewRendering2D();
+		R_ResetViewRendering2D(0, NULL, NULL);
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 
@@ -6587,7 +6578,7 @@ static void R_BlendView(void)
 		if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 		{
 			// apply a color tint to the whole view
-			R_ResetViewRendering2D();
+			R_ResetViewRendering2D(0, NULL, NULL);
 			GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
 			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, true);
@@ -6600,7 +6591,7 @@ static void R_BlendView(void)
 
 matrix4x4_t r_waterscrollmatrix;
 
-void R_UpdateFog(void) // needs to be called before HDR subrender too, as that changes colorscale!
+void R_UpdateFog(void)
 {
 	// Nehahra fog
 	if (gamemode == GAME_NEHAHRA)
@@ -6847,6 +6838,9 @@ extern cvar_t r_shadow_bouncegrid;
 void R_RenderView(void)
 {
 	matrix4x4_t originalmatrix = r_refdef.view.matrix, offsetmatrix;
+	int fbo;
+	rtexture_t *depthtexture;
+	rtexture_t *colortexture;
 
 	dpsoftrast_test = r_test.integer;
 
@@ -6876,6 +6870,7 @@ void R_RenderView(void)
 	if (r_refdef.view.isoverlay)
 	{
 		// TODO: FIXME: move this into its own backend function maybe? [2/5/2008 Andreas]
+		R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 		GL_Clear(GL_DEPTH_BUFFER_BIT, NULL, 1.0f, 0);
 		R_TimeReport("depthclear");
 
@@ -6884,7 +6879,7 @@ void R_RenderView(void)
 		r_fb.water.enabled = false;
 		r_fb.water.numwaterplanes = 0;
 
-		R_RenderScene();
+		R_RenderScene(0, NULL, NULL);
 
 		r_refdef.view.matrix = originalmatrix;
 
@@ -6907,13 +6902,18 @@ void R_RenderView(void)
 	R_Bloom_StartFrame();
 	R_Water_StartFrame();
 
+	// now we probably have an fbo to render into
+	fbo = r_fb.fbo_framebuffer;
+	depthtexture = r_fb.texture_framebufferdepth;
+	colortexture = r_fb.texture_framebuffercolor;
+
 	CHECKGLERROR
 	if (r_timereport_active)
 		R_TimeReport("viewsetup");
 
-	R_ResetViewRendering3D();
+	R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 
-	if (r_refdef.view.clear || r_refdef.fogenabled)
+	if (r_refdef.view.clear || r_refdef.fogenabled || fbo)
 	{
 		R_ClearScreen(r_refdef.fogenabled);
 		if (r_timereport_active)
@@ -6941,12 +6941,12 @@ void R_RenderView(void)
 
 	r_fb.water.numwaterplanes = 0;
 	if (r_fb.water.enabled)
-		R_RenderWaterPlanes();
+		R_RenderWaterPlanes(fbo, depthtexture, colortexture);
 
-	R_RenderScene();
+	R_RenderScene(fbo, depthtexture, colortexture);
 	r_fb.water.numwaterplanes = 0;
 
-	R_BlendView();
+	R_BlendView(fbo, depthtexture, colortexture);
 	if (r_timereport_active)
 		R_TimeReport("blendview");
 
@@ -6958,7 +6958,7 @@ void R_RenderView(void)
 	CHECKGLERROR
 }
 
-void R_RenderWaterPlanes(void)
+void R_RenderWaterPlanes(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawAddWaterPlanes)
 	{
@@ -6977,7 +6977,7 @@ void R_RenderWaterPlanes(void)
 
 	if (r_fb.water.numwaterplanes)
 	{
-		R_Water_ProcessPlanes();
+		R_Water_ProcessPlanes(fbo, depthtexture, colortexture);
 		if (r_timereport_active)
 			R_TimeReport("waterscenes");
 	}
@@ -6990,11 +6990,11 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
-extern void R_DrawModelShadows(void);
-extern void R_DrawModelShadowMaps(void);
+extern void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+extern void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
-void R_RenderScene(void)
+void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	qboolean shadowmapping = false;
 
@@ -7037,15 +7037,15 @@ void R_RenderScene(void)
 		if (skyrendermasked && skyrenderlater)
 		{
 			// we have to force off the water clipping plane while rendering sky
-			R_SetupView(false);
+			R_SetupView(false, fbo, depthtexture, colortexture);
 			R_Sky();
-			R_SetupView(true);
+			R_SetupView(true, fbo, depthtexture, colortexture);
 			if (r_timereport_active)
 				R_TimeReport("sky");
 		}
 	}
 
-	R_Shadow_PrepareLights();
+	R_Shadow_PrepareLights(fbo, depthtexture, colortexture);
 	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
 		R_Shadow_PrepareModelShadows();
 	if (r_timereport_active)
@@ -7072,8 +7072,9 @@ void R_RenderScene(void)
 
 	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
 	{
-		R_DrawModelShadowMaps();
-		R_ResetViewRendering3D();
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+		R_DrawModelShadowMaps(fbo, depthtexture, colortexture);
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
@@ -7100,8 +7101,9 @@ void R_RenderScene(void)
 
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
-		R_DrawModelShadows();
-		R_ResetViewRendering3D();
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
@@ -7120,8 +7122,9 @@ void R_RenderScene(void)
 
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
-		R_DrawModelShadows();
-		R_ResetViewRendering3D();
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
 			S_ExtraUpdate ();
@@ -7230,7 +7233,7 @@ void R_RenderScene(void)
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	R_ResetViewRendering2D();
+	R_ResetViewRendering2D(fbo, depthtexture, colortexture);
 }
 
 static const unsigned short bboxelements[36] =

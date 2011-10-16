@@ -513,9 +513,9 @@ r_framebufferstate_t;
 
 extern r_framebufferstate_t r_fb;
 
-void R_ResetViewRendering2D(void);
-void R_ResetViewRendering3D(void);
-void R_SetupView(qboolean allowwaterclippingplane);
+void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 extern const float r_screenvertex3f[12];
 extern cvar_t r_shadows;
 extern cvar_t r_shadows_darken;

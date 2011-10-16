@@ -261,6 +261,11 @@ rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
 rtexture_t *r_shadow_prepasslightingdiffusetexture;
 rtexture_t *r_shadow_prepasslightingspeculartexture;
 
+// keep track of the provided framebuffer info
+static int r_shadow_fb_fbo;
+static rtexture_t *r_shadow_fb_depthtexture;
+static rtexture_t *r_shadow_fb_colortexture;
+
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
 
@@ -2015,10 +2020,10 @@ void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight)
 
 void R_Shadow_RenderMode_Reset(void)
 {
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_ResetTextureState();
+	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
 	R_SetViewport(&r_refdef.view.viewport);
 	GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
-	R_Mesh_ResetTextureState();
 	GL_DepthRange(0, 1);
 	GL_DepthTest(true);
 	GL_DepthMask(false);
@@ -2229,7 +2234,7 @@ init_done:
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
 {
 	R_Mesh_ResetTextureState();
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
 	if (transparent)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
@@ -4479,7 +4484,7 @@ void R_Shadow_DrawPrepass(void)
 			if (r_refdef.scene.lights[lnum]->draw)
 				R_Shadow_DrawLight(r_refdef.scene.lights[lnum]);
 
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
 
 	R_Shadow_RenderMode_End();
 
@@ -4488,7 +4493,7 @@ void R_Shadow_DrawPrepass(void)
 }
 
 void R_Shadow_DrawLightSprites(void);
-void R_Shadow_PrepareLights(void)
+void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	int flag;
 	int lnum;
@@ -4505,6 +4510,10 @@ void R_Shadow_PrepareLights(void)
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
 		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
 		R_Shadow_FreeShadowMaps();
+
+	r_shadow_fb_fbo = fbo;
+	r_shadow_fb_depthtexture = depthtexture;
+	r_shadow_fb_colortexture = colortexture;
 
 	r_shadow_usingshadowmaportho = false;
 
@@ -4759,7 +4768,7 @@ void R_Shadow_PrepareModelShadows(void)
 	}
 }
 
-void R_DrawModelShadowMaps(void)
+void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	int i;
 	float relativethrowdistance, scale, size, radius, nearclip, farclip, bias, dot1, dot2;
@@ -4771,7 +4780,7 @@ void R_DrawModelShadowMaps(void)
 	float m[12];
 	matrix4x4_t shadowmatrix, cameramatrix, mvpmatrix, invmvpmatrix, scalematrix, texmatrix;
 	r_viewport_t viewport;
-	GLuint fbo = 0;
+	GLuint fbo2d = 0;
 	float clearcolor[4];
 
 	if (!r_refdef.scene.numentities)
@@ -4785,7 +4794,11 @@ void R_DrawModelShadowMaps(void)
 		return;
 	}
 
-	R_ResetViewRendering3D();
+	r_shadow_fb_fbo = fbo;
+	r_shadow_fb_depthtexture = depthtexture;
+	r_shadow_fb_colortexture = colortexture;
+
+	R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(NULL);
 
@@ -4794,7 +4807,7 @@ void R_DrawModelShadowMaps(void)
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		if (!r_shadow_shadowmap2dtexture)
 			R_Shadow_MakeShadowMap(0, r_shadow_shadowmapmaxsize);
-		fbo = r_shadow_fbo2d;
+		fbo2d = r_shadow_fbo2d;
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
@@ -4844,7 +4857,7 @@ void R_DrawModelShadowMaps(void)
 
 	VectorMA(shadoworigin, (1.0f - fabs(dot1)) * radius, shadowforward, shadoworigin);
 
-	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(fbo2d, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
 	R_SetupShader_DepthOrShadow(true);
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
@@ -4865,7 +4878,7 @@ void R_DrawModelShadowMaps(void)
 
 #if 0
 	// debugging
-	R_Mesh_SetMainRenderTargets();
+	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
 	R_SetupShader_ShowDepth(true);
 	GL_ColorMask(1,1,1,1);
 	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
@@ -4954,7 +4967,7 @@ void R_DrawModelShadowMaps(void)
 	}
 }
 
-void R_DrawModelShadows(void)
+void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	int i;
 	float relativethrowdistance;
@@ -4967,7 +4980,11 @@ void R_DrawModelShadows(void)
 	if (!r_refdef.scene.numentities || !vid.stencil || (r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL && r_shadows.integer != 1))
 		return;
 
-	R_ResetViewRendering3D();
+	r_shadow_fb_fbo = fbo;
+	r_shadow_fb_depthtexture = depthtexture;
+	r_shadow_fb_colortexture = colortexture;
+
+	R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 	//GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 	R_Shadow_RenderMode_Begin();
@@ -5052,7 +5069,7 @@ void R_DrawModelShadows(void)
 	//GL_ScissorTest(true);
 	//R_EntityMatrix(&identitymatrix);
 	//R_Mesh_ResetTextureState();
-	R_ResetViewRendering2D();
+	R_ResetViewRendering2D(fbo, depthtexture, colortexture);
 
 	// set up a darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
