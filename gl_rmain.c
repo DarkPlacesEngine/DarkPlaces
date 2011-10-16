@@ -5526,6 +5526,7 @@ static void R_Water_StartFrame(void)
 	int i;
 	int waterwidth, waterheight, texturewidth, textureheight, camerawidth, cameraheight;
 	r_waterstate_waterplane_t *p;
+	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.samples < 2;
 
 	if (vid.width > (int)vid.maxtexturesize_2d || vid.height > (int)vid.maxtexturesize_2d)
 		return;
@@ -5569,7 +5570,7 @@ static void R_Water_StartFrame(void)
 	}
 
 	// allocate textures as needed
-	if (r_fb.water.texturewidth != texturewidth || r_fb.water.textureheight != textureheight || r_fb.water.camerawidth != camerawidth || r_fb.water.cameraheight != cameraheight)
+	if (r_fb.water.texturewidth != texturewidth || r_fb.water.textureheight != textureheight || r_fb.water.camerawidth != camerawidth || r_fb.water.cameraheight != cameraheight || (r_fb.depthtexture && !usewaterfbo))
 	{
 		r_fb.water.maxwaterplanes = MAX_WATERPLANES;
 		for (i = 0, p = r_fb.water.waterplanes;i < r_fb.water.maxwaterplanes;i++, p++)
@@ -5739,6 +5740,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 	int planeindex, qualityreduction = 0, old_r_dynamic = 0, old_r_shadows = 0, old_r_worldrtlight = 0, old_r_dlight = 0, old_r_particles = 0, old_r_decals = 0;
 	r_waterstate_waterplane_t *p;
 	vec3_t visorigin;
+	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.samples < 2;
 
 	originalview = r_refdef.view;
 
@@ -5775,7 +5777,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_refraction)
 				goto error;
-			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
@@ -5789,7 +5791,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
 			if (!p->texture_camera)
 				goto error;
-			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
@@ -5804,7 +5806,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_reflection)
 				goto error;
-			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
@@ -6005,16 +6007,17 @@ void R_Bloom_StartFrame(void)
 	int i;
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
 	int viewwidth, viewheight;
+	qboolean useviewfbo = r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object && vid.samples < 2;
+	textype_t textype = TEXTYPE_COLORBUFFER;
 
-	r_fb.textype = TEXTYPE_COLORBUFFER;
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		if (vid.support.ext_framebuffer_object)
 		{
-			if (r_viewfbo.integer == 2) r_fb.textype = TEXTYPE_COLORBUFFER16F;
-			if (r_viewfbo.integer == 3) r_fb.textype = TEXTYPE_COLORBUFFER32F;
+			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
+			if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
 		}
 		break;
 	case RENDERPATH_GL11:
@@ -6092,7 +6095,12 @@ void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f && !r_viewscale_fpsscaling.integer)
+	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))
+	 && !r_bloom.integer
+	 && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0))
+	 && !useviewfbo
+	 && r_viewscale.value == 1.0f
+	 && !r_viewscale_fpsscaling.integer)
 		screentexturewidth = screentextureheight = 0;
 	if (!r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
@@ -6102,7 +6110,8 @@ void R_Bloom_StartFrame(void)
 	 || r_fb.screentextureheight != screentextureheight
 	 || r_fb.bloomtexturewidth != bloomtexturewidth
 	 || r_fb.bloomtextureheight != bloomtextureheight
-	 || r_fb.viewfbo != r_viewfbo.integer)
+	 || r_fb.textype != textype
+	 || useviewfbo != (r_fb.fbo != 0))
 	{
 		for (i = 0;i < (int)(sizeof(r_fb.bloomtexture)/sizeof(r_fb.bloomtexture[i]));i++)
 		{
@@ -6135,7 +6144,7 @@ void R_Bloom_StartFrame(void)
 		r_fb.screentextureheight = screentextureheight;
 		r_fb.bloomtexturewidth = bloomtexturewidth;
 		r_fb.bloomtextureheight = bloomtextureheight;
-		r_fb.viewfbo = r_viewfbo.integer;
+		r_fb.textype = textype;
 
 		if (r_fb.screentexturewidth && r_fb.screentextureheight)
 		{
@@ -6143,7 +6152,7 @@ void R_Bloom_StartFrame(void)
 				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			r_fb.ghosttexture_valid = false;
 			r_fb.colortexture = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
-			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (useviewfbo)
 			{
 				// FIXME: choose depth bits based on a cvar
 				r_fb.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false);
@@ -6169,7 +6178,7 @@ void R_Bloom_StartFrame(void)
 			for (i = 0;i < (int)(sizeof(r_fb.bloomtexture)/sizeof(r_fb.bloomtexture[i]));i++)
 			{
 				r_fb.bloomtexture[i] = R_LoadTexture2D(r_main_texturepool, "framebufferbloom", r_fb.bloomtexturewidth, r_fb.bloomtextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
-				if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+				if (useviewfbo)
 					r_fb.bloomfbo[i] = R_Mesh_CreateFramebufferObject(NULL, r_fb.bloomtexture[i], NULL, NULL, NULL);
 			}
 		}
