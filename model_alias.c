@@ -3730,10 +3730,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		// this unaligned memory access is safe (all bytes)
 		for (i = 0;i < (int)header.num_vertexes;i++)
 		{
-			outcolor[0] = vcolor4ub[0] * (1.0f / 128.0f);
-			outcolor[1] = vcolor4ub[1] * (1.0f / 128.0f);
-			outcolor[2] = vcolor4ub[2] * (1.0f / 128.0f);
-			outcolor[3] = vcolor4ub[3] * (1.0f / 128.0f);
+			outcolor[0] = vcolor4ub[0] * (1.0f / 255.0f);
+			outcolor[1] = vcolor4ub[1] * (1.0f / 255.0f);
+			outcolor[2] = vcolor4ub[2] * (1.0f / 255.0f);
+			outcolor[3] = vcolor4ub[3] * (1.0f / 255.0f);
 			vcolor4ub += 4;
 			outcolor += 4;
 		}
