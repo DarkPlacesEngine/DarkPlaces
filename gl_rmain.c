@@ -5891,7 +5891,7 @@ static void R_Water_ProcessPlanes(void)
 			if((p->materialflags & MATERIALFLAG_CAMERA) && p->camera_entity)
 			{
 				// we need to perform a matrix transform to render the view... so let's get the transformation matrix
-				r_waterstate.renderingrefraction = false; // we don't want to hide the player model from these ones
+				r_waterstate.hideplayer = false; // we don't want to hide the player model from these ones
 				CL_VM_TransformView(p->camera_entity - MAX_EDICTS, &r_refdef.view.matrix, &r_refdef.view.clipplane, visorigin);
 				R_RenderView_UpdateViewVectors();
 				if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
