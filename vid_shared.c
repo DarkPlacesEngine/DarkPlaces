@@ -1092,7 +1092,6 @@ void VID_CheckExtensions(void)
 		vid.sRGBcapable3D = true;
 		vid.useinterleavedarrays = false;
 		Con_Printf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
-		Con_Printf("vid.mode.samples %i\n", vid.mode.samples);
 		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
 		vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
 	}
@@ -1125,13 +1124,17 @@ void VID_CheckExtensions(void)
 	{
 		int samples = 0;
 		qglGetIntegerv(GL_SAMPLES_ARB, &samples);
+		vid.samples = samples;
 		if (samples > 1)
 			qglEnable(GL_MULTISAMPLE_ARB);
 		else
 			vid.allowalphatocoverage = false;
 	}
 	else
+	{
 		vid.allowalphatocoverage = false;
+		vid.samples = 1;
+	}
 
 	// VorteX: set other info (maybe place them in VID_InitMode?)
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
@@ -1753,6 +1756,8 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 	mode.samples = samples;
 	cl_ignoremousemoves = 2;
 	VID_ClearExtensions();
+
+	vid.samples = vid.mode.samples;
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode
@@ -1764,10 +1769,12 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		vid.refreshrate    = vid.mode.refreshrate;
 		vid.userefreshrate = vid.mode.userefreshrate;
 		vid.stereobuffer   = vid.mode.stereobuffer;
-		vid.samples        = vid.mode.samples;
 		vid.stencil        = vid.mode.bitsperpixel > 16;
 		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
 		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
+
+		if(vid.samples != vid.mode.samples)
+			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
 
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(" (%ix AA)", mode.samples) : "");
 
