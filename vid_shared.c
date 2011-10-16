@@ -1126,7 +1126,15 @@ void VID_CheckExtensions(void)
 		int samples = 0;
 		qglGetIntegerv(GL_SAMPLES_ARB, &samples);
 		if (samples > 1)
+		{
 			qglEnable(GL_MULTISAMPLE_ARB);
+
+			// currently, multisampling is not supported by our FBO paths
+			// so for now, disable FBOs if multisample is requested
+			// FIXME instead, support FBOs + multisampling, and turn off
+			// multisampling on chipsets that don't support this combination
+			vid.support.ext_framebuffer_object = false;
+		}
 		else
 			vid.allowalphatocoverage = false;
 	}
