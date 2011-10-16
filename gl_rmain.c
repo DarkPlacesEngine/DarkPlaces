@@ -183,6 +183,7 @@ cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "h
 cvar_t r_water_scissormode = {0, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
 cvar_t r_water_lowquality = {0, "r_water_lowquality", "0", "special option to accelerate water rendering, 1 disables shadows and particles, 2 disables all dynamic lights"};
 cvar_t r_water_hideplayer = {CVAR_SAVE, "r_water_hideplayer", "0", "if set to 1 then player will be hidden in refraction views, if set to 2 then player will also be hidden in reflection views, player is always visible in camera views"};
+cvar_t r_water_fbo = {CVAR_SAVE, "r_water_fbo", "1", "enables use of render to texture for water effects, otherwise copy to texture is used (slower)"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -4298,6 +4299,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_water_scissormode);
 	Cvar_RegisterVariable(&r_water_lowquality);
 	Cvar_RegisterVariable(&r_water_hideplayer);
+	Cvar_RegisterVariable(&r_water_fbo);
 
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
@@ -5766,7 +5768,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_refraction)
 				goto error;
-			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
@@ -5780,7 +5782,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
 			if (!p->texture_camera)
 				goto error;
-			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
@@ -5795,7 +5797,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_reflection)
 				goto error;
-			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			if (r_water_fbo.integer >= 1 && vid.support.ext_framebuffer_object)
 			{
 				if (r_fb.water.depthtexture == NULL)
 					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
