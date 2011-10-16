@@ -1661,7 +1661,7 @@ typedef struct r_refdef_view_s
 	// which color components to allow (for anaglyph glasses)
 	int colormask[4];
 
-	// global RGB color multiplier for rendering, this is required by HDR
+	// global RGB color multiplier for rendering
 	float colorscale;
 
 	// whether to call R_ClearScreen before rendering stuff
@@ -1670,7 +1670,7 @@ typedef struct r_refdef_view_s
 	qboolean isoverlay;
 
 	// whether to draw r_showtris and such, this is only true for the main
-	// view render, all secondary renders (HDR, mirrors, portals, cameras,
+	// view render, all secondary renders (mirrors, portals, cameras,
 	// distortion effects, etc) omit such debugging information
 	qboolean showdebug;
 

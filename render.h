@@ -113,9 +113,6 @@ extern cvar_t r_showcollisionbrushes_polygonfactor;
 extern cvar_t r_showcollisionbrushes_polygonoffset;
 extern cvar_t r_showdisabledepthtest;
 
-//
-// view origin
-//
 extern cvar_t r_drawentities;
 extern cvar_t r_draw2d;
 extern qboolean r_draw2d_force;
@@ -483,7 +480,51 @@ typedef struct r_waterstate_s
 }
 r_waterstate_t;
 
-extern r_waterstate_t r_waterstate;
+typedef struct r_framebufferstate_s
+{
+	qboolean enabled;
+	qboolean hdr;
+
+	int bloomwidth, bloomheight;
+
+	textype_t texturetype;
+	int viewfbo; // used to check if r_viewfbo cvar has changed
+
+	int fbo_framebuffer; // non-zero if r_viewfbo is enabled and working
+	rtexture_t *texture_framebuffercolor; // non-NULL if fbo_screen is non-zero
+	rtexture_t *texture_framebufferdepth; // non-NULL if fbo_screen is non-zero
+
+	int screentexturewidth, screentextureheight;
+	rtexture_t *texture_screen; /// \note also used for motion blur if enabled!
+
+	int bloomtexturewidth, bloomtextureheight;
+	rtexture_t *texture_bloom;
+
+	// arrays for rendering the screen passes
+	float screentexcoord2f[8];
+	float bloomtexcoord2f[8];
+	float offsettexcoord2f[8];
+
+	r_viewport_t viewport;
+
+	r_waterstate_t water;
+}
+r_framebufferstate_t;
+
+extern r_framebufferstate_t r_fb;
+
+void R_ResetViewRendering2D(void);
+void R_ResetViewRendering3D(void);
+void R_SetupView(qboolean allowwaterclippingplane);
+extern const float r_screenvertex3f[12];
+extern cvar_t r_shadows;
+extern cvar_t r_shadows_darken;
+extern cvar_t r_shadows_drawafterrtlighting;
+extern cvar_t r_shadows_castfrombmodels;
+extern cvar_t r_shadows_throwdistance;
+extern cvar_t r_shadows_throwdirection;
+extern cvar_t r_shadows_focus;
+extern cvar_t r_shadows_shadowmapscale;
 
 #endif
 
