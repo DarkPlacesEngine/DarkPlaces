@@ -52,8 +52,6 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpixels);
 int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4);
 void R_Mesh_DestroyFramebufferObject(int fbo);
-void R_Mesh_ResetRenderTargets(void);
-void R_Mesh_SetMainRenderTargets(void);
 void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4);
 
 unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list);

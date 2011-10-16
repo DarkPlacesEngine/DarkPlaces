@@ -1336,38 +1336,6 @@ void R_Mesh_SetRenderTargetsD3D9(IDirect3DSurface9 *depthsurface, IDirect3DSurfa
 }
 #endif
 
-void R_Mesh_ResetRenderTargets(void)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES1:
-	case RENDERPATH_GLES2:
-		if (gl_state.framebufferobject)
-		{
-			gl_state.framebufferobject = 0;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
-		}
-		break;
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTD3D
-		R_Mesh_SetRenderTargetsD3D9(gl_state.d3drt_backbufferdepthsurface, gl_state.d3drt_backbuffercolorsurface, NULL, NULL, NULL);
-#endif
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
-		DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
-		break;
-	}
-}
-
 void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
 {
 	unsigned int i;
@@ -2546,7 +2514,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 	R_Mesh_SetUseVBO();
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
@@ -3191,7 +3159,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 // restores backend state, used when done with 3D rendering
 void R_Mesh_Finish(void)
 {
-	R_Mesh_ResetRenderTargets();
+	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 }
 
 r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16)
