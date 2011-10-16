@@ -182,6 +182,7 @@ cvar_t r_water_refractdistort = {CVAR_SAVE, "r_water_refractdistort", "0.01", "h
 cvar_t r_water_reflectdistort = {CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_water_scissormode = {0, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
 cvar_t r_water_lowquality = {0, "r_water_lowquality", "0", "special option to accelerate water rendering, 1 disables shadows and particles, 2 disables all dynamic lights"};
+cvar_t r_water_hideplayer = {CVAR_SAVE, "r_water_hideplayer", "0", "if set to 1 then player will be hidden in refraction views, if set to 2 then player will also be hidden in reflection views, player is always visible in camera views"};
 
 cvar_t r_lerpsprites = {CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
@@ -4329,6 +4330,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_water_reflectdistort);
 	Cvar_RegisterVariable(&r_water_scissormode);
 	Cvar_RegisterVariable(&r_water_lowquality);
+	Cvar_RegisterVariable(&r_water_hideplayer);
 
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
@@ -4944,7 +4946,7 @@ static void R_View_UpdateEntityVisible (void)
 	entity_render_t *ent;
 
 	renderimask = r_refdef.envmap                                    ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
-		: r_waterstate.renderingrefraction                       ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
+		: r_waterstate.hideplayer                                    ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
 		: (chase_active.integer || r_waterstate.renderingscene)  ? RENDER_VIEWMODEL
 		:                                                          RENDER_EXTERIORMODEL;
 	if (!r_drawviewmodel.integer)
@@ -5853,6 +5855,7 @@ static void R_Water_ProcessPlanes(void)
 					memset(r_refdef.viewcache.world_pvsbits, 0xFF, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
 			}
 
+			r_waterstate.hideplayer = r_water_hideplayer.integer >= 2;
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
@@ -5864,6 +5867,7 @@ static void R_Water_ProcessPlanes(void)
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			r_waterstate.hideplayer = false;
 		}
 
 		// render the normal view scene and copy into texture
@@ -5878,7 +5882,7 @@ static void R_Water_ProcessPlanes(void)
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
 
-			r_waterstate.renderingrefraction = true;
+			r_waterstate.hideplayer = r_water_hideplayer.integer >= 1;
 
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
@@ -5910,7 +5914,7 @@ static void R_Water_ProcessPlanes(void)
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-			r_waterstate.renderingrefraction = false;
+			r_waterstate.hideplayer = false;
 		}
 		else if (p->materialflags & MATERIALFLAG_CAMERA)
 		{
@@ -5953,13 +5957,15 @@ static void R_Water_ProcessPlanes(void)
 
 			PlaneClassify(&r_refdef.view.clipplane);
 
+			r_waterstate.hideplayer = false;
+
 			R_ResetViewRendering3D();
 			R_ClearScreen(r_refdef.fogenabled);
 			R_View_Update();
 			R_RenderScene();
 
 			R_Mesh_CopyToTexture(p->texture_camera, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-			r_waterstate.renderingrefraction = false;
+			r_waterstate.hideplayer = false;
 		}
 
 	}
