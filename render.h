@@ -440,7 +440,8 @@ typedef enum rsurfacepass_e
 }
 rsurfacepass_t;
 
-void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy);
+void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
+void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy);
 void R_SetupShader_DepthOrShadow(qboolean notrippy);
 void R_SetupShader_ShowDepth(qboolean notrippy);
 void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
@@ -510,6 +511,8 @@ typedef struct r_framebufferstate_s
 	r_viewport_t bloomviewport;
 
 	r_waterstate_t water;
+
+	qboolean ghosttexture_valid; // don't draw garbage on first frame with motionblur
 }
 r_framebufferstate_t;
 

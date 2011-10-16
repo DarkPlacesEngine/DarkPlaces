@@ -2035,7 +2035,7 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, false);
+	R_SetupShader_Generic_NoTexture(false, false);
 	r_shadow_usingshadowmap2d = false;
 	r_shadow_usingshadowmaportho = false;
 	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
@@ -5081,7 +5081,7 @@ void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 
 	// apply the blend to the shadowed areas
 	R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, true);
+	R_SetupShader_Generic_NoTexture(false, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 
 	// restore the viewport
@@ -5268,7 +5268,7 @@ void R_Shadow_DrawCoronas(void)
 			GL_PolygonOffset(0, 0);
 			GL_DepthTest(true);
 			R_Mesh_ResetTextureState();
-			R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, false, false);
+			R_SetupShader_Generic_NoTexture(false, false);
 		}
 #endif
 		break;
