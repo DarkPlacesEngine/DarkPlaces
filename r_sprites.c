@@ -258,7 +258,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// honors scale
 		// honors a global label scaling cvar
 	
-		if(r_waterstate.renderingscene) // labels are considered HUD items, and don't appear in reflections
+		if(r_fb.water.renderingscene) // labels are considered HUD items, and don't appear in reflections
 			return;
 
 		// See the R_TrackSprite definition for a reason for this copying
@@ -281,7 +281,7 @@ void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const r
 		// honors a global label scaling cvar before the rounding
 		// FIXME assumes that 1qu is 1 pixel in the sprite like in SPR32 format. Should not do that, but instead query the source image! This bug only applies to the roundtopixels case, though.
 
-		if(r_waterstate.renderingscene) // labels are considered HUD items, and don't appear in reflections
+		if(r_fb.water.renderingscene) // labels are considered HUD items, and don't appear in reflections
 			return;
 
 		// See the R_TrackSprite definition for a reason for this copying
