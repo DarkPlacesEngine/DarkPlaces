@@ -448,9 +448,12 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s
 {
-	rtexture_t *texture_refraction;
-	rtexture_t *texture_reflection;
-	rtexture_t *texture_camera;
+	rtexture_t *texture_refraction; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFRACTION
+	rtexture_t *texture_reflection; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFLECTION
+	rtexture_t *texture_camera; // MATERIALFLAG_CAMERA
+	int fbo_refraction;
+	int fbo_reflection;
+	int fbo_camera;
 	mplane_t plane;
 	int materialflags; // combined flags of all water surfaces on this plane
 	unsigned char pvsbits[(MAX_MAP_LEAFS+7)>>3]; // FIXME: buffer overflow on huge maps
@@ -470,6 +473,7 @@ typedef struct r_waterstate_s
 	int waterwidth, waterheight;
 	int texturewidth, textureheight;
 	int camerawidth, cameraheight;
+	rtexture_t *depthtexture;
 
 	int maxwaterplanes; // same as MAX_WATERPLANES
 	int numwaterplanes;
@@ -482,30 +486,28 @@ r_waterstate_t;
 
 typedef struct r_framebufferstate_s
 {
-	qboolean enabled;
-	qboolean hdr;
+	int viewfbo; // copy of r_viewfbo cvar (to cause reallocation of textures if needed)
+
+	textype_t textype; // type of color buffer we're using (dependent on r_viewfbo cvar)
+	int fbo; // non-zero if r_viewfbo is enabled and working
+	int screentexturewidth, screentextureheight; // dimensions of texture
+
+	rtexture_t *colortexture; // non-NULL if fbo is non-zero
+	rtexture_t *depthtexture; // non-NULL if fbo is non-zero
+	rtexture_t *ghosttexture; // for r_motionblur (not recommended on multi-GPU hardware!)
+	rtexture_t *bloomtexture[2]; // for r_bloom, multi-stage processing
+	int bloomfbo[2]; // fbos for rendering into bloomtexture[]
+	int bloomindex; // which bloomtexture[] contains the final image
 
 	int bloomwidth, bloomheight;
-
-	textype_t texturetype;
-	int viewfbo; // used to check if r_viewfbo cvar has changed
-
-	int fbo_framebuffer; // non-zero if r_viewfbo is enabled and working
-	rtexture_t *texture_framebuffercolor; // non-NULL if fbo_screen is non-zero
-	rtexture_t *texture_framebufferdepth; // non-NULL if fbo_screen is non-zero
-
-	int screentexturewidth, screentextureheight;
-	rtexture_t *texture_screen; /// \note also used for motion blur if enabled!
-
 	int bloomtexturewidth, bloomtextureheight;
-	rtexture_t *texture_bloom;
 
 	// arrays for rendering the screen passes
-	float screentexcoord2f[8];
-	float bloomtexcoord2f[8];
-	float offsettexcoord2f[8];
+	float screentexcoord2f[8]; // texcoords for colortexture or ghosttexture
+	float bloomtexcoord2f[8]; // texcoords for bloomtexture[]
+	float offsettexcoord2f[8]; // temporary use while updating bloomtexture[]
 
-	r_viewport_t viewport;
+	r_viewport_t bloomviewport;
 
 	r_waterstate_t water;
 }

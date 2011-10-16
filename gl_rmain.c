@@ -197,10 +197,8 @@ cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320", "what resol
 cvar_t r_bloom_colorexponent = {CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
 cvar_t r_bloom_colorsubtract = {CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
 
-cvar_t r_hdr = {CVAR_SAVE, "r_hdr", "0", "enables High Dynamic Range bloom effect (higher quality version of r_bloom)"};
 cvar_t r_hdr_scenebrightness = {CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
 cvar_t r_hdr_glowintensity = {CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
-cvar_t r_hdr_range = {CVAR_SAVE, "r_hdr_range", "4", "how much dynamic range to render bloom with (equivalent to multiplying r_bloom_brighten by this value and dividing r_bloom_colorscale by this value)"};
 cvar_t r_hdr_irisadaptation = {CVAR_SAVE, "r_hdr_irisadaptation", "0", "adjust scene brightness according to light intensity at player location"};
 cvar_t r_hdr_irisadaptation_multiplier = {CVAR_SAVE, "r_hdr_irisadaptation_multiplier", "2", "brightness at which value will be 1.0"};
 cvar_t r_hdr_irisadaptation_minvalue = {CVAR_SAVE, "r_hdr_irisadaptation_minvalue", "0.5", "minimum value that can result from multiplier / brightness"};
@@ -4312,10 +4310,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_resolution);
 	Cvar_RegisterVariable(&r_bloom_colorexponent);
 	Cvar_RegisterVariable(&r_bloom_colorsubtract);
-	Cvar_RegisterVariable(&r_hdr);
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
-	Cvar_RegisterVariable(&r_hdr_range);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_multiplier);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation_minvalue);
@@ -5572,12 +5568,21 @@ static void R_Water_StartFrame(void)
 			if (p->texture_refraction)
 				R_FreeTexture(p->texture_refraction);
 			p->texture_refraction = NULL;
+			if (p->fbo_refraction)
+				R_Mesh_DestroyFramebufferObject(p->fbo_refraction);
+			p->fbo_refraction = 0;
 			if (p->texture_reflection)
 				R_FreeTexture(p->texture_reflection);
 			p->texture_reflection = NULL;
+			if (p->fbo_reflection)
+				R_Mesh_DestroyFramebufferObject(p->fbo_reflection);
+			p->fbo_reflection = 0;
 			if (p->texture_camera)
 				R_FreeTexture(p->texture_camera);
 			p->texture_camera = NULL;
+			if (p->fbo_camera)
+				R_Mesh_DestroyFramebufferObject(p->fbo_camera);
+			p->fbo_camera = 0;
 		}
 		memset(&r_fb.water, 0, sizeof(r_fb.water));
 		r_fb.water.texturewidth = texturewidth;
@@ -5758,24 +5763,45 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			if (!p->texture_refraction)
-				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_refraction)
 				goto error;
+			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			{
+				if (r_fb.water.depthtexture == NULL)
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+				if (p->fbo_refraction == 0)
+					p->fbo_refraction = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_refraction, NULL, NULL, NULL);
+			}
 		}
 		else if (p->materialflags & MATERIALFLAG_CAMERA)
 		{
 			if (!p->texture_camera)
-				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
+				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
 			if (!p->texture_camera)
 				goto error;
+			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			{
+				if (r_fb.water.depthtexture == NULL)
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+				if (p->fbo_camera == 0)
+					p->fbo_camera = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_camera, NULL, NULL, NULL);
+			}
 		}
 
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			if (!p->texture_reflection)
-				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_reflection)
 				goto error;
+			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			{
+				if (r_fb.water.depthtexture == NULL)
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+				if (p->fbo_reflection == 0)
+					p->fbo_reflection = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_reflection, NULL, NULL, NULL);
+			}
 		}
 	}
 
@@ -5794,7 +5820,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			r_refdef.view = myview;
 			if(r_water_scissormode.integer)
 			{
-				R_SetupView(true, fbo, depthtexture, colortexture);
+				R_SetupView(true, p->fbo_reflection, r_fb.water.depthtexture, p->texture_reflection);
 				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
@@ -5817,7 +5843,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			}
 
 			r_fb.water.hideplayer = r_water_hideplayer.integer >= 2;
-			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+			R_ResetViewRendering3D(p->fbo_reflection, r_fb.water.depthtexture, p->texture_reflection);
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
@@ -5825,9 +5851,10 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				R_View_Update();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
-			R_RenderScene(fbo, depthtexture, colortexture);
+			R_RenderScene(p->fbo_reflection, r_fb.water.depthtexture, p->texture_reflection);
 
-			R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			if (!p->fbo_reflection)
+				R_Mesh_CopyToTexture(p->texture_reflection, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
 		}
 
@@ -5838,7 +5865,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			r_refdef.view = myview;
 			if(r_water_scissormode.integer)
 			{
-				R_SetupView(true, fbo, depthtexture, colortexture);
+				R_SetupView(true, p->fbo_refraction, r_fb.water.depthtexture, p->texture_refraction);
 				if(R_ScissorForBBox(p->mins, p->maxs, myscissor))
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
@@ -5864,7 +5891,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 
 			PlaneClassify(&r_refdef.view.clipplane);
 
-			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+			R_ResetViewRendering3D(p->fbo_refraction, r_fb.water.depthtexture, p->texture_refraction);
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
 				R_View_UpdateWithScissor(myscissor);
@@ -5872,9 +5899,10 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				R_View_Update();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
-			R_RenderScene(fbo, depthtexture, colortexture);
+			R_RenderScene(p->fbo_refraction, r_fb.water.depthtexture, p->texture_refraction);
 
-			R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			if (!p->fbo_refraction)
+				R_Mesh_CopyToTexture(p->texture_refraction, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
 		}
 		else if (p->materialflags & MATERIALFLAG_CAMERA)
@@ -5920,12 +5948,13 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 
 			r_fb.water.hideplayer = false;
 
-			R_ResetViewRendering3D(fbo, depthtexture, colortexture);
+			R_ResetViewRendering3D(p->fbo_camera, r_fb.water.depthtexture, p->texture_camera);
 			R_ClearScreen(r_refdef.fogenabled);
 			R_View_Update();
-			R_RenderScene(fbo, depthtexture, colortexture);
+			R_RenderScene(p->fbo_camera, r_fb.water.depthtexture, p->texture_camera);
 
-			R_Mesh_CopyToTexture(p->texture_camera, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+			if (!p->fbo_camera)
+				R_Mesh_CopyToTexture(p->texture_camera, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 			r_fb.water.hideplayer = false;
 		}
 
@@ -5934,7 +5963,8 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 	r_fb.water.renderingscene = false;
 	r_refdef.view = originalview;
 	R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-	R_ClearScreen(r_refdef.fogenabled);
+	if (!r_fb.water.depthtexture)
+		R_ClearScreen(r_refdef.fogenabled);
 	R_View_Update();
 	goto finish;
 error:
@@ -5963,9 +5993,30 @@ finish:
 
 void R_Bloom_StartFrame(void)
 {
+	int i;
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
 	int viewwidth, viewheight;
-	textype_t textype;
+
+	r_fb.textype = TEXTYPE_COLORBUFFER;
+	switch (vid.renderpath)
+	{
+	case RENDERPATH_GL20:
+	case RENDERPATH_GLES2:
+		if (vid.support.ext_framebuffer_object)
+		{
+			if (r_viewfbo.integer == 2) r_fb.textype = TEXTYPE_COLORBUFFER16F;
+			if (r_viewfbo.integer == 3) r_fb.textype = TEXTYPE_COLORBUFFER32F;
+		}
+		break;
+	case RENDERPATH_GL11:
+	case RENDERPATH_GL13:
+	case RENDERPATH_GLES1:
+	case RENDERPATH_D3D9:
+	case RENDERPATH_D3D10:
+	case RENDERPATH_D3D11:
+	case RENDERPATH_SOFT:
+		break;
+	}
 
 	if (r_viewscale_fpsscaling.integer)
 	{
@@ -6025,93 +6076,93 @@ void R_Bloom_StartFrame(void)
 		for (bloomtextureheight  = 1;bloomtextureheight  < r_fb.bloomheight;bloomtextureheight  *= 2);
 	}
 
-	if ((r_hdr.integer || r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > (int)vid.maxtexturesize_2d || r_refdef.view.height > (int)vid.maxtexturesize_2d))
+	if ((r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > (int)vid.maxtexturesize_2d || r_refdef.view.height > (int)vid.maxtexturesize_2d))
 	{
-		Cvar_SetValueQuick(&r_hdr, 0);
 		Cvar_SetValueQuick(&r_bloom, 0);
 		Cvar_SetValueQuick(&r_motionblur, 0);
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && !r_hdr.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f && !r_viewscale_fpsscaling.integer)
+	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial)) && !r_bloom.integer && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0)) && r_viewfbo.integer < 1 && r_viewscale.value == 1.0f && !r_viewscale_fpsscaling.integer)
 		screentexturewidth = screentextureheight = 0;
-	if (!r_hdr.integer && !r_bloom.integer)
+	if (!r_bloom.integer)
 		bloomtexturewidth = bloomtextureheight = 0;
-
-	textype = TEXTYPE_COLORBUFFER;
-	switch (vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (vid.support.ext_framebuffer_object)
-		{
-			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
-			if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
-		}
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_SOFT:
-		break;
-	}
 
 	// allocate textures as needed
 	if (r_fb.screentexturewidth != screentexturewidth
 	 || r_fb.screentextureheight != screentextureheight
 	 || r_fb.bloomtexturewidth != bloomtexturewidth
 	 || r_fb.bloomtextureheight != bloomtextureheight
-	 || r_fb.texturetype != textype
 	 || r_fb.viewfbo != r_viewfbo.integer)
 	{
-		if (r_fb.texture_bloom)
-			R_FreeTexture(r_fb.texture_bloom);
-		r_fb.texture_bloom = NULL;
-		if (r_fb.texture_screen)
-			R_FreeTexture(r_fb.texture_screen);
-		r_fb.texture_screen = NULL;
-		if (r_fb.fbo_framebuffer)
-			R_Mesh_DestroyFramebufferObject(r_fb.fbo_framebuffer);
-		r_fb.fbo_framebuffer = 0;
-		if (r_fb.texture_framebuffercolor)
-			R_FreeTexture(r_fb.texture_framebuffercolor);
-		r_fb.texture_framebuffercolor = NULL;
-		if (r_fb.texture_framebufferdepth)
-			R_FreeTexture(r_fb.texture_framebufferdepth);
-		r_fb.texture_framebufferdepth = NULL;
+		for (i = 0;i < (int)(sizeof(r_fb.bloomtexture)/sizeof(r_fb.bloomtexture[i]));i++)
+		{
+			if (r_fb.bloomtexture[i])
+				R_FreeTexture(r_fb.bloomtexture[i]);
+			r_fb.bloomtexture[i] = NULL;
+
+			if (r_fb.bloomfbo[i])
+				R_Mesh_DestroyFramebufferObject(r_fb.bloomfbo[i]);
+			r_fb.bloomfbo[i] = 0;
+		}
+
+		if (r_fb.fbo)
+			R_Mesh_DestroyFramebufferObject(r_fb.fbo);
+		r_fb.fbo = 0;
+
+		if (r_fb.colortexture)
+			R_FreeTexture(r_fb.colortexture);
+		r_fb.colortexture = NULL;
+
+		if (r_fb.depthtexture)
+			R_FreeTexture(r_fb.depthtexture);
+		r_fb.depthtexture = NULL;
+
+		if (r_fb.ghosttexture)
+			R_FreeTexture(r_fb.ghosttexture);
+		r_fb.ghosttexture = NULL;
+
 		r_fb.screentexturewidth = screentexturewidth;
 		r_fb.screentextureheight = screentextureheight;
-		if (r_fb.screentexturewidth && r_fb.screentextureheight)
-			r_fb.texture_screen = R_LoadTexture2D(r_main_texturepool, "screen", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
-		if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
-		{
-			// FIXME: choose depth bits based on a cvar
-			r_fb.texture_framebufferdepth = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false);
-			r_fb.texture_framebuffercolor = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
-			r_fb.fbo_framebuffer = R_Mesh_CreateFramebufferObject(r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor, NULL, NULL, NULL);
-			R_Mesh_SetRenderTargets(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor, NULL, NULL, NULL);
-#ifndef USE_GLES2
-			// render depth into one texture and normalmap into the other
-			if (qglDrawBuffer)
-			{
-				int status;
-				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-				status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
-				if (status != GL_FRAMEBUFFER_COMPLETE)
-					Con_Printf("R_Bloom_StartFrame: glCheckFramebufferStatusEXT returned %i\n", status);
-			}
-#endif
-		}
 		r_fb.bloomtexturewidth = bloomtexturewidth;
 		r_fb.bloomtextureheight = bloomtextureheight;
-		if (r_fb.bloomtexturewidth && r_fb.bloomtextureheight)
-			r_fb.texture_bloom = R_LoadTexture2D(r_main_texturepool, "bloom", r_fb.bloomtexturewidth, r_fb.bloomtextureheight, NULL, textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 		r_fb.viewfbo = r_viewfbo.integer;
-		r_fb.texturetype = textype;
+
+		if (r_fb.screentexturewidth && r_fb.screentextureheight)
+		{
+			if (r_motionblur.value > 0 || r_damageblur.value > 0)
+				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+			r_fb.colortexture = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+			if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+			{
+				// FIXME: choose depth bits based on a cvar
+				r_fb.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false);
+				r_fb.fbo = R_Mesh_CreateFramebufferObject(r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
+				R_Mesh_SetRenderTargets(r_fb.fbo, r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
+#ifndef USE_GLES2
+				// render depth into one texture and color into the other
+				if (qglDrawBuffer)
+				{
+					int status;
+					qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+					qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+					status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+					if (status != GL_FRAMEBUFFER_COMPLETE)
+						Con_Printf("R_Bloom_StartFrame: glCheckFramebufferStatusEXT returned %i\n", status);
+				}
+#endif
+			}
+		}
+
+		if (r_fb.bloomtexturewidth && r_fb.bloomtextureheight)
+		{
+			for (i = 0;i < (int)(sizeof(r_fb.bloomtexture)/sizeof(r_fb.bloomtexture[i]));i++)
+			{
+				r_fb.bloomtexture[i] = R_LoadTexture2D(r_main_texturepool, "framebufferbloom", r_fb.bloomtexturewidth, r_fb.bloomtextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				if (r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object)
+					r_fb.bloomfbo[i] = R_Mesh_CreateFramebufferObject(NULL, r_fb.bloomtexture[i], NULL, NULL, NULL);
+			}
+		}
 	}
 
 	// bloom texture is a different resolution
@@ -6168,26 +6219,32 @@ void R_Bloom_StartFrame(void)
 		break;
 	}
 
-	if ((r_hdr.integer || r_bloom.integer) && r_fb.bloomwidth)
-	{
-		r_fb.enabled = true;
-		r_fb.hdr = r_hdr.integer != 0 && !r_fb.fbo_framebuffer;
-	}
+	R_Viewport_InitOrtho(&r_fb.bloomviewport, &identitymatrix, r_refdef.view.x, (r_fb.bloomfbo[0] ? r_fb.bloomtextureheight : vid.height) - r_fb.bloomheight - r_refdef.view.y, r_fb.bloomwidth, r_fb.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
 
-	R_Viewport_InitOrtho(&r_fb.viewport, &identitymatrix, r_refdef.view.x, vid.height - r_fb.bloomheight - r_refdef.view.y, r_fb.bloomwidth, r_fb.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
-
-	if (r_fb.fbo_framebuffer)
+	if (r_fb.fbo)
 		r_refdef.view.clear = true;
 }
 
-void R_Bloom_CopyBloomTexture(float colorscale)
+void R_Bloom_MakeTexture(void)
 {
+	int x, range, dir;
+	float xoffset, yoffset, r, brighten;
+	rtexture_t *intex;
+	float colorscale = r_bloom_colorscale.value;
+
 	r_refdef.stats.bloom++;
+
+	if (!r_fb.fbo)
+	{
+		R_Mesh_CopyToTexture(r_fb.colortexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+		r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+	}
 
 	// scale down screen texture to the bloom texture size
 	CHECKGLERROR
-	R_Mesh_SetRenderTargets(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor, NULL, NULL, NULL);
-	R_SetViewport(&r_fb.viewport);
+	r_fb.bloomindex = 0;
+	R_Mesh_SetRenderTargets(r_fb.bloomfbo[r_fb.bloomindex], NULL, r_fb.bloomtexture[r_fb.bloomindex], NULL, NULL, NULL);
+	R_SetViewport(&r_fb.bloomviewport);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_Color(colorscale, colorscale, colorscale, 1);
 	// D3D has upside down Y coords, the easiest way to flip this is to flip the screen vertices rather than the texcoords, so we just use a different array for that...
@@ -6208,66 +6265,57 @@ void R_Bloom_CopyBloomTexture(float colorscale)
 		break;
 	}
 	// TODO: do boxfilter scale-down in shader?
-	R_SetupShader_Generic(r_fb.texture_screen, NULL, GL_MODULATE, 1, false, true);
+	R_SetupShader_Generic(r_fb.colortexture, NULL, GL_MODULATE, 1, false, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	r_refdef.stats.bloom_drawpixels += r_fb.bloomwidth * r_fb.bloomheight;
 
-	// we now have a bloom image in the framebuffer
-	// copy it into the bloom image texture for later processing
-	R_Mesh_CopyToTexture(r_fb.texture_bloom, 0, 0, r_fb.viewport.x, r_fb.viewport.y, r_fb.viewport.width, r_fb.viewport.height);
-	r_refdef.stats.bloom_copypixels += r_fb.viewport.width * r_fb.viewport.height;
-}
+	// we now have a properly scaled bloom image
+	if (!r_fb.bloomfbo[r_fb.bloomindex])
+	{
+		// copy it into the bloom texture
+		R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
+		r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+	}
 
-void R_Bloom_CopyHDRTexture(void)
-{
-	R_Mesh_CopyToTexture(r_fb.texture_bloom, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-	r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
-}
-
-void R_Bloom_MakeTexture(void)
-{
-	int x, range, dir;
-	float xoffset, yoffset, r, brighten;
-
-	r_refdef.stats.bloom++;
-
-	R_ResetViewRendering2D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-
-	// we have a bloom image in the framebuffer
-	CHECKGLERROR
-	R_SetViewport(&r_fb.viewport);
-
+	// multiply bloom image by itself as many times as desired
 	for (x = 1;x < min(r_bloom_colorexponent.value, 32);)
 	{
+		intex = r_fb.bloomtexture[r_fb.bloomindex];
+		r_fb.bloomindex ^= 1;
+		R_Mesh_SetRenderTargets(r_fb.bloomfbo[r_fb.bloomindex], NULL, r_fb.bloomtexture[r_fb.bloomindex], NULL, NULL, NULL);
 		x *= 2;
 		r = bound(0, r_bloom_colorexponent.value / x, 1);
 		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 		GL_Color(r,r,r,1);
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.bloomtexcoord2f);
-		R_SetupShader_Generic(r_fb.texture_bloom, NULL, GL_MODULATE, 1, false, true);
+		R_SetupShader_Generic(intex, NULL, GL_MODULATE, 1, false, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 		r_refdef.stats.bloom_drawpixels += r_fb.bloomwidth * r_fb.bloomheight;
 
-		// copy the vertically blurred bloom view to a texture
-		R_Mesh_CopyToTexture(r_fb.texture_bloom, 0, 0, r_fb.viewport.x, r_fb.viewport.y, r_fb.viewport.width, r_fb.viewport.height);
-		r_refdef.stats.bloom_copypixels += r_fb.viewport.width * r_fb.viewport.height;
+		if (!r_fb.bloomfbo[r_fb.bloomindex])
+		{
+			// copy the darkened image to a texture
+			R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
+			r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+		}
 	}
 
 	range = r_bloom_blur.integer * r_fb.bloomwidth / 320;
 	brighten = r_bloom_brighten.value;
-	if (r_fb.hdr)
-		brighten *= r_hdr_range.value;
 	brighten = sqrt(brighten);
 	if(range >= 1)
 		brighten *= (3 * range) / (2 * range - 1); // compensate for the "dot particle"
-	R_SetupShader_Generic(r_fb.texture_bloom, NULL, GL_MODULATE, 1, false, true);
 
 	for (dir = 0;dir < 2;dir++)
 	{
+		intex = r_fb.bloomtexture[r_fb.bloomindex];
+		r_fb.bloomindex ^= 1;
+		R_Mesh_SetRenderTargets(r_fb.bloomfbo[r_fb.bloomindex], NULL, r_fb.bloomtexture[r_fb.bloomindex], NULL, NULL, NULL);
 		// blend on at multiple vertical offsets to achieve a vertical blur
 		// TODO: do offset blends using GLSL
 		// TODO instead of changing the texcoords, change the target positions to prevent artifacts at edges
 		GL_BlendFunc(GL_ONE, GL_ZERO);
+		R_SetupShader_Generic(intex, NULL, GL_MODULATE, 1, false, true);
 		for (x = -range;x <= range;x++)
 		{
 			if (!dir){xoffset = 0;yoffset = x;}
@@ -6298,70 +6346,13 @@ void R_Bloom_MakeTexture(void)
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
 
-		// copy the vertically blurred bloom view to a texture
-		R_Mesh_CopyToTexture(r_fb.texture_bloom, 0, 0, r_fb.viewport.x, r_fb.viewport.y, r_fb.viewport.width, r_fb.viewport.height);
-		r_refdef.stats.bloom_copypixels += r_fb.viewport.width * r_fb.viewport.height;
+		if (!r_fb.bloomfbo[r_fb.bloomindex])
+		{
+			// copy the vertically or horizontally blurred bloom view to a texture
+			R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
+			r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+		}
 	}
-}
-
-void R_HDR_RenderBloomTexture(void)
-{
-	int oldwidth, oldheight;
-	float oldcolorscale;
-	qboolean oldwaterstate;
-
-	oldwaterstate = r_fb.water.enabled;
-	oldcolorscale = r_refdef.view.colorscale;
-	oldwidth = r_refdef.view.width;
-	oldheight = r_refdef.view.height;
-	r_refdef.view.width = r_fb.bloomwidth;
-	r_refdef.view.height = r_fb.bloomheight;
-
-	if(r_hdr.integer < 2)
-		r_fb.water.enabled = false;
-
-	// TODO: support GL_EXT_framebuffer_object rather than reusing the framebuffer?  it might improve SLI performance.
-	// TODO: add exposure compensation features
-	// TODO: add fp16 framebuffer support (using GL_EXT_framebuffer_object)
-
-	r_refdef.view.showdebug = false;
-	r_refdef.view.colorscale *= r_bloom_colorscale.value / bound(1, r_hdr_range.value, 16);
-
-	R_ResetViewRendering3D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-
-	R_ClearScreen(r_refdef.fogenabled);
-	if (r_timereport_active)
-		R_TimeReport("HDRclear");
-
-	R_View_Update();
-	if (r_timereport_active)
-		R_TimeReport("visibility");
-
-	// only do secondary renders with HDR if r_hdr is 2 or higher
-	r_fb.water.numwaterplanes = 0;
-	if (r_fb.water.enabled)
-		R_RenderWaterPlanes(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-
-	r_refdef.view.showdebug = true;
-	R_RenderScene(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-	r_fb.water.numwaterplanes = 0;
-
-	R_ResetViewRendering2D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-
-	R_Bloom_CopyHDRTexture();
-	R_Bloom_MakeTexture();
-
-	// restore the view settings
-	r_fb.water.enabled = oldwaterstate;
-	r_refdef.view.width = oldwidth;
-	r_refdef.view.height = oldheight;
-	r_refdef.view.colorscale = oldcolorscale;
-
-	R_ResetViewRendering3D(r_fb.fbo_framebuffer, r_fb.texture_framebufferdepth, r_fb.texture_framebuffercolor);
-
-	R_ClearScreen(r_refdef.fogenabled);
-	if (r_timereport_active)
-		R_TimeReport("viewclear");
 }
 
 static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
@@ -6378,18 +6369,19 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
 		permutation =
-			  (r_fb.texture_bloom ? SHADERPERMUTATION_BLOOM : 0)
+			  (r_fb.bloomtexture[r_fb.bloomindex] ? SHADERPERMUTATION_BLOOM : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
 			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
 			| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
 
-		if (r_fb.texture_screen)
+		if (r_fb.colortexture)
 		{
-			// make sure the buffer is available
-			if (r_bloom_blur.value < 1) { Cvar_SetValueQuick(&r_bloom_blur, 1); }
-
-			R_ResetViewRendering2D(fbo, depthtexture, colortexture);
+			if (!r_fb.fbo)
+			{
+				R_Mesh_CopyToTexture(r_fb.colortexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+				r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+			}
 
 			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))
 			{
@@ -6409,10 +6401,10 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 				// from the goal, pick an averaged value between goal and last value
 				cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_averaging.value), 1);
 				blur_average = blur_average * (1 - cl.motionbluralpha) + blur_factor * cl.motionbluralpha;
-				
+
 				// enforce minimum amount of blur 
 				blur_factor = blur_average * (1 - r_motionblur_minblur.value) + r_motionblur_minblur.value;
-				
+
 				//Con_Printf("motionblur: direct factor: %f, averaged factor: %f, velocity: %f, mouse accel: %f \n", blur_factor, blur_average, blur_velocity, blur_mouseaccel);
 
 				// calculate values into a standard alpha
@@ -6425,13 +6417,14 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 						/
 						max(0.0001, cl.time - cl.oldtime) // fps independent
 					  );
-				
+
 				// randomization for the blur value to combat persistent ghosting
 				cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
 				cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
-				
+
 				// apply the blur
-				if (cl.motionbluralpha > 0 && !r_refdef.envmap)
+				R_ResetViewRendering2D(fbo, depthtexture, colortexture);
+				if (cl.motionbluralpha > 0 && !r_refdef.envmap && r_fb.ghosttexture)
 				{
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					GL_Color(1, 1, 1, cl.motionbluralpha);
@@ -6451,21 +6444,24 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 						R_Mesh_PrepareVertices_Generic_Arrays(4, r_d3dscreenvertex3f, NULL, r_fb.screentexcoord2f);
 						break;
 					}
-					R_SetupShader_Generic(r_fb.texture_screen, NULL, GL_MODULATE, 1, false, true);
+					R_SetupShader_Generic(r_fb.ghosttexture, NULL, GL_MODULATE, 1, false, true);
 					R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 					r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 				}
-				
-				// updates old view angles for next pass 
-				VectorCopy(cl.viewangles, blur_oldangles);
-			}
 
-			// copy view into the screen texture
-			R_Mesh_CopyToTexture(r_fb.texture_screen, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-			r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+				// updates old view angles for next pass
+				VectorCopy(cl.viewangles, blur_oldangles);
+
+				// copy view into the ghost texture
+				if (!r_fb.ghosttexture)
+					r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "motionblurtexture", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
+				R_Mesh_CopyToTexture(r_fb.ghosttexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
+				r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+			}
 		}
 		else
 		{
+			// no r_fb.colortexture means we're rendering to the real fb
 			// we may still have to do view tint...
 			if (r_refdef.viewblend[3] >= (1.0f / 256.0f))
 			{
@@ -6480,11 +6476,8 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 			break; // no screen processing, no bloom, skip it
 		}
 
-		if (r_fb.texture_bloom && !r_fb.hdr)
+		if (r_fb.bloomtexture[0])
 		{
-			// render simple bloom effect
-			// copy the screen and shrink it and darken it for the bloom process
-			R_Bloom_CopyBloomTexture(r_bloom_colorscale.value);
 			// make the bloom texture
 			R_Bloom_MakeTexture();
 		}
@@ -6502,7 +6495,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 		if (r_glsl_postprocess_uservec4_enable.integer)
 			sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &uservecs[3][0], &uservecs[3][1], &uservecs[3][2], &uservecs[3][3]);
 
-		R_ResetViewRendering2D(0, NULL, NULL);
+		R_ResetViewRendering2D(0, NULL, NULL); // here we render to the real framebuffer!
 		GL_Color(1, 1, 1, 1);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 
@@ -6512,8 +6505,8 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 		case RENDERPATH_GLES2:
 			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_fb.screentexcoord2f, r_fb.bloomtexcoord2f);
 			R_SetupShader_SetPermutationGLSL(SHADERMODE_POSTPROCESS, permutation);
-			if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First     , r_fb.texture_screen);
-			if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second    , r_fb.texture_bloom );
+			if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First     , r_fb.colortexture);
+			if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second    , r_fb.bloomtexture[r_fb.bloomindex]);
 			if (r_glsl_permutation->tex_Texture_GammaRamps      >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps       );
 			if (r_glsl_permutation->loc_ViewTintColor           >= 0) qglUniform4f(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			if (r_glsl_permutation->loc_PixelSize               >= 0) qglUniform2f(r_glsl_permutation->loc_PixelSize         , 1.0/r_fb.screentexturewidth, 1.0/r_fb.screentextureheight);
@@ -6530,8 +6523,8 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 			// D3D has upside down Y coords, the easiest way to flip this is to flip the screen vertices rather than the texcoords, so we just use a different array for that...
 			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_d3dscreenvertex3f, NULL, NULL, NULL, NULL, r_fb.screentexcoord2f, r_fb.bloomtexcoord2f);
 			R_SetupShader_SetPermutationHLSL(SHADERMODE_POSTPROCESS, permutation);
-			R_Mesh_TexBind(GL20TU_FIRST     , r_fb.texture_screen);
-			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.texture_bloom );
+			R_Mesh_TexBind(GL20TU_FIRST     , r_fb.colortexture);
+			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.bloomtexture);
 			R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
 			hlslPSSetParameter4f(D3DPSREGISTER_ViewTintColor        , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			hlslPSSetParameter2f(D3DPSREGISTER_PixelSize            , 1.0/r_fb.screentexturewidth, 1.0/r_fb.screentextureheight);
@@ -6553,8 +6546,8 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 		case RENDERPATH_SOFT:
 			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_fb.screentexcoord2f, r_fb.bloomtexcoord2f);
 			R_SetupShader_SetPermutationSoft(SHADERMODE_POSTPROCESS, permutation);
-			R_Mesh_TexBind(GL20TU_FIRST     , r_fb.texture_screen);
-			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.texture_bloom );
+			R_Mesh_TexBind(GL20TU_FIRST     , r_fb.colortexture);
+			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.bloomtexture[r_fb.bloomindex]);
 			R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
 			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelSize         , 1.0/r_fb.screentexturewidth, 1.0/r_fb.screentextureheight);
@@ -6903,9 +6896,9 @@ void R_RenderView(void)
 	R_Water_StartFrame();
 
 	// now we probably have an fbo to render into
-	fbo = r_fb.fbo_framebuffer;
-	depthtexture = r_fb.texture_framebufferdepth;
-	colortexture = r_fb.texture_framebuffercolor;
+	fbo = r_fb.fbo;
+	depthtexture = r_fb.depthtexture;
+	colortexture = r_fb.colortexture;
 
 	CHECKGLERROR
 	if (r_timereport_active)
@@ -6920,14 +6913,6 @@ void R_RenderView(void)
 			R_TimeReport("viewclear");
 	}
 	r_refdef.view.clear = true;
-
-	// this produces a bloom texture to be used in R_BlendView() later
-	if (r_fb.hdr)
-	{
-		R_HDR_RenderBloomTexture();
-		// we have to bump the texture frame again because r_refdef.view.colorscale is cached in the textures
-		r_textureframe++; // used only by R_GetCurrentTexture
-	}
 
 	r_refdef.view.showdebug = true;
 
@@ -6990,8 +6975,8 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
-extern void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-extern void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+extern void R_DrawModelShadows(void);
+extern void R_DrawModelShadowMaps(void);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
@@ -7073,7 +7058,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadowMaps(fbo, depthtexture, colortexture);
+		R_DrawModelShadowMaps();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7102,7 +7087,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7123,7 +7108,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7232,8 +7217,6 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
-
-	R_ResetViewRendering2D(fbo, depthtexture, colortexture);
 }
 
 static const unsigned short bboxelements[36] =
