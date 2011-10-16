@@ -4690,19 +4690,6 @@ void R_Shadow_DrawLights(void)
 	R_Shadow_RenderMode_End();
 }
 
-extern const float r_screenvertex3f[12];
-extern void R_SetupView(qboolean allowwaterclippingplane);
-extern void R_ResetViewRendering3D(void);
-extern void R_ResetViewRendering2D(void);
-extern cvar_t r_shadows;
-extern cvar_t r_shadows_darken;
-extern cvar_t r_shadows_drawafterrtlighting;
-extern cvar_t r_shadows_castfrombmodels;
-extern cvar_t r_shadows_throwdistance;
-extern cvar_t r_shadows_throwdirection;
-extern cvar_t r_shadows_focus;
-extern cvar_t r_shadows_shadowmapscale;
-
 void R_Shadow_PrepareModelShadows(void)
 {
 	int i;
@@ -5226,7 +5213,7 @@ void R_Shadow_DrawCoronas(void)
 	size_t range;
 	if (r_coronas.value < (1.0f / 256.0f) && !gl_flashblend.integer)
 		return;
-	if (r_waterstate.renderingscene)
+	if (r_fb.water.renderingscene)
 		return;
 	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	R_EntityMatrix(&identitymatrix);
