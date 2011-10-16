@@ -2143,7 +2143,7 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 	float nearclip, farclip, bias;
 	r_viewport_t viewport;
 	int flipped;
-	GLuint fbo = 0;
+	GLuint fbo2d = 0;
 	float clearcolor[4];
 	nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
 	farclip = 1.0f;
@@ -2163,14 +2163,14 @@ void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		R_Shadow_MakeVSDCT();
 	if (!r_shadow_shadowmap2dtexture)
 		R_Shadow_MakeShadowMap(side, r_shadow_shadowmapmaxsize);
-	if (r_shadow_shadowmap2dtexture) fbo = r_shadow_fbo2d;
+	if (r_shadow_shadowmap2dtexture) fbo2d = r_shadow_fbo2d;
 	r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 	r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
 
 	R_Mesh_ResetTextureState();
 	R_Shadow_RenderMode_Reset();
-	R_Mesh_SetRenderTargets(fbo, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(fbo2d, r_shadow_shadowmap2dtexture, r_shadow_shadowmap2dcolortexture, NULL, NULL, NULL);
 	R_SetupShader_DepthOrShadow(true);
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
@@ -2234,7 +2234,6 @@ init_done:
 void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping)
 {
 	R_Mesh_ResetTextureState();
-	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
 	if (transparent)
 	{
 		r_shadow_lightscissor[0] = r_refdef.view.viewport.x;
@@ -4484,8 +4483,6 @@ void R_Shadow_DrawPrepass(void)
 			if (r_refdef.scene.lights[lnum]->draw)
 				R_Shadow_DrawLight(r_refdef.scene.lights[lnum]);
 
-	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
-
 	R_Shadow_RenderMode_End();
 
 	if (r_timereport_active)
@@ -4545,14 +4542,14 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 			switch (vid.renderpath)
 			{
 			case RENDERPATH_D3D9:
-				r_shadow_prepassgeometrydepthcolortexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrydepthcolormap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+				r_shadow_prepassgeometrydepthcolortexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrydepthcolormap", vid.width, vid.height, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 				break;
 			default:
 				break;
 			}
-			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 
 			// set up the geometry pass fbo (depth + normalmap)
 			r_shadow_prepassgeometryfbo = R_Mesh_CreateFramebufferObject(r_shadow_prepassgeometrydepthtexture, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
@@ -4807,7 +4804,7 @@ void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colort
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		if (!r_shadow_shadowmap2dtexture)
 			R_Shadow_MakeShadowMap(0, r_shadow_shadowmapmaxsize);
-		fbo2d = r_shadow_fbo2d;
+		fbo = r_shadow_fbo2d;
 		r_shadow_shadowmap_texturescale[0] = 1.0f / R_TextureWidth(r_shadow_shadowmap2dtexture);
 		r_shadow_shadowmap_texturescale[1] = 1.0f / R_TextureHeight(r_shadow_shadowmap2dtexture);
 		r_shadow_rendermode = R_SHADOW_RENDERMODE_SHADOWMAP2D;
