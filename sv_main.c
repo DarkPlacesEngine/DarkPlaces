@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 #include "libcurl.h"
 #include "csprogs.h"
+#include "thread.h"
 
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
@@ -155,6 +156,7 @@ cvar_t sv_areadebug = {0, "sv_areadebug", "0", "disables physics culling for deb
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
+cvar_t sv_threaded = {0, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
 
 cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
@@ -563,6 +565,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&timelimit);
+	Cvar_RegisterVariable (&sv_threaded);
 
 	Cvar_RegisterVariable (&saved1);
 	Cvar_RegisterVariable (&saved2);
@@ -2831,9 +2834,23 @@ int SV_ModelIndex(const char *s, int precachemode)
 				if (precachemode == 1)
 					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
-				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
-				if (sv.state != ss_loading)
+				if (sv.state == ss_loading)
 				{
+					// running from SV_SpawnServer which is launched from the client console command interpreter
+					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
+				}
+				else
+				{
+					if (svs.threaded)
+					{
+						// this is running on the server thread, we can't load a model here (it would crash on renderer calls), so only look it up, the svc_precache will cause it to be loaded when it reaches the client
+						sv.models[i] = Mod_FindName (sv.model_precache[i], s[0] == '*' ? sv.worldname : NULL);
+					}
+					else
+					{
+						// running single threaded, so we can load the model here
+						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
+					}
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i);
 					MSG_WriteString(&sv.reliable_datagram, filename);
@@ -3190,6 +3207,8 @@ void SV_SpawnServer (const char *server)
 		}
 	}
 
+//	SV_LockThreadMutex();
+
 	if (cls.state != ca_dedicated)
 	{
 		SCR_BeginLoadingPlaque();
@@ -3216,6 +3235,7 @@ void SV_SpawnServer (const char *server)
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
 		Con_Printf("Couldn't load map %s\n", modelname);
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -3463,6 +3483,8 @@ void SV_SpawnServer (const char *server)
 	NetConn_Heartbeat (2);
 
 	SV_VM_End();
+
+//	SV_UnlockThreadMutex();
 }
 
 /////////////////////////////////////////////////////
@@ -3822,4 +3844,176 @@ void SV_VM_Begin(void)
 void SV_VM_End(void)
 {
 	PRVM_End;
+}
+
+extern cvar_t host_maxwait;
+extern cvar_t host_framerate;
+int SV_ThreadFunc(void *voiddata)
+{
+	double sv_timer = 0;
+	double sv_deltarealtime, sv_oldrealtime, sv_realtime;
+	double wait;
+	int i;
+	sv_realtime = Sys_DoubleTime();
+	while (!svs.threadstop)
+	{
+		// FIXME: we need to handle Host_Error in the server thread somehow
+//		if (setjmp(sv_abortframe))
+//			continue;			// something bad happened in the server game
+
+		sv_oldrealtime = sv_realtime;
+		sv_realtime = Sys_DoubleTime();
+
+		sv_deltarealtime = sv_realtime - sv_oldrealtime;
+		sv_timer += sv_deltarealtime;
+
+		svs.perf_acc_realtime += sv_deltarealtime;
+
+		// Look for clients who have spawned
+		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+			if(host_client->spawned)
+				if(host_client->netconnection)
+					break;
+		if(i == svs.maxclients)
+		{
+			// Nobody is looking? Then we won't do timing...
+			// Instead, reset it to zero
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
+		else if(svs.perf_acc_realtime > 5)
+		{
+			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
+			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+			if(svs.perf_acc_offset_samples > 0)
+			{
+				svs.perf_offset_max = svs.perf_acc_offset_max;
+				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
+				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+			}
+			if(svs.perf_lost > 0 && developer_extra.integer)
+				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport());
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
+
+		// get new packets
+		if (sv.active)
+			NetConn_ServerFrame();
+
+		// if the accumulators haven't become positive yet, wait a while
+		wait = sv_timer * -1000000.0;
+		if (wait >= 1)
+		{
+			double time0;
+			if (host_maxwait.value <= 0)
+				wait = min(wait, 1000000.0);
+			else
+				wait = min(wait, host_maxwait.value * 1000.0);
+			if(wait < 1)
+				wait = 1; // because we cast to int
+			time0 = Sys_DoubleTime();
+			Sys_Sleep((int)wait);
+			svs.perf_acc_sleeptime += Sys_DoubleTime() - time0;
+			continue;
+		}
+
+		if (sv.active && sv_timer > 0)
+		{
+			// execute one server frame
+			double advancetime;
+			float offset;
+
+			if (sys_ticrate.value <= 0)
+				advancetime = min(sv_timer, 0.1); // don't step more than 100ms
+			else
+				advancetime = sys_ticrate.value;
+
+			if(advancetime > 0)
+			{
+				offset = sv_timer + (Sys_DoubleTime() - sv_realtime); // LordHavoc: FIXME: I don't understand this line
+				++svs.perf_acc_offset_samples;
+				svs.perf_acc_offset += offset;
+				svs.perf_acc_offset_squared += offset * offset;
+				if(svs.perf_acc_offset_max < offset)
+					svs.perf_acc_offset_max = offset;
+			}
+
+			// at this point we start doing real server work, and must block on any client activity pertaining to the server (such as executing SV_SpawnServer)
+			SV_LockThreadMutex();
+
+			// only advance time if not paused
+			// the game also pauses in singleplayer when menu or console is used
+			sv.frametime = advancetime * slowmo.value;
+			if (host_framerate.value)
+				sv.frametime = host_framerate.value;
+			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+				sv.frametime = 0;
+
+			sv_timer -= advancetime;
+
+			// setup the VM frame
+			SV_VM_Begin();
+
+			// move things around and think unless paused
+			if (sv.frametime)
+				SV_Physics();
+
+			// send all messages to the clients
+			SV_SendClientMessages();
+
+			if (sv.paused == 1 && sv_realtime > sv.pausedstart && sv.pausedstart > 0)
+			{
+				prog->globals.generic[OFS_PARM0] = sv_realtime - sv.pausedstart;
+				PRVM_ExecuteProgram(PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
+			}
+
+			// end the server VM frame
+			SV_VM_End();
+
+			// send an heartbeat if enough time has passed since the last one
+			NetConn_Heartbeat(0);
+
+			// at this point we start doing real server work, and must block on any client activity pertaining to the server (such as executing SV_SpawnServer)
+			SV_UnlockThreadMutex();
+		}
+
+		// if there is some time remaining from this frame, reset the timers
+		if (sv_timer >= 0)
+		{
+			svs.perf_acc_lost += sv_timer;
+			sv_timer = 0;
+		}
+	}
+	return 0;
+}
+
+void SV_StartThread(void)
+{
+	if (!sv_threaded.integer || !Thread_HasThreads())
+		return;
+	svs.threaded = true;
+	svs.threadstop = false;
+	svs.threadmutex = Thread_CreateMutex();
+	svs.thread = Thread_CreateThread(SV_ThreadFunc, NULL);
+}
+
+void SV_StopThread(void)
+{
+	if (!svs.threaded)
+		return;
+	svs.threadstop = true;
+	Thread_WaitThread(svs.thread, 0);
+	Thread_DestroyMutex(svs.threadmutex);
+	svs.threaded = false;
+}
+
+void SV_LockThreadMutex(void)
+{
+	if (svs.threaded)
+		Thread_LockMutex(svs.threadmutex);
+}
+
+void SV_UnlockThreadMutex(void)
+{
+	if (svs.threaded)
+		Thread_UnlockMutex(svs.threadmutex);
 }

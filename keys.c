@@ -1200,7 +1200,7 @@ Key_Message (int key, int ascii)
 	if (key == K_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
-			Cmd_ExecuteString(chat_buffer, src_command); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
+			Cmd_ExecuteString(chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
 		else
 			Cmd_ForwardStringToServer(va("%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 

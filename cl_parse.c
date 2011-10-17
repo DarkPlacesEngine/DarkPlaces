@@ -3618,7 +3618,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_sellscreen:
-				Cmd_ExecuteString ("help", src_command);
+				Cmd_ExecuteString ("help", src_command, true);
 				break;
 
 			case qw_svc_smallkick:
@@ -4124,7 +4124,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sellscreen:
-				Cmd_ExecuteString ("help", src_command);
+				Cmd_ExecuteString ("help", src_command, true);
 				break;
 			case svc_hidelmp:
 				if (gamemode == GAME_TENEBRAE)

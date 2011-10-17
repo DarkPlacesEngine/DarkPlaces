@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "thread.h"
 #include "lhnet.h"
 
 // for secure rcon authentication
@@ -135,6 +136,7 @@ static lhnetsocket_t *sv_sockets[16];
 
 netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;
+void *netconn_mutex = NULL;
 
 cvar_t cl_netport = {0, "cl_port", "0", "forces client to use chosen port number if not 0"};
 cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"};
@@ -597,8 +599,13 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
-	int length = LHNET_Read(mysocket, data, maxlength, peeraddress);
+	int length;
 	int i;
+	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
+		Thread_LockMutex(netconn_mutex);
+	length = LHNET_Read(mysocket, data, maxlength, peeraddress);
+	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
+		Thread_UnlockMutex(netconn_mutex);
 	if (length == 0)
 		return 0;
 	if (cl_netpacketloss_receive.integer)
@@ -629,7 +636,11 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 		for (i = 0;i < cl_numsockets;i++)
 			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_send.integer)
 				return length;
+	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
+		Thread_LockMutex(netconn_mutex);
 	ret = LHNET_Write(mysocket, data, length, peeraddress);
+	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
+		Thread_UnlockMutex(netconn_mutex);
 	if (developer_networking.integer)
 	{
 		char addressstring[128], addressstring2[128];
@@ -2683,7 +2694,7 @@ void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const ch
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(s, src_command);
+				Cmd_ExecuteString(s, src_command, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
@@ -3655,6 +3666,8 @@ void NetConn_Init(void)
 	net_message.maxsize = sizeof(net_message_buf);
 	net_message.cursize = 0;
 	LHNET_Init();
+	if (Thread_HasThreads())
+		netconn_mutex = Thread_CreateMutex();
 }
 
 void NetConn_Shutdown(void)
@@ -3662,5 +3675,8 @@ void NetConn_Shutdown(void)
 	NetConn_CloseClientPorts();
 	NetConn_CloseServerPorts();
 	LHNET_Shutdown();
+	if (netconn_mutex)
+		Thread_DestroyMutex(netconn_mutex);
+	netconn_mutex = NULL;
 }
 

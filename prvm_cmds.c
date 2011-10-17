@@ -2565,7 +2565,7 @@ void VM_clcommand (void)
 
 	temp_client = host_client;
 	host_client = svs.clients + i;
-	Cmd_ExecuteString (PRVM_G_STRING(OFS_PARM1), src_client);
+	Cmd_ExecuteString (PRVM_G_STRING(OFS_PARM1), src_client, true);
 	host_client = temp_client;
 }
 

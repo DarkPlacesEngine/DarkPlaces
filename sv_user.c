@@ -862,7 +862,7 @@ void SV_ReadClientMessage(void)
 			if (strncasecmp(s, "spawn", 5) == 0
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
-				Cmd_ExecuteString (s, src_client);
+				Cmd_ExecuteString (s, src_client, true);
 			else if (PRVM_serverfunction(SV_ParseClientCommand))
 			{
 				int restorevm_tempstringsbuf_cursize;
@@ -873,7 +873,7 @@ void SV_ReadClientMessage(void)
 				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else
-				Cmd_ExecuteString (s, src_client);
+				Cmd_ExecuteString (s, src_client, true);
 			break;
 
 clc_stringcmd_invalid:

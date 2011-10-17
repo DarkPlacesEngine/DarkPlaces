@@ -624,30 +624,16 @@ const char *Host_TimingReport(void)
 	return va("%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
 }
 
-/*
-==================
-Host_Frame
-
-Runs all active servers
-==================
-*/
-static void Host_Init(void);
-void Host_Main(void)
+void Host_Mingled(void)
 {
 	double time1 = 0;
 	double time2 = 0;
 	double time3 = 0;
-	double cl_timer, sv_timer;
+	double cl_timer = 0, sv_timer = 0;
 	double clframetime, deltarealtime, oldrealtime;
 	double wait;
 	int pass1, pass2, pass3, i;
 
-	Host_Init();
-
-	cl_timer = 0;
-	sv_timer = 0;
-
-	realtime = host_starttime = Sys_DoubleTime();
 	for (;;)
 	{
 		if (setjmp(host_abortframe))
@@ -764,6 +750,10 @@ void Host_Main(void)
 			continue;
 		}
 
+		// limit the frametime steps to no more than 100ms each
+		if (cl_timer > 0.1)
+			cl_timer = 0.1;
+
 		R_TimeReport("---");
 
 	//-------------------
@@ -773,8 +763,6 @@ void Host_Main(void)
 	//-------------------
 
 		// limit the frametime steps to no more than 100ms each
-		if (cl_timer > 0.1)
-			cl_timer = 0.1;
 		if (sv_timer > 0.1)
 		{
 			svs.perf_acc_lost += (sv_timer - 0.1);
@@ -1023,6 +1011,242 @@ void Host_Main(void)
 	}
 }
 
+void Host_Threaded(void)
+{
+	double time1 = 0;
+	double time2 = 0;
+	double time3 = 0;
+	double cl_timer = 0;
+	double clframetime, deltarealtime, oldrealtime;
+	double wait;
+	int pass1, pass2, pass3;
+
+	for (;;)
+	{
+		if (setjmp(host_abortframe))
+		{
+			SCR_ClearLoadingScreen(false);
+			continue;			// something bad happened, or the server disconnected
+		}
+
+		oldrealtime = realtime;
+		realtime = Sys_DoubleTime();
+
+		deltarealtime = realtime - oldrealtime;
+		cl_timer += deltarealtime;
+
+		if (slowmo.value < 0.00001 && slowmo.value != 0)
+			Cvar_SetValue("slowmo", 0);
+		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
+			Cvar_SetValue("host_framerate", 0);
+
+		// keep the random time dependent, but not when playing demos/benchmarking
+		if(!*sv_random_seed.string && !cls.demoplayback)
+			rand();
+
+		cl.islocalgame = NetConn_IsLocalGame();
+
+		// get new key events
+		Key_EventQueue_Unblock();
+		SndSys_SendKeyEvents();
+		Sys_SendKeyEvents();
+
+		NetConn_UpdateSockets();
+
+		Log_DestBuffer_Flush();
+
+		Curl_Run();
+
+		// check for commands typed to the host
+		Host_GetConsoleCommands();
+
+		// process console commands
+//		R_TimeReport("preconsole");
+		CL_VM_PreventInformationLeaks();
+		Cbuf_Execute();
+//		R_TimeReport("console");
+
+		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
+
+		// if the accumulators haven't become positive yet, wait a while
+		wait = cl_timer * -1000000.0;
+
+		if (!cls.timedemo && wait >= 1)
+		{
+			double time0;
+
+			if(host_maxwait.value <= 0)
+				wait = min(wait, 1000000.0);
+			else
+				wait = min(wait, host_maxwait.value * 1000.0);
+			if(wait < 1)
+				wait = 1; // because we cast to int
+
+			time0 = Sys_DoubleTime();
+			Sys_Sleep((int)wait);
+//			R_TimeReport("sleep");
+			continue;
+		}
+
+		// limit the frametime steps to no more than 100ms each
+		if (cl_timer > 0.1)
+			cl_timer = 0.1;
+
+		R_TimeReport("---");
+
+		if (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1))
+		{
+			R_TimeReport("---");
+			Collision_Cache_NewFrame();
+			R_TimeReport("collisioncache");
+			// decide the simulation time
+			if (cls.capturevideo.active)
+			{
+				//***
+				if (cls.capturevideo.realtime)
+					clframetime = cl.realframetime = max(cl_timer, 1.0 / cls.capturevideo.framerate);
+				else
+				{
+					clframetime = 1.0 / cls.capturevideo.framerate;
+					cl.realframetime = max(cl_timer, clframetime);
+				}
+			}
+			else if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+			{
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
+				// when running slow, we need to sleep to keep input responsive
+				wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
+				if (wait > 0)
+					Sys_Sleep((int)wait);
+			}
+			else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
+				clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
+			else
+				clframetime = cl.realframetime = cl_timer;
+
+			// apply slowmo scaling
+			clframetime *= cl.movevars_timescale;
+			// scale playback speed of demos by slowmo cvar
+			if (cls.demoplayback)
+			{
+				clframetime *= slowmo.value;
+				// if demo playback is paused, don't advance time at all
+				if (cls.demopaused)
+					clframetime = 0;
+			}
+
+			// host_framerate overrides all else
+			if (host_framerate.value)
+				clframetime = host_framerate.value;
+
+			if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+				clframetime = 0;
+
+			if (cls.timedemo)
+				clframetime = cl.realframetime = cl_timer;
+
+			// deduct the frame time from the accumulator
+			cl_timer -= cl.realframetime;
+
+			cl.oldtime = cl.time;
+			cl.time += clframetime;
+
+			// update video
+			if (host_speeds.integer)
+				time1 = Sys_DoubleTime();
+			R_TimeReport("pre-input");
+
+			// Collect input into cmd
+			CL_Input();
+
+			R_TimeReport("input");
+
+			// check for new packets
+			NetConn_ClientFrame();
+
+			// read a new frame from a demo if needed
+			CL_ReadDemoMessage();
+			R_TimeReport("clientnetwork");
+
+			// now that packets have been read, send input to server
+			CL_SendMove();
+			R_TimeReport("sendmove");
+
+			// update client world (interpolate entities, create trails, etc)
+			CL_UpdateWorld();
+			R_TimeReport("lerpworld");
+
+			CL_Video_Frame();
+
+			R_TimeReport("client");
+
+			CL_UpdateScreen();
+			R_TimeReport("render");
+
+			if (host_speeds.integer)
+				time2 = Sys_DoubleTime();
+
+			// update audio
+			if(cl.csqc_usecsqclistener)
+			{
+				S_Update(&cl.csqc_listenermatrix);
+				cl.csqc_usecsqclistener = false;
+			}
+			else
+				S_Update(&r_refdef.view.matrix);
+
+			CDAudio_Update();
+			R_TimeReport("audio");
+
+			// reset gathering of mouse input
+			in_mouse_x = in_mouse_y = 0;
+
+			if (host_speeds.integer)
+			{
+				pass1 = (int)((time1 - time3)*1000000);
+				time3 = Sys_DoubleTime();
+				pass2 = (int)((time2 - time1)*1000000);
+				pass3 = (int)((time3 - time2)*1000000);
+				Con_Printf("%6ius total %6ius other %6ius gfx %6ius snd\n",
+							pass1+pass2+pass3, pass1, pass2, pass3);
+			}
+		}
+
+#if MEMPARANOIA
+		Mem_CheckSentinelsGlobal();
+#else
+		if (developer_memorydebug.integer)
+			Mem_CheckSentinelsGlobal();
+#endif
+
+		// if there is some time remaining from this frame, reset the timers
+		if (cl_timer >= 0)
+			cl_timer = 0;
+
+		host_framecount++;
+	}
+}
+
+/*
+==================
+Host_Frame
+
+Runs all active servers
+==================
+*/
+static void Host_Init(void);
+void Host_Main(void)
+{
+	Host_Init();
+
+	realtime = host_starttime = Sys_DoubleTime();
+
+	if (svs.threaded)
+		Host_Threaded();
+	else
+		Host_Mingled();
+}
+
 //============================================================================
 
 qboolean vid_opened = false;
@@ -1258,6 +1482,9 @@ static void Host_Init (void)
 	Con_DPrint("========Initialized=========\n");
 
 	//Host_StartVideo();
+
+	if (cls.state != ca_dedicated)
+		SV_StartThread();
 }
 
 
@@ -1317,6 +1544,7 @@ void Host_Shutdown(void)
 		VID_Shutdown();
 	}
 
+	SV_StopThread();
 	Thread_Shutdown();
 	Cmd_Shutdown();
 	Key_Shutdown();
