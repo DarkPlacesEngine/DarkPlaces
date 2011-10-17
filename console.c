@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 
 #include "quakedef.h"
+#include "thread.h"
 
 // for u8_encodech
 #include "ft2.h"
@@ -35,6 +36,7 @@ float con_cursorspeed = 4;
 int con_backscroll;
 
 conbuffer_t con;
+void *con_mutex = NULL;
 
 #define CON_LINES(i) CONBUFFER_LINES(&con, i)
 #define CON_LINES_LAST CONBUFFER_LINES_LAST(&con)
@@ -726,17 +728,21 @@ void Con_ConDump_f (void)
 		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(1));
 		return;
 	}
+	if (con_mutex) Thread_LockMutex(con_mutex);
 	for(i = 0; i < CON_LINES_COUNT; ++i)
 	{
 		FS_Write(file, CON_LINES(i).start, CON_LINES(i).len);
 		FS_Write(file, "\n", 1);
 	}
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
 	FS_Close(file);
 }
 
 void Con_Clear_f (void)
 {
+	if (con_mutex) Thread_LockMutex(con_mutex);
 	ConBuffer_Clear(&con);
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
 /*
@@ -748,6 +754,8 @@ void Con_Init (void)
 {
 	con_linewidth = 80;
 	ConBuffer_Init(&con, CON_TEXTSIZE, CON_MAXLINES, zonemempool);
+	if (Thread_HasThreads())
+		con_mutex = Thread_CreateMutex();
 
 	// Allocate a log queue, this will be freed after configs are parsed
 	logq_size = MAX_INPUTLINE;
@@ -804,7 +812,10 @@ void Con_Init (void)
 
 void Con_Shutdown (void)
 {
+	if (con_mutex) Thread_LockMutex(con_mutex);
 	ConBuffer_Shutdown(&con);
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
+	if (con_mutex) Thread_DestroyMutex(con_mutex);con_mutex = NULL;
 }
 
 /*
@@ -829,6 +840,7 @@ void Con_PrintToHistory(const char *txt, int mask)
 	if(!con.text) // FIXME uses a non-abstracted property of con
 		return;
 
+	if (con_mutex) Thread_LockMutex(con_mutex);
 	for(; *txt; ++txt)
 	{
 		if(cr_pending)
@@ -859,6 +871,7 @@ void Con_PrintToHistory(const char *txt, int mask)
 				break;
 		}
 	}
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
 /*! The translation table between the graphical font and plain ASCII  --KB */
@@ -1056,6 +1069,9 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 	static int mask = 0;
 	static int index = 0;
 	static char line[MAX_INPUTLINE];
+
+	if (con_mutex)
+		Thread_LockMutex(con_mutex);
 
 	for (;*msg;msg++)
 	{
@@ -1323,6 +1339,9 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			mask = 0;
 		}
 	}
+
+	if (con_mutex)
+		Thread_UnlockMutex(con_mutex);
 }
 
 /*
@@ -1668,6 +1687,7 @@ void Con_DrawNotify (void)
 	int numChatlines;
 	int chatpos;
 
+	if (con_mutex) Thread_LockMutex(con_mutex);
 	ConBuffer_FixTimes(&con);
 
 	numChatlines = con_chat.integer;
@@ -1758,6 +1778,7 @@ void Con_DrawNotify (void)
 		x = min(xr, x);
 		DrawQ_String(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
 	}
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
 /*
@@ -1876,6 +1897,8 @@ void Con_DrawConsole (int lines)
 	if (lines <= 0)
 		return;
 
+	if (con_mutex) Thread_LockMutex(con_mutex);
+
 	if (con_backscroll < 0)
 		con_backscroll = 0;
 
@@ -1982,6 +2005,7 @@ void Con_DrawConsole (int lines)
 	Con_DrawInput ();
 
 	r_draw2d_force = false;
+	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
 /*

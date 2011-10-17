@@ -53,6 +53,12 @@ typedef struct server_static_s
 	unsigned char *csqc_progdata;
 	size_t csqc_progsize_deflated;
 	unsigned char *csqc_progdata_deflated;
+
+	// independent server thread (when running client)
+	qboolean threaded; // true if server is running on separate thread
+	qboolean volatile threadstop;
+	void *threadmutex;
+	void *thread;
 } server_static_t;
 
 //=============================================================================
@@ -583,6 +589,11 @@ const char *Host_TimingReport(void); ///< for output in Host_Status_f
 
 int SV_GetPitchSign(prvm_edict_t *ent);
 void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
+
+void SV_StartThread(void);
+void SV_StopThread(void);
+void SV_LockThreadMutex(void);
+void SV_UnlockThreadMutex(void);
 
 #endif
 

@@ -367,7 +367,7 @@ void CL_Record_f (void)
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command);
+		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command, false);
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);

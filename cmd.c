@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cmd.c -- Quake script command processing module
 
 #include "quakedef.h"
+#include "thread.h"
 
 typedef struct cmdalias_s
 {
@@ -175,6 +176,19 @@ static void Cmd_Centerprint_f (void)
 
 static sizebuf_t	cmd_text;
 static unsigned char		cmd_text_buf[CMDBUFSIZE];
+void *cmd_text_mutex = NULL;
+
+static void Cbuf_LockThreadMutex(void)
+{
+	if (cmd_text_mutex)
+		Thread_LockMutex(cmd_text_mutex);
+}
+
+static void Cbuf_UnlockThreadMutex(void)
+{
+	if (cmd_text_mutex)
+		Thread_UnlockMutex(cmd_text_mutex);
+}
 
 /*
 ============
@@ -187,15 +201,14 @@ void Cbuf_AddText (const char *text)
 {
 	int		l;
 
-	l = (int)strlen (text);
+	l = (int)strlen(text);
 
+	Cbuf_LockThreadMutex();
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
-	{
 		Con_Print("Cbuf_AddText: overflow\n");
-		return;
-	}
-
-	SZ_Write (&cmd_text, (const unsigned char *)text, (int)strlen (text));
+	else
+		SZ_Write(&cmd_text, (const unsigned char *)text, (int)strlen (text));
+	Cbuf_UnlockThreadMutex();
 }
 
 
@@ -212,6 +225,8 @@ void Cbuf_InsertText (const char *text)
 {
 	char	*temp;
 	int		templen;
+
+	Cbuf_LockThreadMutex();
 
 	// copy off any commands still remaining in the exec buffer
 	templen = cmd_text.cursize;
@@ -233,6 +248,8 @@ void Cbuf_InsertText (const char *text)
 		SZ_Write (&cmd_text, (const unsigned char *)temp, templen);
 		Mem_Free (temp);
 	}
+
+	Cbuf_UnlockThreadMutex();
 }
 
 /*
@@ -285,6 +302,9 @@ void Cbuf_Execute (void)
 	char *firstchar;
 	qboolean quotes;
 	char *comment;
+
+	Cbuf_LockThreadMutex();
+	SV_LockThreadMutex();
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
@@ -362,11 +382,11 @@ void Cbuf_Execute (void)
 		)
 		{
 			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
-			Cmd_ExecuteString (preprocessed, src_command);
+			Cmd_ExecuteString (preprocessed, src_command, false);
 		}
 		else
 		{
-			Cmd_ExecuteString (line, src_command);
+			Cmd_ExecuteString (line, src_command, false);
 		}
 
 		if (cmd_wait)
@@ -376,6 +396,9 @@ void Cbuf_Execute (void)
 			break;
 		}
 	}
+
+	SV_UnlockThreadMutex();
+	Cbuf_UnlockThreadMutex();
 }
 
 /*
@@ -1222,6 +1245,9 @@ void Cmd_Init (void)
 	cmd_text.data = cmd_text_buf;
 	cmd_text.maxsize = sizeof(cmd_text_buf);
 	cmd_text.cursize = 0;
+
+	if (Thread_HasThreads())
+		cmd_text_mutex = Thread_CreateMutex();
 }
 
 void Cmd_Init_Commands (void)
@@ -1269,6 +1295,10 @@ Cmd_Shutdown
 */
 void Cmd_Shutdown(void)
 {
+	if (cmd_text_mutex)
+		Thread_DestroyMutex(cmd_text_mutex);
+	cmd_text_mutex = NULL;
+
 	Mem_FreePool(&cmd_mempool);
 }
 
@@ -1646,13 +1676,15 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void Cmd_ExecuteString (const char *text, cmd_source_t src)
+void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex)
 {
 	int oldpos;
 	int found;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
 
+	if (lockmutex)
+		Cbuf_LockThreadMutex();
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
 	found = false;
@@ -1661,10 +1693,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 
 // execute the command line
 	if (!Cmd_Argc())
-	{
-		cmd_tokenizebufferpos = oldpos;
-		return;		// no tokens
-	}
+		goto done; // no tokens
 
 // check functions
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
@@ -1672,7 +1701,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
 			if (cmd->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
-				return;
+				goto done;
 			switch (src)
 			{
 			case src_command:
@@ -1696,8 +1725,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 				if (cmd->clientfunction)
 				{
 					cmd->clientfunction ();
-					cmd_tokenizebufferpos = oldpos;
-					return;
+					goto done;
 				}
 				break;
 			}
@@ -1710,8 +1738,7 @@ command_found:
 	if (cmd_source == src_client)
 	{
 		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
-		cmd_tokenizebufferpos = oldpos;
-		return;
+		goto done;
 	}
 
 // check alias
@@ -1720,22 +1747,21 @@ command_found:
 		if (!strcasecmp (cmd_argv[0], a->name))
 		{
 			Cmd_ExecuteAlias(a);
-			cmd_tokenizebufferpos = oldpos;
-			return;
+			goto done;
 		}
 	}
 
 	if(found) // if the command was hooked and found, all is good
-	{
-		cmd_tokenizebufferpos = oldpos;
-		return;
-	}
+		goto done;
 
 // check cvars
 	if (!Cvar_Command () && host_framecount > 0)
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
 
+done:
 	cmd_tokenizebufferpos = oldpos;
+	if (lockmutex)
+		Cbuf_UnlockThreadMutex();
 }
 
 

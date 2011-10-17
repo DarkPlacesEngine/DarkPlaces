@@ -142,7 +142,7 @@ int Cmd_CheckParm (const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (const char *text, cmd_source_t src);
+void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex);
 
 /// adds the string as a clc_stringcmd to the client message.
 /// (used when there is no reason to generate a local command to do it)

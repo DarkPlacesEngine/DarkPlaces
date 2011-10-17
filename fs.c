@@ -44,6 +44,7 @@
 #endif
 
 #include "quakedef.h"
+#include "thread.h"
 
 #include "fs.h"
 #include "wad.h"
@@ -332,6 +333,7 @@ VARIABLES
 */
 
 mempool_t *fs_mempool;
+void *fs_mutex = NULL;
 
 searchpath_t *fs_searchpaths = NULL;
 const char *const fs_checkgamedir_missing = "missing";
@@ -2067,6 +2069,9 @@ void FS_Init (void)
 
 	// generate the searchpath
 	FS_Rescan();
+
+	if (Thread_HasThreads())
+		fs_mutex = Thread_CreateMutex();
 }
 
 void FS_Init_Commands(void)
@@ -2101,6 +2106,9 @@ void FS_Shutdown (void)
 	Sys_UnloadLibrary (&shell32_dll);
 	Sys_UnloadLibrary (&ole32_dll);
 #endif
+
+	if (fs_mutex)
+		Thread_DestroyMutex(fs_mutex);
 }
 
 int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
@@ -2595,13 +2603,17 @@ Open a file. The syntax is the same as fopen
 */
 qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet)
 {
+	qfile_t *result = NULL;
 	if (FS_CheckNastyPath(filepath, false))
 	{
 		Con_Printf("FS_OpenVirtualFile(\"%s\", %s): nasty filename rejected\n", filepath, quiet ? "true" : "false");
 		return NULL;
 	}
 
-	return FS_OpenReadFile (filepath, quiet, false, 16);
+	if (fs_mutex) Thread_LockMutex(fs_mutex);
+	result = FS_OpenReadFile (filepath, quiet, false, 16);
+	if (fs_mutex) Thread_UnlockMutex(fs_mutex);
+	return result;
 }
 
 
