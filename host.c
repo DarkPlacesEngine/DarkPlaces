@@ -1163,6 +1163,8 @@ static void Host_Init (void)
 	Host_InitLocal();
 	Host_ServerOptions();
 
+	Thread_Init();
+
 	if (cls.state == ca_dedicated)
 		Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
 	else
@@ -1172,7 +1174,6 @@ static void Host_Init (void)
 		R_Modules_Init();
 		Palette_Init();
 		MR_Init_Commands();
-		Thread_Init();
 		VID_Shared_Init();
 		VID_Init();
 		Render_Init();
@@ -1314,9 +1315,9 @@ void Host_Shutdown(void)
 	{
 		R_Modules_Shutdown();
 		VID_Shutdown();
-		Thread_Shutdown();
 	}
 
+	Thread_Shutdown();
 	Cmd_Shutdown();
 	Key_Shutdown();
 	CL_Shutdown();
