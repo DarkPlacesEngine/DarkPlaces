@@ -38,6 +38,7 @@ cvar_t sv_worldname = {CVAR_READONLY, "sv_worldname", "", "name of current world
 cvar_t sv_worldnamenoextension = {CVAR_READONLY, "sv_worldnamenoextension", "", "name of current worldmodel without extension"};
 cvar_t sv_worldbasename = {CVAR_READONLY, "sv_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
 
+cvar_t sv_disablenotify = {0, "sv_disablenotify", "1", "suppress broadcast prints when certain cvars are changed (CVAR_NOTIFY flag in engine code)"};
 cvar_t coop = {0, "coop","0", "coop mode, 0 = no coop, 1 = coop mode, multiple players playing through the singleplayer game (coop mode also shuts off deathmatch)"};
 cvar_t deathmatch = {0, "deathmatch","0", "deathmatch mode, values depend on mod but typically 0 = no deathmatch, 1 = normal deathmatch with respawning weapons, 2 = weapons stay (players can only pick up new weapons)"};
 cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags is reached by any player"};
@@ -447,6 +448,7 @@ void SV_Init (void)
 	Cmd_AddCommand_WithClientCommand("sv_startdownload", NULL, SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
 	Cmd_AddCommand_WithClientCommand("download", NULL, SV_Download_f, "downloads a specified file from the server");
 
+	Cvar_RegisterVariable (&sv_disablenotify);
 	Cvar_RegisterVariable (&coop);
 	Cvar_RegisterVariable (&deathmatch);
 	Cvar_RegisterVariable (&fraglimit);
