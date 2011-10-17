@@ -160,6 +160,9 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents);
 void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, qboolean hitsurfaces);
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents);
+// caching surface trace for renderer (NOT THREAD SAFE)
+void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents);
 // combines data from two traces:
 // merges contents flags, startsolid, allsolid, inwater
 // updates fraction, endpos, plane and surface info if new fraction is shorter

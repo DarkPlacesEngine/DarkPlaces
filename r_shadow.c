@@ -2702,10 +2702,16 @@ void R_Shadow_UpdateBounceGridTexture(void)
 				r_refdef.stats.bouncegrid_traces++;
 				//r_refdef.scene.worldmodel->TraceLineAgainstSurfaces(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace, clipstart, clipend, hitsupercontentsmask);
 				//r_refdef.scene.worldmodel->TraceLine(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace2, clipstart, clipend, hitsupercontentsmask);
-				//if (settings.staticmode)
-				//	Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask, true);
-				//else
+				if (settings.staticmode)
+				{
+					// static mode fires a LOT of rays but none of them are identical, so they are not cached
 					cliptrace = CL_TraceLine(clipstart, clipend, settings.staticmode ? MOVE_WORLDONLY : (settings.hitmodels ? MOVE_HITMODEL : MOVE_NOMONSTERS), NULL, hitsupercontentsmask, true, false, NULL, true, true);
+				}
+				else
+				{
+					// dynamic mode fires many rays and most will match the cache from the previous frame
+					cliptrace = CL_Cache_TraceLineSurfaces(clipstart, clipend, settings.staticmode ? MOVE_WORLDONLY : (settings.hitmodels ? MOVE_HITMODEL : MOVE_NOMONSTERS), hitsupercontentsmask);
+				}
 				if (bouncecount > 0 || settings.includedirectlighting)
 				{
 					// calculate second order spherical harmonics values (average, slopeX, slopeY, slopeZ)
