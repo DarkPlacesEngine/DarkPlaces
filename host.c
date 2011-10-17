@@ -59,6 +59,7 @@ double host_starttime = 0;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
 cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
+cvar_t cl_maxphysicsframesperserverframe = {0, "cl_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
 // shows time used by certain subsystems
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
 cvar_t host_maxwait = {0, "host_maxwait","1000", "maximum sleep time requested from the operating system in millisecond. Larger sleeps will be done using multiple host_maxwait length sleeps. Lowering this value will increase CPU load, but may help working around problems with accuracy of sleep times."};
@@ -216,6 +217,7 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand("loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 
+	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&host_maxwait);
@@ -802,7 +804,7 @@ void Host_Main(void)
 			{
 				// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
 				advancetime = bound(0.01, cl_timer, sys_ticrate.value);
-				framelimit = 10;
+				framelimit = cl_maxphysicsframesperserverframe.integer;
 				aborttime = realtime + 0.1;
 			}
 			else
@@ -811,7 +813,7 @@ void Host_Main(void)
 				// listen servers can run multiple server frames per client frame
 				if (cls.state == ca_connected)
 				{
-					framelimit = 10;
+					framelimit = cl_maxphysicsframesperserverframe.integer;
 					aborttime = realtime + 0.1;
 				}
 			}
