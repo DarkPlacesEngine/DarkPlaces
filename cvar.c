@@ -318,6 +318,7 @@ void Cvar_UpdateAllAutoCvars(void)
 Cvar_Set
 ============
 */
+extern cvar_t sv_disablenotify;
 void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
 	qboolean changed;
@@ -341,7 +342,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	memcpy ((char *)var->string, value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
-	if ((var->flags & CVAR_NOTIFY) && changed && sv.active)
+	if ((var->flags & CVAR_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
 		SV_BroadcastPrintf("\"%s\" changed to \"%s\"\n", var->name, var->string);
 #if 0
 	// TODO: add infostring support to the server?
