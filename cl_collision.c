@@ -938,3 +938,123 @@ finished:
 #endif
 	return cliptrace;
 }
+
+/*
+==================
+CL_Cache_TraceLine
+==================
+*/
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t pEnd, int type, int hitsupercontentsmask)
+#else
+trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int type, int hitsupercontentsmask)
+#endif
+{
+	int i;
+	prvm_edict_t *touch;
+	trace_t trace;
+	// bounding box of entire move area
+	vec3_t clipboxmins, clipboxmaxs;
+	// start and end origin of move
+	vec3_t clipstart, clipend;
+	// trace results
+	trace_t cliptrace;
+	// matrices to transform into/out of other entity's space
+	matrix4x4_t matrix, imatrix;
+	// model of other entity
+	dp_model_t *model;
+	// list of entities to test for collisions
+	int numtouchedicts;
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	vec3_t end;
+	vec_t len = 0;
+
+	if(collision_endposnudge.value > 0 && !VectorCompare(start, pEnd))
+	{
+		// TRICK: make the trace 1 qu longer!
+		VectorSubtract(pEnd, start, end);
+		len = VectorNormalizeLength(end);
+		VectorMA(pEnd, collision_endposnudge.value, end, end);
+	}
+	else
+		VectorCopy(pEnd, end);
+#endif
+
+	VectorCopy(start, clipstart);
+	VectorCopy(end, clipend);
+#if COLLISIONPARANOID >= 3
+	Con_Printf("move(%f %f %f,%f %f %f)", clipstart[0], clipstart[1], clipstart[2], clipend[0], clipend[1], clipend[2]);
+#endif
+
+	// clip to world
+	Collision_Cache_ClipLineToWorldSurfaces(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask);
+	cliptrace.bmodelstartsolid = cliptrace.startsolid;
+	if (cliptrace.startsolid || cliptrace.fraction < 1)
+		cliptrace.ent = prog ? prog->edicts : NULL;
+	if (type == MOVE_WORLDONLY)
+		goto finished;
+
+	// create the bounding box of the entire move
+	for (i = 0;i < 3;i++)
+	{
+		clipboxmins[i] = min(clipstart[i], cliptrace.endpos[i]) - 1;
+		clipboxmaxs[i] = max(clipstart[i], cliptrace.endpos[i]) + 1;
+	}
+
+	// if the passedict is world, make it NULL (to avoid two checks each time)
+	// this checks prog because this function is often called without a CSQC
+	// VM context
+
+	// collide against network entities
+	for (i = 0;i < cl.num_brushmodel_entities;i++)
+	{
+		entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
+		if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
+			continue;
+		Collision_Cache_ClipLineToGenericEntitySurfaces(&trace, ent->model, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask);
+		Collision_CombineTraces(&cliptrace, &trace, NULL, true);
+	}
+
+	// clip to entities
+	// because this uses World_EntitiestoBox, we know all entity boxes overlap
+	// the clip region, so we can skip culling checks in the loop below
+	// note: if prog is NULL then there won't be any linked entities
+	numtouchedicts = 0;
+	if (prog != NULL)
+	{
+		numtouchedicts = World_EntitiesInBox(&cl.world, clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+		if (numtouchedicts > MAX_EDICTS)
+		{
+			// this never happens
+			Con_Printf("CL_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+			numtouchedicts = MAX_EDICTS;
+		}
+	}
+	for (i = 0;i < numtouchedicts;i++)
+	{
+		touch = touchedicts[i];
+		// might interact, so do an exact clip
+		// only hit entity models, not collision shapes
+		model = CL_GetModelFromEdict(touch);
+		if (!model)
+			continue;
+		// animated models are too slow to collide against and can't be cached
+		if (touch->priv.server->frameblend || touch->priv.server->skeleton.relativetransforms)
+			continue;
+		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
+			continue;
+		Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2], PRVM_clientedictvector(touch, angles)[0], PRVM_clientedictvector(touch, angles)[1], PRVM_clientedictvector(touch, angles)[2], 1);
+		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		Collision_Cache_ClipLineToGenericEntitySurfaces(&trace, model, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask);
+		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
+	}
+
+finished:
+#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
+	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
+		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
+#endif
+	return cliptrace;
+}
+
