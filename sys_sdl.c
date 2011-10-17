@@ -83,7 +83,7 @@ void Sys_PrintToTerminal(const char *text)
 
 char *Sys_ConsoleInput(void)
 {
-	if (cls.state == ca_dedicated)
+//	if (cls.state == ca_dedicated)
 	{
 		static char text[MAX_INPUTLINE];
 		int len = 0;
