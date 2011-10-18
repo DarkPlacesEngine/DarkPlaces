@@ -104,4 +104,7 @@ void R_Shadow_PrepareModelShadows(void);
 void R_LightPoint(vec3_t color, const vec3_t p, const int flags);
 void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, const int flags);
 
+void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+
 #endif
