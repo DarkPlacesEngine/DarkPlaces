@@ -1810,7 +1810,7 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 
 			// reallocate with malloc, as this is in tempmempool (do not want)
 			xpm = data;
-			data = malloc(width * height * 4);
+			data = (char *) malloc(width * height * 4);
 			memcpy(data, xpm, width * height * 4);
 			Mem_Free(xpm);
 			xpm = NULL;
