@@ -6993,8 +6993,6 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
-extern void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-extern void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
