@@ -6993,8 +6993,8 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
-extern void R_DrawModelShadows(void);
-extern void R_DrawModelShadowMaps(void);
+extern void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+extern void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
@@ -7076,7 +7076,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadowMaps();
+		R_DrawModelShadowMaps(fbo, depthtexture, colortexture);
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7105,7 +7105,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows();
+		R_DrawModelShadows(fbo, depthtexture, colortexture);
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7126,7 +7126,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows();
+		R_DrawModelShadows(fbo, depthtexture, colortexture);
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
