@@ -5347,7 +5347,7 @@ void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtex
 {
 	const float *customclipplane = NULL;
 	float plane[4];
-	int scaledwidth, scaledheight;
+	int /*rtwidth,*/ rtheight, scaledwidth, scaledheight;
 	if (r_refdef.view.useclipplane && allowwaterclippingplane)
 	{
 		// LordHavoc: couldn't figure out how to make this approach the
@@ -5362,13 +5362,16 @@ void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtex
 		if(vid.renderpath != RENDERPATH_SOFT) customclipplane = plane;
 	}
 
+	//rtwidth = fbo ? R_TextureWidth(depthtexture ? depthtexture : colortexture) : vid.width;
+	rtheight = fbo ? R_TextureHeight(depthtexture ? depthtexture : colortexture) : vid.height;
+
 	R_GetScaledViewSize(r_refdef.view.width, r_refdef.view.height, &scaledwidth, &scaledheight);
 	if (!r_refdef.view.useperspective)
-		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, rtheight - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
 	else if (vid.stencil && r_useinfinitefarclip.integer)
-		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
+		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, rtheight - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
-		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, vid.height - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, r_refdef.view.x, rtheight - scaledheight - r_refdef.view.y, scaledwidth, scaledheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
 	R_Mesh_SetRenderTargets(fbo, depthtexture, colortexture, NULL, NULL, NULL);
 	R_SetViewport(&r_refdef.view.viewport);
 	if (r_refdef.view.useclipplane && allowwaterclippingplane && vid.renderpath == RENDERPATH_SOFT)
