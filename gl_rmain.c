@@ -6545,7 +6545,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 			R_Mesh_PrepareVertices_Mesh_Arrays(4, r_d3dscreenvertex3f, NULL, NULL, NULL, NULL, r_fb.screentexcoord2f, r_fb.bloomtexcoord2f);
 			R_SetupShader_SetPermutationHLSL(SHADERMODE_POSTPROCESS, permutation);
 			R_Mesh_TexBind(GL20TU_FIRST     , r_fb.colortexture);
-			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.bloomtexture);
+			R_Mesh_TexBind(GL20TU_SECOND    , r_fb.bloomtexture[r_fb.bloomindex]);
 			R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps       );
 			hlslPSSetParameter4f(D3DPSREGISTER_ViewTintColor        , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 			hlslPSSetParameter2f(D3DPSREGISTER_PixelSize            , 1.0/r_fb.screentexturewidth, 1.0/r_fb.screentextureheight);
