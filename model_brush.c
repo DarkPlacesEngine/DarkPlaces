@@ -58,6 +58,7 @@ cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "di
 cvar_t mod_collision_bih = {0, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
 cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 extern cvar_t vid_sRGB;
+extern cvar_t vid_sRGB_fallback;
 
 static texture_t mod_q1bsp_texture_solid;
 static texture_t mod_q1bsp_texture_sky;
@@ -4724,7 +4725,7 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 1] = LittleFloat(in->lightmap2f[1]);
 		// svector/tvector are calculated later in face loading
-		if(vid_sRGB.integer && !vid.sRGBcapable3D)
+		if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 		{
 			loadmodel->brushq3.data_color4f[i * 4 + 0] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[0]);
 			loadmodel->brushq3.data_color4f[i * 4 + 1] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[1]);
@@ -5020,7 +5021,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
 			{
-				if(vid_sRGB.integer && !vid.sRGBcapable3D)
+				if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 					Image_MakesRGBColorsFromLinear_Lightmap(mergedpixels, mergedpixels, mergedwidth * mergedheight);
 				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			}
