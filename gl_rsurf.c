@@ -123,7 +123,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	}
 
 	if(vid_sRGB.integer && !vid.sRGBcapable3D)
-		Image_MakesRGBColorsFromLinear(templight, templight, size);
+		Image_MakesRGBColorsFromLinear_Lightmap(templight, templight, size);
 	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
 
 	// update the surface's deluxemap if it has one
