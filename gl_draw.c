@@ -392,7 +392,7 @@ reload:
 	pic->lastusedframe = draw_frame;
 
 	// load a high quality image from disk if possible
-	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
+	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
 	{
 		// note this loads even if autoload is true, otherwise we can't get the width/height
 		loaded = true;
@@ -517,7 +517,7 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 		{
 			qboolean ddshasalpha;
 			float ddsavgcolor[4];
-			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), pic->texflags, &ddshasalpha, ddsavgcolor, 0);
+			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0);
 		}
 		if (pic->tex == NULL)
 		{
