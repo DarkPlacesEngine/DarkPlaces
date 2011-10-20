@@ -5012,7 +5012,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			else
 			{
 				if(vid_sRGB.integer && !vid.sRGBcapable3D)
-					Image_MakesRGBColorsFromLinear(mergedpixels, mergedpixels, mergedwidth * mergedheight);
+					Image_MakesRGBColorsFromLinear_Lightmap(mergedpixels, mergedpixels, mergedwidth * mergedheight);
 				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			}
 		}

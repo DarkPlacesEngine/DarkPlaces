@@ -797,7 +797,7 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 }
 
 static unsigned char image_linearfromsrgb[256];
-static unsigned char image_srgbfromlinear[256];
+static unsigned char image_srgbfromlinear_lightmap[256];
 
 void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pin, int numpixels)
 {
@@ -815,18 +815,18 @@ void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pi
 	}
 }
 
-void Image_MakesRGBColorsFromLinear(unsigned char *pout, const unsigned char *pin, int numpixels)
+void Image_MakesRGBColorsFromLinear_Lightmap(unsigned char *pout, const unsigned char *pin, int numpixels)
 {
 	int i;
 	// this math from http://www.opengl.org/registry/specs/EXT/texture_sRGB.txt
-	if (!image_srgbfromlinear[255])
+	if (!image_srgbfromlinear_lightmap[255])
 		for (i = 0;i < 256;i++)
-			image_srgbfromlinear[i] = (unsigned char)bound(0, Image_sRGBFloatFromLinear(i*2) * 128.0f, 255);
+			image_srgbfromlinear_lightmap[i] = (unsigned char)bound(0, Image_sRGBFloatFromLinear(i*2) * 128.0f, 255);
 	for (i = 0;i < numpixels;i++)
 	{
-		pout[i*4+0] = image_srgbfromlinear[pin[i*4+0]];
-		pout[i*4+1] = image_srgbfromlinear[pin[i*4+1]];
-		pout[i*4+2] = image_srgbfromlinear[pin[i*4+2]];
+		pout[i*4+0] = image_srgbfromlinear_lightmap[pin[i*4+0]];
+		pout[i*4+1] = image_srgbfromlinear_lightmap[pin[i*4+1]];
+		pout[i*4+2] = image_srgbfromlinear_lightmap[pin[i*4+2]];
 		pout[i*4+3] = pin[i*4+3];
 	}
 }
