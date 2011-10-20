@@ -2020,7 +2020,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 #endif
 }
 
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
 {
 	int i, size, dds_format_flags, dds_miplevels, dds_width, dds_height;
 	//int dds_flags;
@@ -2031,10 +2031,10 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
 	textypeinfo_t *texinfo;
 	int mip, mipwidth, mipheight, mipsize, mipsize_total;
-	unsigned int c;
+	unsigned int c, r, g, b;
 	GLint oldbindtexnum = 0;
-	const unsigned char *mippixels;
-	const unsigned char *mippixels_start;
+	unsigned char *mippixels;
+	unsigned char *mippixels_start;
 	unsigned char *ddspixels;
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;
@@ -2362,6 +2362,65 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			avgcolor[1] *= f;
 			avgcolor[2] *= f;
 			avgcolor[3] *= f;
+		}
+	}
+
+	// if we want sRGB, convert now
+	if(srgb)
+	{
+		if (vid.support.ext_texture_srgb)
+		{
+			switch(textype)
+			{
+			case TEXTYPE_DXT1:    textype = TEXTYPE_SRGB_DXT1   ;break;
+			case TEXTYPE_DXT1A:   textype = TEXTYPE_SRGB_DXT1A  ;break;
+			case TEXTYPE_DXT3:    textype = TEXTYPE_SRGB_DXT3   ;break;
+			case TEXTYPE_DXT5:    textype = TEXTYPE_SRGB_DXT5   ;break;
+			case TEXTYPE_RGBA:    textype = TEXTYPE_SRGB_RGBA   ;break;
+			default:
+				break;
+			}
+		}
+		else
+		{
+			switch(textype)
+			{
+			case TEXTYPE_DXT1:
+			case TEXTYPE_DXT1A:
+			case TEXTYPE_DXT3:
+			case TEXTYPE_DXT5:
+				{
+					for (i = bytesperblock == 16 ? 8 : 0;i < mipsize;i += bytesperblock)
+					{
+						c = mippixels_start[i] + 256*mippixels_start[i+1];
+						r = ((c >> 11) & 0x1F);
+						g = ((c >>  5) & 0x3F);
+						b = ((c      ) & 0x1F);
+						r = floor(Image_LinearFloatFromsRGB(r * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						g = floor(Image_LinearFloatFromsRGB(g * (255.0f / 63.0f)) * 63.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						b = floor(Image_LinearFloatFromsRGB(b * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						c = (r << 11) | (g << 5) | b;
+						mippixels_start[i] = c & 255;
+						mippixels_start[i+1] = c >> 8;
+						c = mippixels_start[i+2] + 256*mippixels_start[i+3];
+						r = ((c >> 11) & 0x1F);
+						g = ((c >>  5) & 0x3F);
+						b = ((c      ) & 0x1F);
+						r = floor(Image_LinearFloatFromsRGB(r * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						g = floor(Image_LinearFloatFromsRGB(g * (255.0f / 63.0f)) * 63.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						b = floor(Image_LinearFloatFromsRGB(b * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
+						c = (r << 11) | (g << 5) | b;
+						mippixels_start[i+2] = c & 255;
+						mippixels_start[i+3] = c >> 8;
+					}
+				}
+				break;
+			case TEXTYPE_RGBA:
+				Image_MakeLinearColorsFromsRGB(mippixels, mippixels, mipsize_total / bytesperblock);
+				break;
+			default:
+				break;
+			}
 		}
 	}
 
