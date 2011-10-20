@@ -53,7 +53,7 @@ extern cvar_t r_fixtrans_auto;
 #define Image_sRGBFloatFromLinear(c) (((c) < 1) ? (c) * 0.05046875f : 1.055f * (float)pow((c)*(1.0f/256.0f), 1.0f/2.4f) - 0.055f)
 
 void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pin, int numpixels);
-void Image_MakesRGBColorsFromLinear(unsigned char *pout, const unsigned char *pin, int numpixels);
+void Image_MakesRGBColorsFromLinear_Lightmap(unsigned char *pout, const unsigned char *pin, int numpixels);
 
 #endif
 
