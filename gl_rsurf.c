@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "portals.h"
 #include "csprogs.h"
+#include "image.h"
 
 cvar_t r_ambient = {0, "r_ambient", "0", "brightens map, value is 0-128"};
 cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
@@ -30,6 +31,7 @@ cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility upda
 cvar_t r_useportalculling = {0, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
 cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
+extern cvar_t vid_sRGB;
 
 /*
 ===============
@@ -120,6 +122,8 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		}
 	}
 
+	if(vid_sRGB.integer && !vid.sRGBcapable3D)
+		Image_MakesRGBColorsFromLinear(templight, templight, size);
 	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
 
 	// update the surface's deluxemap if it has one
