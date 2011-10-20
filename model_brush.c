@@ -57,6 +57,7 @@ cvar_t mod_q3shader_force_addalpha = {0, "mod_q3shader_force_addalpha", "0", "tr
 cvar_t mod_q1bsp_polygoncollisions = {0, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
 cvar_t mod_collision_bih = {0, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
 cvar_t mod_recalculatenodeboxes = {0, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
+extern cvar_t vid_sRGB;
 
 static texture_t mod_q1bsp_texture_solid;
 static texture_t mod_q1bsp_texture_sky;
@@ -5009,7 +5010,11 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
 				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
+			{
+				if(vid_sRGB.integer && !vid.sRGBcapable3D)
+					Image_MakesRGBColorsFromLinear(mergedpixels, mergedpixels, mergedwidth * mergedheight);
 				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+			}
 		}
 	}
 
