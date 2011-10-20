@@ -2390,28 +2390,64 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			case TEXTYPE_DXT3:
 			case TEXTYPE_DXT5:
 				{
-					for (i = bytesperblock == 16 ? 8 : 0;i < mipsize;i += bytesperblock)
+					for (i = bytesperblock == 16 ? 8 : 0;i < mipsize_total;i += bytesperblock)
 					{
-						c = mippixels_start[i] + 256*mippixels_start[i+1];
-						r = ((c >> 11) & 0x1F);
-						g = ((c >>  5) & 0x3F);
-						b = ((c      ) & 0x1F);
+						int c0, c1, c0new, c1new;
+						c0 = mippixels_start[i] + 256*mippixels_start[i+1];
+						r = ((c0 >> 11) & 0x1F);
+						g = ((c0 >>  5) & 0x3F);
+						b = ((c0      ) & 0x1F);
 						r = floor(Image_LinearFloatFromsRGB(r * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
 						g = floor(Image_LinearFloatFromsRGB(g * (255.0f / 63.0f)) * 63.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
 						b = floor(Image_LinearFloatFromsRGB(b * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
-						c = (r << 11) | (g << 5) | b;
-						mippixels_start[i] = c & 255;
-						mippixels_start[i+1] = c >> 8;
-						c = mippixels_start[i+2] + 256*mippixels_start[i+3];
-						r = ((c >> 11) & 0x1F);
-						g = ((c >>  5) & 0x3F);
-						b = ((c      ) & 0x1F);
+						c0new = (r << 11) | (g << 5) | b;
+						c1 = mippixels_start[i+2] + 256*mippixels_start[i+3];
+						r = ((c1 >> 11) & 0x1F);
+						g = ((c1 >>  5) & 0x3F);
+						b = ((c1      ) & 0x1F);
 						r = floor(Image_LinearFloatFromsRGB(r * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
 						g = floor(Image_LinearFloatFromsRGB(g * (255.0f / 63.0f)) * 63.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
 						b = floor(Image_LinearFloatFromsRGB(b * (255.0f / 31.0f)) * 31.0f + 0.5f); // these multiplications here get combined with multiplications in Image_LinearFloatFromsRGB
-						c = (r << 11) | (g << 5) | b;
-						mippixels_start[i+2] = c & 255;
-						mippixels_start[i+3] = c >> 8;
+						c1new = (r << 11) | (g << 5) | b;
+						// swap the colors if needed to fix order
+						if(c0 > c1) // thirds
+						{
+							if(c0new < c1new)
+							{
+								c = c0new;
+								c0new = c1new;
+								c1new = c;
+								if(c0new == c1new)
+								mippixels_start[i+4] ^= 0x55;
+								mippixels_start[i+5] ^= 0x55;
+								mippixels_start[i+6] ^= 0x55;
+								mippixels_start[i+7] ^= 0x55;
+							}
+							else if(c0new == c1new)
+							{
+								mippixels_start[i+4] = 0x00;
+								mippixels_start[i+5] = 0x00;
+								mippixels_start[i+6] = 0x00;
+								mippixels_start[i+7] = 0x00;
+							}
+						}
+						else // half + transparent
+						{
+							if(c0new > c1new)
+							{
+								c = c0new;
+								c0new = c1new;
+								c1new = c;
+								mippixels_start[i+4] ^= (~mippixels_start[i+4] >> 1) & 0x55;
+								mippixels_start[i+5] ^= (~mippixels_start[i+5] >> 1) & 0x55;
+								mippixels_start[i+6] ^= (~mippixels_start[i+6] >> 1) & 0x55;
+								mippixels_start[i+7] ^= (~mippixels_start[i+7] >> 1) & 0x55;
+							}
+						}
+						mippixels_start[i] = c0new & 255;
+						mippixels_start[i+1] = c0new >> 8;
+						mippixels_start[i+2] = c1new & 255;
+						mippixels_start[i+3] = c1new >> 8;
 					}
 				}
 				break;
