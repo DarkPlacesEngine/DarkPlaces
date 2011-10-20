@@ -4724,9 +4724,18 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 1] = LittleFloat(in->lightmap2f[1]);
 		// svector/tvector are calculated later in face loading
-		loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f);
-		loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f);
-		loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f);
+		if(vid_sRGB.integer && !vid.sRGBcapable3D)
+		{
+			loadmodel->brushq3.data_color4f[i * 4 + 0] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[0]);
+			loadmodel->brushq3.data_color4f[i * 4 + 1] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[1]);
+			loadmodel->brushq3.data_color4f[i * 4 + 2] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[2]);
+		}
+		else
+		{
+			loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f);
+			loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f);
+			loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f);
+		}
 		loadmodel->brushq3.data_color4f[i * 4 + 3] = in->color4ub[3] * (1.0f / 255.0f);
 		if(in->color4ub[0] != 255 || in->color4ub[1] != 255 || in->color4ub[2] != 255)
 			loadmodel->lit = true;
