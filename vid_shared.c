@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cdaudio.h"
+#include "image.h"
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
@@ -1398,18 +1399,24 @@ unsigned int vid_gammatables_serial = 0; // so other subsystems can poll if gamm
 qboolean vid_gammatables_trivial = true;
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 {
-	float srgbmul = (vid.sRGB2D || vid.sRGB3D) ? 2.2f : 1.0f;
 	if (cachecolorenable)
 	{
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]) * srgbmul, cachewhite[0], cacheblack[0], cachecontrastboost, ramps, rampsize);
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]) * srgbmul, cachewhite[1], cacheblack[1], cachecontrastboost, ramps + rampsize, rampsize);
-		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]) * srgbmul, cachewhite[2], cacheblack[2], cachecontrastboost, ramps + rampsize*2, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[0]), cachewhite[0], cacheblack[0], cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[1]), cachewhite[1], cacheblack[1], cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, invpow(0.5, 1 - cachegrey[2]), cachewhite[2], cacheblack[2], cachecontrastboost, ramps + rampsize*2, rampsize);
 	}
 	else
 	{
-		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps, rampsize);
-		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize, rampsize);
-		BuildGammaTable16(1.0f, cachegamma * srgbmul, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize*2, rampsize);
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps, rampsize);
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize, rampsize);
+		BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, cachecontrastboost, ramps + rampsize*2, rampsize);
+	}
+
+	if(vid.sRGB2D || vid.sRGB3D)
+	{
+		int i;
+		for(i = 0; i < 3*rampsize; ++i)
+			ramps[i] = bound(0, (int)floor(Image_sRGBFloatFromLinear(ramps[i] / 256.0) * 65535.0 + 0.5), 65535);
 	}
 
 	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
