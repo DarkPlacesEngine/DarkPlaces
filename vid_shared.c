@@ -177,7 +177,7 @@ cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.
 cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 cvar_t vid_sRGB = {CVAR_SAVE, "vid_sRGB", "0", "if hardware is capable, modify rendering to be gamma corrected for the sRGB color standard (computer monitors, TVs), recommended"};
-cvar_t vid_sRGB_fallback = {CVAR_SAVE, "vid_sRGB_fallback", "0", "do an approximate sRGB fallback if not properly supported by hardware (2: always use the fallback even if sRGB is supported)"};
+cvar_t vid_sRGB_fallback = {CVAR_SAVE, "vid_sRGB_fallback", "0", "do an approximate sRGB fallback if not properly supported by hardware (2: also use the fallback if framebuffer is 8bit, 3: always use the fallback even if sRGB is supported)"};
 
 cvar_t vid_touchscreen = {0, "vid_touchscreen", "0", "Use touchscreen-style input (no mouse grab, track mouse motion only while button is down, screen areas for mimicing joystick axes and buttons"};
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
@@ -201,6 +201,8 @@ cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "0", "enables use of hardware gamma 
 cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
 cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
+
+extern cvar_t r_viewfbo;
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -1772,8 +1774,16 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		vid.userefreshrate = vid.mode.userefreshrate;
 		vid.stereobuffer   = vid.mode.stereobuffer;
 		vid.stencil        = vid.mode.bitsperpixel > 16;
-		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid_sRGB_fallback.integer <= 1 && vid.sRGBcapable2D;
-		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid_sRGB_fallback.integer <= 1 && vid.sRGBcapable3D;
+		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
+		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
+
+		if(
+			(vid_sRGB_fallback.integer >= 3) // force fallback
+			||
+			(vid_sRGB_fallback.integer >= 2 && // fallback if framebuffer is 8bit
+				!(r_viewfbo.integer >= 2 && vid.support.ext_framebuffer_object && vid.samples < 2))
+		)
+			vid.sRGB2D = vid.sRGB3D = false;
 
 		if(vid.samples != vid.mode.samples)
 			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
