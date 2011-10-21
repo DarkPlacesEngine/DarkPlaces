@@ -48,6 +48,7 @@ cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0", "select
 cvar_t mod_q3bsp_lightmapmergepower = {CVAR_SAVE, "mod_q3bsp_lightmapmergepower", "4", "merges the quake3 128x128 lightmap textures into larger lightmap group textures to speed up rendering, 1 = 256x256, 2 = 512x512, 3 = 1024x1024, 4 = 2048x2048, 5 = 4096x4096, ..."};
 cvar_t mod_q3bsp_nolightmaps = {CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not load lightmaps in Q3BSP maps (to save video RAM, but be warned: it looks ugly)"};
 cvar_t mod_q3bsp_tracelineofsight_brushes = {0, "mod_q3bsp_tracelineofsight_brushes", "0", "enables culling of entities behind detail brushes, curves, etc"};
+cvar_t mod_q3bsp_sRGBlightmaps = {0, "mod_q3bsp_sRGBlightmaps", "0", "treat lightmaps from Q3 maps as sRGB when vid_sRGB is active"};
 cvar_t mod_q3shader_default_offsetmapping = {CVAR_SAVE, "mod_q3shader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces that are using q3 shader files"};
 cvar_t mod_q3shader_default_offsetmapping_scale = {CVAR_SAVE, "mod_q3shader_default_offsetmapping_scale", "1", "default scale used for offsetmapping"};
 cvar_t mod_q3shader_default_offsetmapping_bias = {CVAR_SAVE, "mod_q3shader_default_offsetmapping_bias", "0", "default bias used for offsetmapping"};
@@ -89,6 +90,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
 	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
 	Cvar_RegisterVariable(&mod_q3bsp_nolightmaps);
+	Cvar_RegisterVariable(&mod_q3bsp_sRGBlightmaps);
 	Cvar_RegisterVariable(&mod_q3bsp_tracelineofsight_brushes);
 	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping);
 	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping_scale);
@@ -4725,17 +4727,39 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
 		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 1] = LittleFloat(in->lightmap2f[1]);
 		// svector/tvector are calculated later in face loading
-		if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+		if(mod_q3bsp_sRGBlightmaps.integer)
 		{
-			loadmodel->brushq3.data_color4f[i * 4 + 0] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[0]);
-			loadmodel->brushq3.data_color4f[i * 4 + 1] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[1]);
-			loadmodel->brushq3.data_color4f[i * 4 + 2] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[2]);
+			// if lightmaps are sRGB, vertex colors are sRGB too, so we need to linearize them
+			// note: when this is in use, lightmap color 128 is no longer neutral, but "sRGB half power" is
+			// working like this may be odd, but matches q3map2 -gamma 2.2
+			if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+			{
+				// TODO (should we do this, or should we instead knowingly render brighter in sRGB fallback mode?)
+				loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
+				loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
+				loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
+			}
+			else
+			{
+				loadmodel->brushq3.data_color4f[i * 4 + 0] = Image_LinearFloatFromsRGB(in->color4ub[0]);
+				loadmodel->brushq3.data_color4f[i * 4 + 1] = Image_LinearFloatFromsRGB(in->color4ub[1]);
+				loadmodel->brushq3.data_color4f[i * 4 + 2] = Image_LinearFloatFromsRGB(in->color4ub[2]);
+			}
 		}
 		else
 		{
-			loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f);
-			loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f);
-			loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f);
+			if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+			{
+				loadmodel->brushq3.data_color4f[i * 4 + 0] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[0]);
+				loadmodel->brushq3.data_color4f[i * 4 + 1] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[1]);
+				loadmodel->brushq3.data_color4f[i * 4 + 2] = Image_sRGBFloatFromLinear_Lightmap(in->color4ub[2]);
+			}
+			else
+			{
+				loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f);
+				loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f);
+				loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f);
+			}
 		}
 		loadmodel->brushq3.data_color4f[i * 4 + 3] = in->color4ub[3] * (1.0f / 255.0f);
 		if(in->color4ub[0] != 255 || in->color4ub[1] != 255 || in->color4ub[2] != 255)
@@ -5021,9 +5045,32 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
 			{
-				if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
-					Image_MakesRGBColorsFromLinear_Lightmap(mergedpixels, mergedpixels, mergedwidth * mergedheight);
-				loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				if(mod_q3bsp_sRGBlightmaps.integer)
+				{
+					textype_t t;
+					if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+					{
+						// TODO (should we do this, or should we instead knowingly render brighter in sRGB fallback mode?)
+						int n = mergedwidth * mergedheight * 4;
+						int i;
+						for(i = 0; i < n; i += 4)
+						{
+							mergedpixels[i+0] = (mergedpixels[i+0] * (int)186 + 128) / 255;
+							mergedpixels[i+1] = (mergedpixels[i+1] * (int)186 + 128) / 255;
+							mergedpixels[i+2] = (mergedpixels[i+2] * (int)186 + 128) / 255;
+						}
+						t = TEXTYPE_BGRA; // in stupid fallback mode, we upload lightmaps in sRGB form and just fix their brightness
+					}
+					else
+						t = TEXTYPE_SRGB_BGRA; // normally, we upload lightmaps in sRGB form (possibly downconverted to linear)
+					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, t, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				}
+				else
+				{
+					if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+						Image_MakesRGBColorsFromLinear_Lightmap(mergedpixels, mergedpixels, mergedwidth * mergedheight);
+					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				}
 			}
 		}
 	}
@@ -5774,6 +5821,7 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	q3dlightgrid_t *in;
 	q3dlightgrid_t *out;
 	int count;
+	int i;
 
 	in = (q3dlightgrid_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -5809,6 +5857,54 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 		loadmodel->brushq3.num_lightgrid = count;
 		// no swapping or validation necessary
 		memcpy(out, in, count * (int)sizeof(*out));
+
+		if(mod_q3bsp_sRGBlightmaps.integer)
+		{
+			if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+			{
+				// TODO (should we do this, or should we instead knowingly render brighter in sRGB fallback mode?)
+				for(i = 0; i < count; ++i)
+				{
+					out[i].ambientrgb[0] = (out[i].ambientrgb[0] * (int)186 + 128) / 255; // fixes neutral level
+					out[i].ambientrgb[1] = (out[i].ambientrgb[1] * (int)186 + 128) / 255; // fixes neutral level
+					out[i].ambientrgb[2] = (out[i].ambientrgb[2] * (int)186 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[0] = (out[i].diffusergb[0] * (int)186 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[1] = (out[i].diffusergb[1] * (int)186 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[2] = (out[i].diffusergb[2] * (int)186 + 128) / 255; // fixes neutral level
+				}
+			}
+			else
+			{
+				for(i = 0; i < count; ++i)
+				{
+					out[i].ambientrgb[0] = floor(Image_LinearFloatFromsRGB(out[i].ambientrgb[0]) * 255.0f + 0.5f);
+					out[i].ambientrgb[1] = floor(Image_LinearFloatFromsRGB(out[i].ambientrgb[1]) * 255.0f + 0.5f);
+					out[i].ambientrgb[2] = floor(Image_LinearFloatFromsRGB(out[i].ambientrgb[2]) * 255.0f + 0.5f);
+					out[i].diffusergb[0] = floor(Image_LinearFloatFromsRGB(out[i].diffusergb[0]) * 255.0f + 0.5f);
+					out[i].diffusergb[1] = floor(Image_LinearFloatFromsRGB(out[i].diffusergb[1]) * 255.0f + 0.5f);
+					out[i].diffusergb[2] = floor(Image_LinearFloatFromsRGB(out[i].diffusergb[2]) * 255.0f + 0.5f);
+				}
+			}
+		}
+		else
+		{
+			if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+			{
+				for(i = 0; i < count; ++i)
+				{
+					out[i].ambientrgb[0] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].ambientrgb[0]) * 255.0f + 0.5f);
+					out[i].ambientrgb[1] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].ambientrgb[1]) * 255.0f + 0.5f);
+					out[i].ambientrgb[2] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].ambientrgb[2]) * 255.0f + 0.5f);
+					out[i].diffusergb[0] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].diffusergb[0]) * 255.0f + 0.5f);
+					out[i].diffusergb[1] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].diffusergb[1]) * 255.0f + 0.5f);
+					out[i].diffusergb[2] = floor(Image_sRGBFloatFromLinear_Lightmap(out[i].diffusergb[2]) * 255.0f + 0.5f);
+				}
+			}
+			else
+			{
+				// all is good
+			}
+		}
 	}
 }
 
