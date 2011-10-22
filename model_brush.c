@@ -4734,10 +4734,13 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 			// working like this may be odd, but matches q3map2 -gamma 2.2
 			if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 			{
-				// TODO (should we do this, or should we instead knowingly render brighter in sRGB fallback mode?)
-				loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
-				loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
-				loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f) * 0.72974f; // fixes neutral level
+				// actually we do: Image_sRGBFloatFromLinear_Lightmap(Image_LinearFloatFromsRGBFloat(x))
+				// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
+				// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
+				// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
+				loadmodel->brushq3.data_color4f[i * 4 + 0] = in->color4ub[0] * (1.0f / 255.0f) * 0.679942f; // fixes neutral level
+				loadmodel->brushq3.data_color4f[i * 4 + 1] = in->color4ub[1] * (1.0f / 255.0f) * 0.679942f; // fixes neutral level
+				loadmodel->brushq3.data_color4f[i * 4 + 2] = in->color4ub[2] * (1.0f / 255.0f) * 0.679942f; // fixes neutral level
 			}
 			else
 			{
@@ -5055,9 +5058,13 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 						int i;
 						for(i = 0; i < n; i += 4)
 						{
-							mergedpixels[i+0] = (mergedpixels[i+0] * (int)186 + 128) / 255;
-							mergedpixels[i+1] = (mergedpixels[i+1] * (int)186 + 128) / 255;
-							mergedpixels[i+2] = (mergedpixels[i+2] * (int)186 + 128) / 255;
+							// actually we do: Image_sRGBFloatFromLinear_Lightmap(Image_LinearFloatFromsRGBFloat(x))
+							// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
+							// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
+							// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
+							mergedpixels[i+0] = (mergedpixels[i+0] * (int)173 + 128) / 255;
+							mergedpixels[i+1] = (mergedpixels[i+1] * (int)173 + 128) / 255;
+							mergedpixels[i+2] = (mergedpixels[i+2] * (int)173 + 128) / 255;
 						}
 						t = TEXTYPE_BGRA; // in stupid fallback mode, we upload lightmaps in sRGB form and just fix their brightness
 					}
@@ -5865,12 +5872,16 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 				// TODO (should we do this, or should we instead knowingly render brighter in sRGB fallback mode?)
 				for(i = 0; i < count; ++i)
 				{
-					out[i].ambientrgb[0] = (out[i].ambientrgb[0] * (int)186 + 128) / 255; // fixes neutral level
-					out[i].ambientrgb[1] = (out[i].ambientrgb[1] * (int)186 + 128) / 255; // fixes neutral level
-					out[i].ambientrgb[2] = (out[i].ambientrgb[2] * (int)186 + 128) / 255; // fixes neutral level
-					out[i].diffusergb[0] = (out[i].diffusergb[0] * (int)186 + 128) / 255; // fixes neutral level
-					out[i].diffusergb[1] = (out[i].diffusergb[1] * (int)186 + 128) / 255; // fixes neutral level
-					out[i].diffusergb[2] = (out[i].diffusergb[2] * (int)186 + 128) / 255; // fixes neutral level
+					// actually we do: Image_sRGBFloatFromLinear_Lightmap(Image_LinearFloatFromsRGBFloat(x))
+					// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
+					// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
+					// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
+					out[i].ambientrgb[0] = (out[i].ambientrgb[0] * (int)173 + 128) / 255; // fixes neutral level
+					out[i].ambientrgb[1] = (out[i].ambientrgb[1] * (int)173 + 128) / 255; // fixes neutral level
+					out[i].ambientrgb[2] = (out[i].ambientrgb[2] * (int)173 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[0] = (out[i].diffusergb[0] * (int)173 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[1] = (out[i].diffusergb[1] * (int)173 + 128) / 255; // fixes neutral level
+					out[i].diffusergb[2] = (out[i].diffusergb[2] * (int)173 + 128) / 255; // fixes neutral level
 				}
 			}
 			else
