@@ -1003,7 +1003,8 @@ static CompressedImageCacheItem *CompressedImageCache[COMPRESSEDIMAGECACHE_SIZE]
 
 static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void *compressed, size_t compressed_size)
 {
-	const char *hashkey = va("%s:%d", imagename, (int) maxsize);
+	char vabuf[1024];
+	const char *hashkey = va(vabuf, sizeof(vabuf), "%s:%d", imagename, (int) maxsize);
 	int hashindex = CRC_Block((unsigned char *) hashkey, strlen(hashkey)) % COMPRESSEDIMAGECACHE_SIZE;
 	CompressedImageCacheItem *i;
 
@@ -1021,7 +1022,8 @@ static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void
 
 static CompressedImageCacheItem *CompressedImageCache_Find(const char *imagename, size_t maxsize)
 {
-	const char *hashkey = va("%s:%d", imagename, (int) maxsize);
+	char vabuf[1024];
+	const char *hashkey = va(vabuf, sizeof(vabuf), "%s:%d", imagename, (int) maxsize);
 	int hashindex = CRC_Block((unsigned char *) hashkey, strlen(hashkey)) % COMPRESSEDIMAGECACHE_SIZE;
 	CompressedImageCacheItem *i = CompressedImageCache[hashindex];
 

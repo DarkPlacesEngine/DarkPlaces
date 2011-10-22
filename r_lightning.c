@@ -16,20 +16,20 @@ skinframe_t *r_lightningbeamqmbtexture;
 int r_lightningbeamelement3i[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
 unsigned short r_lightningbeamelement3s[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
 
-void r_lightningbeams_start(void)
+static void r_lightningbeams_start(void)
 {
 	r_lightningbeamtexture = NULL;
 	r_lightningbeamqmbtexture = NULL;
 }
 
-void r_lightningbeams_setupqmbtexture(void)
+static void r_lightningbeams_setupqmbtexture(void)
 {
 	r_lightningbeamqmbtexture = R_SkinFrame_LoadExternal("textures/particles/lightning.pcx", TEXF_ALPHA | TEXF_FORCELINEAR, false);
 	if (r_lightningbeamqmbtexture == NULL)
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
 
-void r_lightningbeams_setuptexture(void)
+static void r_lightningbeams_setuptexture(void)
 {
 #if 0
 #define BEAMWIDTH 128
@@ -103,7 +103,7 @@ void r_lightningbeams_setuptexture(void)
 			}
 		}
 
-		Image_WriteTGABGRA(va("lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
+		Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "lightningbeam%i.tga", imagenumber), BEAMWIDTH, BEAMHEIGHT, pixels);
 	}
 
 	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", BEAMWIDTH, BEAMHEIGHT, pixels, TEXTYPE_BGRA, TEXF_FORCELINEAR, NULL);
@@ -151,13 +151,13 @@ void r_lightningbeams_setuptexture(void)
 #endif
 }
 
-void r_lightningbeams_shutdown(void)
+static void r_lightningbeams_shutdown(void)
 {
 	r_lightningbeamtexture = NULL;
 	r_lightningbeamqmbtexture = NULL;
 }
 
-void r_lightningbeams_newmap(void)
+static void r_lightningbeams_newmap(void)
 {
 	if (r_lightningbeamtexture)
 		R_SkinFrame_MarkUsed(r_lightningbeamtexture);
@@ -177,7 +177,7 @@ void R_LightningBeams_Init(void)
 	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap, NULL, NULL);
 }
 
-void R_CalcLightningBeamPolygonVertex3f(float *v, const float *start, const float *end, const float *offset)
+static void R_CalcLightningBeamPolygonVertex3f(float *v, const float *start, const float *end, const float *offset)
 {
 	// near right corner
 	VectorAdd     (start, offset, (v + 0));
@@ -189,7 +189,7 @@ void R_CalcLightningBeamPolygonVertex3f(float *v, const float *start, const floa
 	VectorAdd     (end  , offset, (v + 9));
 }
 
-void R_CalcLightningBeamPolygonTexCoord2f(float *tc, float t1, float t2)
+static void R_CalcLightningBeamPolygonTexCoord2f(float *tc, float t1, float t2)
 {
 	if (r_lightningbeam_qmbtexture.integer)
 	{
@@ -217,7 +217,7 @@ void R_CalcLightningBeamPolygonTexCoord2f(float *tc, float t1, float t2)
 
 float beamrepeatscale;
 
-void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_DrawLightningBeam_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
 	float vertex3f[12*3];

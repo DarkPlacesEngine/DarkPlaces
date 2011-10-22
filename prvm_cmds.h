@@ -1,3 +1,7 @@
+
+#ifndef PRVM_CMDS_H
+#define PRVM_CMDS_H
+
 // AK
 // Basically every vm builtin cmd should be in here.
 // All 3 builtin and extension lists can be found here
@@ -199,8 +203,8 @@ float	getserverlistindexforkey(string key)
 // nice helper macros
 
 #ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNTRANGE(p1,p2,f)	if(prog->argc < p1 || prog->argc > p2) PRVM_ERROR(#f " wrong parameter count %i (" #p1 " to " #p2 " expected ) !", prog->argc)
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f " wrong parameter count %i (" #p " expected ) !", prog->argc)
+#define VM_SAFEPARMCOUNTRANGE(p1,p2,f)	if(prog->argc < p1 || prog->argc > p2) prog->error_cmd(#f " wrong parameter count %i (" #p1 " to " #p2 " expected ) !", prog->argc)
+#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) prog->error_cmd(#f " wrong parameter count %i (" #p " expected ) !", prog->argc)
 #else
 #define VM_SAFEPARMCOUNTRANGE(p1,p2,f)
 #define VM_SAFEPARMCOUNT(p,f)
@@ -210,271 +214,269 @@ float	getserverlistindexforkey(string key)
 
 #define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
 
+// init code
+void PR_Cmd_Init(void);
+
 // builtins and other general functions
 
-void VM_CheckEmptyString (const char *s);
-void VM_VarString(int first, char *out, int outlength);
+void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);
+void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength);
 
-void VM_checkextension (void);
-void VM_error (void);
-void VM_objerror (void);
-void VM_print (void);
-void VM_bprint (void);
-void VM_sprint (void);
-void VM_centerprint (void);
-void VM_normalize (void);
-void VM_vlen (void);
-void VM_vectoyaw (void);
-void VM_vectoangles (void);
-void VM_random (void);
-void VM_localsound(void);
-void VM_break (void);
-void VM_localcmd (void);
-void VM_cvar (void);
-void VM_cvar_string(void);
-void VM_cvar_type (void);
-void VM_cvar_defstring (void);
-void VM_cvar_set (void);
-void VM_dprint (void);
-void VM_ftos (void);
-void VM_fabs (void);
-void VM_vtos (void);
-void VM_etos (void);
-void VM_stof(void);
-void VM_itof(void);
-void VM_ftoe(void);
-void VM_strftime(void);
-void VM_spawn (void);
-void VM_remove (void);
-void VM_find (void);
-void VM_findfloat (void);
-void VM_findchain (void);
-void VM_findchainfloat (void);
-void VM_findflags (void);
-void VM_findchainflags (void);
-void VM_precache_file (void);
-void VM_precache_sound (void);
-void VM_coredump (void);
+void VM_checkextension (prvm_prog_t *prog);
+void VM_error (prvm_prog_t *prog);
+void VM_objerror (prvm_prog_t *prog);
+void VM_print (prvm_prog_t *prog);
+void VM_bprint (prvm_prog_t *prog);
+void VM_sprint (prvm_prog_t *prog);
+void VM_centerprint (prvm_prog_t *prog);
+void VM_normalize (prvm_prog_t *prog);
+void VM_vlen (prvm_prog_t *prog);
+void VM_vectoyaw (prvm_prog_t *prog);
+void VM_vectoangles (prvm_prog_t *prog);
+void VM_random (prvm_prog_t *prog);
+void VM_localsound(prvm_prog_t *prog);
+void VM_break (prvm_prog_t *prog);
+void VM_localcmd (prvm_prog_t *prog);
+void VM_cvar (prvm_prog_t *prog);
+void VM_cvar_string(prvm_prog_t *prog);
+void VM_cvar_type (prvm_prog_t *prog);
+void VM_cvar_defstring (prvm_prog_t *prog);
+void VM_cvar_set (prvm_prog_t *prog);
+void VM_dprint (prvm_prog_t *prog);
+void VM_ftos (prvm_prog_t *prog);
+void VM_fabs (prvm_prog_t *prog);
+void VM_vtos (prvm_prog_t *prog);
+void VM_etos (prvm_prog_t *prog);
+void VM_stof(prvm_prog_t *prog);
+void VM_itof(prvm_prog_t *prog);
+void VM_ftoe(prvm_prog_t *prog);
+void VM_strftime(prvm_prog_t *prog);
+void VM_spawn (prvm_prog_t *prog);
+void VM_remove (prvm_prog_t *prog);
+void VM_find (prvm_prog_t *prog);
+void VM_findfloat (prvm_prog_t *prog);
+void VM_findchain (prvm_prog_t *prog);
+void VM_findchainfloat (prvm_prog_t *prog);
+void VM_findflags (prvm_prog_t *prog);
+void VM_findchainflags (prvm_prog_t *prog);
+void VM_precache_file (prvm_prog_t *prog);
+void VM_precache_sound (prvm_prog_t *prog);
+void VM_coredump (prvm_prog_t *prog);
 
-void VM_stackdump (void);
-void VM_crash(void); // REMOVE IT
-void VM_traceon (void);
-void VM_traceoff (void);
-void VM_eprint (void);
-void VM_rint (void);
-void VM_floor (void);
-void VM_ceil (void);
-void VM_nextent (void);
+void VM_stackdump (prvm_prog_t *prog);
+void VM_crash(prvm_prog_t *prog); // REMOVE IT
+void VM_traceon (prvm_prog_t *prog);
+void VM_traceoff (prvm_prog_t *prog);
+void VM_eprint (prvm_prog_t *prog);
+void VM_rint (prvm_prog_t *prog);
+void VM_floor (prvm_prog_t *prog);
+void VM_ceil (prvm_prog_t *prog);
+void VM_nextent (prvm_prog_t *prog);
 
-void VM_changelevel (void);
-void VM_sin (void);
-void VM_cos (void);
-void VM_sqrt (void);
-void VM_randomvec (void);
-void VM_registercvar (void);
-void VM_min (void);
-void VM_max (void);
-void VM_bound (void);
-void VM_pow (void);
-void VM_log (void);
-void VM_asin (void);
-void VM_acos (void);
-void VM_atan (void);
-void VM_atan2 (void);
-void VM_tan (void);
+void VM_changelevel (prvm_prog_t *prog);
+void VM_sin (prvm_prog_t *prog);
+void VM_cos (prvm_prog_t *prog);
+void VM_sqrt (prvm_prog_t *prog);
+void VM_randomvec (prvm_prog_t *prog);
+void VM_registercvar (prvm_prog_t *prog);
+void VM_min (prvm_prog_t *prog);
+void VM_max (prvm_prog_t *prog);
+void VM_bound (prvm_prog_t *prog);
+void VM_pow (prvm_prog_t *prog);
+void VM_log (prvm_prog_t *prog);
+void VM_asin (prvm_prog_t *prog);
+void VM_acos (prvm_prog_t *prog);
+void VM_atan (prvm_prog_t *prog);
+void VM_atan2 (prvm_prog_t *prog);
+void VM_tan (prvm_prog_t *prog);
 
-void VM_Files_Init(void);
-void VM_Files_CloseAll(void);
+void VM_Files_Init(prvm_prog_t *prog);
+void VM_Files_CloseAll(prvm_prog_t *prog);
 
-void VM_fopen(void);
-void VM_fclose(void);
-void VM_fgets(void);
-void VM_fputs(void);
-void VM_writetofile(void); // only used by menu
+void VM_fopen(prvm_prog_t *prog);
+void VM_fclose(prvm_prog_t *prog);
+void VM_fgets(prvm_prog_t *prog);
+void VM_fputs(prvm_prog_t *prog);
+void VM_writetofile(prvm_prog_t *prog); // only used by menu
 
-void VM_strlen(void);
-void VM_strcat(void);
-void VM_substring(void);
-void VM_stov(void);
-void VM_strzone(void);
-void VM_strunzone(void);
+void VM_strlen(prvm_prog_t *prog);
+void VM_strcat(prvm_prog_t *prog);
+void VM_substring(prvm_prog_t *prog);
+void VM_stov(prvm_prog_t *prog);
+void VM_strzone(prvm_prog_t *prog);
+void VM_strunzone(prvm_prog_t *prog);
 
 // KrimZon - DP_QC_ENTITYDATA
-void VM_numentityfields(void);
-void VM_entityfieldname(void);
-void VM_entityfieldtype(void);
-void VM_getentityfieldstring(void);
-void VM_putentityfieldstring(void);
-// And declared these ones for VM_getentityfieldstring and VM_putentityfieldstring in prvm_cmds.c
-// the function is from prvm_edict.c
-char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val);
-qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
+void VM_numentityfields(prvm_prog_t *prog);
+void VM_entityfieldname(prvm_prog_t *prog);
+void VM_entityfieldtype(prvm_prog_t *prog);
+void VM_getentityfieldstring(prvm_prog_t *prog);
+void VM_putentityfieldstring(prvm_prog_t *prog);
 
 // DRESK - String Length (not counting color codes)
-void VM_strlennocol(void);
+void VM_strlennocol(prvm_prog_t *prog);
 // DRESK - Decolorized String
-void VM_strdecolorize(void);
+void VM_strdecolorize(prvm_prog_t *prog);
 // DRESK - String Uppercase and Lowercase Support
-void VM_strtolower(void);
-void VM_strtoupper(void);
+void VM_strtolower(prvm_prog_t *prog);
+void VM_strtoupper(prvm_prog_t *prog);
 
-void VM_clcommand (void);
+void VM_clcommand (prvm_prog_t *prog);
 
-void VM_tokenize (void);
-void VM_tokenizebyseparator (void);
-void VM_argv (void);
+void VM_tokenize (prvm_prog_t *prog);
+void VM_tokenizebyseparator (prvm_prog_t *prog);
+void VM_argv (prvm_prog_t *prog);
 
-void VM_isserver(void);
-void VM_clientcount(void);
-void VM_clientstate(void);
+void VM_isserver(prvm_prog_t *prog);
+void VM_clientcount(prvm_prog_t *prog);
+void VM_clientstate(prvm_prog_t *prog);
 // not used at the moment -> not included in the common list
-void VM_getostype(void);
-void VM_getmousepos(void);
-void VM_gettime(void);
-void VM_getsoundtime(void);
-void VM_soundlength(void);
-void VM_loadfromdata(void);
-void VM_parseentitydata(void);
-void VM_loadfromfile(void);
-void VM_modulo(void);
+void VM_getostype(prvm_prog_t *prog);
+void VM_getmousepos(prvm_prog_t *prog);
+void VM_gettime(prvm_prog_t *prog);
+void VM_getsoundtime(prvm_prog_t *prog);
+void VM_soundlength(prvm_prog_t *prog);
+void VM_loadfromdata(prvm_prog_t *prog);
+void VM_parseentitydata(prvm_prog_t *prog);
+void VM_loadfromfile(prvm_prog_t *prog);
+void VM_modulo(prvm_prog_t *prog);
 
-void VM_search_begin(void);
-void VM_search_end(void);
-void VM_search_getsize(void);
-void VM_search_getfilename(void);
-void VM_chr(void);
-void VM_iscachedpic(void);
-void VM_precache_pic(void);
-void VM_freepic(void);
-void VM_drawcharacter(void);
-void VM_drawstring(void);
-void VM_drawcolorcodedstring(void);
-void VM_stringwidth(void);
-void VM_drawpic(void);
-void VM_drawrotpic(void);
-void VM_drawsubpic(void);
-void VM_drawfill(void);
-void VM_drawsetcliparea(void);
-void VM_drawresetcliparea(void);
-void VM_getimagesize(void);
+void VM_search_begin(prvm_prog_t *prog);
+void VM_search_end(prvm_prog_t *prog);
+void VM_search_getsize(prvm_prog_t *prog);
+void VM_search_getfilename(prvm_prog_t *prog);
+void VM_chr(prvm_prog_t *prog);
+void VM_iscachedpic(prvm_prog_t *prog);
+void VM_precache_pic(prvm_prog_t *prog);
+void VM_freepic(prvm_prog_t *prog);
+void VM_drawcharacter(prvm_prog_t *prog);
+void VM_drawstring(prvm_prog_t *prog);
+void VM_drawcolorcodedstring(prvm_prog_t *prog);
+void VM_stringwidth(prvm_prog_t *prog);
+void VM_drawpic(prvm_prog_t *prog);
+void VM_drawrotpic(prvm_prog_t *prog);
+void VM_drawsubpic(prvm_prog_t *prog);
+void VM_drawfill(prvm_prog_t *prog);
+void VM_drawsetcliparea(prvm_prog_t *prog);
+void VM_drawresetcliparea(prvm_prog_t *prog);
+void VM_getimagesize(prvm_prog_t *prog);
 
-void VM_findfont(void);
-void VM_loadfont(void);
+void VM_findfont(prvm_prog_t *prog);
+void VM_loadfont(prvm_prog_t *prog);
 
-void VM_makevectors (void);
-void VM_vectorvectors (void);
+void VM_makevectors (prvm_prog_t *prog);
+void VM_vectorvectors (prvm_prog_t *prog);
 
-void VM_keynumtostring (void);
-void VM_getkeybind (void);
-void VM_findkeysforcommand (void);
-void VM_stringtokeynum (void);
-void VM_setkeybind (void);
-void VM_getbindmaps (void);
-void VM_setbindmaps (void);
+void VM_keynumtostring (prvm_prog_t *prog);
+void VM_getkeybind (prvm_prog_t *prog);
+void VM_findkeysforcommand (prvm_prog_t *prog);
+void VM_stringtokeynum (prvm_prog_t *prog);
+void VM_setkeybind (prvm_prog_t *prog);
+void VM_getbindmaps (prvm_prog_t *prog);
+void VM_setbindmaps (prvm_prog_t *prog);
 
-void VM_cin_open( void );
-void VM_cin_close( void );
-void VM_cin_setstate( void );
-void VM_cin_getstate( void );
-void VM_cin_restart( void );
+void VM_cin_open(prvm_prog_t *prog);
+void VM_cin_close(prvm_prog_t *prog);
+void VM_cin_setstate(prvm_prog_t *prog);
+void VM_cin_getstate(prvm_prog_t *prog);
+void VM_cin_restart(prvm_prog_t *prog);
 
-void VM_gecko_create( void );
-void VM_gecko_destroy( void );
-void VM_gecko_navigate( void );
-void VM_gecko_keyevent( void );
-void VM_gecko_movemouse( void );
-void VM_gecko_resize( void );
-void VM_gecko_get_texture_extent( void );
+void VM_gecko_create(prvm_prog_t *prog);
+void VM_gecko_destroy(prvm_prog_t *prog);
+void VM_gecko_navigate(prvm_prog_t *prog);
+void VM_gecko_keyevent(prvm_prog_t *prog);
+void VM_gecko_movemouse(prvm_prog_t *prog);
+void VM_gecko_resize(prvm_prog_t *prog);
+void VM_gecko_get_texture_extent(prvm_prog_t *prog);
 
-void VM_drawline (void);
+void VM_drawline (prvm_prog_t *prog);
 
-void VM_bitshift (void);
+void VM_bitshift (prvm_prog_t *prog);
 
-void VM_altstr_count( void );
-void VM_altstr_prepare( void );
-void VM_altstr_get( void );
-void VM_altstr_set( void );
-void VM_altstr_ins(void);
+void VM_altstr_count(prvm_prog_t *prog);
+void VM_altstr_prepare(prvm_prog_t *prog);
+void VM_altstr_get(prvm_prog_t *prog);
+void VM_altstr_set(prvm_prog_t *prog);
+void VM_altstr_ins(prvm_prog_t *prog);
 
-void VM_buf_create(void);
-void VM_buf_del (void);
-void VM_buf_getsize (void);
-void VM_buf_copy (void);
-void VM_buf_sort (void);
-void VM_buf_implode (void);
-void VM_bufstr_get (void);
-void VM_bufstr_set (void);
-void VM_bufstr_add (void);
-void VM_bufstr_free (void);
+void VM_buf_create(prvm_prog_t *prog);
+void VM_buf_del (prvm_prog_t *prog);
+void VM_buf_getsize (prvm_prog_t *prog);
+void VM_buf_copy (prvm_prog_t *prog);
+void VM_buf_sort (prvm_prog_t *prog);
+void VM_buf_implode (prvm_prog_t *prog);
+void VM_bufstr_get (prvm_prog_t *prog);
+void VM_bufstr_set (prvm_prog_t *prog);
+void VM_bufstr_add (prvm_prog_t *prog);
+void VM_bufstr_free (prvm_prog_t *prog);
 
-void VM_changeyaw (void);
-void VM_changepitch (void);
+void VM_changeyaw (prvm_prog_t *prog);
+void VM_changepitch (prvm_prog_t *prog);
 
-void VM_uncolorstring (void);
+void VM_uncolorstring (prvm_prog_t *prog);
 
-void VM_strstrofs (void);
-void VM_str2chr (void);
-void VM_chr2str (void);
-void VM_strconv (void);
-void VM_strpad (void);
-void VM_infoadd (void);
-void VM_infoget (void);
-void VM_strncmp (void);
-void VM_strncmp (void);
-void VM_strncasecmp (void);
-void VM_registercvar (void);
-void VM_wasfreed (void);
+void VM_strstrofs (prvm_prog_t *prog);
+void VM_str2chr (prvm_prog_t *prog);
+void VM_chr2str (prvm_prog_t *prog);
+void VM_strconv (prvm_prog_t *prog);
+void VM_strpad (prvm_prog_t *prog);
+void VM_infoadd (prvm_prog_t *prog);
+void VM_infoget (prvm_prog_t *prog);
+void VM_strncmp (prvm_prog_t *prog);
+void VM_strncmp (prvm_prog_t *prog);
+void VM_strncasecmp (prvm_prog_t *prog);
+void VM_registercvar (prvm_prog_t *prog);
+void VM_wasfreed (prvm_prog_t *prog);
 
-void VM_strreplace (void);
-void VM_strireplace (void);
+void VM_strreplace (prvm_prog_t *prog);
+void VM_strireplace (prvm_prog_t *prog);
 
-void VM_crc16(void);
-void VM_digest_hex(void);
+void VM_crc16(prvm_prog_t *prog);
+void VM_digest_hex(prvm_prog_t *prog);
 
-void VM_SetTraceGlobals(const trace_t *trace);
-void VM_ClearTraceGlobals(void);
+void VM_SetTraceGlobals(prvm_prog_t *prog, const trace_t *trace);
+void VM_ClearTraceGlobals(prvm_prog_t *prog);
 
-void VM_Cmd_Init(void);
-void VM_Cmd_Reset(void);
+void VM_uri_escape (prvm_prog_t *prog);
+void VM_uri_unescape (prvm_prog_t *prog);
+void VM_whichpack (prvm_prog_t *prog);
 
-void VM_uri_escape (void);
-void VM_uri_unescape (void);
-void VM_whichpack (void);
+void VM_etof (prvm_prog_t *prog);
+void VM_uri_get (prvm_prog_t *prog);
+void VM_netaddress_resolve (prvm_prog_t *prog);
 
-void VM_etof (void);
-void VM_uri_get (void);
-void VM_netaddress_resolve (void);
+void VM_tokenize_console (prvm_prog_t *prog);
+void VM_argv_start_index (prvm_prog_t *prog);
+void VM_argv_end_index (prvm_prog_t *prog);
 
-void VM_tokenize_console (void);
-void VM_argv_start_index (void);
-void VM_argv_end_index (void);
+void VM_buf_cvarlist(prvm_prog_t *prog);
+void VM_cvar_description(prvm_prog_t *prog);
 
-void VM_buf_cvarlist(void);
-void VM_cvar_description(void);
-
-void VM_CL_getextresponse (void);
-void VM_SV_getextresponse (void);
+void VM_CL_getextresponse (prvm_prog_t *prog);
+void VM_SV_getextresponse (prvm_prog_t *prog);
 
 // Common functions between menu.dat and clsprogs
-void VM_CL_isdemo (void);
-void VM_CL_videoplaying (void);
+void VM_CL_isdemo (prvm_prog_t *prog);
+void VM_CL_videoplaying (prvm_prog_t *prog);
 
-void VM_isfunction(void);
-void VM_callfunction(void);
+void VM_isfunction(prvm_prog_t *prog);
+void VM_callfunction(prvm_prog_t *prog);
 
-void VM_sprintf(void);
+void VM_sprintf(prvm_prog_t *prog);
 
-void VM_getsurfacenumpoints(void);
-void VM_getsurfacepoint(void);
-void VM_getsurfacepointattribute(void);
-void VM_getsurfacenormal(void);
-void VM_getsurfacetexture(void);
-void VM_getsurfacenearpoint(void);
-void VM_getsurfaceclippedpoint(void);
-void VM_getsurfacenumtriangles(void);
-void VM_getsurfacetriangle(void);
+void VM_getsurfacenumpoints(prvm_prog_t *prog);
+void VM_getsurfacepoint(prvm_prog_t *prog);
+void VM_getsurfacepointattribute(prvm_prog_t *prog);
+void VM_getsurfacenormal(prvm_prog_t *prog);
+void VM_getsurfacetexture(prvm_prog_t *prog);
+void VM_getsurfacenearpoint(prvm_prog_t *prog);
+void VM_getsurfaceclippedpoint(prvm_prog_t *prog);
+void VM_getsurfacenumtriangles(prvm_prog_t *prog);
+void VM_getsurfacetriangle(prvm_prog_t *prog);
 
 // physics builtins
-void VM_physics_enable(void);
-void VM_physics_addforce(void);
-void VM_physics_addtorque(void);
+void VM_physics_enable(prvm_prog_t *prog);
+void VM_physics_addforce(prvm_prog_t *prog);
+void VM_physics_addtorque(prvm_prog_t *prog);
+
+#endif

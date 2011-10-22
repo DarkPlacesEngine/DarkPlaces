@@ -380,7 +380,7 @@ SDL_bool SDL_iPhoneKeyboardIsShown(SDL_Window * window);  // returns whether or 
 int SDL_iPhoneKeyboardToggle(SDL_Window * window); // toggles the visibility of the onscreen keyboard.  Returns 0 on success and -1 on error.
 #endif
 
-void VID_ShowKeyboard(qboolean show)
+static void VID_ShowKeyboard(qboolean show)
 {
 #ifdef __IPHONEOS__
 	if (show)
@@ -486,7 +486,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 #define MAXFINGERS 11
 int multitouch[MAXFINGERS][3];
 
-qboolean VID_TouchscreenArea(int corner, float px, float py, float pwidth, float pheight, const char *icon, float *resultmove, qboolean *resultbutton, keynum_t key)
+static qboolean VID_TouchscreenArea(int corner, float px, float py, float pwidth, float pheight, const char *icon, float *resultmove, qboolean *resultbutton, keynum_t key)
 {
 	int finger;
 	float fx, fy, fwidth, fheight;
@@ -1964,6 +1964,7 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 				static long netwm_icon[MAX_NETWM_ICON];
 				int pos = 0;
 				int i = 1;
+				char vabuf[1024];
 
 				while(data)
 				{
@@ -1981,7 +1982,7 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 					}
 					++i;
 					Mem_Free(data);
-					data = (char *) loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+					data = (char *) loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
 				}
 
 				info.info.x11.lock_func();
@@ -2011,7 +2012,7 @@ static void VID_OutputVersion(void)
 					version->major, version->minor, version->patch );
 }
 
-qboolean VID_InitModeGL(viddef_mode_t *mode)
+static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
 #if SETVIDEOMODE
@@ -2198,7 +2199,7 @@ extern cvar_t gl_info_version;
 extern cvar_t gl_info_platform;
 extern cvar_t gl_info_driver;
 
-qboolean VID_InitModeSoft(viddef_mode_t *mode)
+static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
 #if SETVIDEOMODE
 	int flags = SDL_HWSURFACE;

@@ -61,7 +61,7 @@ void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes)
 	return Mod_Skeletal_AnimateVertices_bonepose;
 }
 
-void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 
 	if (!model->surfmesh.num_vertices)
@@ -113,7 +113,7 @@ void Mod_AliasInit (void)
 #endif
 }
 
-int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
+static int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
 {
 	int i;
 	blendweights_t *weights;
@@ -130,7 +130,7 @@ int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
 	return model->num_bones + i;
 }
 
-int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
+static int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
 {
 	int i, total;
 	float scale;
@@ -173,7 +173,7 @@ int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const flo
 	return Mod_Skeletal_AddBlend(model, &newweights);
 }
 
-void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -261,7 +261,7 @@ void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend
 		}
 	}
 }
-void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -643,19 +643,14 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	int i;
 	float segmentmins[3], segmentmaxs[3];
 	msurface_t *surface;
-	static int maxvertices = 0;
-	static float *vertex3f = NULL;
+	float vertex3fbuf[1024*3];
+	float *vertex3f = vertex3fbuf;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	if (maxvertices < model->surfmesh.num_vertices)
-	{
-		if (vertex3f)
-			Z_Free(vertex3f);
-		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
-	}
+	if (model->surfmesh.num_vertices > 1024)
+		vertex3f = Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) - 1;
 	segmentmins[1] = min(start[1], end[1]) - 1;
 	segmentmins[2] = min(start[2], end[2]) - 1;
@@ -665,10 +660,9 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+	if (vertex3f != vertex3fbuf)
+		Mem_Free(vertex3f);
 }
-
-static int maxvertices = 0;
-static float *vertex3f = NULL;
 
 static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
 {
@@ -676,6 +670,8 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	vec3_t shiftstart, shiftend;
 	float segmentmins[3], segmentmaxs[3];
 	msurface_t *surface;
+	float vertex3fbuf[1024*3];
+	float *vertex3f = vertex3fbuf;
 	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
 
@@ -693,13 +689,8 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	trace->fraction = 1;
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
-	if (maxvertices < model->surfmesh.num_vertices)
-	{
-		if (vertex3f)
-			Z_Free(vertex3f);
-		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
-	}
+	if (model->surfmesh.num_vertices > 1024)
+		vertex3f = Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
 	segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
 	segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
@@ -712,16 +703,11 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	VectorAdd(end, boxmaxs, boxendmaxs);
 	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
 	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
-	if (maxvertices < model->surfmesh.num_vertices)
-	{
-		if (vertex3f)
-			Z_Free(vertex3f);
-		maxvertices = (model->surfmesh.num_vertices + 255) & ~255;
-		vertex3f = (float *)Z_Malloc(maxvertices * sizeof(float[3]));
-	}
 	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+	if (vertex3f != vertex3fbuf)
+		Mem_Free(vertex3f);
 }
 
 static void Mod_ConvertAliasVerts (int inverts, trivertx_t *v, trivertx_t *out, int *vertremap)
@@ -842,7 +828,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername)
 {
 	int i;
-	static char stripbuf[MAX_QPATH];
+	char stripbuf[MAX_QPATH];
 	skinfileitem_t *skinfileitem;
 	if(developer_extra.integer)
 		Con_DPrintf("Looking up texture for %s (default: %s)\n", meshname, shadername);
@@ -908,6 +894,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	float *vertst;
 	int *vertonseam, *vertremap;
 	skinfile_t *skinfiles;
+	char vabuf[1024];
 
 	datapointer = (unsigned char *)buffer;
 	pinmodel = (mdl_t *)datapointer;
@@ -1186,7 +1173,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		// check for skins that don't exist in the model, but do exist as external images
 		// (this was added because yummyluv kept pestering me about support for it)
 		// TODO: support shaders here?
-		while ((tempskinframe = R_SkinFrame_LoadExternal(va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false)))
+		while ((tempskinframe = R_SkinFrame_LoadExternal(va(vabuf, sizeof(vabuf), "%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, false)))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;

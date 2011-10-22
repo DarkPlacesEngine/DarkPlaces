@@ -84,7 +84,14 @@ void Sys_Quit (int returnvalue);
  */
 void Sys_AllowProfiling (qboolean enable);
 
-double Sys_DoubleTime (void);
+typedef struct sys_cleantime_s
+{
+	double dirtytime; // last value gotten from Sys_DirtyTime()
+	double cleantime; // sanitized linearly increasing time since app start
+}
+sys_cleantime_t;
+
+double Sys_DirtyTime(void);
 
 void Sys_ProvideSelfFD (void);
 

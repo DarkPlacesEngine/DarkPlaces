@@ -596,15 +596,14 @@ int u8_fromchar(Uchar w, char *to, size_t maxlen)
  * @param l         The number of bytes without the terminating null.
  * @return          A statically allocated buffer containing the character's utf8 representation, or NULL if it fails.
  */
-char *u8_encodech(Uchar ch, size_t *l)
+char *u8_encodech(Uchar ch, size_t *l, char *buf16)
 {
-	static char buf[16];
 	size_t len;
-	len = u8_fromchar(ch, buf, sizeof(buf));
+	len = u8_fromchar(ch, buf16, 16);
 	if (len > 0)
 	{
 		if (l) *l = len;
-		return buf;
+		return buf16;
 	}
 	return NULL;
 }

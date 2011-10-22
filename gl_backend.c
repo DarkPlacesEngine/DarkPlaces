@@ -347,7 +347,7 @@ unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
-void GL_VBOStats_f(void)
+static void GL_VBOStats_f(void)
 {
 	GL_Mesh_ListVBOs(true);
 }
@@ -2523,7 +2523,7 @@ void R_Mesh_Start(void)
 	}
 }
 
-qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
+static qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
 {
 	int shaderobject;
 	int shadercompiled;
@@ -2620,18 +2620,6 @@ void GL_Backend_FreeProgram(unsigned int prog)
 	CHECKGLERROR
 	qglDeleteProgram(prog);
 	CHECKGLERROR
-}
-
-void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
-{
-	int i;
-	if (offset)
-	{
-		for (i = 0;i < count;i++)
-			*out++ = *in++ + offset;
-	}
-	else
-		memcpy(out, in, sizeof(*out) * count);
 }
 
 // renders triangles using vertices from the active arrays

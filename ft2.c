@@ -363,7 +363,7 @@ ft2_font_t *Font_Alloc(void)
 	return (ft2_font_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_t));
 }
 
-qboolean Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
+static qboolean Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
 {
 	ft2_attachment_t *na;
 
@@ -410,6 +410,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 {
 	int s, count, i;
 	ft2_font_t *ft2, *fbfont, *fb;
+	char vabuf[1024];
 
 	ft2 = Font_Alloc();
 	if (!ft2)
@@ -457,10 +458,10 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 
 		if (!Font_LoadFile(dpfnt->fallbacks[i], dpfnt->fallback_faces[i], &dpfnt->settings, fb))
 		{
-			if(!FS_FileExists(va("%s.tga", dpfnt->fallbacks[i])))
-			if(!FS_FileExists(va("%s.png", dpfnt->fallbacks[i])))
-			if(!FS_FileExists(va("%s.jpg", dpfnt->fallbacks[i])))
-			if(!FS_FileExists(va("%s.pcx", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va(vabuf, sizeof(vabuf), "%s.tga", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va(vabuf, sizeof(vabuf), "%s.png", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va(vabuf, sizeof(vabuf), "%s.jpg", dpfnt->fallbacks[i])))
+			if(!FS_FileExists(va(vabuf, sizeof(vabuf), "%s.pcx", dpfnt->fallbacks[i])))
 				Con_Printf("Failed to load font %s for fallback %i of font %s\n", dpfnt->fallbacks[i], i, name);
 			Mem_Free(fb);
 			continue;
@@ -612,7 +613,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 	return true;
 }
 
-void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
+static void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 {
 	int needed, x, y;
 	float gausstable[2*POSTPROCESS_MAXRADIUS+1];
@@ -666,7 +667,7 @@ void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 	}
 }
 
-void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
+static void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitch, int bpp, int w, int h, int *pad_l, int *pad_r, int *pad_t, int *pad_b)
 {
 	int x, y;
 
@@ -1109,6 +1110,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	int tp;
 	FT_Int32 load_flags;
 	int gpad_l, gpad_r, gpad_t, gpad_b;
+	char vabuf[1024];
 
 	int pitch;
 	int gR, gC; // glyph position: row and column
@@ -1545,10 +1547,10 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 				data[x*4+0] = data[x*4+2];
 				data[x*4+2] = b;
 			}
-			Image_WriteTGABGRA(va("%s.tga", map_identifier), w, h, data);
+			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), w, h, data);
 #ifndef USE_GLES2
 			if (r_font_compress.integer && qglGetCompressedTexImageARB && tex)
-				R_SaveTextureDDSFile(tex, va("dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
+				R_SaveTextureDDSFile(tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
 #endif
 		}
 	}

@@ -156,7 +156,7 @@ static int Q3PatchTesselation(float largestsquared3xcurvearea, float tolerance)
 		// maps [4..8[ to 4
 }
 
-float Squared3xCurveArea(const float *a, const float *control, const float *b, int components)
+static float Squared3xCurveArea(const float *a, const float *control, const float *b, int components)
 {
 #if 0
 	// mimicing the old behaviour with the new code...

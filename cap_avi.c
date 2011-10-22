@@ -188,7 +188,7 @@ static void SCR_CaptureVideo_RIFF_IndexEntry(const char *chunkfourcc, int chunks
 {
 	LOAD_FORMATSPECIFIC_AVI();
 	if(!format->canseek)
-		Host_Error("SCR_CaptureVideo_RIFF_IndexEntry called on non-seekable AVI");
+		Sys_Error("SCR_CaptureVideo_RIFF_IndexEntry called on non-seekable AVI");
 
 	if (format->riffstacklevel != 2)
 		Sys_Error("SCR_Capturevideo_RIFF_IndexEntry: RIFF stack level is %i (should be 2)\n", format->riffstacklevel);
@@ -209,7 +209,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	fs_offset_t pos, sz;
 	
 	if(!format->canseek)
-		Host_Error("SCR_CaptureVideo_RIFF_MakeIxChunk called on non-seekable AVI");
+		Sys_Error("SCR_CaptureVideo_RIFF_MakeIxChunk called on non-seekable AVI");
 
 	if(*masteridx_count >= AVI_MASTER_INDEX_SIZE)
 		return;
@@ -404,7 +404,7 @@ static void SCR_CaptureVideo_Avi_VideoFrames(int num)
 	}
 }
 
-void SCR_CaptureVideo_Avi_EndVideo(void)
+static void SCR_CaptureVideo_Avi_EndVideo(void)
 {
 	LOAD_FORMATSPECIFIC_AVI();
 
@@ -449,7 +449,7 @@ void SCR_CaptureVideo_Avi_EndVideo(void)
 	Mem_Free(format);
 }
 
-void SCR_CaptureVideo_Avi_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
+static void SCR_CaptureVideo_Avi_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	LOAD_FORMATSPECIFIC_AVI();
 	int x;
@@ -502,12 +502,13 @@ void SCR_CaptureVideo_Avi_BeginVideo(void)
 	int n, d;
 	unsigned int i;
 	double aspect;
+	char vabuf[1024];
 
 	aspect = vid.width / (vid.height * vid_pixelheight.value);
 
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_AVI_I420;
 	cls.capturevideo.formatextension = "avi";
-	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
+	cls.capturevideo.videofile = FS_OpenRealFile(va(vabuf, sizeof(vabuf), "%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	cls.capturevideo.endvideo = SCR_CaptureVideo_Avi_EndVideo;
 	cls.capturevideo.videoframes = SCR_CaptureVideo_Avi_VideoFrames;
 	cls.capturevideo.soundframe = SCR_CaptureVideo_Avi_SoundFrame;

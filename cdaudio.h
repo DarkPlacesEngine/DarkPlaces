@@ -49,3 +49,18 @@ void CDAudio_Shutdown(void);
 void CDAudio_Update(void);
 float CDAudio_GetPosition(void);
 void CDAudio_StartPlaylist(qboolean resume);
+
+// Prototypes of the system dependent functions
+void CDAudio_SysEject (void);
+void CDAudio_SysCloseDoor (void);
+int CDAudio_SysGetAudioDiskInfo (void);
+float CDAudio_SysGetVolume (void);
+void CDAudio_SysSetVolume (float volume);
+int CDAudio_SysPlay (int track);
+int CDAudio_SysStop (void);
+int CDAudio_SysPause (void);
+int CDAudio_SysResume (void);
+int CDAudio_SysUpdate (void);
+void CDAudio_SysInit (void);
+int CDAudio_SysStartup (void);
+void CDAudio_SysShutdown (void);

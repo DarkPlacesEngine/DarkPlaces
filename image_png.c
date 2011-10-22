@@ -217,7 +217,7 @@ static struct
 } my_png;
 
 //LordHavoc: removed __cdecl prefix, added overrun protection, and rewrote this to be more efficient
-void PNG_fReadData(void *png, unsigned char *data, size_t length)
+static void PNG_fReadData(void *png, unsigned char *data, size_t length)
 {
 	size_t l;
 	l = my_png.tmpBuflength - my_png.tmpi;
@@ -234,21 +234,21 @@ void PNG_fReadData(void *png, unsigned char *data, size_t length)
 	//Com_HexDumpToConsole(data, (int)length);
 }
 
-void PNG_fWriteData(void *png, unsigned char *data, size_t length)
+static void PNG_fWriteData(void *png, unsigned char *data, size_t length)
 {
 	FS_Write(my_png.outfile, data, length);
 }
 
-void PNG_fFlushData(void *png)
+static void PNG_fFlushData(void *png)
 {
 }
 
-void PNG_error_fn(void *png, const char *message)
+static void PNG_error_fn(void *png, const char *message)
 {
 	Con_Printf("PNG_LoadImage: error: %s\n", message);
 }
 
-void PNG_warning_fn(void *png, const char *message)
+static void PNG_warning_fn(void *png, const char *message)
 {
 	Con_Printf("PNG_LoadImage: warning: %s\n", message);
 }

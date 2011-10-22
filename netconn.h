@@ -221,6 +221,17 @@ typedef struct netconn_s
 
 	char address[128];
 	crypto_t crypto;
+
+	// statistic counters
+	int packetsSent;
+	int packetsReSent;
+	int packetsReceived;
+	int receivedDuplicateCount;
+	int droppedDatagrams;
+	int unreliableMessagesSent;
+	int unreliableMessagesReceived;
+	int reliableMessagesSent;
+	int reliableMessagesReceived;
 } netconn_t;
 
 extern netconn_t *netconn_list;
@@ -389,7 +400,10 @@ extern int masterreplycount;
 extern int serverquerycount;
 extern int serverreplycount;
 
-extern sizebuf_t net_message;
+extern sizebuf_t cl_message;
+extern sizebuf_t sv_message;
+extern char cl_readstring[MAX_INPUTLINE];
+extern char sv_readstring[MAX_INPUTLINE];
 
 extern cvar_t sv_public;
 

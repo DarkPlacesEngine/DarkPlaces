@@ -5,6 +5,7 @@ extern cvar_t sv_autodemo_perclient_discardable;
 
 void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrack)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	char name[MAX_QPATH];
 
 	if(client->sv_demo_file != NULL)
@@ -30,6 +31,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 
 void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clienttoserver)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int len, i;
 	float f;
 	int temp;
@@ -52,6 +54,7 @@ void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clien
 
 void SV_StopDemoRecording(client_t *client)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	sizebuf_t buf;
 	unsigned char bufdata[64];
 

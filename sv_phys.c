@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_phys.c
 
 #include "quakedef.h"
+#include "prvm_cmds.h"
 
 /*
 
@@ -43,7 +44,7 @@ solid_edge items only clip against bsp models.
 
 void SV_Physics_Toss (prvm_edict_t *ent);
 
-int SV_GetPitchSign(prvm_edict_t *ent)
+int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	dp_model_t *model;
 	if (
@@ -71,6 +72,7 @@ LINE TESTING IN HULLS
 
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (passedict)
 	{
 		int dphitcontentsmask = (int)PRVM_serveredictfloat(passedict, dphitcontentsmask);
@@ -101,6 +103,7 @@ SV_TracePoint
 */
 trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, bodysupercontents;
 	int passedictprog;
 	float pitchsign = 1;
@@ -213,16 +216,16 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		if ((int) PRVM_serveredictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 		{
 			model = SV_GetModelFromEdict(touch);
-			pitchsign = SV_GetPitchSign(touch);
+			pitchsign = SV_GetPitchSign(prog, touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2], pitchsign * PRVM_serveredictvector(touch, angles)[0], PRVM_serveredictvector(touch, angles)[1], PRVM_serveredictvector(touch, angles)[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_GenerateFrameGroupBlend(prog, touch->priv.server->framegroupblend, touch);
 		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
-		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
+		VM_UpdateEdictSkeleton(prog, touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)PRVM_serveredictfloat(touch, flags) & FL_MONSTER)
 			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_serveredictvector(touch, mins), PRVM_serveredictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
 		else
@@ -246,6 +249,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t pEnd, int type, prvm_edict
 trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 #endif
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, bodysupercontents;
 	int passedictprog;
 	float pitchsign = 1;
@@ -379,16 +383,16 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		if ((int) PRVM_serveredictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 		{
 			model = SV_GetModelFromEdict(touch);
-			pitchsign = SV_GetPitchSign(touch);
+			pitchsign = SV_GetPitchSign(prog, touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2], pitchsign * PRVM_serveredictvector(touch, angles)[0], PRVM_serveredictvector(touch, angles)[1], PRVM_serveredictvector(touch, angles)[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_GenerateFrameGroupBlend(prog, touch->priv.server->framegroupblend, touch);
 		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
-		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
+		VM_UpdateEdictSkeleton(prog, touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)PRVM_serveredictfloat(touch, flags) & FL_MONSTER)
 			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_serveredictvector(touch, mins), PRVM_serveredictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
@@ -424,6 +428,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 #endif
 #endif
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
 	int passedictprog;
@@ -592,16 +597,16 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		if ((int) PRVM_serveredictfloat(touch, solid) == SOLID_BSP || type == MOVE_HITMODEL)
 		{
 			model = SV_GetModelFromEdict(touch);
-			pitchsign = SV_GetPitchSign(touch);
+			pitchsign = SV_GetPitchSign(prog, touch);
 		}
 		if (model)
 			Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2], pitchsign * PRVM_serveredictvector(touch, angles)[0], PRVM_serveredictvector(touch, angles)[1], PRVM_serveredictvector(touch, angles)[2], 1);
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
-		VM_GenerateFrameGroupBlend(touch->priv.server->framegroupblend, touch);
+		VM_GenerateFrameGroupBlend(prog, touch->priv.server->framegroupblend, touch);
 		VM_FrameBlendFromFrameGroupBlend(touch->priv.server->frameblend, touch->priv.server->framegroupblend, model);
-		VM_UpdateEdictSkeleton(touch, model, touch->priv.server->frameblend);
+		VM_UpdateEdictSkeleton(prog, touch, model, touch->priv.server->frameblend);
 		if (type == MOVE_MISSILE && (int)PRVM_serveredictfloat(touch, flags) & FL_MONSTER)
 			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_serveredictvector(touch, mins), PRVM_serveredictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
@@ -640,6 +645,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 int SV_PointSuperContents(const vec3_t point)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int supercontents = 0;
 	int i;
 	prvm_edict_t *touch;
@@ -701,6 +707,7 @@ Linking entities into the world culling system
 
 int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_edict_t **resultedicts)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t paddedmins, paddedmaxs;
 	if (maxedicts < 1 || resultedicts == NULL)
 		return 0;
@@ -729,6 +736,7 @@ int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_e
 
 void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(touch);
 	PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(ent);
 	PRVM_serverglobalfloat(time) = sv.time;
@@ -745,11 +753,12 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent)
 	PRVM_serverglobalfloat(trace_dphitcontents) = 0;
 	PRVM_serverglobalfloat(trace_dphitq3surfaceflags) = 0;
 	PRVM_serverglobalstring(trace_dphittexturename) = 0;
-	PRVM_ExecuteProgram (PRVM_serveredictfunction(touch, touch), "QC function self.touch is missing");
+	prog->ExecuteProgram(prog, PRVM_serveredictfunction(touch, touch), "QC function self.touch is missing");
 }
 
 void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, numtouchedicts, old_self, old_other;
 	prvm_edict_t *touch;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -826,6 +835,7 @@ SV_LinkEdict
 */
 void SV_LinkEdict (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	dp_model_t *model;
 	vec3_t mins, maxs;
 	int modelindex;
@@ -844,9 +854,9 @@ void SV_LinkEdict (prvm_edict_t *ent)
 	}
 	model = SV_GetModelByIndex(modelindex);
 
-	VM_GenerateFrameGroupBlend(ent->priv.server->framegroupblend, ent);
+	VM_GenerateFrameGroupBlend(prog, ent->priv.server->framegroupblend, ent);
 	VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
-	VM_UpdateEdictSkeleton(ent, model, ent->priv.server->frameblend);
+	VM_UpdateEdictSkeleton(prog, ent, model, ent->priv.server->frameblend);
 
 // set the abs box
 
@@ -942,6 +952,7 @@ returns true if the entity is in solid currently
 */
 static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int contents;
 	vec3_t org;
 	trace_t trace;
@@ -996,34 +1007,6 @@ static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
 	return false;
 }
 
-/*
-================
-SV_CheckAllEnts
-================
-*/
-void SV_CheckAllEnts (void)
-{
-	int e;
-	prvm_edict_t *check;
-
-	// see if any solid entities are inside the final position
-	check = PRVM_NEXT_EDICT(prog->edicts);
-	for (e = 1;e < prog->num_edicts;e++, check = PRVM_NEXT_EDICT(check))
-	{
-		if (check->priv.server->free)
-			continue;
-		if (PRVM_serveredictfloat(check, movetype) == MOVETYPE_PUSH
-		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_NONE
-		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_FOLLOW
-		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_NOCLIP
-		 || PRVM_serveredictfloat(check, movetype) == MOVETYPE_FLY_WORLDONLY)
-			continue;
-
-		if (SV_TestEntityPosition (check, vec3_origin))
-			Con_Print("entity in invalid position\n");
-	}
-}
-
 // DRESK - Support for Entity Contents Transition Event
 /*
 ================
@@ -1032,8 +1015,9 @@ SV_CheckContentsTransition
 returns true if entity had a valid contentstransition function call
 ================
 */
-int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
+static int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int bValidFunctionCall;
 
 	// Default Valid Function Call to False
@@ -1047,14 +1031,16 @@ int SV_CheckContentsTransition(prvm_edict_t *ent, const int nContents)
 			// Assign Valid Function
 			bValidFunctionCall = true;
 			// Prepare Parameters (Original Contents, New Contents)
-				// Original Contents
-				PRVM_G_FLOAT(OFS_PARM0) = PRVM_serveredictfloat(ent, watertype);
-				// New Contents
-				PRVM_G_FLOAT(OFS_PARM1) = nContents;
-				// Assign Self
-				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+			// Original Contents
+			PRVM_G_FLOAT(OFS_PARM0) = PRVM_serveredictfloat(ent, watertype);
+			// New Contents
+			PRVM_G_FLOAT(OFS_PARM1) = nContents;
+			// Assign Self
+			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+			// Set Time
+			PRVM_serverglobalfloat(time) = sv.time;
 			// Execute VM Function
-			PRVM_ExecuteProgram(PRVM_serveredictfunction(ent, contentstransition), "contentstransition: NULL function");
+			prog->ExecuteProgram(prog, PRVM_serveredictfunction(ent, contentstransition), "contentstransition: NULL function");
 		}
 	}
 
@@ -1070,6 +1056,7 @@ SV_CheckVelocity
 */
 void SV_CheckVelocity (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	float wishspeed;
 
@@ -1080,12 +1067,12 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 	{
 		if (IS_NAN(PRVM_serveredictvector(ent, velocity)[i]))
 		{
-			Con_Printf("Got a NaN velocity on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)));
+			Con_Printf("Got a NaN velocity on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			PRVM_serveredictvector(ent, velocity)[i] = 0;
 		}
 		if (IS_NAN(PRVM_serveredictvector(ent, origin)[i]))
 		{
-			Con_Printf("Got a NaN origin on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)));
+			Con_Printf("Got a NaN origin on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			PRVM_serveredictvector(ent, origin)[i] = 0;
 		}
 	}
@@ -1117,8 +1104,9 @@ in a frame.  Not used for pushmove objects, because they must be exact.
 Returns false if the entity removed itself.
 =============
 */
-qboolean SV_RunThink (prvm_edict_t *ent)
+static qboolean SV_RunThink (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int iterations;
 
 	// don't let things stay in the past.
@@ -1132,7 +1120,7 @@ qboolean SV_RunThink (prvm_edict_t *ent)
 		PRVM_serveredictfloat(ent, nextthink) = 0;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 		PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(prog->edicts);
-		PRVM_ExecuteProgram (PRVM_serveredictfunction(ent, think), "QC function self.think is missing");
+		prog->ExecuteProgram(prog, PRVM_serveredictfunction(ent, think), "QC function self.think is missing");
 		// mods often set nextthink to time to cause a think every frame,
 		// we don't want to loop in that case, so exit if the new nextthink is
 		// <= the time the qc was told, also exit if it is past the end of the
@@ -1150,30 +1138,30 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-extern void VM_SetTraceGlobals(const trace_t *trace);
-extern sizebuf_t vm_tempstringsbuf;
-void SV_Impact (prvm_edict_t *e1, trace_t *trace)
+static void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
 
 	old_self = PRVM_serverglobaledict(self);
 	old_other = PRVM_serverglobaledict(other);
-	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
 
-	VM_SetTraceGlobals(trace);
+	VM_SetTraceGlobals(prog, trace);
 
-	PRVM_serverglobalfloat(time) = sv.time;
 	if (!e1->priv.server->free && !e2->priv.server->free && PRVM_serveredictfunction(e1, touch) && PRVM_serveredictfloat(e1, solid) != SOLID_NOT)
 	{
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(e1);
 		PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(e2);
-		PRVM_ExecuteProgram (PRVM_serveredictfunction(e1, touch), "QC function self.touch is missing");
+		prog->ExecuteProgram(prog, PRVM_serveredictfunction(e1, touch), "QC function self.touch is missing");
 	}
 
 	if (!e1->priv.server->free && !e2->priv.server->free && PRVM_serveredictfunction(e2, touch) && PRVM_serveredictfloat(e2, solid) != SOLID_NOT)
 	{
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(e2);
 		PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(e1);
 		VectorCopy(PRVM_serveredictvector(e2, origin), PRVM_serverglobalvector(trace_endpos));
@@ -1184,12 +1172,12 @@ void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 		PRVM_serverglobalfloat(trace_dphitcontents) = 0;
 		PRVM_serverglobalfloat(trace_dphitq3surfaceflags) = 0;
 		PRVM_serverglobalstring(trace_dphittexturename) = 0;
-		PRVM_ExecuteProgram (PRVM_serveredictfunction(e2, touch), "QC function self.touch is missing");
+		prog->ExecuteProgram(prog, PRVM_serveredictfunction(e2, touch), "QC function self.touch is missing");
 	}
 
 	PRVM_serverglobaledict(self) = old_self;
 	PRVM_serverglobaledict(other) = old_other;
-	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }
 
 
@@ -1202,7 +1190,7 @@ returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
 #define STOP_EPSILON 0.1
-void ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
+static void ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
 	int i;
 	float backoff;
@@ -1234,6 +1222,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 #define MAX_CLIP_PLANES 5
 static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask, float stepheight)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int blocked, bumpcount;
 	int i, j, numplanes;
 	float d, time_left, gravity;
@@ -1461,6 +1450,7 @@ SV_Gravity
 */
 static float SV_Gravity (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float ent_gravity;
 
 	ent_gravity = PRVM_serveredictfloat(ent, gravity);
@@ -1480,6 +1470,7 @@ PUSHMOVE
 
 static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int bump;
 	trace_t stucktrace;
 	vec3_t stuckorigin;
@@ -1560,6 +1551,7 @@ static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pi
 
 static qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int bump;
 	trace_t stucktrace;
 	vec3_t stuckorigin;
@@ -1603,6 +1595,7 @@ Returns true if the push did not result in the entity being teleported by QC cod
 */
 static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean failonbmodelstartsolid, qboolean dolink)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int solid;
 	int movetype;
 	int type;
@@ -1669,8 +1662,9 @@ SV_PushMove
 
 ============
 */
-void SV_PushMove (prvm_edict_t *pusher, float movetime)
+static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, e, index;
 	int pusherowner, pusherprog;
 	int checkcontents;
@@ -1949,9 +1943,10 @@ void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
 			if (PRVM_serveredictfunction(pusher, blocked))
 			{
+				PRVM_serverglobalfloat(time) = sv.time;
 				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(pusher);
 				PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(check);
-				PRVM_ExecuteProgram (PRVM_serveredictfunction(pusher, blocked), "QC function self.blocked is missing");
+				prog->ExecuteProgram(prog, PRVM_serveredictfunction(pusher, blocked), "QC function self.blocked is missing");
 			}
 			break;
 		}
@@ -1967,8 +1962,9 @@ SV_Physics_Pusher
 
 ================
 */
-void SV_Physics_Pusher (prvm_edict_t *ent)
+static void SV_Physics_Pusher (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float thinktime, oldltime, movetime;
 
 	oldltime = PRVM_serveredictfloat(ent, ltime);
@@ -1993,7 +1989,7 @@ void SV_Physics_Pusher (prvm_edict_t *ent)
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
 		PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(prog->edicts);
-		PRVM_ExecuteProgram (PRVM_serveredictfunction(ent, think), "QC function self.think is missing");
+		prog->ExecuteProgram(prog, PRVM_serveredictfunction(ent, think), "QC function self.think is missing");
 	}
 }
 
@@ -2031,8 +2027,9 @@ typedef enum unstickresult_e
 }
 unstickresult_t;
 
-unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t offset)
+static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t offset)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, maxunstick;
 
 	// if not stuck in a bmodel, just return
@@ -2077,17 +2074,18 @@ unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t offset)
 
 qboolean SV_UnstickEntity (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
 	switch(SV_UnstickEntityReturnOffset(ent, offset))
 	{
 		case UNSTICK_GOOD:
 			return true;
 		case UNSTICK_UNSTUCK:
-			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
+			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
 			return true;
 		case UNSTICK_STUCK:
 			if (developer_extra.integer)
-				Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)));
+				Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			return false;
 		default:
 			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
@@ -2103,8 +2101,9 @@ This is a big hack to try and fix the rare case of getting stuck in the world
 clipping hull.
 =============
 */
-void SV_CheckStuck (prvm_edict_t *ent)
+static void SV_CheckStuck (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
 
 	switch(SV_UnstickEntityReturnOffset(ent, offset))
@@ -2113,18 +2112,18 @@ void SV_CheckStuck (prvm_edict_t *ent)
 			VectorCopy (PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, oldorigin));
 			break;
 		case UNSTICK_UNSTUCK:
-			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
+			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
 			break;
 		case UNSTICK_STUCK:
 			VectorSubtract(PRVM_serveredictvector(ent, oldorigin), PRVM_serveredictvector(ent, origin), offset);
 			if (!SV_TestEntityPosition(ent, offset))
 			{
-				Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)));
+				Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 				SV_LinkEdict(ent);
 				//SV_LinkEdict_TouchAreaGrid(ent);
 			}
 			else
-				Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(PRVM_serveredictstring(ent, classname)));
+				Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			break;
 		default:
 			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
@@ -2137,8 +2136,9 @@ void SV_CheckStuck (prvm_edict_t *ent)
 SV_CheckWater
 =============
 */
-qboolean SV_CheckWater (prvm_edict_t *ent)
+static qboolean SV_CheckWater (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int cont;
 	int nNativeContents;
 	vec3_t point;
@@ -2188,8 +2188,9 @@ SV_WallFriction
 
 ============
 */
-void SV_WallFriction (prvm_edict_t *ent, float *stepnormal)
+static void SV_WallFriction (prvm_edict_t *ent, float *stepnormal)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float d, i;
 	vec3_t forward, into, side;
 
@@ -2274,8 +2275,9 @@ SV_WalkMove
 Only used by players
 ======================
 */
-void SV_WalkMove (prvm_edict_t *ent)
+static void SV_WalkMove (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int clip;
 	int oldonground;
 	//int originalmove_clip;
@@ -2479,8 +2481,9 @@ SV_Physics_Follow
 Entities that are "stuck" to another entity
 =============
 */
-void SV_Physics_Follow (prvm_edict_t *ent)
+static void SV_Physics_Follow (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t vf, vr, vu, angles, v;
 	prvm_edict_t *e;
 
@@ -2531,8 +2534,9 @@ SV_CheckWaterTransition
 
 =============
 */
-void SV_CheckWaterTransition (prvm_edict_t *ent)
+static void SV_CheckWaterTransition (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	// LordHavoc: bugfixes in this function are keyed to the sv_gameplayfix_bugfixedcheckwatertransition cvar - if this cvar is 0 then all the original bugs should be reenabled for compatibility
 	int cont;
 	cont = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(PRVM_serveredictvector(ent, origin)));
@@ -2579,6 +2583,7 @@ Toss, bounce, and fly movement.  When onground, do nothing.
 
 void SV_Physics_Toss (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	trace_t trace;
 	vec3_t move;
 	vec_t movetime;
@@ -2744,8 +2749,9 @@ This is also used for objects that have become still on the ground, but
 will fall if the floor is pulled out from under them.
 =============
 */
-void SV_Physics_Step (prvm_edict_t *ent)
+static void SV_Physics_Step (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int flags = (int)PRVM_serveredictfloat(ent, flags);
 
 	// DRESK
@@ -2787,14 +2793,16 @@ void SV_Physics_Step (prvm_edict_t *ent)
 				if(PRVM_serveredictfunction(ent, movetypesteplandevent))
 				{ // Valid Function; Execute
 					// Prepare Parameters
-						// Assign Velocity at Impact
-						PRVM_G_VECTOR(OFS_PARM0)[0] = backupVelocity[0];
-						PRVM_G_VECTOR(OFS_PARM0)[1] = backupVelocity[1];
-						PRVM_G_VECTOR(OFS_PARM0)[2] = backupVelocity[2];
-						// Assign Self
-						PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+					// Assign Velocity at Impact
+					PRVM_G_VECTOR(OFS_PARM0)[0] = backupVelocity[0];
+					PRVM_G_VECTOR(OFS_PARM0)[1] = backupVelocity[1];
+					PRVM_G_VECTOR(OFS_PARM0)[2] = backupVelocity[2];
+					// Assign Self
+					PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+					// Set Time
+					PRVM_serverglobalfloat(time) = sv.time;
 					// Execute VM Function
-					PRVM_ExecuteProgram(PRVM_serveredictfunction(ent, movetypesteplandevent), "movetypesteplandevent: NULL function");
+					prog->ExecuteProgram(prog, PRVM_serveredictfunction(ent, movetypesteplandevent), "movetypesteplandevent: NULL function");
 				}
 				else
 				// Check for Engine Landing Sound
@@ -2821,6 +2829,7 @@ void SV_Physics_Step (prvm_edict_t *ent)
 
 static void SV_Physics_Entity (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	// don't run think/move on newly spawned projectiles as it messes up
 	// movement interpolation and rocket trails, and is inconsistent with
 	// respect to entities spawned in the same frame
@@ -2886,6 +2895,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 
 void SV_Physics_ClientMove(void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t *ent;
 	ent = host_client->edict;
 
@@ -2897,7 +2907,7 @@ void SV_Physics_ClientMove(void)
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobalfloat(frametime) = 0;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram (PRVM_serverfunction(PlayerPreThink), "QC function PlayerPreThink is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(PlayerPreThink), "QC function PlayerPreThink is missing");
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
 
 	// make sure the velocity is sane (not a NaN)
@@ -2910,7 +2920,7 @@ void SV_Physics_ClientMove(void)
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobalfloat(frametime) = 0;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram (PRVM_serverfunction(PlayerPostThink), "QC function PlayerPostThink is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(PlayerPostThink), "QC function PlayerPostThink is missing");
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
 
 	if(PRVM_serveredictfloat(ent, fixangle))
@@ -2927,6 +2937,7 @@ void SV_Physics_ClientMove(void)
 
 static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
 	if (!host_client->spawned)
 		return;
@@ -2947,7 +2958,7 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 	// call standard client pre-think
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram(PRVM_serverfunction(PlayerPreThink), "QC function PlayerPreThink is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(PlayerPreThink), "QC function PlayerPreThink is missing");
 
 	// make sure the velocity is still sane (not a NaN)
 	SV_CheckVelocity(ent);
@@ -2955,6 +2966,7 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 
 static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
 	if (!host_client->spawned)
 		return;
@@ -2965,7 +2977,7 @@ static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
 	// call standard player post-think
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-	PRVM_ExecuteProgram(PRVM_serverfunction(PlayerPostThink), "QC function PlayerPostThink is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(PlayerPostThink), "QC function PlayerPostThink is missing");
 
 	// make sure the velocity is still sane (not a NaN)
 	SV_CheckVelocity(ent);
@@ -2991,6 +3003,7 @@ static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
 
 static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
 	if (!host_client->spawned)
 	{
@@ -3067,6 +3080,7 @@ SV_Physics
 */
 void SV_Physics (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	prvm_edict_t *ent;
 
@@ -3075,7 +3089,7 @@ void SV_Physics (void)
 	PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(prog->edicts);
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
-	PRVM_ExecuteProgram (PRVM_serverfunction(StartFrame), "QC function StartFrame is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(StartFrame), "QC function StartFrame is missing");
 
 	// run physics engine
 	World_Physics_Frame(&sv.world, sv.frametime, sv_gravity.value);
@@ -3142,11 +3156,11 @@ void SV_Physics (void)
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(prog->edicts);
 		PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(prog->edicts);
 		PRVM_serverglobalfloat(time) = sv.time;
-		PRVM_ExecuteProgram (PRVM_serverfunction(EndFrame), "QC function EndFrame is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(EndFrame), "QC function EndFrame is missing");
 	}
 
 	// decrement prog->num_edicts if the highest number entities died
-	for (;PRVM_ED_CanAlloc(PRVM_EDICT_NUM(prog->num_edicts - 1));prog->num_edicts--);
+	for (;PRVM_ED_CanAlloc(prog, PRVM_EDICT_NUM(prog->num_edicts - 1));prog->num_edicts--);
 
 	if (!sv_freezenonclients.integer)
 		sv.time += sv.frametime;

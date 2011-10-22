@@ -112,6 +112,43 @@ typedef struct prvm_edict_s
 	} fields;
 } prvm_edict_t;
 
+#define VMPOLYGONS_MAXPOINTS 64
+
+typedef struct vmpolygons_triangle_s
+{
+	rtexture_t		*texture;
+	int				drawflag;
+	qboolean hasalpha;
+	unsigned short	elements[3];
+} vmpolygons_triangle_t;
+
+typedef struct vmpolygons_s
+{
+	mempool_t		*pool;
+	qboolean		initialized;
+
+	int				max_vertices;
+	int				num_vertices;
+	float			*data_vertex3f;
+	float			*data_color4f;
+	float			*data_texcoord2f;
+
+	int				max_triangles;
+	int				num_triangles;
+	vmpolygons_triangle_t *data_triangles;
+	unsigned short	*data_sortedelement3s;
+
+	qboolean		begin_active;
+	int	begin_draw2d;
+	rtexture_t		*begin_texture;
+	int				begin_drawflag;
+	int				begin_vertices;
+	float			begin_vertex[VMPOLYGONS_MAXPOINTS][3];
+	float			begin_color[VMPOLYGONS_MAXPOINTS][4];
+	float			begin_texcoord[VMPOLYGONS_MAXPOINTS][2];
+	qboolean		begin_texture_hasalpha;
+} vmpolygons_t;
+
 extern prvm_eval_t prvm_badvalue;
 
 #define PRVM_alledictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
@@ -231,7 +268,8 @@ extern prvm_eval_t prvm_badvalue;
 #define PRVM_MAX_OPENSEARCHES 128
 #endif
 
-typedef void (*prvm_builtin_t) (void);
+struct prvm_prog_s;
+typedef void (*prvm_builtin_t) (struct prvm_prog_s *prog);
 
 // NOTE: field offsets use -1 for NULL
 typedef struct prvm_prog_fieldoffsets_s
@@ -487,7 +525,8 @@ prvm_stringbuffer_t;
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
 typedef struct prvm_prog_s
 {
-	double              starttime;
+	double				starttime; // system time when PRVM_Prog_Load was called
+	double				profiletime; // system time when last PRVM_CallProfile was called (or PRVM_Prog_Load initially)
 	unsigned int		id; // increasing unique id of progs instance
 	mfunction_t			*functions;
 	char				*strings;
@@ -570,6 +609,13 @@ typedef struct prvm_prog_s
 	const char *         opensearches_origin[PRVM_MAX_OPENSEARCHES];
 	skeleton_t			*skeletons[MAX_EDICTS];
 
+	// buffer for storing all tempstrings created during one invocation of ExecuteProgram
+	sizebuf_t			tempstringsbuf;
+
+	// LordHavoc: moved this here to clean up things that relied on prvm_prog_list too much
+	// FIXME: make VM_CL_R_Polygon functions use Debug_Polygon functions?
+	vmpolygons_t		vmpolygons;
+
 	// copies of some vars that were former read from sv
 	int					num_edicts;
 	// number of edicts for which space has been (should be) allocated
@@ -628,32 +674,41 @@ typedef struct prvm_prog_s
 	//============================================================================
 	// function pointers
 
-	void				(*begin_increase_edicts)(void); // [INIT] used by PRVM_MEM_Increase_Edicts
-	void				(*end_increase_edicts)(void); // [INIT]
+	void				(*begin_increase_edicts)(struct prvm_prog_s *prog); // [INIT] used by PRVM_MEM_Increase_Edicts
+	void				(*end_increase_edicts)(struct prvm_prog_s *prog); // [INIT]
 
-	void				(*init_edict)(prvm_edict_t *edict); // [INIT] used by PRVM_ED_ClearEdict
-	void				(*free_edict)(prvm_edict_t *ed); // [INIT] used by PRVM_ED_Free
+	void				(*init_edict)(struct prvm_prog_s *prog, prvm_edict_t *edict); // [INIT] used by PRVM_ED_ClearEdict
+	void				(*free_edict)(struct prvm_prog_s *prog, prvm_edict_t *ed); // [INIT] used by PRVM_ED_Free
 
-	void				(*count_edicts)(void); // [INIT] used by PRVM_ED_Count_f
+	void				(*count_edicts)(struct prvm_prog_s *prog); // [INIT] used by PRVM_ED_Count_f
 
-	qboolean			(*load_edict)(prvm_edict_t *ent); // [INIT] used by PRVM_ED_LoadFromFile
+	qboolean			(*load_edict)(struct prvm_prog_s *prog, prvm_edict_t *ent); // [INIT] used by PRVM_ED_LoadFromFile
 
-	void				(*init_cmd)(void); // [INIT] used by PRVM_InitProg
-	void				(*reset_cmd)(void); // [INIT] used by PRVM_ResetProg
+	void				(*init_cmd)(struct prvm_prog_s *prog); // [INIT] used by PRVM_InitProg
+	void				(*reset_cmd)(struct prvm_prog_s *prog); // [INIT] used by PRVM_ResetProg
 
 	void				(*error_cmd)(const char *format, ...) DP_FUNC_PRINTF(1); // [INIT]
 
-	void				(*ExecuteProgram)(func_t fnum, const char *errormessage); // pointer to one of the *VM_ExecuteProgram functions
+	void				(*ExecuteProgram)(struct prvm_prog_s *prog, func_t fnum, const char *errormessage); // pointer to one of the *VM_ExecuteProgram functions
 } prvm_prog_t;
 
-extern prvm_prog_t * prog;
+typedef enum prvm_progindex_e
+{
+	PRVM_PROG_SERVER,
+	PRVM_PROG_CLIENT,
+	PRVM_PROG_MENU,
+	PRVM_PROG_MAX
+}
+prvm_progindex_t;
 
-#define PRVM_MAXPROGS 3
-#define PRVM_SERVERPROG 0 // actually not used at the moment
-#define PRVM_CLIENTPROG 1
-#define PRVM_MENUPROG	2
-
-extern prvm_prog_t prvm_prog_list[PRVM_MAXPROGS];
+extern prvm_prog_t prvm_prog_list[PRVM_PROG_MAX];
+prvm_prog_t *PRVM_ProgFromString(const char *str);
+prvm_prog_t *PRVM_FriendlyProgFromString(const char *str); // for console commands (prints error if name unknown and returns NULL, prints error if prog not loaded and returns NULL)
+#define PRVM_GetProg(n) (&prvm_prog_list[(n)])
+#define PRVM_ProgLoaded(n) (PRVM_GetProg(n)->loaded)
+#define SVVM_prog (&prvm_prog_list[PRVM_PROG_SERVER])
+#define CLVM_prog (&prvm_prog_list[PRVM_PROG_CLIENT])
+#define MVM_prog (&prvm_prog_list[PRVM_PROG_MENU])
 
 //============================================================================
 // prvm_cmds part
@@ -669,80 +724,75 @@ extern const int vm_m_numbuiltins;
 extern const char * vm_sv_extensions; // client also uses this
 extern const char * vm_m_extensions;
 
-void VM_SV_Cmd_Init(void);
-void VM_SV_Cmd_Reset(void);
+void SVVM_init_cmd(prvm_prog_t *prog);
+void SVVM_reset_cmd(prvm_prog_t *prog);
 
-void VM_CL_Cmd_Init(void);
-void VM_CL_Cmd_Reset(void);
+void CLVM_init_cmd(prvm_prog_t *prog);
+void CLVM_reset_cmd(prvm_prog_t *prog);
 
-void VM_M_Cmd_Init(void);
-void VM_M_Cmd_Reset(void);
+void MVM_init_cmd(prvm_prog_t *prog);
+void MVM_reset_cmd(prvm_prog_t *prog);
 
-void VM_Cmd_Init(void);
-void VM_Cmd_Reset(void);
+void VM_Cmd_Init(prvm_prog_t *prog);
+void VM_Cmd_Reset(prvm_prog_t *prog);
 //============================================================================
 
 void PRVM_Init (void);
 
 #ifdef PROFILING
-void MVM_ExecuteProgram (func_t fnum, const char *errormessage);
-void CLVM_ExecuteProgram (func_t fnum, const char *errormessage);
-void SVVM_ExecuteProgram (func_t fnum, const char *errormessage);
+void SVVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
+void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
+void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
 #else
-#define MVM_ExecuteProgram SVVM_ExecuteProgram
-#define CLVM_ExecuteProgram SVVM_ExecuteProgram
-void SVVM_ExecuteProgram (func_t fnum, const char *errormessage);
+#define SVVM_ExecuteProgram PRVM_ExecuteProgram
+#define CLVM_ExecuteProgram PRVM_ExecuteProgram
+#define MVM_ExecuteProgram PRVM_ExecuteProgram
+void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
 #endif
-#define PRVM_ExecuteProgram prog->ExecuteProgram
 
-#define PRVM_Alloc(buffersize) _PRVM_Alloc(buffersize, __FILE__, __LINE__)
-#define PRVM_Free(buffer) _PRVM_Free(buffer, __FILE__, __LINE__)
-#define PRVM_FreeAll() _PRVM_FreeAll(__FILE__, __LINE__)
-void *_PRVM_Alloc (size_t buffersize, const char *filename, int fileline);
-void _PRVM_Free (void *buffer, const char *filename, int fileline);
-void _PRVM_FreeAll (const char *filename, int fileline);
+#define PRVM_Alloc(buffersize) Mem_Alloc(prog->progs_mempool, buffersize)
+#define PRVM_Free(buffer) Mem_Free(buffer)
 
-void PRVM_Profile (int maxfunctions, double mintime, int sortby);
+void PRVM_Profile (prvm_prog_t *prog, int maxfunctions, double mintime, int sortby);
 void PRVM_Profile_f (void);
 void PRVM_ChildProfile_f (void);
 void PRVM_CallProfile_f (void);
 void PRVM_PrintFunction_f (void);
 
-void PRVM_PrintState(void);
-void PRVM_CrashAll (void);
-void PRVM_Crash (void);
-void PRVM_ShortStackTrace(char *buf, size_t bufsize);
-const char *PRVM_AllocationOrigin(void);
+void PRVM_PrintState(prvm_prog_t *prog);
+void PRVM_Crash(prvm_prog_t *prog);
+void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize);
+const char *PRVM_AllocationOrigin(prvm_prog_t *prog);
 
-ddef_t *PRVM_ED_FindField(const char *name);
-ddef_t *PRVM_ED_FindGlobal(const char *name);
-mfunction_t *PRVM_ED_FindFunction(const char *name);
+ddef_t *PRVM_ED_FindField(prvm_prog_t *prog, const char *name);
+ddef_t *PRVM_ED_FindGlobal(prvm_prog_t *prog, const char *name);
+mfunction_t *PRVM_ED_FindFunction(prvm_prog_t *prog, const char *name);
 
-int PRVM_ED_FindFieldOffset(const char *name);
-int PRVM_ED_FindGlobalOffset(const char *name);
-func_t PRVM_ED_FindFunctionOffset(const char *name);
+int PRVM_ED_FindFieldOffset(prvm_prog_t *prog, const char *name);
+int PRVM_ED_FindGlobalOffset(prvm_prog_t *prog, const char *name);
+func_t PRVM_ED_FindFunctionOffset(prvm_prog_t *prog, const char *name);
 #define PRVM_ED_FindFieldOffset_FromStruct(st, field) prog->fieldoffsets . field = ((int *)(&((st *)NULL)-> field ) - ((int *)NULL))
 #define PRVM_ED_FindGlobalOffset_FromStruct(st, field) prog->globaloffsets . field = ((int *)(&((st *)NULL)-> field ) - ((int *)NULL))
 
-void PRVM_MEM_IncreaseEdicts(void);
+void PRVM_MEM_IncreaseEdicts(prvm_prog_t *prog);
 
-qboolean PRVM_ED_CanAlloc(prvm_edict_t *e);
-prvm_edict_t *PRVM_ED_Alloc (void);
-void PRVM_ED_Free (prvm_edict_t *ed);
-void PRVM_ED_ClearEdict (prvm_edict_t *e);
+qboolean PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e);
+prvm_edict_t *PRVM_ED_Alloc(prvm_prog_t *prog);
+void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed);
+void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e);
 
-void PRVM_PrintFunctionStatements (const char *name);
-void PRVM_ED_Print(prvm_edict_t *ed, const char *wildcard_fieldname);
-void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed);
-const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent);
+void PRVM_PrintFunctionStatements(prvm_prog_t *prog, const char *name);
+void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fieldname);
+void PRVM_ED_Write(prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed);
+const char *PRVM_ED_ParseEdict(prvm_prog_t *prog, const char *data, prvm_edict_t *ent);
 
-void PRVM_ED_WriteGlobals (qfile_t *f);
-void PRVM_ED_ParseGlobals (const char *data);
+void PRVM_ED_WriteGlobals(prvm_prog_t *prog, qfile_t *f);
+void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
 
-void PRVM_ED_LoadFromFile (const char *data);
+void PRVM_ED_LoadFromFile(prvm_prog_t *prog, const char *data);
 
-unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, const char *filename, int fileline);
-#define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? (unsigned int)(n) : PRVM_EDICT_NUM_ERROR((unsigned int)(n), __FILE__, __LINE__))
+unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char *filename, int fileline);
+#define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? (unsigned int)(n) : PRVM_EDICT_NUM_ERROR(prog, (unsigned int)(n), __FILE__, __LINE__))
 #define	PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
 
 //int NUM_FOR_EDICT_ERROR(prvm_edict_t *e);
@@ -763,58 +813,37 @@ unsigned int PRVM_EDICT_NUM_ERROR(unsigned int n, const char *filename, int file
 #define	PRVM_G_EDICT(o) (PRVM_PROG_TO_EDICT(*(int *)&prog->globals.generic[o]))
 #define PRVM_G_EDICTNUM(o) PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(o))
 #define	PRVM_G_VECTOR(o) (&prog->globals.generic[o])
-#define	PRVM_G_STRING(o) (PRVM_GetString(*(string_t *)&prog->globals.generic[o]))
-//#define	PRVM_G_FUNCTION(o) (*(func_t *)&prog->globals.generic[o])
+#define	PRVM_G_STRING(o) (PRVM_GetString(prog, *(string_t *)&prog->globals.generic[o]))
+//#define	PRVM_G_FUNCTION(prog, o) (*(func_t *)&prog->globals.generic[o])
 
 // FIXME: make these go away?
 #define	PRVM_E_FLOAT(e,o) (((float*)e->fields.vp)[o])
 #define	PRVM_E_INT(e,o) (((int*)e->fields.vp)[o])
 //#define	PRVM_E_VECTOR(e,o) (&((float*)e->fields.vp)[o])
-#define	PRVM_E_STRING(e,o) (PRVM_GetString(*(string_t *)&((float*)e->fields.vp)[o]))
+#define	PRVM_E_STRING(e,o) (PRVM_GetString(prog, *(string_t *)&((float*)e->fields.vp)[o]))
 
 extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-project is to
 // make the new vm mostly independent from the old one, thus if it's necessary, I copy everything
 
-void PRVM_Init_Exec(void);
+void PRVM_Init_Exec(prvm_prog_t *prog);
 
 void PRVM_ED_PrintEdicts_f (void);
-void PRVM_ED_PrintNum (int ent, const char *wildcard_fieldname);
+void PRVM_ED_PrintNum (prvm_prog_t *prog, int ent, const char *wildcard_fieldname);
 
-const char *PRVM_GetString(int num);
-int PRVM_SetEngineString(const char *s);
-const char *PRVM_ChangeEngineString(int i, const char *s);
-int PRVM_SetTempString(const char *s);
-int PRVM_AllocString(size_t bufferlength, char **pointer);
-void PRVM_FreeString(int num);
+const char *PRVM_GetString(prvm_prog_t *prog, int num);
+int PRVM_SetEngineString(prvm_prog_t *prog, const char *s);
+const char *PRVM_ChangeEngineString(prvm_prog_t *prog, int i, const char *s);
+int PRVM_SetTempString(prvm_prog_t *prog, const char *s);
+int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer);
+void PRVM_FreeString(prvm_prog_t *prog, int num);
+
+ddef_t *PRVM_ED_FieldAtOfs(prvm_prog_t *prog, int ofs);
+qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
+char *PRVM_UglyValueString(prvm_prog_t *prog, etype_t type, prvm_eval_t *val, char *line, size_t linelength);
+char *PRVM_GlobalString(prvm_prog_t *prog, int ofs, char *line, size_t linelength);
+char *PRVM_GlobalStringNoContents(prvm_prog_t *prog, int ofs, char *line, size_t linelength);
 
 //============================================================================
-
-// used as replacement for a prog stack
-//#define PRVM_DEBUGPRSTACK
-
-#ifdef PRVM_DEBUGPRSTACK
-#define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i) in file: %s line: %i!\n", PRVM_GetProgNr(), __FILE__, __LINE__)
-#define PRVM_End	prog = 0
-#else
-#define PRVM_Begin
-#define PRVM_End	prog = 0
-#endif
-
-//#define PRVM_SAFENAME
-#ifndef PRVM_SAFENAME
-#	define PRVM_NAME	(prog->name)
-#else
-#	define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
-#endif
-
-// helper macro to make function pointer calls easier
-#define PRVM_GCALL(func)	if(prog->func) prog->func
-
-#define PRVM_ERROR		prog->error_cmd
-
-// other prog handling functions
-qboolean PRVM_SetProgFromString(const char *str);
-void PRVM_SetProg(int prognr);
 
 /*
 Initializing a vm:
@@ -822,23 +851,18 @@ Call InitProg with the num
 Set up the fields marked with [INIT] in the prog struct
 Load a program with LoadProgs
 */
-void PRVM_InitProg(int prognr);
-// LoadProgs expects to be called right after InitProg
-void PRVM_LoadProgs (const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
-void PRVM_ResetProg(void);
+// Load expects to be called right after Init
+void PRVM_Prog_Init(prvm_prog_t *prog);
+void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
+void PRVM_Prog_Reset(prvm_prog_t *prog);
 
-qboolean PRVM_ProgLoaded(int prognr);
+void PRVM_StackTrace(prvm_prog_t *prog);
 
-int	PRVM_GetProgNr(void);
+void VM_Warning(prvm_prog_t *prog, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
-void VM_Warning(const char *fmt, ...) DP_FUNC_PRINTF(1);
-
-// TODO: fill in the params
-//void PRVM_Create();
-
-void VM_GenerateFrameGroupBlend(framegroupblend_t *framegroupblend, const prvm_edict_t *ed);
+void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroupblend, const prvm_edict_t *ed);
 void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model);
-void VM_UpdateEdictSkeleton(prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
-void VM_RemoveEdictSkeleton(prvm_edict_t *ed);
+void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
+void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed);
 
 #endif

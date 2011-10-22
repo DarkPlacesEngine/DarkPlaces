@@ -33,7 +33,7 @@ typedef struct hz_bitstream_readblocks_s
 }
 hz_bitstream_readblocks_t;
 
-hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
+static hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 {
 	qfile_t *file;
 	hz_bitstream_read_t *stream;
@@ -48,7 +48,7 @@ hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 		return NULL;
 }
 
-void hz_bitstream_read_close(hz_bitstream_read_t *stream)
+static void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 {
 	if (stream)
 	{
@@ -57,7 +57,7 @@ void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 	}
 }
 
-hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
+static hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
 {
 	hz_bitstream_readblocks_t *blocks;
 	blocks = (hz_bitstream_readblocks_t *)Z_Malloc(sizeof(hz_bitstream_readblocks_t));
@@ -67,7 +67,7 @@ hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
 	return blocks;
 }
 
-void hz_bitstream_read_blocks_free(hz_bitstream_readblocks_t *blocks)
+static void hz_bitstream_read_blocks_free(hz_bitstream_readblocks_t *blocks)
 {
 	hz_bitstream_readblock_t *b, *n;
 	if (blocks == NULL)
@@ -80,13 +80,13 @@ void hz_bitstream_read_blocks_free(hz_bitstream_readblocks_t *blocks)
 	Z_Free(blocks);
 }
 
-void hz_bitstream_read_flushbits(hz_bitstream_readblocks_t *blocks)
+static void hz_bitstream_read_flushbits(hz_bitstream_readblocks_t *blocks)
 {
 	blocks->store = 0;
 	blocks->count = 0;
 }
 
-int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstream_read_t *stream, unsigned int size)
+static int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstream_read_t *stream, unsigned int size)
 {
 	int s;
 	hz_bitstream_readblock_t *b, *p;
@@ -133,7 +133,7 @@ int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstrea
 	return HZREADERROR_OK;
 }
 
-unsigned int hz_bitstream_read_blocks_getbyte(hz_bitstream_readblocks_t *blocks)
+static unsigned int hz_bitstream_read_blocks_getbyte(hz_bitstream_readblocks_t *blocks)
 {
 	while (blocks->current != NULL && blocks->position >= blocks->current->size)
 	{
@@ -145,7 +145,7 @@ unsigned int hz_bitstream_read_blocks_getbyte(hz_bitstream_readblocks_t *blocks)
 	return blocks->current->data[blocks->position++];
 }
 
-int hz_bitstream_read_bit(hz_bitstream_readblocks_t *blocks)
+static int hz_bitstream_read_bit(hz_bitstream_readblocks_t *blocks)
 {
 	if (!blocks->count)
 	{
@@ -157,7 +157,7 @@ int hz_bitstream_read_bit(hz_bitstream_readblocks_t *blocks)
 	return (blocks->store >> blocks->count) & 1;
 }
 
-unsigned int hz_bitstream_read_bits(hz_bitstream_readblocks_t *blocks, int size)
+static unsigned int hz_bitstream_read_bits(hz_bitstream_readblocks_t *blocks, int size)
 {
 	unsigned int num = 0;
 	// we can only handle about 24 bits at a time safely
@@ -178,18 +178,18 @@ unsigned int hz_bitstream_read_bits(hz_bitstream_readblocks_t *blocks, int size)
 	return num;
 }
 
-unsigned int hz_bitstream_read_byte(hz_bitstream_readblocks_t *blocks)
+static unsigned int hz_bitstream_read_byte(hz_bitstream_readblocks_t *blocks)
 {
 	return hz_bitstream_read_blocks_getbyte(blocks);
 }
 
-unsigned int hz_bitstream_read_short(hz_bitstream_readblocks_t *blocks)
+static unsigned int hz_bitstream_read_short(hz_bitstream_readblocks_t *blocks)
 {
 	return (hz_bitstream_read_byte(blocks) << 8)
 	     | (hz_bitstream_read_byte(blocks));
 }
 
-unsigned int hz_bitstream_read_int(hz_bitstream_readblocks_t *blocks)
+static unsigned int hz_bitstream_read_int(hz_bitstream_readblocks_t *blocks)
 {
 	return (hz_bitstream_read_byte(blocks) << 24)
 	     | (hz_bitstream_read_byte(blocks) << 16)
@@ -197,7 +197,7 @@ unsigned int hz_bitstream_read_int(hz_bitstream_readblocks_t *blocks)
 	     | (hz_bitstream_read_byte(blocks));
 }
 
-void hz_bitstream_read_bytes(hz_bitstream_readblocks_t *blocks, void *outdata, unsigned int size)
+static void hz_bitstream_read_bytes(hz_bitstream_readblocks_t *blocks, void *outdata, unsigned int size)
 {
 	unsigned char *out;
 	out = (unsigned char *)outdata;

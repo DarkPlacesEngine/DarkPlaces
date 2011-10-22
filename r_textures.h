@@ -199,5 +199,7 @@ void R_ClearTexture (rtexture_t *rt);
 // returns the desired picmip level for given TEXF_ flags
 int R_PicmipForFlags(int flags);
 
+void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal);
+
 #endif
 

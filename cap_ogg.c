@@ -523,7 +523,7 @@ static dllfunction_t theorafuncs[] =
 
 static dllhandle_t og_dll = NULL, vo_dll = NULL, ve_dll = NULL, th_dll = NULL;
 
-qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
+static qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
 {
 	const char* dllnames_og [] =
 	{
@@ -677,7 +677,7 @@ static void SCR_CaptureVideo_Ogg_Interleave(void)
 				format->videopage.len = pg.header_len + pg.body_len;
 				format->videopage.time = qtheora_granule_time(&format->ts, qogg_page_granulepos(&pg));
 				if(format->videopage.len > sizeof(format->videopage.data))
-					Host_Error("video page too long");
+					Sys_Error("video page too long");
 				memcpy(format->videopage.data, pg.header, pg.header_len);
 				memcpy(format->videopage.data + pg.header_len, pg.body, pg.body_len);
 			}
@@ -687,7 +687,7 @@ static void SCR_CaptureVideo_Ogg_Interleave(void)
 				format->audiopage.len = pg.header_len + pg.body_len;
 				format->audiopage.time = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&pg));
 				if(format->audiopage.len > sizeof(format->audiopage.data))
-					Host_Error("audio page too long");
+					Sys_Error("audio page too long");
 				memcpy(format->audiopage.data, pg.header, pg.header_len);
 				memcpy(format->audiopage.data + pg.header_len, pg.body, pg.body_len);
 			}
@@ -782,7 +782,7 @@ static void SCR_CaptureVideo_Ogg_EndVideo(void)
 	while (1) {
 		int result = qogg_stream_flush (&format->to, &pg);
 		if (result < 0)
-			fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+			fprintf (stderr, "Internal Ogg library error.\n"); // TODO Sys_Error
 		if (result <= 0)
 			break;
 		FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
@@ -794,7 +794,7 @@ static void SCR_CaptureVideo_Ogg_EndVideo(void)
 		while (1) {
 			int result = qogg_stream_flush (&format->vo, &pg);
 			if (result < 0)
-				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Sys_Error
 			if (result <= 0)
 				break;
 			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
@@ -937,9 +937,10 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 
 void SCR_CaptureVideo_Ogg_BeginVideo(void)
 {
+	char vabuf[1024];
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_OGG_VORBIS_THEORA;
 	cls.capturevideo.formatextension = "ogv";
-	cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
+	cls.capturevideo.videofile = FS_OpenRealFile(va(vabuf, sizeof(vabuf), "%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	cls.capturevideo.endvideo = SCR_CaptureVideo_Ogg_EndVideo;
 	cls.capturevideo.videoframes = SCR_CaptureVideo_Ogg_VideoFrames;
 	cls.capturevideo.soundframe = SCR_CaptureVideo_Ogg_SoundFrame;
@@ -1098,7 +1099,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 		{
 			int result = qogg_stream_flush (&format->to, &pg);
 			if (result < 0)
-				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Sys_Error
 			if (result <= 0)
 				break;
 			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
@@ -1110,7 +1111,7 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 		{
 			int result = qogg_stream_flush (&format->vo, &pg);
 			if (result < 0)
-				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Host_Error
+				fprintf (stderr, "Internal Ogg library error.\n"); // TODO Sys_Error
 			if (result <= 0)
 				break;
 			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);

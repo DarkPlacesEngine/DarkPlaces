@@ -24,21 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cdaudio.h"
 #include "sound.h"
 
-// Prototypes of the system dependent functions
-extern void CDAudio_SysEject (void);
-extern void CDAudio_SysCloseDoor (void);
-extern int CDAudio_SysGetAudioDiskInfo (void);
-extern float CDAudio_SysGetVolume (void);
-extern void CDAudio_SysSetVolume (float volume);
-extern int CDAudio_SysPlay (int track);
-extern int CDAudio_SysStop (void);
-extern int CDAudio_SysPause (void);
-extern int CDAudio_SysResume (void);
-extern int CDAudio_SysUpdate (void);
-extern void CDAudio_SysInit (void);
-extern int CDAudio_SysStartup (void);
-extern void CDAudio_SysShutdown (void);
-
 // used by menu to ghost CD audio slider
 cvar_t cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0","indicates if CD Audio system is active"};
 cvar_t cdaudio = {CVAR_SAVE,"cdaudio","1","CD playing mode (0 = never access CD drive, 1 = play CD tracks if no replacement available, 2 = play fake tracks if no CD track available, 3 = play only real CD tracks, 4 = play real CD tracks even instead of named fake tracks)"};
@@ -164,7 +149,7 @@ static int CDAudio_GetAudioDiskInfo (void)
 	return 0;
 }
 
-qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
+static qboolean CDAudio_Play_real (int track, qboolean looping, qboolean complain)
 {
 	if(track < 1)
 	{
@@ -583,7 +568,7 @@ static void CD_f (void)
 	Con_Printf("cd info - prints basic disc information (number of tracks, currently playing track, volume level)\n");
 }
 
-void CDAudio_SetVolume (float newvol)
+static void CDAudio_SetVolume (float newvol)
 {
 	// If the volume hasn't changed
 	if (newvol == cdvolume)

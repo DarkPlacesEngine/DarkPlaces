@@ -70,7 +70,7 @@ cvar_t *Cvar_FindVarAfter (const char *prev_var_name, int neededflags)
 	return var;
 }
 
-cvar_t *Cvar_FindVarLink (const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha)
+static cvar_t *Cvar_FindVarLink (const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha)
 {
 	int hashindex;
 	cvar_t *var;
@@ -266,17 +266,18 @@ void Cvar_CompleteCvarPrint (const char *partial)
 static void Cvar_UpdateAutoCvar(cvar_t *var)
 {
 	int i;
-	if(!prog)
-		Host_Error("Cvar_UpdateAutoCvar: no prog set");
-	i = PRVM_GetProgNr();
-	if(var->globaldefindex_progid[i] == prog->id)
+	int j;
+	const char *s;
+	vec3_t v;
+	prvm_prog_t *prog;
+	for (i = 0;i < PRVM_PROG_MAX;i++)
 	{
-		// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
-		int j;
-		const char *s;
-		vec3_t v;
-		switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
+		prog = &prvm_prog_list[i];
+		if (prog->loaded && var->globaldefindex_progid[i] == prog->id)
 		{
+			// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
+			switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
+			{
 			case ev_float:
 				PRVM_GLOBALFIELDFLOAT(prog->globaldefs[var->globaldefindex[i]].ofs) = var->value;
 				break;
@@ -298,9 +299,10 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 				VectorCopy(v, PRVM_GLOBALFIELDVECTOR(prog->globaldefs[var->globaldefindex[i]].ofs));
 				break;
 			case ev_string:
-				PRVM_ChangeEngineString(var->globaldefindex_stringno[i], var->string);
+				PRVM_ChangeEngineString(prog, var->globaldefindex_stringno[i], var->string);
 				PRVM_GLOBALFIELDSTRING(prog->globaldefs[var->globaldefindex[i]].ofs) = var->globaldefindex_stringno[i];
 				break;
+			}
 		}
 	}
 }
@@ -319,12 +321,11 @@ Cvar_Set
 ============
 */
 extern cvar_t sv_disablenotify;
-void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
+static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
 	qboolean changed;
 	size_t valuelen;
-	prvm_prog_t *tmpprog;
-	int i;
+	char vabuf[1024];
 
 	changed = strcmp(var->string, value) != 0;
 	// LordHavoc: don't reallocate when there is no change
@@ -370,16 +371,16 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		if (!strcmp(var->name, "_cl_color"))
 		{
 			int top = (var->integer >> 4) & 15, bottom = var->integer & 15;
-			CL_SetInfo("topcolor", va("%i", top), true, false, false, false);
-			CL_SetInfo("bottomcolor", va("%i", bottom), true, false, false, false);
+			CL_SetInfo("topcolor", va(vabuf, sizeof(vabuf), "%i", top), true, false, false, false);
+			CL_SetInfo("bottomcolor", va(vabuf, sizeof(vabuf), "%i", bottom), true, false, false, false);
 			if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
 			{
 				MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString(&cls.netcon->message, va("color %i %i", top, bottom));
+				MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", top, bottom));
 			}
 		}
 		else if (!strcmp(var->name, "_cl_rate"))
-			CL_SetInfo("rate", va("%i", var->integer), true, false, false, false);
+			CL_SetInfo("rate", va(vabuf, sizeof(vabuf), "%i", var->integer), true, false, false, false);
 		else if (!strcmp(var->name, "_cl_playerskin"))
 			CL_SetInfo("playerskin", var->string, true, false, false, false);
 		else if (!strcmp(var->name, "_cl_playermodel"))
@@ -398,16 +399,7 @@ void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 			NetConn_UpdateFavorites();
 	}
 
-	tmpprog = prog;
-	for(i = 0; i < PRVM_MAXPROGS; ++i)
-	{
-		if(PRVM_ProgLoaded(i))
-		{
-			PRVM_SetProg(i);
-			Cvar_UpdateAutoCvar(var);
-		}
-	}
-	prog = tmpprog;
+	Cvar_UpdateAutoCvar(var);
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)

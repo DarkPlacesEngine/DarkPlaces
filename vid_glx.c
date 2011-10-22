@@ -1190,7 +1190,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 			}
 			++i;
 			Mem_Free(data);
-			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+			data = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
 		}
 		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
 	}
@@ -1523,7 +1523,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 			}
 			++i;
 			Mem_Free(data);
-			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+			data = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
 		}
 		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
 	}
