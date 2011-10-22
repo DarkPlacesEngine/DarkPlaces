@@ -55,7 +55,7 @@ extern cvar_t r_fixtrans_auto;
 #define Image_LinearFloatFromsRGB(c) Image_LinearFloatFromsRGBFloat((c) * (1.0f / 255.0f))
 #define Image_sRGBFloatFromLinear(c) Image_sRGBFloatFromLinearFloat((c) * (1.0f / 255.0f))
 
-#define Image_sRGBFloatFromLinear_Lightmap(c) (Image_sRGBFloatFromLinear(c*2.0f)*0.5f)
+#define Image_sRGBFloatFromLinear_Lightmap(c) Image_sRGBFloatFromLinearFloat((c) * (2.0f / 255.0f)) * 0.5f
 
 void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pin, int numpixels);
 void Image_MakesRGBColorsFromLinear_Lightmap(unsigned char *pout, const unsigned char *pin, int numpixels);
