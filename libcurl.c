@@ -1,6 +1,7 @@
 #include "quakedef.h"
 #include "fs.h"
 #include "libcurl.h"
+#include "thread.h"
 
 static cvar_t cl_curl_maxdownloads = {CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
 static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
@@ -182,6 +183,8 @@ static dllfunction_t curlfuncs[] =
 static dllhandle_t curl_dll = NULL;
 // will be checked at many places to find out if qcurl calls are allowed
 
+void *curl_mutex = NULL;
+
 typedef struct downloadinfo_s
 {
 	char filename[MAX_OSPATH];
@@ -231,7 +234,7 @@ all downloads since last server connect ended with a successful status.
 Setting the command to NULL clears it.
 ====================
 */
-void Curl_CommandWhenDone(const char *cmd)
+static void Curl_CommandWhenDone(const char *cmd)
 {
 	if(!curl_dll)
 		return;
@@ -247,7 +250,7 @@ Do not use yet. Not complete.
 Problem: what counts as an error?
 */
 
-void Curl_CommandWhenError(const char *cmd)
+static void Curl_CommandWhenError(const char *cmd)
 {
 	if(!curl_dll)
 		return;
@@ -269,6 +272,7 @@ void Curl_Clear_forthismap(void)
 	downloadinfo *di;
 	if(noclear)
 		return;
+	if (curl_mutex) Thread_LockMutex(curl_mutex);
 	for(di = downloads; di; di = di->next)
 		di->forthismap = false;
 	Curl_CommandWhenError(NULL);
@@ -276,6 +280,7 @@ void Curl_Clear_forthismap(void)
 	numdownloads_fail = 0;
 	numdownloads_success = 0;
 	numdownloads_added = 0;
+	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
 
 /*
@@ -292,8 +297,10 @@ qboolean Curl_Have_forthismap(void)
 
 void Curl_Register_predownload(void)
 {
+	if (curl_mutex) Thread_LockMutex(curl_mutex);
 	Curl_CommandWhenDone("cl_begindownloads");
 	Curl_CommandWhenError("cl_begindownloads");
+	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
 
 /*
@@ -450,11 +457,6 @@ static void curl_default_callback(int status, size_t length_received, unsigned c
 	}
 }
 
-static void curl_quiet_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
-{
-	curl_default_callback(status, length_received, buffer, cbdata);
-}
-
 /*
 ====================
 Curl_EndDownload
@@ -562,9 +564,8 @@ CleanURL
 Returns a "cleaned up" URL for display (to strip login data)
 ====================
 */
-static const char *CleanURL(const char *url)
+static const char *CleanURL(const char *url, char *urlbuf, size_t urlbuflength)
 {
-	static char urlbuf[1024];
 	const char *p, *q, *r;
 
 	// if URL is of form anything://foo-without-slash@rest, replace by anything://rest
@@ -577,7 +578,7 @@ static const char *CleanURL(const char *url)
 			r = strchr(p + 3, '/');
 			if(!r || q < r)
 			{
-				dpsnprintf(urlbuf, sizeof(urlbuf), "%.*s%s", (int)(p - url + 3), url, q + 1);
+				dpsnprintf(urlbuf, urlbuflength, "%.*s%s", (int)(p - url + 3), url, q + 1);
 				return urlbuf;
 			}
 		}
@@ -598,6 +599,8 @@ up to a maximum number of cl_curl_maxdownloads are running.
 static void CheckPendingDownloads(void)
 {
 	const char *h;
+	char urlbuf[1024];
+	char vabuf[1024];
 	if(!curl_dll)
 		return;
 	if(numdownloads < cl_curl_maxdownloads.integer)
@@ -609,7 +612,7 @@ static void CheckPendingDownloads(void)
 			{
 				if(!di->buffer)
 				{
-					Con_Printf("Downloading %s -> %s", CleanURL(di->url), di->filename);
+					Con_Printf("Downloading %s -> %s", CleanURL(di->url, urlbuf, sizeof(urlbuf)), di->filename);
 
 					di->stream = FS_OpenRealFile(di->filename, "ab", false);
 					if(!di->stream)
@@ -627,7 +630,7 @@ static void CheckPendingDownloads(void)
 				}
 				else
 				{
-					Con_DPrintf("Downloading %s -> memory\n", CleanURL(di->url));
+					Con_DPrintf("Downloading %s -> memory\n", CleanURL(di->url, urlbuf, sizeof(urlbuf)));
 					di->startpos = 0;
 				}
 
@@ -654,7 +657,7 @@ static void CheckPendingDownloads(void)
 					qcurl_easy_setopt(di->curle, CURLOPT_POST, 1);
 					qcurl_easy_setopt(di->curle, CURLOPT_POSTFIELDS, di->postbuf);
 					qcurl_easy_setopt(di->curle, CURLOPT_POSTFIELDSIZE, di->postbufsize);
-					di->slist = qcurl_slist_append(di->slist, va("Content-Type: %s", di->post_content_type));
+					di->slist = qcurl_slist_append(di->slist, va(vabuf, sizeof(vabuf), "Content-Type: %s", di->post_content_type));
 				}
 
 				// parse extra headers into slist
@@ -703,6 +706,7 @@ void Curl_Init(void)
 	CURL_OpenLibrary();
 	if(!curl_dll)
 		return;
+	if (Thread_HasThreads()) curl_mutex = Thread_CreateMutex();
 	qcurl_global_init(CURL_GLOBAL_NOTHING);
 	curlm = qcurl_multi_init();
 }
@@ -721,6 +725,7 @@ void Curl_Shutdown(void)
 		return;
 	Curl_ClearRequirements();
 	Curl_CancelAll();
+	if (curl_mutex) Thread_DestroyMutex(curl_mutex);
 	CURL_CloseLibrary();
 	curl_dll = NULL;
 }
@@ -741,24 +746,6 @@ static downloadinfo *Curl_Find(const char *filename)
 		if(!strcasecmp(di->filename, filename))
 			return di;
 	return NULL;
-}
-
-void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata)
-{
-	downloadinfo *di;
-	if(!curl_dll)
-		return;
-	for(di = downloads; di; )
-	{
-		if(di->callback == callback && di->callback_data == cbdata)
-		{
-			di->callback = curl_quiet_callback; // do NOT call the callback
-			Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK);
-			di = downloads;
-		}
-		else
-			di = di->next;
-	}
 }
 
 /*
@@ -830,7 +817,9 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		//   141.2.16.3 - - [17/Mar/2006:22:32:43 +0100] "GET /maps/tznex07.pk3 HTTP/1.1" 200 1077455 "dp://141.2.16.7:26000/" "Nexuiz Linux 22:07:43 Mar 17 2006"
 
 		if(!name)
-			name = CleanURL(URL);
+			name = CleanURL(URL, urlbuf, sizeof(urlbuf));
+
+		if (curl_mutex) Thread_LockMutex(curl_mutex);
 
 		if(!buf)
 		{
@@ -847,7 +836,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 				downloadinfo *di = Curl_Find(fn);
 				if(di)
 				{
-					Con_Printf("Can't download %s, already getting it from %s!\n", fn, CleanURL(di->url));
+					Con_Printf("Can't download %s, already getting it from %s!\n", fn, CleanURL(di->url, urlbuf, sizeof(urlbuf)));
 
 					// however, if it was not for this map yet...
 					if(forthismap && !di->forthismap)
@@ -912,6 +901,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		if(strncmp(URL, "http://", 7) && strncmp(URL, "ftp://", 6) && strncmp(URL, "https://", 8))
 		{
 			Con_Printf("Curl_Begin(\"%s\"): nasty URL scheme rejected\n", URL);
+			if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 			return false;
 		}
 
@@ -964,6 +954,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		}
 
 		downloads = di;
+		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return true;
 	}
 }
@@ -1002,13 +993,21 @@ void Curl_Run(void)
 	if(!curl_dll)
 		return;
 
+	if (curl_mutex) Thread_LockMutex(curl_mutex);
+
 	Curl_CheckCommandWhenDone();
 
 	if(!downloads)
+	{
+		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return;
+	}
 
 	if(realtime < curltime) // throttle
+	{
+		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return;
+	}
 
 	{
 		int remaining;
@@ -1091,6 +1090,8 @@ void Curl_Run(void)
 	}
 	else
 		curltime = realtime;
+
+	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
 
 /*
@@ -1105,11 +1106,15 @@ void Curl_CancelAll(void)
 	if(!curl_dll)
 		return;
 
+	if (curl_mutex) Thread_LockMutex(curl_mutex);
+
 	while(downloads)
 	{
 		Curl_EndDownload(downloads, CURL_DOWNLOAD_ABORTED, CURLE_OK);
 		// INVARIANT: downloads will point to the next download after that!
 	}
+
+	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
 
 /*
@@ -1184,15 +1189,17 @@ prints the download list
 static void Curl_Info_f(void)
 {
 	downloadinfo *di;
+	char urlbuf[1024];
 	if(!curl_dll)
 		return;
 	if(Curl_Running())
 	{
+		if (curl_mutex) Thread_LockMutex(curl_mutex);
 		Con_Print("Currently running downloads:\n");
 		for(di = downloads; di; di = di->next)
 		{
 			double speed, percent;
-			Con_Printf("  %s -> %s ",  CleanURL(di->url), di->filename);
+			Con_Printf("  %s -> %s ",  CleanURL(di->url, urlbuf, sizeof(urlbuf)), di->filename);
 			percent = 100.0 * Curl_GetDownloadAmount(di);
 			speed = Curl_GetDownloadSpeed(di);
 			if(percent >= 0)
@@ -1200,6 +1207,7 @@ static void Curl_Info_f(void)
 			else
 				Con_Print("(queued)\n");
 		}
+		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 	}
 	else
 	{
@@ -1233,7 +1241,7 @@ curl --finish_autodownload
 	once the last download completes successfully, reconnect to the current server
 ====================
 */
-void Curl_Curl_f(void)
+static void Curl_Curl_f(void)
 {
 	double maxspeed = 0;
 	int i;
@@ -1402,12 +1410,11 @@ information, or to NULL if no such display shall occur. The returned
 array must be freed later using Z_Free.
 ====================
 */
-Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **additional_info)
+Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **additional_info, char *addinfo, size_t addinfolength)
 {
 	int i;
 	downloadinfo *di;
 	Curl_downloadinfo_t *downinfo;
-	static char addinfo[128];
 
 	if(!curl_dll)
 	{
@@ -1416,6 +1423,8 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 			*additional_info = NULL;
 		return NULL;
 	}
+
+	if (curl_mutex) Thread_LockMutex(curl_mutex);
 
 	i = 0;
 	for(di = downloads; di; di = di->next)
@@ -1449,11 +1458,11 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 		if(*command_when_done && !numdownloads_fail && numdownloads_added)
 		{
 			if(!strncmp(command_when_done, "connect ", 8))
-				dpsnprintf(addinfo, sizeof(addinfo), "(will join %s when done)", command_when_done + 8);
+				dpsnprintf(addinfo, addinfolength, "(will join %s when done)", command_when_done + 8);
 			else if(!strcmp(command_when_done, "cl_begindownloads"))
-				dpsnprintf(addinfo, sizeof(addinfo), "(will enter the game when done)");
+				dpsnprintf(addinfo, addinfolength, "(will enter the game when done)");
 			else
-				dpsnprintf(addinfo, sizeof(addinfo), "(will do '%s' when done)", command_when_done);
+				dpsnprintf(addinfo, addinfolength, "(will do '%s' when done)", command_when_done);
 			*additional_info = addinfo;
 		}
 		else
@@ -1461,6 +1470,7 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 	}
 
 	*nDownloads = i;
+	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 	return downinfo;
 }
 
@@ -1491,7 +1501,7 @@ this file for obvious reasons.
 */
 static const char *Curl_FindPackURL(const char *filename)
 {
-	static char foundurl[1024];
+	static char foundurl[1024]; // invoked only by server
 	fs_offset_t filesize;
 	char *buf = (char *) FS_LoadFile("curl_urls.txt", tempmempool, true, &filesize);
 	if(buf && filesize)

@@ -76,7 +76,7 @@ unsigned char host_quakepal[768] =
 	139,0,0,      179,0,0,      215,0,0,      255,0,0,      255,243,147,  255,247,199,  255,255,255,  159,91,83
 }; //                                                    15 ^
 
-void Palette_SetupSpecialPalettes(void)
+static void Palette_SetupSpecialPalettes(void)
 {
 	int i;
 	int fullbright_start, fullbright_end;
@@ -221,15 +221,15 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, flo
 	}
 }
 
-void Palette_Shutdown(void)
+static void Palette_Shutdown(void)
 {
 }
 
-void Palette_NewMap(void)
+static void Palette_NewMap(void)
 {
 }
 
-void Palette_Load(void)
+static void Palette_Load(void)
 {
 	int i;
 	unsigned char *out;

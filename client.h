@@ -580,7 +580,7 @@ typedef struct capturevideostate_s
 	const char *formatextension;
 	qfile_t *videofile;
 		// always use this:
-		//   cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
+		//   cls.capturevideo.videofile = FS_OpenRealFile(va(vabuf, sizeof(vabuf), "%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	void (*endvideo) (void);
 	void (*videoframes) (int num);
 	void (*soundframe) (const portable_sampleframe_t *paintbuffer, size_t length);
@@ -1409,7 +1409,7 @@ extern int cl_ignoremousemoves;
 
 
 float CL_KeyState (kbutton_t *key);
-const char *Key_KeynumToString (int keynum);
+const char *Key_KeynumToString (int keynum, char *buf, size_t buflength);
 int Key_StringToKeynum (const char *str);
 
 //
@@ -1837,6 +1837,22 @@ extern r_refdef_t r_refdef;
 
 // warpzone prediction hack (CSQC builtin)
 void CL_RotateMoves(const matrix4x4_t *m);
+
+void CL_NewFrameReceived(int num);
+void CL_ParseEntityLump(char *entitystring);
+void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
+void CL_RelinkLightFlashes(void);
+void Sbar_ShowFPS(void);
+void Sbar_ShowFPS_Update(void);
+void Host_SaveConfig(void);
+void Host_LoadConfig_f(void);
+void CL_UpdateMoveVars(void);
+void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
+void V_DriftPitch(void);
+void V_FadeViewFlashs(void);
+void V_CalcViewBlend(void);
+void V_CalcRefdef(void);
+void CL_Locs_Reload_f(void);
 
 #endif
 

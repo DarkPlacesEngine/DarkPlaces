@@ -213,7 +213,7 @@ ifeq ($(D3D), 1)
 	LDFLAGS_D3D=-ld3d9
 else
 	CFLAGS_D3D=
-	CFLAGS_WARNINGS=-Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement
+	CFLAGS_WARNINGS=-Wall -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
 	LDFLAGS_D3D=
 endif
 

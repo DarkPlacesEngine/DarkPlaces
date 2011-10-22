@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t cl_capturevideo;
 int old_vsync = 0;
 
-void CL_FinishTimeDemo (void);
+static void CL_FinishTimeDemo (void);
 
 /*
 ==============================================================================
@@ -138,7 +138,7 @@ void CL_CutDemo (unsigned char **buf, fs_offset_t *filesize)
 	// restart the demo recording
 	cls.demofile = FS_OpenRealFile(cls.demoname, "wb", false);
 	if(!cls.demofile)
-		Host_Error("failed to reopen the demo file");
+		Sys_Error("failed to reopen the demo file");
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
 }
 
@@ -238,16 +238,21 @@ void CL_ReadDemoMessage(void)
 		}
 
 		// get the next message
-		FS_Read(cls.demofile, &net_message.cursize, 4);
-		net_message.cursize = LittleLong(net_message.cursize);
-		if(net_message.cursize & DEMOMSG_CLIENT_TO_SERVER) // This is a client->server message! Ignore for now!
+		FS_Read(cls.demofile, &cl_message.cursize, 4);
+		cl_message.cursize = LittleLong(cl_message.cursize);
+		if(cl_message.cursize & DEMOMSG_CLIENT_TO_SERVER) // This is a client->server message! Ignore for now!
 		{
 			// skip over demo packet
-			FS_Seek(cls.demofile, 12 + (net_message.cursize & (~DEMOMSG_CLIENT_TO_SERVER)), SEEK_CUR);
+			FS_Seek(cls.demofile, 12 + (cl_message.cursize & (~DEMOMSG_CLIENT_TO_SERVER)), SEEK_CUR);
 			continue;
 		}
-		if (net_message.cursize > net_message.maxsize)
-			Host_Error("Demo message (%i) > net_message.maxsize (%i)", net_message.cursize, net_message.maxsize);
+		if (cl_message.cursize > cl_message.maxsize)
+		{
+			Con_Printf("Demo message (%i) > cl_message.maxsize (%i)", cl_message.cursize, cl_message.maxsize);
+			cl_message.cursize = 0;
+			CL_Disconnect();
+			return;
+		}
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
 		for (i = 0;i < 3;i++)
 		{
@@ -255,9 +260,9 @@ void CL_ReadDemoMessage(void)
 			cl.mviewangles[0][i] = LittleFloat(f);
 		}
 
-		if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == net_message.cursize)
+		if (FS_Read(cls.demofile, cl_message.data, cl_message.cursize) == cl_message.cursize)
 		{
-			MSG_BeginReading();
+			MSG_BeginReading(&cl_message);
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
@@ -298,7 +303,7 @@ void CL_Stop_f (void)
 	}
 
 // write a disconnect message to the demo file
-	// LordHavoc: don't replace the net_message when doing this
+	// LordHavoc: don't replace the cl_message when doing this
 	buf.data = bufdata;
 	buf.maxsize = sizeof(bufdata);
 	SZ_Clear(&buf);
@@ -329,6 +334,7 @@ void CL_Record_f (void)
 {
 	int c, track;
 	char name[MAX_OSPATH];
+	char vabuf[1024];
 
 	c = Cmd_Argc();
 	if (c != 2 && c != 3 && c != 4)
@@ -367,7 +373,7 @@ void CL_Record_f (void)
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command, false);
+		Cmd_ExecuteString ( va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(2)), src_command, false);
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
@@ -449,13 +455,14 @@ CL_FinishTimeDemo
 
 ====================
 */
-void CL_FinishTimeDemo (void)
+static void CL_FinishTimeDemo (void)
 {
 	int frames;
 	int i;
 	double time, totalfpsavg;
 	double fpsmin, fpsavg, fpsmax; // report min/avg/max fps
 	static int benchmark_runs = 0;
+	char vabuf[1024];
 
 	cls.timedemo = false;
 
@@ -477,7 +484,7 @@ void CL_FinishTimeDemo (void)
 			if(atoi(com_argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
-				Cbuf_AddText(va("timedemo %s\n", cls.demoname));
+				Cbuf_AddText(va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
 				// cannot execute here
 			}
 			else

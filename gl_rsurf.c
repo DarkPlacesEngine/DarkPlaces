@@ -167,7 +167,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	}
 }
 
-void R_StainNode (mnode_t *node, dp_model_t *model, const vec3_t origin, float radius, const float fcolor[8])
+static void R_StainNode (mnode_t *node, dp_model_t *model, const vec3_t origin, float radius, const float fcolor[8])
 {
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surface, *endsurface;
@@ -582,7 +582,6 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 		R_DrawModelSurfaces(ent, true, true, false, false, false);
 }
 
-extern void R_Water_AddWaterPlane(msurface_t *surface, int entno);
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 {
 	int i, j, n, flagsmask;
@@ -1185,7 +1184,7 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 
 static msurface_t *r_q1bsp_getlightinfo_surfaces;
 
-int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
+static int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
 {
 	int a = *(int*)ap;
 	int b = *(int*)bp;
@@ -1538,7 +1537,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 }
 
 //Made by [515]
-void R_ReplaceWorldTexture (void)
+static void R_ReplaceWorldTexture (void)
 {
 	dp_model_t		*m;
 	texture_t	*t;
@@ -1588,7 +1587,7 @@ void R_ReplaceWorldTexture (void)
 }
 
 //Made by [515]
-void R_ListWorldTextures (void)
+static void R_ListWorldTextures (void)
 {
 	dp_model_t		*m;
 	texture_t	*t;

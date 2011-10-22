@@ -146,7 +146,7 @@ demonstrated by the game Doom3.
 extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 #endif
 
-extern void R_Shadow_EditLights_Init(void);
+static void R_Shadow_EditLights_Init(void);
 
 typedef enum r_shadow_rendermode_e
 {
@@ -429,7 +429,7 @@ skinframe_t *r_editlights_sprcubemaplight;
 skinframe_t *r_editlights_sprcubemapnoshadowlight;
 skinframe_t *r_editlights_sprselection;
 
-void R_Shadow_SetShadowMode(void)
+static void R_Shadow_SetShadowMode(void)
 {
 	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4);
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20;
@@ -509,7 +509,7 @@ qboolean R_Shadow_ShadowMappingEnabled(void)
 	}
 }
 
-void R_Shadow_FreeShadowMaps(void)
+static void R_Shadow_FreeShadowMaps(void)
 {
 	R_Shadow_SetShadowMode();
 
@@ -530,7 +530,7 @@ void R_Shadow_FreeShadowMaps(void)
 	r_shadow_shadowmapvsdcttexture = NULL;
 }
 
-void r_shadow_start(void)
+static void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
 	r_shadow_bouncegridpixels = NULL;
@@ -596,7 +596,7 @@ void r_shadow_start(void)
 }
 
 static void R_Shadow_FreeDeferred(void);
-void r_shadow_shutdown(void)
+static void r_shadow_shutdown(void)
 {
 	CHECKGLERROR
 	R_Shadow_UncompileWorldLights();
@@ -679,7 +679,7 @@ void r_shadow_shutdown(void)
 		Mem_Free(r_shadow_buffer_lighttrispvs);
 }
 
-void r_shadow_newmap(void)
+static void r_shadow_newmap(void)
 {
 	if (r_shadow_bouncegridtexture) R_FreeTexture(r_shadow_bouncegridtexture);r_shadow_bouncegridtexture = NULL;
 	if (r_shadow_lightcorona)                 R_SkinFrame_MarkUsed(r_shadow_lightcorona);
@@ -826,7 +826,7 @@ matrix4x4_t matrix_attenuationz =
 	}
 };
 
-void R_Shadow_ResizeShadowArrays(int numvertices, int numtriangles, int vertscale, int triscale)
+static void R_Shadow_ResizeShadowArrays(int numvertices, int numtriangles, int vertscale, int triscale)
 {
 	numvertices = ((numvertices + 255) & ~255) * vertscale;
 	numtriangles = ((numtriangles + 255) & ~255) * triscale;
@@ -1301,7 +1301,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 	}
 }
 
-qboolean R_Shadow_UseZPass(vec3_t mins, vec3_t maxs)
+static qboolean R_Shadow_UseZPass(vec3_t mins, vec3_t maxs)
 {
 #if 1
 	return false;
@@ -1456,7 +1456,7 @@ int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t
 	return mask;
 }
 
-int R_Shadow_CalcBBoxSideMask(const vec3_t mins, const vec3_t maxs, const matrix4x4_t *worldtolight, const matrix4x4_t *radiustolight, float bias)
+static int R_Shadow_CalcBBoxSideMask(const vec3_t mins, const vec3_t maxs, const matrix4x4_t *worldtolight, const matrix4x4_t *radiustolight, float bias)
 {
 	vec3_t center, radius, lightcenter, lightradius, pmin, pmax;
 	float dp1, dn1, ap1, an1, dp2, dn2, ap2, an2;
@@ -1525,7 +1525,7 @@ int R_Shadow_CalcSphereSideMask(const vec3_t p, float radius, float bias)
     return mask;
 }
 
-int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
+static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
 {
 	int i;
 	vec3_t p, n;
@@ -2138,7 +2138,7 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 #endif
 }
 
-void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
+static void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 {
 	float nearclip, farclip, bias;
 	r_viewport_t viewport;
@@ -3181,8 +3181,8 @@ static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numve
 	int *newe;
 	const int *e;
 	float *c;
-	int maxtriangles = 4096;
-	static int newelements[4096*3];
+	int maxtriangles = 1024;
+	int newelements[1024*3];
 	R_Shadow_RenderLighting_Light_Vertex_Shading(firstvertex, numvertices, diffusecolor2, ambientcolor2);
 	for (renders = 0;renders < 4;renders++)
 	{
@@ -3570,7 +3570,7 @@ void R_Shadow_UncompileWorldLights(void)
 	}
 }
 
-void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
+static void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 {
 	int i, j;
 	mplane_t plane;
@@ -3739,7 +3739,7 @@ void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 #endif
 }
 
-void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist, const unsigned char *trispvs, const unsigned char *surfacesides)
+static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist, const unsigned char *trispvs, const unsigned char *surfacesides)
 {
 	shadowmesh_t *mesh;
 
@@ -3769,7 +3769,7 @@ void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist, const
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
+static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
 {
 	qboolean zpass = false;
 	shadowmesh_t *mesh;
@@ -3844,7 +3844,7 @@ void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, co
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-void R_Shadow_DrawEntityShadow(entity_render_t *ent)
+static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 {
 	vec3_t relativeshadoworigin, relativeshadowmins, relativeshadowmaxs;
 	vec_t relativeshadowradius;
@@ -3880,7 +3880,7 @@ void R_Shadow_SetupEntityLight(const entity_render_t *ent)
 	Matrix4x4_Transform(&ent->inversematrix, rsurface.rtlight->shadoworigin, rsurface.entitylightorigin);
 }
 
-void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *lighttrispvs)
+static void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned char *lighttrispvs)
 {
 	if (!r_refdef.scene.worldmodel->DrawLight)
 		return;
@@ -3897,7 +3897,7 @@ void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const unsigned c
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-void R_Shadow_DrawEntityLight(entity_render_t *ent)
+static void R_Shadow_DrawEntityLight(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (!model->DrawLight)
@@ -3910,7 +3910,7 @@ void R_Shadow_DrawEntityLight(entity_render_t *ent)
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-void R_Shadow_PrepareLight(rtlight_t *rtlight)
+static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 {
 	int i;
 	float f;
@@ -4144,7 +4144,7 @@ void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	}
 }
 
-void R_Shadow_DrawLight(rtlight_t *rtlight)
+static void R_Shadow_DrawLight(rtlight_t *rtlight)
 {
 	int i;
 	int numsurfaces;
@@ -5097,7 +5097,7 @@ void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 	//R_Shadow_RenderMode_End();
 }
 
-void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
+static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 {
 	float zdist;
 	vec3_t centerorigin;
@@ -5159,7 +5159,7 @@ void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
 
 static float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
-void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
+static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 {
 	vec3_t color;
 	GLint allpixels = 0, visiblepixels = 0;
@@ -5350,12 +5350,12 @@ void R_Shadow_DrawCoronas(void)
 
 
 
-dlight_t *R_Shadow_NewWorldLight(void)
+static dlight_t *R_Shadow_NewWorldLight(void)
 {
 	return (dlight_t *)Mem_ExpandableArray_AllocRecord(&r_shadow_worldlightsarray);
 }
 
-void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
+static void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
 	matrix4x4_t matrix;
 	// validate parameters
@@ -5396,7 +5396,7 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	R_RTLight_Update(&light->rtlight, true, &matrix, light->color, light->style, light->cubemapname[0] ? light->cubemapname : NULL, light->shadow, light->corona, light->coronasizescale, light->ambientscale, light->diffusescale, light->specularscale, light->flags);
 }
 
-void R_Shadow_FreeWorldLight(dlight_t *light)
+static void R_Shadow_FreeWorldLight(dlight_t *light)
 {
 	if (r_shadow_selectedlight == light)
 		r_shadow_selectedlight = NULL;
@@ -5418,7 +5418,7 @@ void R_Shadow_ClearWorldLights(void)
 	r_shadow_selectedlight = NULL;
 }
 
-void R_Shadow_SelectLight(dlight_t *light)
+static void R_Shadow_SelectLight(dlight_t *light)
 {
 	if (r_shadow_selectedlight)
 		r_shadow_selectedlight->selected = false;
@@ -5427,7 +5427,7 @@ void R_Shadow_SelectLight(dlight_t *light)
 		r_shadow_selectedlight->selected = true;
 }
 
-void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	// this is never batched (there can be only one)
 	float vertex3f[12];
@@ -5436,7 +5436,7 @@ void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, const r
 	R_DrawCustomSurface(r_editlights_sprcursor, &identitymatrix, MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false);
 }
 
-void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	float intensity;
 	float s;
@@ -5515,7 +5515,7 @@ int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radiu
 	return 1;
 }
 
-void R_Shadow_SelectLightInView(void)
+static void R_Shadow_SelectLightInView(void)
 {
 	float bestrating, rating, temp[3];
 	dlight_t *best;
@@ -5770,6 +5770,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	const char *data;
 	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
 	char key[256], value[MAX_INPUTLINE];
+	char vabuf[1024];
 
 	if (cl.worldmodel == NULL)
 	{
@@ -5973,14 +5974,14 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		}
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 1)
-			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL, 0.25, 0, 1, 1, LIGHTFLAG_REALTIMEMODE);
+			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", skin) : NULL, 0.25, 0, 1, 1, LIGHTFLAG_REALTIMEMODE);
 	}
 	if (entfiledata)
 		Mem_Free(entfiledata);
 }
 
 
-void R_Shadow_SetCursorLocationForView(void)
+static void R_Shadow_SetCursorLocationForView(void)
 {
 	vec_t dist, push;
 	vec3_t dest, endpos;
@@ -6017,7 +6018,7 @@ void R_Shadow_UpdateWorldLightSelection(void)
 		R_Shadow_SelectLight(NULL);
 }
 
-void R_Shadow_EditLights_Clear_f(void)
+static void R_Shadow_EditLights_Clear_f(void)
 {
 	R_Shadow_ClearWorldLights();
 }
@@ -6037,26 +6038,26 @@ void R_Shadow_EditLights_Reload_f(void)
 	}
 }
 
-void R_Shadow_EditLights_Save_f(void)
+static void R_Shadow_EditLights_Save_f(void)
 {
 	if (!cl.worldmodel)
 		return;
 	R_Shadow_SaveWorldLights();
 }
 
-void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(void)
+static void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(void)
 {
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
 }
 
-void R_Shadow_EditLights_ImportLightsFile_f(void)
+static void R_Shadow_EditLights_ImportLightsFile_f(void)
 {
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadLightsFile();
 }
 
-void R_Shadow_EditLights_Spawn_f(void)
+static void R_Shadow_EditLights_Spawn_f(void)
 {
 	vec3_t color;
 	if (!r_editlights.integer)
@@ -6073,7 +6074,7 @@ void R_Shadow_EditLights_Spawn_f(void)
 	R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), r_editlights_cursorlocation, vec3_origin, color, 200, 0, 0, true, NULL, 0.25, 0, 1, 1, LIGHTFLAG_REALTIMEMODE);
 }
 
-void R_Shadow_EditLights_Edit_f(void)
+static void R_Shadow_EditLights_Edit_f(void)
 {
 	vec3_t origin, angles, color;
 	vec_t radius, corona, coronasizescale, ambientscale, diffusescale, specularscale;
@@ -6399,7 +6400,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, origin, angles, color, radius, corona, style, shadows, cubemapname, coronasizescale, ambientscale, diffusescale, specularscale, flags);
 }
 
-void R_Shadow_EditLights_EditAll_f(void)
+static void R_Shadow_EditLights_EditAll_f(void)
 {
 	size_t lightindex;
 	dlight_t *light, *oldselected;
@@ -6472,7 +6473,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	dpsnprintf(temp, sizeof(temp), "RealTimeMode : %s\n", (r_shadow_selectedlight->flags & LIGHTFLAG_REALTIMEMODE) ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true, FONT_DEFAULT);y += 8;
 }
 
-void R_Shadow_EditLights_ToggleShadow_f(void)
+static void R_Shadow_EditLights_ToggleShadow_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6487,7 +6488,7 @@ void R_Shadow_EditLights_ToggleShadow_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname, r_shadow_selectedlight->coronasizescale, r_shadow_selectedlight->ambientscale, r_shadow_selectedlight->diffusescale, r_shadow_selectedlight->specularscale, r_shadow_selectedlight->flags);
 }
 
-void R_Shadow_EditLights_ToggleCorona_f(void)
+static void R_Shadow_EditLights_ToggleCorona_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6502,7 +6503,7 @@ void R_Shadow_EditLights_ToggleCorona_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname, r_shadow_selectedlight->coronasizescale, r_shadow_selectedlight->ambientscale, r_shadow_selectedlight->diffusescale, r_shadow_selectedlight->specularscale, r_shadow_selectedlight->flags);
 }
 
-void R_Shadow_EditLights_Remove_f(void)
+static void R_Shadow_EditLights_Remove_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6518,7 +6519,7 @@ void R_Shadow_EditLights_Remove_f(void)
 	r_shadow_selectedlight = NULL;
 }
 
-void R_Shadow_EditLights_Help_f(void)
+static void R_Shadow_EditLights_Help_f(void)
 {
 	Con_Print(
 "Documentation on r_editlights system:\n"
@@ -6575,7 +6576,7 @@ void R_Shadow_EditLights_Help_f(void)
 	);
 }
 
-void R_Shadow_EditLights_CopyInfo_f(void)
+static void R_Shadow_EditLights_CopyInfo_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6604,7 +6605,7 @@ void R_Shadow_EditLights_CopyInfo_f(void)
 	r_shadow_bufferlight.flags = r_shadow_selectedlight->flags;
 }
 
-void R_Shadow_EditLights_PasteInfo_f(void)
+static void R_Shadow_EditLights_PasteInfo_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6619,7 +6620,7 @@ void R_Shadow_EditLights_PasteInfo_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname, r_shadow_bufferlight.coronasizescale, r_shadow_bufferlight.ambientscale, r_shadow_bufferlight.diffusescale, r_shadow_bufferlight.specularscale, r_shadow_bufferlight.flags);
 }
 
-void R_Shadow_EditLights_Lock_f(void)
+static void R_Shadow_EditLights_Lock_f(void)
 {
 	if (!r_editlights.integer)
 	{
@@ -6639,7 +6640,7 @@ void R_Shadow_EditLights_Lock_f(void)
 	r_editlights_lockcursor = true;
 }
 
-void R_Shadow_EditLights_Init(void)
+static void R_Shadow_EditLights_Init(void)
 {
 	Cvar_RegisterVariable(&r_editlights);
 	Cvar_RegisterVariable(&r_editlights_cursordistance);

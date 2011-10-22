@@ -509,7 +509,7 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qboolean crash);
 
-void SV_SendClientMessages (void);
+void SV_SendClientMessages(void);
 
 void SV_ReadClientMessage(void);
 
@@ -572,7 +572,7 @@ int SV_PointSuperContents(const vec3_t point);
 void SV_FlushBroadcastMessages(void);
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
-void SV_MoveToGoal (void);
+void VM_SV_MoveToGoal(prvm_prog_t *prog);
 
 void SV_ApplyClientMove (void);
 void SV_SaveSpawnparms (void);
@@ -582,18 +582,20 @@ void SV_CheckVelocity (prvm_edict_t *ent);
 
 void SV_SetupVM(void);
 
-void SV_VM_Begin(void);
-void SV_VM_End(void);
+const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in Host_Status_f
 
-const char *Host_TimingReport(void); ///< for output in Host_Status_f
-
-int SV_GetPitchSign(prvm_edict_t *ent);
-void SV_GetEntityMatrix (prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
+int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
+void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
 
 void SV_StartThread(void);
 void SV_StopThread(void);
 void SV_LockThreadMutex(void);
 void SV_UnlockThreadMutex(void);
+
+void VM_CustomStats_Clear(void);
+void VM_SV_UpdateCustomStats(client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
+void Host_Savegame_to(prvm_prog_t *prog, const char *name);
+void SV_SendServerinfo(client_t *client);
 
 #endif
 

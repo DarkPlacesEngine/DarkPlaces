@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "polygon.h"
+#include "portals.h"
 
 #define MAXRECURSIVEPORTALPLANES 1024
 #define MAXRECURSIVEPORTALS 256

@@ -53,7 +53,7 @@ void Collision_Init (void)
 
 
 
-void Collision_PrintBrushAsQHull(colbrushf_t *brush, const char *name)
+static void Collision_PrintBrushAsQHull(colbrushf_t *brush, const char *name)
 {
 	int i;
 	Con_Printf("3 %s\n%i\n", name, brush->numpoints);
@@ -65,7 +65,7 @@ void Collision_PrintBrushAsQHull(colbrushf_t *brush, const char *name)
 		Con_Printf("%f %f %f %f\n", brush->planes[i].normal[0], brush->planes[i].normal[1], brush->planes[i].normal[2], brush->planes[i].dist);
 }
 
-void Collision_ValidateBrush(colbrushf_t *brush)
+static void Collision_ValidateBrush(colbrushf_t *brush)
 {
 	int j, k, pointsoffplanes, pointonplanes, pointswithinsufficientplanes, printbrush;
 	float d;
@@ -124,7 +124,7 @@ void Collision_ValidateBrush(colbrushf_t *brush)
 		Collision_PrintBrushAsQHull(brush, "unnamed");
 }
 
-float nearestplanedist_float(const float *normal, const colpointf_t *points, int numpoints)
+static float nearestplanedist_float(const float *normal, const colpointf_t *points, int numpoints)
 {
 	float dist, bestdist;
 	if (!numpoints)
@@ -140,7 +140,7 @@ float nearestplanedist_float(const float *normal, const colpointf_t *points, int
 	return bestdist;
 }
 
-float furthestplanedist_float(const float *normal, const colpointf_t *points, int numpoints)
+static float furthestplanedist_float(const float *normal, const colpointf_t *points, int numpoints)
 {
 	float dist, bestdist;
 	if (!numpoints)
@@ -156,7 +156,7 @@ float furthestplanedist_float(const float *normal, const colpointf_t *points, in
 	return bestdist;
 }
 
-void Collision_CalcEdgeDirsForPolygonBrushFloat(colbrushf_t *brush)
+static void Collision_CalcEdgeDirsForPolygonBrushFloat(colbrushf_t *brush)
 {
 	int i, j;
 	for (i = 0, j = brush->numpoints - 1;i < brush->numpoints;j = i, i++)
@@ -1032,7 +1032,7 @@ void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const co
 	}
 }
 
-void Collision_SnapCopyPoints(int numpoints, const colpointf_t *in, colpointf_t *out, float fractionprecision, float invfractionprecision)
+static void Collision_SnapCopyPoints(int numpoints, const colpointf_t *in, colpointf_t *out, float fractionprecision, float invfractionprecision)
 {
 	int i;
 	for (i = 0;i < numpoints;i++)
@@ -1245,28 +1245,6 @@ void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const ve
 	VectorSet(boxbrush->brush.mins, mins[0] - 1, mins[1] - 1, mins[2] - 1);
 	VectorSet(boxbrush->brush.maxs, maxs[0] + 1, maxs[1] + 1, maxs[2] + 1);
 	//Collision_ValidateBrush(&boxbrush->brush);
-}
-
-void Collision_ClipTrace_BrushBox(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int supercontents, int q3surfaceflags, texture_t *texture)
-{
-	colboxbrushf_t boxbrush, thisbrush_start, thisbrush_end;
-	vec3_t startmins, startmaxs, endmins, endmaxs;
-
-	// create brushes for the collision
-	VectorAdd(start, mins, startmins);
-	VectorAdd(start, maxs, startmaxs);
-	VectorAdd(end, mins, endmins);
-	VectorAdd(end, maxs, endmaxs);
-	Collision_BrushForBox(&boxbrush, cmins, cmaxs, supercontents, q3surfaceflags, texture);
-	Collision_BrushForBox(&thisbrush_start, startmins, startmaxs, 0, 0, NULL);
-	Collision_BrushForBox(&thisbrush_end, endmins, endmaxs, 0, 0, NULL);
-
-	memset(trace, 0, sizeof(trace_t));
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	trace->fraction = 1;
-	trace->realfraction = 1;
-	trace->allsolid = true;
-	Collision_TraceBrushBrushFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, &boxbrush.brush, &boxbrush.brush);
 }
 
 //pseudocode for detecting line/sphere overlap without calculating an impact point
@@ -1538,55 +1516,6 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 #endif
 }
 
-typedef struct colbspnode_s
-{
-	mplane_t plane;
-	struct colbspnode_s *children[2];
-	// the node is reallocated or split if max is reached
-	int numcolbrushf;
-	int maxcolbrushf;
-	colbrushf_t **colbrushflist;
-	//int numcolbrushd;
-	//int maxcolbrushd;
-	//colbrushd_t **colbrushdlist;
-}
-colbspnode_t;
-
-typedef struct colbsp_s
-{
-	mempool_t *mempool;
-	colbspnode_t *nodes;
-}
-colbsp_t;
-
-colbsp_t *Collision_CreateCollisionBSP(mempool_t *mempool)
-{
-	colbsp_t *bsp;
-	bsp = (colbsp_t *)Mem_Alloc(mempool, sizeof(colbsp_t));
-	bsp->mempool = mempool;
-	bsp->nodes = (colbspnode_t *)Mem_Alloc(bsp->mempool, sizeof(colbspnode_t));
-	return bsp;
-}
-
-void Collision_FreeCollisionBSPNode(colbspnode_t *node)
-{
-	if (node->children[0])
-		Collision_FreeCollisionBSPNode(node->children[0]);
-	if (node->children[1])
-		Collision_FreeCollisionBSPNode(node->children[1]);
-	while (--node->numcolbrushf)
-		Mem_Free(node->colbrushflist[node->numcolbrushf]);
-	//while (--node->numcolbrushd)
-	//	Mem_Free(node->colbrushdlist[node->numcolbrushd]);
-	Mem_Free(node);
-}
-
-void Collision_FreeCollisionBSP(colbsp_t *bsp)
-{
-	Collision_FreeCollisionBSPNode(bsp->nodes);
-	Mem_Free(bsp);
-}
-
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac)
 {
 	int i;
@@ -1615,7 +1544,7 @@ void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const co
 
 //===========================================
 
-void Collision_TranslateBrush(const vec3_t shift, colbrushf_t *brush)
+static void Collision_TranslateBrush(const vec3_t shift, colbrushf_t *brush)
 {
 	int i;
 	// now we can transform the data
@@ -1631,7 +1560,7 @@ void Collision_TranslateBrush(const vec3_t shift, colbrushf_t *brush)
 	VectorAdd(brush->maxs, shift, brush->maxs);
 }
 
-void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *brush)
+static void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *brush)
 {
 	int i;
 	vec3_t v;
@@ -1733,7 +1662,7 @@ void Collision_Cache_Init(mempool_t *mempool)
 	Collision_Cache_Reset(true);
 }
 
-void Collision_Cache_RebuildHash(void)
+static void Collision_Cache_RebuildHash(void)
 {
 	int index;
 	int range = collision_cachedtrace_lastused + 1;

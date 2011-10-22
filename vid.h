@@ -225,10 +225,6 @@ extern const char *gl_platformextensions;
 // name of driver library (opengl32.dll, libGL.so.1, or whatever)
 extern char gl_driver[256];
 
-// compatibility hacks
-extern qboolean isG200;
-extern qboolean isRagePro;
-
 void *GL_GetProcAddress(const char *name);
 qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
 
@@ -274,6 +270,7 @@ void VID_Finish (void);
 void VID_Restart_f(void);
 
 void VID_Start(void);
+void VID_Stop(void);
 
 extern unsigned int vid_gammatables_serial; // so other subsystems can poll if gamma parameters have changed; this starts with 0 and gets increased by 1 each time the gamma parameters get changed and VID_BuildGammaTables should be called again
 extern qboolean vid_gammatables_trivial; // this is set to true if all color control values are at default setting, and it therefore would make no sense to use the gamma table
@@ -288,5 +285,6 @@ vid_mode_t;
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount);
 size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean userefreshrate, qboolean useaspect);
 void VID_Soft_SharedSetup(void);
+
 #endif
 

@@ -259,7 +259,6 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	loadmodel->radius2 = modelradius * modelradius;
 }
 
-extern void R_Model_Sprite_Draw(entity_render_t *ent);
 void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int version;

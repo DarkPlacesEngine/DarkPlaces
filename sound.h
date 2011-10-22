@@ -72,6 +72,7 @@ float S_SoundLength(const char *name);
 void S_ClearUsed (void);
 void S_PurgeUnused (void);
 qboolean S_IsSoundPrecached (const sfx_t *sfx);
+sfx_t *S_FindName(const char *name);
 
 // for sound() builtins
 #define CHANFLAG_RELIABLE 1

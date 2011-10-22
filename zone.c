@@ -824,7 +824,7 @@ void Mem_PrintList(size_t minallocationsize)
 	}
 }
 
-void MemList_f(void)
+static void MemList_f(void)
 {
 	switch(Cmd_Argc())
 	{
@@ -842,8 +842,7 @@ void MemList_f(void)
 	}
 }
 
-extern void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal);
-void MemStats_f(void)
+static void MemStats_f(void)
 {
 	Mem_CheckSentinelsGlobal();
 	R_TextureStats_Print(false, false, true);

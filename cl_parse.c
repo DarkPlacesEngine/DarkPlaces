@@ -191,18 +191,15 @@ cvar_t cl_iplog_name = {CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "nam
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
 static void QW_CL_NextUpload(void);
-void QW_CL_StartUpload(unsigned char *data, int size);
 //static qboolean QW_CL_IsUploading(void);
 static void QW_CL_StopUpload(void);
-extern void CL_VM_UpdateIntermissionState(int intermission);
-extern qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed);
 
 /*
 ==================
 CL_ParseStartSoundPacket
 ==================
 */
-void CL_ParseStartSoundPacket(int largesoundindex)
+static void CL_ParseStartSoundPacket(int largesoundindex)
 {
 	vec3_t  pos;
 	int 	channel, ent;
@@ -215,15 +212,15 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		channel = MSG_ReadShort();
+		channel = MSG_ReadShort(&cl_message);
 
 		if (channel & (1<<15))
-			volume = MSG_ReadByte ();
+			volume = MSG_ReadByte(&cl_message);
 		else
 			volume = DEFAULT_SOUND_PACKET_VOLUME;
 
 		if (channel & (1<<14))
-			attenuation = MSG_ReadByte () / 64.0;
+			attenuation = MSG_ReadByte(&cl_message) / 64.0;
 		else
 			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 	
@@ -232,48 +229,48 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 		ent = (channel>>3)&1023;
 		channel &= 7;
 
-		sound_num = MSG_ReadByte ();
+		sound_num = MSG_ReadByte(&cl_message);
 	}
 	else
 	{
-		field_mask = MSG_ReadByte();
+		field_mask = MSG_ReadByte(&cl_message);
 
 		if (field_mask & SND_VOLUME)
-			volume = MSG_ReadByte ();
+			volume = MSG_ReadByte(&cl_message);
 		else
 			volume = DEFAULT_SOUND_PACKET_VOLUME;
 
 		if (field_mask & SND_ATTENUATION)
-			attenuation = MSG_ReadByte () / 64.0;
+			attenuation = MSG_ReadByte(&cl_message) / 64.0;
 		else
 			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 
 		if (field_mask & SND_SPEEDUSHORT4000)
-			speed = ((unsigned short)MSG_ReadShort ()) / 4000.0f;
+			speed = ((unsigned short)MSG_ReadShort(&cl_message)) / 4000.0f;
 		else
 			speed = 1.0f;
 
 		if (field_mask & SND_LARGEENTITY)
 		{
-			ent = (unsigned short) MSG_ReadShort ();
-			channel = MSG_ReadChar ();
+			ent = (unsigned short) MSG_ReadShort(&cl_message);
+			channel = MSG_ReadChar(&cl_message);
 		}
 		else
 		{
-			channel = (unsigned short) MSG_ReadShort ();
+			channel = (unsigned short) MSG_ReadShort(&cl_message);
 			ent = channel >> 3;
 			channel &= 7;
 		}
 
 		if (largesoundindex || (field_mask & SND_LARGESOUND) || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
-			sound_num = (unsigned short) MSG_ReadShort ();
+			sound_num = (unsigned short) MSG_ReadShort(&cl_message);
 		else
-			sound_num = MSG_ReadByte ();
+			sound_num = MSG_ReadByte(&cl_message);
 	}
 
 	channel = CHAN_NET2ENGINE(channel);
 
-	MSG_ReadVector(pos, cls.protocol);
+	MSG_ReadVector(&cl_message, pos, cls.protocol);
 
 	if (sound_num >= MAX_SOUNDS)
 	{
@@ -307,14 +304,12 @@ static unsigned char olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (qboolean readmessages)
 {
 	static qboolean recursive = false;
-	float time;
+	double time;
 	static double nextmsg = -1;
 	static double nextupdate = -1;
 #if 0
 	static double lasttime = -1;
 #endif
-	int oldreadcount;
-	qboolean oldbadread;
 	sizebuf_t old;
 
 	qboolean thisrecursive;
@@ -322,11 +317,12 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	thisrecursive = recursive;
 	recursive = true;
 
+	time = Sys_DirtyTime();
 	if(!thisrecursive)
 	{
 		if(cls.state != ca_dedicated)
 		{
-			if((time = Sys_DoubleTime()) >= nextupdate)
+			if(time >= nextupdate || time < nextupdate) // check if time stepped backwards
 			{
 				SCR_UpdateLoadingScreenIfShown();
 				nextupdate = time + 2;
@@ -344,28 +340,16 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	if (readmessages)
 	{
 		// read messages from server, should just be nops
-		oldreadcount = msg_readcount;
-		oldbadread = msg_badread;
-		old = net_message;
-		memcpy(olddata, net_message.data, net_message.cursize);
+		old = cl_message;
+		memcpy(olddata, cl_message.data, cl_message.cursize);
 
 		NetConn_ClientFrame();
 
-		msg_readcount = oldreadcount;
-		msg_badread = oldbadread;
-		net_message = old;
-		memcpy(net_message.data, olddata, net_message.cursize);
+		cl_message = old;
+		memcpy(cl_message.data, olddata, cl_message.cursize);
 	}
 
-#if 0
-	if((time = Sys_DoubleTime()) >= lasttime + 1)
-	{
-		Con_Printf("long delta: %f\n", time - lasttime);
-	}
-	lasttime = Sys_DoubleTime();
-#endif
-
-	if (cls.netcon && (time = Sys_DoubleTime()) >= nextmsg)
+	if (cls.netcon && (time >= nextmsg || time < nextmsg)) // check if time stepped backwards
 	{
 		sizebuf_t	msg;
 		unsigned char		buf[4];
@@ -462,12 +446,11 @@ void CL_ParseEntityLump(char *entdata)
 	}
 }
 
-extern void CL_Locs_Reload_f(void);
-extern void CL_VM_Init (void);
 static const vec3_t defaultmins = {-4096, -4096, -4096};
 static const vec3_t defaultmaxs = {4096, 4096, 4096};
 static void CL_SetupWorldModel(void)
 {
+	prvm_prog_t *prog = CLVM_prog;
 	// update the world model
 	cl.entities[0].render.model = cl.worldmodel = CL_GetModelByIndex(1);
 	CL_UpdateRenderEntity(&cl.entities[0].render);
@@ -483,14 +466,14 @@ static void CL_SetupWorldModel(void)
 		Cvar_SetQuick(&cl_worldname, cl.worldname);
 		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
 		Cvar_SetQuick(&cl_worldbasename, cl.worldbasename);
-		World_SetSize(&cl.world, cl.worldname, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+		World_SetSize(&cl.world, cl.worldname, cl.worldmodel->normalmins, cl.worldmodel->normalmaxs, prog);
 	}
 	else
 	{
 		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
 		Cvar_SetQuick(&cl_worldnamenoextension, "");
 		Cvar_SetQuick(&cl_worldbasename, "");
-		World_SetSize(&cl.world, "", defaultmins, defaultmaxs);
+		World_SetSize(&cl.world, "", defaultmins, defaultmaxs, prog);
 	}
 	World_Start(&cl.world);
 
@@ -527,6 +510,7 @@ static void CL_SetupWorldModel(void)
 static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 {
 	qfile_t *file;
+	char vabuf[1024];
 
 	// see if the file already exists
 	file = FS_OpenVirtualFile(filename, true);
@@ -558,7 +542,7 @@ static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
 	}
 
 	MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-	MSG_WriteString(&cls.netcon->message, va("download %s", filename));
+	MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "download %s", filename));
 
 	cls.qw_downloadnumber++;
 	cls.qw_downloadpercent = 0;
@@ -571,6 +555,7 @@ static void QW_CL_ProcessUserInfo(int slot);
 static void QW_CL_RequestNextDownload(void)
 {
 	int i;
+	char vabuf[1024];
 
 	// clear name of file that just finished
 	cls.qw_downloadname[0] = 0;
@@ -587,7 +572,7 @@ static void QW_CL_RequestNextDownload(void)
 			if (!cl.scores[cls.qw_downloadnumber].name[0])
 				continue;
 			// check if we need to download the file, and return if so
-			if (!QW_CL_CheckOrDownloadFile(va("skins/%s.pcx", cl.scores[cls.qw_downloadnumber].qw_skin)))
+			if (!QW_CL_CheckOrDownloadFile(va(vabuf, sizeof(vabuf), "skins/%s.pcx", cl.scores[cls.qw_downloadnumber].qw_skin)))
 				return;
 		}
 
@@ -603,7 +588,7 @@ static void QW_CL_RequestNextDownload(void)
 			cls.signon = SIGNONS-1;
 			// we'll go to SIGNONS when the first entity update is received
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("begin %i", cl.qw_servercount));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "begin %i", cl.qw_servercount));
 		}
 		break;
 	case dl_model:
@@ -668,12 +653,12 @@ static void QW_CL_RequestNextDownload(void)
 		CL_SetupWorldModel();
 
 		// add pmodel/emodel CRCs to userinfo
-		CL_SetInfo("pmodel", va("%i", FS_CRCFile("progs/player.mdl", NULL)), true, true, true, true);
-		CL_SetInfo("emodel", va("%i", FS_CRCFile("progs/eyes.mdl", NULL)), true, true, true, true);
+		CL_SetInfo("pmodel", va(vabuf, sizeof(vabuf), "%i", FS_CRCFile("progs/player.mdl", NULL)), true, true, true, true);
+		CL_SetInfo("emodel", va(vabuf, sizeof(vabuf), "%i", FS_CRCFile("progs/eyes.mdl", NULL)), true, true, true, true);
 
 		// done checking sounds and models, send a prespawn command now
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("prespawn %i 0 %i", cl.qw_servercount, cl.model_precache[1]->brush.qw_md4sum2));
+		MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "prespawn %i 0 %i", cl.qw_servercount, cl.model_precache[1]->brush.qw_md4sum2));
 
 		if (cls.qw_downloadmemory)
 		{
@@ -694,7 +679,7 @@ static void QW_CL_RequestNextDownload(void)
 		for (;cl.sound_name[cls.qw_downloadnumber][0];cls.qw_downloadnumber++)
 		{
 			// check if we need to download the file, and return if so
-			if (!QW_CL_CheckOrDownloadFile(va("sound/%s", cl.sound_name[cls.qw_downloadnumber])))
+			if (!QW_CL_CheckOrDownloadFile(va(vabuf, sizeof(vabuf), "sound/%s", cl.sound_name[cls.qw_downloadnumber])))
 				return;
 		}
 
@@ -724,7 +709,7 @@ static void QW_CL_RequestNextDownload(void)
 
 		// done with sound downloads, next we check models
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("modellist %i %i", cl.qw_servercount, 0));
+		MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "modellist %i %i", cl.qw_servercount, 0));
 		break;
 	case dl_none:
 	default:
@@ -734,8 +719,8 @@ static void QW_CL_RequestNextDownload(void)
 
 static void QW_CL_ParseDownload(void)
 {
-	int size = (signed short)MSG_ReadShort();
-	int percent = MSG_ReadByte();
+	int size = (signed short)MSG_ReadShort(&cl_message);
+	int percent = MSG_ReadByte(&cl_message);
 
 	//Con_Printf("download %i %i%% (%i/%i)\n", size, percent, cls.qw_downloadmemorycursize, cls.qw_downloadmemorymaxsize);
 
@@ -743,7 +728,7 @@ static void QW_CL_ParseDownload(void)
 	if (!cls.netcon)
 	{
 		if (size > 0)
-			msg_readcount += size;
+			cl_message.readcount += size;
 		return;
 	}
 
@@ -754,7 +739,7 @@ static void QW_CL_ParseDownload(void)
 		return;
 	}
 
-	if (msg_readcount + (unsigned short)size > net_message.cursize)
+	if (cl_message.readcount + (unsigned short)size > cl_message.cursize)
 		Host_Error("corrupt download message\n");
 
 	// make sure the buffer is big enough to include this new fragment
@@ -773,7 +758,7 @@ static void QW_CL_ParseDownload(void)
 	}
 
 	// read the fragment out of the packet
-	MSG_ReadBytes(size, cls.qw_downloadmemory + cls.qw_downloadmemorycursize);
+	MSG_ReadBytes(&cl_message, size, cls.qw_downloadmemory + cls.qw_downloadmemorycursize);
 	cls.qw_downloadmemorycursize += size;
 	cls.qw_downloadspeedcount += size;
 
@@ -802,13 +787,14 @@ static void QW_CL_ParseDownload(void)
 static void QW_CL_ParseModelList(void)
 {
 	int n;
-	int nummodels = MSG_ReadByte();
+	int nummodels = MSG_ReadByte(&cl_message);
 	char *str;
+	char vabuf[1024];
 
 	// parse model precache list
 	for (;;)
 	{
-		str = MSG_ReadString();
+		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		if (!str[0])
 			break;
 		nummodels++;
@@ -819,11 +805,11 @@ static void QW_CL_ParseModelList(void)
 		strlcpy(cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 	}
 
-	n = MSG_ReadByte();
+	n = MSG_ReadByte(&cl_message);
 	if (n)
 	{
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("modellist %i %i", cl.qw_servercount, n));
+		MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "modellist %i %i", cl.qw_servercount, n));
 		return;
 	}
 
@@ -836,13 +822,14 @@ static void QW_CL_ParseModelList(void)
 static void QW_CL_ParseSoundList(void)
 {
 	int n;
-	int numsounds = MSG_ReadByte();
+	int numsounds = MSG_ReadByte(&cl_message);
 	char *str;
+	char vabuf[1024];
 
 	// parse sound precache list
 	for (;;)
 	{
-		str = MSG_ReadString();
+		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		if (!str[0])
 			break;
 		numsounds++;
@@ -853,12 +840,12 @@ static void QW_CL_ParseSoundList(void)
 		strlcpy(cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 	}
 
-	n = MSG_ReadByte();
+	n = MSG_ReadByte(&cl_message);
 
 	if (n)
 	{
 		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-		MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, n));
+		MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "soundlist %i %i", cl.qw_servercount, n));
 		return;
 	}
 
@@ -971,16 +958,16 @@ static void QW_CL_ProcessUserInfo(int slot)
 static void QW_CL_UpdateUserInfo(void)
 {
 	int slot;
-	slot = MSG_ReadByte();
+	slot = MSG_ReadByte(&cl_message);
 	if (slot >= cl.maxclients)
 	{
 		Con_Printf("svc_updateuserinfo >= cl.maxclients\n");
-		MSG_ReadLong();
-		MSG_ReadString();
+		MSG_ReadLong(&cl_message);
+		MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		return;
 	}
-	cl.scores[slot].qw_userid = MSG_ReadLong();
-	strlcpy(cl.scores[slot].qw_userinfo, MSG_ReadString(), sizeof(cl.scores[slot].qw_userinfo));
+	cl.scores[slot].qw_userid = MSG_ReadLong(&cl_message);
+	strlcpy(cl.scores[slot].qw_userinfo, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(cl.scores[slot].qw_userinfo));
 
 	QW_CL_ProcessUserInfo(slot);
 }
@@ -990,9 +977,9 @@ static void QW_CL_SetInfo(void)
 	int slot;
 	char key[2048];
 	char value[2048];
-	slot = MSG_ReadByte();
-	strlcpy(key, MSG_ReadString(), sizeof(key));
-	strlcpy(value, MSG_ReadString(), sizeof(value));
+	slot = MSG_ReadByte(&cl_message);
+	strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
+	strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
 	if (slot >= cl.maxclients)
 	{
 		Con_Printf("svc_setinfo >= cl.maxclients\n");
@@ -1008,8 +995,8 @@ static void QW_CL_ServerInfo(void)
 	char key[2048];
 	char value[2048];
 	char temp[32];
-	strlcpy(key, MSG_ReadString(), sizeof(key));
-	strlcpy(value, MSG_ReadString(), sizeof(value));
+	strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
+	strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
 	Con_DPrintf("SERVERINFO: %s=%s\n", key, value);
 	InfoString_SetValue(cl.qw_serverinfo, sizeof(cl.qw_serverinfo), key, value);
 	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
@@ -1019,13 +1006,13 @@ static void QW_CL_ServerInfo(void)
 static void QW_CL_ParseNails(void)
 {
 	int i, j;
-	int numnails = MSG_ReadByte();
+	int numnails = MSG_ReadByte(&cl_message);
 	vec_t *v;
 	unsigned char bits[6];
 	for (i = 0;i < numnails;i++)
 	{
 		for (j = 0;j < 6;j++)
-			bits[j] = MSG_ReadByte();
+			bits[j] = MSG_ReadByte(&cl_message);
 		if (cl.qw_num_nails > 255)
 			continue;
 		v = cl.qw_nails[cl.qw_num_nails++];
@@ -1061,8 +1048,9 @@ static void CL_UpdateItemsAndWeapon(void)
 #define LOADPROGRESSWEIGHT_WORLDMODEL      30.0
 #define LOADPROGRESSWEIGHT_WORLDMODEL_INIT  2.0
 
-void CL_BeginDownloads(qboolean aborteddownload)
+static void CL_BeginDownloads(qboolean aborteddownload)
 {
+	char vabuf[1024];
 	// quakeworld works differently
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		return;
@@ -1095,13 +1083,13 @@ void CL_BeginDownloads(qboolean aborteddownload)
 		 && csqc_progcrc.integer >= 0
 		 && cl_serverextension_download.integer
 		 && (FS_CRCFile(csqc_progname.string, &progsize) != csqc_progcrc.integer || ((int)progsize != csqc_progsize.integer && csqc_progsize.integer != -1))
-		 && !FS_FileExists(va("dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
+		 && !FS_FileExists(va(vabuf, sizeof(vabuf), "dlcache/%s.%i.%i", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer)))
 		{
 			Con_Printf("Downloading new CSQC code to dlcache/%s.%i.%i\n", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer);
 			if(cl_serverextension_download.integer == 2 && FS_HasZlib())
-				Cmd_ForwardStringToServer(va("download %s deflate", csqc_progname.string));
+				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s deflate", csqc_progname.string));
 			else
-				Cmd_ForwardStringToServer(va("download %s", csqc_progname.string));
+				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", csqc_progname.string));
 			return;
 		}
 	}
@@ -1269,7 +1257,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				// regarding the * check: don't try to download submodels
 				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*' && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va("download %s", cl.model_name[cl.downloadmodel_current]));
+					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", cl.model_name[cl.downloadmodel_current]));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1322,7 +1310,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				Con_Printf("Sound %s not found\n", soundname);
 				if (cl_serverextension_download.integer && cls.netcon && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va("download %s", soundname));
+					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1348,7 +1336,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 	}
 }
 
-void CL_BeginDownloads_f(void)
+static void CL_BeginDownloads_f(void)
 {
 	// prevent cl_begindownloads from being issued multiple times in one match
 	// to prevent accidentally cancelled downloads
@@ -1358,7 +1346,7 @@ void CL_BeginDownloads_f(void)
 		CL_BeginDownloads(false);
 }
 
-void CL_StopDownload(int size, int crc)
+static void CL_StopDownload(int size, int crc)
 {
 	if (cls.qw_downloadmemory && cls.qw_downloadmemorycursize == size && CRC_Block(cls.qw_downloadmemory, cls.qw_downloadmemorycursize) == crc)
 	{
@@ -1443,12 +1431,12 @@ void CL_StopDownload(int size, int crc)
 	cls.qw_downloadpercent = 0;
 }
 
-void CL_ParseDownload(void)
+static void CL_ParseDownload(void)
 {
 	int i, start, size;
 	static unsigned char data[NET_MAXMESSAGE];
-	start = MSG_ReadLong();
-	size = (unsigned short)MSG_ReadShort();
+	start = MSG_ReadLong(&cl_message);
+	size = (unsigned short)MSG_ReadShort(&cl_message);
 
 	// record the start/size information to ack in the next input packet
 	for (i = 0;i < CL_MAX_DOWNLOADACKS;i++)
@@ -1461,7 +1449,7 @@ void CL_ParseDownload(void)
 		}
 	}
 
-	MSG_ReadBytes(size, data);
+	MSG_ReadBytes(&cl_message, size, data);
 
 	if (!cls.qw_downloadname[0])
 	{
@@ -1482,7 +1470,7 @@ void CL_ParseDownload(void)
 	cls.qw_downloadspeedcount += size;
 }
 
-void CL_DownloadBegin_f(void)
+static void CL_DownloadBegin_f(void)
 {
 	int size = atoi(Cmd_Argv(1));
 
@@ -1515,7 +1503,7 @@ void CL_DownloadBegin_f(void)
 	Cmd_ForwardStringToServer("sv_startdownload");
 }
 
-void CL_StopDownload_f(void)
+static void CL_StopDownload_f(void)
 {
 	Curl_CancelAll();
 	if (cls.qw_downloadname[0])
@@ -1526,7 +1514,7 @@ void CL_StopDownload_f(void)
 	CL_BeginDownloads(true);
 }
 
-void CL_DownloadFinished_f(void)
+static void CL_DownloadFinished_f(void)
 {
 	if (Cmd_Argc() < 3)
 	{
@@ -1539,29 +1527,30 @@ void CL_DownloadFinished_f(void)
 
 static void CL_SendPlayerInfo(void)
 {
+	char vabuf[1024];
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va("name \"%s\"", cl_name.string));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", cl_name.string));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va("color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va("rate %i", cl_rate.integer));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate %i", cl_rate.integer));
 
 	if (cl_pmodel.integer)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va("pmodel %i", cl_pmodel.integer));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "pmodel %i", cl_pmodel.integer));
 	}
 	if (*cl_playermodel.string)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va("playermodel %s", cl_playermodel.string));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playermodel %s", cl_playermodel.string));
 	}
 	if (*cl_playerskin.string)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va("playerskin %s", cl_playerskin.string));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playerskin %s", cl_playerskin.string));
 	}
 }
 
@@ -1638,12 +1627,13 @@ static void CL_SignonReply (void)
 CL_ParseServerInfo
 ==================
 */
-void CL_ParseServerInfo (void)
+static void CL_ParseServerInfo (void)
 {
 	char *str;
 	int i;
 	protocolversion_t protocol;
 	int nummodels, numsounds;
+	char vabuf[1024];
 
 	// if we start loading a level and a video is still playing, stop it
 	CL_VideoStop();
@@ -1672,7 +1662,7 @@ void CL_ParseServerInfo (void)
 	CL_ClearState ();
 
 // parse protocol version number
-	i = MSG_ReadLong ();
+	i = MSG_ReadLong(&cl_message);
 	protocol = Protocol_EnumForNumber(i);
 	if (protocol == PROTOCOL_UNKNOWN)
 	{
@@ -1691,9 +1681,9 @@ void CL_ParseServerInfo (void)
 	{
 		char gamedir[1][MAX_QPATH];
 
-		cl.qw_servercount = MSG_ReadLong();
+		cl.qw_servercount = MSG_ReadLong(&cl_message);
 
-		str = MSG_ReadString();
+		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		Con_Printf("server gamedir is %s\n", str);
 		strlcpy(gamedir[0], str, sizeof(gamedir[0]));
 
@@ -1705,27 +1695,27 @@ void CL_ParseServerInfo (void)
 		cl.maxclients = 32;
 
 		// parse player number
-		i = MSG_ReadByte();
+		i = MSG_ReadByte(&cl_message);
 		// cl.qw_spectator is an unneeded flag, cl.scores[cl.playerentity].qw_spectator works better (it can be updated by the server during the game)
 		//cl.qw_spectator = (i & 128) != 0;
 		cl.realplayerentity = cl.playerentity = cl.viewentity = (i & 127) + 1;
 		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
 		// get the full level name
-		str = MSG_ReadString ();
+		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 		// get the movevars that are defined in the qw protocol
-		cl.movevars_gravity            = MSG_ReadFloat();
-		cl.movevars_stopspeed          = MSG_ReadFloat();
-		cl.movevars_maxspeed           = MSG_ReadFloat();
-		cl.movevars_spectatormaxspeed  = MSG_ReadFloat();
-		cl.movevars_accelerate         = MSG_ReadFloat();
-		cl.movevars_airaccelerate      = MSG_ReadFloat();
-		cl.movevars_wateraccelerate    = MSG_ReadFloat();
-		cl.movevars_friction           = MSG_ReadFloat();
-		cl.movevars_waterfriction      = MSG_ReadFloat();
-		cl.movevars_entgravity         = MSG_ReadFloat();
+		cl.movevars_gravity            = MSG_ReadFloat(&cl_message);
+		cl.movevars_stopspeed          = MSG_ReadFloat(&cl_message);
+		cl.movevars_maxspeed           = MSG_ReadFloat(&cl_message);
+		cl.movevars_spectatormaxspeed  = MSG_ReadFloat(&cl_message);
+		cl.movevars_accelerate         = MSG_ReadFloat(&cl_message);
+		cl.movevars_airaccelerate      = MSG_ReadFloat(&cl_message);
+		cl.movevars_wateraccelerate    = MSG_ReadFloat(&cl_message);
+		cl.movevars_friction           = MSG_ReadFloat(&cl_message);
+		cl.movevars_waterfriction      = MSG_ReadFloat(&cl_message);
+		cl.movevars_entgravity         = MSG_ReadFloat(&cl_message);
 
 		// other movevars not in the protocol...
 		cl.movevars_wallfriction = 0;
@@ -1746,7 +1736,7 @@ void CL_ParseServerInfo (void)
 		if (cls.netcon)
 		{
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("soundlist %i %i", cl.qw_servercount, 0));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "soundlist %i %i", cl.qw_servercount, 0));
 		}
 
 		cl.loadbegun = false;
@@ -1773,7 +1763,7 @@ void CL_ParseServerInfo (void)
 	else
 	{
 	// parse maxclients
-		cl.maxclients = MSG_ReadByte ();
+		cl.maxclients = MSG_ReadByte(&cl_message);
 		if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
 		{
 			Host_Error("Bad maxclients (%u) from server", cl.maxclients);
@@ -1782,14 +1772,14 @@ void CL_ParseServerInfo (void)
 		cl.scores = (scoreboard_t *)Mem_Alloc(cls.levelmempool, cl.maxclients*sizeof(*cl.scores));
 
 	// parse gametype
-		cl.gametype = MSG_ReadByte ();
+		cl.gametype = MSG_ReadByte(&cl_message);
 		// the original id singleplayer demos are bugged and contain
 		// GAME_DEATHMATCH even for singleplayer
 		if (cl.maxclients == 1 && cls.protocol == PROTOCOL_QUAKE)
 			cl.gametype = GAME_COOP;
 
 	// parse signon message
-		str = MSG_ReadString ();
+		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 	// seperate the printfs so the server message can have a color
@@ -1802,7 +1792,7 @@ void CL_ParseServerInfo (void)
 		// parse model precache list
 		for (nummodels=1 ; ; nummodels++)
 		{
-			str = MSG_ReadString();
+			str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 			if (!str[0])
 				break;
 			if (nummodels==MAX_MODELS)
@@ -1814,7 +1804,7 @@ void CL_ParseServerInfo (void)
 		// parse sound precache list
 		for (numsounds=1 ; ; numsounds++)
 		{
-			str = MSG_ReadString();
+			str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 			if (!str[0])
 				break;
 			if (numsounds==MAX_SOUNDS)
@@ -1917,6 +1907,7 @@ void CL_ParseServerInfo (void)
 				Con_Print ("ERROR: couldn't open.\n");
 		}
 	}
+	cl.islocalgame = NetConn_IsLocalGame();
 }
 
 void CL_ValidateState(entity_state_t *s)
@@ -2065,7 +2056,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 CL_ParseBaseline
 ==================
 */
-void CL_ParseBaseline (entity_t *ent, int large)
+static void CL_ParseBaseline (entity_t *ent, int large)
 {
 	int i;
 
@@ -2074,25 +2065,25 @@ void CL_ParseBaseline (entity_t *ent, int large)
 	ent->state_baseline.active = true;
 	if (large)
 	{
-		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort ();
-		ent->state_baseline.frame = (unsigned short) MSG_ReadShort ();
+		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort(&cl_message);
+		ent->state_baseline.frame = (unsigned short) MSG_ReadShort(&cl_message);
 	}
 	else if (cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
 	{
-		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort ();
-		ent->state_baseline.frame = MSG_ReadByte ();
+		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort(&cl_message);
+		ent->state_baseline.frame = MSG_ReadByte(&cl_message);
 	}
 	else
 	{
-		ent->state_baseline.modelindex = MSG_ReadByte ();
-		ent->state_baseline.frame = MSG_ReadByte ();
+		ent->state_baseline.modelindex = MSG_ReadByte(&cl_message);
+		ent->state_baseline.frame = MSG_ReadByte(&cl_message);
 	}
-	ent->state_baseline.colormap = MSG_ReadByte();
-	ent->state_baseline.skin = MSG_ReadByte();
+	ent->state_baseline.colormap = MSG_ReadByte(&cl_message);
+	ent->state_baseline.skin = MSG_ReadByte(&cl_message);
 	for (i = 0;i < 3;i++)
 	{
-		ent->state_baseline.origin[i] = MSG_ReadCoord(cls.protocol);
-		ent->state_baseline.angles[i] = MSG_ReadAngle(cls.protocol);
+		ent->state_baseline.origin[i] = MSG_ReadCoord(&cl_message, cls.protocol);
+		ent->state_baseline.angles[i] = MSG_ReadAngle(&cl_message, cls.protocol);
 	}
 	ent->state_previous = ent->state_current = ent->state_baseline;
 }
@@ -2105,7 +2096,7 @@ CL_ParseClientdata
 Server information pertaining to this client only
 ==================
 */
-void CL_ParseClientdata (void)
+static void CL_ParseClientdata (void)
 {
 	int i, bits;
 
@@ -2132,89 +2123,89 @@ void CL_ParseClientdata (void)
 	cl.mvelocity[0][2] = 0;
 	cl.mviewzoom[0] = 1;
 
-	bits = (unsigned short) MSG_ReadShort ();
+	bits = (unsigned short) MSG_ReadShort(&cl_message);
 	if (bits & SU_EXTEND1)
-		bits |= (MSG_ReadByte() << 16);
+		bits |= (MSG_ReadByte(&cl_message) << 16);
 	if (bits & SU_EXTEND2)
-		bits |= (MSG_ReadByte() << 24);
+		bits |= (MSG_ReadByte(&cl_message) << 24);
 
 	if (bits & SU_VIEWHEIGHT)
-		cl.stats[STAT_VIEWHEIGHT] = MSG_ReadChar ();
+		cl.stats[STAT_VIEWHEIGHT] = MSG_ReadChar(&cl_message);
 
 	if (bits & SU_IDEALPITCH)
-		cl.idealpitch = MSG_ReadChar ();
+		cl.idealpitch = MSG_ReadChar(&cl_message);
 
 	for (i = 0;i < 3;i++)
 	{
 		if (bits & (SU_PUNCH1<<i) )
 		{
 			if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
-				cl.mpunchangle[0][i] = MSG_ReadChar();
+				cl.mpunchangle[0][i] = MSG_ReadChar(&cl_message);
 			else
-				cl.mpunchangle[0][i] = MSG_ReadAngle16i();
+				cl.mpunchangle[0][i] = MSG_ReadAngle16i(&cl_message);
 		}
 		if (bits & (SU_PUNCHVEC1<<i))
 		{
 			if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4)
-				cl.mpunchvector[0][i] = MSG_ReadCoord16i();
+				cl.mpunchvector[0][i] = MSG_ReadCoord16i(&cl_message);
 			else
-				cl.mpunchvector[0][i] = MSG_ReadCoord32f();
+				cl.mpunchvector[0][i] = MSG_ReadCoord32f(&cl_message);
 		}
 		if (bits & (SU_VELOCITY1<<i) )
 		{
 			if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 || cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4)
-				cl.mvelocity[0][i] = MSG_ReadChar()*16;
+				cl.mvelocity[0][i] = MSG_ReadChar(&cl_message)*16;
 			else
-				cl.mvelocity[0][i] = MSG_ReadCoord32f();
+				cl.mvelocity[0][i] = MSG_ReadCoord32f(&cl_message);
 		}
 	}
 
 	// LordHavoc: hipnotic demos don't have this bit set but should
 	if (bits & SU_ITEMS || cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 || cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
-		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
+		cl.stats[STAT_ITEMS] = MSG_ReadLong(&cl_message);
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
 	if (cls.protocol == PROTOCOL_DARKPLACES5)
 	{
-		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadShort() : 0;
-		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadShort() : 0;
-		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadShort() : 0;
-		cl.stats[STAT_HEALTH] = MSG_ReadShort();
-		cl.stats[STAT_AMMO] = MSG_ReadShort();
-		cl.stats[STAT_SHELLS] = MSG_ReadShort();
-		cl.stats[STAT_NAILS] = MSG_ReadShort();
-		cl.stats[STAT_ROCKETS] = MSG_ReadShort();
-		cl.stats[STAT_CELLS] = MSG_ReadShort();
-		cl.stats[STAT_ACTIVEWEAPON] = (unsigned short) MSG_ReadShort ();
+		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadShort(&cl_message) : 0;
+		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadShort(&cl_message) : 0;
+		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadShort(&cl_message) : 0;
+		cl.stats[STAT_HEALTH] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_AMMO] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_SHELLS] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_NAILS] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_ROCKETS] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_CELLS] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_ACTIVEWEAPON] = (unsigned short) MSG_ReadShort(&cl_message);
 	}
 	else if (cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 || cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4)
 	{
-		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte() : 0;
-		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte() : 0;
+		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadByte(&cl_message) : 0;
+		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadByte(&cl_message) : 0;
 		if (cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3)
-			cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? (unsigned short)MSG_ReadShort() : 0;
+			cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? (unsigned short)MSG_ReadShort(&cl_message) : 0;
 		else
-			cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte() : 0;
-		cl.stats[STAT_HEALTH] = MSG_ReadShort();
-		cl.stats[STAT_AMMO] = MSG_ReadByte();
-		cl.stats[STAT_SHELLS] = MSG_ReadByte();
-		cl.stats[STAT_NAILS] = MSG_ReadByte();
-		cl.stats[STAT_ROCKETS] = MSG_ReadByte();
-		cl.stats[STAT_CELLS] = MSG_ReadByte();
+			cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte(&cl_message) : 0;
+		cl.stats[STAT_HEALTH] = MSG_ReadShort(&cl_message);
+		cl.stats[STAT_AMMO] = MSG_ReadByte(&cl_message);
+		cl.stats[STAT_SHELLS] = MSG_ReadByte(&cl_message);
+		cl.stats[STAT_NAILS] = MSG_ReadByte(&cl_message);
+		cl.stats[STAT_ROCKETS] = MSG_ReadByte(&cl_message);
+		cl.stats[STAT_CELLS] = MSG_ReadByte(&cl_message);
 		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
-			cl.stats[STAT_ACTIVEWEAPON] = (1<<MSG_ReadByte ());
+			cl.stats[STAT_ACTIVEWEAPON] = (1<<MSG_ReadByte(&cl_message));
 		else
-			cl.stats[STAT_ACTIVEWEAPON] = MSG_ReadByte ();
+			cl.stats[STAT_ACTIVEWEAPON] = MSG_ReadByte(&cl_message);
 	}
 
 	if (bits & SU_VIEWZOOM)
 	{
 		if (cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4)
-			cl.stats[STAT_VIEWZOOM] = MSG_ReadByte();
+			cl.stats[STAT_VIEWZOOM] = MSG_ReadByte(&cl_message);
 		else
-			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort();
+			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort(&cl_message);
 	}
 
 	// viewzoom interpolation
@@ -2226,7 +2217,7 @@ void CL_ParseClientdata (void)
 CL_ParseStatic
 =====================
 */
-void CL_ParseStatic (int large)
+static void CL_ParseStatic (int large)
 {
 	entity_t *ent;
 
@@ -2266,46 +2257,46 @@ void CL_ParseStatic (int large)
 CL_ParseStaticSound
 ===================
 */
-void CL_ParseStaticSound (int large)
+static void CL_ParseStaticSound (int large)
 {
 	vec3_t		org;
 	int			sound_num, vol, atten;
 
-	MSG_ReadVector(org, cls.protocol);
+	MSG_ReadVector(&cl_message, org, cls.protocol);
 	if (large || cls.protocol == PROTOCOL_NEHAHRABJP2)
-		sound_num = (unsigned short) MSG_ReadShort ();
+		sound_num = (unsigned short) MSG_ReadShort(&cl_message);
 	else
-		sound_num = MSG_ReadByte ();
-	vol = MSG_ReadByte ();
-	atten = MSG_ReadByte ();
+		sound_num = MSG_ReadByte(&cl_message);
+	vol = MSG_ReadByte(&cl_message);
+	atten = MSG_ReadByte(&cl_message);
 
 	S_StaticSound (cl.sound_precache[sound_num], org, vol/255.0f, atten);
 }
 
-void CL_ParseEffect (void)
+static void CL_ParseEffect (void)
 {
 	vec3_t		org;
 	int			modelindex, startframe, framecount, framerate;
 
-	MSG_ReadVector(org, cls.protocol);
-	modelindex = MSG_ReadByte ();
-	startframe = MSG_ReadByte ();
-	framecount = MSG_ReadByte ();
-	framerate = MSG_ReadByte ();
+	MSG_ReadVector(&cl_message, org, cls.protocol);
+	modelindex = MSG_ReadByte(&cl_message);
+	startframe = MSG_ReadByte(&cl_message);
+	framecount = MSG_ReadByte(&cl_message);
+	framerate = MSG_ReadByte(&cl_message);
 
 	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
 
-void CL_ParseEffect2 (void)
+static void CL_ParseEffect2 (void)
 {
 	vec3_t		org;
 	int			modelindex, startframe, framecount, framerate;
 
-	MSG_ReadVector(org, cls.protocol);
-	modelindex = (unsigned short) MSG_ReadShort ();
-	startframe = (unsigned short) MSG_ReadShort ();
-	framecount = MSG_ReadByte ();
-	framerate = MSG_ReadByte ();
+	MSG_ReadVector(&cl_message, org, cls.protocol);
+	modelindex = (unsigned short) MSG_ReadShort(&cl_message);
+	startframe = (unsigned short) MSG_ReadShort(&cl_message);
+	framecount = MSG_ReadByte(&cl_message);
+	framerate = MSG_ReadByte(&cl_message);
 
 	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
@@ -2349,14 +2340,14 @@ void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning
 		Con_Print("beam list overflow!\n");
 }
 
-void CL_ParseBeam (dp_model_t *m, int lightning)
+static void CL_ParseBeam (dp_model_t *m, int lightning)
 {
 	int ent;
 	vec3_t start, end;
 
-	ent = (unsigned short) MSG_ReadShort ();
-	MSG_ReadVector(start, cls.protocol);
-	MSG_ReadVector(end, cls.protocol);
+	ent = (unsigned short) MSG_ReadShort(&cl_message);
+	MSG_ReadVector(&cl_message, start, cls.protocol);
+	MSG_ReadVector(&cl_message, end, cls.protocol);
 
 	if (ent >= MAX_EDICTS)
 	{
@@ -2367,7 +2358,7 @@ void CL_ParseBeam (dp_model_t *m, int lightning)
 	CL_NewBeam(ent, start, end, m, lightning);
 }
 
-void CL_ParseTempEntity(void)
+static void CL_ParseTempEntity(void)
 {
 	int type;
 	vec3_t pos, pos2;
@@ -2382,12 +2373,12 @@ void CL_ParseTempEntity(void)
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		type = MSG_ReadByte();
+		type = MSG_ReadByte(&cl_message);
 		switch (type)
 		{
 		case QW_TE_WIZSPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
@@ -2395,7 +2386,7 @@ void CL_ParseTempEntity(void)
 
 		case QW_TE_KNIGHTSPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
@@ -2403,7 +2394,7 @@ void CL_ParseTempEntity(void)
 
 		case QW_TE_SPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2421,7 +2412,7 @@ void CL_ParseTempEntity(void)
 			break;
 		case QW_TE_SUPERSPIKE:
 			// super spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2440,7 +2431,7 @@ void CL_ParseTempEntity(void)
 
 		case QW_TE_EXPLOSION:
 			// rocket explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
@@ -2449,7 +2440,7 @@ void CL_ParseTempEntity(void)
 
 		case QW_TE_TAREXPLOSION:
 			// tarbaby explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
@@ -2471,19 +2462,19 @@ void CL_ParseTempEntity(void)
 			break;
 
 		case QW_TE_LAVASPLASH:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_TELEPORT:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_GUNSHOT:
 			// bullet hitting wall
-			radius = MSG_ReadByte();
-			MSG_ReadVector(pos, cls.protocol);
+			radius = MSG_ReadByte(&cl_message);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			VectorSet(pos2, pos[0] + radius, pos[1] + radius, pos[2] + radius);
 			VectorSet(pos, pos[0] - radius, pos[1] - radius, pos[2] - radius);
@@ -2506,14 +2497,14 @@ void CL_ParseTempEntity(void)
 			break;
 
 		case QW_TE_BLOOD:
-			count = MSG_ReadByte();
-			MSG_ReadVector(pos, cls.protocol);
+			count = MSG_ReadByte(&cl_message);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_BLOOD, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case QW_TE_LIGHTNINGBLOOD:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_BLOOD, 2.5, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
@@ -2524,12 +2515,12 @@ void CL_ParseTempEntity(void)
 	}
 	else
 	{
-		type = MSG_ReadByte();
+		type = MSG_ReadByte(&cl_message);
 		switch (type)
 		{
 		case TE_WIZSPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_wizhit, pos, 1, 1);
@@ -2537,7 +2528,7 @@ void CL_ParseTempEntity(void)
 
 		case TE_KNIGHTSPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_knighthit, pos, 1, 1);
@@ -2545,7 +2536,7 @@ void CL_ParseTempEntity(void)
 
 		case TE_SPIKE:
 			// spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2563,7 +2554,7 @@ void CL_ParseTempEntity(void)
 			break;
 		case TE_SPIKEQUAD:
 			// quad spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SPIKEQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2581,7 +2572,7 @@ void CL_ParseTempEntity(void)
 			break;
 		case TE_SUPERSPIKE:
 			// super spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2599,7 +2590,7 @@ void CL_ParseTempEntity(void)
 			break;
 		case TE_SUPERSPIKEQUAD:
 			// quad super spike hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_SUPERSPIKEQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if (rand() % 5)
@@ -2618,36 +2609,36 @@ void CL_ParseTempEntity(void)
 			// LordHavoc: added for improved blood splatters
 		case TE_BLOOD:
 			// blood puff
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			dir[0] = MSG_ReadChar();
-			dir[1] = MSG_ReadChar();
-			dir[2] = MSG_ReadChar();
-			count = MSG_ReadByte();
+			dir[0] = MSG_ReadChar(&cl_message);
+			dir[1] = MSG_ReadChar(&cl_message);
+			dir[2] = MSG_ReadChar(&cl_message);
+			count = MSG_ReadByte(&cl_message);
 			CL_ParticleEffect(EFFECT_TE_BLOOD, count, pos, pos, dir, dir, NULL, 0);
 			break;
 		case TE_SPARK:
 			// spark shower
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			dir[0] = MSG_ReadChar();
-			dir[1] = MSG_ReadChar();
-			dir[2] = MSG_ReadChar();
-			count = MSG_ReadByte();
+			dir[0] = MSG_ReadChar(&cl_message);
+			dir[1] = MSG_ReadChar(&cl_message);
+			dir[2] = MSG_ReadChar(&cl_message);
+			count = MSG_ReadByte(&cl_message);
 			CL_ParticleEffect(EFFECT_TE_SPARK, count, pos, pos, dir, dir, NULL, 0);
 			break;
 		case TE_PLASMABURN:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_PLASMABURN, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 			// LordHavoc: added for improved gore
 		case TE_BLOODSHOWER:
 			// vaporized body
-			MSG_ReadVector(pos, cls.protocol); // mins
-			MSG_ReadVector(pos2, cls.protocol); // maxs
-			velspeed = MSG_ReadCoord(cls.protocol); // speed
-			count = (unsigned short) MSG_ReadShort(); // number of particles
+			MSG_ReadVector(&cl_message, pos, cls.protocol); // mins
+			MSG_ReadVector(&cl_message, pos2, cls.protocol); // maxs
+			velspeed = MSG_ReadCoord(&cl_message, cls.protocol); // speed
+			count = (unsigned short) MSG_ReadShort(&cl_message); // number of particles
 			vel1[0] = -velspeed;
 			vel1[1] = -velspeed;
 			vel1[2] = -velspeed;
@@ -2659,39 +2650,39 @@ void CL_ParseTempEntity(void)
 
 		case TE_PARTICLECUBE:
 			// general purpose particle effect
-			MSG_ReadVector(pos, cls.protocol); // mins
-			MSG_ReadVector(pos2, cls.protocol); // maxs
-			MSG_ReadVector(dir, cls.protocol); // dir
-			count = (unsigned short) MSG_ReadShort(); // number of particles
-			colorStart = MSG_ReadByte(); // color
-			colorLength = MSG_ReadByte(); // gravity (1 or 0)
-			velspeed = MSG_ReadCoord(cls.protocol); // randomvel
+			MSG_ReadVector(&cl_message, pos, cls.protocol); // mins
+			MSG_ReadVector(&cl_message, pos2, cls.protocol); // maxs
+			MSG_ReadVector(&cl_message, dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(&cl_message); // number of particles
+			colorStart = MSG_ReadByte(&cl_message); // color
+			colorLength = MSG_ReadByte(&cl_message); // gravity (1 or 0)
+			velspeed = MSG_ReadCoord(&cl_message, cls.protocol); // randomvel
 			CL_ParticleCube(pos, pos2, dir, count, colorStart, colorLength != 0, velspeed);
 			break;
 
 		case TE_PARTICLERAIN:
 			// general purpose particle effect
-			MSG_ReadVector(pos, cls.protocol); // mins
-			MSG_ReadVector(pos2, cls.protocol); // maxs
-			MSG_ReadVector(dir, cls.protocol); // dir
-			count = (unsigned short) MSG_ReadShort(); // number of particles
-			colorStart = MSG_ReadByte(); // color
+			MSG_ReadVector(&cl_message, pos, cls.protocol); // mins
+			MSG_ReadVector(&cl_message, pos2, cls.protocol); // maxs
+			MSG_ReadVector(&cl_message, dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(&cl_message); // number of particles
+			colorStart = MSG_ReadByte(&cl_message); // color
 			CL_ParticleRain(pos, pos2, dir, count, colorStart, 0);
 			break;
 
 		case TE_PARTICLESNOW:
 			// general purpose particle effect
-			MSG_ReadVector(pos, cls.protocol); // mins
-			MSG_ReadVector(pos2, cls.protocol); // maxs
-			MSG_ReadVector(dir, cls.protocol); // dir
-			count = (unsigned short) MSG_ReadShort(); // number of particles
-			colorStart = MSG_ReadByte(); // color
+			MSG_ReadVector(&cl_message, pos, cls.protocol); // mins
+			MSG_ReadVector(&cl_message, pos2, cls.protocol); // maxs
+			MSG_ReadVector(&cl_message, dir, cls.protocol); // dir
+			count = (unsigned short) MSG_ReadShort(&cl_message); // number of particles
+			colorStart = MSG_ReadByte(&cl_message); // color
 			CL_ParticleRain(pos, pos2, dir, count, colorStart, 1);
 			break;
 
 		case TE_GUNSHOT:
 			// bullet hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if(cl_sound_ric_gunshot.integer & RIC_GUNSHOT)
@@ -2713,7 +2704,7 @@ void CL_ParseTempEntity(void)
 
 		case TE_GUNSHOTQUAD:
 			// quad bullet hitting wall
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			if(cl_sound_ric_gunshot.integer & RIC_GUNSHOTQUAD)
@@ -2735,7 +2726,7 @@ void CL_ParseTempEntity(void)
 
 		case TE_EXPLOSION:
 			// rocket explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
@@ -2743,7 +2734,7 @@ void CL_ParseTempEntity(void)
 
 		case TE_EXPLOSIONQUAD:
 			// quad rocket explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_EXPLOSIONQUAD, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
@@ -2751,11 +2742,11 @@ void CL_ParseTempEntity(void)
 
 		case TE_EXPLOSION3:
 			// Nehahra movie colored lighting explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			color[0] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
-			color[1] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
-			color[2] = MSG_ReadCoord(cls.protocol) * (2.0f / 1.0f);
+			color[0] = MSG_ReadCoord(&cl_message, cls.protocol) * (2.0f / 1.0f);
+			color[1] = MSG_ReadCoord(&cl_message, cls.protocol) * (2.0f / 1.0f);
+			color[2] = MSG_ReadCoord(&cl_message, cls.protocol) * (2.0f / 1.0f);
 			CL_ParticleExplosion(pos);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocLightFlash(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
@@ -2764,12 +2755,12 @@ void CL_ParseTempEntity(void)
 
 		case TE_EXPLOSIONRGB:
 			// colored lighting explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleExplosion(pos);
-			color[0] = MSG_ReadByte() * (2.0f / 255.0f);
-			color[1] = MSG_ReadByte() * (2.0f / 255.0f);
-			color[2] = MSG_ReadByte() * (2.0f / 255.0f);
+			color[0] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
+			color[1] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
+			color[2] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocLightFlash(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
@@ -2777,34 +2768,34 @@ void CL_ParseTempEntity(void)
 
 		case TE_TAREXPLOSION:
 			// tarbaby explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_SMALLFLASH:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_SMALLFLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_CUSTOMFLASH:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 4);
-			radius = (MSG_ReadByte() + 1) * 8;
-			velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
-			color[0] = MSG_ReadByte() * (2.0f / 255.0f);
-			color[1] = MSG_ReadByte() * (2.0f / 255.0f);
-			color[2] = MSG_ReadByte() * (2.0f / 255.0f);
+			radius = (MSG_ReadByte(&cl_message) + 1) * 8;
+			velspeed = (MSG_ReadByte(&cl_message) + 1) * (1.0 / 256.0);
+			color[0] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
+			color[1] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
+			color[2] = MSG_ReadByte(&cl_message) * (2.0f / 255.0f);
 			Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 			CL_AllocLightFlash(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			break;
 
 		case TE_FLAMEJET:
-			MSG_ReadVector(pos, cls.protocol);
-			MSG_ReadVector(dir, cls.protocol);
-			count = MSG_ReadByte();
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
+			MSG_ReadVector(&cl_message, dir, cls.protocol);
+			count = MSG_ReadByte(&cl_message);
 			CL_ParticleEffect(EFFECT_TE_FLAMEJET, count, pos, pos, dir, dir, NULL, 0);
 			break;
 
@@ -2832,25 +2823,25 @@ void CL_ParseTempEntity(void)
 
 	// LordHavoc: for compatibility with the Nehahra movie...
 		case TE_LIGHTNING4NEH:
-			CL_ParseBeam(Mod_ForName(MSG_ReadString(), true, false, NULL), false);
+			CL_ParseBeam(Mod_ForName(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), true, false, NULL), false);
 			break;
 
 		case TE_LAVASPLASH:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_TELEPORT:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_EXPLOSION2:
 			// color mapped explosion
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
-			colorStart = MSG_ReadByte();
-			colorLength = MSG_ReadByte();
+			colorStart = MSG_ReadByte(&cl_message);
+			colorLength = MSG_ReadByte(&cl_message);
 			CL_ParticleExplosion2(pos, colorStart, colorLength);
 			tempcolor = palette_rgb[(rand()%colorLength) + colorStart];
 			color[0] = tempcolor[0] * (2.0f / 255.0f);
@@ -2862,31 +2853,31 @@ void CL_ParseTempEntity(void)
 			break;
 
 		case TE_TEI_G3:
-			MSG_ReadVector(pos, cls.protocol);
-			MSG_ReadVector(pos2, cls.protocol);
-			MSG_ReadVector(dir, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos2, cls.protocol);
+			MSG_ReadVector(&cl_message, dir, cls.protocol);
 			CL_ParticleEffect(EFFECT_TE_TEI_G3, 1, pos, pos2, dir, dir, NULL, 0);
 			break;
 
 		case TE_TEI_SMOKE:
-			MSG_ReadVector(pos, cls.protocol);
-			MSG_ReadVector(dir, cls.protocol);
-			count = MSG_ReadByte();
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
+			MSG_ReadVector(&cl_message, dir, cls.protocol);
+			count = MSG_ReadByte(&cl_message);
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_TEI_SMOKE, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
 
 		case TE_TEI_BIGEXPLOSION:
-			MSG_ReadVector(pos, cls.protocol);
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_TEI_BIGEXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
 			break;
 
 		case TE_TEI_PLASMAHIT:
-			MSG_ReadVector(pos, cls.protocol);
-			MSG_ReadVector(dir, cls.protocol);
-			count = MSG_ReadByte();
+			MSG_ReadVector(&cl_message, pos, cls.protocol);
+			MSG_ReadVector(&cl_message, dir, cls.protocol);
+			count = MSG_ReadByte(&cl_message);
 			CL_FindNonSolidLocation(pos, pos, 5);
 			CL_ParticleEffect(EFFECT_TE_TEI_PLASMAHIT, count, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
@@ -2897,39 +2888,39 @@ void CL_ParseTempEntity(void)
 	}
 }
 
-void CL_ParseTrailParticles(void)
+static void CL_ParseTrailParticles(void)
 {
 	int entityindex;
 	int effectindex;
 	vec3_t start, end;
-	entityindex = (unsigned short)MSG_ReadShort();
+	entityindex = (unsigned short)MSG_ReadShort(&cl_message);
 	if (entityindex >= MAX_EDICTS)
 		entityindex = 0;
 	if (entityindex >= cl.max_entities)
 		CL_ExpandEntities(entityindex);
-	effectindex = (unsigned short)MSG_ReadShort();
-	MSG_ReadVector(start, cls.protocol);
-	MSG_ReadVector(end, cls.protocol);
+	effectindex = (unsigned short)MSG_ReadShort(&cl_message);
+	MSG_ReadVector(&cl_message, start, cls.protocol);
+	MSG_ReadVector(&cl_message, end, cls.protocol);
 	CL_ParticleEffect(effectindex, 1, start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0);
 }
 
-void CL_ParsePointParticles(void)
+static void CL_ParsePointParticles(void)
 {
 	int effectindex, count;
 	vec3_t origin, velocity;
-	effectindex = (unsigned short)MSG_ReadShort();
-	MSG_ReadVector(origin, cls.protocol);
-	MSG_ReadVector(velocity, cls.protocol);
-	count = (unsigned short)MSG_ReadShort();
+	effectindex = (unsigned short)MSG_ReadShort(&cl_message);
+	MSG_ReadVector(&cl_message, origin, cls.protocol);
+	MSG_ReadVector(&cl_message, velocity, cls.protocol);
+	count = (unsigned short)MSG_ReadShort(&cl_message);
 	CL_ParticleEffect(effectindex, count, origin, origin, velocity, velocity, NULL, 0);
 }
 
-void CL_ParsePointParticles1(void)
+static void CL_ParsePointParticles1(void)
 {
 	int effectindex;
 	vec3_t origin;
-	effectindex = (unsigned short)MSG_ReadShort();
-	MSG_ReadVector(origin, cls.protocol);
+	effectindex = (unsigned short)MSG_ReadShort(&cl_message);
+	MSG_ReadVector(&cl_message, origin, cls.protocol);
 	CL_ParticleEffect(effectindex, 1, origin, origin, vec3_origin, vec3_origin, NULL, 0);
 }
 
@@ -3083,7 +3074,7 @@ static void CL_IPLog_List_f(void)
 }
 
 // look for anything interesting like player IP addresses or ping reports
-qboolean CL_ExaminePrintString(const char *text)
+static qboolean CL_ExaminePrintString(const char *text)
 {
 	int len;
 	const char *t;
@@ -3228,7 +3219,6 @@ qboolean CL_ExaminePrintString(const char *text)
 
 extern cvar_t slowmo;
 extern cvar_t cl_lerpexcess;
-extern void CSQC_UpdateNetworkTimes(double newtime, double oldtime);
 static void CL_NetworkTimeReceived(double newtime)
 {
 	double timehigh;
@@ -3327,14 +3317,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	}
 }
 
-#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s(%i)\n", msg_readcount-1, x, cmd);
-
-//[515]: csqc
-qboolean CL_VM_Parse_TempEntity (void);
-void CL_VM_Parse_StuffCmd (const char *msg);
-void CL_VM_Parse_CenterPrint (const char *msg);
-void CSQC_AddPrintText (const char *msg);
-void CSQC_ReadEntities (void);
+#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf("%3i:%s(%i)\n", cl_message.readcount-1, x, cmd);
 
 /*
 =====================
@@ -3342,7 +3325,6 @@ CL_ParseServerMessage
 =====================
 */
 int parsingerror = false;
-extern void CL_UpdateMoveVars(void);
 void CL_ParseServerMessage(void)
 {
 	int			cmd;
@@ -3353,12 +3335,13 @@ void CL_ParseServerMessage(void)
 	int			cmdindex, cmdcount = 0;
 	qboolean	qwplayerupdatereceived;
 	qboolean	strip_pqc;
+	char vabuf[1024];
 
 	// LordHavoc: moved demo message writing from before the packet parse to
 	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
 	// code in CL_ParseServerinfo
 	//if (cls.demorecording)
-	//	CL_WriteDemoMessage (&net_message);
+	//	CL_WriteDemoMessage (&cl_message);
 
 	cl.last_received_message = realtime;
 
@@ -3368,7 +3351,7 @@ void CL_ParseServerMessage(void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.integer == 1)
-		Con_Printf("%f %i\n", realtime, net_message.cursize);
+		Con_Printf("%f %i\n", realtime, cl_message.cursize);
 	else if (cl_shownet.integer == 2)
 		Con_Print("------------------\n");
 
@@ -3395,10 +3378,10 @@ void CL_ParseServerMessage(void)
 
 		while (1)
 		{
-			if (msg_badread)
+			if (cl_message.badread)
 				Host_Error ("CL_ParseServerMessage: Bad QW server message");
 
-			cmd = MSG_ReadByte ();
+			cmd = MSG_ReadByte(&cl_message);
 
 			if (cmd == -1)
 			{
@@ -3459,23 +3442,23 @@ void CL_ParseServerMessage(void)
 				return;
 
 			case qw_svc_print:
-				i = MSG_ReadByte();
-				temp = MSG_ReadString();
+				i = MSG_ReadByte(&cl_message);
+				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
 				{
 					if (i == 3) // chat
-						CSQC_AddPrintText(va("\1%s", temp));	//[515]: csqc
+						CSQC_AddPrintText(va(vabuf, sizeof(vabuf), "\1%s", temp));	//[515]: csqc
 					else
 						CSQC_AddPrintText(temp);
 				}
 				break;
 
 			case qw_svc_centerprint:
-				CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
+				CL_VM_Parse_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
 				break;
 
 			case qw_svc_stufftext:
-				CL_VM_Parse_StuffCmd(MSG_ReadString ());	//[515]: csqc
+				CL_VM_Parse_StuffCmd(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
 				break;
 
 			case qw_svc_damage:
@@ -3490,7 +3473,7 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_setangle:
 				for (i=0 ; i<3 ; i++)
-					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+					cl.viewangles[i] = MSG_ReadAngle(&cl_message, cls.protocol);
 				if (!cls.demoplayback)
 				{
 					cl.fixangle[0] = true;
@@ -3502,13 +3485,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_lightstyle:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.max_lightstyle)
 				{
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
 				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
@@ -3518,41 +3501,41 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_stopsound:
-				i = (unsigned short) MSG_ReadShort();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				S_StopSound(i>>3, i&7);
 				break;
 
 			case qw_svc_updatefrags:
-				i = MSG_ReadByte();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
-				cl.scores[i].frags = (signed short) MSG_ReadShort();
+				cl.scores[i].frags = (signed short) MSG_ReadShort(&cl_message);
 				break;
 
 			case qw_svc_updateping:
-				i = MSG_ReadByte();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error("CL_ParseServerMessage: svc_updateping >= cl.maxclients");
-				cl.scores[i].qw_ping = MSG_ReadShort();
+				cl.scores[i].qw_ping = MSG_ReadShort(&cl_message);
 				break;
 
 			case qw_svc_updatepl:
-				i = MSG_ReadByte();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error("CL_ParseServerMessage: svc_updatepl >= cl.maxclients");
-				cl.scores[i].qw_packetloss = MSG_ReadByte();
+				cl.scores[i].qw_packetloss = MSG_ReadByte(&cl_message);
 				break;
 
 			case qw_svc_updateentertime:
-				i = MSG_ReadByte();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error("CL_ParseServerMessage: svc_updateentertime >= cl.maxclients");
 				// seconds ago
-				cl.scores[i].qw_entertime = cl.time - MSG_ReadFloat();
+				cl.scores[i].qw_entertime = cl.time - MSG_ReadFloat(&cl_message);
 				break;
 
 			case qw_svc_spawnbaseline:
-				i = (unsigned short) MSG_ReadShort();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
 				if (i >= cl.max_entities)
@@ -3576,17 +3559,17 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_updatestat:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i < 0 || i >= MAX_CL_STATS)
 					Host_Error ("svc_updatestat: %i is invalid", i);
-				cl.stats[i] = MSG_ReadByte ();
+				cl.stats[i] = MSG_ReadByte(&cl_message);
 				break;
 
 			case qw_svc_updatestatlong:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i < 0 || i >= MAX_CL_STATS)
 					Host_Error ("svc_updatestatlong: %i is invalid", i);
-				cl.stats[i] = MSG_ReadLong ();
+				cl.stats[i] = MSG_ReadLong(&cl_message);
 				break;
 
 			case qw_svc_spawnstaticsound:
@@ -3594,7 +3577,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_cdtrack:
-				cl.cdtrack = cl.looptrack = MSG_ReadByte ();
+				cl.cdtrack = cl.looptrack = MSG_ReadByte(&cl_message);
 				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
 					CDAudio_Play ((unsigned char)cls.forcetrack, true);
 				else
@@ -3605,16 +3588,16 @@ void CL_ParseServerMessage(void)
 				if(!cl.intermission)
 					cl.completed_time = cl.time;
 				cl.intermission = 1;
-				MSG_ReadVector(cl.qw_intermission_origin, cls.protocol);
+				MSG_ReadVector(&cl_message, cl.qw_intermission_origin, cls.protocol);
 				for (i = 0;i < 3;i++)
-					cl.qw_intermission_angles[i] = MSG_ReadAngle(cls.protocol);
+					cl.qw_intermission_angles[i] = MSG_ReadAngle(&cl_message, cls.protocol);
 				break;
 
 			case qw_svc_finale:
 				if(!cl.intermission)
 					cl.completed_time = cl.time;
 				cl.intermission = 2;
-				SCR_CenterPrint(MSG_ReadString ());
+				SCR_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
 				break;
 
 			case qw_svc_sellscreen:
@@ -3629,7 +3612,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_muzzleflash:
-				i = (unsigned short) MSG_ReadShort();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				// NOTE: in QW this only worked on clients
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
@@ -3671,7 +3654,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_chokecount:
-				i = MSG_ReadByte();
+				i = MSG_ReadByte(&cl_message);
 				// FIXME: apply to netgraph
 				//for (j = 0;j < i;j++)
 				//	cl.frames[(cls.netcon->qw.incoming_acknowledged-1-j)&QW_UPDATE_MASK].receivedtime = -2;
@@ -3706,17 +3689,17 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_maxspeed:
-				cl.movevars_maxspeed = MSG_ReadFloat();
+				cl.movevars_maxspeed = MSG_ReadFloat(&cl_message);
 				break;
 
 			case qw_svc_entgravity:
-				cl.movevars_entgravity = MSG_ReadFloat();
+				cl.movevars_entgravity = MSG_ReadFloat(&cl_message);
 				if (!cl.movevars_entgravity)
 					cl.movevars_entgravity = 1.0f;
 				break;
 
 			case qw_svc_setpause:
-				cl.paused = MSG_ReadByte () != 0;
+				cl.paused = MSG_ReadByte(&cl_message) != 0;
 				if (cl.paused)
 					CDAudio_Pause ();
 				else
@@ -3738,10 +3721,10 @@ void CL_ParseServerMessage(void)
 	{
 		while (1)
 		{
-			if (msg_badread)
+			if (cl_message.badread)
 				Host_Error ("CL_ParseServerMessage: Bad server message");
 
-			cmd = MSG_ReadByte ();
+			cmd = MSG_ReadByte(&cl_message);
 
 			if (cmd == -1)
 			{
@@ -3813,7 +3796,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_time:
-				CL_NetworkTimeReceived(MSG_ReadFloat());
+				CL_NetworkTimeReceived(MSG_ReadFloat(&cl_message));
 				break;
 
 			case svc_clientdata:
@@ -3821,7 +3804,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_version:
-				i = MSG_ReadLong ();
+				i = MSG_ReadLong(&cl_message);
 				protocol = Protocol_EnumForNumber(i);
 				if (protocol == PROTOCOL_UNKNOWN)
 					Host_Error("CL_ParseServerMessage: Server is unrecognized protocol number (%i)", i);
@@ -3840,17 +3823,17 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_print:
-				temp = MSG_ReadString();
+				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
 					CSQC_AddPrintText(temp);	//[515]: csqc
 				break;
 
 			case svc_centerprint:
-				CL_VM_Parse_CenterPrint(MSG_ReadString ());	//[515]: csqc
+				CL_VM_Parse_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
 				break;
 
 			case svc_stufftext:
-				temp = MSG_ReadString();
+				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 				/* if(utf8_enable.integer)
 				{
 					strip_pqc = true;
@@ -3898,7 +3881,7 @@ void CL_ParseServerMessage(void)
 
 			case svc_setangle:
 				for (i=0 ; i<3 ; i++)
-					cl.viewangles[i] = MSG_ReadAngle (cls.protocol);
+					cl.viewangles[i] = MSG_ReadAngle(&cl_message, cls.protocol);
 				if (!cls.demoplayback)
 				{
 					cl.fixangle[0] = true;
@@ -3910,7 +3893,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_setview:
-				cl.viewentity = (unsigned short)MSG_ReadShort ();
+				cl.viewentity = (unsigned short)MSG_ReadShort(&cl_message);
 				if (cl.viewentity >= MAX_EDICTS)
 					Host_Error("svc_setview >= MAX_EDICTS");
 				if (cl.viewentity >= cl.max_entities)
@@ -3924,13 +3907,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_lightstyle:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.max_lightstyle)
 				{
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(), sizeof (cl.lightstyle[i].map));
+				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
 				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
@@ -3947,8 +3930,8 @@ void CL_ParseServerMessage(void)
 				}
 				else
 				{
-					int i = (unsigned short)MSG_ReadShort();
-					char *s = MSG_ReadString();
+					int i = (unsigned short)MSG_ReadShort(&cl_message);
+					char *s = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 					if (i < 32768)
 					{
 						if (i >= 1 && i < MAX_MODELS)
@@ -3978,29 +3961,29 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_stopsound:
-				i = (unsigned short) MSG_ReadShort();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				S_StopSound(i>>3, i&7);
 				break;
 
 			case svc_updatename:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
-				strlcpy (cl.scores[i].name, MSG_ReadString (), sizeof (cl.scores[i].name));
+				strlcpy (cl.scores[i].name, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.scores[i].name));
 				break;
 
 			case svc_updatefrags:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
-				cl.scores[i].frags = (signed short) MSG_ReadShort ();
+				cl.scores[i].frags = (signed short) MSG_ReadShort(&cl_message);
 				break;
 
 			case svc_updatecolors:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error ("CL_ParseServerMessage: svc_updatecolors >= cl.maxclients");
-				cl.scores[i].colors = MSG_ReadByte ();
+				cl.scores[i].colors = MSG_ReadByte(&cl_message);
 				break;
 
 			case svc_particle:
@@ -4016,7 +3999,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_spawnbaseline:
-				i = (unsigned short) MSG_ReadShort ();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
 				if (i >= cl.max_entities)
@@ -4024,7 +4007,7 @@ void CL_ParseServerMessage(void)
 				CL_ParseBaseline (cl.entities + i, false);
 				break;
 			case svc_spawnbaseline2:
-				i = (unsigned short) MSG_ReadShort ();
+				i = (unsigned short) MSG_ReadShort(&cl_message);
 				if (i < 0 || i >= MAX_EDICTS)
 					Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
 				if (i >= cl.max_entities)
@@ -4043,7 +4026,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_setpause:
-				cl.paused = MSG_ReadByte () != 0;
+				cl.paused = MSG_ReadByte(&cl_message) != 0;
 				if (cl.paused)
 					CDAudio_Pause ();
 				else
@@ -4052,7 +4035,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_signonnum:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				// LordHavoc: it's rude to kick off the client if they missed the
 				// reconnect somehow, so allow signon 1 even if at signon 1
 				if (i <= cls.signon && i != 1)
@@ -4070,17 +4053,17 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_updatestat:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i < 0 || i >= MAX_CL_STATS)
 					Host_Error ("svc_updatestat: %i is invalid", i);
-				cl.stats[i] = MSG_ReadLong ();
+				cl.stats[i] = MSG_ReadLong(&cl_message);
 				break;
 
 			case svc_updatestatubyte:
-				i = MSG_ReadByte ();
+				i = MSG_ReadByte(&cl_message);
 				if (i < 0 || i >= MAX_CL_STATS)
 					Host_Error ("svc_updatestat: %i is invalid", i);
-				cl.stats[i] = MSG_ReadByte ();
+				cl.stats[i] = MSG_ReadByte(&cl_message);
 				break;
 
 			case svc_spawnstaticsound:
@@ -4092,8 +4075,8 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_cdtrack:
-				cl.cdtrack = MSG_ReadByte ();
-				cl.looptrack = MSG_ReadByte ();
+				cl.cdtrack = MSG_ReadByte(&cl_message);
+				cl.looptrack = MSG_ReadByte(&cl_message);
 				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
 					CDAudio_Play ((unsigned char)cls.forcetrack, true);
 				else
@@ -4112,7 +4095,7 @@ void CL_ParseServerMessage(void)
 					cl.completed_time = cl.time;
 				cl.intermission = 2;
 				CL_VM_UpdateIntermissionState(cl.intermission);
-				SCR_CenterPrint(MSG_ReadString ());
+				SCR_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
 				break;
 
 			case svc_cutscene:
@@ -4120,7 +4103,7 @@ void CL_ParseServerMessage(void)
 					cl.completed_time = cl.time;
 				cl.intermission = 3;
 				CL_VM_UpdateIntermissionState(cl.intermission);
-				SCR_CenterPrint(MSG_ReadString ());
+				SCR_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
 				break;
 
 			case svc_sellscreen:
@@ -4130,16 +4113,16 @@ void CL_ParseServerMessage(void)
 				if (gamemode == GAME_TENEBRAE)
 				{
 					// repeating particle effect
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					(void) MSG_ReadByte();
-					MSG_ReadLong();
-					MSG_ReadLong();
-					MSG_ReadString();
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					(void) MSG_ReadByte(&cl_message);
+					MSG_ReadLong(&cl_message);
+					MSG_ReadLong(&cl_message);
+					MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 				}
 				else
 					SHOWLMP_decodehide();
@@ -4148,17 +4131,17 @@ void CL_ParseServerMessage(void)
 				if (gamemode == GAME_TENEBRAE)
 				{
 					// particle effect
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					MSG_ReadCoord(cls.protocol);
-					(void) MSG_ReadByte();
-					MSG_ReadString();
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					MSG_ReadCoord(&cl_message, cls.protocol);
+					(void) MSG_ReadByte(&cl_message);
+					MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 				}
 				else
 					SHOWLMP_decodeshow();
 				break;
 			case svc_skybox:
-				R_SetSkyBox(MSG_ReadString());
+				R_SetSkyBox(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
 				break;
 			case svc_entities:
 				if (cls.signon == SIGNONS - 1)
@@ -4210,7 +4193,7 @@ void CL_ParseServerMessage(void)
 	// implemented
 	if (cls.demorecording)
 	{
-		CL_WriteDemoMessage (&net_message);
+		CL_WriteDemoMessage (&cl_message);
 //		R_TimeReport("WriteDemo");
 	}
 }
@@ -4220,7 +4203,7 @@ void CL_Parse_DumpPacket(void)
 	if (!parsingerror)
 		return;
 	Con_Print("Packet dump:\n");
-	SZ_HexDumpToConsole(&net_message);
+	SZ_HexDumpToConsole(&cl_message);
 	parsingerror = false;
 }
 

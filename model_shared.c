@@ -228,7 +228,7 @@ void Mod_UnloadModel (dp_model_t *mod)
 	mod->loaded = false;
 }
 
-void R_Model_Null_Draw(entity_render_t *ent)
+static void R_Model_Null_Draw(entity_render_t *ent)
 {
 	return;
 }
@@ -236,7 +236,7 @@ void R_Model_Null_Draw(entity_render_t *ent)
 
 typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qboolean loop, void *pass);
 
-int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
+static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
 {
 	const char *bufptr;
 	int start, len;
@@ -289,13 +289,7 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 	return i;
 }
 
-void Mod_FrameGroupify_ParseGroups_Count (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
-{
-	unsigned int *cnt = (unsigned int *) pass;
-	++*cnt;
-}
-
-void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
+static void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
 {
 	dp_model_t *mod = (dp_model_t *) pass;
 	animscene_t *anim = &mod->animscenes[i];
@@ -307,7 +301,7 @@ void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, fl
 	//Con_Printf("frame group %d is %d %d %f %d\n", i, start, len, fps, loop);
 }
 
-void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
+static void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
 {
 	unsigned int cnt;
 
@@ -328,7 +322,7 @@ void Mod_FrameGroupify(dp_model_t *mod, const char *buf)
 	Mod_FrameGroupify_ParseGroups(buf, Mod_FrameGroupify_ParseGroups_Store, mod);
 }
 
-void Mod_FindPotentialDeforms(dp_model_t *mod)
+static void Mod_FindPotentialDeforms(dp_model_t *mod)
 {
 	int i, j;
 	texture_t *texture;
@@ -366,6 +360,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	unsigned int crc;
 	void *buf;
 	fs_offset_t filesize = 0;
+	char vabuf[1024];
 
 	mod->used = true;
 
@@ -491,8 +486,8 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 		Mem_Free(buf);
 
 		Mod_FindPotentialDeforms(mod);
-					
-		buf = FS_LoadFile (va("%s.framegroups", mod->name), tempmempool, false, &filesize);
+
+		buf = FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.framegroups", mod->name), tempmempool, false, &filesize);
 		if(buf)
 		{
 			Mod_FrameGroupify(mod, (const char *)buf);
@@ -856,7 +851,8 @@ void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const 
 		VectorNormalize(vectorNormal);
 }
 
-void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
+#if 0
+static void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
 {
 	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
 	// 79 add/sub/negate/multiply (1 cycle), 1 compare (3 cycle?), total cycles not counting load/store/exchange roughly 82 cycles
@@ -899,6 +895,7 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 		VectorNegate(tvector3f, tvector3f);
 	}
 }
+#endif
 
 // warning: this is a very expensive function!
 void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting)
@@ -1394,7 +1391,8 @@ void Mod_CreateCollisionMesh(dp_model_t *mod)
 	mod->brush.collisionmesh = Mod_ShadowMesh_Finish(mempool, mod->brush.collisionmesh, false, false, false);
 }
 
-void Mod_GetTerrainVertex3fTexCoord2fFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+#if 0
+static void Mod_GetTerrainVertex3fTexCoord2fFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float v[3], tc[3];
 	v[0] = ix;
@@ -1409,7 +1407,7 @@ void Mod_GetTerrainVertex3fTexCoord2fFromBGRA(const unsigned char *imagepixels, 
 	texcoord2f[1] = tc[1];
 }
 
-void Mod_GetTerrainVertexFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+static void Mod_GetTerrainVertexFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	float vup[3], vdown[3], vleft[3], vright[3];
 	float tcup[3], tcdown[3], tcleft[3], tcright[3];
@@ -1434,7 +1432,7 @@ void Mod_GetTerrainVertexFromBGRA(const unsigned char *imagepixels, int imagewid
 	VectorAdd(normal3f, nl, normal3f);
 }
 
-void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+static void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	int x, y, ix, iy, *e;
 	e = element3i;
@@ -1456,6 +1454,7 @@ void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int ima
 		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
 			Mod_GetTerrainVertexFromBGRA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
 }
+#endif
 
 #if 0
 void Mod_Terrain_SurfaceRecurseChunk(dp_model_t *model, int stepsize, int x, int y)
@@ -1537,7 +1536,7 @@ void Mod_Terrain_UpdateSurfacesForViewOrigin(dp_model_t *model)
 }
 #endif
 
-int Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
+static int Mod_LoadQ3Shaders_EnumerateWaveFunc(const char *s)
 {
 	int offset = 0;
 	if (!strncasecmp(s, "user", 4)) // parse stuff like "user1sin", always user<n>func
@@ -2692,6 +2691,7 @@ skinfile_t *Mod_LoadSkinFiles(void)
 	skinfile_t *skinfile = NULL, *first = NULL;
 	skinfileitem_t *skinfileitem;
 	char word[10][MAX_QPATH];
+	char vabuf[1024];
 
 /*
 sample file:
@@ -2709,7 +2709,7 @@ tag_weapon,
 tag_torso,
 */
 	memset(word, 0, sizeof(word));
-	for (i = 0;i < 256 && (data = text = (char *)FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
+	for (i = 0;i < 256 && (data = text = (char *)FS_LoadFile(va(vabuf, sizeof(vabuf), "%s_%i.skin", loadmodel->name, i), tempmempool, true, NULL));i++)
 	{
 		// If it's the first file we parse
 		if (skinfile == NULL)
@@ -3280,6 +3280,7 @@ static void Mod_Decompile_f(void)
 	int zymtextsize = 0;
 	int dpmtextsize = 0;
 	int framegroupstextsize = 0;
+	char vabuf[1024];
 
 	if (Cmd_Argc() != 2)
 	{
@@ -3386,11 +3387,11 @@ static void Mod_Decompile_f(void)
 			}
 		}
 		if (zymtextsize)
-			FS_WriteFile(va("%s_decompiled/out_zym.txt", basename), zymtextbuffer, (fs_offset_t)zymtextsize);
+			FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_decompiled/out_zym.txt", basename), zymtextbuffer, (fs_offset_t)zymtextsize);
 		if (dpmtextsize)
-			FS_WriteFile(va("%s_decompiled/out_dpm.txt", basename), dpmtextbuffer, (fs_offset_t)dpmtextsize);
+			FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_decompiled/out_dpm.txt", basename), dpmtextbuffer, (fs_offset_t)dpmtextsize);
 		if (framegroupstextsize)
-			FS_WriteFile(va("%s_decompiled.framegroups", basename), framegroupstextbuffer, (fs_offset_t)framegroupstextsize);
+			FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_decompiled.framegroups", basename), framegroupstextbuffer, (fs_offset_t)framegroupstextsize);
 	}
 }
 
@@ -3524,7 +3525,6 @@ static float mod_generatelightmaps_offsets[3][MAX_LIGHTMAPSAMPLES][3];
 static int mod_generatelightmaps_numlights;
 static lightmaplight_t *mod_generatelightmaps_lightinfo;
 
-extern int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);
 extern cvar_t r_shadow_lightattenuationdividebias;
 extern cvar_t r_shadow_lightattenuationlinearscale;
 
@@ -4105,6 +4105,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	unsigned char *lightmappixels;
 	unsigned char *deluxemappixels;
 	mod_alloclightmap_state_t lmstate;
+	char vabuf[1024];
 
 	// generate lightmap projection information for all triangles
 	if (model->texturepool == NULL)
@@ -4287,8 +4288,8 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 
 	for (lightmapindex = 0;lightmapindex < model->brushq3.num_mergedlightmaps;lightmapindex++)
 	{
-		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
-		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va("deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
+		model->brushq3.data_lightmaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va(vabuf, sizeof(vabuf), "lightmap%i", lightmapindex), lm_texturesize, lm_texturesize, lightmappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
+		model->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(model->texturepool, va(vabuf, sizeof(vabuf), "deluxemap%i", lightmapindex), lm_texturesize, lm_texturesize, deluxemappixels + lightmapindex * lm_texturesize * lm_texturesize * 4, TEXTYPE_BGRA, TEXF_FORCELINEAR, -1, NULL);
 	}
 
 	if (lightmappixels)

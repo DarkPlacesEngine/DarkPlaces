@@ -165,5 +165,7 @@ void Cmd_Print(const char *text);
 /// enclosing quote marks are also put.
 qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
 
+void Cmd_ClearCsqcFuncs (void);
+
 #endif
 

@@ -1012,7 +1012,7 @@ void R_Textures_Frame (void)
 	}
 }
 
-void R_MakeResizeBufferBigger(int size)
+static void R_MakeResizeBufferBigger(int size)
 {
 	if (resizebuffersize < size)
 	{

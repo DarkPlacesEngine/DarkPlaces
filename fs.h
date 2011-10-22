@@ -136,4 +136,9 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 
 qboolean FS_HasZlib(void);
 
+void FS_Init_SelfPack(void);
+void FS_Init(void);
+void FS_Shutdown(void);
+void FS_Init_Commands(void);
+
 #endif

@@ -302,7 +302,7 @@ cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias
 cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
 
 
-void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, const char *filename)
+static void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, const char *filename)
 {
 	int arrayindex;
 	int argc;
@@ -509,7 +509,7 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 	"SVC_PARTICLE"
 };
 
-void CL_Particles_LoadEffectInfo(void)
+static void CL_Particles_LoadEffectInfo(void)
 {
 	int i;
 	int filepass;
@@ -891,7 +891,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 
 static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount);
 static void CL_Smoke(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float smokecount);
-void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
+static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
 {
 	vec3_t center;
 	matrix4x4_t tempmatrix;
@@ -1417,6 +1417,7 @@ void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t o
 void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4])
 {
 	qboolean found = false;
+	char vabuf[1024];
 	if (effectnameindex < 1 || effectnameindex >= MAX_PARTICLEEFFECTNAME || !particleeffectname[effectnameindex][0])
 	{
 		Con_DPrintf("Unknown effect number %i received from server\n", effectnameindex);
@@ -1485,7 +1486,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						rvec[0] = info->lightcolor[0]*avgtint[0]*avgtint[3];
 						rvec[1] = info->lightcolor[1]*avgtint[1]*avgtint[3];
 						rvec[2] = info->lightcolor[2]*avgtint[2]*avgtint[3];
-						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, info->lightcubemapnum > 0 ? va("cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, info->lightcubemapnum > 0 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 						r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 					}
 				}
@@ -1687,11 +1688,11 @@ void CL_ParseParticleEffect (void)
 	vec3_t org, dir;
 	int i, count, msgcount, color;
 
-	MSG_ReadVector(org, cls.protocol);
+	MSG_ReadVector(&cl_message, org, cls.protocol);
 	for (i=0 ; i<3 ; i++)
-		dir[i] = MSG_ReadChar () * (1.0 / 16.0);
-	msgcount = MSG_ReadByte ();
-	color = MSG_ReadByte ();
+		dir[i] = MSG_ReadChar(&cl_message) * (1.0 / 16.0);
+	msgcount = MSG_ReadByte(&cl_message);
+	color = MSG_ReadByte(&cl_message);
 
 	if (msgcount == 255)
 		count = 1024;
@@ -1930,7 +1931,7 @@ static unsigned char shadebubble(float dx, float dy, vec3_t light)
 }
 
 int particlefontwidth, particlefontheight, particlefontcellwidth, particlefontcellheight, particlefontrows, particlefontcols;
-void CL_Particle_PixelCoordsForTexnum(int texnum, int *basex, int *basey, int *width, int *height)
+static void CL_Particle_PixelCoordsForTexnum(int texnum, int *basex, int *basey, int *width, int *height)
 {
 	*basex = (texnum % particlefontcols) * particlefontcellwidth;
 	*basey = ((texnum / particlefontcols) % particlefontrows) * particlefontcellheight;
@@ -1948,7 +1949,7 @@ static void setuptex(int texnum, unsigned char *data, unsigned char *particletex
 		memcpy(particletexturedata + ((basey + y) * PARTICLEFONTSIZE + basex) * 4, data + y * PARTICLETEXTURESIZE * 4, PARTICLETEXTURESIZE * 4);
 }
 
-void particletextureblotch(unsigned char *data, float radius, float red, float green, float blue, float alpha)
+static void particletextureblotch(unsigned char *data, float radius, float red, float green, float blue, float alpha)
 {
 	int x, y;
 	float cx, cy, dx, dy, f, iradius;
@@ -1977,7 +1978,8 @@ void particletextureblotch(unsigned char *data, float radius, float red, float g
 	}
 }
 
-void particletextureclamp(unsigned char *data, int minr, int ming, int minb, int maxr, int maxg, int maxb)
+#if 0
+static void particletextureclamp(unsigned char *data, int minr, int ming, int minb, int maxr, int maxg, int maxb)
 {
 	int i;
 	for (i = 0;i < PARTICLETEXTURESIZE*PARTICLETEXTURESIZE;i++, data += 4)
@@ -1987,8 +1989,9 @@ void particletextureclamp(unsigned char *data, int minr, int ming, int minb, int
 		data[2] = bound(minr, data[2], maxr);
 	}
 }
+#endif
 
-void particletextureinvert(unsigned char *data)
+static void particletextureinvert(unsigned char *data)
 {
 	int i;
 	for (i = 0;i < PARTICLETEXTURESIZE*PARTICLETEXTURESIZE;i++, data += 4)
@@ -2368,7 +2371,7 @@ void R_Particles_Init (void)
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap, NULL, NULL);
 }
 
-void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
 	const decal_t *d;
@@ -2519,7 +2522,7 @@ killdecal:
 	r_refdef.stats.totaldecals = cl.num_decals;
 }
 
-void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int surfacelistindex;
 	int batchstart, batchcount;

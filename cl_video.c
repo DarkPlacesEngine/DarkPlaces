@@ -418,7 +418,7 @@ typedef struct
 }
 cl_video_subtitle_info_t;
 
-float CL_DrawVideo_WordWidthFunc(void *passthrough, const char *w, size_t *length, float maxWidth)
+static float CL_DrawVideo_WordWidthFunc(void *passthrough, const char *w, size_t *length, float maxWidth)
 {
 	cl_video_subtitle_info_t *si = (cl_video_subtitle_info_t *) passthrough;
 
@@ -432,7 +432,7 @@ float CL_DrawVideo_WordWidthFunc(void *passthrough, const char *w, size_t *lengt
 		return 0;
 }
 
-int CL_DrawVideo_DisplaySubtitleLine(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int CL_DrawVideo_DisplaySubtitleLine(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
 {
 	cl_video_subtitle_info_t *si = (cl_video_subtitle_info_t *) passthrough;
 
@@ -577,12 +577,13 @@ void CL_DrawVideo(void)
 
 void CL_VideoStart(char *filename, const char *subtitlesfile)
 {
+	char vabuf[1024];
 	Host_StartVideo();
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
 	// already contains video/
-	if( !OpenVideo( cl_videos, filename, va( CLDYNTEXTUREPREFIX "%s", filename ), 0, subtitlesfile ) )
+	if( !OpenVideo( cl_videos, filename, va(vabuf, sizeof(vabuf),  CLDYNTEXTUREPREFIX "%s", filename ), 0, subtitlesfile ) )
 		return;
 	// expand the active range to include the new entry
 	cl_num_videos = max(cl_num_videos, 1);

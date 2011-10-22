@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MENU_H
 
 #define M_PROG_FILENAME "menu.dat"
-#define M_NAME	"menu"
 
 enum m_state_e {
 	m_none,

@@ -35,6 +35,7 @@ int c_yes, c_no;
 
 qboolean SV_CheckBottom (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t	mins, maxs, start, stop;
 	trace_t	trace;
 	int		x, y;
@@ -107,6 +108,7 @@ possible, no move is done and false is returned
 */
 qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float		dz;
 	vec3_t		oldorg, neworg, end, traceendpos;
 	trace_t		trace;
@@ -249,14 +251,14 @@ facing it.
 
 ======================
 */
-void VM_changeyaw (void);
-qboolean SV_StepDirection (prvm_edict_t *ent, float yaw, float dist)
+static qboolean SV_StepDirection (prvm_edict_t *ent, float yaw, float dist)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t		move, oldorigin;
 	float		delta;
 
 	PRVM_serveredictfloat(ent, ideal_yaw) = yaw;
-	VM_changeyaw();
+	VM_changeyaw(prog);
 
 	yaw = yaw*M_PI*2 / 360;
 	move[0] = cos(yaw)*dist;
@@ -287,8 +289,9 @@ SV_FixCheckBottom
 
 ======================
 */
-void SV_FixCheckBottom (prvm_edict_t *ent)
+static void SV_FixCheckBottom (prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_PARTIALGROUND;
 }
 
@@ -301,8 +304,9 @@ SV_NewChaseDir
 ================
 */
 #define	DI_NODIR	-1
-void SV_NewChaseDir (prvm_edict_t *actor, prvm_edict_t *enemy, float dist)
+static void SV_NewChaseDir (prvm_edict_t *actor, prvm_edict_t *enemy, float dist)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float		deltax,deltay;
 	float			d[3];
 	float		tdir, olddir, turnaround;
@@ -390,7 +394,7 @@ SV_CloseEnough
 
 ======================
 */
-qboolean SV_CloseEnough (prvm_edict_t *ent, prvm_edict_t *goal, float dist)
+static qboolean SV_CloseEnough (prvm_edict_t *ent, prvm_edict_t *goal, float dist)
 {
 	int		i;
 
@@ -410,7 +414,7 @@ SV_MoveToGoal
 
 ======================
 */
-void SV_MoveToGoal (void)
+void VM_SV_MoveToGoal(prvm_prog_t *prog)
 {
 	prvm_edict_t		*ent, *goal;
 	float		dist;

@@ -72,10 +72,6 @@ int vid_xinputindex = -1;
 // global video state
 viddef_t vid;
 
-// LordHavoc: these are only set in wgl
-qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
-qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
-
 // AK FIXME -> input_dest
 qboolean in_client_mouse = true;
 
@@ -1241,7 +1237,7 @@ void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
 	joystate->button[35] = r < 0.0f;
 }
 
-void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
+static void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
 {
 	if (oldbutton)
 	{
@@ -1386,7 +1382,7 @@ int VID_Shared_SetJoystick(int index)
 }
 
 
-void Force_CenterView_f (void)
+static void Force_CenterView_f (void)
 {
 	cl.viewangles[PITCH] = 0;
 }
@@ -1752,9 +1748,10 @@ void VID_Shared_Init(void)
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
-int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
+static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
 {
 	viddef_mode_t mode;
+	char vabuf[1024];
 
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
@@ -1795,7 +1792,7 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		if(vid.samples != vid.mode.samples)
 			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
 
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(" (%ix AA)", mode.samples) : "");
+		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(vabuf, sizeof(vabuf), " (%ix AA)", mode.samples) : "");
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 		Cvar_SetValueQuick(&vid_width, vid.mode.width);
@@ -1829,6 +1826,8 @@ extern qboolean vid_opened;
 
 void VID_Restart_f(void)
 {
+	char vabuf[1024];
+	char vabuf2[1024];
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
@@ -1840,8 +1839,8 @@ void VID_Restart_f(void)
 	}
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
-		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va("x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(" (%ix AA)", vid.mode.samples) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va("x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(" (%ix AA)", vid_samples.integer) : "");
+		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid.mode.samples) : "",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid_samples.integer) : "");
 	VID_CloseSystems();
 	VID_Shutdown();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer))
@@ -1920,7 +1919,7 @@ void VID_Stop(void)
 	VID_Shutdown();
 }
 
-int VID_SortModes_Compare(const void *a_, const void *b_)
+static int VID_SortModes_Compare(const void *a_, const void *b_)
 {
 	vid_mode_t *a = (vid_mode_t *) a_;
 	vid_mode_t *b = (vid_mode_t *) b_;
