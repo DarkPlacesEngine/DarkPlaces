@@ -2484,7 +2484,7 @@ static void SV_UpdateToReliableMessages (void)
 				clientcamera = PRVM_NUM_FOR_EDICT(host_client->edict);
 			host_client->clientcamera = clientcamera;
 
-			if (oldclientcamera != host_client->clientcamera)
+			if (oldclientcamera != host_client->clientcamera && host_client->netconnection)
 			{
 				MSG_WriteByte(&host_client->netconnection->message, svc_setview);
 				MSG_WriteShort(&host_client->netconnection->message, host_client->clientcamera);
