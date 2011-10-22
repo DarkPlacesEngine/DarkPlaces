@@ -49,8 +49,12 @@ void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned cha
 void Image_FixTransparentPixels_f(void);
 extern cvar_t r_fixtrans_auto;
 
-#define Image_LinearFloatFromsRGB(c) (((c) <= 10.3552f) ? (c) * 0.000302341331f : (float)pow(((c)*(1.0f/256.0f) + 0.055f)*(1.0f/1.055f), 2.4f))
-#define Image_sRGBFloatFromLinear(c) (((c) < 0.8014848f) ? (c) * 0.05046875f : 1.055f * (float)pow((c)*(1.0f/256.0f), 1.0f/2.4f) - 0.055f)
+#define Image_LinearFloatFromsRGBFloat(c) (((c) <= 0.04045f) ? (c) * (1.0f / 12.92f) : (float)pow(((c) + 0.055f)*(1.0f/1.055f), 2.4f))
+#define Image_sRGBFloatFromLinearFloat(c) (((c) < 0.0031308f) ? (c) * 12.92f : 1.055f * (float)pow((c), 1.0f/2.4f) - 0.055f)
+
+#define Image_LinearFloatFromsRGB(c) Image_LinearFloatFromsRGBFloat((c) * (1.0f / 255.0f))
+#define Image_sRGBFloatFromLinear(c) Image_sRGBFloatFromLinearFloat((c) * (1.0f / 255.0f))
+
 #define Image_sRGBFloatFromLinear_Lightmap(c) (Image_sRGBFloatFromLinear(c*2.0f)*0.5f)
 
 void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pin, int numpixels);
