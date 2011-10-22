@@ -805,7 +805,7 @@ void Image_MakeLinearColorsFromsRGB(unsigned char *pout, const unsigned char *pi
 	// this math from http://www.opengl.org/registry/specs/EXT/texture_sRGB.txt
 	if (!image_linearfromsrgb[255])
 		for (i = 0;i < 256;i++)
-			image_linearfromsrgb[i] = (unsigned char)(Image_LinearFloatFromsRGB(i) * 256.0f);
+			image_linearfromsrgb[i] = (unsigned char)floor(Image_LinearFloatFromsRGB(i) * 255.0f + 0.5f);
 	for (i = 0;i < numpixels;i++)
 	{
 		pout[i*4+0] = image_linearfromsrgb[pin[i*4+0]];
@@ -821,7 +821,7 @@ void Image_MakesRGBColorsFromLinear_Lightmap(unsigned char *pout, const unsigned
 	// this math from http://www.opengl.org/registry/specs/EXT/texture_sRGB.txt
 	if (!image_srgbfromlinear_lightmap[255])
 		for (i = 0;i < 256;i++)
-			image_srgbfromlinear_lightmap[i] = (unsigned char)bound(0, Image_sRGBFloatFromLinear_Lightmap(i) * 256.0f, 255);
+			image_srgbfromlinear_lightmap[i] = (unsigned char)floor(bound(0.0f, Image_sRGBFloatFromLinear_Lightmap(i), 1.0f) * 255.0f + 0.5f);
 	for (i = 0;i < numpixels;i++)
 	{
 		pout[i*4+0] = image_srgbfromlinear_lightmap[pin[i*4+0]];
