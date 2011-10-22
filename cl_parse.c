@@ -1281,7 +1281,7 @@ void CL_BeginDownloads(qboolean aborteddownload)
 				Mod_FreeQ3Shaders();
 			}
 
-			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, false, cl.model_name[cl.downloadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
+			cl.model_precache[cl.downloadmodel_current] = Mod_ForName(cl.model_name[cl.downloadmodel_current], false, true, cl.model_name[cl.downloadmodel_current][0] == '*' ? cl.model_name[1] : NULL);
 			if (cl.downloadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
