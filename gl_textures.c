@@ -1620,6 +1620,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			{
 				temppixels = (unsigned char *)Mem_Alloc(tempmempool, size);
 				memcpy(temppixels, data, size);
+				data = temppixels;
 			}
 			Image_MakeLinearColorsFromsRGB(temppixels, temppixels, width*height*depth*sides);
 		}
