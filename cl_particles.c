@@ -651,9 +651,9 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	part->color[2] = ((((pcolor1 >>  0) & 0xFF) * l1 + ((pcolor2 >>  0) & 0xFF) * l2) >> 8) & 0xFF;
 	if (vid.sRGB3D)
 	{
-		part->color[0] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[0]) * 256.0f);
-		part->color[1] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[1]) * 256.0f);
-		part->color[2] = (unsigned char)(Image_LinearFloatFromsRGB(part->color[2]) * 256.0f);
+		part->color[0] = (unsigned char)floor(Image_LinearFloatFromsRGB(part->color[0]) * 255.0f + 0.5f);
+		part->color[1] = (unsigned char)floor(Image_LinearFloatFromsRGB(part->color[1]) * 255.0f + 0.5f);
+		part->color[2] = (unsigned char)floor(Image_LinearFloatFromsRGB(part->color[2]) * 255.0f + 0.5f);
 	}
 	part->alpha = palpha;
 	part->alphafade = palphafade;
@@ -2304,7 +2304,7 @@ static void R_InitParticleTexture (void)
 				Con_Printf("particles/particlefont.txt: texnum %i outside valid range (0 to %i)\n", i, MAX_PARTICLETEXTURES);
 				continue;
 			}
-			sf = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true);
+			sf = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true); // note: this loads as sRGB if sRGB is active!
 			if(!sf)
 			{
 				// R_SkinFrame_LoadExternal already complained
