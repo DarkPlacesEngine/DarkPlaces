@@ -17,6 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+#if !defined(__APPLE__) && !defined(__MACH__) && !defined(SUNOS)
+//#define USEDGA
+#endif
+
 #include <signal.h>
 
 #include <dlfcn.h>
@@ -35,7 +39,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/xpm.h>
 
 #include <X11/extensions/XShm.h>
-#if !defined(__APPLE__) && !defined(__MACH__) && !defined(SUNOS)
+#ifdef USEDGA
 #include <X11/extensions/xf86dga.h>
 #endif
 #include <X11/extensions/xf86vmode.h>
@@ -116,10 +120,12 @@ static qboolean vid_usinghidecursor = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
 static qboolean vid_x11_hardwaregammasupported = false;
+#ifdef USEDGA
 static qboolean vid_x11_dgasupported = false;
+#endif
 static int vid_x11_gammarampsize = 0;
 
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
 static qboolean vid_usingdgamouse = false;
 #endif
@@ -325,7 +331,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	static int originalmouseparms_threshold;
 	static qboolean restore_spi;
 
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 	qboolean usedgamouse;
 #endif
 
@@ -338,7 +344,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	if (!mouse_avail)
 		fullscreengrab = relative = hidecursor = false;
 
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 	usedgamouse = relative && vid_dgamouse.integer;
 	if (!vid_x11_dgasupported)
 		usedgamouse = false;
@@ -374,7 +380,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 			attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
 			XChangeWindowAttributes(vidx11_display, win, CWEventMask, &attribs_2);
 
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 			vid_usingdgamouse = usedgamouse;
 			if (usedgamouse)
 			{
@@ -386,7 +392,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 				XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
 
 // COMMANDLINEOPTION: X11 Input: -noforcemparms disables setting of mouse parameters (not used with DGA, windows only)
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 			if (!COM_CheckParm ("-noforcemparms") && !usedgamouse)
 #else
 			if (!COM_CheckParm ("-noforcemparms"))
@@ -407,7 +413,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	{
 		if (vid_usingmouse)
 		{
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 			if (vid_usingdgamouse)
 				XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 			vid_usingdgamouse = false;
@@ -599,7 +605,7 @@ static void HandleEvents(void)
 			// mouse moved
 			if (vid_usingmouse)
 			{
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 				if (vid_usingdgamouse)
 				{
 					in_mouse_x += event.xmotion.x_root;
@@ -965,7 +971,7 @@ int VID_GetGamma(unsigned short *ramps, int rampsize)
 
 void VID_Init(void)
 {
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 	Cvar_RegisterVariable (&vid_dgamouse);
 #endif
 	Cvar_RegisterVariable (&vid_netwmfullscreen);
@@ -1291,7 +1297,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid_hidden = false;
 	vid_activewindow = true;
 	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
 	if (!vid_x11_dgasupported)
 		Con_Print( "Failed to detect XF86DGA Mouse extension\n" );
@@ -1301,7 +1307,8 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	return true;
 }
-qboolean VID_InitModeGL(viddef_mode_t *mode)
+
+static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i, j;
 	int attrib[32];
@@ -1630,7 +1637,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_hidden = false;
 	vid_activewindow = true;
 	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
-#if !defined(__APPLE__) && !defined(SUNOS)
+#ifdef USEDGA
 	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
 	if (!vid_x11_dgasupported)
 		Con_Print( "Failed to detect XF86DGA Mouse extension\n" );
