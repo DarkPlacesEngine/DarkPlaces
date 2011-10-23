@@ -874,13 +874,13 @@ void Memory_Init (void)
 	u.s = 0x100;
 	mem_bigendian = u.b[0] != 0;
 
-	if (Thread_HasThreads())
-		mem_mutex = Thread_CreateMutex();
-
 	sentinel_seed = rand();
 	poolchain = NULL;
 	tempmempool = Mem_AllocPool("Temporary Memory", POOLFLAG_TEMP, NULL);
 	zonemempool = Mem_AllocPool("Zone", 0, NULL);
+
+	if (Thread_HasThreads())
+		mem_mutex = Thread_CreateMutex();
 }
 
 void Memory_Shutdown (void)
