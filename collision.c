@@ -1256,7 +1256,7 @@ void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const ve
 // all the results are correct (impactpoint, impactnormal, and fraction)
 float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double *sphereorigin, double sphereradius, double *impactpoint, double *impactnormal)
 {
-	double dir[3], scale, v[3], deviationdist, impactdist, linelength;
+	double dir[3], scale, v[3], deviationdist2, impactdist, linelength;
 	// make sure the impactpoint and impactnormal are valid even if there is
 	// no collision
 	VectorCopy(lineend, impactpoint);
@@ -1278,13 +1278,12 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 	// of the line from the sphereorigin (deviation, how off-center it is)
 	VectorMA(linestart, impactdist, dir, v);
 	VectorSubtract(v, sphereorigin, v);
-	deviationdist = VectorLength2(v);
-	// if outside the radius, it's a miss for sure
-	// (we do this comparison using squared radius to avoid a sqrt)
-	if (deviationdist > sphereradius*sphereradius)
+	deviationdist2 = sphereradius * sphereradius - VectorLength2(v);
+	// if squared offset length is outside the squared sphere radius, miss
+	if (deviationdist2 < 0)
 		return 1; // miss (off to the side)
 	// nudge back to find the correct impact distance
-	impactdist -= sphereradius - deviationdist/sphereradius;
+	impactdist -= sqrt(deviationdist2);
 	if (impactdist >= linelength)
 		return 1; // miss (not close enough)
 	if (impactdist < 0)
