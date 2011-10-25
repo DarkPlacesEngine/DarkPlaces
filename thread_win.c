@@ -16,23 +16,36 @@ qboolean Thread_HasThreads(void)
 	return true;
 }
 
-void *Thread_CreateMutex(void)
+void *_Thread_CreateMutex(const char *filename, int fileline)
 {
-	return (void *)CreateMutex(NULL, FALSE, NULL);
+	void *mutex = (void *)CreateMutex(NULL, FALSE, NULL);
+#ifdef THREADDEBUG
+	printf("%p create %s:%i\n" , mutex, filename, fileline);
+#endif
+	return mutex;
 }
 
-void Thread_DestroyMutex(void *mutex)
+void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p destroy %s:%i\n", mutex, filename, fileline);
+#endif
 	CloseHandle(mutex);
 }
 
-int Thread_LockMutex(void *mutex)
+int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p lock %s:%i\n"   , mutex, filename, fileline);
+#endif
 	return (WaitForSingleObject(mutex, INFINITE) == WAIT_FAILED) ? -1 : 0;
 }
 
-int Thread_UnlockMutex(void *mutex)
+int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p unlock %s:%i\n" , mutex, filename, fileline);
+#endif
 	return (ReleaseMutex(mutex) == FALSE) ? -1 : 0;
 }
 

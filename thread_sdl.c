@@ -17,23 +17,36 @@ qboolean Thread_HasThreads(void)
 	return true;
 }
 
-void *Thread_CreateMutex(void)
+void *_Thread_CreateMutex(const char *filename, int fileline)
 {
-	return SDL_CreateMutex();
+	void *mutex = SDL_CreateMutex();
+#ifdef THREADDEBUG
+	printf("%p create %s:%i\n" , mutex, filename, fileline);
+#endif
+	return mutex;
 }
 
-void Thread_DestroyMutex(void *mutex)
+void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p destroy %s:%i\n", mutex, filename, fileline);
+#endif
 	SDL_DestroyMutex((SDL_mutex *)mutex);
 }
 
-int Thread_LockMutex(void *mutex)
+int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p lock %s:%i\n"   , mutex, filename, fileline);
+#endif
 	return SDL_LockMutex((SDL_mutex *)mutex);
 }
 
-int Thread_UnlockMutex(void *mutex)
+int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	printf("%p unlock %s:%i\n" , mutex, filename, fileline);
+#endif
 	return SDL_UnlockMutex((SDL_mutex *)mutex);
 }
 
