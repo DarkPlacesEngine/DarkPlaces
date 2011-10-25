@@ -147,6 +147,8 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define qd0_blind_id_util_sha256 d0_blind_id_util_sha256
 #define qd0_blind_id_sign_with_private_id_sign d0_blind_id_sign_with_private_id_sign
 #define qd0_blind_id_sign_with_private_id_sign_detached d0_blind_id_sign_with_private_id_sign_detached
+#define qd0_blind_id_setmallocfuncs d0_blind_id_setmallocfuncs
+#define qd0_blind_id_setmutexfuncs d0_blind_id_setmutexfuncs
 
 #else
 
@@ -158,6 +160,13 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define D0_WARN_UNUSED_RESULT
 #endif
 #define D0_BOOL int
+
+typedef void *(d0_malloc_t)(size_t len);
+typedef void (d0_free_t)(void *p);
+typedef void *(d0_createmutex_t)(void);
+typedef void (d0_destroymutex_t)(void *);
+typedef int (d0_lockmutex_t)(void *); // zero on success
+typedef int (d0_unlockmutex_t)(void *); // zero on success
 
 typedef struct d0_blind_id_s d0_blind_id_t;
 typedef D0_BOOL (*d0_fastreject_function) (const d0_blind_id_t *ctx, void *pass);
@@ -196,6 +205,8 @@ static D0_EXPORT void (*qd0_blind_id_SHUTDOWN) (void);
 static D0_EXPORT void (*qd0_blind_id_util_sha256) (char *out, const char *in, size_t n);
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign_detached) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
+static D0_EXPORT void (*qd0_blind_id_setmallocfuncs)(d0_malloc_t *m, d0_free_t *f);
+static D0_EXPORT void (*qd0_blind_id_setmutexfuncs)(d0_createmutex_t *c, d0_destroymutex_t *d, d0_lockmutex_t *l, d0_unlockmutex_t *u);
 static dllfunction_t d0_blind_id_funcs[] =
 {
 	{"d0_blind_id_new", (void **) &qd0_blind_id_new},
@@ -233,6 +244,8 @@ static dllfunction_t d0_blind_id_funcs[] =
 	{"d0_blind_id_util_sha256", (void **) &qd0_blind_id_util_sha256},
 	{"d0_blind_id_sign_with_private_id_sign", (void **) &qd0_blind_id_sign_with_private_id_sign},
 	{"d0_blind_id_sign_with_private_id_sign_detached", (void **) &qd0_blind_id_sign_with_private_id_sign_detached},
+	{"d0_blind_id_setmallocfuncs", (void **) &qd0_blind_id_setmallocfuncs},
+	{"d0_blind_id_setmutexfuncs", (void **) &qd0_blind_id_setmutexfuncs},
 	{NULL, NULL}
 };
 // end of d0_blind_id interface
@@ -872,6 +885,46 @@ static void Crypto_UnloadKeys(void)
 	crypto_idstring = NULL;
 }
 
+
+static mempool_t *cryptomempool;
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+static void *d0_malloc(size_t len)
+{
+	return Mem_Alloc(cryptomempool, len);
+}
+
+static void d0_free(void *p)
+{
+	Mem_Free(p);
+}
+
+static void *d0_createmutex(void)
+{
+	return Thread_CreateMutex();
+}
+
+static void d0_destroymutex(void *m)
+{
+	Thread_DestroyMutex(m);
+}
+
+static int d0_lockmutex(void *m)
+{
+	return Thread_LockMutex(m);
+}
+
+static int d0_unlockmutex(void *m)
+{
+	return Thread_UnlockMutex(m);
+}
+#ifdef __cplusplus
+}
+#endif
+
 void Crypto_Shutdown(void)
 {
 	crypto_t *crypto;
@@ -901,15 +954,23 @@ void Crypto_Shutdown(void)
 
 		Crypto_CloseLibrary();
 	}
+
+	Mem_FreePool(&cryptomempool);
 }
 
 void Crypto_Init(void)
 {
+	cryptomempool = Mem_AllocPool("crypto", 0, NULL);
+
 	if(!Crypto_OpenLibrary())
 		return;
 
+	qd0_blind_id_setmallocfuncs(d0_malloc, d0_free);
 	if (Thread_HasThreads())
+	{
 		crypto_mutex = Thread_CreateMutex();
+		qd0_blind_id_setmutexfuncs(d0_createmutex, d0_destroymutex, d0_lockmutex, d0_unlockmutex);
+	}
 
 	if(!qd0_blind_id_INITIALIZE())
 	{
