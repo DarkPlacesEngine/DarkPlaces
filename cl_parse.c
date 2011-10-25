@@ -303,13 +303,12 @@ so the server doesn't disconnect.
 static unsigned char olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (qboolean readmessages)
 {
+	static double lastdirtytime = 0;
 	static qboolean recursive = false;
-	double time;
-	static double nextmsg = -1;
-	static double nextupdate = -1;
-#if 0
-	static double lasttime = -1;
-#endif
+	double dirtytime;
+	double deltatime;
+	static double countdownmsg = 0;
+	static double countdownupdate = 0;
 	sizebuf_t old;
 
 	qboolean thisrecursive;
@@ -317,21 +316,29 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	thisrecursive = recursive;
 	recursive = true;
 
-	time = Sys_DirtyTime();
+	dirtytime = Sys_DirtyTime();
+	deltatime = dirtytime - lastdirtytime;
+	lastdirtytime = dirtytime;
+	if (deltatime <= 0 || deltatime >= 1800.0)
+		return;
+
+	countdownmsg -= deltatime;
+	countdownupdate -= deltatime;
+
 	if(!thisrecursive)
 	{
 		if(cls.state != ca_dedicated)
 		{
-			if(time >= nextupdate || time < nextupdate) // check if time stepped backwards
+			if(countdownupdate <= 0) // check if time stepped backwards
 			{
 				SCR_UpdateLoadingScreenIfShown();
-				nextupdate = time + 2;
+				countdownupdate = 2;
 			}
 		}
 	}
 
 	// no need if server is local and definitely not if this is a demo
-	if (!cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
+	if (sv.active || !cls.netcon || cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon >= SIGNONS)
 	{
 		recursive = thisrecursive;
 		return;
@@ -349,11 +356,11 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		memcpy(cl_message.data, olddata, cl_message.cursize);
 	}
 
-	if (cls.netcon && (time >= nextmsg || time < nextmsg)) // check if time stepped backwards
+	if (cls.netcon && countdownmsg <= 0) // check if time stepped backwards
 	{
 		sizebuf_t	msg;
 		unsigned char		buf[4];
-		nextmsg = time + 5;
+		countdownmsg = 5;
 		// write out a nop
 		// LordHavoc: must use unreliable because reliable could kill the sigon message!
 		Con_Print("--> client to server keepalive\n");
