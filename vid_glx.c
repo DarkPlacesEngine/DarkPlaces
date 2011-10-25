@@ -147,7 +147,7 @@ static Colormap vidx11_colormap;
 /*-----------------------------------------------------------------------*/
 //
 
-long keysym2ucs(KeySym keysym);
+extern long keysym2ucs(KeySym keysym); // LordHavoc: suppress warning just in this case, it's not worth having a header file for this...
 static void DP_Xutf8LookupString(XKeyEvent * ev,
 			 Uchar *uch,
 			 KeySym * keysym_return,
