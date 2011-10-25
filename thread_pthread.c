@@ -17,29 +17,41 @@ qboolean Thread_HasThreads(void)
 	return true;
 }
 
-void *Thread_CreateMutex(void)
+void *_Thread_CreateMutex(const char *filename, int fileline)
 {
 	pthread_mutex_t *mutexp = (pthread_mutex_t *) Z_Malloc(sizeof(pthread_mutex_t));
+#ifdef THREADDEBUG
+	printf("%p create %s:%i\n" , mutexp, filename, fileline);
+#endif
 	pthread_mutex_init(mutexp, NULL);
 	return mutexp;
 }
 
-void Thread_DestroyMutex(void *mutex)
+void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
 	pthread_mutex_t *mutexp = (pthread_mutex_t *) mutex;
+#ifdef THREADDEBUG
+	printf("%p destroy %s:%i\n", mutex, filename, fileline);
+#endif
 	pthread_mutex_destroy(mutexp);
 	Z_Free(mutexp);
 }
 
-int Thread_LockMutex(void *mutex)
+int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
 	pthread_mutex_t *mutexp = (pthread_mutex_t *) mutex;
+#ifdef THREADDEBUG
+	printf("%p lock %s:%i\n"   , mutex, filename, fileline);
+#endif
 	return pthread_mutex_lock(mutexp);
 }
 
-int Thread_UnlockMutex(void *mutex)
+int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
 	pthread_mutex_t *mutexp = (pthread_mutex_t *) mutex;
+#ifdef THREADDEBUG
+	printf("%p unlock %s:%i\n" , mutex, filename, fileline);
+#endif
 	return pthread_mutex_unlock(mutexp);
 }
 
