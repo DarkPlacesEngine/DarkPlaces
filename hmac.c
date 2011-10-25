@@ -8,10 +8,10 @@ qboolean hmac(
 	const unsigned char *key, int k
 )
 {
-	static unsigned char hashbuf[32];
-	static unsigned char k_xor_ipad[128];
-	static unsigned char k_xor_opad[128];
-	static unsigned char catbuf[65600]; // 65535 bytes max quake packet size + 64 for the hash
+	unsigned char hashbuf[32];
+	unsigned char k_xor_ipad[128];
+	unsigned char k_xor_opad[128];
+	unsigned char *catbuf;
 	int i;
 
 	if(sizeof(hashbuf) < (size_t) hlen)
@@ -20,10 +20,8 @@ qboolean hmac(
 		return false;
 	if(sizeof(k_xor_ipad) < (size_t) hlen)
 		return false;
-	if(sizeof(catbuf) < (size_t) hblock + (size_t) hlen)
-		return false;
-	if(sizeof(catbuf) < (size_t) hblock + (size_t) n)
-		return false;
+
+	catbuf = Mem_Alloc(tempmempool, (size_t) hblock + max((size_t) hlen, (size_t) n));
 
 	if(k > hblock)
 	{
@@ -56,5 +54,8 @@ qboolean hmac(
 	memcpy(catbuf, k_xor_opad, hblock);
 	memcpy(catbuf + hblock, hashbuf, hlen);
 	hfunc(out, catbuf, hblock + hlen);
+
+	Mem_Free(catbuf);
+
 	return true;
 }
