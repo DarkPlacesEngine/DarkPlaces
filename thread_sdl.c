@@ -21,7 +21,7 @@ void *_Thread_CreateMutex(const char *filename, int fileline)
 {
 	void *mutex = SDL_CreateMutex();
 #ifdef THREADDEBUG
-	printf("%p create %s:%i\n" , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p create %s:%i\n" , mutex, filename, fileline);
 #endif
 	return mutex;
 }
@@ -29,7 +29,7 @@ void *_Thread_CreateMutex(const char *filename, int fileline)
 void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	printf("%p destroy %s:%i\n", mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p destroy %s:%i\n", mutex, filename, fileline);
 #endif
 	SDL_DestroyMutex((SDL_mutex *)mutex);
 }
@@ -37,7 +37,7 @@ void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	printf("%p lock %s:%i\n"   , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p lock %s:%i\n"   , mutex, filename, fileline);
 #endif
 	return SDL_LockMutex((SDL_mutex *)mutex);
 }
@@ -45,7 +45,7 @@ int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	printf("%p unlock %s:%i\n" , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p unlock %s:%i\n" , mutex, filename, fileline);
 #endif
 	return SDL_UnlockMutex((SDL_mutex *)mutex);
 }

@@ -176,25 +176,9 @@ static void Cmd_Centerprint_f (void)
 static sizebuf_t	cmd_text;
 static unsigned char		cmd_text_buf[CMDBUFSIZE];
 void *cmd_text_mutex = NULL;
-qboolean cmd_text_mutex_locked = false;
 
-static void Cbuf_LockThreadMutex(void)
-{
-	if (cmd_text_mutex)
-	{
-		Thread_LockMutex(cmd_text_mutex);
-		cmd_text_mutex_locked = true;
-	}
-}
-
-static void Cbuf_UnlockThreadMutex(void)
-{
-	if (cmd_text_mutex)
-	{
-		cmd_text_mutex_locked = false;
-		Thread_UnlockMutex(cmd_text_mutex);
-	}
-}
+#define Cbuf_LockThreadMutex() (cmd_text_mutex ? Thread_LockMutex(cmd_text_mutex),1 : 0)
+#define Cbuf_UnlockThreadMutex() (cmd_text_mutex ? Thread_UnlockMutex(cmd_text_mutex),1 : 0)
 
 /*
 ============
@@ -213,7 +197,7 @@ void Cbuf_AddText (const char *text)
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
-		SZ_Write(&cmd_text, (const unsigned char *)text, (int)strlen (text));
+		SZ_Write(&cmd_text, (const unsigned char *)text, l);
 	Cbuf_UnlockThreadMutex();
 }
 
@@ -229,32 +213,18 @@ FIXME: actually change the command buffer to do less copying
 */
 void Cbuf_InsertText (const char *text)
 {
-	char	*temp;
-	int		templen;
-
+	size_t l = strlen(text);
 	Cbuf_LockThreadMutex();
-
-	// copy off any commands still remaining in the exec buffer
-	templen = cmd_text.cursize;
-	if (templen)
-	{
-		temp = (char *)Mem_Alloc (tempmempool, templen);
-		memcpy (temp, cmd_text.data, templen);
-		SZ_Clear (&cmd_text);
-	}
+	// we need to memmove the existing text and stuff this in before it...
+	if (cmd_text.cursize + l >= (size_t)cmd_text.maxsize)
+		Con_Print("Cbuf_InsertText: overflow\n");
 	else
-		temp = NULL;
-
-	// add the entire text of the file
-	Cbuf_AddText (text);
-
-	// add the copied off data
-	if (temp != NULL)
 	{
-		SZ_Write (&cmd_text, (const unsigned char *)temp, templen);
-		Mem_Free (temp);
+		// we don't have a SZ_Prepend, so...
+		memmove(cmd_text.data + l, cmd_text.data, cmd_text.cursize);
+		cmd_text.cursize += l;
+		memcpy(cmd_text.data, text, l);
 	}
-
 	Cbuf_UnlockThreadMutex();
 }
 
@@ -315,9 +285,6 @@ void Cbuf_Execute (void)
 	char *firstchar;
 	qboolean quotes;
 	char *comment;
-
-	SV_LockThreadMutex();
-	Cbuf_LockThreadMutex();
 
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
@@ -409,9 +376,6 @@ void Cbuf_Execute (void)
 			break;
 		}
 	}
-
-	SV_UnlockThreadMutex();
-	Cbuf_UnlockThreadMutex();
 }
 
 /*
@@ -1701,8 +1665,6 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex)
 	cmd_function_t *cmd;
 	cmdalias_t *a;
 
-	if (lockmutex)
-		Cbuf_LockThreadMutex();
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
 	found = false;
@@ -1778,8 +1740,6 @@ command_found:
 
 done:
 	cmd_tokenizebufferpos = oldpos;
-	if (lockmutex)
-		Cbuf_UnlockThreadMutex();
 }
 
 
