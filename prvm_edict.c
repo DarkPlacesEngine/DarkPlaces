@@ -222,7 +222,7 @@ qboolean PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e)
 		return false;
 	if(prvm_reuseedicts_always_allow == realtime)
 		return true;
-	if(realtime <= e->priv.required->freetime && prvm_reuseedicts_neverinsameframe.integer)
+	if(realtime <= e->priv.required->freetime + 0.1 && prvm_reuseedicts_neverinsameframe.integer)
 		return false; // never allow reuse in same frame (causes networking trouble)
 	if(e->priv.required->freetime < prog->starttime + prvm_reuseedicts_startuptime.value)
 		return true;
