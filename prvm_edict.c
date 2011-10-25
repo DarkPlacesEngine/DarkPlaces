@@ -1901,7 +1901,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 		prog->error_cmd("PRVM_LoadProgs: couldn't load %s for %s", filename, prog->name);
 	// TODO bounds check header fields (e.g. numstatements), they must never go behind end of file
 
-	prog->profiletime = prog->starttime = Sys_DirtyTime();
+	prog->profiletime = Sys_DirtyTime();
+	prog->starttime = realtime;
 
 	Con_DPrintf("%s programs occupy %iK.\n", prog->name, (int)(filesize/1024));
 
