@@ -814,7 +814,6 @@ static void Con_PrintToHistory(const char *txt, int mask)
 	if(!con.text) // FIXME uses a non-abstracted property of con
 		return;
 
-	if (con_mutex) Thread_LockMutex(con_mutex);
 	for(; *txt; ++txt)
 	{
 		if(cr_pending)
@@ -845,7 +844,6 @@ static void Con_PrintToHistory(const char *txt, int mask)
 				break;
 		}
 	}
-	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
 /*! The translation table between the graphical font and plain ASCII  --KB */
@@ -1535,7 +1533,7 @@ static float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length,
 		return DrawQ_TextWidth(w, *length, ti->fontsize, ti->fontsize, false, ti->font);
 	else
 	{
-		printf("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
+		Sys_PrintfToTerminal("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
 		// Note: this is NOT a Con_Printf, as it could print recursively
 		return 0;
 	}

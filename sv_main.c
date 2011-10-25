@@ -4009,15 +4009,3 @@ void SV_StopThread(void)
 	Thread_DestroyMutex(svs.threadmutex);
 	svs.threaded = false;
 }
-
-void SV_LockThreadMutex(void)
-{
-	if (svs.threaded)
-		Thread_LockMutex(svs.threadmutex);
-}
-
-void SV_UnlockThreadMutex(void)
-{
-	if (svs.threaded)
-		Thread_UnlockMutex(svs.threadmutex);
-}

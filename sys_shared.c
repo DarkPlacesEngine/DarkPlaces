@@ -434,8 +434,20 @@ void Sys_Sleep(int microseconds)
 	if(sys_debugsleep.integer)
 	{
 		t = Sys_DirtyTime() - t;
-		printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
+		Sys_PrintfToTerminal("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
 	}
+}
+
+void Sys_PrintfToTerminal(const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAX_INPUTLINE];
+
+	va_start(argptr,fmt);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
+
+	Sys_PrintToTerminal(msg);
 }
 
 static const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)

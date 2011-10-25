@@ -312,7 +312,7 @@ int VID_GetGamma(unsigned short *ramps, int rampsize)
 
 void signal_handler(int sig)
 {
-	printf("Received signal %d, exiting...\n", sig);
+	Sys_PrintfToTerminal("Received signal %d, exiting...\n", sig);
 	VID_RestoreSystemGamma();
 	Sys_Quit(1);
 }
