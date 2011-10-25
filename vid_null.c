@@ -29,13 +29,13 @@ void VID_Shutdown(void)
 {
 }
 
-void signal_handler(int sig)
+static void signal_handler(int sig)
 {
 	Con_Printf("Received signal %d, exiting...\n", sig);
 	Sys_Quit(1);
 }
 
-void InitSig(void)
+static void InitSig(void)
 {
 #ifndef WIN32
 	signal(SIGHUP, signal_handler);
