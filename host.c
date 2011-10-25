@@ -755,13 +755,11 @@ void Host_Main(void)
 		// otherwise we execute them on client frames
 		if (sv.active ? sv_timer > 0 : cl_timer > 0)
 		{
-			SV_LockThreadMutex();
 			// process console commands
 //			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
-			Cbuf_Execute();
+			Cbuf_Frame();
 //			R_TimeReport("console");
-			SV_UnlockThreadMutex();
 		}
 
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);

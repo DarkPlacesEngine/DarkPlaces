@@ -61,6 +61,8 @@ void Cbuf_InsertText (const char *text);
  * \note Do not call inside a command function!
  */
 void Cbuf_Execute (void);
+/*! Performs deferred commands and runs Cbuf_Execute, called by Host_Main */
+void Cbuf_Frame (void);
 
 //===========================================================================
 

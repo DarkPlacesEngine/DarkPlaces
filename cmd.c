@@ -289,7 +289,6 @@ void Cbuf_Execute (void)
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
 
-	Cbuf_Execute_Deferred();
 	while (cmd_text.cursize)
 	{
 // find a \n or ; line break
@@ -375,6 +374,17 @@ void Cbuf_Execute (void)
 			cmd_wait = false;
 			break;
 		}
+	}
+}
+
+void Cbuf_Frame(void)
+{
+	Cbuf_Execute_Deferred();
+	if (cmd_text.cursize)
+	{
+		SV_LockThreadMutex();
+		Cbuf_Execute();
+		SV_UnlockThreadMutex();
 	}
 }
 
