@@ -21,7 +21,7 @@ void *_Thread_CreateMutex(const char *filename, int fileline)
 {
 	void *mutex = SDL_CreateMutex();
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p create %s:%i\n" , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p mutex create %s:%i\n" , mutex, filename, fileline);
 #endif
 	return mutex;
 }
@@ -29,7 +29,7 @@ void *_Thread_CreateMutex(const char *filename, int fileline)
 void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p destroy %s:%i\n", mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p mutex destroy %s:%i\n", mutex, filename, fileline);
 #endif
 	SDL_DestroyMutex((SDL_mutex *)mutex);
 }
@@ -37,7 +37,7 @@ void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p lock %s:%i\n"   , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p mutex lock %s:%i\n"   , mutex, filename, fileline);
 #endif
 	return SDL_LockMutex((SDL_mutex *)mutex);
 }
@@ -45,44 +45,67 @@ int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p unlock %s:%i\n" , mutex, filename, fileline);
+	Sys_PrintfToTerminal("%p mutex unlock %s:%i\n" , mutex, filename, fileline);
 #endif
 	return SDL_UnlockMutex((SDL_mutex *)mutex);
 }
 
-void *Thread_CreateCond(void)
+void *_Thread_CreateCond(const char *filename, int fileline)
 {
-	return SDL_CreateCond();
+	void *cond = (void *)SDL_CreateCond();
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond create %s:%i\n"   , cond, filename, fileline);
+#endif
+	return cond;
 }
 
-void Thread_DestroyCond(void *cond)
+void _Thread_DestroyCond(void *cond, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond destroy %s:%i\n"   , cond, filename, fileline);
+#endif
 	SDL_DestroyCond((SDL_cond *)cond);
 }
 
-int Thread_CondSignal(void *cond)
+int _Thread_CondSignal(void *cond, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond signal %s:%i\n"   , cond, filename, fileline);
+#endif
 	return SDL_CondSignal((SDL_cond *)cond);
 }
 
-int Thread_CondBroadcast(void *cond)
+int _Thread_CondBroadcast(void *cond, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond broadcast %s:%i\n"   , cond, filename, fileline);
+#endif
 	return SDL_CondBroadcast((SDL_cond *)cond);
 }
 
-int Thread_CondWait(void *cond, void *mutex)
+int _Thread_CondWait(void *cond, void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond wait %s:%i\n"   , cond, filename, fileline);
+#endif
 	return SDL_CondWait((SDL_cond *)cond, (SDL_mutex *)mutex);
 }
 
-void *Thread_CreateThread(int (*fn)(void *), void *data)
+void *_Thread_CreateThread(int (*fn)(void *), void *data, const char *filename, int fileline)
 {
-	return SDL_CreateThread(fn, data);
+	void *thread = (void *)SDL_CreateThread(fn, data);
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p thread create %s:%i\n"   , thread, filename, fileline);
+#endif
+	return thread;
 }
 
-int Thread_WaitThread(void *thread, int retval)
+int _Thread_WaitThread(void *thread, int retval, const char *filename, int fileline)
 {
 	int status = retval;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p thread wait %s:%i\n"   , thread, filename, fileline);
+#endif
 	SDL_WaitThread((SDL_Thread *)thread, &status);
 	return status;
 }
