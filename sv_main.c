@@ -3231,6 +3231,9 @@ void SV_SpawnServer (const char *server)
 
 //	SV_LockThreadMutex();
 
+	if(cls.state == ca_dedicated)
+		Sys_MakeProcessNice();
+
 	if (cls.state != ca_dedicated)
 	{
 		SCR_BeginLoadingPlaque();
@@ -3256,7 +3259,12 @@ void SV_SpawnServer (const char *server)
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
 		Con_Printf("Couldn't load map %s\n", modelname);
+
+		if(cls.state == ca_dedicated)
+			Sys_MakeProcessMean();
+
 //		SV_UnlockThreadMutex();
+
 		return;
 	}
 
@@ -3497,6 +3505,9 @@ void SV_SpawnServer (const char *server)
 
 	Con_DPrint("Server spawned.\n");
 	NetConn_Heartbeat (2);
+
+	if(cls.state == ca_dedicated)
+		Sys_MakeProcessMean();
 
 //	SV_UnlockThreadMutex();
 }

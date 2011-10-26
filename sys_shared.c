@@ -561,3 +561,70 @@ qboolean Sys_HaveSSE2(void)
 	return false;
 }
 #endif
+
+/// called to set process priority for dedicated servers
+#if defined(__linux__)
+#include <sys/resource.h>
+#include <errno.h>
+static int nicelevel;
+static qboolean nicepossible;
+static qboolean isnice;
+void Sys_InitProcessNice (void)
+{
+	struct rlimit lim;
+	nicepossible = false;
+	if(COM_CheckParm("-nonice"))
+		return;
+	errno = 0;
+	nicelevel = getpriority(PRIO_PROCESS, 0);
+	if(errno)
+	{
+		Con_Printf("Kernel does not support reading process priority - cannot use niceness\n");
+		return;
+	}
+	if(getrlimit(RLIMIT_NICE, &lim))
+	{
+		Con_Printf("Kernel does not support lowering nice level again - cannot use niceness\n");
+		return;
+	}
+	if(lim.rlim_cur != RLIM_INFINITY && nicelevel < (int) (20 - lim.rlim_cur))
+	{
+		Con_Printf("Current nice level is below the soft limit - cannot use niceness\n");
+		return;
+	}
+	nicepossible = true;
+	isnice = false;
+}
+void Sys_MakeProcessNice (void)
+{
+	if(!nicepossible)
+		return;
+	if(isnice)
+		return;
+	Con_DPrintf("Process is becoming 'nice'...\n");
+	if(setpriority(PRIO_PROCESS, 0, 19))
+		Con_Printf("Failed to raise nice level to %d\n", 19);
+	isnice = true;
+}
+void Sys_MakeProcessMean (void)
+{
+	if(!nicepossible)
+		return;
+	if(!isnice)
+		return;
+	Con_DPrintf("Process is becoming 'mean'...\n");
+	if(setpriority(PRIO_PROCESS, 0, nicelevel))
+		Con_Printf("Failed to lower nice level to %d\n", nicelevel);
+	isnice = false;
+}
+#else
+void Sys_InitProcessNice (void)
+{
+}
+void Sys_MakeProcessNice (void)
+{
+}
+void Sys_MakeProcessMean (void)
+{
+}
+#endif
