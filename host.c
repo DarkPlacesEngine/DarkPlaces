@@ -94,6 +94,9 @@ aborts the current host frame and goes on with the next one
 */
 void Host_AbortCurrentFrame(void)
 {
+	// in case we were previously nice, make us mean again
+	Sys_MakeProcessMean();
+
 	longjmp (host_abortframe, 1);
 }
 
@@ -1160,6 +1163,9 @@ static void Host_Init (void)
 	os = DP_OS_NAME;
 	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
 	Con_Printf("%s\n", engineversion);
+
+	// initialize process nice level
+	Sys_InitProcessNice();
 
 	// initialize ixtable
 	Mathlib_Init();
