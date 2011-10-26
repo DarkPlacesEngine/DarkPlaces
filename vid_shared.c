@@ -135,7 +135,7 @@ cvar_t joy_x360_sensitivityroll = {0, "joy_x360_sensitivityroll", "1", "movement
 
 // cvars for DPSOFTRAST
 cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
-cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "2", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
+cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "8", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
 cvar_t vid_soft_interlace = {CVAR_SAVE, "vid_soft_interlace", "1", "whether the DarkPlaces Software Rasterizer should interlace the screen bands occupied by each thread"};
 
 // we don't know until we try it!
