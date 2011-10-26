@@ -102,5 +102,10 @@ extern qboolean sys_supportsdlgetticks;
 unsigned int Sys_SDL_GetTicks (void); // wrapper to call SDL_GetTicks
 void Sys_SDL_Delay (unsigned int milliseconds); // wrapper to call SDL_Delay
 
+/// called to set process priority for dedicated servers
+void Sys_InitProcessNice (void);
+void Sys_MakeProcessNice (void);
+void Sys_MakeProcessMean (void);
+
 #endif
 

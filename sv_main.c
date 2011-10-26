@@ -3192,6 +3192,9 @@ void SV_SpawnServer (const char *server)
 		}
 	}
 
+	if(cls.state == ca_dedicated)
+		Sys_MakeProcessNice();
+
 	if (cls.state != ca_dedicated)
 	{
 		SCR_BeginLoadingPlaque();
@@ -3218,6 +3221,10 @@ void SV_SpawnServer (const char *server)
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
 		Con_Printf("Couldn't load map %s\n", modelname);
+
+		if(cls.state == ca_dedicated)
+			Sys_MakeProcessMean();
+
 		return;
 	}
 
@@ -3465,6 +3472,9 @@ void SV_SpawnServer (const char *server)
 	NetConn_Heartbeat (2);
 
 	SV_VM_End();
+
+	if(cls.state == ca_dedicated)
+		Sys_MakeProcessMean();
 }
 
 /////////////////////////////////////////////////////
