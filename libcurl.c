@@ -1663,7 +1663,7 @@ void Curl_SendRequirements(void)
 		foundone = Curl_SendRequirement(req->filename, foundone, sendbuffer, sizeof(sendbuffer)) || foundone;
 
 	p = sv_curl_serverpackages.string;
-	while(COM_ParseToken_Simple(&p, false, false))
+	while(COM_ParseToken_Simple(&p, false, false, true))
 		foundone = Curl_SendRequirement(com_token, foundone, sendbuffer, sizeof(sendbuffer)) || foundone;
 
 	if(foundone)

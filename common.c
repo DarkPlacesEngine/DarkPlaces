@@ -989,7 +989,7 @@ COM_ParseToken_Simple
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash)
+int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash, qboolean parsecomments)
 {
 	int len;
 	int c;
@@ -1024,14 +1024,14 @@ skipwhite:
 	if (data[0] == '\r' && data[1] == '\n')
 		data++;
 
-	if (data[0] == '/' && data[1] == '/')
+	if (parsecomments && data[0] == '/' && data[1] == '/')
 	{
 		// comment
 		while (*data && *data != '\n' && *data != '\r')
 			data++;
 		goto skipwhite;
 	}
-	else if (data[0] == '/' && data[1] == '*')
+	else if (parsecomments && data[0] == '/' && data[1] == '*')
 	{
 		// comment
 		data++;

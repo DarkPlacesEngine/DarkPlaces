@@ -2975,7 +2975,7 @@ void VM_parseentitydata(prvm_prog_t *prog)
 	data = PRVM_G_STRING(OFS_PARM1);
 
 	// parse the opening brace
-	if (!COM_ParseToken_Simple(&data, false, false) || com_token[0] != '{' )
+	if (!COM_ParseToken_Simple(&data, false, false, true) || com_token[0] != '{' )
 		prog->error_cmd("VM_parseentitydata: %s: Couldn't parse entity data:\n%s", prog->name, data );
 
 	PRVM_ED_ParseEdict (prog, data, ent);

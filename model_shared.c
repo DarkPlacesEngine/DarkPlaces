@@ -234,11 +234,12 @@ static void R_Model_Null_Draw(entity_render_t *ent)
 }
 
 
-typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qboolean loop, void *pass);
+typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qboolean loop, const char *name, void *pass);
 
 static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
 {
 	const char *bufptr;
+	const char *name;
 	int start, len;
 	float fps;
 	unsigned int i;
@@ -249,12 +250,12 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 	for(;;)
 	{
 		// an anim scene!
-		if (!COM_ParseToken_Simple(&bufptr, true, false))
+		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
 			break;
 		if (!strcmp(com_token, "\n"))
 			continue; // empty line
 		start = atoi(com_token);
-		if (!COM_ParseToken_Simple(&bufptr, true, false))
+		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
 			break;
 		if (!strcmp(com_token, "\n"))
 		{
@@ -262,15 +263,15 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 			continue;
 		}
 		len = atoi(com_token);
-		if (!COM_ParseToken_Simple(&bufptr, true, false))
+		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
 			break;
 		// we default to looping as it's usually wanted, so to NOT loop you append a 0
-		if (strcmp(com_token, "\n"))
+		if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
 		{
 			fps = atof(com_token);
-			if (!COM_ParseToken_Simple(&bufptr, true, false))
+			if (!COM_ParseToken_Simple(&bufptr, true, false, false))
 				break;
-			if (strcmp(com_token, "\n"))
+			if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
 				loop = atoi(com_token) != 0;
 			else
 				loop = true;
@@ -281,19 +282,37 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 			loop = true;
 		}
 
+		name = NULL;
+		if(!strcmp(com_token, "//"))
+		{
+			if (COM_ParseToken_Simple(&bufptr, true, false, false))
+			{
+				if(strcmp(com_token, "\n"))
+				{
+					name = com_token;
+					// skip to EOL
+					while (*bufptr && *bufptr != '\n' && *bufptr != '\r')
+						bufptr++;
+				}
+			}
+		}
+
 		if(cb)
-			cb(i, start, len, fps, loop, pass);
+			cb(i, start, len, fps, loop, name, pass);
 		++i;
 	}
 
 	return i;
 }
 
-static void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, void *pass)
+static void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, const char *name, void *pass)
 {
 	dp_model_t *mod = (dp_model_t *) pass;
 	animscene_t *anim = &mod->animscenes[i];
-	dpsnprintf(anim->name, sizeof(anim[i].name), "groupified_%d_anim", i);
+	if(name)
+		strlcpy(anim->name, name, sizeof(anim[i].name));
+	else
+		dpsnprintf(anim->name, sizeof(anim[i].name), "groupified_%d_anim", i);
 	anim->firstframe = bound(0, start, mod->num_poses - 1);
 	anim->framecount = bound(1, len, mod->num_poses - anim->firstframe);
 	anim->framerate = max(1, fps);
