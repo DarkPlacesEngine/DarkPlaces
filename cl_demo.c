@@ -88,8 +88,9 @@ void CL_StopPlayback (void)
 	if (cls.timedemo)
 		CL_FinishTimeDemo ();
 
-	if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
-		Host_Quit_f();
+	if (!cls.demostarting) // only quit if not starting another demo
+		if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
+			Host_Quit_f();
 
 }
 
@@ -98,7 +99,7 @@ void CL_StopPlayback (void)
 CL_WriteDemoMessage
 
 Dumps the current net message, prefixed by the length and view angles
-====================
+#====================
 */
 void CL_WriteDemoMessage (sizebuf_t *message)
 {
@@ -400,12 +401,26 @@ void CL_PlayDemo_f (void)
 	char	name[MAX_QPATH];
 	int c;
 	qboolean neg = false;
+	qfile_t *f;
 
 	if (Cmd_Argc() != 2)
 	{
 		Con_Print("play <demoname> : plays a demo\n");
 		return;
 	}
+
+	// open the demo file
+	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	FS_DefaultExtension (name, ".dem", sizeof (name));
+	f = FS_OpenVirtualFile(name, false);
+	if (!f)
+	{
+		Con_Printf("ERROR: couldn't open %s.\n", name);
+		cls.demonum = -1;		// stop demo loop
+		return;
+	}
+
+	cls.demostarting = true;
 
 	// disconnect from server
 	CL_Disconnect ();
@@ -414,19 +429,10 @@ void CL_PlayDemo_f (void)
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
 
-	// open the demo file
-	strlcpy (name, Cmd_Argv(1), sizeof (name));
-	FS_DefaultExtension (name, ".dem", sizeof (name));
 	cls.protocol = PROTOCOL_QUAKE;
 
 	Con_Printf("Playing demo %s.\n", name);
-	cls.demofile = FS_OpenVirtualFile(name, false);
-	if (!cls.demofile)
-	{
-		Con_Print("ERROR: couldn't open.\n");
-		cls.demonum = -1;		// stop demo loop
-		return;
-	}
+	cls.demofile = f;
 	strlcpy(cls.demoname, name, sizeof(cls.demoname));
 
 	cls.demoplayback = true;
@@ -441,6 +447,8 @@ void CL_PlayDemo_f (void)
 
 	if (neg)
 		cls.forcetrack = -cls.forcetrack;
+
+	cls.demostarting = false;
 }
 
 /*
