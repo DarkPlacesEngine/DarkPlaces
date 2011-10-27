@@ -892,32 +892,32 @@ static mempool_t *cryptomempool;
 extern "C"
 {
 #endif
-static void *d0_malloc(size_t len)
+static void *Crypto_d0_malloc(size_t len)
 {
 	return Mem_Alloc(cryptomempool, len);
 }
 
-static void d0_free(void *p)
+static void Crypto_d0_free(void *p)
 {
 	Mem_Free(p);
 }
 
-static void *d0_createmutex(void)
+static void *Crypto_d0_createmutex(void)
 {
 	return Thread_CreateMutex();
 }
 
-static void d0_destroymutex(void *m)
+static void Crypto_d0_destroymutex(void *m)
 {
 	Thread_DestroyMutex(m);
 }
 
-static int d0_lockmutex(void *m)
+static int Crypto_d0_lockmutex(void *m)
 {
 	return Thread_LockMutex(m);
 }
 
-static int d0_unlockmutex(void *m)
+static int Crypto_d0_unlockmutex(void *m)
 {
 	return Thread_UnlockMutex(m);
 }
@@ -965,11 +965,11 @@ void Crypto_Init(void)
 	if(!Crypto_OpenLibrary())
 		return;
 
-	qd0_blind_id_setmallocfuncs(d0_malloc, d0_free);
+	qd0_blind_id_setmallocfuncs(Crypto_d0_malloc, Crypto_d0_free);
 	if (Thread_HasThreads())
 	{
 		crypto_mutex = Thread_CreateMutex();
-		qd0_blind_id_setmutexfuncs(d0_createmutex, d0_destroymutex, d0_lockmutex, d0_unlockmutex);
+		qd0_blind_id_setmutexfuncs(Crypto_d0_createmutex, Crypto_d0_destroymutex, Crypto_d0_lockmutex, Crypto_d0_unlockmutex);
 	}
 
 	if(!qd0_blind_id_INITIALIZE())
