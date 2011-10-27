@@ -198,7 +198,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationSize, floa
 
 extern char com_token[MAX_INPUTLINE];
 
-int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash);
+int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash, qboolean parsecomments);
 int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_Console(const char **datapointer);

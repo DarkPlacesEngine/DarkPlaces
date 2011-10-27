@@ -2079,7 +2079,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 				for (;;)
 				{
 					int l;
-					if (!COM_ParseToken_Simple(&data, false, false))
+					if (!COM_ParseToken_Simple(&data, false, false, true))
 						break;
 					if (com_token[0] == '{')
 						continue;
@@ -2090,7 +2090,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					for (l = 0;l < (int)sizeof(keyname) - 1 && com_token[k+l] && !ISWHITESPACE(com_token[k+l]);l++)
 						keyname[l] = com_token[k+l];
 					keyname[l] = 0;
-					if (!COM_ParseToken_Simple(&data, false, false))
+					if (!COM_ParseToken_Simple(&data, false, false, true))
 						break;
 					if (developer_extra.integer)
 						Con_DPrintf("key: %s %s\n", keyname, com_token);
@@ -2766,7 +2766,7 @@ void Con_CompleteCommandLine (void)
 
 				stringlistinit(&resultbuf);
 				stringlistinit(&dirbuf);
-				while(COM_ParseToken_Simple(&patterns, false, false))
+				while(COM_ParseToken_Simple(&patterns, false, false, true))
 				{
 					fssearch_t *search;
 					if(strchr(com_token, '/'))
