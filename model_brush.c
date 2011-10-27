@@ -2077,13 +2077,13 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 	int i, j, k;
 	if (!data)
 		return;
-	if (!COM_ParseToken_Simple(&data, false, false))
+	if (!COM_ParseToken_Simple(&data, false, false, true))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		if (!COM_ParseToken_Simple(&data, false, false))
+		if (!COM_ParseToken_Simple(&data, false, false, true))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -2093,7 +2093,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 			strlcpy(key, com_token, sizeof(key));
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		if (!COM_ParseToken_Simple(&data, false, false))
+		if (!COM_ParseToken_Simple(&data, false, false, true))
 			return; // error
 		dpsnprintf(value, sizeof(value), "%s", com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps
@@ -3062,12 +3062,12 @@ static void Mod_Q1BSP_LoadMapBrushes(void)
 	if (!maptext)
 		return;
 	text = maptext;
-	if (!COM_ParseToken_Simple(&data, false, false))
+	if (!COM_ParseToken_Simple(&data, false, false, true))
 		return; // error
 	submodel = 0;
 	for (;;)
 	{
-		if (!COM_ParseToken_Simple(&data, false, false))
+		if (!COM_ParseToken_Simple(&data, false, false, true))
 			break;
 		if (com_token[0] != '{')
 			return; // error
@@ -3078,7 +3078,7 @@ static void Mod_Q1BSP_LoadMapBrushes(void)
 		brushes = Mem_Alloc(loadmodel->mempool, maxbrushes * sizeof(mbrush_t));
 		for (;;)
 		{
-			if (!COM_ParseToken_Simple(&data, false, false))
+			if (!COM_ParseToken_Simple(&data, false, false, true))
 				return; // error
 			if (com_token[0] == '}')
 				break; // end of entity
@@ -3102,7 +3102,7 @@ static void Mod_Q1BSP_LoadMapBrushes(void)
 				}
 				for (;;)
 				{
-					if (!COM_ParseToken_Simple(&data, false, false))
+					if (!COM_ParseToken_Simple(&data, false, false, true))
 						return; // error
 					if (com_token[0] == '}')
 						break; // end of brush
@@ -3111,25 +3111,25 @@ static void Mod_Q1BSP_LoadMapBrushes(void)
 					// FIXME: support hl .map format
 					for (pointnum = 0;pointnum < 3;pointnum++)
 					{
-						COM_ParseToken_Simple(&data, false, false);
+						COM_ParseToken_Simple(&data, false, false, true);
 						for (componentnum = 0;componentnum < 3;componentnum++)
 						{
-							COM_ParseToken_Simple(&data, false, false);
+							COM_ParseToken_Simple(&data, false, false, true);
 							point[pointnum][componentnum] = atof(com_token);
 						}
-						COM_ParseToken_Simple(&data, false, false);
+						COM_ParseToken_Simple(&data, false, false, true);
 					}
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					strlcpy(facetexture, com_token, sizeof(facetexture));
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					//scroll_s = atof(com_token);
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					//scroll_t = atof(com_token);
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					//rotate = atof(com_token);
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					//scale_s = atof(com_token);
-					COM_ParseToken_Simple(&data, false, false);
+					COM_ParseToken_Simple(&data, false, false, true);
 					//scale_t = atof(com_token);
 					TriangleNormal(point[0], point[1], point[2], planenormal);
 					VectorNormalizeDouble(planenormal);
@@ -4452,11 +4452,11 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 	// some Q3 maps override the lightgrid_cellsize with a worldspawn key
 	// VorteX: q3map2 FS-R generates tangentspace deluxemaps for q3bsp and sets 'deluxeMaps' key
 	loadmodel->brushq3.deluxemapping = false;
-	if (data && COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{')
+	if (data && COM_ParseToken_Simple(&data, false, false, true) && com_token[0] == '{')
 	{
 		while (1)
 		{
-			if (!COM_ParseToken_Simple(&data, false, false))
+			if (!COM_ParseToken_Simple(&data, false, false, true))
 				break; // error
 			if (com_token[0] == '}')
 				break; // end of worldspawn
@@ -4466,7 +4466,7 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 				strlcpy(key, com_token, sizeof(key));
 			while (key[strlen(key)-1] == ' ') // remove trailing spaces
 				key[strlen(key)-1] = 0;
-			if (!COM_ParseToken_Simple(&data, false, false))
+			if (!COM_ParseToken_Simple(&data, false, false, true))
 				break; // error
 			strlcpy(value, com_token, sizeof(value));
 			if (!strcasecmp("gridsize", key)) // this one is case insensitive to 100% match q3map2

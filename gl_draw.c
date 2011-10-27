@@ -706,7 +706,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 		ch = 0;
 		while(ch < 256)
 		{
-			if(!COM_ParseToken_Simple(&p, false, false))
+			if(!COM_ParseToken_Simple(&p, false, false, true))
 				return;
 
 			switch(*com_token)
@@ -730,20 +730,20 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 				default:
 					if(!strcmp(com_token, "extraspacing"))
 					{
-						if(!COM_ParseToken_Simple(&p, false, false))
+						if(!COM_ParseToken_Simple(&p, false, false, true))
 							return;
 						extraspacing = atof(com_token);
 					}
 					else if(!strcmp(com_token, "scale"))
 					{
-						if(!COM_ParseToken_Simple(&p, false, false))
+						if(!COM_ParseToken_Simple(&p, false, false, true))
 							return;
 						fnt->settings.scale = atof(com_token);
 					}
 					else
 					{
 						Con_Printf("Warning: skipped unknown font property %s\n", com_token);
-						if(!COM_ParseToken_Simple(&p, false, false))
+						if(!COM_ParseToken_Simple(&p, false, false, true))
 							return;
 					}
 					break;

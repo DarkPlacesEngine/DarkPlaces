@@ -5780,7 +5780,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		data = cl.worldmodel->brush.entities;
 	if (!data)
 		return;
-	for (entnum = 0;COM_ParseToken_Simple(&data, false, false) && com_token[0] == '{';entnum++)
+	for (entnum = 0;COM_ParseToken_Simple(&data, false, false, true) && com_token[0] == '{';entnum++)
 	{
 		type = LIGHTTYPE_MINUSX;
 		origin[0] = origin[1] = origin[2] = 0;
@@ -5798,7 +5798,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		islight = false;
 		while (1)
 		{
-			if (!COM_ParseToken_Simple(&data, false, false))
+			if (!COM_ParseToken_Simple(&data, false, false, true))
 				break; // error
 			if (com_token[0] == '}')
 				break; // end of entity
@@ -5808,7 +5808,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				strlcpy(key, com_token, sizeof(key));
 			while (key[strlen(key)-1] == ' ') // remove trailing spaces
 				key[strlen(key)-1] = 0;
-			if (!COM_ParseToken_Simple(&data, false, false))
+			if (!COM_ParseToken_Simple(&data, false, false, true))
 				break; // error
 			strlcpy(value, com_token, sizeof(value));
 
