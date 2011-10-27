@@ -632,6 +632,7 @@ typedef struct client_static_s
 	fs_offset_t demo_lastcsprogssize;
 	int demo_lastcsprogscrc;
 	qboolean demoplayback;
+	qboolean demostarting; // set if currently starting a demo, to stop -demo from quitting when switching to another demo
 	qboolean timedemo;
 	// -1 = use normal cd track
 	int forcetrack;
