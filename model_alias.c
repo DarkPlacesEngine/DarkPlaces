@@ -2517,8 +2517,8 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	strlcat(animname, ".psa", sizeof(animname));
 	animbuffer = animfilebuffer = FS_LoadFile(animname, loadmodel->mempool, false, &filesize);
 	animbufferend = (void *)((unsigned char*)animbuffer + (int)filesize);
-	if (animbuffer == NULL)
-		Host_Error("%s: can't find .psa file (%s)", loadmodel->name, animname);
+	if (!animbuffer)
+		animbufferend = animbuffer;
 
 	numpnts = 0;
 	pnts = NULL;
@@ -2836,15 +2836,19 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			Con_Printf("%s: unknown chunk ID \"%s\"\n", animname, pchunk->id);
 	}
 
-	if (!numpnts || !pnts || !numvtxw || !vtxw || !numfaces || !faces || !nummatts || !matts || !numbones || !bones || !numrawweights || !rawweights || !numanims || !anims || !numanimkeys || !animkeys)
+	if (!numpnts || !pnts || !numvtxw || !vtxw || !numfaces || !faces || !nummatts || !matts || !numbones || !bones || !numrawweights || !rawweights)
 		Host_Error("%s: missing required chunks", loadmodel->name);
 
-	loadmodel->numframes = 0;
-	for (index = 0;index < numanims;index++)
-		loadmodel->numframes += anims[index].numframes;
-
-	if (numanimkeys != numbones * loadmodel->numframes)
-		Host_Error("%s: %s has incorrect number of animation keys", animname, pchunk->id);
+	if (numanims)
+	{
+		loadmodel->numframes = 0;
+		for (index = 0;index < numanims;index++)
+			loadmodel->numframes += anims[index].numframes;
+		if (numanimkeys != numbones * loadmodel->numframes)
+			Host_Error("%s: %s has incorrect number of animation keys", animname, pchunk->id);
+	}
+	else
+		loadmodel->numframes = loadmodel->num_poses = 1;
 
 	meshvertices = numvtxw;
 	meshtriangles = numfaces;
@@ -2946,6 +2950,30 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, index, index);
 	}
 
+	// convert the basepose data
+	if (loadmodel->num_bones)
+	{
+		int boneindex;
+		matrix4x4_t *basebonepose;
+		float *outinvmatrix = loadmodel->data_baseboneposeinverse;
+		matrix4x4_t bonematrix;
+		matrix4x4_t tempbonematrix;
+		basebonepose = (matrix4x4_t *)Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(matrix4x4_t));
+		for (boneindex = 0;boneindex < loadmodel->num_bones;boneindex++)
+		{
+			Matrix4x4_FromOriginQuat(&bonematrix, bones[boneindex].basepose.origin[0], bones[boneindex].basepose.origin[1], bones[boneindex].basepose.origin[2], bones[boneindex].basepose.quat[0], bones[boneindex].basepose.quat[1], bones[boneindex].basepose.quat[2], bones[boneindex].basepose.quat[3]);
+			if (loadmodel->data_bones[boneindex].parent >= 0)
+			{
+				tempbonematrix = bonematrix;
+				Matrix4x4_Concat(&bonematrix, basebonepose + loadmodel->data_bones[boneindex].parent, &tempbonematrix);
+			}
+			basebonepose[boneindex] = bonematrix;
+			Matrix4x4_Invert_Simple(&tempbonematrix, basebonepose + boneindex);
+			Matrix4x4_ToArray12FloatD3D(&tempbonematrix, outinvmatrix + 12*boneindex);
+		}
+		Mem_Free(basebonepose);
+	}
+
 	// sort the psk point weights into the vertex weight tables
 	// (which only accept up to 4 bones per vertex)
 	for (index = 0;index < numvtxw;index++)
@@ -2984,49 +3012,91 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Realloc(loadmodel->mempool, loadmodel->surfmesh.data_blendweights, loadmodel->surfmesh.num_blends * sizeof(blendweights_t));
 
 	// set up the animscenes based on the anims
-	for (index = 0, i = 0;index < numanims;index++)
+	if (numanims)
 	{
-		for (j = 0;j < anims[index].numframes;j++, i++)
+		for (index = 0, i = 0;index < numanims;index++)
 		{
-			dpsnprintf(loadmodel->animscenes[i].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", anims[index].name, j);
-			loadmodel->animscenes[i].firstframe = i;
-			loadmodel->animscenes[i].framecount = 1;
-			loadmodel->animscenes[i].loop = true;
-			loadmodel->animscenes[i].framerate = anims[index].fps;
+			for (j = 0;j < anims[index].numframes;j++, i++)
+			{
+				dpsnprintf(loadmodel->animscenes[i].name, sizeof(loadmodel->animscenes[i].name), "%s_%d", anims[index].name, j);
+				loadmodel->animscenes[i].firstframe = i;
+				loadmodel->animscenes[i].framecount = 1;
+				loadmodel->animscenes[i].loop = true;
+				loadmodel->animscenes[i].framerate = anims[index].fps;
+			}
+		}
+		// calculate the scaling value for bone origins so they can be compressed to short
+		biggestorigin = 0;
+		for (index = 0;index < numanimkeys;index++)
+		{
+			pskanimkeys_t *k = animkeys + index;
+			biggestorigin = max(biggestorigin, fabs(k->origin[0]));
+			biggestorigin = max(biggestorigin, fabs(k->origin[1]));
+			biggestorigin = max(biggestorigin, fabs(k->origin[2]));
+		}
+		loadmodel->num_posescale = biggestorigin / 32767.0f;
+		loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+	
+		// load the poses from the animkeys
+		for (index = 0;index < numanimkeys;index++)
+		{
+			pskanimkeys_t *k = animkeys + index;
+			float quat[4];
+			Vector4Copy(k->quat, quat);
+			if (quat[3] > 0)
+				Vector4Negate(quat, quat);
+			Vector4Normalize2(quat, quat);
+			// compress poses to the short[6] format for longterm storage
+			loadmodel->data_poses6s[index*6+0] = k->origin[0] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+1] = k->origin[1] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+2] = k->origin[2] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
+			loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
+			loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
+		}
+	}
+	else
+	{
+		strlcpy(loadmodel->animscenes[0].name, "base", sizeof(loadmodel->animscenes[0].name));
+		loadmodel->animscenes[0].firstframe = 0;
+		loadmodel->animscenes[0].framecount = 1;
+		loadmodel->animscenes[0].loop = true;
+		loadmodel->animscenes[0].framerate = 10;
+
+		// calculate the scaling value for bone origins so they can be compressed to short
+		biggestorigin = 0;
+		for (index = 0;index < numbones;index++)
+		{
+			pskboneinfo_t *p = bones + index;
+			biggestorigin = max(biggestorigin, fabs(p->basepose.origin[0]));
+			biggestorigin = max(biggestorigin, fabs(p->basepose.origin[1]));
+			biggestorigin = max(biggestorigin, fabs(p->basepose.origin[2]));
+		}
+		loadmodel->num_posescale = biggestorigin / 32767.0f;
+		loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
+	
+		// load the basepose as a frame
+		for (index = 0;index < numbones;index++)
+		{
+			pskboneinfo_t *p = bones + index;
+			float quat[4];
+			Vector4Copy(p->basepose.quat, quat);
+			if (quat[3] > 0)
+				Vector4Negate(quat, quat);
+			Vector4Normalize2(quat, quat);
+			// compress poses to the short[6] format for longterm storage
+			loadmodel->data_poses6s[index*6+0] = p->basepose.origin[0] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+1] = p->basepose.origin[1] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+2] = p->basepose.origin[2] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
+			loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
+			loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
 		}
 	}
 
-	// calculate the scaling value for bone origins so they can be compressed to short
-	biggestorigin = 0;
-	for (index = 0;index < numanimkeys;index++)
-	{
-		pskanimkeys_t *k = animkeys + index;
-		biggestorigin = max(biggestorigin, fabs(k->origin[0]));
-		biggestorigin = max(biggestorigin, fabs(k->origin[1]));
-		biggestorigin = max(biggestorigin, fabs(k->origin[2]));
-	}
-	loadmodel->num_posescale = biggestorigin / 32767.0f;
-	loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
-
-	// load the poses from the animkeys
-	for (index = 0;index < numanimkeys;index++)
-	{
-		pskanimkeys_t *k = animkeys + index;
-		float quat[4];
-		Vector4Copy(k->quat, quat);
-		if (quat[3] > 0)
-			Vector4Negate(quat, quat);
-		Vector4Normalize2(quat, quat);
-		// compress poses to the short[6] format for longterm storage
-		loadmodel->data_poses6s[index*6+0] = k->origin[0] * loadmodel->num_poseinvscale;
-		loadmodel->data_poses6s[index*6+1] = k->origin[1] * loadmodel->num_poseinvscale;
-		loadmodel->data_poses6s[index*6+2] = k->origin[2] * loadmodel->num_poseinvscale;
-		loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
-		loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
-		loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
-	}
 	Mod_FreeSkinFiles(skinfiles);
-	Mem_Free(animfilebuffer);
+	if (animfilebuffer)
+		Mem_Free(animfilebuffer);
 	Mod_MakeSortedSurfaces(loadmodel);
 
 	// compute all the mesh information that was not loaded from the file
@@ -3035,7 +3105,6 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles, 0, loadmodel->surfmesh.num_vertices, __FILE__, __LINE__);
-	Mod_BuildBaseBonePoses();
 	Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, r_smoothnormals_areaweighting.integer != 0);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 	if (loadmodel->surfmesh.data_neighbor3i)
