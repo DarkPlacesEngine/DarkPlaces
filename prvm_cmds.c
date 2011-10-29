@@ -95,7 +95,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 
 	memset(blend, 0, MAX_FRAMEBLENDS * sizeof(*blend));
 
-	if (!model || !model->surfmesh.isanimated)
+	if (!model || !model->surfmesh.isanimated || model->numframes <= 1)
 	{
 		blend[0].lerp = 1;
 		return;
@@ -108,7 +108,8 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 		f = g->frame;
 		if ((unsigned int)f >= (unsigned int)numframes)
 		{
-			Con_DPrintf("VM_FrameBlendFromFrameGroupBlend: no such frame %d in model %s\n", f, model->name);
+			if (developer_extra.integer)
+				Con_DPrintf("VM_FrameBlendFromFrameGroupBlend: no such frame %d in model %s\n", f, model->name);
 			f = 0;
 		}
 		d = lerp = g->lerp;
