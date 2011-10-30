@@ -21,7 +21,7 @@ qboolean hmac(
 	if(sizeof(k_xor_ipad) < (size_t) hlen)
 		return false;
 
-	catbuf = Mem_Alloc(tempmempool, (size_t) hblock + max((size_t) hlen, (size_t) n));
+	catbuf = (unsigned char *)Mem_Alloc(tempmempool, (size_t) hblock + max((size_t) hlen, (size_t) n));
 
 	if(k > hblock)
 	{
