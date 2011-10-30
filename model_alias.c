@@ -650,7 +650,7 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
-		vertex3f = Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
+		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) - 1;
 	segmentmins[1] = min(start[1], end[1]) - 1;
 	segmentmins[2] = min(start[2], end[2]) - 1;
@@ -690,7 +690,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
-		vertex3f = Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
+		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
 	segmentmins[1] = min(start[1], end[1]) + boxmins[1] - 1;
 	segmentmins[2] = min(start[2], end[2]) + boxmins[2] - 1;
