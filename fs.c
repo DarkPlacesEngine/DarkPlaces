@@ -1957,6 +1957,7 @@ void FS_Init (void)
 			if (split)
 			{
 				struct stat statresult;
+				char vabuf[1024];
 				// truncate to just after the .app/
 				split[5] = 0;
 				// see if gamedir exists in Resources
