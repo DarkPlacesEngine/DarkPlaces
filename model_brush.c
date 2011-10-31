@@ -1775,6 +1775,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		{
 			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
+			tx->supercontents |= SUPERCONTENTS_SOLID; // for the surface traceline we need to hit this surface as a solid...
 		}
 		else
 		{
