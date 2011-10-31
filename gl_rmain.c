@@ -2037,6 +2037,7 @@ void R_SetupShader_ShowDepth(qboolean notrippy)
 }
 
 extern qboolean r_shadow_usingdeferredprepass;
+extern cvar_t r_shadow_deferred_8bitrange;
 extern rtexture_t *r_shadow_attenuationgradienttexture;
 extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
@@ -2558,8 +2559,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2568,8 +2569,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
@@ -2708,8 +2709,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
 				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2718,8 +2719,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
@@ -2858,8 +2859,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2868,8 +2869,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale, specularscale, specularscale);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
@@ -2986,6 +2987,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	matrix4x4_t viewtolight;
 	matrix4x4_t lighttoview;
 	float viewtolight16f[16];
+	float range = 1.0f / r_shadow_deferred_8bitrange.value;
 	// light source
 	mode = SHADERMODE_DEFERREDLIGHTSOURCE;
 	if (rtlight->currentcubemap != r_texture_whitecube)
@@ -3048,9 +3050,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3f(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
-		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
-		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
-		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
+		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
+		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
+		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
 		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
@@ -3072,9 +3074,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ViewToLightM1            , 1, false, viewtolight16f);
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
 		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		DPSOFTRAST_Uniform1f(       DPSOFTRAST_UNIFORM_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);

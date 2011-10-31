@@ -280,6 +280,8 @@ cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
 cvar_t r_shadow_deferred = {CVAR_SAVE, "r_shadow_deferred", "0", "uses image-based lighting instead of geometry-based lighting, the method used renders a depth image and a normalmap image, renders lights into separate diffuse and specular images, and then combines this into the normal rendering, requires r_shadow_shadowmapping"};
+cvar_t r_shadow_deferred_8bitrange = {CVAR_SAVE, "r_shadow_deferred_8bitrange", "4", "dynamic range of image-based lighting when using 32bit color (does not apply to fp)"};
+//cvar_t r_shadow_deferred_fp = {CVAR_SAVE, "r_shadow_deferred_fp", "0", "use 16bit (1) or 32bit (2) floating point for accumulation of image-based lighting"};
 cvar_t r_shadow_usebihculling = {0, "r_shadow_usebihculling", "1", "use BIH (Bounding Interval Hierarchy) for culling lit surfaces instead of BSP (Binary Space Partitioning)"};
 cvar_t r_shadow_usenormalmap = {CVAR_SAVE, "r_shadow_usenormalmap", "1", "enables use of directional shading on lights"};
 cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
@@ -699,6 +701,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_usenormalmap);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_deferred);
+	Cvar_RegisterVariable(&r_shadow_deferred_8bitrange);
+//	Cvar_RegisterVariable(&r_shadow_deferred_fp);
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
 	Cvar_RegisterVariable(&r_shadow_glossintensity);
