@@ -9822,6 +9822,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 		GL_DepthMask(true);
 		R_SetupShader_Surface(vec3_origin, (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT) != 0, 1, 1, rsurface.texture->specularscale, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false);
 		RSurf_DrawBatch();
+		return;
 	}
 
 	// bind lightmap texture
