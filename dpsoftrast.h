@@ -112,7 +112,7 @@ typedef enum gl20_texunit_e
 	GL20TU_SHADOWMAP2D = 15,
 	GL20TU_CUBEPROJECTION = 12,
 	// rtlight prepass data (screenspace depth and normalmap)
-	GL20TU_SCREENDEPTH = 13,
+//	GL20TU_UNUSED1 = 13,
 	GL20TU_SCREENNORMALMAP = 14,
 	// lightmap prepass data (screenspace diffuse and specular from lights)
 	GL20TU_SCREENDIFFUSE = 11,
@@ -197,8 +197,8 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_BOUNCEGRID = 1<<28, ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
 	SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL = 1<<29, ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
 	SHADERPERMUTATION_TRIPPY = 1<<30, ///< use trippy vertex shader effect
-	SHADERPERMUTATION_LIMIT = 1<<31, ///< size of permutations array
-	SHADERPERMUTATION_COUNT = 31 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_DEPTHRGB = 1<<31, ///< read/write depth values in RGB color coded format for older hardware without depth samplers
+	SHADERPERMUTATION_COUNT = 32 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 
@@ -227,7 +227,6 @@ typedef enum DPSOFTRAST_UNIFORM_e
 	DPSOFTRAST_UNIFORM_Texture_Reflection,
 	DPSOFTRAST_UNIFORM_Texture_ShadowMap2D,
 	DPSOFTRAST_UNIFORM_Texture_CubeProjection,
-	DPSOFTRAST_UNIFORM_Texture_ScreenDepth,
 	DPSOFTRAST_UNIFORM_Texture_ScreenNormalMap,
 	DPSOFTRAST_UNIFORM_Texture_ScreenDiffuse,
 	DPSOFTRAST_UNIFORM_Texture_ScreenSpecular,

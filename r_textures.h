@@ -77,10 +77,20 @@ typedef enum textype_e
 	TEXTYPE_COLORBUFFER16F,
 	// this represents an RGBA float texture (4 32bit floats)
 	TEXTYPE_COLORBUFFER32F,
-	// 32bit D24S8 (24bit depth, 8bit stencil)
-	TEXTYPE_SHADOWMAP_STENCIL,
-	// 16bit D16 (16bit depth) or 32bit S8D24 (24bit depth, 8bit stencil unused)
-	TEXTYPE_SHADOWMAP
+	// depth-stencil buffer (or texture)
+	TEXTYPE_DEPTHBUFFER16,
+	// depth-stencil buffer (or texture)
+	TEXTYPE_DEPTHBUFFER24,
+	// 32bit D24S8 buffer (24bit depth, 8bit stencil), not supported on OpenGL ES
+	TEXTYPE_DEPTHBUFFER24STENCIL8,
+	// shadowmap-friendly format with depth comparison (not supported on some hardware)
+	TEXTYPE_SHADOWMAP16_COMP,
+	// shadowmap-friendly format with raw reading (not supported on some hardware)
+	TEXTYPE_SHADOWMAP16_RAW,
+	// shadowmap-friendly format with depth comparison (not supported on some hardware)
+	TEXTYPE_SHADOWMAP24_COMP,
+	// shadowmap-friendly format with raw reading (not supported on some hardware)
+	TEXTYPE_SHADOWMAP24_RAW,
 }
 textype_t;
 
@@ -98,13 +108,16 @@ textype_t;
 typedef struct rtexture_s
 {
 	// this is exposed (rather than private) for speed reasons only
-	int texnum;
-	qboolean dirty;
-	int gltexturetypeenum; // exposed for use in R_Mesh_TexBind
+	int texnum; // GL texture slot number
+	int renderbuffernum; // GL renderbuffer slot number
+	qboolean dirty; // indicates that R_RealGetTexture should be called
+	int gltexturetypeenum; // used by R_Mesh_TexBind
 	// d3d stuff the backend needs
 	void *d3dtexture;
+	void *d3dsurface;
 #ifdef SUPPORTD3D
-	qboolean d3disdepthsurface; // for depth/stencil surfaces
+	qboolean d3disrendertargetsurface;
+	qboolean d3disdepthstencilsurface;
 	int d3dformat;
 	int d3dusage;
 	int d3dpool;
@@ -156,7 +169,8 @@ extern cvar_t r_texture_dds_save;
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter, qboolean stencil);
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qboolean filter);
+rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype);
 rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel);
 
 // saves a texture to a DDS file

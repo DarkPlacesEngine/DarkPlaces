@@ -199,8 +199,6 @@ cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to app
 cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
 
-extern cvar_t r_viewfbo;
-
 // brand of graphics chip
 const char *gl_vendor;
 // graphics chip model and other information

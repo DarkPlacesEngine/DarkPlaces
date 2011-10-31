@@ -1249,9 +1249,9 @@ static void GL_BindEBO(int bufferobject)
 	}
 }
 
+static const GLuint drawbuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
 int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
 {
-	int temp;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
@@ -1259,17 +1259,60 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
-		if (!vid.support.ext_framebuffer_object)
-			return 0;
-		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
-		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
-		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
-		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
-		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
-		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
-		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR
-		if (colortexture4) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, colortexture4->gltexturetypeenum, R_GetTexture(colortexture4), 0);CHECKGLERROR
-		return temp;
+		if (vid.support.ext_framebuffer_object)
+		{
+			int temp;
+			GLuint status;
+			qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
+			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+		//	if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
+			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
+			if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
+			if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
+			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+			if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
+			if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
+			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
+			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
+
+			if (colortexture4 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture3 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture2 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture && qglDrawBuffer)
+			{
+				qglDrawBuffer(drawbuffers[0]);CHECKGLERROR
+				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+			}
+			else if (qglDrawBuffer)
+			{
+				qglDrawBuffer(GL_NONE);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
+			if (status != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatusEXT returned %i\n", status);
+				qglDeleteFramebuffersEXT(1, (GLuint*)&temp);
+				temp = 0;
+			}
+			return temp;
+		}
+		return 0;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -1304,10 +1347,6 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 #ifdef SUPPORTD3D
 void R_Mesh_SetRenderTargetsD3D9(IDirect3DSurface9 *depthsurface, IDirect3DSurface9 *colorsurface0, IDirect3DSurface9 *colorsurface1, IDirect3DSurface9 *colorsurface2, IDirect3DSurface9 *colorsurface3)
 {
-// LordHavoc: for some weird reason the redundant SetDepthStencilSurface calls are necessary (otherwise the lights fail depth test, as if they were using the shadowmap depth surface and render target still)
-	if (gl_state.d3drt_depthsurface == depthsurface && gl_state.d3drt_colorsurfaces[0] == colorsurface0 && gl_state.d3drt_colorsurfaces[1] == colorsurface1 && gl_state.d3drt_colorsurfaces[2] == colorsurface2 && gl_state.d3drt_colorsurfaces[3] == colorsurface3)
-		return;
-
 	gl_state.framebufferobject = depthsurface != gl_state.d3drt_backbufferdepthsurface || colorsurface0 != gl_state.d3drt_backbuffercolorsurface;
 	if (gl_state.d3drt_depthsurface != depthsurface)
 	{
@@ -1370,19 +1409,24 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		// TODO: optimize: keep surface pointer around in rtexture_t until texture is freed or lost
 		if (fbo)
 		{
-			IDirect3DSurface9 *colorsurfaces[4];
-			for (i = 0;i < 4;i++)
+			IDirect3DSurface9 *surfaces[5];
+			for (i = 0;i < 5;i++)
 			{
-				colorsurfaces[i] = NULL;
+				surfaces[i] = NULL;
 				if (textures[i])
-					IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)textures[i]->d3dtexture, 0, &colorsurfaces[i]);
+				{
+					if (textures[i]->d3dsurface)
+						surfaces[i] = (IDirect3DSurface9 *)textures[i]->d3dsurface;
+					else
+						IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)textures[i]->d3dtexture, 0, &surfaces[i]);
+				}
 			}
 			// set the render targets for real
-			R_Mesh_SetRenderTargetsD3D9(depthtexture ? (IDirect3DSurface9 *)depthtexture->d3dtexture : NULL, colorsurfaces[0], colorsurfaces[1], colorsurfaces[2], colorsurfaces[3]);
+			R_Mesh_SetRenderTargetsD3D9(surfaces[4], surfaces[0], surfaces[1], surfaces[2], surfaces[3]);
 			// release the texture surface levels (they won't be lost while bound...)
-			for (i = 0;i < 4;i++)
-				if (textures[i])
-					IDirect3DSurface9_Release(colorsurfaces[i]);
+			for (i = 0;i < 5;i++)
+				if (textures[i] && !textures[i]->d3dsurface)
+					IDirect3DSurface9_Release(surfaces[i]);
 		}
 		else
 			R_Mesh_SetRenderTargetsD3D9(gl_state.d3drt_backbufferdepthsurface, gl_state.d3drt_backbuffercolorsurface, NULL, NULL, NULL);
