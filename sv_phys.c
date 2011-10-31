@@ -2589,6 +2589,9 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	vec_t movetime;
 	int bump;
 	prvm_edict_t *groundentity;
+	float d, ent_gravity;
+	float bouncefactor;
+	float bouncestop;
 
 // if onground, return without moving
 	if ((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND)
@@ -2634,8 +2637,8 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	for (bump = 0;bump < MAX_CLIP_PLANES && movetime > 0;bump++)
 	{
 	// move origin
-		VectorScale (PRVM_serveredictvector(ent, velocity), movetime, move);
-		if(!SV_PushEntity (&trace, ent, move, true, true))
+		VectorScale(PRVM_serveredictvector(ent, velocity), movetime, move);
+		if(!SV_PushEntity(&trace, ent, move, true, true))
 			return; // teleported
 		if (ent->priv.server->free)
 			return;
@@ -2644,7 +2647,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			// try to unstick the entity
 			if (sv_gameplayfix_unstickentities.integer)
 				SV_UnstickEntity(ent);
-			if(!SV_PushEntity (&trace, ent, move, false, true))
+			if(!SV_PushEntity(&trace, ent, move, false, true))
 				return; // teleported
 			if (ent->priv.server->free)
 				return;
@@ -2652,22 +2655,19 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		if (trace.fraction == 1)
 			break;
 		movetime *= 1 - min(1, trace.fraction);
-		if (PRVM_serveredictfloat(ent, movetype) == MOVETYPE_BOUNCEMISSILE)
+		switch((int)PRVM_serveredictfloat(ent, movetype))
 		{
-			float bouncefactor;
+		case MOVETYPE_BOUNCEMISSILE:
 			bouncefactor = PRVM_serveredictfloat(ent, bouncefactor);
 			if (!bouncefactor)
 				bouncefactor = 1.0f;
 
-			ClipVelocity (PRVM_serveredictvector(ent, velocity), trace.plane.normal, PRVM_serveredictvector(ent, velocity), 1 + bouncefactor);
+			ClipVelocity(PRVM_serveredictvector(ent, velocity), trace.plane.normal, PRVM_serveredictvector(ent, velocity), 1 + bouncefactor);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
-		}
-		else if (PRVM_serveredictfloat(ent, movetype) == MOVETYPE_BOUNCE)
-		{
-			float d, ent_gravity;
-			float bouncefactor;
-			float bouncestop;
-
+			if (!sv_gameplayfix_slidemoveprojectiles.integer)
+				movetime = 0;
+			break;
+		case MOVETYPE_BOUNCE:
 			bouncefactor = PRVM_serveredictfloat(ent, bouncefactor);
 			if (!bouncefactor)
 				bouncefactor = 0.5f;
@@ -2676,39 +2676,31 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			if (!bouncestop)
 				bouncestop = 60.0f / 800.0f;
 
-			ClipVelocity (PRVM_serveredictvector(ent, velocity), trace.plane.normal, PRVM_serveredictvector(ent, velocity), 1 + bouncefactor);
+			ClipVelocity(PRVM_serveredictvector(ent, velocity), trace.plane.normal, PRVM_serveredictvector(ent, velocity), 1 + bouncefactor);
 			ent_gravity = PRVM_serveredictfloat(ent, gravity);
 			if (!ent_gravity)
 				ent_gravity = 1.0f;
 			// LordHavoc: fixed grenades not bouncing when fired down a slope
 			if (sv_gameplayfix_grenadebouncedownslopes.integer)
+				d = fabs(DotProduct(trace.plane.normal, PRVM_serveredictvector(ent, velocity)));
+			else
+				d = PRVM_serveredictvector(ent, velocity)[2];
+			if (trace.plane.normal[2] > 0.7 && d < sv_gravity.value * bouncestop * ent_gravity)
 			{
-				d = DotProduct(trace.plane.normal, PRVM_serveredictvector(ent, velocity));
-				if (trace.plane.normal[2] > 0.7 && fabs(d) < sv_gravity.value * bouncestop * ent_gravity)
-				{
-					PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
-					PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
-					VectorClear (PRVM_serveredictvector(ent, velocity));
-					VectorClear (PRVM_serveredictvector(ent, avelocity));
-				}
-				else
-					PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
+				PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
+				PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
+				VectorClear(PRVM_serveredictvector(ent, velocity));
+				VectorClear(PRVM_serveredictvector(ent, avelocity));
+				movetime = 0;
 			}
 			else
 			{
-				if (trace.plane.normal[2] > 0.7 && PRVM_serveredictvector(ent, velocity)[2] < sv_gravity.value * bouncestop * ent_gravity)
-				{
-					PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
-					PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
-					VectorClear (PRVM_serveredictvector(ent, velocity));
-					VectorClear (PRVM_serveredictvector(ent, avelocity));
-				}
-				else
-					PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
+				PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
+				if (!sv_gameplayfix_slidemoveprojectiles.integer)
+					movetime = 0;
 			}
-		}
-		else
-		{
+			break;
+		default:
 			ClipVelocity (PRVM_serveredictvector(ent, velocity), trace.plane.normal, PRVM_serveredictvector(ent, velocity), 1.0);
 			if (trace.plane.normal[2] > 0.7)
 			{
@@ -2721,9 +2713,9 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			}
 			else
 				PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
-		}
-		if (!sv_gameplayfix_slidemoveprojectiles.integer || (PRVM_serveredictfloat(ent, movetype) != MOVETYPE_BOUNCE && PRVM_serveredictfloat(ent, movetype) == MOVETYPE_BOUNCEMISSILE) || ((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
+			movetime = 0;
 			break;
+		}
 	}
 
 // check for in water
