@@ -837,20 +837,15 @@ void Host_Main(void)
 				advancetime = sv_timer;
 			else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
 			{
-				// synchronize to the client frametime, but no less than 10ms and no more than sys_ticrate
-				advancetime = bound(0.01, cl_timer, sys_ticrate.value);
-				framelimit = cl_maxphysicsframesperserverframe.integer;
-				aborttime = realtime + 0.1;
+				// synchronize to the client frametime, but no less than 10ms and no more than 100ms
+				advancetime = bound(0.01, cl_timer, 0.1);
 			}
 			else
 			{
 				advancetime = sys_ticrate.value;
 				// listen servers can run multiple server frames per client frame
-				if (cls.state == ca_connected)
-				{
-					framelimit = cl_maxphysicsframesperserverframe.integer;
-					aborttime = realtime + 0.1;
-				}
+				framelimit = cl_maxphysicsframesperserverframe.integer;
+				aborttime = realtime + 0.1;
 			}
 			if(slowmo.value > 0 && slowmo.value < 1)
 				advancetime = min(advancetime, 0.1 / slowmo.value);
