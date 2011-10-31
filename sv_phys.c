@@ -1652,7 +1652,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	if((PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace->ent && (!((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || PRVM_serveredictedict(ent, groundentity) != PRVM_EDICT_TO_PROG(trace->ent))))
 		SV_Impact (ent, trace);
 
-	return VectorCompare(PRVM_serveredictvector(ent, origin), original) && VectorCompare(PRVM_serveredictvector(ent, velocity), original_velocity);
+	return VectorCompare(PRVM_serveredictvector(ent, origin), original);// && VectorCompare(PRVM_serveredictvector(ent, velocity), original_velocity);
 }
 
 
