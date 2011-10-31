@@ -63,6 +63,7 @@ typedef struct viddef_support_s
 	qboolean ext_blend_subtract;
 	qboolean ext_draw_range_elements;
 	qboolean ext_framebuffer_object;
+	qboolean ext_packed_depth_stencil;
 	qboolean ext_stencil_two_side;
 	qboolean ext_texture_3d;
 	qboolean ext_texture_compression_s3tc;

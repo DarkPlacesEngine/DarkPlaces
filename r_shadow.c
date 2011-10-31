@@ -2100,7 +2100,7 @@ static void R_Shadow_MakeShadowMap(int side, int size)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		if (r_shadow_shadowmap2dtexture) return;
-		r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", size*2, size*(vid.support.arb_texture_non_power_of_two ? 3 : 4), r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler);
+		r_shadow_shadowmap2dtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "shadowmap", size*2, size*(vid.support.arb_texture_non_power_of_two ? 3 : 4), r_shadow_shadowmapdepthbits, r_shadow_shadowmapsampler, false);
 		r_shadow_shadowmap2dcolortexture = NULL;
 		switch(vid.renderpath)
 		{
@@ -4544,7 +4544,7 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 			r_shadow_usingdeferredprepass = true;
 			r_shadow_prepass_width = vid.width;
 			r_shadow_prepass_height = vid.height;
-			r_shadow_prepassgeometrydepthtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "prepassgeometrydepthmap", vid.width, vid.height, 24, false);
+			r_shadow_prepassgeometrydepthtexture = R_LoadTextureShadowMap2D(r_shadow_texturepool, "prepassgeometrydepthmap", vid.width, vid.height, 24, false, false);
 			switch (vid.renderpath)
 			{
 			case RENDERPATH_D3D9:

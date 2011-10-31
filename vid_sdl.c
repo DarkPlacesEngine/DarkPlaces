@@ -1572,6 +1572,7 @@ void GLES_Init(void)
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
 	vid.support.ext_framebuffer_object = false;//true;
+	vid.support.ext_packed_depth_stencil = false;
 	vid.support.ext_stencil_two_side = false;
 	vid.support.ext_texture_3d = SDL_GL_ExtensionSupported("GL_OES_texture_3D");
 	vid.support.ext_texture_compression_s3tc = SDL_GL_ExtensionSupported("GL_EXT_texture_compression_s3tc");

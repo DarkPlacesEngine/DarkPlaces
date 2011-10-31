@@ -1018,6 +1018,12 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 extern void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
 
 extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
+
+//GL_EXT_packed_depth_stencil
+#define GL_DEPTH_STENCIL_EXT            0x84F9
+#define GL_UNSIGNED_INT_24_8_EXT        0x84FA
+#define GL_DEPTH24_STENCIL8_EXT         0x88F0
+
 #endif
 
 #define DEBUGGL
