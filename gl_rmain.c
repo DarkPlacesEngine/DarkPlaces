@@ -5738,7 +5738,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
 				if (p->fbo_refraction == 0)
 					p->fbo_refraction = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_refraction, NULL, NULL, NULL);
 			}
@@ -5752,7 +5752,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
 				if (p->fbo_camera == 0)
 					p->fbo_camera = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_camera, NULL, NULL, NULL);
 			}
@@ -5767,7 +5767,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false);
+					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
 				if (p->fbo_reflection == 0)
 					p->fbo_reflection = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_reflection, NULL, NULL, NULL);
 			}
@@ -6113,7 +6113,7 @@ static void R_Bloom_StartFrame(void)
 			if (useviewfbo)
 			{
 				// FIXME: choose depth bits based on a cvar
-				r_fb.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false);
+				r_fb.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false, vid.support.ext_packed_depth_stencil);
 				r_fb.fbo = R_Mesh_CreateFramebufferObject(r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
 				R_Mesh_SetRenderTargets(r_fb.fbo, r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
 #ifndef USE_GLES2

@@ -1264,6 +1264,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
 		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
 		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
+		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
 		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
 		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
 		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR

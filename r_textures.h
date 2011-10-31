@@ -77,6 +77,8 @@ typedef enum textype_e
 	TEXTYPE_COLORBUFFER16F,
 	// this represents an RGBA float texture (4 32bit floats)
 	TEXTYPE_COLORBUFFER32F,
+	// 32bit D24S8 (24bit depth, 8bit stencil)
+	TEXTYPE_SHADOWMAP_STENCIL,
 	// 16bit D16 (16bit depth) or 32bit S8D24 (24bit depth, 8bit stencil unused)
 	TEXTYPE_SHADOWMAP
 }
@@ -154,7 +156,7 @@ extern cvar_t r_texture_dds_save;
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter);
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter, qboolean stencil);
 rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel);
 
 // saves a texture to a DDS file

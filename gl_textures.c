@@ -85,6 +85,7 @@ textypeinfo_t;
 // GLES2 devices rarely support depth textures, so we actually use a renderbuffer there
 static textypeinfo_t textype_shadowmap16                 = {"shadowmap16",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16                  , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_shadowmap24                 = {"shadowmap24",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16                  , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_shadowmap24s8               = {"shadowmap24",              TEXTYPE_SHADOWMAP_STENCIL,  2,  2,  2.0f, GL_DEPTH_COMPONENT16                  , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER   ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F,  8,  8,  8.0f, GL_RGBA                               , GL_RGBA           , GL_FLOAT         };
 static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F, 16, 16, 16.0f, GL_RGBA                               , GL_RGBA           , GL_FLOAT         };
@@ -100,7 +101,8 @@ static textypeinfo_t textype_bgra_alpha                  = {"bgra_alpha",       
 #else
 // framebuffer texture formats
 static textypeinfo_t textype_shadowmap16                 = {"shadowmap16",              TEXTYPE_SHADOWMAP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16_ARB              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
-static textypeinfo_t textype_shadowmap24                 = {"shadowmap24",              TEXTYPE_SHADOWMAP     ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24_ARB              , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
+static textypeinfo_t textype_shadowmap24                 = {"shadowmap24",              TEXTYPE_SHADOWMAP     ,  4,  4,  4.0f, GL_DEPTH_COMPONENT                    , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
+static textypeinfo_t textype_shadowmap24s8               = {"shadowmap24",              TEXTYPE_SHADOWMAP_STENCIL,  4,  4,  4.0f, GL_DEPTH24_STENCIL8_EXT               , GL_DEPTH_STENCIL_EXT, GL_UNSIGNED_INT_24_8_EXT};
 static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER   ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F,  8,  8,  8.0f, GL_RGBA16F_ARB                        , GL_RGBA           , GL_FLOAT         };
 static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F, 16, 16, 16.0f, GL_RGBA32F_ARB                        , GL_RGBA           , GL_FLOAT         };
@@ -260,6 +262,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 	case TEXTYPE_BGRA: return ((flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra);
 	case TEXTYPE_ALPHA: return &textype_alpha;
 	case TEXTYPE_SHADOWMAP: return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
+	case TEXTYPE_SHADOWMAP_STENCIL: return &textype_shadowmap24s8;
 	case TEXTYPE_COLORBUFFER: return &textype_colorbuffer;
 	case TEXTYPE_COLORBUFFER16F: return &textype_colorbuffer16f;
 	case TEXTYPE_COLORBUFFER32F: return &textype_colorbuffer32f;
@@ -279,6 +282,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 	case TEXTYPE_BGRA: return ((flags & TEXF_COMPRESS) && vid.support.ext_texture_compression_s3tc) ? ((flags & TEXF_ALPHA) ? &textype_bgra_alpha_compress : &textype_bgra_compress) : ((flags & TEXF_ALPHA) ? &textype_bgra_alpha : &textype_bgra);
 	case TEXTYPE_ALPHA: return &textype_alpha;
 	case TEXTYPE_SHADOWMAP: return (flags & TEXF_LOWPRECISION) ? &textype_shadowmap16 : &textype_shadowmap24;
+	case TEXTYPE_SHADOWMAP_STENCIL: return &textype_shadowmap24s8;
 	case TEXTYPE_COLORBUFFER: return &textype_colorbuffer;
 	case TEXTYPE_COLORBUFFER16F: return &textype_colorbuffer16f;
 	case TEXTYPE_COLORBUFFER32F: return &textype_colorbuffer32f;
@@ -1097,7 +1101,7 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 	}
 
 #ifndef USE_GLES2
-	if (textype == TEXTYPE_SHADOWMAP)
+	if (textype == TEXTYPE_SHADOWMAP || TEXTYPE_SHADOWMAP_STENCIL)
 	{
 		if (vid.support.arb_shadow)
 		{
@@ -1687,6 +1691,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		}
 		break;
 	case TEXTYPE_SHADOWMAP:
+	case TEXTYPE_SHADOWMAP_STENCIL:
 		break;
 	case TEXTYPE_DXT1:
 	case TEXTYPE_SRGB_DXT1:
@@ -1780,14 +1785,15 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			case TEXTYPE_COLORBUFFER: d3dformat = D3DFMT_A8R8G8B8;break;
 			case TEXTYPE_COLORBUFFER16F: d3dformat = D3DFMT_A16B16G16R16F;break;
 			case TEXTYPE_COLORBUFFER32F: d3dformat = D3DFMT_A32B32G32R32F;break;
-			case TEXTYPE_SHADOWMAP: d3dformat = D3DFMT_D16;d3dusage = D3DUSAGE_DEPTHSTENCIL;break; // note: can not use D3DUSAGE_RENDERTARGET here
+			case TEXTYPE_SHADOWMAP: d3dformat = D3DFMT_D24X8;d3dusage = D3DUSAGE_DEPTHSTENCIL;break; // note: can not use D3DUSAGE_RENDERTARGET here
+			case TEXTYPE_SHADOWMAP_STENCIL: d3dformat = D3DFMT_D24S8;d3dusage = D3DUSAGE_DEPTHSTENCIL;break; // note: can not use D3DUSAGE_RENDERTARGET here
 			case TEXTYPE_ALPHA: d3dformat = D3DFMT_A8;break;
 			default: d3dformat = D3DFMT_A8R8G8B8;Sys_Error("R_LoadTexture: unsupported texture type %i when picking D3DFMT", (int)textype);break;
 			}
 			glt->d3dformat = d3dformat;
 			glt->d3dusage = d3dusage;
 			glt->d3dpool = d3dpool;
-			glt->d3disdepthsurface = textype == TEXTYPE_SHADOWMAP;
+			glt->d3disdepthsurface = (textype == TEXTYPE_SHADOWMAP || textype == TEXTYPE_SHADOWMAP_STENCIL);
 			if (glt->d3disdepthsurface)
 			{
 				if (FAILED(d3dresult = IDirect3DDevice9_CreateDepthStencilSurface(vid_d3d9dev, glt->tilewidth, glt->tileheight, (D3DFORMAT)glt->d3dformat, D3DMULTISAMPLE_NONE, 0, false, (IDirect3DSurface9 **)&glt->d3dtexture, NULL)))
@@ -1829,6 +1835,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			case TEXTYPE_COLORBUFFER16F: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA16F;break;
 			case TEXTYPE_COLORBUFFER32F: tflags = DPSOFTRAST_TEXTURE_FORMAT_RGBA32F;break;
 			case TEXTYPE_SHADOWMAP: tflags = DPSOFTRAST_TEXTURE_FORMAT_DEPTH;break;
+			case TEXTYPE_SHADOWMAP_STENCIL: tflags = DPSOFTRAST_TEXTURE_FORMAT_DEPTH;break;
 			case TEXTYPE_ALPHA: tflags = DPSOFTRAST_TEXTURE_FORMAT_ALPHA8;break;
 			default: Sys_Error("R_LoadTexture: unsupported texture type %i when picking DPSOFTRAST_TEXTURE_FLAGS", (int)textype);
 			}
@@ -1883,9 +1890,9 @@ static int R_ShadowMapTextureFlags(int precision, qboolean filter)
 	return flags;
 }
 
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter)
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int precision, qboolean filter, qboolean stencil)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, R_ShadowMapTextureFlags(precision, filter), -1, stencil ? TEXTYPE_SHADOWMAP_STENCIL : TEXTYPE_SHADOWMAP, GLTEXTURETYPE_2D, NULL, NULL);
 }
 
 int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)
