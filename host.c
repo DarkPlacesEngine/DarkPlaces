@@ -845,7 +845,7 @@ void Host_Main(void)
 				advancetime = sys_ticrate.value;
 				// listen servers can run multiple server frames per client frame
 				framelimit = cl_maxphysicsframesperserverframe.integer;
-				aborttime = realtime + 0.1;
+				aborttime = Sys_DirtyTime() + 0.1;
 			}
 			if(slowmo.value > 0 && slowmo.value < 1)
 				advancetime = min(advancetime, 0.1 / slowmo.value);
@@ -854,7 +854,7 @@ void Host_Main(void)
 
 			if(advancetime > 0)
 			{
-				offset = Sys_DirtyTime() - realtime;if (offset < 0 || offset >= 1800) offset = 0;
+				offset = Sys_DirtyTime() - dirtytime;if (offset < 0 || offset >= 1800) offset = 0;
 				offset += sv_timer;
 				++svs.perf_acc_offset_samples;
 				svs.perf_acc_offset += offset;
