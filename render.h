@@ -442,7 +442,7 @@ rsurfacepass_t;
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
 void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy);
-void R_SetupShader_DepthOrShadow(qboolean notrippy);
+void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb);
 void R_SetupShader_ShowDepth(qboolean notrippy);
 void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
@@ -511,10 +511,13 @@ typedef struct r_framebufferstate_s
 	r_waterstate_t water;
 
 	qboolean ghosttexture_valid; // don't draw garbage on first frame with motionblur
+	qboolean usedepthtextures; // use depth texture instead of depth renderbuffer (faster if you need to read it later anyway)
 }
 r_framebufferstate_t;
 
 extern r_framebufferstate_t r_fb;
+
+extern cvar_t r_viewfbo;
 
 void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
