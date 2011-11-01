@@ -365,10 +365,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\cl_gecko.c"
-				>
-			</File>
-			<File
 				RelativePath=".\cl_input.c"
 				>
 			</File>

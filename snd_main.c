@@ -1476,7 +1476,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		f = dist * ch->distfade;
 
 		f =
-			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), snd_attenuation_exponent.value))
+			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), (double)snd_attenuation_exponent.value))
 			*
 			((snd_attenuation_decibel.value == 0) ? 1.0 : pow(0.1, 0.1 * snd_attenuation_decibel.value * f));
 
