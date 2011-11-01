@@ -1411,7 +1411,7 @@ void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 	{
 		int i;
 		for(i = 0; i < 3*rampsize; ++i)
-			ramps[i] = (int)floor(bound(0.0f, Image_sRGBFloatFromLinearFloat(ramps[i] / 65535.0), 1.0f) * 65535.0 + 0.5);
+			ramps[i] = (int)floor(bound(0.0f, Image_sRGBFloatFromLinearFloat(ramps[i] / 65535.0f), 1.0f) * 65535.0f + 0.5f);
 	}
 
 	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have

@@ -450,6 +450,7 @@ void Sys_PrintfToTerminal(const char *fmt, ...)
 	Sys_PrintToTerminal(msg);
 }
 
+#ifndef WIN32
 static const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)
 {
 	const char *p = PATH;
@@ -472,6 +473,7 @@ static const char *Sys_FindInPATH(const char *name, char namesep, const char *PA
 	}
 	return name;
 }
+#endif
 
 static const char *Sys_FindExecutableName(void)
 {

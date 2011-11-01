@@ -1964,7 +1964,9 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 			case TEXTYPE_COLORBUFFER: d3dformat = D3DFMT_A8R8G8B8;glt->d3disrendertargetsurface = true;break;
 			case TEXTYPE_COLORBUFFER16F: d3dformat = D3DFMT_A16B16G16R16F;glt->d3disrendertargetsurface = true;break;
 			case TEXTYPE_COLORBUFFER32F: d3dformat = D3DFMT_A32B32G32R32F;glt->d3disrendertargetsurface = true;break;
-			case TEXTYPE_DEPTHBUFFER: d3dformat = D3DFMT_D24S8;glt->d3disdepthstencilsurface = true;break;
+			case TEXTYPE_DEPTHBUFFER16: d3dformat = D3DFMT_D16;glt->d3disdepthstencilsurface = true;break;
+			case TEXTYPE_DEPTHBUFFER24: d3dformat = D3DFMT_D24X8;glt->d3disdepthstencilsurface = true;break;
+			case TEXTYPE_DEPTHBUFFER24STENCIL8: d3dformat = D3DFMT_D24S8;glt->d3disdepthstencilsurface = true;break;
 			default: d3dformat = D3DFMT_A8R8G8B8;Sys_Error("R_LoadTextureRenderbuffer: unsupported texture type %i when picking D3DFMT", (int)textype);break;
 			}
 			glt->d3dformat = d3dformat;

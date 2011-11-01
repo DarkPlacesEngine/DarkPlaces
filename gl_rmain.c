@@ -2656,7 +2656,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dcolortexture);
+			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2ddepthtexture);
 			if (rsurface.rtlight)
 			{
 				if (permutation & SHADERPERMUTATION_CUBEFILTER        ) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
@@ -3028,9 +3028,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationHLSL(mode, permutation);
 		hlslPSSetParameter3f(D3DPSREGISTER_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		hlslPSSetParameter16f(D3DPSREGISTER_ViewToLight, viewtolight16f);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
 		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
@@ -3040,7 +3040,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
 		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dcolortexture                    );
+		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2ddepthtexture                    );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 #endif
 		break;
@@ -5974,7 +5974,7 @@ static void R_Bloom_StartFrame(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-		r_fb.usedepthtextures = r_usedepthtextures.integer;
+		r_fb.usedepthtextures = r_usedepthtextures.integer != 0;
 		if (vid.support.ext_framebuffer_object)
 		{
 			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;

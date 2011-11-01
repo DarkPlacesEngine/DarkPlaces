@@ -967,9 +967,9 @@ extern cvar_t csqc_usedemoprogs;
 void CL_VM_Init (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	const char* csprogsfn;
+	const char* csprogsfn = NULL;
 	unsigned char *csprogsdata = NULL;
-	fs_offset_t csprogsdatasize;
+	fs_offset_t csprogsdatasize = 0;
 	int csprogsdatacrc, requiredcrc;
 	int requiredsize;
 	char vabuf[1024];
