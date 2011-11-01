@@ -778,8 +778,6 @@ void Crypto_LoadKeys(void)
 
 	Host_LockSession(); // we use the session ID here
 
-	SV_LockThreadMutex();
-
 	// load keys
 	// note: we are just a CLIENT
 	// so we load:
@@ -874,15 +872,11 @@ void Crypto_LoadKeys(void)
 	}
 	if(crypto_keyfp_recommended_length < 7)
 		crypto_keyfp_recommended_length = 7;
-
-	SV_UnlockThreadMutex();
 }
 
 static void Crypto_UnloadKeys(void)
 {
 	int i;
-
-	SV_LockThreadMutex();
 
 	keygen_i = -1;
 	for(i = 0; i < MAX_PUBKEYS; ++i)
@@ -896,8 +890,6 @@ static void Crypto_UnloadKeys(void)
 		challenge_append_length = 0;
 	}
 	crypto_idstring = NULL;
-
-	SV_UnlockThreadMutex();
 }
 
 static mempool_t *cryptomempool;
