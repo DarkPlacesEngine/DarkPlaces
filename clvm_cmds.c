@@ -52,6 +52,8 @@ static void VM_CL_setorigin (prvm_prog_t *prog)
 	}
 	org = PRVM_G_VECTOR(OFS_PARM1);
 	VectorCopy (org, PRVM_clientedictvector(e, origin));
+	if(e->priv.required->mark == PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN)
+		e->priv.required->mark = PRVM_EDICT_MARK_SETORIGIN_CAUGHT;
 	CL_LinkEdict(e);
 }
 
