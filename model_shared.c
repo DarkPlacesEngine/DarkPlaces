@@ -282,6 +282,17 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 			loop = true;
 		}
 
+		if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
+		{
+			while (COM_ParseToken_Simple(&bufptr, true, false, false)) // fetch newline
+			{
+				if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
+					Con_Printf("framegroups file: extra data (%s) found, skipped\n", com_token);
+				else
+					break;
+			}
+		}
+
 		name = NULL;
 		if(!strcmp(com_token, "//"))
 		{
