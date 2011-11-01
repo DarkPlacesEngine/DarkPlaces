@@ -1972,7 +1972,8 @@ void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int fro
 			qglStencilMask(writemask);CHECKGLERROR
 			qglStencilOpSeparate(GL_FRONT, frontfail, frontzfail, frontzpass);CHECKGLERROR
 			qglStencilOpSeparate(GL_BACK, backfail, backzfail, backzpass);CHECKGLERROR
-			qglStencilFuncSeparate(frontcompare, backcompare, comparereference, comparereference);CHECKGLERROR
+			qglStencilFuncSeparate(GL_FRONT, frontcompare, comparereference, comparereference);CHECKGLERROR
+			qglStencilFuncSeparate(GL_BACK, backcompare, comparereference, comparereference);CHECKGLERROR
 		}
 		else if (vid.support.ext_stencil_two_side)
 		{
