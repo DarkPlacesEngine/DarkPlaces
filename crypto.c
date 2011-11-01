@@ -7,8 +7,6 @@
 #include "hmac.h"
 #include "libcurl.h"
 
-void *crypto_mutex = NULL;
-
 cvar_t crypto_developer = {CVAR_SAVE, "crypto_developer", "0", "print extra info about crypto handshake"};
 cvar_t crypto_servercpupercent = {CVAR_SAVE, "crypto_servercpupercent", "10", "allowed crypto CPU load in percent for server operation (0 = no limit, faster)"};
 cvar_t crypto_servercpumaxtime = {CVAR_SAVE, "crypto_servercpumaxtime", "0.01", "maximum allowed crypto CPU time per frame (0 = no limit)"};
@@ -780,6 +778,8 @@ void Crypto_LoadKeys(void)
 
 	Host_LockSession(); // we use the session ID here
 
+	SV_LockThreadMutex();
+
 	// load keys
 	// note: we are just a CLIENT
 	// so we load:
@@ -874,11 +874,16 @@ void Crypto_LoadKeys(void)
 	}
 	if(crypto_keyfp_recommended_length < 7)
 		crypto_keyfp_recommended_length = 7;
+
+	SV_UnlockThreadMutex();
 }
 
 static void Crypto_UnloadKeys(void)
 {
 	int i;
+
+	SV_LockThreadMutex();
+
 	keygen_i = -1;
 	for(i = 0; i < MAX_PUBKEYS; ++i)
 	{
@@ -891,6 +896,8 @@ static void Crypto_UnloadKeys(void)
 		challenge_append_length = 0;
 	}
 	crypto_idstring = NULL;
+
+	SV_UnlockThreadMutex();
 }
 
 static mempool_t *cryptomempool;
@@ -937,10 +944,6 @@ void Crypto_Shutdown(void)
 	crypto_t *crypto;
 	int i;
 
-	if (crypto_mutex)
-		Thread_DestroyMutex(crypto_mutex);
-	crypto_mutex = NULL;
-
 	Crypto_Rijndael_CloseLibrary();
 
 	if(d0_blind_id_dll)
@@ -974,10 +977,7 @@ void Crypto_Init(void)
 
 	qd0_blind_id_setmallocfuncs(Crypto_d0_malloc, Crypto_d0_free);
 	if (Thread_HasThreads())
-	{
-		crypto_mutex = Thread_CreateMutex();
 		qd0_blind_id_setmutexfuncs(Crypto_d0_createmutex, Crypto_d0_destroymutex, Crypto_d0_lockmutex, Crypto_d0_unlockmutex);
-	}
 
 	if(!qd0_blind_id_INITIALIZE())
 	{
@@ -1014,13 +1014,13 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	size_t len2;
 	char vabuf[1024];
 
-	if (crypto_mutex) Thread_LockMutex(crypto_mutex);
+	SV_LockThreadMutex();
 
 	if(!d0_blind_id_dll)
 	{
 		Con_Print("libd0_blind_id DLL not found, this command is inactive.\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -1028,14 +1028,14 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("overflow of keygen_i\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(keygen_i < 0)
 	{
 		Con_Printf("Unexpected response from keygen server:\n");
 		Com_HexDumpToConsole(buffer, length_received);
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!Crypto_ParsePack((const char *) buffer, length_received, FOURCC_D0IR, p, l, 1))
@@ -1050,14 +1050,14 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 			Com_HexDumpToConsole(buffer, length_received);
 		}
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_finish_private_id_request(pubkeys[keygen_i], p[0], l[0]))
 	{
 		Con_Printf("d0_blind_id_finish_private_id_request failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -1067,7 +1067,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("d0_blind_id_new failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	ctx2 = qd0_blind_id_new();
@@ -1076,7 +1076,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		Con_Printf("d0_blind_id_new failed\n");
 		qd0_blind_id_free(ctx);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_copy(ctx, pubkeys[keygen_i]))
@@ -1085,7 +1085,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_copy(ctx2, pubkeys[keygen_i]))
@@ -1094,7 +1094,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	bufsize = sizeof(buf);
@@ -1104,7 +1104,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2size = sizeof(buf2);
@@ -1114,7 +1114,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	bufsize = sizeof(buf);
@@ -1124,7 +1124,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2size = sizeof(buf2);
@@ -1134,7 +1134,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	qd0_blind_id_free(ctx);
@@ -1158,14 +1158,14 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("d0_blind_id_write_private_id failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!(buf2size = Crypto_UnParsePack(buf2, sizeof(buf2), FOURCC_D0SI, p, l, 1)))
 	{
 		Con_Printf("Crypto_UnParsePack failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -1175,7 +1175,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("Cannot open key_%d.d0si%s\n", keygen_i, sessionid.string);
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	FS_Write(f, buf2, buf2size);
@@ -1183,7 +1183,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 
 	Con_Printf("Saved to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	keygen_i = -1;
-	if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+	SV_UnlockThreadMutex();
 }
 
 static void Crypto_KeyGen_f(void)
@@ -1204,25 +1204,25 @@ static void Crypto_KeyGen_f(void)
 		Con_Printf("usage:\n%s id url\n", Cmd_Argv(0));
 		return;
 	}
-	if (crypto_mutex) Thread_LockMutex(crypto_mutex);
+	SV_LockThreadMutex();
 	Crypto_LoadKeys();
 	i = atoi(Cmd_Argv(1));
 	if(!pubkeys[i])
 	{
 		Con_Printf("there is no public key %d\n", i);
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(pubkeys_havepriv[i])
 	{
 		Con_Printf("there is already a private key for %d\n", i);
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(keygen_i >= 0)
 	{
 		Con_Printf("there is already a keygen run on the way\n");
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	keygen_i = i;
@@ -1230,7 +1230,7 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("d0_blind_id_start failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	p[0] = buf;
@@ -1239,7 +1239,7 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("d0_blind_id_generate_private_id_request failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2pos = strlen(Cmd_Argv(2));
@@ -1248,14 +1248,14 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("Crypto_UnParsePack failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!(buf2l = base64_encode((unsigned char *) (buf2 + buf2pos), buf2l, sizeof(buf2) - buf2pos - 1)))
 	{
 		Con_Printf("base64_encode failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2l += buf2pos;
@@ -1264,11 +1264,11 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("curl failed\n");
 		keygen_i = -1;
-		if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	Con_Printf("key generation in progress\n");
-	if (crypto_mutex) Thread_UnlockMutex(crypto_mutex);
+	SV_UnlockThreadMutex();
 }
 // end
 
