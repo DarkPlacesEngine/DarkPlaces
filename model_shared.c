@@ -309,7 +309,7 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 				}
 			}
 		}
-		Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
+		//Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
 
 		if(cb)
 			cb(i, start, len, fps, loop, name, pass);
