@@ -923,7 +923,9 @@ void NetConn_OpenClientPorts(void)
 	int port;
 	NetConn_CloseClientPorts();
 
+	SV_LockThreadMutex(); // FIXME recursive?
 	Crypto_LoadKeys(); // client sockets
+	SV_UnlockThreadMutex();
 
 	port = bound(0, cl_netport.integer, 65535);
 	if (cl_netport.integer != port)
@@ -991,7 +993,9 @@ void NetConn_OpenServerPorts(int opennetports)
 	int port;
 	NetConn_CloseServerPorts();
 
+	SV_LockThreadMutex(); // FIXME recursive?
 	Crypto_LoadKeys(); // server sockets
+	CSV_UnlockThreadMutex();
 
 	NetConn_UpdateSockets();
 	port = bound(0, sv_netport.integer, 65535);
