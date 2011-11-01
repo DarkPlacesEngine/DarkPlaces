@@ -1954,6 +1954,9 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, const char **re
 	if (prog->loaded)
 		PRVM_ERROR ("PRVM_LoadProgs: there is already a %s program loaded!", PRVM_NAME );
 
+	Host_LockSession(); // all progs can use the session cvar
+	Crypto_LoadKeys(); // all progs might use the keys at init time
+
 	dprograms = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
 	if (dprograms == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);

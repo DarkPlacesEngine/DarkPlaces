@@ -404,6 +404,8 @@ extern cvar_t developer_insane;
 extern cvar_t developer_loadfile;
 extern cvar_t developer_loading;
 
+extern cvar_t sessionid;
+
 #define STARTCONFIGFILENAME "quake.rc"
 #define CONFIGFILENAME "config.cfg"
 
@@ -512,6 +514,8 @@ void Host_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Host_ShutdownServer(void);
 void Host_Reconnect_f(void);
 void Host_NoOperation_f(void);
+void Host_LockSession(void);
+void Host_UnlockSession(void);
 
 void Host_AbortCurrentFrame(void);
 

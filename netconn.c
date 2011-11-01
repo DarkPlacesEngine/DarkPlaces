@@ -922,6 +922,9 @@ void NetConn_OpenClientPorts(void)
 {
 	int port;
 	NetConn_CloseClientPorts();
+
+	Crypto_LoadKeys(); // client sockets
+
 	port = bound(0, cl_netport.integer, 65535);
 	if (cl_netport.integer != port)
 		Cvar_SetValueQuick(&cl_netport, port);
@@ -987,6 +990,9 @@ void NetConn_OpenServerPorts(int opennetports)
 {
 	int port;
 	NetConn_CloseServerPorts();
+
+	Crypto_LoadKeys(); // server sockets
+
 	NetConn_UpdateSockets();
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)

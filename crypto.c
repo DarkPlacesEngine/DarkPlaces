@@ -340,12 +340,12 @@ void sha256(unsigned char *out, const unsigned char *in, int n)
 	qd0_blind_id_util_sha256((char *) out, (const char *) in, n);
 }
 
-static size_t Crypto_LoadFile(const char *path, char *buf, size_t nmax)
+static size_t Crypto_LoadFile(const char *path, char *buf, size_t nmax, qboolean inuserdir)
 {
 	qfile_t *f = NULL;
 	fs_offset_t n;
 	if(*fs_userdir)
-		f = FS_SysOpen(va("%s%s", fs_userdir, path), "rb", false);
+		f = FS_SysOpen(va("%s%s", *fs_userdir ? fs_userdir : fs_basedir, path), "rb", false);
 	if(!f)
 		f = FS_SysOpen(va("%s%s", fs_basedir, path), "rb", false);
 	if(!f)
@@ -748,11 +748,19 @@ static void Crypto_BuildChallengeAppend(void)
 	challenge_append_length = p - challenge_append;
 }
 
-static void Crypto_LoadKeys(void)
+void Crypto_LoadKeys(void)
 {
 	char buf[8192];
 	size_t len, len2;
 	int i;
+
+	if(!d0_blind_id_dll) // don't if we can't
+		return;
+
+	if(crypto_idstring) // already loaded? then not
+		return;
+
+	Host_LockSession(); // we use the session ID here
 
 	// load keys
 	// note: we are just a CLIENT
@@ -767,14 +775,14 @@ static void Crypto_LoadKeys(void)
 		memset(pubkeys_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		memset(pubkeys_priv_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		pubkeys_havepriv[i] = false;
-		len = Crypto_LoadFile(va("key_%d.d0pk", i), buf, sizeof(buf));
+		len = Crypto_LoadFile(va("key_%d.d0pk", i), buf, sizeof(buf), false);
 		if((pubkeys[i] = Crypto_ReadPublicKey(buf, len)))
 		{
 			len2 = FP64_SIZE;
 			if(qd0_blind_id_fingerprint64_public_key(pubkeys[i], pubkeys_fp64[i], &len2)) // keeps final NUL
 			{
 				Con_Printf("Loaded public key key_%d.d0pk (fingerprint: %s)\n", i, pubkeys_fp64[i]);
-				len = Crypto_LoadFile(va("key_%d.d0si", i), buf, sizeof(buf));
+				len = Crypto_LoadFile(va("key_%d.d0si%s", i, sessionid.string), buf, sizeof(buf), true);
 				if(len)
 				{
 					if(Crypto_AddPrivateKey(pubkeys[i], buf, len))
@@ -782,7 +790,7 @@ static void Crypto_LoadKeys(void)
 						len2 = FP64_SIZE;
 						if(qd0_blind_id_fingerprint64_public_id(pubkeys[i], pubkeys_priv_fp64[i], &len2)) // keeps final NUL
 						{
-							Con_Printf("Loaded private ID key_%d.d0si for key_%d.d0pk (public key fingerprint: %s)\n", i, i, pubkeys_priv_fp64[i]);
+							Con_Printf("Loaded private ID key_%d.d0si%s for key_%d.d0pk (public key fingerprint: %s)\n", i, sessionid.string, i, pubkeys_priv_fp64[i]);
 							pubkeys_havepriv[i] = true;
 							strlcat(crypto_idstring_buf, va(" %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
 						}
@@ -910,7 +918,6 @@ void Crypto_Init(void)
 	Crypto_Rijndael_OpenLibrary(); // if this fails, it's uncritical
 
 	Crypto_InitHostKeys();
-	Crypto_LoadKeys();
 }
 // end
 
@@ -1072,26 +1079,18 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		return;
 	}
 
-	if(*fs_userdir)
-	{
-		FS_CreatePath(va("%skey_%d.d0si", fs_userdir, keygen_i));
-		f = FS_SysOpen(va("%skey_%d.d0si", fs_userdir, keygen_i), "wb", false);
-	}
+	FS_CreatePath(va("%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string));
+	f = FS_SysOpen(va("%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "wb", false);
 	if(!f)
 	{
-		FS_CreatePath(va("%skey_%d.d0si", fs_basedir, keygen_i));
-		f = FS_SysOpen(va("%skey_%d.d0si", fs_basedir, keygen_i), "wb", false);
-	}
-	if(!f)
-	{
-		Con_Printf("Cannot open key_%d.d0si\n", keygen_i);
+		Con_Printf("Cannot open key_%d.d0si%s\n", keygen_i, sessionid.string);
 		keygen_i = -1;
 		return;
 	}
 	FS_Write(f, buf2, buf2size);
 	FS_Close(f);
 
-	Con_Printf("Saved to key_%d.d0si\n", keygen_i);
+	Con_Printf("Saved to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	keygen_i = -1;
 }
 
@@ -1113,6 +1112,7 @@ static void Crypto_KeyGen_f(void)
 		Con_Printf("usage:\n%s id url\n", Cmd_Argv(0));
 		return;
 	}
+	Crypto_LoadKeys();
 	i = atoi(Cmd_Argv(1));
 	if(!pubkeys[i])
 	{
@@ -1192,7 +1192,7 @@ static void Crypto_Keys_f(void)
 		{
 			Con_Printf("%2d: public key key_%d.d0pk (fingerprint: %s)\n", i, i, pubkeys_fp64[i]);
 			if(pubkeys_havepriv[i])
-				Con_Printf("    private ID key_%d.d0si (public key fingerprint: %s)\n", i, pubkeys_priv_fp64[i]);
+				Con_Printf("    private ID key_%d.d0si%s (public key fingerprint: %s)\n", i, sessionid.string, pubkeys_priv_fp64[i]);
 		}
 	}
 }

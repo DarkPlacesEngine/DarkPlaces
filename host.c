@@ -83,6 +83,9 @@ cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints det
 cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
 cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%Y-%m-%d %H:%M:%S] ", "time format to use on timestamped console messages"};
 
+cvar_t sessionid = {CVAR_READONLY, "sessionid", "", "ID of the current session (use the -sessionid parameter to set it); this is always either empty or begins with a dot (.)"};
+cvar_t locksession = {0, "locksession", "0", "Lock the session? 0 = no, 1 = yes and abort on failure, 2 = yes and continue on failure"};
+
 /*
 ================
 Host_AbortCurrentFrame
@@ -1051,6 +1054,63 @@ extern void COM_Init_Commands(void);
 extern void FS_Init_Commands(void);
 extern qboolean host_stuffcmdsrun;
 
+static qfile_t *locksession_fh = NULL;
+static qboolean locksession_run = false;
+static void Host_InitSession(void)
+{
+	int i;
+	Cvar_RegisterVariable(&sessionid);
+	Cvar_RegisterVariable(&locksession);
+
+	// load the session ID into the read-only cvar
+	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < com_argc))
+	{
+		char vabuf[1024];
+		if(com_argv[i+1][0] == '.')
+			Cvar_SetQuick(&sessionid, com_argv[i+1]);
+		else
+			Cvar_SetQuick(&sessionid, va(vabuf, sizeof(vabuf), ".%s", com_argv[i+1]));
+	}
+}
+void Host_LockSession(void)
+{
+	if(locksession_run)
+		return;
+	locksession_run = true;
+	if(locksession.integer != 0)
+	{
+		char vabuf[1024];
+		locksession_fh = FS_SysOpen(va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string), "wl", false);
+		// TODO maybe write the pid into the lockfile, while we are at it? may help server management tools
+		if(!locksession_fh)
+		{
+			if(locksession.integer == 2)
+			{
+				Con_Printf("WARNING: session lock %slock%s could not be acquired. Please run with -sessionid and an unique session name. Continuing anyway.\n", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
+			}
+			else
+			{
+				Sys_Error("session lock %slock%s could not be acquired. Please run with -sessionid and an unique session name.\n", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
+			}
+		}
+	}
+}
+void Host_UnlockSession(void)
+{
+	if(!locksession_run)
+		return;
+	locksession_run = false;
+
+	if(locksession_fh)
+	{
+		FS_Close(locksession_fh);
+		// NOTE: we can NOT unlink the lock here, as doing so would
+		// create a race condition if another process created it
+		// between our close and our unlink
+		locksession_fh = NULL;
+	}
+}
+
 /*
 ====================
 Host_Init
@@ -1146,6 +1206,9 @@ static void Host_Init (void)
 
 	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
 	FS_Init();
+
+	// register the cvars for session locking
+	Host_InitSession();
 
 	// must be after FS_Init
 	Crypto_Init();
@@ -1325,7 +1388,10 @@ void Host_Shutdown(void)
 	Sys_Shutdown();
 	Log_Close();
 	Crypto_Shutdown();
-	FS_Shutdown();
+
+	Host_UnlockSession();
+
+	S_Shutdown();
 	Con_Shutdown();
 	Memory_Shutdown();
 }

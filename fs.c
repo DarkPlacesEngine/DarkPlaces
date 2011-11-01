@@ -773,11 +773,7 @@ pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qboolean sil
 pack_t *FS_LoadPackPK3 (const char *packfile)
 {
 	int packhandle;
-#if _MSC_VER >= 1400
-	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
-#else
-	packhandle = open (packfile, O_RDONLY | O_BINARY);
-#endif
+	packhandle = FS_SysOpenFD (packfile, "rb", false);
 	if (packhandle < 0)
 		return NULL;
 	return FS_LoadPackPK3FromFD(packfile, packhandle, false);
@@ -947,11 +943,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	pack_t *pack;
 	dpackfile_t *info;
 
-#if _MSC_VER >= 1400
-	_sopen_s(&packhandle, packfile, O_RDONLY | O_BINARY, _SH_DENYNO, _S_IREAD | _S_IWRITE);
-#else
-	packhandle = open (packfile, O_RDONLY | O_BINARY);
-#endif
+	packhandle = FS_SysOpenFD(packfile, "rb", false);
 	if (packhandle < 0)
 		return NULL;
 	if(read (packhandle, (void *)&header, sizeof(header)) != sizeof(header))
@@ -1884,11 +1876,8 @@ int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsiz
 
 	// see if we can write to this path (note: won't create path)
 #ifdef WIN32
-# if _MSC_VER >= 1400
-	_sopen_s(&fd, va("%s%s/config.cfg", userdir, gamedirname1), O_WRONLY | O_CREAT, _SH_DENYNO, _S_IREAD | _S_IWRITE); // note: no O_TRUNC here!
-# else
-	fd = open (va("%s%s/config.cfg", userdir, gamedirname1), O_WRONLY | O_CREAT, 0666); // note: no O_TRUNC here!
-# endif
+	// no access() here, we must try to open the file for appending
+	fd = Sys_OpenFD(va("%s%s/config.cfg", userdir, gamedirname1), "a", false);
 	if(fd >= 0)
 		close(fd);
 #else
@@ -2105,9 +2094,10 @@ void FS_Shutdown (void)
 
 int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 {
-	int handle;
+	int handle = -1;
 	int mod, opt;
 	unsigned int ind;
+	qboolean dolock = false;
 
 	// Parse the mode string
 	switch (mode[0])
@@ -2138,6 +2128,9 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 			case 'b':
 				opt |= O_BINARY;
 				break;
+			case 'l':
+				dolock = true;
+				break;
 			default:
 				Con_Printf ("FS_SysOpen(%s, %s): unknown character in mode (%c)\n",
 							filepath, mode, mode[ind]);
@@ -2147,11 +2140,29 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
-#if _MSC_VER >= 1400
-	_sopen_s(&handle, filepath, mod | opt, _SH_DENYNO, _S_IREAD | _S_IWRITE);
+#ifdef WIN32
+# if _MSC_VER >= 1400
+	_sopen_s(&handle, filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+# else
+	handle = _sopen (filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+# endif
 #else
 	handle = open (filepath, mod | opt, 0666);
+	if(handle >= 0 && dolock)
+	{
+		struct flock l;
+		l.l_type = ((mod == O_RDONLY) ? F_RDLCK : F_WRLCK);
+		l.l_whence = SEEK_SET;
+		l.l_start = 0;
+		l.l_len = 0;
+		if(fcntl(handle, F_SETLK, &l) == -1)
+		{
+			close(handle);
+			handle = -1;
+		}
+	}
 #endif
+
 	return handle;
 }
 
