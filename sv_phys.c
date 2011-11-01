@@ -1600,7 +1600,6 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	int movetype;
 	int type;
 	vec3_t mins, maxs;
-	vec3_t original, original_velocity;
 	vec3_t start;
 	vec3_t end;
 
@@ -1633,8 +1632,7 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 
 	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, origin));
 
-	VectorCopy(PRVM_serveredictvector(ent, origin), original);
-	VectorCopy(PRVM_serveredictvector(ent, velocity), original_velocity);
+	ent->priv.required->mark = PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN; // -2: setorigin running
 
 	SV_LinkEdict(ent);
 
@@ -1652,7 +1650,21 @@ static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, q
 	if((PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace->ent && (!((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || PRVM_serveredictedict(ent, groundentity) != PRVM_EDICT_TO_PROG(trace->ent))))
 		SV_Impact (ent, trace);
 
-	return VectorCompare(PRVM_serveredictvector(ent, origin), original);// && VectorCompare(PRVM_serveredictvector(ent, velocity), original_velocity);
+	if(ent->priv.required->mark == PRVM_EDICT_MARK_SETORIGIN_CAUGHT)
+	{
+		ent->priv.required->mark = 0;
+		return false;
+	}
+	else if(ent->priv.required->mark == PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN)
+	{
+		ent->priv.required->mark = 0;
+		return true;
+	}
+	else
+	{
+		Con_Printf("The edict mark had been overwritten! Please debug this.\n");
+		return true;
+	}
 }
 
 
