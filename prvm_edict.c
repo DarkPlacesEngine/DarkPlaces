@@ -3077,13 +3077,16 @@ static qboolean PRVM_IsEdictReferenced(prvm_edict_t *edict, int mark)
 		if(!*targetname) // ""
 			targetname = NULL;
 
-	for (i = 0;i < prog->numglobaldefs;i++)
+	if(mark == 0)
 	{
-		ddef_t *d = &prog->globaldefs[i];
-		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
-			continue;
-		if(edictnum == PRVM_GLOBALFIELDEDICT(d->ofs))
-			return true;
+		for (i = 0;i < prog->numglobaldefs;i++)
+		{
+			ddef_t *d = &prog->globaldefs[i];
+			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
+				continue;
+			if(edictnum == PRVM_GLOBALFIELDEDICT(d->ofs))
+				return true;
+		}
 	}
 
 	for(j = 0; j < prog->num_edicts; ++j)
@@ -3186,6 +3189,8 @@ void PRVM_LeakTest(void)
 			Con_Print("\n");
 			leaked = true;
 		}
+
+		ed->priv.required->mark = 0; // clear marks again when done
 	}
 
 	for (i = 0; i < (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray); ++i)
