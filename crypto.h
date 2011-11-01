@@ -31,6 +31,7 @@ crypto_t;
 
 void Crypto_Init(void);
 void Crypto_Init_Commands(void);
+void Crypto_LoadKeys(void);
 void Crypto_Shutdown(void);
 qboolean Crypto_Available(void);
 void sha256(unsigned char *out, const unsigned char *in, int n); // may ONLY be called if Crypto_Available()
