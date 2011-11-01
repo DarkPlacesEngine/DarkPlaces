@@ -291,11 +291,14 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 				{
 					name = com_token;
 					// skip to EOL
-					while (*bufptr && *bufptr != '\n' && *bufptr != '\r')
+					while (*bufptr && !(*bufptr == '\n' || *bufptr == '\r'))
+						bufptr++;
+					while (*bufptr && (*bufptr == '\n' || *bufptr == '\r'))
 						bufptr++;
 				}
 			}
 		}
+		Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
 
 		if(cb)
 			cb(i, start, len, fps, loop, name, pass);
