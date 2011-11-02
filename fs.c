@@ -1883,7 +1883,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	// see if we can write to this path (note: won't create path)
 #ifdef WIN32
 	// no access() here, we must try to open the file for appending
-	fd = Sys_OpenFD(va(vabuf, sizeof(vabuf), "%s%s/config.cfg", userdir, gamedirname1), "a", false);
+	fd = FS_SysOpenFD(va(vabuf, sizeof(vabuf), "%s%s/config.cfg", userdir, gamedirname1), "a", false);
 	if(fd >= 0)
 		close(fd);
 #else
