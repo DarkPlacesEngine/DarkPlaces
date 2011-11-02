@@ -519,77 +519,104 @@ extern GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
 extern void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
 extern void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
-//GL_EXT_framebuffer_object
+//GL_ARB_framebuffer_object
+// (slight differences from GL_EXT_framebuffer_object as this integrates GL_EXT_packed_depth_stencil)
 #ifndef GL_FRAMEBUFFER
-#define GL_FRAMEBUFFER                                   0x8D40
-#define GL_RENDERBUFFER                                  0x8D41
-#define GL_STENCIL_INDEX1                                0x8D46
-#define GL_STENCIL_INDEX4                                0x8D47
-#define GL_STENCIL_INDEX8                                0x8D48
-#define GL_STENCIL_INDEX16                               0x8D49
-#define GL_RENDERBUFFER_WIDTH                            0x8D42
-#define GL_RENDERBUFFER_HEIGHT                           0x8D43
-#define GL_RENDERBUFFER_INTERNAL_FORMAT                  0x8D44
-#define GL_RENDERBUFFER_RED_SIZE                         0x8D50
-#define GL_RENDERBUFFER_GREEN_SIZE                       0x8D51
-#define GL_RENDERBUFFER_BLUE_SIZE                        0x8D52
-#define GL_RENDERBUFFER_ALPHA_SIZE                       0x8D53
-#define GL_RENDERBUFFER_DEPTH_SIZE                       0x8D54
-#define GL_RENDERBUFFER_STENCIL_SIZE                     0x8D55
+#define GL_FRAMEBUFFER                     0x8D40
+#define GL_READ_FRAMEBUFFER                0x8CA8
+#define GL_DRAW_FRAMEBUFFER                0x8CA9
+#define GL_RENDERBUFFER                    0x8D41
+#define GL_STENCIL_INDEX1                  0x8D46
+#define GL_STENCIL_INDEX4                  0x8D47
+#define GL_STENCIL_INDEX8                  0x8D48
+#define GL_STENCIL_INDEX16                 0x8D49
+#define GL_RENDERBUFFER_WIDTH              0x8D42
+#define GL_RENDERBUFFER_HEIGHT             0x8D43
+#define GL_RENDERBUFFER_INTERNAL_FORMAT    0x8D44
+#define GL_RENDERBUFFER_RED_SIZE           0x8D50
+#define GL_RENDERBUFFER_GREEN_SIZE         0x8D51
+#define GL_RENDERBUFFER_BLUE_SIZE          0x8D52
+#define GL_RENDERBUFFER_ALPHA_SIZE         0x8D53
+#define GL_RENDERBUFFER_DEPTH_SIZE         0x8D54
+#define GL_RENDERBUFFER_STENCIL_SIZE       0x8D55
+#define GL_RENDERBUFFER_SAMPLES            0x8CAB
 #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE            0x8CD0
 #define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME            0x8CD1
 #define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL          0x8CD2
 #define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE  0x8CD3
-#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_3D_ZOFFSET     0x8CD4
-#define GL_COLOR_ATTACHMENT0                             0x8CE0
-#define GL_COLOR_ATTACHMENT1                             0x8CE1
-#define GL_COLOR_ATTACHMENT2                             0x8CE2
-#define GL_COLOR_ATTACHMENT3                             0x8CE3
-#define GL_COLOR_ATTACHMENT4                             0x8CE4
-#define GL_COLOR_ATTACHMENT5                             0x8CE5
-#define GL_COLOR_ATTACHMENT6                             0x8CE6
-#define GL_COLOR_ATTACHMENT7                             0x8CE7
-#define GL_COLOR_ATTACHMENT8                             0x8CE8
-#define GL_COLOR_ATTACHMENT9                             0x8CE9
-#define GL_COLOR_ATTACHMENT10                            0x8CEA
-#define GL_COLOR_ATTACHMENT11                            0x8CEB
-#define GL_COLOR_ATTACHMENT12                            0x8CEC
-#define GL_COLOR_ATTACHMENT13                            0x8CED
-#define GL_COLOR_ATTACHMENT14                            0x8CEE
-#define GL_COLOR_ATTACHMENT15                            0x8CEF
-#define GL_DEPTH_ATTACHMENT                              0x8D00
-#define GL_STENCIL_ATTACHMENT                            0x8D20
+#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LAYER          0x8CD4
+#define GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING         0x8210
+#define GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE         0x8211
+#define GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE               0x8212
+#define GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE             0x8213
+#define GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE              0x8214
+#define GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE             0x8215
+#define GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE             0x8216
+#define GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE           0x8217
+#define GL_SRGB                                          0x8C40
+#define GL_UNSIGNED_NORMALIZED                           0x8C17
+#define GL_FRAMEBUFFER_DEFAULT                           0x8218
+#define GL_INDEX                                         0x8222
+#define GL_COLOR_ATTACHMENT0                0x8CE0
+#define GL_COLOR_ATTACHMENT1                0x8CE1
+#define GL_COLOR_ATTACHMENT2                0x8CE2
+#define GL_COLOR_ATTACHMENT3                0x8CE3
+#define GL_COLOR_ATTACHMENT4                0x8CE4
+#define GL_COLOR_ATTACHMENT5                0x8CE5
+#define GL_COLOR_ATTACHMENT6                0x8CE6
+#define GL_COLOR_ATTACHMENT7                0x8CE7
+#define GL_COLOR_ATTACHMENT8                0x8CE8
+#define GL_COLOR_ATTACHMENT9                0x8CE9
+#define GL_COLOR_ATTACHMENT10               0x8CEA
+#define GL_COLOR_ATTACHMENT11               0x8CEB
+#define GL_COLOR_ATTACHMENT12               0x8CEC
+#define GL_COLOR_ATTACHMENT13               0x8CED
+#define GL_COLOR_ATTACHMENT14               0x8CEE
+#define GL_COLOR_ATTACHMENT15               0x8CEF
+#define GL_DEPTH_ATTACHMENT                 0x8D00
+#define GL_STENCIL_ATTACHMENT               0x8D20
+#define GL_DEPTH_STENCIL_ATTACHMENT         0x821A
+#define GL_MAX_SAMPLES                     0x8D57
 #define GL_FRAMEBUFFER_COMPLETE                          0x8CD5
 #define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT             0x8CD6
 #define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT     0x8CD7
-#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS             0x8CD9
-#define GL_FRAMEBUFFER_INCOMPLETE_FORMATS                0x8CDA
 #define GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER            0x8CDB
 #define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER            0x8CDC
 #define GL_FRAMEBUFFER_UNSUPPORTED                       0x8CDD
-#define GL_FRAMEBUFFER_BINDING                           0x8CA6
-#define GL_RENDERBUFFER_BINDING                          0x8CA7
-#define GL_MAX_COLOR_ATTACHMENTS                         0x8CDF
-#define GL_MAX_RENDERBUFFER_SIZE                         0x84E8
-#define GL_INVALID_FRAMEBUFFER_OPERATION                 0x0506
+#define GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE            0x8D56
+#define GL_FRAMEBUFFER_UNDEFINED                         0x8219
+#define GL_FRAMEBUFFER_BINDING             0x8CA6 // alias DRAW_FRAMEBUFFER_BINDING
+#define GL_DRAW_FRAMEBUFFER_BINDING        0x8CA6
+#define GL_READ_FRAMEBUFFER_BINDING        0x8CAA
+#define GL_RENDERBUFFER_BINDING            0x8CA7
+#define GL_MAX_COLOR_ATTACHMENTS           0x8CDF
+#define GL_MAX_RENDERBUFFER_SIZE           0x84E8
+#define GL_INVALID_FRAMEBUFFER_OPERATION   0x0506
+#define GL_DEPTH_STENCIL                              0x84F9
+#define GL_UNSIGNED_INT_24_8                          0x84FA
+#define GL_DEPTH24_STENCIL8                           0x88F0
+#define GL_TEXTURE_STENCIL_SIZE                       0x88F1
 #endif
-extern GLboolean (GLAPIENTRY *qglIsRenderbufferEXT)(GLuint renderbuffer);
-extern void (GLAPIENTRY *qglBindRenderbufferEXT)(GLenum target, GLuint renderbuffer);
-extern void (GLAPIENTRY *qglDeleteRenderbuffersEXT)(GLsizei n, const GLuint *renderbuffers);
-extern void (GLAPIENTRY *qglGenRenderbuffersEXT)(GLsizei n, GLuint *renderbuffers);
-extern void (GLAPIENTRY *qglRenderbufferStorageEXT)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
-extern void (GLAPIENTRY *qglGetRenderbufferParameterivEXT)(GLenum target, GLenum pname, GLint *params);
-extern GLboolean (GLAPIENTRY *qglIsFramebufferEXT)(GLuint framebuffer);
-extern void (GLAPIENTRY *qglBindFramebufferEXT)(GLenum target, GLuint framebuffer);
-extern void (GLAPIENTRY *qglDeleteFramebuffersEXT)(GLsizei n, const GLuint *framebuffers);
-extern void (GLAPIENTRY *qglGenFramebuffersEXT)(GLsizei n, GLuint *framebuffers);
-extern GLenum (GLAPIENTRY *qglCheckFramebufferStatusEXT)(GLenum target);
-//extern void (GLAPIENTRY *qglFramebufferTexture1DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-extern void (GLAPIENTRY *qglFramebufferTexture2DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-extern void (GLAPIENTRY *qglFramebufferTexture3DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
-extern void (GLAPIENTRY *qglFramebufferRenderbufferEXT)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
-extern void (GLAPIENTRY *qglGetFramebufferAttachmentParameterivEXT)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
-extern void (GLAPIENTRY *qglGenerateMipmapEXT)(GLenum target);
+extern GLboolean (GLAPIENTRY *qglIsRenderbuffer)(GLuint renderbuffer);
+extern GLvoid (GLAPIENTRY *qglBindRenderbuffer)(GLenum target, GLuint renderbuffer);
+extern GLvoid (GLAPIENTRY *qglDeleteRenderbuffers)(GLsizei n, const GLuint *renderbuffers);
+extern GLvoid (GLAPIENTRY *qglGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
+extern GLvoid (GLAPIENTRY *qglRenderbufferStorage)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+extern GLvoid (GLAPIENTRY *qglRenderbufferStorageMultisample)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+extern GLvoid (GLAPIENTRY *qglGetRenderbufferParameteriv)(GLenum target, GLenum pname, GLint *params);
+extern GLboolean (GLAPIENTRY *qglIsFramebuffer)(GLuint framebuffer);
+extern GLvoid (GLAPIENTRY *qglBindFramebuffer)(GLenum target, GLuint framebuffer);
+extern GLvoid (GLAPIENTRY *qglDeleteFramebuffers)(GLsizei n, const GLuint *framebuffers);
+extern GLvoid (GLAPIENTRY *qglGenFramebuffers)(GLsizei n, GLuint *framebuffers);
+extern GLenum (GLAPIENTRY *qglCheckFramebufferStatus)(GLenum target);
+extern GLvoid (GLAPIENTRY *qglFramebufferTexture1D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+extern GLvoid (GLAPIENTRY *qglFramebufferTexture2D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+extern GLvoid (GLAPIENTRY *qglFramebufferTexture3D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
+extern GLvoid (GLAPIENTRY *qglFramebufferTextureLayer)(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
+extern GLvoid (GLAPIENTRY *qglFramebufferRenderbuffer)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+extern GLvoid (GLAPIENTRY *qglGetFramebufferAttachmentParameteriv)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+extern GLvoid (GLAPIENTRY *qglBlitFramebuffer)(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+extern GLvoid (GLAPIENTRY *qglGenerateMipmap)(GLenum target);
 
 // GL_ARB_draw_buffers
 #ifndef GL_MAX_DRAW_BUFFERS_ARB
@@ -1113,8 +1140,8 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 //#define qglEndQueryARB glEndQuery
 #define qglFinish glFinish
 #define qglFlush glFlush
-#define qglFramebufferRenderbufferEXT glFramebufferRenderbuffer
-#define qglFramebufferTexture2DEXT glFramebufferTexture2D
+#define qglFramebufferRenderbuffer glFramebufferRenderbuffer
+#define qglFramebufferTexture2D glFramebufferTexture2D
 #define qglFramebufferTexture3DEXT glFramebufferTexture3D
 #define qglGenBuffersARB glGenBuffers
 #define qglGenFramebuffersEXT glGenFramebuffers

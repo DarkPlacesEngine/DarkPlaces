@@ -175,6 +175,7 @@ typedef struct gltexture_s
 	int texnum; // GL texture slot number
 	int renderbuffernum; // GL renderbuffer slot number
 	qboolean dirty; // indicates that R_RealGetTexture should be called
+	qboolean glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
 	int gltexturetypeenum; // used by R_Mesh_TexBind
 	// d3d stuff the backend needs
 	void *d3dtexture;
@@ -370,7 +371,7 @@ void R_FreeTexture(rtexture_t *rt)
 		if (glt->renderbuffernum)
 		{
 			CHECKGLERROR
-			qglDeleteRenderbuffersEXT(1, (GLuint *)&glt->renderbuffernum);CHECKGLERROR
+			qglDeleteRenderbuffers(1, (GLuint *)&glt->renderbuffernum);CHECKGLERROR
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1758,6 +1759,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = 0;
 	glt->dirty = false;
+	glt->glisdepthstencil = false;
 	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
@@ -1929,6 +1931,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = 0;
 	glt->dirty = false;
+	glt->glisdepthstencil = glt->texturetype == TEXTYPE_DEPTHBUFFER24STENCIL8;
 	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
@@ -1946,11 +1949,11 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
-		qglGenRenderbuffersEXT(1, (GLuint *)&glt->renderbuffernum);CHECKGLERROR
-		qglBindRenderbufferEXT(GL_RENDERBUFFER, glt->renderbuffernum);CHECKGLERROR
-		qglRenderbufferStorageEXT(GL_RENDERBUFFER, glt->glinternalformat, glt->tilewidth, glt->tileheight);CHECKGLERROR
+		qglGenRenderbuffers(1, (GLuint *)&glt->renderbuffernum);CHECKGLERROR
+		qglBindRenderbuffer(GL_RENDERBUFFER, glt->renderbuffernum);CHECKGLERROR
+		qglRenderbufferStorage(GL_RENDERBUFFER, glt->glinternalformat, glt->tilewidth, glt->tileheight);CHECKGLERROR
 		// note we can query the renderbuffer for info with glGetRenderbufferParameteriv for GL_WIDTH, GL_HEIGHt, GL_RED_SIZE, GL_GREEN_SIZE, GL_BLUE_SIZE, GL_GL_ALPHA_SIZE, GL_DEPTH_SIZE, GL_STENCIL_SIZE, GL_INTERNAL_FORMAT
-		qglBindRenderbufferEXT(GL_RENDERBUFFER, 0);CHECKGLERROR
+		qglBindRenderbuffer(GL_RENDERBUFFER, 0);CHECKGLERROR
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
