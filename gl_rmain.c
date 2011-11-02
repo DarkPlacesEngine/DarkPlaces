@@ -643,17 +643,17 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
-	{"#define USESHADOWMAPPCF 1\n", " shadowmappcf"},
-	{"#define USESHADOWMAPPCF 2\n", " shadowmappcf2"},
-	{"#define USESHADOWSAMPLER\n", " shadowsampler"},
-	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"},
+	{"#define USESHADOWMAPPCF 1\n", " shadowmappcf"}, // TODO make this a static parm
+	{"#define USESHADOWMAPPCF 2\n", " shadowmappcf2"}, // TODO make this a static parm
+	{"#define USESHADOWSAMPLER\n", " shadowsampler"}, // TODO make this a static parm
+	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"}, // TODO make this a static parm
 	{"#define USESHADOWMAPORTHO\n", " shadowmaportho"},
 	{"#define USEDEFERREDLIGHTMAP\n", " deferredlightmap"},
 	{"#define USEALPHAKILL\n", " alphakill"},
 	{"#define USEREFLECTCUBE\n", " reflectcube"},
 	{"#define USENORMALMAPSCROLLBLEND\n", " normalmapscrollblend"},
 	{"#define USEBOUNCEGRID\n", " bouncegrid"},
-	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"},
+	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"}, // TODO make this a static parm
 	{"#define USETRIPPY\n", " trippy"},
 	{"#define USEDEPTHRGB\n", " depthrgb"},
 };
