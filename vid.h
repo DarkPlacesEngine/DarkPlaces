@@ -49,6 +49,7 @@ typedef struct viddef_support_s
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
+	qboolean arb_framebuffer_object;
 	qboolean arb_multitexture;
 	qboolean arb_occlusion_query;
 	qboolean arb_shadow;
