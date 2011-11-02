@@ -37,6 +37,8 @@
 # include <direct.h>
 # include <io.h>
 # include <shlobj.h>
+# include <sys/stat.h>
+# include <share.h>
 #else
 # include <pwd.h>
 # include <sys/stat.h>
@@ -65,10 +67,8 @@
 # define lseek _lseeki64
 #endif
 
-#if _MSC_VER >= 1400
 // suppress deprecated warnings
-# include <sys/stat.h>
-# include <share.h>
+#if _MSC_VER >= 1400
 # define read _read
 # define write _write
 # define close _close
