@@ -995,7 +995,7 @@ void NetConn_OpenServerPorts(int opennetports)
 
 	SV_LockThreadMutex(); // FIXME recursive?
 	Crypto_LoadKeys(); // server sockets
-	CSV_UnlockThreadMutex();
+	SV_UnlockThreadMutex();
 
 	NetConn_UpdateSockets();
 	port = bound(0, sv_netport.integer, 65535);
