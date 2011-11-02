@@ -2015,7 +2015,7 @@ For program optimization
 static void CL_TimeRefresh_f (void)
 {
 	int i;
-	float timestart, timedelta;
+	double timestart, timedelta;
 
 	r_refdef.scene.extraupdate = false;
 
