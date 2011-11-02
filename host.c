@@ -1065,11 +1065,10 @@ static void Host_InitSession(void)
 	// load the session ID into the read-only cvar
 	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < com_argc))
 	{
-		char vabuf[1024];
 		if(com_argv[i+1][0] == '.')
 			Cvar_SetQuick(&sessionid, com_argv[i+1]);
 		else
-			Cvar_SetQuick(&sessionid, va(vabuf, sizeof(vabuf), ".%s", com_argv[i+1]));
+			Cvar_SetQuick(&sessionid, va(".%s", com_argv[i+1]));
 	}
 }
 void Host_LockSession(void)
@@ -1079,8 +1078,7 @@ void Host_LockSession(void)
 	locksession_run = true;
 	if(locksession.integer != 0)
 	{
-		char vabuf[1024];
-		locksession_fh = FS_SysOpen(va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string), "wl", false);
+		locksession_fh = FS_SysOpen(va("%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string), "wl", false);
 		// TODO maybe write the pid into the lockfile, while we are at it? may help server management tools
 		if(!locksession_fh)
 		{
