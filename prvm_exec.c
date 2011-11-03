@@ -176,6 +176,7 @@ void PRVM_PrintFunctionStatements (prvm_prog_t *prog, const char *name)
 
 	// now print the range of statements
 	Con_Printf("%s progs: disassembly of function %s (statements %i-%i, locals %i-%i):\n", prog->name, name, firststatement, endstatement, func->parm_start, func->parm_start + func->locals - 1);
+	prog->xfunction = func;
 	for (i = firststatement;i < endstatement;i++)
 	{
 		PRVM_PrintStatement(prog, prog->statements + i);
