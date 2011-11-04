@@ -520,6 +520,8 @@ static void CL_ModelIndexList_f(void)
 	for (i = -MAX_MODELS;i < MAX_MODELS;i++)
 	{
 		model = CL_GetModelByIndex(i);
+		if (!model)
+			continue;
 		if(model->loaded || i == 1)
 			Con_Printf("%3i: %-30s %-8s %-10i\n", i, model->name, model->modeldatatypestring, model->surfmesh.num_triangles);
 		else
