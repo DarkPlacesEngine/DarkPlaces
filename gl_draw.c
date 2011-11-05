@@ -1071,37 +1071,17 @@ void GL_Draw_Init (void)
 
 static void _DrawQ_Setup(void) // see R_ResetViewRendering2D
 {
-	r_viewport_t viewport;
 	if (r_refdef.draw2dstage == 1)
 		return;
 	r_refdef.draw2dstage = 1;
-	CHECKGLERROR
 
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
-	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
-	R_SetViewport(&viewport);
-	//GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height); // DrawQ_SetClipArea would do this
-	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	//GL_BlendFunc(GL_ONE, GL_ZERO); // DrawQ_ProcessDrawFlag does this
-	GL_ScissorTest(false);
-	GL_DepthMask(false);
-	GL_DepthRange(0, 1);
-	GL_DepthTest(false);
-	GL_DepthFunc(GL_LEQUAL);
-	R_EntityMatrix(&identitymatrix);
-	R_Mesh_ResetTextureState();
-	GL_PolygonOffset(0, 0);
-	//R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255); // not needed
-	//qglEnable(GL_POLYGON_OFFSET_FILL); // we never use polygon offset here
-	GL_CullFace(GL_NONE);
+	R_ResetViewRendering2D_Common(0, NULL, NULL, vid_conwidth.integer, vid_conheight.integer);
 }
 
 qboolean r_draw2d_force = false;
 static void _DrawQ_SetupAndProcessDrawFlag(int flags, cachepic_t *pic, float alpha)
 {
 	_DrawQ_Setup();
-	CHECKGLERROR
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 	DrawQ_ProcessDrawFlag(flags, (alpha < 1) || (pic && pic->hasalpha));
@@ -1959,7 +1939,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
 {
 	_DrawQ_Setup();
-	CHECKGLERROR
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
 	DrawQ_ProcessDrawFlag(flags, hasalpha);
