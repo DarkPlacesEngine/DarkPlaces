@@ -1066,26 +1066,32 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap, NULL, NULL);
 }
 
-static void _DrawQ_Setup(void)
+static void _DrawQ_Setup(void) // see R_ResetViewRendering2D
 {
 	r_viewport_t viewport;
 	if (r_refdef.draw2dstage == 1)
 		return;
 	r_refdef.draw2dstage = 1;
 	CHECKGLERROR
+
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, r_refdef.view.x, vid.height - r_refdef.view.y - r_refdef.view.height, r_refdef.view.width, r_refdef.view.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 	R_SetViewport(&viewport);
+	//GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height); // DrawQ_SetClipArea would do this
+	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	GL_DepthFunc(GL_LEQUAL);
-	GL_PolygonOffset(0,0);
-	GL_CullFace(GL_NONE);
-	R_EntityMatrix(&identitymatrix);
-
+	//GL_BlendFunc(GL_ONE, GL_ZERO); // DrawQ_ProcessDrawFlag does this
+	GL_ScissorTest(false);
+	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
-	GL_PolygonOffset(0, 0);
 	GL_DepthTest(false);
-	GL_Color(1,1,1,1);
+	GL_DepthFunc(GL_LEQUAL);
+	R_EntityMatrix(&identitymatrix);
+	R_Mesh_ResetTextureState();
+	GL_PolygonOffset(0, 0);
+	//R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255); // not needed
+	//qglEnable(GL_POLYGON_OFFSET_FILL); // we never use polygon offset here
+	GL_CullFace(GL_NONE);
 }
 
 qboolean r_draw2d_force = false;
