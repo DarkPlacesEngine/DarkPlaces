@@ -516,6 +516,7 @@ r_framebufferstate_t;
 
 extern r_framebufferstate_t r_fb;
 
+void R_ResetViewRendering2D_Common(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, float x2, float y2); // this is called by R_ResetViewRendering2D and _DrawQ_Setup and internal
 void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
