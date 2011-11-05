@@ -299,6 +299,18 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 				break;
 		}
 
+		// OPTIONAL: remaining unsupported tokens (eat them)
+		while (strcmp(com_token, "\n"))
+		{
+			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
+			{
+				bufptr = NULL;
+				break;
+			}
+		}
+		if(!bufptr)
+			break;
+
 		//Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
 
 		if(cb)
