@@ -4785,7 +4785,7 @@ static void R_View_UpdateEntityLighting (void)
 			continue;
 
 		// skip bsp models
-		if (ent->model && ent->model->brush.num_leafs)
+		if (ent->model && (ent->model == cl.worldmodel || ent->model->brush.parentmodel == cl.worldmodel))
 		{
 			// TODO: use modellight for r_ambient settings on world?
 			VectorSet(ent->modellight_ambient, 0, 0, 0);
