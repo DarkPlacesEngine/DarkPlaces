@@ -239,23 +239,27 @@ typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int 
 int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
 {
 	const char *bufptr;
-	const char *name;
 	int start, len;
 	float fps;
 	unsigned int i;
 	qboolean loop;
+	char name[64];
 
 	bufptr = buf;
 	i = 0;
 	for(;;)
 	{
 		// an anim scene!
-		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
+
+		// REQUIRED: fetch start
+		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
 			break;
 		if (!strcmp(com_token, "\n"))
 			continue; // empty line
 		start = atoi(com_token);
-		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
+
+		// REQUIRED: fetch length
+		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
 			break;
 		if (!strcmp(com_token, "\n"))
 		{
@@ -263,56 +267,42 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 			continue;
 		}
 		len = atoi(com_token);
-		if (!COM_ParseToken_Simple(&bufptr, true, false, false))
+
+		// OPTIONAL args start
+		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
 			break;
-		// we default to looping as it's usually wanted, so to NOT loop you append a 0
-		if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
+
+		// OPTIONAL: fetch fps
+		fps = 20;
+		if (strcmp(com_token, "\n"))
 		{
 			fps = atof(com_token);
-			if (!COM_ParseToken_Simple(&bufptr, true, false, false))
+			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
 				break;
-			if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
-				loop = atoi(com_token) != 0;
-			else
-				loop = true;
-		}
-		else
-		{
-			fps = 20;
-			loop = true;
 		}
 
-		if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
+		// OPTIONAL: fetch loopflag
+		loop = true;
+		if (strcmp(com_token, "\n"))
 		{
-			while (COM_ParseToken_Simple(&bufptr, true, false, false)) // fetch newline
-			{
-				if (strcmp(com_token, "\n") && strcmp(com_token, "//"))
-					Con_Printf("framegroups file: extra data (%s) found, skipped\n", com_token);
-				else
-					break;
-			}
+			loop = (atoi(com_token) != 0);
+			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
+				break;
 		}
 
-		name = NULL;
-		if(!strcmp(com_token, "//"))
+		// OPTIONAL: fetch name
+		name[0] = 0;
+		if (strcmp(com_token, "\n"))
 		{
-			if (COM_ParseToken_Simple(&bufptr, true, false, false))
-			{
-				if(strcmp(com_token, "\n"))
-				{
-					name = com_token;
-					// skip to EOL
-					while (*bufptr && !(*bufptr == '\n' || *bufptr == '\r'))
-						bufptr++;
-					while (*bufptr && (*bufptr == '\n' || *bufptr == '\r'))
-						bufptr++;
-				}
-			}
+			strlcpy(name, com_token, sizeof(name));
+			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
+				break;
 		}
+
 		//Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
 
 		if(cb)
-			cb(i, start, len, fps, loop, name, pass);
+			cb(i, start, len, fps, loop, (name[0] ? name : NULL), pass);
 		++i;
 	}
 
