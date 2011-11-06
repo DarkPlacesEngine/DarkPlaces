@@ -247,21 +247,21 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 
 	bufptr = buf;
 	i = 0;
-	for(;;)
+	while(bufptr)
 	{
 		// an anim scene!
 
 		// REQUIRED: fetch start
-		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-			break;
+		COM_ParseToken_Simple(&bufptr, true, false, true);
+		if (!bufptr)
+			break; // end of file
 		if (!strcmp(com_token, "\n"))
 			continue; // empty line
 		start = atoi(com_token);
 
 		// REQUIRED: fetch length
-		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-			break;
-		if (!strcmp(com_token, "\n"))
+		COM_ParseToken_Simple(&bufptr, true, false, true);
+		if (!bufptr || !strcmp(com_token, "\n"))
 		{
 			Con_Printf("framegroups file: missing number of frames\n");
 			continue;
@@ -269,47 +269,35 @@ int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups
 		len = atoi(com_token);
 
 		// OPTIONAL args start
-		if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-			break;
+		COM_ParseToken_Simple(&bufptr, true, false, true);
 
 		// OPTIONAL: fetch fps
 		fps = 20;
-		if (strcmp(com_token, "\n"))
+		if (bufptr && strcmp(com_token, "\n"))
 		{
 			fps = atof(com_token);
-			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-				break;
+			COM_ParseToken_Simple(&bufptr, true, false, true);
 		}
 
 		// OPTIONAL: fetch loopflag
 		loop = true;
-		if (strcmp(com_token, "\n"))
+		if (bufptr && strcmp(com_token, "\n"))
 		{
 			loop = (atoi(com_token) != 0);
-			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-				break;
+			COM_ParseToken_Simple(&bufptr, true, false, true);
 		}
 
 		// OPTIONAL: fetch name
 		name[0] = 0;
-		if (strcmp(com_token, "\n"))
+		if (bufptr && strcmp(com_token, "\n"))
 		{
 			strlcpy(name, com_token, sizeof(name));
-			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-				break;
+			COM_ParseToken_Simple(&bufptr, true, false, true);
 		}
 
 		// OPTIONAL: remaining unsupported tokens (eat them)
-		while (strcmp(com_token, "\n"))
-		{
-			if (!COM_ParseToken_Simple(&bufptr, true, false, true))
-			{
-				bufptr = NULL;
-				break;
-			}
-		}
-		if(!bufptr)
-			break;
+		while (bufptr && strcmp(com_token, "\n"))
+			COM_ParseToken_Simple(&bufptr, true, false, true);
 
 		//Con_Printf("data: %d %d %d %f %d (%s)\n", i, start, len, fps, loop, name);
 
