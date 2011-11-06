@@ -211,7 +211,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	numlist = 0;
 	// add entities not linked into areagrid because they are too big or
 	// outside the grid bounds
-	if (world->areagrid_outside.next != &world->areagrid_outside)
+	if (world->areagrid_outside.next)
 	{
 		grid = &world->areagrid_outside;
 		for (l = grid->next;l != grid;l = l->next)
@@ -236,7 +236,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 		grid = world->areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
 		{
-			if (grid->next != grid)
+			if (grid->next)
 			{
 				for (l = grid->next;l != grid;l = l->next)
 				{
