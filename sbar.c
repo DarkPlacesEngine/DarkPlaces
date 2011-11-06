@@ -1211,14 +1211,18 @@ void Sbar_ShowFPS(void)
 	}
 	if (showtex.integer)
 	{
+		vec3_t org;
 		vec3_t dest;
+		vec3_t temp;
 		trace_t trace;
 
-		VectorMA(r_refdef.view.origin, 65536, r_refdef.view.forward, dest);
+		Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, org);
+		VectorSet(temp, 65536, 0, 0);
+		Matrix4x4_Transform(&r_refdef.view.matrix, temp, dest);
 		trace.hittexture = NULL; // to make sure
 		// TODO change this trace to be stopped by anything "visible" (i.e. with a drawsurface), but not stuff like weapclip
 		// probably needs adding a new SUPERCONTENTS type
-		trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, true, false, NULL, true, true);
+		trace = CL_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, true, false, NULL, true, true);
 		if(trace.hittexture)
 			strlcpy(texstring, trace.hittexture->name, sizeof(texstring));
 		else
