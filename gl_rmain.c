@@ -6920,6 +6920,11 @@ void R_RenderView(void)
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
 
+	if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+		// in sRGB fallback, behave similar to true sRGB: convert this
+		// value from linear to sRGB
+		r_refdef.view.colorscale = Image_sRGBFloatFromLinearFloat(r_refdef.view.colorscale);
+
 	R_RenderView_UpdateViewVectors();
 
 	R_Shadow_UpdateWorldLightSelection();
