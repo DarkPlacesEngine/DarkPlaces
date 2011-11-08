@@ -1275,7 +1275,8 @@ void CL_UpdateNetworkEntityTrail(entity_t *e)
 		if (len > 0)
 			len = 1.0f / len;
 		VectorScale(vel, len, vel);
-		CL_ParticleTrail(trailtype, 1, e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true, NULL, NULL);
+		// pass time as count so that trails that are time based (such as an emitter) will emit properly as long as they don't use trailspacing
+		CL_ParticleTrail(trailtype, bound(0, cl.time - cl.oldtime, 0.1), e->persistent.trail_origin, origin, vel, vel, e, e->state_current.glowcolor, false, true, NULL, NULL);
 	}
 	// now that the entity has survived one trail update it is allowed to
 	// leave a real trail on later frames
