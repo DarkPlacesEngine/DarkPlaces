@@ -24,6 +24,7 @@ extern cvar_t v_flipped;
 extern cvar_t r_equalize_entities_fullbright;
 
 r_refdef_view_t csqc_original_r_refdef_view;
+r_refdef_view_t csqc_main_r_refdef_view;
 
 sfx_t *S_FindName(const char *name);
 int Sbar_GetSortedPlayerIndex (int index);
@@ -884,6 +885,9 @@ void VM_CL_R_SetView (void)
 		case VF_CLEARSCREEN:
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.isoverlay;
 			break;
+		case VF_MAINVIEW:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.ismain;
+			break;
 		case VF_FOG_DENSITY:
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_density;
 			break;
@@ -1030,6 +1034,9 @@ void VM_CL_R_SetView (void)
 		break;
 	case VF_CLEARSCREEN:
 		r_refdef.view.isoverlay = !k;
+		break;
+	case VF_MAINVIEW:
+		PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.ismain;
 		break;
 	case VF_FOG_DENSITY:
 		r_refdef.fog_density = k;
@@ -3089,6 +3096,17 @@ void VM_CL_R_RenderScene (void)
 	double t = Sys_DoubleTime();
 	vmpolygons_t* polys = vmpolygons + PRVM_GetProgNr();
 	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
+
+	// update the views
+	if(r_refdef.view.ismain)
+	{
+		// set the main view
+		csqc_main_r_refdef_view = r_refdef.view;
+
+		// clear the flags so no other view becomes "main" unless CSQC sets VF_MAINVIEW
+		r_refdef.view.ismain = false;
+		csqc_original_r_refdef_view.ismain = false;
+	}
 
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
