@@ -5477,7 +5477,7 @@ void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *color
 R_RenderView_UpdateViewVectors
 ================
 */
-static void R_RenderView_UpdateViewVectors(void)
+void R_RenderView_UpdateViewVectors(void)
 {
 	// break apart the view matrix into vectors for various purposes
 	// it is important that this occurs outside the RenderScene function because that can be called from reflection renders, where the vectors come out wrong
