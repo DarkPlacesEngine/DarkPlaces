@@ -882,3 +882,14 @@ string(string command, float bindmap) findkeysforcommand = #610;
 float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
 //description:
 //use -1 as buffer handle to justs end delim as postdata
+
+//DP_CSQC_MAINVIEW
+//idea: divVerent
+//darkplaces implementation: divVerent
+//constant definitions:
+const float VF_MAINVIEW         = 212;
+//use setproperty(VF_MAINVIEW, 1); before calling R_RenderView for the render
+//that shall become the "main" view, which is e.g. used by PRYDON_CLIENTCURSOR 
+//this flag is set for the first scene, and not cleared by R_ClearScene
+//this flag is automatically cleared by R_RenderView
+//so when not using this extension, the first view rendered is the main view
