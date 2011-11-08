@@ -193,6 +193,8 @@ extern cvar_t vid_stick_mouse;
 extern cvar_t vid_resizable;
 extern cvar_t vid_minwidth;
 extern cvar_t vid_minheight;
+extern cvar_t vid_sRGB;
+extern cvar_t vid_sRGB_fallback;
 
 extern cvar_t gl_finish;
 
