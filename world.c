@@ -335,14 +335,10 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 #define USEODE 1
 #endif
 
-// recent ODE trunk has dWorldStepFast1 removed
-//#define ODE_USE_STEPFAST
-
 #ifdef USEODE
 cvar_t physics_ode_quadtree_depth = {0, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
 cvar_t physics_ode_contactsurfacelayer = {0, "physics_ode_contactsurfacelayer","1", "allows objects to overlap this many units to reduce jitter"};
-cvar_t physics_ode_worldstep = {0, "physics_ode_worldstep","2", "step function to use, 0 - dWorldStep, 1 - dWorldStepFast1, 2 - dWorldQuickStep"};
-cvar_t physics_ode_worldstep_iterations = {0, "physics_ode_worldstep_iterations", "20", "parameter to dWorldQuickStep and dWorldStepFast1"};
+cvar_t physics_ode_worldstep_iterations = {0, "physics_ode_worldstep_iterations", "20", "parameter to dWorldQuickStep"};
 cvar_t physics_ode_contact_mu = {0, "physics_ode_contact_mu", "1", "contact solver mu parameter - friction pyramid approximation 1 (see ODE User Guide)"};
 cvar_t physics_ode_contact_erp = {0, "physics_ode_contact_erp", "0.96", "contact solver erp parameter - Error Restitution Percent (see ODE User Guide)"};
 cvar_t physics_ode_contact_cfm = {0, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
@@ -589,7 +585,7 @@ void            (ODE_API *dWorldSetERP)(dWorldID, dReal erp);
 //dReal           (ODE_API *dWorldGetERP)(dWorldID);
 void            (ODE_API *dWorldSetCFM)(dWorldID, dReal cfm);
 //dReal           (ODE_API *dWorldGetCFM)(dWorldID);
-void            (ODE_API *dWorldStep)(dWorldID, dReal stepsize);
+//void            (ODE_API *dWorldStep)(dWorldID, dReal stepsize);
 //void            (ODE_API *dWorldImpulseToForce)(dWorldID, dReal stepsize, dReal ix, dReal iy, dReal iz, dVector3 force);
 void            (ODE_API *dWorldQuickStep)(dWorldID w, dReal stepsize);
 void            (ODE_API *dWorldSetQuickStepNumIterations)(dWorldID, int num);
@@ -600,9 +596,7 @@ void            (ODE_API *dWorldSetQuickStepNumIterations)(dWorldID, int num);
 //dReal           (ODE_API *dWorldGetContactMaxCorrectingVel)(dWorldID);
 void            (ODE_API *dWorldSetContactSurfaceLayer)(dWorldID, dReal depth);
 //dReal           (ODE_API *dWorldGetContactSurfaceLayer)(dWorldID);
-#ifdef ODE_USE_STEPFAST
-void            (ODE_API *dWorldStepFast1)(dWorldID, dReal stepsize, int maxiterations);
-#endif
+//void            (ODE_API *dWorldStepFast1)(dWorldID, dReal stepsize, int maxiterations);
 //void            (ODE_API *dWorldSetAutoEnableDepthSF1)(dWorldID, int autoEnableDepth);
 //int             (ODE_API *dWorldGetAutoEnableDepthSF1)(dWorldID);
 //dReal           (ODE_API *dWorldGetAutoDisableLinearThreshold)(dWorldID);
@@ -1056,7 +1050,7 @@ static dllfunction_t odefuncs[] =
 //	{"dWorldGetERP",								(void **) &dWorldGetERP},
 	{"dWorldSetCFM",								(void **) &dWorldSetCFM},
 //	{"dWorldGetCFM",								(void **) &dWorldGetCFM},
-	{"dWorldStep",									(void **) &dWorldStep},
+//	{"dWorldStep",									(void **) &dWorldStep},
 //	{"dWorldImpulseToForce",						(void **) &dWorldImpulseToForce},
 	{"dWorldQuickStep",								(void **) &dWorldQuickStep},
 	{"dWorldSetQuickStepNumIterations",				(void **) &dWorldSetQuickStepNumIterations},
@@ -1067,9 +1061,7 @@ static dllfunction_t odefuncs[] =
 //	{"dWorldGetContactMaxCorrectingVel",			(void **) &dWorldGetContactMaxCorrectingVel},
 	{"dWorldSetContactSurfaceLayer",				(void **) &dWorldSetContactSurfaceLayer},
 //	{"dWorldGetContactSurfaceLayer",				(void **) &dWorldGetContactSurfaceLayer},
-#ifdef ODE_USE_STEPFAST
-	{"dWorldStepFast1",								(void **) &dWorldStepFast1},
-#endif
+//	{"dWorldStepFast1",								(void **) &dWorldStepFast1},
 //	{"dWorldSetAutoEnableDepthSF1",					(void **) &dWorldSetAutoEnableDepthSF1},
 //	{"dWorldGetAutoEnableDepthSF1",					(void **) &dWorldGetAutoEnableDepthSF1},
 //	{"dWorldGetAutoDisableLinearThreshold",			(void **) &dWorldGetAutoDisableLinearThreshold},
@@ -1496,7 +1488,6 @@ static void World_Physics_Init(void)
 
 	Cvar_RegisterVariable(&physics_ode_quadtree_depth);
 	Cvar_RegisterVariable(&physics_ode_contactsurfacelayer);
-	Cvar_RegisterVariable(&physics_ode_worldstep);
 	Cvar_RegisterVariable(&physics_ode_worldstep_iterations);
 	Cvar_RegisterVariable(&physics_ode_contact_mu);
 	Cvar_RegisterVariable(&physics_ode_contact_erp);
@@ -2679,17 +2670,8 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			collisiontime += (Sys_DirtyTime() - tdelta3)*10000;
 
 			// run physics (move objects, calculate new velocities)
-			if (physics_ode_worldstep.integer == 2)
-			{
-				dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldstep_iterations.integer, 200));
-				dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
-			}
-#ifdef ODE_USE_STEPFAST
-			else if (physics_ode_worldstep.integer == 1)
-				dWorldStepFast1((dWorldID)world->physics.ode_world, world->physics.ode_step, bound(1, physics_ode_worldstep_iterations.integer, 200));
-#endif
-			else
-				dWorldStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
+			dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldstep_iterations.integer, 200));
+			dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 
 			// clear the JointGroup now that we're done with it
 			dJointGroupEmpty((dJointGroupID)world->physics.ode_contactgroup);
