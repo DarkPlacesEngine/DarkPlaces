@@ -31,8 +31,6 @@ cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility upda
 cvar_t r_useportalculling = {0, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
 cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
-extern cvar_t vid_sRGB;
-extern cvar_t vid_sRGB_fallback;
 
 /*
 ===============
