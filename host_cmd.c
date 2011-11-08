@@ -1698,6 +1698,7 @@ Host_Pause_f
 */
 static void Host_Pause_f (void)
 {
+	void (*print) (const char *fmt, ...);
 	if (cmd_source == src_command)
 	{
 		// if running a client, try to send over network so the pause is handled by the server
