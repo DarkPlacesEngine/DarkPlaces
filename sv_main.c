@@ -43,7 +43,7 @@ cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0", "ends level if this many frags
 cvar_t gamecfg = {0, "gamecfg", "0", "unused cvar in quake, can be used by mods"};
 cvar_t noexit = {CVAR_NOTIFY, "noexit","0", "kills anyone attempting to use an exit"};
 cvar_t nomonsters = {0, "nomonsters", "0", "unused cvar in quake, can be used by mods"};
-cvar_t pausable = {0, "pausable","1", "allow players to pause or not"};
+cvar_t pausable = {0, "pausable","1", "allow players to pause or not (otherwise, only the server admin can)"};
 cvar_t pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
 cvar_t samelevel = {CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
 cvar_t skill = {0, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
