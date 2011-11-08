@@ -1698,16 +1698,36 @@ Host_Pause_f
 */
 static void Host_Pause_f (void)
 {
-	if (!pausable.integer)
-		SV_ClientPrint("Pause not allowed.\n");
-	else
+	if (cmd_source == src_command)
 	{
-		sv.paused ^= 1;
-		SV_BroadcastPrintf("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
-		// send notification to all clients
-		MSG_WriteByte(&sv.reliable_datagram, svc_setpause);
-		MSG_WriteByte(&sv.reliable_datagram, sv.paused);
+		// if running a client, try to send over network so the pause is handled by the server
+		if (cls.state == ca_connected)
+		{
+			Cmd_ForwardToServer ();
+			return;
+		}
+		print = Con_Printf;
 	}
+	else
+		print = SV_ClientPrintf;
+
+	if (!pausable.integer)
+	{
+		if (cmd_source == src_client)
+		{
+			if(cls.state == ca_dedicated || host_client == &svs.clients[0]) // non-admin
+			{
+				print("Pause not allowed.\n");
+				return;
+			}
+		}
+	}
+	
+	sv.paused ^= 1;
+	SV_BroadcastPrintf("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
+	// send notification to all clients
+	MSG_WriteByte(&sv.reliable_datagram, svc_setpause);
+	MSG_WriteByte(&sv.reliable_datagram, sv.paused);
 }
 
 /*
@@ -2905,7 +2925,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand_WithClientCommand ("say_team", Host_Say_Team_f, Host_Say_Team_f, "send a chat message to your team on the server");
 	Cmd_AddCommand_WithClientCommand ("tell", Host_Tell_f, Host_Tell_f, "send a chat message to only one person on the server");
 	Cmd_AddCommand_WithClientCommand ("kill", NULL, Host_Kill_f, "die instantly");
-	Cmd_AddCommand_WithClientCommand ("pause", NULL, Host_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand_WithClientCommand ("pause", Host_Pause_f, Host_Pause_f, "pause the game (if the server allows pausing)");
 	Cmd_AddCommand ("kick", Host_Kick_f, "kick a player off the server by number or name");
 	Cmd_AddCommand_WithClientCommand ("ping", Host_Ping_f, Host_Ping_f, "print ping times of all players on the server");
 	Cmd_AddCommand ("load", Host_Loadgame_f, "load a saved game file");
