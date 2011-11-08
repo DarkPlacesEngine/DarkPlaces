@@ -46,7 +46,7 @@ typedef struct world_physics_s
 	void *ode_world;
 	void *ode_space;
 	void *ode_contactgroup;
-	// number of constraint solver iterations to use (for dWorldStepFast)
+	// number of constraint solver iterations to use (for dWorldQuickStep)
 	int ode_iterations;
 	// actual step (server frametime / ode_iterations)
 	vec_t ode_step;
