@@ -393,7 +393,7 @@ void R_DrawPortals(void)
 						VectorAdd(center, portal->points[i].position, center);
 					f = ixtable[portal->numpoints];
 					VectorScale(center, f, center);
-					R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, rsurface.rtlight);
+					R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, rsurface.rtlight);
 				}
 			}
 		}
@@ -1516,11 +1516,26 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				for (l = k;l < kend;l++)
 				{
 					surface = batchsurfacelist[l];
-					tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-					tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-					tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+					if (r_transparent_sortsurfacesbynearest.integer)
+					{
+						tempcenter[0] = bound(surface->mins[0], rsurface.localvieworigin[0], surface->maxs[0]);
+						tempcenter[1] = bound(surface->mins[1], rsurface.localvieworigin[1], surface->maxs[1]);
+						tempcenter[2] = bound(surface->mins[2], rsurface.localvieworigin[2], surface->maxs[2]);
+					}
+					else
+					{
+						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+					}
 					Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-					R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
+					if (ent->transparent_offset) // transparent offset
+					{
+						center[0] += r_refdef.view.forward[0]*ent->transparent_offset;
+						center[1] += r_refdef.view.forward[1]*ent->transparent_offset;
+						center[2] += r_refdef.view.forward[2]*ent->transparent_offset;
+					}
+					R_MeshQueue_AddTransparent((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 				}
 				continue;
 			}

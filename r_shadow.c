@@ -5429,10 +5429,10 @@ void R_Shadow_DrawLightSprites(void)
 	{
 		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
 		if (light)
-			R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 5, &light->rtlight);
+			R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, light->origin, R_Shadow_DrawLightSprite_TransparentCallback, (entity_render_t *)light, 5, &light->rtlight);
 	}
 	if (!r_editlights_lockcursor)
-		R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
+		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, r_editlights_cursorlocation, R_Shadow_DrawCursor_TransparentCallback, NULL, 0, NULL);
 }
 
 int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color)

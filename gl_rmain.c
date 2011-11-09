@@ -77,6 +77,8 @@ cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip pla
 cvar_t r_deformvertexes = {0, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
 cvar_t r_transparent = {0, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
 cvar_t r_transparent_alphatocoverage = {0, "r_transparent_alphatocoverage", "1", "enables GL_ALPHA_TO_COVERAGE antialiasing technique on alphablend and alphatest surfaces when using vid_samples 2 or higher"};
+cvar_t r_transparent_sortsurfacesbynearest = {0, "r_transparent_sortsurfacesbynearest", "1", "sort entity and world surfaces by nearest point on bounding box instead of using the center of the bounding box, usually reduces sorting artifacts"};
+cvar_t r_transparent_useplanardistance = {0, "r_transparent_useplanardistance", "0", "sort transparent meshes by distance from view plane rather than spherical distance to the chosen point"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -4186,6 +4188,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_deformvertexes);
 	Cvar_RegisterVariable(&r_transparent);
 	Cvar_RegisterVariable(&r_transparent_alphatocoverage);
+	Cvar_RegisterVariable(&r_transparent_sortsurfacesbynearest);
+	Cvar_RegisterVariable(&r_transparent_useplanardistance);
 	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -7304,7 +7308,7 @@ static void R_DrawEntityBBoxes(void)
 		if(PRVM_serveredictedict(edict, viewmodelforclient) != 0)
 			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
-		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
+		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
 	}
 }
 
@@ -7412,7 +7416,7 @@ void R_DrawNoModel(entity_render_t *ent)
 	vec3_t org;
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	if ((ent->flags & RENDER_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent(ent->flags & RENDER_NODEPTHTEST ? r_refdef.view.origin : org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
+		R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : MESHQUEUE_SORT_DISTANCE, org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
 	else
 		R_DrawNoModel_TransparentCallback(ent, rsurface.rtlight, 0, NULL);
 }
@@ -10410,7 +10414,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, const entity_render_t *queueentity)
+static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	// transparent surfaces get pushed off into the transparent queue
 	int surfacelistindex;
@@ -10419,17 +10423,26 @@ static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const
 	for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
 	{
 		surface = texturesurfacelist[surfacelistindex];
-		tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-		tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-		tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-		Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-		if (queueentity->transparent_offset) // transparent offset
+		if (r_transparent_sortsurfacesbynearest.integer)
 		{
-			center[0] += r_refdef.view.forward[0]*queueentity->transparent_offset;
-			center[1] += r_refdef.view.forward[1]*queueentity->transparent_offset;
-			center[2] += r_refdef.view.forward[2]*queueentity->transparent_offset;
+			tempcenter[0] = bound(surface->mins[0], rsurface.localvieworigin[0], surface->maxs[0]);
+			tempcenter[1] = bound(surface->mins[1], rsurface.localvieworigin[1], surface->maxs[1]);
+			tempcenter[2] = bound(surface->mins[2], rsurface.localvieworigin[2], surface->maxs[2]);
 		}
-		R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
+		else
+		{
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+		}
+		Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+		if (rsurface.entity->transparent_offset) // transparent offset
+		{
+			center[0] += r_refdef.view.forward[0]*rsurface.entity->transparent_offset;
+			center[1] += r_refdef.view.forward[1]*rsurface.entity->transparent_offset;
+			center[2] += r_refdef.view.forward[2]*rsurface.entity->transparent_offset;
+		}
+		R_MeshQueue_AddTransparent((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), center, R_DrawSurface_TransparentCallback, rsurface.entity, surface - rsurface.modelsurfaces, rsurface.rtlight);
 	}
 }
 
@@ -10450,7 +10463,6 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 
 static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
-	const entity_render_t *queueentity = r_refdef.scene.worldentity;
 	CHECKGLERROR
 	if (depthonly)
 		R_DrawTextureSurfaceList_DepthOnly(texturenumsurfaces, texturesurfacelist);
@@ -10459,7 +10471,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		if (!rsurface.texture->currentnumlayers)
 			return;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
@@ -10467,11 +10479,11 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
-	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
+	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))))
 	{
 		// in the deferred case, transparent surfaces were queued during prepass
 		if (!r_shadow_usingdeferredprepass)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 	}
 	else
 	{
@@ -10527,7 +10539,7 @@ static void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacel
 	R_FrameData_ReturnToMark();
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity, qboolean prepass)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
 	CHECKGLERROR
 	if (depthonly)
@@ -10537,7 +10549,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		if (!rsurface.texture->currentnumlayers)
 			return;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
@@ -10545,11 +10557,11 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
-	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
+	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))))
 	{
 		// in the deferred case, transparent surfaces were queued during prepass
 		if (!r_shadow_usingdeferredprepass)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 	}
 	else
 	{
@@ -10600,7 +10612,7 @@ static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const
 				;
 		}
 		// render the range of surfaces
-		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent, prepass);
+		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, prepass);
 	}
 	R_FrameData_ReturnToMark();
 }
@@ -10677,7 +10689,7 @@ void R_DrawLocs(void)
 	for (loc = cl.locnodes, index = 0;loc;loc = loc->next, index++)
 	{
 		VectorLerp(loc->mins, 0.5f, loc->maxs, center);
-		R_MeshQueue_AddTransparent(center, R_DrawLoc_Callback, (entity_render_t *)loc, loc == nearestloc ? -1 : index, NULL);
+		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawLoc_Callback, (entity_render_t *)loc, loc == nearestloc ? -1 : index, NULL);
 	}
 }
 
