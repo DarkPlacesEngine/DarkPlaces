@@ -10,15 +10,13 @@ typedef struct meshqueue_s
 	int surfacenumber;
 	const rtlight_t *rtlight;
 	float dist;
+	meshqueue_sortcategory_t category;
 }
 meshqueue_t;
 
 int trans_sortarraysize;
 meshqueue_t **trans_hash = NULL;
 meshqueue_t ***trans_hashpointer = NULL;
-extern cvar_t r_transparent_sortarraysize;
-extern cvar_t r_transparent_sortmindist;
-extern cvar_t r_transparent_sortmaxdist;
 
 float mqt_viewplanedist;
 float mqt_viewmaxdist;
@@ -33,7 +31,7 @@ void R_MeshQueue_BeginScene(void)
 	mqt_viewmaxdist = 0;
 }
 
-void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
+void R_MeshQueue_AddTransparent(meshqueue_sortcategory_t category, const vec3_t center, void (*callback)(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist), const entity_render_t *ent, int surfacenumber, const rtlight_t *rtlight)
 {
 	meshqueue_t *mq;
 	if (mqt_count >= mqt_total || !mqt_array)
@@ -53,10 +51,11 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const enti
 	mq->ent = ent;
 	mq->surfacenumber = surfacenumber;
 	mq->rtlight = rtlight;
-	if (ent && (ent->flags & RENDER_WORLDOBJECT))
-		mq->dist = mqt_viewmaxdist;
-	else
+	mq->category = category;
+	if (r_transparent_useplanardistance.integer)
 		mq->dist = DotProduct(center, r_refdef.view.forward) - mqt_viewplanedist;
+	else
+		mq->dist = VectorDistance(center, r_refdef.view.origin);
 	mq->next = NULL;
 	mqt_viewmaxdist = max(mqt_viewmaxdist, mq->dist);
 }
@@ -102,7 +101,20 @@ void R_MeshQueue_RenderTransparent(void)
 	maxhashindex = trans_sortarraysize - 1;
 	for (i = 0, mqt = mqt_array; i < mqt_count; i++, mqt++)
 	{
-		hashindex = bound(0, (int)(bound(0, mqt->dist - r_transparent_sortmindist.integer, r_transparent_sortmaxdist.integer) * distscale), maxhashindex);
+		switch(mqt->category)
+		{
+		default:
+		case MESHQUEUE_SORT_HUD:
+			hashindex = 0;
+			break;
+		case MESHQUEUE_SORT_DISTANCE:
+			// this could use a reduced range if we need more categories
+			hashindex = bound(0, (int)(bound(0, mqt->dist - r_transparent_sortmindist.integer, r_transparent_sortmaxdist.integer) * distscale), maxhashindex);
+			break;
+		case MESHQUEUE_SORT_SKY:
+			hashindex = maxhashindex;
+			break;
+		}
 		// link to tail of hash chain (to preserve render order)
 		mqt->next = NULL;
 		*trans_hashpointer[hashindex] = mqt;

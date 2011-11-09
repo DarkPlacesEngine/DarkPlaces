@@ -1536,8 +1536,6 @@ static int d3dstencilopforglfunc(int f)
 }
 #endif
 
-extern cvar_t r_transparent_alphatocoverage;
-
 static void GL_Backend_ResetState(void)
 {
 	unsigned int i;

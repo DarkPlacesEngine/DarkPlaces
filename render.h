@@ -534,6 +534,13 @@ extern cvar_t r_shadows_throwdirection;
 extern cvar_t r_shadows_focus;
 extern cvar_t r_shadows_shadowmapscale;
 
+extern cvar_t r_transparent_alphatocoverage;
+extern cvar_t r_transparent_sortsurfacesbynearest;
+extern cvar_t r_transparent_useplanardistance;
+extern cvar_t r_transparent_sortarraysize;
+extern cvar_t r_transparent_sortmindist;
+extern cvar_t r_transparent_sortmaxdist;
+
 void R_Model_Sprite_Draw(entity_render_t *ent);
 
 struct prvm_prog_s;
