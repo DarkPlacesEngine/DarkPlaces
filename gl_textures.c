@@ -2121,9 +2121,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			Con_Printf("^1%s: invalid DXT1 DDS image\n", filename);
 			return NULL;
 		}
-		if(r_texture_dds_load_alphamode.integer && (flags & TEXF_ALPHA))
+		if (flags & TEXF_ALPHA)
 		{
-			if(r_texture_dds_load_alphamode.integer == 1)
+			if (r_texture_dds_load_alphamode.integer == 1)
 			{
 				// check alpha
 				for (i = 0;i < size;i += bytesperblock)
@@ -2140,6 +2140,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 				else
 					flags &= ~TEXF_ALPHA;
 			}
+			else if (r_texture_dds_load_alphamode.integer == 0)
+				textype = TEXTYPE_DXT1A;
 			else
 			{
 				flags &= ~TEXF_ALPHA;
