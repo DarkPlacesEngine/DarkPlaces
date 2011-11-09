@@ -2672,8 +2672,10 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			collisiontime += (Sys_DirtyTime() - tdelta3)*10000;
 
 			// run physics (move objects, calculate new velocities)
+			// be sure not to pass 0 as step time because that causes an ODE error
 			dWorldSetQuickStepNumIterations((dWorldID)world->physics.ode_world, bound(1, physics_ode_worldstep_iterations.integer, 200));
-			dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
+			if (world->physics.ode_step > 0)
+				dWorldQuickStep((dWorldID)world->physics.ode_world, world->physics.ode_step);
 
 			// clear the JointGroup now that we're done with it
 			dJointGroupEmpty((dJointGroupID)world->physics.ode_contactgroup);
