@@ -95,7 +95,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 
 	memset(blend, 0, MAX_FRAMEBLENDS * sizeof(*blend));
 
-	if (!model || !model->surfmesh.isanimated || model->numframes <= 1)
+	if (!model || !model->surfmesh.isanimated)
 	{
 		blend[0].lerp = 1;
 		return;
