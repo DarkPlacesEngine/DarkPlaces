@@ -1441,6 +1441,35 @@ static void VM_CL_setsensitivityscale (prvm_prog_t *prog)
 //#347 void() runstandardplayerphysics (EXT_CSQC)
 static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 {
+	cl_clientmovement_state_t s;
+	prvm_edict_t *ent;
+
+	VM_SAFEPARMCOUNT(1, VM_CL_runplayerphysics);
+
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	VectorCopy(PRVM_clientedictvector(ent, origin), s.origin);
+	VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
+	VectorCopy(PRVM_clientglobalvector(pmove_mins), s.mins);
+	VectorCopy(PRVM_clientglobalvector(pmove_maxs), s.maxs);
+	s.onground = 0; // ???
+	s.crouched = 0; // ???
+	s.watertype = 0; // ???
+	s.waterlevel = 0; // ???
+	s.waterjumptime = 0; // ???
+	VectorCopy(PRVM_clientglobalvector(input_angles), s.cmd.viewangles);
+	s.cmd.forwardmove = PRVM_clientglobalvector(input_movevalues)[0];
+	s.cmd.sidemove = PRVM_clientglobalvector(input_movevalues)[1];
+	s.cmd.upmove = PRVM_clientglobalvector(input_movevalues)[2];
+	s.cmd.buttons = PRVM_clientglobalfloat(input_buttons);
+	s.cmd.frametime = PRVM_clientglobalfloat(input_timelength);
+	s.cmd.canjump = 1; // ???
+	s.cmd.jump = (s.cmd.buttons & 2) != 0;
+	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
+
+	CL_ClientMovement_PlayerMove(&s);
+
+	VectorCopy(s.origin, PRVM_clientedictvector(ent, origin));
+	VectorCopy(s.velocity, PRVM_clientedictvector(ent, velocity));
 }
 
 //#348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
