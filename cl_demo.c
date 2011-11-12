@@ -457,6 +457,25 @@ void CL_PlayDemo_f (void)
 	cls.demostarting = false;
 }
 
+typedef struct
+{
+	int frames;
+	double time, totalfpsavg;
+	double fpsmin, fpsavg, fpsmax;
+}
+benchmarkhistory_t;
+static size_t doublecmp_offset;
+static int doublecmp_withoffset(const void *a_, const void *b_)
+{
+	const double *a = (const double *) ((const char *) a_ + doublecmp_offset);
+	const double *b = (const double *) ((const char *) b_ + doublecmp_offset);
+	if(*a > *b)
+		return +1;
+	if(*a < *b)
+		return -1;
+	return 0;
+}
+
 /*
 ====================
 CL_FinishTimeDemo
@@ -489,6 +508,17 @@ static void CL_FinishTimeDemo (void)
 		i = COM_CheckParm("-benchmarkruns");
 		if(i && i + 1 < com_argc)
 		{
+			static benchmarkhistory_t *history = NULL;
+			if(!history)
+				history = Z_Malloc(sizeof(*history) * atoi(com_argv[i + 1]));
+
+			history[benchmark_runs - 1].frames = frames;
+			history[benchmark_runs - 1].time = time;
+			history[benchmark_runs - 1].totalfpsavg = totalfpsavg;
+			history[benchmark_runs - 1].fpsmin = fpsmin;
+			history[benchmark_runs - 1].fpsavg = fpsavg;
+			history[benchmark_runs - 1].fpsmax = fpsmax;
+
 			if(atoi(com_argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
@@ -496,7 +526,53 @@ static void CL_FinishTimeDemo (void)
 				// cannot execute here
 			}
 			else
+			{
+				// print statistics
+				int first = COM_CheckParm("-benchmarkruns_skipfirst") ? 1 : 0;
+				if(benchmark_runs > first)
+				{
+#define DO_MIN(f) \
+					for(i = first; i < benchmark_runs; ++i) if((i == first) || (history[i].f < f)) f = history[i].f
+
+#define DO_MAX(f) \
+					for(i = first; i < benchmark_runs; ++i) if((i == first) || (history[i].f > f)) f = history[i].f
+
+#define DO_MED(f) \
+					doublecmp_offset = (char *)&history->f - (char *)history; \
+					qsort(history + first, benchmark_runs - first, sizeof(*history), doublecmp_withoffset); \
+					if((first + benchmark_runs) & 1) \
+						f = history[(first + benchmark_runs - 1) / 2].f; \
+					else \
+						f = (history[(first + benchmark_runs - 2) / 2].f + history[(first + benchmark_runs) / 2].f) / 2
+
+					DO_MIN(frames);
+					DO_MAX(time);
+					DO_MIN(totalfpsavg);
+					DO_MIN(fpsmin);
+					DO_MIN(fpsavg);
+					DO_MIN(fpsmax);
+					Con_Printf("MIN: %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
+
+					DO_MED(frames);
+					DO_MED(time);
+					DO_MED(totalfpsavg);
+					DO_MED(fpsmin);
+					DO_MED(fpsavg);
+					DO_MED(fpsmax);
+					Con_Printf("MED: %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
+
+					DO_MAX(frames);
+					DO_MIN(time);
+					DO_MAX(totalfpsavg);
+					DO_MAX(fpsmin);
+					DO_MAX(fpsavg);
+					DO_MAX(fpsmax);
+					Con_Printf("MAX: %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
+				}
+				Z_Free(history);
+				history = NULL;
 				Host_Quit_f();
+			}
 		}
 		else
 			Host_Quit_f();
