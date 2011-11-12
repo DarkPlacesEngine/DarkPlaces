@@ -304,6 +304,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		entrender->entitynumber = edictnum + MAX_EDICTS;
 		//entrender->shadertime = 0; // shadertime was set by spawn()
 		entrender->flags = 0;
+		entrender->effects = 0;
 		entrender->alpha = 1;
 		entrender->scale = 1;
 		VectorSet(entrender->colormod, 1, 1, 1);
