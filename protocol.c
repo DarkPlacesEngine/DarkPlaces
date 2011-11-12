@@ -2058,6 +2058,31 @@ static int EntityState5_Priority(entityframe5_database_t *d, int stateindex)
 	return bound(1, priority, ENTITYFRAME5_PRIORITYLEVELS - 1);
 }
 
+static double anim_reducetime(double t, double frameduration, double maxtime)
+{
+	if(t < 0) // clamp to non-negative
+		return 0;
+	if(t <= maxtime) // time can be represented normally
+		return t;
+	if(frameduration == 0) // don't like dividing by zero
+		return t;
+	if(maxtime <= 2 * frameduration) // if two frames don't fit, we better not do this
+		return t;
+	t -= frameduration * ceil((t - maxtime) / frameduration);
+	// now maxtime - frameduration < t <= maxtime
+	return t;
+}
+
+// see VM_SV_frameduration
+static double anim_frameduration(dp_model_t *model, int framenum)
+{
+	if (!model || !model->animscenes || framenum < 0 || framenum >= model->numframes)
+		return 0;
+	if(model->animscenes[framenum].framerate)
+		return model->animscenes[framenum].framecount / model->animscenes[framenum].framerate;
+	return 0;
+}
+
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg)
 {
 	unsigned int bits = 0;
@@ -2226,50 +2251,54 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 					MSG_WriteShort(msg, pose6s[5]);
 				}
 			}
-			else if (s->framegroupblend[3].lerp > 0)
-			{
-				MSG_WriteByte(msg, 3);
-				MSG_WriteShort(msg, s->framegroupblend[0].frame);
-				MSG_WriteShort(msg, s->framegroupblend[1].frame);
-				MSG_WriteShort(msg, s->framegroupblend[2].frame);
-				MSG_WriteShort(msg, s->framegroupblend[3].frame);
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[2].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[3].start) * 1000.0));
-				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[3].lerp * 255.0f);
-			}
-			else if (s->framegroupblend[2].lerp > 0)
-			{
-				MSG_WriteByte(msg, 2);
-				MSG_WriteShort(msg, s->framegroupblend[0].frame);
-				MSG_WriteShort(msg, s->framegroupblend[1].frame);
-				MSG_WriteShort(msg, s->framegroupblend[2].frame);
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[2].start) * 1000.0));
-				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
-			}
-			else if (s->framegroupblend[1].lerp > 0)
-			{
-				MSG_WriteByte(msg, 1);
-				MSG_WriteShort(msg, s->framegroupblend[0].frame);
-				MSG_WriteShort(msg, s->framegroupblend[1].frame);
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[1].start) * 1000.0));
-				MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-				MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
-			}
 			else
 			{
-				MSG_WriteByte(msg, 0);
-				MSG_WriteShort(msg, s->framegroupblend[0].frame);
-				MSG_WriteShort(msg, (int)((sv.time - s->framegroupblend[0].start) * 1000.0));
+				dp_model_t *model = SV_GetModelByIndex(s->modelindex);
+				if (s->framegroupblend[3].lerp > 0)
+				{
+					MSG_WriteByte(msg, 3);
+					MSG_WriteShort(msg, s->framegroupblend[0].frame);
+					MSG_WriteShort(msg, s->framegroupblend[1].frame);
+					MSG_WriteShort(msg, s->framegroupblend[2].frame);
+					MSG_WriteShort(msg, s->framegroupblend[3].frame);
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[3].start, anim_frameduration(model, s->framegroupblend[3].frame), 65.535) * 1000.0));
+					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[3].lerp * 255.0f);
+				}
+				else if (s->framegroupblend[2].lerp > 0)
+				{
+					MSG_WriteByte(msg, 2);
+					MSG_WriteShort(msg, s->framegroupblend[0].frame);
+					MSG_WriteShort(msg, s->framegroupblend[1].frame);
+					MSG_WriteShort(msg, s->framegroupblend[2].frame);
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
+					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+				}
+				else if (s->framegroupblend[1].lerp > 0)
+				{
+					MSG_WriteByte(msg, 1);
+					MSG_WriteShort(msg, s->framegroupblend[0].frame);
+					MSG_WriteShort(msg, s->framegroupblend[1].frame);
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+				}
+				else
+				{
+					MSG_WriteByte(msg, 0);
+					MSG_WriteShort(msg, s->framegroupblend[0].frame);
+					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+				}
 			}
 		}
 		if (bits & E5_TRAILEFFECTNUM)
@@ -2411,7 +2440,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			s->framegroupblend[1].frame = 0;
 			s->framegroupblend[2].frame = 0;
 			s->framegroupblend[3].frame = 0;
-			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[0].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
 			s->framegroupblend[1].start = 0;
 			s->framegroupblend[2].start = 0;
 			s->framegroupblend[3].start = 0;
@@ -2425,8 +2454,8 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			s->framegroupblend[1].frame = MSG_ReadShort();
 			s->framegroupblend[2].frame = 0;
 			s->framegroupblend[3].frame = 0;
-			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[0].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
 			s->framegroupblend[2].start = 0;
 			s->framegroupblend[3].start = 0;
 			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
@@ -2439,9 +2468,9 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			s->framegroupblend[1].frame = MSG_ReadShort();
 			s->framegroupblend[2].frame = MSG_ReadShort();
 			s->framegroupblend[3].frame = 0;
-			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[2].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[0].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[2].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
 			s->framegroupblend[3].start = 0;
 			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
 			s->framegroupblend[1].lerp = MSG_ReadByte() * (1.0f / 255.0f);
@@ -2453,10 +2482,10 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			s->framegroupblend[1].frame = MSG_ReadShort();
 			s->framegroupblend[2].frame = MSG_ReadShort();
 			s->framegroupblend[3].frame = MSG_ReadShort();
-			s->framegroupblend[0].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[1].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[2].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
-			s->framegroupblend[3].start = cl.time - (short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[0].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[1].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[2].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
+			s->framegroupblend[3].start = cl.time - (unsigned short)MSG_ReadShort() * (1.0f / 1000.0f);
 			s->framegroupblend[0].lerp = MSG_ReadByte() * (1.0f / 255.0f);
 			s->framegroupblend[1].lerp = MSG_ReadByte() * (1.0f / 255.0f);
 			s->framegroupblend[2].lerp = MSG_ReadByte() * (1.0f / 255.0f);
@@ -2596,7 +2625,25 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 		if (o->glowmod[0] != n->glowmod[0] || o->glowmod[1] != n->glowmod[1] || o->glowmod[2] != n->glowmod[2])
 			bits |= E5_GLOWMOD;
 		if (n->flags & RENDER_COMPLEXANIMATION)
-			bits |= E5_COMPLEXANIMATION;
+		{
+			if ((o->skeletonobject.model && o->skeletonobject.relativetransforms) != (n->skeletonobject.model && n->skeletonobject.relativetransforms))
+			{
+				bits |= E5_COMPLEXANIMATION;
+			}
+			else if (o->skeletonobject.model && o->skeletonobject.relativetransforms)
+			{
+				if(o->modelindex != n->modelindex)
+					bits |= E5_COMPLEXANIMATION;
+				else if(o->skeletonobject.model->num_bones != n->skeletonobject.model->num_bones)
+					bits |= E5_COMPLEXANIMATION;
+				else if(memcmp(o->skeletonobject.relativetransforms, n->skeletonobject.relativetransforms, o->skeletonobject.model->num_bones * sizeof(*o->skeletonobject.relativetransforms)))
+					bits |= E5_COMPLEXANIMATION;
+			}
+			else if (memcmp(o->framegroupblend, n->framegroupblend, sizeof(o->framegroupblend)))
+			{
+				bits |= E5_COMPLEXANIMATION;
+			}
+		}
 		if (o->traileffectnum != n->traileffectnum)
 			bits |= E5_TRAILEFFECTNUM;
 	}

@@ -1355,6 +1355,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 		cs->framegroupblend[2].lerp = PRVM_serveredictfloat(ent, lerpfrac3);
 		cs->framegroupblend[3].lerp = PRVM_serveredictfloat(ent, lerpfrac4);
 		cs->framegroupblend[0].lerp = 1.0f - cs->framegroupblend[1].lerp - cs->framegroupblend[2].lerp - cs->framegroupblend[3].lerp;
+		cs->frame = 0; // don't need the legacy frame
 	}
 
 	cs->light[0] = light[0];
