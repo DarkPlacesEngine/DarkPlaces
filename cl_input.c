@@ -806,40 +806,6 @@ static void CL_UpdatePrydonCursor(void)
 		cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
-typedef enum waterlevel_e
-{
-	WATERLEVEL_NONE,
-	WATERLEVEL_WETFEET,
-	WATERLEVEL_SWIMMING,
-	WATERLEVEL_SUBMERGED
-}
-waterlevel_t;
-
-typedef struct cl_clientmovement_state_s
-{
-	// position
-	vec3_t origin;
-	vec3_t velocity;
-	// current bounding box (different if crouched vs standing)
-	vec3_t mins;
-	vec3_t maxs;
-	// currently on the ground
-	qboolean onground;
-	// currently crouching
-	qboolean crouched;
-	// what kind of water (SUPERCONTENTS_LAVA for instance)
-	int watertype;
-	// how deep
-	waterlevel_t waterlevel;
-	// weird hacks when jumping out of water
-	// (this is in seconds and counts down to 0)
-	float waterjumptime;
-
-	// user command
-	usercmd_t cmd;
-}
-cl_clientmovement_state_t;
-
 #define NUMOFFSETS 27
 static vec3_t offsets[NUMOFFSETS] =
 {
@@ -1474,7 +1440,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	}
 }
 
-static void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
+void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 {
 	//Con_Printf(" %f", frametime);
 	if (!s->cmd.jump)

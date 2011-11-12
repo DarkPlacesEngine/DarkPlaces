@@ -1838,6 +1838,41 @@ r_refdef_t;
 
 extern r_refdef_t r_refdef;
 
+typedef enum waterlevel_e
+{
+	WATERLEVEL_NONE,
+	WATERLEVEL_WETFEET,
+	WATERLEVEL_SWIMMING,
+	WATERLEVEL_SUBMERGED
+}
+waterlevel_t;
+
+typedef struct cl_clientmovement_state_s
+{
+	// position
+	vec3_t origin;
+	vec3_t velocity;
+	// current bounding box (different if crouched vs standing)
+	vec3_t mins;
+	vec3_t maxs;
+	// currently on the ground
+	qboolean onground;
+	// currently crouching
+	qboolean crouched;
+	// what kind of water (SUPERCONTENTS_LAVA for instance)
+	int watertype;
+	// how deep
+	waterlevel_t waterlevel;
+	// weird hacks when jumping out of water
+	// (this is in seconds and counts down to 0)
+	float waterjumptime;
+
+	// user command
+	usercmd_t cmd;
+}
+cl_clientmovement_state_t;
+void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s);
+
 // warpzone prediction hack (CSQC builtin)
 void CL_RotateMoves(const matrix4x4_t *m);
 
