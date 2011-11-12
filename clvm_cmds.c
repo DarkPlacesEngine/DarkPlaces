@@ -1451,18 +1451,15 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
 	VectorCopy(PRVM_clientglobalvector(pmove_mins), s.mins);
 	VectorCopy(PRVM_clientglobalvector(pmove_maxs), s.maxs);
-	s.onground = 0; // ???
-	s.crouched = 0; // ???
-	s.watertype = 0; // ???
-	s.waterlevel = 0; // ???
-	s.waterjumptime = 0; // ???
+	s.crouched = 0; // FIXME we need the current crouched status
+	s.waterjumptime = 0; // FIXME where do we get this from?
 	VectorCopy(PRVM_clientglobalvector(input_angles), s.cmd.viewangles);
 	s.cmd.forwardmove = PRVM_clientglobalvector(input_movevalues)[0];
 	s.cmd.sidemove = PRVM_clientglobalvector(input_movevalues)[1];
 	s.cmd.upmove = PRVM_clientglobalvector(input_movevalues)[2];
 	s.cmd.buttons = PRVM_clientglobalfloat(input_buttons);
 	s.cmd.frametime = PRVM_clientglobalfloat(input_timelength);
-	s.cmd.canjump = 1; // ???
+	s.cmd.canjump = 1; // FIXME we need the current canjump status
 	s.cmd.jump = (s.cmd.buttons & 2) != 0;
 	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
 
