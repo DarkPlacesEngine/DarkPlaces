@@ -1451,7 +1451,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
 	VectorCopy(PRVM_clientglobalvector(pmove_mins), s.mins);
 	VectorCopy(PRVM_clientglobalvector(pmove_maxs), s.maxs);
-	s.crouched = 0; // FIXME we need the current crouched status
+	s.crouched = ((int)PRVM_clientedictfloat(ent, pmove_flags) & 1) != 0; // FIXME which flag?
 	s.waterjumptime = 0; // FIXME where do we get this from?
 	VectorCopy(PRVM_clientglobalvector(input_angles), s.cmd.viewangles);
 	s.cmd.forwardmove = PRVM_clientglobalvector(input_movevalues)[0];
@@ -1459,7 +1459,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	s.cmd.upmove = PRVM_clientglobalvector(input_movevalues)[2];
 	s.cmd.buttons = PRVM_clientglobalfloat(input_buttons);
 	s.cmd.frametime = PRVM_clientglobalfloat(input_timelength);
-	s.cmd.canjump = 1; // FIXME we need the current canjump status
+	s.cmd.canjump = ((int)PRVM_clientedictfloat(ent, pmove_flags) & 2) != 0; // FIXME which flag?
 	s.cmd.jump = (s.cmd.buttons & 2) != 0;
 	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
 
@@ -1467,6 +1467,9 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 
 	VectorCopy(s.origin, PRVM_clientedictvector(ent, origin));
 	VectorCopy(s.velocity, PRVM_clientedictvector(ent, velocity));
+	PRVM_clientedictfloat(ent, pmove_flags) =
+		(s.crouched ? 1 : 0) |
+		(s.cmd.canjump ? 2 : 0);
 }
 
 //#348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
