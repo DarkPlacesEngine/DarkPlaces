@@ -510,7 +510,7 @@ static void CL_FinishTimeDemo (void)
 		{
 			static benchmarkhistory_t *history = NULL;
 			if(!history)
-				history = Z_Malloc(sizeof(*history) * atoi(com_argv[i + 1]));
+				history = (benchmarkhistory_t *)Z_Malloc(sizeof(*history) * atoi(com_argv[i + 1]));
 
 			history[benchmark_runs - 1].frames = frames;
 			history[benchmark_runs - 1].time = time;
