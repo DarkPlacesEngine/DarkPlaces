@@ -1551,6 +1551,8 @@ void CL_ClientMovement_Replay(void)
 	double totalmovemsec;
 	cl_clientmovement_state_t s;
 
+	VectorCopy(cl.mvelocity[0], cl.movement_velocity);
+
 	if (cl.movement_predicted && !cl.movement_replay)
 		return;
 
@@ -1616,9 +1618,7 @@ void CL_ClientMovement_Replay(void)
 		s.cmd = cl.movecmd[0];
 	}
 
-	if (cls.demoplayback) // for bob, speedometer
-		VectorCopy(cl.mvelocity[0], cl.movement_velocity);
-	else
+	if (!cls.demoplayback) // for bob, speedometer
 	{
 		cl.movement_replay = false;
 		// update the interpolation target position and velocity
