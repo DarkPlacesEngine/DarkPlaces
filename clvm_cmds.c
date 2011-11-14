@@ -1416,6 +1416,7 @@ static void VM_CL_getinputstate (prvm_prog_t *prog)
 			PRVM_clientglobalvector(input_movevalues)[1] = cl.movecmd[i].sidemove;
 			PRVM_clientglobalvector(input_movevalues)[2] = cl.movecmd[i].upmove;
 			PRVM_clientglobalfloat(input_timelength) = cl.movecmd[i].frametime;
+			// this probably shouldn't be here
 			if(cl.movecmd[i].crouch)
 			{
 				VectorCopy(cl.playercrouchmins, PRVM_clientglobalvector(pmove_mins));
@@ -1439,6 +1440,9 @@ static void VM_CL_setsensitivityscale (prvm_prog_t *prog)
 }
 
 //#347 void() runstandardplayerphysics (EXT_CSQC)
+#define PMF_JUMP_HELD 1
+#define PMF_LADDER 2 // not used by DP
+#define PMF_DUCKED 4 // FIXME FTEQW doesn't have this for Q1 like movement
 static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 {
 	cl_clientmovement_state_t s;
@@ -1449,17 +1453,17 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	VectorCopy(PRVM_clientedictvector(ent, origin), s.origin);
 	VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
-	VectorCopy(PRVM_clientglobalvector(pmove_mins), s.mins);
-	VectorCopy(PRVM_clientglobalvector(pmove_maxs), s.maxs);
-	s.crouched = ((int)PRVM_clientedictfloat(ent, pmove_flags) & 1) != 0; // FIXME which flag?
-	s.waterjumptime = 0; // FIXME where do we get this from?
+	VectorCopy(PRVM_clientedictvector(ent, mins), s.mins);
+	VectorCopy(PRVM_clientedictvector(ent, maxs), s.maxs);
+	s.crouched = ((int)PRVM_clientedictfloat(ent, pmove_flags) & PMF_DUCKED) != 0;
+	s.waterjumptime = 0; // FIXME where do we get this from? FTEQW lacks support for this too
 	VectorCopy(PRVM_clientglobalvector(input_angles), s.cmd.viewangles);
 	s.cmd.forwardmove = PRVM_clientglobalvector(input_movevalues)[0];
 	s.cmd.sidemove = PRVM_clientglobalvector(input_movevalues)[1];
 	s.cmd.upmove = PRVM_clientglobalvector(input_movevalues)[2];
 	s.cmd.buttons = PRVM_clientglobalfloat(input_buttons);
 	s.cmd.frametime = PRVM_clientglobalfloat(input_timelength);
-	s.cmd.canjump = ((int)PRVM_clientedictfloat(ent, pmove_flags) & 2) != 0; // FIXME which flag?
+	s.cmd.canjump = ((int)PRVM_clientedictfloat(ent, pmove_flags) & PMF_JUMP_HELD) == 0;
 	s.cmd.jump = (s.cmd.buttons & 2) != 0;
 	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
 
@@ -1468,8 +1472,8 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	VectorCopy(s.origin, PRVM_clientedictvector(ent, origin));
 	VectorCopy(s.velocity, PRVM_clientedictvector(ent, velocity));
 	PRVM_clientedictfloat(ent, pmove_flags) =
-		(s.crouched ? 1 : 0) |
-		(s.cmd.canjump ? 2 : 0);
+		(s.crouched ? PMF_DUCKED : 0) |
+		(s.cmd.canjump ? 0 : PMF_JUMP_HELD);
 }
 
 //#348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
