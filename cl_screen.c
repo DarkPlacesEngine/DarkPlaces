@@ -2368,6 +2368,7 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 
 		r_stereo_side = 1;
+		r_refdef.view.clear = true;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
