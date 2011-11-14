@@ -827,7 +827,7 @@ void V_CalcRefdef (void)
 {
 	entity_t *ent;
 
-	if (cls.state == ca_connected && cls.signon == SIGNONS)
+	if (cls.state == ca_connected && cls.signon == SIGNONS && !cl.csqc_server2csqcentitynumber[cl.playerentity])
 	{
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
@@ -839,6 +839,8 @@ void V_CalcRefdef (void)
 		viewmodelmatrix_nobob = identitymatrix;
 		viewmodelmatrix_withbob = identitymatrix;
 		r_refdef.view.matrix = identitymatrix;
+		VectorClear(cl.csqc_vieworiginfromengine);
+		VectorCopy(cl.viewangles, cl.csqc_viewanglesfromengine);
 	}
 }
 
