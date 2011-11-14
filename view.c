@@ -428,9 +428,8 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
 	out[2] = highpass_limited(value[2], fracz, limitz, &store[2]);
 }
 
-void V_CalcRefdef (void)
+void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump)
 {
-	entity_t *ent;
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
 	matrix4x4_t tmpmatrix;
@@ -444,377 +443,402 @@ void V_CalcRefdef (void)
 // end of chase camera bounding box size for proper collisions by Alexander Zubov
 #endif
 	trace_t trace;
+
+	// react to clonground state changes (for gun bob)
+	if (clonground)
+	{
+		if (!cl.oldonground)
+			cl.hitgroundtime = cl.movecmd[0].time;
+		cl.lastongroundtime = cl.movecmd[0].time;
+	}
+	cl.oldonground = clonground;
+
 	VectorClear(gunorg);
 	viewmodelmatrix_nobob = identitymatrix;
 	viewmodelmatrix_withbob = identitymatrix;
 	r_refdef.view.matrix = identitymatrix;
+
+	// player can look around, so take the origin from the entity,
+	// and the angles from the input system
+	Matrix4x4_OriginFromMatrix(entrendermatrix, vieworg);
+	VectorCopy(clviewangles, viewangles);
+
+	// calculate how much time has passed since the last V_CalcRefdef
+	smoothtime = bound(0, cl.time - cl.stairsmoothtime, 0.1);
+	cl.stairsmoothtime = cl.time;
+
+	// fade damage flash
+	if (v_dmg_time > 0)
+		v_dmg_time -= bound(0, smoothtime, 0.1);
+
+	if (cl.intermission)
+	{
+		// entity is a fixed camera, just copy the matrix
+		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+			Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.qw_intermission_origin[0], cl.qw_intermission_origin[1], cl.qw_intermission_origin[2], cl.qw_intermission_angles[0], cl.qw_intermission_angles[1], cl.qw_intermission_angles[2], 1);
+		else
+		{
+			r_refdef.view.matrix = *entrendermatrix;
+			Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
+		}
+		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
+		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
+		Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
+	}
+	else
+	{
+		// smooth stair stepping, but only if clonground and enabled
+		if (!clonground || cl_stairsmoothspeed.value <= 0 || teleported)
+			cl.stairsmoothz = vieworg[2];
+		else
+		{
+			if (cl.stairsmoothz < vieworg[2])
+				vieworg[2] = cl.stairsmoothz = bound(vieworg[2] - cl.movevars_stepheight, cl.stairsmoothz + smoothtime * cl_stairsmoothspeed.value, vieworg[2]);
+			else if (cl.stairsmoothz > vieworg[2])
+				vieworg[2] = cl.stairsmoothz = bound(vieworg[2], cl.stairsmoothz - smoothtime * cl_stairsmoothspeed.value, vieworg[2] + cl.movevars_stepheight);
+		}
+
+		// apply qw weapon recoil effect (this did not work in QW)
+		// TODO: add a cvar to disable this
+		viewangles[PITCH] += cl.qw_weaponkick;
+
+		// apply the viewofs (even if chasecam is used)
+		// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
+		viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
+		viewheightavg = viewheightavg * (1 - viewheight) + cl.stats[STAT_VIEWHEIGHT] * viewheight;
+		vieworg[2] += viewheightavg;
+
+		if (chase_active.value)
+		{
+			// observing entity from third person. Added "campitch" by Alexander "motorsep" Zubov
+			vec_t camback, camup, dist, campitch, forward[3], chase_dest[3];
+
+			camback = chase_back.value;
+			camup = chase_up.value;
+			campitch = chase_pitchangle.value;
+
+			AngleVectors(viewangles, forward, NULL, NULL);
+
+			if (chase_overhead.integer)
+			{
+#if 1
+				vec3_t offset;
+				vec3_t bestvieworg;
+#endif
+				vec3_t up;
+				viewangles[PITCH] = 0;
+				AngleVectors(viewangles, forward, NULL, up);
+				// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
+				chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup;
+				chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup;
+				chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
+#if 0
+#if 1
+				//trace = CL_TraceLine(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+				trace = CL_TraceLine(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#else
+				//trace = CL_TraceBox(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
+				VectorCopy(trace.endpos, vieworg);
+				vieworg[2] -= 8;
+#else
+				// trace from first person view location to our chosen third person view location
+#if 1
+				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+#else
+				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
+				VectorCopy(trace.endpos, bestvieworg);
+				offset[2] = 0;
+				for (offset[0] = -16;offset[0] <= 16;offset[0] += 8)
+				{
+					for (offset[1] = -16;offset[1] <= 16;offset[1] += 8)
+					{
+						AngleVectors(viewangles, NULL, NULL, up);
+						chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup + offset[0];
+						chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
+						chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
+#if 1
+						trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+#else
+						trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+#endif
+						if (bestvieworg[2] > trace.endpos[2])
+							bestvieworg[2] = trace.endpos[2];
+					}
+				}
+				bestvieworg[2] -= 8;
+				VectorCopy(bestvieworg, vieworg);
+#endif
+				viewangles[PITCH] = campitch;
+			}
+			else
+			{
+				if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
+				{
+					// look straight down from high above
+					viewangles[PITCH] = 90;
+					camback = 2048;
+					VectorSet(forward, 0, 0, -1);
+				}
+
+				// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
+				dist = -camback - 8;
+				chase_dest[0] = vieworg[0] + forward[0] * dist;
+				chase_dest[1] = vieworg[1] + forward[1] * dist;
+				chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
+				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+				VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
+			}
+		}
+		else
+		{
+			// first person view from entity
+			// angles
+			if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
+				viewangles[ROLL] = v_deathtiltangle.value;
+			VectorAdd(viewangles, cl.punchangle, viewangles);
+			viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
+			if (v_dmg_time > 0)
+			{
+				viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
+				viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
+			}
+			// origin
+			VectorAdd(vieworg, cl.punchvector, vieworg);
+			if (cl.stats[STAT_HEALTH] > 0)
+			{
+				double xyspeed, bob, bobfall;
+				float cycle;
+				vec_t frametime;
+
+				//frametime = cl.realframetime * cl.movevars_timescale;
+				frametime = (cl.time - cl.oldtime) * cl.movevars_timescale;
+
+				// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
+				if(teleported)
+				{
+					// try to fix the first highpass; result is NOT
+					// perfect! TODO find a better fix
+					VectorCopy(viewangles, cl.gunangles_prev);
+					VectorCopy(vieworg, cl.gunorg_prev);
+				}
+
+				// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
+				VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
+				highpass3_limited(vieworg, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
+				VectorCopy(vieworg, cl.gunorg_prev);
+				VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
+
+				// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
+				VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
+				cl.gunangles_highpass[PITCH] += 360 * floor((viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
+				cl.gunangles_highpass[YAW] += 360 * floor((viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
+				cl.gunangles_highpass[ROLL] += 360 * floor((viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
+				highpass3_limited(viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
+				VectorCopy(viewangles, cl.gunangles_prev);
+				VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
+
+				// 3. calculate the RAW adjustment vectors
+				gunorg[0] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
+				gunorg[1] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
+				gunorg[2] *= (cl_followmodel.value ? -cl_followmodel_up_speed.value : 0);
+
+				gunangles[PITCH] *= (cl_leanmodel.value ? -cl_leanmodel_up_speed.value : 0);
+				gunangles[YAW] *= (cl_leanmodel.value ? -cl_leanmodel_side_speed.value : 0);
+				gunangles[ROLL] = 0;
+
+				// 4. perform highpass/lowpass on the adjustment vectors (turning velocity into acceleration!)
+				//    trick: we must do the lowpass LAST, so the lowpass vector IS the final vector!
+				highpass3(gunorg, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_up_highpass.value, cl.gunorg_adjustment_highpass, gunorg);
+				lowpass3(gunorg, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_up_lowpass.value, cl.gunorg_adjustment_lowpass, gunorg);
+				// we assume here: PITCH = 0, YAW = 1, ROLL = 2
+				highpass3(gunangles, frametime*cl_leanmodel_up_highpass.value, frametime*cl_leanmodel_side_highpass.value, 0, cl.gunangles_adjustment_highpass, gunangles);
+				lowpass3(gunangles, frametime*cl_leanmodel_up_lowpass.value, frametime*cl_leanmodel_side_lowpass.value, 0, cl.gunangles_adjustment_lowpass, gunangles);
+
+				// 5. use the adjusted vectors
+				VectorAdd(vieworg, gunorg, gunorg);
+				VectorAdd(viewangles, gunangles, gunangles);
+
+				// bounded XY speed, used by several effects below
+				xyspeed = bound (0, sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]), 400);
+
+				// vertical view bobbing code
+				if (cl_bob.value && cl_bobcycle.value)
+				{
+					// LordHavoc: this code is *weird*, but not replacable (I think it
+					// should be done in QC on the server, but oh well, quake is quake)
+					// LordHavoc: figured out bobup: the time at which the sin is at 180
+					// degrees (which allows lengthening or squishing the peak or valley)
+					cycle = cl.time / cl_bobcycle.value;
+					cycle -= (int) cycle;
+					if (cycle < cl_bobup.value)
+						cycle = sin(M_PI * cycle / cl_bobup.value);
+					else
+						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+					// bob is proportional to velocity in the xy plane
+					// (don't count Z, or jumping messes it up)
+					bob = xyspeed * bound(0, cl_bob.value, 0.05);
+					bob = bob*0.3 + bob*0.7*cycle;
+					vieworg[2] += bob;
+					// we also need to adjust gunorg, or this appears like pushing the gun!
+					// In the old code, this was applied to vieworg BEFORE copying to gunorg,
+					// but this is not viable with the new followmodel code as that would mean
+					// that followmodel would work on the munged-by-bob vieworg and do feedback
+					gunorg[2] += bob;
+				}
+
+				// horizontal view bobbing code
+				if (cl_bob2.value && cl_bob2cycle.value)
+				{
+					vec3_t bob2vel;
+					vec3_t forward, right, up;
+					float side, front;
+
+					cycle = cl.time / cl_bob2cycle.value;
+					cycle -= (int) cycle;
+					if (cycle < 0.5)
+						cycle = cos(M_PI * cycle / 0.5); // cos looks better here with the other view bobbing using sin
+					else
+						cycle = cos(M_PI + M_PI * (cycle-0.5)/0.5);
+					bob = bound(0, cl_bob2.value, 0.05) * cycle;
+
+					// this value slowly decreases from 1 to 0 when we stop touching the ground.
+					// The cycle is later multiplied with it so the view smooths back to normal
+					if (clonground && !clcmdjump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
+						cl.bob2_smooth = 1;
+					else
+					{
+						if(cl.bob2_smooth > 0)
+							cl.bob2_smooth -= bound(0, cl_bob2smooth.value, 1);
+						else
+							cl.bob2_smooth = 0;
+					}
+
+					// calculate the front and side of the player between the X and Y axes
+					AngleVectors(viewangles, forward, right, up);
+					// now get the speed based on those angles. The bounds should match the same value as xyspeed's
+					side = bound(-400, DotProduct (cl.velocity, right) * cl.bob2_smooth, 400);
+					front = bound(-400, DotProduct (cl.velocity, forward) * cl.bob2_smooth, 400);
+					VectorScale(forward, bob, forward);
+					VectorScale(right, bob, right);
+					// we use side with forward and front with right, so the bobbing goes
+					// to the side when we walk forward and to the front when we strafe
+					VectorMAMAM(side, forward, front, right, 0, up, bob2vel);
+					vieworg[0] += bob2vel[0];
+					vieworg[1] += bob2vel[1];
+					// we also need to adjust gunorg, or this appears like pushing the gun!
+					// In the old code, this was applied to vieworg BEFORE copying to gunorg,
+					// but this is not viable with the new followmodel code as that would mean
+					// that followmodel would work on the munged-by-bob vieworg and do feedback
+					gunorg[0] += bob2vel[0];
+					gunorg[1] += bob2vel[1];
+				}
+
+				// fall bobbing code
+				// causes the view to swing down and back up when touching the ground
+				if (cl_bobfall.value && cl_bobfallcycle.value)
+				{
+					if (!clonground)
+					{
+						cl.bobfall_speed = bound(-400, cl.velocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
+						if (cl.velocity[2] < -cl_bobfallminspeed.value)
+							cl.bobfall_swing = 1;
+						else
+							cl.bobfall_swing = 0; // TODO really?
+					}
+					else
+					{
+						cl.bobfall_swing = max(0, cl.bobfall_swing - cl_bobfallcycle.value * frametime);
+
+						bobfall = sin(M_PI * cl.bobfall_swing) * cl.bobfall_speed;
+						vieworg[2] += bobfall;
+						gunorg[2] += bobfall;
+					}
+				}
+
+				// gun model bobbing code
+				if (cl_bobmodel.value)
+				{
+					// calculate for swinging gun model
+					// the gun bobs when running on the ground, but doesn't bob when you're in the air.
+					// Sajt: I tried to smooth out the transitions between bob and no bob, which works
+					// for the most part, but for some reason when you go through a message trigger or
+					// pick up an item or anything like that it will momentarily jolt the gun.
+					vec3_t forward, right, up;
+					float bspeed;
+					float s;
+					float t;
+
+					s = cl.time * cl_bobmodel_speed.value;
+					if (clonground)
+					{
+						if (cl.time - cl.hitgroundtime < 0.2)
+						{
+							// just hit the ground, speed the bob back up over the next 0.2 seconds
+							t = cl.time - cl.hitgroundtime;
+							t = bound(0, t, 0.2);
+							t *= 5;
+						}
+						else
+							t = 1;
+					}
+					else
+					{
+						// recently left the ground, slow the bob down over the next 0.2 seconds
+						t = cl.time - cl.lastongroundtime;
+						t = 0.2 - bound(0, t, 0.2);
+						t *= 5;
+					}
+
+					bspeed = xyspeed * 0.01f;
+					AngleVectors (gunangles, forward, right, up);
+					bob = bspeed * cl_bobmodel_side.value * cl_viewmodel_scale.value * sin (s) * t;
+					VectorMA (gunorg, bob, right, gunorg);
+					bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
+					VectorMA (gunorg, bob, up, gunorg);
+				}
+			}
+		}
+		// calculate a view matrix for rendering the scene
+		if (v_idlescale.value)
+		{
+			viewangles[0] += v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
+			viewangles[1] += v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
+			viewangles[2] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
+		}
+		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 1);
+
+		// calculate a viewmodel matrix for use in view-attached entities
+		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
+		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
+
+		Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix_withbob, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
+		VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
+		VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
+
+		Matrix4x4_Invert_Simple(&tmpmatrix, &r_refdef.view.matrix);
+		Matrix4x4_Concat(&cl.csqc_viewmodelmatrixfromengine, &tmpmatrix, &viewmodelmatrix_withbob);
+	}
+}
+
+void V_CalcRefdef (void)
+{
+	entity_t *ent;
+
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
-		// player can look around, so take the origin from the entity,
-		// and the angles from the input system
-		Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
-		VectorCopy(cl.viewangles, viewangles);
 
-		// calculate how much time has passed since the last V_CalcRefdef
-		smoothtime = bound(0, cl.time - cl.stairsmoothtime, 0.1);
-		cl.stairsmoothtime = cl.time;
-
-		// fade damage flash
-		if (v_dmg_time > 0)
-			v_dmg_time -= bound(0, smoothtime, 0.1);
-
-		if (cl.intermission)
-		{
-			// entity is a fixed camera, just copy the matrix
-			if (cls.protocol == PROTOCOL_QUAKEWORLD)
-				Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.qw_intermission_origin[0], cl.qw_intermission_origin[1], cl.qw_intermission_origin[2], cl.qw_intermission_angles[0], cl.qw_intermission_angles[1], cl.qw_intermission_angles[2], 1);
-			else
-			{
-				r_refdef.view.matrix = ent->render.matrix;
-				Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
-			}
-			Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
-			Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
-			Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
-		}
-		else
-		{
-			// smooth stair stepping, but only if onground and enabled
-			if (!cl.onground || cl_stairsmoothspeed.value <= 0 || !ent->persistent.trail_allowed) // FIXME use a better way to detect teleport/warp
-				cl.stairsmoothz = vieworg[2];
-			else
-			{
-				if (cl.stairsmoothz < vieworg[2])
-					vieworg[2] = cl.stairsmoothz = bound(vieworg[2] - cl.movevars_stepheight, cl.stairsmoothz + smoothtime * cl_stairsmoothspeed.value, vieworg[2]);
-				else if (cl.stairsmoothz > vieworg[2])
-					vieworg[2] = cl.stairsmoothz = bound(vieworg[2], cl.stairsmoothz - smoothtime * cl_stairsmoothspeed.value, vieworg[2] + cl.movevars_stepheight);
-			}
-
-			// apply qw weapon recoil effect (this did not work in QW)
-			// TODO: add a cvar to disable this
-			viewangles[PITCH] += cl.qw_weaponkick;
-
-			// apply the viewofs (even if chasecam is used)
-			// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
-			viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
-			viewheightavg = viewheightavg * (1 - viewheight) + cl.stats[STAT_VIEWHEIGHT] * viewheight;
-			vieworg[2] += viewheightavg;
-
-			if (chase_active.value)
-			{
-				// observing entity from third person. Added "campitch" by Alexander "motorsep" Zubov
-				vec_t camback, camup, dist, campitch, forward[3], chase_dest[3];
-
-				camback = chase_back.value;
-				camup = chase_up.value;
-				campitch = chase_pitchangle.value;
-
-				AngleVectors(viewangles, forward, NULL, NULL);
-
-				if (chase_overhead.integer)
-				{
-#if 1
-					vec3_t offset;
-					vec3_t bestvieworg;
-#endif
-					vec3_t up;
-					viewangles[PITCH] = 0;
-					AngleVectors(viewangles, forward, NULL, up);
-					// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
-					chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup;
-					chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup;
-					chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
-#if 0
-#if 1
-					//trace = CL_TraceLine(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-					trace = CL_TraceLine(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-#else
-					//trace = CL_TraceBox(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-					trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-#endif
-					VectorCopy(trace.endpos, vieworg);
-					vieworg[2] -= 8;
-#else
-					// trace from first person view location to our chosen third person view location
-#if 1
-					trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
-#else
-					trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-#endif
-					VectorCopy(trace.endpos, bestvieworg);
-					offset[2] = 0;
-					for (offset[0] = -16;offset[0] <= 16;offset[0] += 8)
-					{
-						for (offset[1] = -16;offset[1] <= 16;offset[1] += 8)
-						{
-							AngleVectors(viewangles, NULL, NULL, up);
-							chase_dest[0] = vieworg[0] - forward[0] * camback + up[0] * camup + offset[0];
-							chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
-							chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
-#if 1
-							trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
-#else
-							trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-#endif
-							if (bestvieworg[2] > trace.endpos[2])
-								bestvieworg[2] = trace.endpos[2];
-						}
-					}
-					bestvieworg[2] -= 8;
-					VectorCopy(bestvieworg, vieworg);
-#endif
-					viewangles[PITCH] = campitch;
-				}
-				else
-				{
-					if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
-					{
-						// look straight down from high above
-						viewangles[PITCH] = 90;
-						camback = 2048;
-						VectorSet(forward, 0, 0, -1);
-					}
-
-					// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
-					dist = -camback - 8;
-					chase_dest[0] = vieworg[0] + forward[0] * dist;
-					chase_dest[1] = vieworg[1] + forward[1] * dist;
-					chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
-					trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
-					VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
-				}
-			}
-			else
-			{
-				// first person view from entity
-				// angles
-				if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
-					viewangles[ROLL] = v_deathtiltangle.value;
-				VectorAdd(viewangles, cl.punchangle, viewangles);
-				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
-				if (v_dmg_time > 0)
-				{
-					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
-					viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-				}
-				// origin
-				VectorAdd(vieworg, cl.punchvector, vieworg);
-				if (cl.stats[STAT_HEALTH] > 0)
-				{
-					double xyspeed, bob, bobfall;
-					float cycle;
-					vec_t frametime;
-
-					//frametime = cl.realframetime * cl.movevars_timescale;
-					frametime = (cl.time - cl.oldtime) * cl.movevars_timescale;
-					
-					// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
-					if(!ent->persistent.trail_allowed) // FIXME improve this check
-					{
-						// try to fix the first highpass; result is NOT
-						// perfect! TODO find a better fix
-						VectorCopy(viewangles, cl.gunangles_prev);
-						VectorCopy(vieworg, cl.gunorg_prev);
-					}
-
-					// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
-					VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
-					highpass3_limited(vieworg, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
-					VectorCopy(vieworg, cl.gunorg_prev);
-					VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
-
-					// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
-					VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
-					cl.gunangles_highpass[PITCH] += 360 * floor((viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
-					cl.gunangles_highpass[YAW] += 360 * floor((viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
-					cl.gunangles_highpass[ROLL] += 360 * floor((viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
-					highpass3_limited(viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
-					VectorCopy(viewangles, cl.gunangles_prev);
-					VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
-
-					// 3. calculate the RAW adjustment vectors
-					gunorg[0] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
-					gunorg[1] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
-					gunorg[2] *= (cl_followmodel.value ? -cl_followmodel_up_speed.value : 0);
-
-					gunangles[PITCH] *= (cl_leanmodel.value ? -cl_leanmodel_up_speed.value : 0);
-					gunangles[YAW] *= (cl_leanmodel.value ? -cl_leanmodel_side_speed.value : 0);
-					gunangles[ROLL] = 0;
-
-					// 4. perform highpass/lowpass on the adjustment vectors (turning velocity into acceleration!)
-					//    trick: we must do the lowpass LAST, so the lowpass vector IS the final vector!
-					highpass3(gunorg, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_up_highpass.value, cl.gunorg_adjustment_highpass, gunorg);
-					lowpass3(gunorg, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_up_lowpass.value, cl.gunorg_adjustment_lowpass, gunorg);
-					// we assume here: PITCH = 0, YAW = 1, ROLL = 2
-					highpass3(gunangles, frametime*cl_leanmodel_up_highpass.value, frametime*cl_leanmodel_side_highpass.value, 0, cl.gunangles_adjustment_highpass, gunangles);
-					lowpass3(gunangles, frametime*cl_leanmodel_up_lowpass.value, frametime*cl_leanmodel_side_lowpass.value, 0, cl.gunangles_adjustment_lowpass, gunangles);
-
-					// 5. use the adjusted vectors
-					VectorAdd(vieworg, gunorg, gunorg);
-					VectorAdd(viewangles, gunangles, gunangles);
-
-					// bounded XY speed, used by several effects below
-					xyspeed = bound (0, sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]), 400);
-
-					// vertical view bobbing code
-					if (cl_bob.value && cl_bobcycle.value)
-					{
-						// LordHavoc: this code is *weird*, but not replacable (I think it
-						// should be done in QC on the server, but oh well, quake is quake)
-						// LordHavoc: figured out bobup: the time at which the sin is at 180
-						// degrees (which allows lengthening or squishing the peak or valley)
-						cycle = cl.time / cl_bobcycle.value;
-						cycle -= (int) cycle;
-						if (cycle < cl_bobup.value)
-							cycle = sin(M_PI * cycle / cl_bobup.value);
-						else
-							cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-						// bob is proportional to velocity in the xy plane
-						// (don't count Z, or jumping messes it up)
-						bob = xyspeed * bound(0, cl_bob.value, 0.05);
-						bob = bob*0.3 + bob*0.7*cycle;
-						vieworg[2] += bob;
-						// we also need to adjust gunorg, or this appears like pushing the gun!
-						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
-						// but this is not viable with the new followmodel code as that would mean
-						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[2] += bob;
-					}
-
-					// horizontal view bobbing code
-					if (cl_bob2.value && cl_bob2cycle.value)
-					{
-						vec3_t bob2vel;
-						vec3_t forward, right, up;
-						float side, front;
-
-						cycle = cl.time / cl_bob2cycle.value;
-						cycle -= (int) cycle;
-						if (cycle < 0.5)
-							cycle = cos(M_PI * cycle / 0.5); // cos looks better here with the other view bobbing using sin
-						else
-							cycle = cos(M_PI + M_PI * (cycle-0.5)/0.5);
-						bob = bound(0, cl_bob2.value, 0.05) * cycle;
-
-						// this value slowly decreases from 1 to 0 when we stop touching the ground.
-						// The cycle is later multiplied with it so the view smooths back to normal
-						if (cl.onground && !cl.cmd.jump) // also block the effect while the jump button is pressed, to avoid twitches when bunny-hopping
-							cl.bob2_smooth = 1;
-						else
-						{
-							if(cl.bob2_smooth > 0)
-								cl.bob2_smooth -= bound(0, cl_bob2smooth.value, 1);
-							else
-								cl.bob2_smooth = 0;
-						}
-
-						// calculate the front and side of the player between the X and Y axes
-						AngleVectors(viewangles, forward, right, up);
-						// now get the speed based on those angles. The bounds should match the same value as xyspeed's
-						side = bound(-400, DotProduct (cl.velocity, right) * cl.bob2_smooth, 400);
-						front = bound(-400, DotProduct (cl.velocity, forward) * cl.bob2_smooth, 400);
-						VectorScale(forward, bob, forward);
-						VectorScale(right, bob, right);
-						// we use side with forward and front with right, so the bobbing goes
-						// to the side when we walk forward and to the front when we strafe
-						VectorMAMAM(side, forward, front, right, 0, up, bob2vel);
-						vieworg[0] += bob2vel[0];
-						vieworg[1] += bob2vel[1];
-						// we also need to adjust gunorg, or this appears like pushing the gun!
-						// In the old code, this was applied to vieworg BEFORE copying to gunorg,
-						// but this is not viable with the new followmodel code as that would mean
-						// that followmodel would work on the munged-by-bob vieworg and do feedback
-						gunorg[0] += bob2vel[0];
-						gunorg[1] += bob2vel[1];
-					}
-
-					// fall bobbing code
-					// causes the view to swing down and back up when touching the ground
-					if (cl_bobfall.value && cl_bobfallcycle.value)
-					{
-						if (!cl.onground)
-						{
-							cl.bobfall_speed = bound(-400, cl.velocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
-							if (cl.velocity[2] < -cl_bobfallminspeed.value)
-								cl.bobfall_swing = 1;
-							else
-								cl.bobfall_swing = 0; // TODO really?
-						}
-						else
-						{
-							cl.bobfall_swing = max(0, cl.bobfall_swing - cl_bobfallcycle.value * frametime);
-
-							bobfall = sin(M_PI * cl.bobfall_swing) * cl.bobfall_speed;
-							vieworg[2] += bobfall;
-							gunorg[2] += bobfall;
-						}
-					}
-
-					// gun model bobbing code
-					if (cl_bobmodel.value)
-					{
-						// calculate for swinging gun model
-						// the gun bobs when running on the ground, but doesn't bob when you're in the air.
-						// Sajt: I tried to smooth out the transitions between bob and no bob, which works
-						// for the most part, but for some reason when you go through a message trigger or
-						// pick up an item or anything like that it will momentarily jolt the gun.
-						vec3_t forward, right, up;
-						float bspeed;
-						float s;
-						float t;
-
-						s = cl.time * cl_bobmodel_speed.value;
-						if (cl.onground)
-						{
-							if (cl.time - cl.hitgroundtime < 0.2)
-							{
-								// just hit the ground, speed the bob back up over the next 0.2 seconds
-								t = cl.time - cl.hitgroundtime;
-								t = bound(0, t, 0.2);
-								t *= 5;
-							}
-							else
-								t = 1;
-						}
-						else
-						{
-							// recently left the ground, slow the bob down over the next 0.2 seconds
-							t = cl.time - cl.lastongroundtime;
-							t = 0.2 - bound(0, t, 0.2);
-							t *= 5;
-						}
-
-						bspeed = xyspeed * 0.01f;
-						AngleVectors (gunangles, forward, right, up);
-						bob = bspeed * cl_bobmodel_side.value * cl_viewmodel_scale.value * sin (s) * t;
-						VectorMA (gunorg, bob, right, gunorg);
-						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
-						VectorMA (gunorg, bob, up, gunorg);
-					}
-				}
-			}
-			// calculate a view matrix for rendering the scene
-			if (v_idlescale.value)
-			{
-				viewangles[0] += v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-				viewangles[1] += v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
-				viewangles[2] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
-			}
-			Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 1);
-
-			// calculate a viewmodel matrix for use in view-attached entities
-			Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
-			Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
-
-			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix_withbob, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
-			VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
-			VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
-
-			Matrix4x4_Invert_Simple(&tmpmatrix, &r_refdef.view.matrix);
-			Matrix4x4_Concat(&cl.csqc_viewmodelmatrixfromengine, &tmpmatrix, &viewmodelmatrix_withbob);
-		}
+		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump); // FIXME use a better way to detect teleport/warp than trail_allowed
+	}
+	else
+	{
+		viewmodelmatrix_nobob = identitymatrix;
+		viewmodelmatrix_withbob = identitymatrix;
+		r_refdef.view.matrix = identitymatrix;
 	}
 }
 

@@ -1646,15 +1646,6 @@ void CL_ClientMovement_Replay(void)
 		if (s.onground)
 			cl.onground = true;
 	}
-
-	// react to onground state changes (for gun bob)
-	if (cl.onground)
-	{
-		if (!cl.oldonground)
-			cl.hitgroundtime = cl.movecmd[0].time;
-		cl.lastongroundtime = cl.movecmd[0].time;
-	}
-	cl.oldonground = cl.onground;
 }
 
 static void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
