@@ -838,6 +838,7 @@ void V_CalcRefdef (void)
 	{
 		viewmodelmatrix_nobob = identitymatrix;
 		viewmodelmatrix_withbob = identitymatrix;
+		cl.csqc_viewmodelmatrixfromengine = identitymatrix;
 		r_refdef.view.matrix = identitymatrix;
 		VectorClear(cl.csqc_vieworiginfromengine);
 		VectorCopy(cl.viewangles, cl.csqc_viewanglesfromengine);
