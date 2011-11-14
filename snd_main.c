@@ -1324,6 +1324,13 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 			else
 				Matrix4x4_OriginFromMatrix(&cl.entities[ch->entnum].render.matrix, ch->origin);
 		}
+		else if (cl.csqc_server2csqcentitynumber[ch->entnum])
+		{
+			//Con_Printf("-- entnum %i (client %i) origin %f %f %f neworigin %f %f %f\n", ch->entnum, cl.csqc_server2csqcentitynumber[ch->entnum], ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
+
+			if (!CL_VM_GetEntitySoundOrigin(cl.csqc_server2csqcentitynumber[ch->entnum] + MAX_EDICTS, ch->origin))
+				ch->entnum = MAX_EDICTS; // entity was removed, disown sound
+		}
 	}
 
 	mastervol = ch->basevolume;
