@@ -580,7 +580,7 @@ typedef struct capturevideostate_s
 	const char *formatextension;
 	qfile_t *videofile;
 		// always use this:
-		//   cls.capturevideo.videofile = FS_OpenRealFile(va("%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
+		//   cls.capturevideo.videofile = FS_OpenRealFile(va(vabuf, sizeof(vabuf), "%s.%s", cls.capturevideo.basename, cls.capturevideo.formatextension), "wb", false);
 	void (*endvideo) (void);
 	void (*videoframes) (int num);
 	void (*soundframe) (const portable_sampleframe_t *paintbuffer, size_t length);
@@ -1410,7 +1410,7 @@ extern int cl_ignoremousemoves;
 
 
 float CL_KeyState (kbutton_t *key);
-const char *Key_KeynumToString (int keynum);
+const char *Key_KeynumToString (int keynum, char *buf, size_t buflength);
 int Key_StringToKeynum (const char *str);
 
 //
@@ -1838,8 +1838,60 @@ r_refdef_t;
 
 extern r_refdef_t r_refdef;
 
+typedef enum waterlevel_e
+{
+	WATERLEVEL_NONE,
+	WATERLEVEL_WETFEET,
+	WATERLEVEL_SWIMMING,
+	WATERLEVEL_SUBMERGED
+}
+waterlevel_t;
+
+typedef struct cl_clientmovement_state_s
+{
+	// position
+	vec3_t origin;
+	vec3_t velocity;
+	// current bounding box (different if crouched vs standing)
+	vec3_t mins;
+	vec3_t maxs;
+	// currently on the ground
+	qboolean onground;
+	// currently crouching
+	qboolean crouched;
+	// what kind of water (SUPERCONTENTS_LAVA for instance)
+	int watertype;
+	// how deep
+	waterlevel_t waterlevel;
+	// weird hacks when jumping out of water
+	// (this is in seconds and counts down to 0)
+	float waterjumptime;
+
+	// user command
+	usercmd_t cmd;
+}
+cl_clientmovement_state_t;
+void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s);
+
 // warpzone prediction hack (CSQC builtin)
 void CL_RotateMoves(const matrix4x4_t *m);
+
+void CL_NewFrameReceived(int num);
+void CL_ParseEntityLump(char *entitystring);
+void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
+void CL_RelinkLightFlashes(void);
+void Sbar_ShowFPS(void);
+void Sbar_ShowFPS_Update(void);
+void Host_SaveConfig(void);
+void Host_LoadConfig_f(void);
+void CL_UpdateMoveVars(void);
+void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
+void V_DriftPitch(void);
+void V_FadeViewFlashs(void);
+void V_CalcViewBlend(void);
+void V_CalcRefdefUsing(const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump);
+void V_CalcRefdef(void);
+void CL_Locs_Reload_f(void);
 
 #endif
 

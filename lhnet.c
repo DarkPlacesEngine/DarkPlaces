@@ -612,7 +612,7 @@ int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
 		return LHNETADDRESSTYPE_NONE;
 }
 
-const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
+const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress, char *ifname, size_t ifnamelength)
 {
 #ifdef SUPPORTIPV6
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
@@ -621,8 +621,6 @@ const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
 	{
 #ifndef _WIN32
 
-		static char ifname [IF_NAMESIZE];
-		
 		if (if_indextoname(address->addr.in6.sin6_scope_id, ifname) == ifname)
 			return ifname;
 
@@ -631,9 +629,7 @@ const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress)
 		// The Win32 API doesn't have if_indextoname() until Windows Vista,
 		// but luckily it just uses the interface ID as the interface name
 
-		static char ifname [16];
-
-		if (dpsnprintf(ifname, sizeof(ifname), "%lu", address->addr.in6.sin6_scope_id) > 0)
+		if (dpsnprintf(ifname, ifnamelength, "%lu", address->addr.in6.sin6_scope_id) > 0)
 			return ifname;
 
 #endif

@@ -147,8 +147,8 @@ static Colormap vidx11_colormap;
 /*-----------------------------------------------------------------------*/
 //
 
-long keysym2ucs(KeySym keysym);
-void DP_Xutf8LookupString(XKeyEvent * ev,
+extern long keysym2ucs(KeySym keysym); // LordHavoc: suppress warning just in this case, it's not worth having a header file for this...
+static void DP_Xutf8LookupString(XKeyEvent * ev,
 			 Uchar *uch,
 			 KeySym * keysym_return,
 			 Status * status_return)
@@ -877,14 +877,14 @@ void VID_Shutdown(void)
 	Key_ClearStates ();
 }
 
-void signal_handler(int sig)
+static void signal_handler(int sig)
 {
 	Con_Printf("Received signal %d, exiting...\n", sig);
 	VID_RestoreSystemGamma();
 	Sys_Quit(1);
 }
 
-void InitSig(void)
+static void InitSig(void)
 {
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
@@ -983,7 +983,7 @@ void VID_Init(void)
 	vidx11_shminfo[1].shmid = -1;
 }
 
-void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, int samples)
+static void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, int samples)
 {
 	*attrib++ = GLX_RGBA;
 	*attrib++ = GLX_RED_SIZE;*attrib++ = stencil ? 8 : 5;
@@ -1009,7 +1009,7 @@ void VID_BuildGLXAttrib(int *attrib, qboolean stencil, qboolean stereobuffer, in
 	*attrib++ = None;
 }
 
-qboolean VID_InitModeSoft(viddef_mode_t *mode)
+static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
 	int i, j;
 	XSetWindowAttributes attr;
@@ -1023,6 +1023,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	unsigned char *data;
 	XGCValues gcval;
 	const char *dpyname;
+	char vabuf[1024];
 
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
@@ -1196,7 +1197,7 @@ qboolean VID_InitModeSoft(viddef_mode_t *mode)
 			}
 			++i;
 			Mem_Free(data);
-			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+			data = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
 		}
 		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
 	}
@@ -1322,6 +1323,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	char *xpm;
 	char **idata;
 	unsigned char *data;
+	char vabuf[1024];
 
 	vid_isfullscreen = false;
 	vid_isnetwmfullscreen = false;
@@ -1530,7 +1532,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 			}
 			++i;
 			Mem_Free(data);
-			data = loadimagepixelsbgra(va("darkplaces-icon%d", i), false, false, false, NULL);
+			data = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
 		}
 		XChangeProperty(vidx11_display, win, net_wm_icon, cardinal, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
 	}

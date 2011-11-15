@@ -27,22 +27,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern float ixtable[4096];
 
 // fog stuff
-extern void FOG_clear(void);
+void FOG_clear(void);
 
 // sky stuff
 extern cvar_t r_sky;
 extern cvar_t r_skyscroll1;
 extern cvar_t r_skyscroll2;
 extern int skyrenderlater, skyrendermasked;
-extern int R_SetSkyBox(const char *sky);
-extern void R_SkyStartFrame(void);
-extern void R_Sky(void);
-extern void R_ResetSkyBox(void);
+int R_SetSkyBox(const char *sky);
+void R_SkyStartFrame(void);
+void R_Sky(void);
+void R_ResetSkyBox(void);
 
 // SHOWLMP stuff (Nehahra)
-extern void SHOWLMP_decodehide(void);
-extern void SHOWLMP_decodeshow(void);
-extern void SHOWLMP_drawall(void);
+void SHOWLMP_decodehide(void);
+void SHOWLMP_decodeshow(void);
+void SHOWLMP_drawall(void);
 
 // render profiling stuff
 extern int r_timereport_active;
@@ -443,7 +443,7 @@ rsurfacepass_t;
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
 void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy);
-void R_SetupShader_DepthOrShadow(qboolean notrippy);
+void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb);
 void R_SetupShader_ShowDepth(qboolean notrippy);
 void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
@@ -512,10 +512,13 @@ typedef struct r_framebufferstate_s
 	r_waterstate_t water;
 
 	qboolean ghosttexture_valid; // don't draw garbage on first frame with motionblur
+	qboolean usedepthtextures; // use depth texture instead of depth renderbuffer (faster if you need to read it later anyway)
 }
 r_framebufferstate_t;
 
 extern r_framebufferstate_t r_fb;
+
+extern cvar_t r_viewfbo;
 
 void R_ResetViewRendering2D_Common(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, float x2, float y2); // this is called by R_ResetViewRendering2D and _DrawQ_Setup and internal
 void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
@@ -530,6 +533,50 @@ extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
 extern cvar_t r_shadows_focus;
 extern cvar_t r_shadows_shadowmapscale;
+
+extern cvar_t r_transparent_alphatocoverage;
+extern cvar_t r_transparent_sortsurfacesbynearest;
+extern cvar_t r_transparent_useplanardistance;
+extern cvar_t r_transparent_sortarraysize;
+extern cvar_t r_transparent_sortmindist;
+extern cvar_t r_transparent_sortmaxdist;
+
+void R_Model_Sprite_Draw(entity_render_t *ent);
+
+struct prvm_prog_s;
+void R_UpdateFog(void);
+qboolean CL_VM_UpdateView(void);
+void SCR_DrawConsole(void);
+void R_Shadow_EditLights_DrawSelectedLightProperties(void);
+void R_DecalSystem_Reset(decalsystem_t *decalsystem);
+void R_Shadow_UpdateBounceGridTexture(void);
+void R_DrawLightningBeams(void);
+void VM_CL_AddPolygonsToMeshQueue(struct prvm_prog_s *prog);
+void R_DrawPortals(void);
+void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
+void R_Water_AddWaterPlane(msurface_t *surface, int entno);
+int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);
+dp_font_t *FindFont(const char *title, qboolean allocate_new);
+void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset);
+
+void Render_Init(void);
+
+// these are called by Render_Init
+void R_Textures_Init(void);
+void GL_Draw_Init(void);
+void GL_Main_Init(void);
+void R_Shadow_Init(void);
+void R_Sky_Init(void);
+void GL_Surf_Init(void);
+void R_Particles_Init(void);
+void R_Explosion_Init(void);
+void gl_backend_init(void);
+void Sbar_Init(void);
+void R_LightningBeams_Init(void);
+void Mod_RenderInit(void);
+void Font_Init(void);
 
 #endif
 

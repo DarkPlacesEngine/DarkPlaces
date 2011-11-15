@@ -1900,8 +1900,8 @@ void VID_Shutdown (void)
 		if (vid_begunscene)
 			IDirect3DDevice9_EndScene(vid_d3d9dev);
 		vid_begunscene = false;
-//		Cmd_ExecuteString("r_texturestats", src_command);
-//		Cmd_ExecuteString("memlist", src_command);
+//		Cmd_ExecuteString("r_texturestats", src_command, true);
+//		Cmd_ExecuteString("memlist", src_command, true);
 		IDirect3DDevice9_Release(vid_d3d9dev);
 	}
 	vid_d3d9dev = NULL;

@@ -72,10 +72,6 @@ int vid_xinputindex = -1;
 // global video state
 viddef_t vid;
 
-// LordHavoc: these are only set in wgl
-qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
-qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
-
 // AK FIXME -> input_dest
 qboolean in_client_mouse = true;
 
@@ -202,8 +198,6 @@ cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "0", "enables use of hardware gamma 
 cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
 cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
-
-extern cvar_t r_viewfbo;
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -471,24 +465,27 @@ GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
 void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
 void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
-//GL_EXT_framebuffer_object
-GLboolean (GLAPIENTRY *qglIsRenderbufferEXT)(GLuint renderbuffer);
-void (GLAPIENTRY *qglBindRenderbufferEXT)(GLenum target, GLuint renderbuffer);
-void (GLAPIENTRY *qglDeleteRenderbuffersEXT)(GLsizei n, const GLuint *renderbuffers);
-void (GLAPIENTRY *qglGenRenderbuffersEXT)(GLsizei n, GLuint *renderbuffers);
-void (GLAPIENTRY *qglRenderbufferStorageEXT)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
-void (GLAPIENTRY *qglGetRenderbufferParameterivEXT)(GLenum target, GLenum pname, GLint *params);
-GLboolean (GLAPIENTRY *qglIsFramebufferEXT)(GLuint framebuffer);
-void (GLAPIENTRY *qglBindFramebufferEXT)(GLenum target, GLuint framebuffer);
-void (GLAPIENTRY *qglDeleteFramebuffersEXT)(GLsizei n, const GLuint *framebuffers);
-void (GLAPIENTRY *qglGenFramebuffersEXT)(GLsizei n, GLuint *framebuffers);
-GLenum (GLAPIENTRY *qglCheckFramebufferStatusEXT)(GLenum target);
-//void (GLAPIENTRY *qglFramebufferTexture1DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-void (GLAPIENTRY *qglFramebufferTexture2DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-void (GLAPIENTRY *qglFramebufferTexture3DEXT)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint zoffset);
-void (GLAPIENTRY *qglFramebufferRenderbufferEXT)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
-void (GLAPIENTRY *qglGetFramebufferAttachmentParameterivEXT)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
-void (GLAPIENTRY *qglGenerateMipmapEXT)(GLenum target);
+//GL_ARB_framebuffer_object
+GLboolean (GLAPIENTRY *qglIsRenderbuffer)(GLuint renderbuffer);
+GLvoid (GLAPIENTRY *qglBindRenderbuffer)(GLenum target, GLuint renderbuffer);
+GLvoid (GLAPIENTRY *qglDeleteRenderbuffers)(GLsizei n, const GLuint *renderbuffers);
+GLvoid (GLAPIENTRY *qglGenRenderbuffers)(GLsizei n, GLuint *renderbuffers);
+GLvoid (GLAPIENTRY *qglRenderbufferStorage)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
+GLvoid (GLAPIENTRY *qglRenderbufferStorageMultisample)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
+GLvoid (GLAPIENTRY *qglGetRenderbufferParameteriv)(GLenum target, GLenum pname, GLint *params);
+GLboolean (GLAPIENTRY *qglIsFramebuffer)(GLuint framebuffer);
+GLvoid (GLAPIENTRY *qglBindFramebuffer)(GLenum target, GLuint framebuffer);
+GLvoid (GLAPIENTRY *qglDeleteFramebuffers)(GLsizei n, const GLuint *framebuffers);
+GLvoid (GLAPIENTRY *qglGenFramebuffers)(GLsizei n, GLuint *framebuffers);
+GLenum (GLAPIENTRY *qglCheckFramebufferStatus)(GLenum target);
+GLvoid (GLAPIENTRY *qglFramebufferTexture1D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+GLvoid (GLAPIENTRY *qglFramebufferTexture2D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+GLvoid (GLAPIENTRY *qglFramebufferTexture3D)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level, GLint layer);
+GLvoid (GLAPIENTRY *qglFramebufferTextureLayer)(GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
+GLvoid (GLAPIENTRY *qglFramebufferRenderbuffer)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
+GLvoid (GLAPIENTRY *qglGetFramebufferAttachmentParameteriv)(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+GLvoid (GLAPIENTRY *qglBlitFramebuffer)(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+GLvoid (GLAPIENTRY *qglGenerateMipmap)(GLenum target);
 
 void (GLAPIENTRY *qglDrawBuffersARB)(GLsizei n, const GLenum *bufs);
 
@@ -868,25 +865,50 @@ static dllfunction_t vbofuncs[] =
 	{NULL, NULL}
 };
 
-static dllfunction_t fbofuncs[] =
+static dllfunction_t arbfbofuncs[] =
 {
-	{"glIsRenderbufferEXT"                      , (void **) &qglIsRenderbufferEXT},
-	{"glBindRenderbufferEXT"                    , (void **) &qglBindRenderbufferEXT},
-	{"glDeleteRenderbuffersEXT"                 , (void **) &qglDeleteRenderbuffersEXT},
-	{"glGenRenderbuffersEXT"                    , (void **) &qglGenRenderbuffersEXT},
-	{"glRenderbufferStorageEXT"                 , (void **) &qglRenderbufferStorageEXT},
-	{"glGetRenderbufferParameterivEXT"          , (void **) &qglGetRenderbufferParameterivEXT},
-	{"glIsFramebufferEXT"                       , (void **) &qglIsFramebufferEXT},
-	{"glBindFramebufferEXT"                     , (void **) &qglBindFramebufferEXT},
-	{"glDeleteFramebuffersEXT"                  , (void **) &qglDeleteFramebuffersEXT},
-	{"glGenFramebuffersEXT"                     , (void **) &qglGenFramebuffersEXT},
-	{"glCheckFramebufferStatusEXT"              , (void **) &qglCheckFramebufferStatusEXT},
-//	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1DEXT},
-	{"glFramebufferTexture2DEXT"                , (void **) &qglFramebufferTexture2DEXT},
-	{"glFramebufferTexture3DEXT"                , (void **) &qglFramebufferTexture3DEXT},
-	{"glFramebufferRenderbufferEXT"             , (void **) &qglFramebufferRenderbufferEXT},
-	{"glGetFramebufferAttachmentParameterivEXT" , (void **) &qglGetFramebufferAttachmentParameterivEXT},
-	{"glGenerateMipmapEXT"                      , (void **) &qglGenerateMipmapEXT},
+	{"glIsRenderbufferARB"                      , (void **) &qglIsRenderbuffer},
+	{"glBindRenderbufferARB"                    , (void **) &qglBindRenderbuffer},
+	{"glDeleteRenderbuffersARB"                 , (void **) &qglDeleteRenderbuffers},
+	{"glGenRenderbuffersARB"                    , (void **) &qglGenRenderbuffers},
+	{"glRenderbufferStorageARB"                 , (void **) &qglRenderbufferStorage},
+	{"glRenderbufferStorageMultisampleARB"      , (void **) &qglRenderbufferStorageMultisample}, // not in GL_EXT_framebuffer_object
+	{"glGetRenderbufferParameterivARB"          , (void **) &qglGetRenderbufferParameteriv},
+	{"glIsFramebufferARB"                       , (void **) &qglIsFramebuffer},
+	{"glBindFramebufferARB"                     , (void **) &qglBindFramebuffer},
+	{"glDeleteFramebuffersARB"                  , (void **) &qglDeleteFramebuffers},
+	{"glGenFramebuffersARB"                     , (void **) &qglGenFramebuffers},
+	{"glCheckFramebufferStatusARB"              , (void **) &qglCheckFramebufferStatus},
+	{"glFramebufferTexture1DARB"                , (void **) &qglFramebufferTexture1D},
+	{"glFramebufferTexture2DARB"                , (void **) &qglFramebufferTexture2D},
+	{"glFramebufferTexture3DARB"                , (void **) &qglFramebufferTexture3D},
+	{"glFramebufferTextureLayerARB"             , (void **) &qglFramebufferTextureLayer}, // not in GL_EXT_framebuffer_object
+	{"glFramebufferRenderbufferARB"             , (void **) &qglFramebufferRenderbuffer},
+	{"glGetFramebufferAttachmentParameterivARB" , (void **) &qglGetFramebufferAttachmentParameteriv},
+	{"glBlitFramebufferARB"                     , (void **) &qglBlitFramebuffer}, // not in GL_EXT_framebuffer_object
+	{"glGenerateMipmapARB"                      , (void **) &qglGenerateMipmap},
+	{NULL, NULL}
+};
+
+static dllfunction_t extfbofuncs[] =
+{
+	{"glIsRenderbufferEXT"                      , (void **) &qglIsRenderbuffer},
+	{"glBindRenderbufferEXT"                    , (void **) &qglBindRenderbuffer},
+	{"glDeleteRenderbuffersEXT"                 , (void **) &qglDeleteRenderbuffers},
+	{"glGenRenderbuffersEXT"                    , (void **) &qglGenRenderbuffers},
+	{"glRenderbufferStorageEXT"                 , (void **) &qglRenderbufferStorage},
+	{"glGetRenderbufferParameterivEXT"          , (void **) &qglGetRenderbufferParameteriv},
+	{"glIsFramebufferEXT"                       , (void **) &qglIsFramebuffer},
+	{"glBindFramebufferEXT"                     , (void **) &qglBindFramebuffer},
+	{"glDeleteFramebuffersEXT"                  , (void **) &qglDeleteFramebuffers},
+	{"glGenFramebuffersEXT"                     , (void **) &qglGenFramebuffers},
+	{"glCheckFramebufferStatusEXT"              , (void **) &qglCheckFramebufferStatus},
+	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1D},
+	{"glFramebufferTexture2DEXT"                , (void **) &qglFramebufferTexture2D},
+	{"glFramebufferTexture3DEXT"                , (void **) &qglFramebufferTexture3D},
+	{"glFramebufferRenderbufferEXT"             , (void **) &qglFramebufferRenderbuffer},
+	{"glGetFramebufferAttachmentParameterivEXT" , (void **) &qglGetFramebufferAttachmentParameteriv},
+	{"glGenerateMipmapEXT"                      , (void **) &qglGenerateMipmap},
 	{NULL, NULL}
 };
 
@@ -957,7 +979,7 @@ void VID_ClearExtensions(void)
 	qglFlush = NULL;
 	qglActiveTexture = NULL;
 	qglGetCompressedTexImageARB = NULL;
-	qglFramebufferTexture2DEXT = NULL;
+	qglFramebufferTexture2D = NULL;
 	qglDrawBuffersARB = NULL;
 #endif
 }
@@ -1011,7 +1033,11 @@ void VID_CheckExtensions(void)
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 	vid.support.ext_draw_range_elements = GL_CheckExtension("drawrangeelements", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
-	vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", fbofuncs, "-nofbo", false);
+	vid.support.arb_framebuffer_object = GL_CheckExtension("GL_ARB_framebuffer_object", arbfbofuncs, "-nofbo", false);
+	if (vid.support.arb_framebuffer_object)
+		vid.support.ext_framebuffer_object = true;
+	else
+		vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", extfbofuncs, "-nofbo", false);
 	vid.support.ext_packed_depth_stencil = GL_CheckExtension("GL_EXT_packed_depth_stencil", NULL, "-nopackeddepthstencil", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
@@ -1242,7 +1268,7 @@ void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
 	joystate->button[35] = r < 0.0f;
 }
 
-void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
+static void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
 {
 	if (oldbutton)
 	{
@@ -1387,7 +1413,7 @@ int VID_Shared_SetJoystick(int index)
 }
 
 
-void Force_CenterView_f (void)
+static void Force_CenterView_f (void)
 {
 	cl.viewangles[PITCH] = 0;
 }
@@ -1417,7 +1443,7 @@ void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 	{
 		int i;
 		for(i = 0; i < 3*rampsize; ++i)
-			ramps[i] = (int)floor(bound(0.0f, Image_sRGBFloatFromLinearFloat(ramps[i] / 65535.0), 1.0f) * 65535.0 + 0.5);
+			ramps[i] = (int)floor(bound(0.0f, Image_sRGBFloatFromLinearFloat(ramps[i] / 65535.0f), 1.0f) * 65535.0f + 0.5f);
 	}
 
 	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
@@ -1753,9 +1779,10 @@ void VID_Shared_Init(void)
 	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
-int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
+static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
 {
 	viddef_mode_t mode;
+	char vabuf[1024];
 
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
@@ -1796,7 +1823,7 @@ int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, 
 		if(vid.samples != vid.mode.samples)
 			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
 
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(" (%ix AA)", mode.samples) : "");
+		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(vabuf, sizeof(vabuf), " (%ix AA)", mode.samples) : "");
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 		Cvar_SetValueQuick(&vid_width, vid.mode.width);
@@ -1830,6 +1857,8 @@ extern qboolean vid_opened;
 
 void VID_Restart_f(void)
 {
+	char vabuf[1024];
+	char vabuf2[1024];
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
@@ -1841,8 +1870,8 @@ void VID_Restart_f(void)
 	}
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
-		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va("x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(" (%ix AA)", vid.mode.samples) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va("x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(" (%ix AA)", vid_samples.integer) : "");
+		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid.mode.samples) : "",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid_samples.integer) : "");
 	VID_CloseSystems();
 	VID_Shutdown();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer))
@@ -1921,7 +1950,7 @@ void VID_Stop(void)
 	VID_Shutdown();
 }
 
-int VID_SortModes_Compare(const void *a_, const void *b_)
+static int VID_SortModes_Compare(const void *a_, const void *b_)
 {
 	vid_mode_t *a = (vid_mode_t *) a_;
 	vid_mode_t *b = (vid_mode_t *) b_;

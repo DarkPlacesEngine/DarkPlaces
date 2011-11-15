@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // Z_zone.c
 
 #include "quakedef.h"
+#include "thread.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -37,6 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 unsigned int sentinel_seed;
 
 qboolean mem_bigendian = false;
+void *mem_mutex = NULL;
 
 // LordHavoc: enables our own low-level allocator (instead of malloc)
 #define MEMCLUMPING 0
@@ -330,6 +332,8 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	}
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
+	if (mem_mutex)
+		Thread_LockMutex(mem_mutex);
 	if (developer_memory.integer)
 		Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
 	//if (developer.integer > 0 && developer_memorydebug.integer)
@@ -366,6 +370,9 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	pool->chain = mem;
 	if (mem->next)
 		mem->next->prev = mem;
+
+	if (mem_mutex)
+		Thread_UnlockMutex(mem_mutex);
 
 	// copy the shared portion in the case of a realloc, then memset the rest
 	sharedsize = 0;
@@ -405,6 +412,8 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	// unlink memheader from doubly linked list
 	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
 		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);
+	if (mem_mutex)
+		Thread_LockMutex(mem_mutex);
 	if (mem->prev)
 		mem->prev->next = mem->next;
 	else
@@ -417,6 +426,8 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	pool->totalsize -= size;
 	pool->realsize -= realsize;
 	Clump_FreeBlock(mem->baseaddress, realsize);
+	if (mem_mutex)
+		Thread_UnlockMutex(mem_mutex);
 }
 
 void _Mem_Free(void *data, const char *filename, int fileline)
@@ -813,7 +824,7 @@ void Mem_PrintList(size_t minallocationsize)
 	}
 }
 
-void MemList_f(void)
+static void MemList_f(void)
 {
 	switch(Cmd_Argc())
 	{
@@ -831,8 +842,7 @@ void MemList_f(void)
 	}
 }
 
-extern void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal);
-void MemStats_f(void)
+static void MemStats_f(void)
 {
 	Mem_CheckSentinelsGlobal();
 	R_TextureStats_Print(false, false, true);
@@ -868,12 +878,19 @@ void Memory_Init (void)
 	poolchain = NULL;
 	tempmempool = Mem_AllocPool("Temporary Memory", POOLFLAG_TEMP, NULL);
 	zonemempool = Mem_AllocPool("Zone", 0, NULL);
+
+	if (Thread_HasThreads())
+		mem_mutex = Thread_CreateMutex();
 }
 
 void Memory_Shutdown (void)
 {
 //	Mem_FreePool (&zonemempool);
 //	Mem_FreePool (&tempmempool);
+
+	if (mem_mutex)
+		Thread_DestroyMutex(mem_mutex);
+	mem_mutex = NULL;
 }
 
 void Memory_Init_Commands (void)

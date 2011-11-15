@@ -46,6 +46,8 @@ typedef struct sizebuf_s
 	unsigned char		*data;
 	int			maxsize;
 	int			cursize;
+	int			readcount;
+	qboolean	badread;		// set if a read goes beyond end of message
 } sizebuf_t;
 
 void SZ_Clear (sizebuf_t *buf);
@@ -63,6 +65,8 @@ unsigned char COM_BlockSequenceCRCByteQW(unsigned char *base, int length, int se
 // these are actually md4sum (mdfour.c)
 unsigned Com_BlockChecksum (void *buffer, int length);
 void Com_BlockFullChecksum (void *buffer, int len, unsigned char *outbuf);
+
+void COM_Init_Commands(void);
 
 
 //============================================================================
@@ -160,34 +164,31 @@ void MSG_WriteCoord (sizebuf_t *sb, float f, protocolversion_t protocol);
 void MSG_WriteVector (sizebuf_t *sb, float *v, protocolversion_t protocol);
 void MSG_WriteAngle (sizebuf_t *sb, float f, protocolversion_t protocol);
 
-extern	int			msg_readcount;
-extern	qboolean	msg_badread;		// set if a read goes beyond end of message
+void MSG_BeginReading (sizebuf_t *sb);
+int MSG_ReadLittleShort (sizebuf_t *sb);
+int MSG_ReadBigShort (sizebuf_t *sb);
+int MSG_ReadLittleLong (sizebuf_t *sb);
+int MSG_ReadBigLong (sizebuf_t *sb);
+float MSG_ReadLittleFloat (sizebuf_t *sb);
+float MSG_ReadBigFloat (sizebuf_t *sb);
+char *MSG_ReadString (sizebuf_t *sb, char *string, size_t maxstring);
+int MSG_ReadBytes (sizebuf_t *sb, int numbytes, unsigned char *out);
 
-void MSG_BeginReading (void);
-int MSG_ReadLittleShort (void);
-int MSG_ReadBigShort (void);
-int MSG_ReadLittleLong (void);
-int MSG_ReadBigLong (void);
-float MSG_ReadLittleFloat (void);
-float MSG_ReadBigFloat (void);
-char *MSG_ReadString (void);
-int MSG_ReadBytes (int numbytes, unsigned char *out);
-
-#define MSG_ReadChar() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (signed char)net_message.data[msg_readcount++])
-#define MSG_ReadByte() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (unsigned char)net_message.data[msg_readcount++])
+#define MSG_ReadChar(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, -1) : (signed char)(sb)->data[(sb)->readcount++])
+#define MSG_ReadByte(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, -1) : (unsigned char)(sb)->data[(sb)->readcount++])
 #define MSG_ReadShort MSG_ReadLittleShort
 #define MSG_ReadLong MSG_ReadLittleLong
 #define MSG_ReadFloat MSG_ReadLittleFloat
 
-float MSG_ReadAngle8i (void);
-float MSG_ReadAngle16i (void);
-float MSG_ReadAngle32f (void);
-float MSG_ReadCoord13i (void);
-float MSG_ReadCoord16i (void);
-float MSG_ReadCoord32f (void);
-float MSG_ReadCoord (protocolversion_t protocol);
-void MSG_ReadVector (float *v, protocolversion_t protocol);
-float MSG_ReadAngle (protocolversion_t protocol);
+float MSG_ReadAngle8i (sizebuf_t *sb);
+float MSG_ReadAngle16i (sizebuf_t *sb);
+float MSG_ReadAngle32f (sizebuf_t *sb);
+float MSG_ReadCoord13i (sizebuf_t *sb);
+float MSG_ReadCoord16i (sizebuf_t *sb);
+float MSG_ReadCoord32f (sizebuf_t *sb);
+float MSG_ReadCoord (sizebuf_t *sb, protocolversion_t protocol);
+void MSG_ReadVector (sizebuf_t *sb, float *v, protocolversion_t protocol);
+float MSG_ReadAngle (sizebuf_t *sb, protocolversion_t protocol);
 //@}
 //============================================================================
 
@@ -211,8 +212,8 @@ void COM_Init (void);
 void COM_Shutdown (void);
 void COM_InitGameType (void);
 
-char	*va(const char *format, ...) DP_FUNC_PRINTF(1);
-// does a varargs printf into a temp buffer
+char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
+// does a varargs printf into provided buffer, returns buffer (so it can be called in-line unlike dpsnprintf)
 
 
 // snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
@@ -332,9 +333,7 @@ void stringlistappend(stringlist_t *list, const char *text);
 void stringlistsort(stringlist_t *list, qboolean uniq);
 void listdirectory(stringlist_t *list, const char *basepath, const char *path);
 
-char *SearchInfostring(const char *infostring, const char *key);
-
-void InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
+char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
 void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value);
 void InfoString_Print(char *buffer);
 

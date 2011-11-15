@@ -1294,7 +1294,7 @@ loc0:
 	}
 }
 
-void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+static void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	// pretend lighting is coming down from above (due to lack of a lightgrid to know primary lighting direction)
 	VectorSet(diffusenormal, 0, 0, 1);
@@ -1532,7 +1532,7 @@ R_Q1BSP_LoadSplitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
+static void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
 {
 	int x, y;
 	int w = width/2;
@@ -1610,6 +1610,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	const char *s;
 	char mapname[MAX_QPATH], name[MAX_QPATH];
 	unsigned char zeroopaque[4], zerotrans[4];
+	char vabuf[1024];
 	Vector4Set(zeroopaque, 0, 0, 0, 255);
 	Vector4Set(zerotrans, 0, 0, 0, 128);
 
@@ -1786,9 +1787,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// LordHavoc: HL sky textures are entirely different than quake
 			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), false, false, false, NULL);
+				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
 				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), false, false, false, NULL);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
 				if (data && image_width == image_height * 2)
 				{
 					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
@@ -1799,9 +1800,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
+				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
-					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va("textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
+					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (skinframe)
 					tx->offsetmapping = OFFSETMAPPING_DEFAULT; // allow offsetmapping on external textures without a q3 shader
 				if (!skinframe)
@@ -2165,7 +2166,7 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 // The following two functions should be removed and MSG_* or SZ_* function sets adjusted so they
 // can be used for this
 // REMOVEME
-int SB_ReadInt (unsigned char **buffer)
+static int SB_ReadInt (unsigned char **buffer)
 {
 	int	i;
 	i = ((*buffer)[0]) + 256*((*buffer)[1]) + 65536*((*buffer)[2]) + 16777216*((*buffer)[3]);
@@ -2174,7 +2175,7 @@ int SB_ReadInt (unsigned char **buffer)
 }
 
 // REMOVEME
-float SB_ReadFloat (unsigned char **buffer)
+static float SB_ReadFloat (unsigned char **buffer)
 {
 	union
 	{
@@ -2461,6 +2462,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	int i, j, count, surfacenum, planenum, smax, tmax, ssize, tsize, firstedge, numedges, totalverts, totaltris, lightmapnumber, lightmapsize, totallightmapsamples;
 	float texmins[2], texmaxs[2], val;
 	rtexture_t *lightmaptexture, *deluxemaptexture;
+	char vabuf[1024];
 
 	in = (dface_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -2669,9 +2671,9 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 				loadmodel->brushq3.num_mergedlightmaps = lightmapnumber + 1;
 				loadmodel->brushq3.data_lightmaps = (rtexture_t **)Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_lightmaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_lightmaps[0]));
 				loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Realloc(loadmodel->mempool, loadmodel->brushq3.data_deluxemaps, loadmodel->brushq3.num_mergedlightmaps * sizeof(loadmodel->brushq3.data_deluxemaps[0]));
-				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
+				loadmodel->brushq3.data_lightmaps[lightmapnumber] = lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, va(vabuf, sizeof(vabuf), "lightmap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
 				if (loadmodel->brushq1.nmaplightdata)
-					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
+					loadmodel->brushq3.data_deluxemaps[lightmapnumber] = deluxemaptexture = R_LoadTexture2D(loadmodel->texturepool, va(vabuf, sizeof(vabuf), "deluxemap%i", lightmapnumber), lightmapsize, lightmapsize, NULL, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_ALLOWUPDATES, -1, NULL);
 				lightmapnumber++;
 				Mod_AllocLightmap_Reset(&allocState);
 				Mod_AllocLightmap_Block(&allocState, ssize, tsize, &lightmapx, &lightmapy);
@@ -2891,7 +2893,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	}
 }
 
-qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
+static qboolean Mod_Q1BSP_CheckWaterAlphaSupport(void)
 {
 	int i, j;
 	mleaf_t *leaf;
@@ -4375,7 +4377,7 @@ static void Mod_Q2BSP_LoadModels(lump_t *l)
 */
 }
 
-void static Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i;
 	q2dheader_t *header;
@@ -4834,6 +4836,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	char mapname[MAX_QPATH];
 	qboolean external;
 	unsigned char *inpixels[10000]; // max count q3map2 can output (it uses 4 digits)
+	char vabuf[1024];
 
 	// defaults for q3bsp
 	size = 128;
@@ -4870,7 +4873,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		if (developer_loading.integer)
 			Con_Printf("Using external lightmaps\n");
 		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
-		inpixels[0] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, 0), false, false, false, NULL);
+		inpixels[0] = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s/lm_%04d", mapname, 0), false, false, false, NULL);
 		if(!inpixels[0])
 			return;
 
@@ -4890,7 +4893,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 
 		for(count = 1; ; ++count)
 		{
-			inpixels[count] = loadimagepixelsbgra(va("%s/lm_%04d", mapname, count), false, false, false, NULL);
+			inpixels[count] = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s/lm_%04d", mapname, count), false, false, false, NULL);
 			if(!inpixels[count])
 				break; // we got all of them
 			if(image_width != size || image_height != size)
@@ -5044,7 +5047,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		if (((realindex + 1) & (mergedrowsxcolumns - 1)) == 0 || (realindex + 1) == realcount)
 		{
 			if (loadmodel->brushq3.deluxemapping && (i & 1))
-				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+				loadmodel->brushq3.data_deluxemaps[lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va(vabuf, sizeof(vabuf), "deluxemap%04i", lightmapindex), mergedwidth, mergedheight, mergeddeluxepixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bspdeluxemaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 			else
 			{
 				if(mod_q3bsp_sRGBlightmaps.integer)
@@ -5069,13 +5072,13 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 					}
 					else
 						t = TEXTYPE_SRGB_BGRA; // normally, we upload lightmaps in sRGB form (possibly downconverted to linear)
-					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, t, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va(vabuf, sizeof(vabuf), "lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, t, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 				}
 				else
 				{
 					if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 						Image_MakesRGBColorsFromLinear_Lightmap(mergedpixels, mergedpixels, mergedwidth * mergedheight);
-					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va("lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
+					loadmodel->brushq3.data_lightmaps [lightmapindex] = R_LoadTexture2D(loadmodel->texturepool, va(vabuf, sizeof(vabuf), "lightmap%04i", lightmapindex), mergedwidth, mergedheight, mergedpixels, TEXTYPE_BGRA, TEXF_FORCELINEAR | (gl_texturecompression_q3bsplightmaps.integer ? TEXF_COMPRESS : 0), -1, NULL);
 				}
 			}
 		}
@@ -6180,7 +6183,7 @@ void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameble
 	}
 }
 
-void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, const bih_t *bih)
+static void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, const bih_t *bih)
 {
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
@@ -6454,7 +6457,7 @@ void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend
 }
 
 
-int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
+static int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
 {
 	trace_t trace;
 	Mod_CollisionBIH_TracePoint(model, NULL, NULL, &trace, point, 0);
@@ -6776,7 +6779,7 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
 }
 
-void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
+static void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask)
 {
 	float segmentmins[3], segmentmaxs[3];
 	int i;
@@ -6841,9 +6844,7 @@ static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const 
 	q3mbrush_t *brush;
 	if (mod_collision_bih.integer)
 	{
-		trace_t trace;
-		Mod_Q3BSP_TracePoint(model, NULL, NULL, &trace, point, 0);
-		supercontents = trace.startsupercontents;
+		supercontents = Mod_CollisionBIH_PointSuperContents(model, frame, point);
 	}
 	// test if the point is inside each brush
 	else if (model->brush.submodel)
@@ -7073,7 +7074,7 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(dp_model_t *model, int supe
 	return nativecontents;
 }
 
-void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
+static void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 {
 	int numleafs;
 	while (node->plane)
@@ -7086,7 +7087,7 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 		loadmodel->brush.num_leafs = numleafs;
 }
 
-void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, lumps;
 	q3dheader_t *header;
@@ -7930,40 +7931,3 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	Con_DPrintf("Stats for obj model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
 }
-
-qboolean Mod_CanSeeBox_Trace(int numsamples, float t, dp_model_t *model, vec3_t eye, vec3_t minsX, vec3_t maxsX)
-{
-	// we already have done PVS culling at this point...
-	// so we don't need to do it again.
-
-	int i;
-	vec3_t testorigin, mins, maxs;
-
-	testorigin[0] = (minsX[0] + maxsX[0]) * 0.5;
-	testorigin[1] = (minsX[1] + maxsX[1]) * 0.5;
-	testorigin[2] = (minsX[2] + maxsX[2]) * 0.5;
-
-	if(model->brush.TraceLineOfSight(model, eye, testorigin))
-		return 1;
-
-	// expand the box a little
-	mins[0] = (t+1) * minsX[0] - t * maxsX[0];
-	maxs[0] = (t+1) * maxsX[0] - t * minsX[0];
-	mins[1] = (t+1) * minsX[1] - t * maxsX[1];
-	maxs[1] = (t+1) * maxsX[1] - t * minsX[1];
-	mins[2] = (t+1) * minsX[2] - t * maxsX[2];
-	maxs[2] = (t+1) * maxsX[2] - t * minsX[2];
-
-	for(i = 0; i != numsamples; ++i)
-	{
-		testorigin[0] = lhrandom(mins[0], maxs[0]);
-		testorigin[1] = lhrandom(mins[1], maxs[1]);
-		testorigin[2] = lhrandom(mins[2], maxs[2]);
-
-		if(model->brush.TraceLineOfSight(model, eye, testorigin))
-			return 1;
-	}
-
-	return 0;
-}
-

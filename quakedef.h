@@ -395,6 +395,7 @@ extern char engineversion[128];
 #include "keys.h"
 #include "console.h"
 #include "menu.h"
+#include "csprogs.h"
 
 extern qboolean noclip_anglehack;
 
@@ -503,6 +504,8 @@ qboolean Sys_HaveSSE2(void);
 extern int host_framecount;
 /// not bounded in any way, changed at start of every frame, never reset
 extern double realtime;
+/// equal to Sys_DirtyTime() at the start of this host frame
+extern double host_dirtytime;
 
 void Host_InitCommands(void);
 void Host_Main(void);

@@ -61,6 +61,8 @@ void Cbuf_InsertText (const char *text);
  * \note Do not call inside a command function!
  */
 void Cbuf_Execute (void);
+/*! Performs deferred commands and runs Cbuf_Execute, called by Host_Main */
+void Cbuf_Frame (void);
 
 //===========================================================================
 
@@ -142,7 +144,7 @@ int Cmd_CheckParm (const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (const char *text, cmd_source_t src);
+void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex);
 
 /// adds the string as a clc_stringcmd to the client message.
 /// (used when there is no reason to generate a local command to do it)
@@ -164,6 +166,8 @@ void Cmd_Print(const char *text);
 /// will contain a part of the quoted string). If putquotes is set, the
 /// enclosing quote marks are also put.
 qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
+
+void Cmd_ClearCsqcFuncs (void);
 
 #endif
 

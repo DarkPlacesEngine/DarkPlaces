@@ -110,9 +110,6 @@ const char *prvm_opnames[] =
 "BITOR"
 };
 
-char *PRVM_GlobalString (int ofs);
-char *PRVM_GlobalStringNoContents (int ofs);
-extern ddef_t *PRVM_ED_FieldAtOfs(int ofs);
 
 
 //=============================================================================
@@ -124,14 +121,15 @@ PRVM_PrintStatement
 */
 extern cvar_t prvm_statementprofiling;
 extern cvar_t prvm_timeprofiling;
-void PRVM_PrintStatement(mstatement_t *s)
+static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
 {
 	size_t i;
 	int opnum = (int)(s - prog->statements);
+	char valuebuf[MAX_INPUTLINE];
 
 	Con_Printf("s%i: ", opnum);
 	if( prog->statement_linenums )
-		Con_Printf( "%s:%i: ", PRVM_GetString( prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
+		Con_Printf( "%s:%i: ", PRVM_GetString( prog, prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
 
 	if (prvm_statementprofiling.integer)
 		Con_Printf("%7.0f ", prog->statement_profile[s - prog->statements]);
@@ -146,27 +144,27 @@ void PRVM_PrintStatement(mstatement_t *s)
 		for ( ; i<10 ; i++)
 			Con_Print(" ");
 	}
-	if (s->operand[0] >= 0) Con_Printf(  "%s", PRVM_GlobalString(s->operand[0]));
-	if (s->operand[1] >= 0) Con_Printf(", %s", PRVM_GlobalString(s->operand[1]));
-	if (s->operand[2] >= 0) Con_Printf(", %s", PRVM_GlobalString(s->operand[2]));
+	if (s->operand[0] >= 0) Con_Printf(  "%s", PRVM_GlobalString(prog, s->operand[0], valuebuf, sizeof(valuebuf)));
+	if (s->operand[1] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[1], valuebuf, sizeof(valuebuf)));
+	if (s->operand[2] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[2], valuebuf, sizeof(valuebuf)));
 	if (s->jumpabsolute >= 0) Con_Printf(", statement %i", s->jumpabsolute);
 	Con_Print("\n");
 }
 
-void PRVM_PrintFunctionStatements (const char *name)
+void PRVM_PrintFunctionStatements (prvm_prog_t *prog, const char *name)
 {
 	int i, firststatement, endstatement;
 	mfunction_t *func;
-	func = PRVM_ED_FindFunction (name);
+	func = PRVM_ED_FindFunction (prog, name);
 	if (!func)
 	{
-		Con_Printf("%s progs: no function named %s\n", PRVM_NAME, name);
+		Con_Printf("%s progs: no function named %s\n", prog->name, name);
 		return;
 	}
 	firststatement = func->first_statement;
 	if (firststatement < 0)
 	{
-		Con_Printf("%s progs: function %s is builtin #%i\n", PRVM_NAME, name, -firststatement);
+		Con_Printf("%s progs: function %s is builtin #%i\n", prog->name, name, -firststatement);
 		return;
 	}
 
@@ -177,10 +175,11 @@ void PRVM_PrintFunctionStatements (const char *name)
 			endstatement = prog->functions[i].first_statement;
 
 	// now print the range of statements
-	Con_Printf("%s progs: disassembly of function %s (statements %i-%i, locals %i-%i):\n", PRVM_NAME, name, firststatement, endstatement, func->parm_start, func->parm_start + func->locals - 1);
+	Con_Printf("%s progs: disassembly of function %s (statements %i-%i, locals %i-%i):\n", prog->name, name, firststatement, endstatement, func->parm_start, func->parm_start + func->locals - 1);
+	prog->xfunction = func;
 	for (i = firststatement;i < endstatement;i++)
 	{
-		PRVM_PrintStatement(prog->statements + i);
+		PRVM_PrintStatement(prog, prog->statements + i);
 		prog->statement_profile[i] = 0;
 	}
 }
@@ -193,19 +192,17 @@ PRVM_PrintFunction_f
 */
 void PRVM_PrintFunction_f (void)
 {
+	prvm_prog_t *prog;
 	if (Cmd_Argc() != 3)
 	{
 		Con_Printf("usage: prvm_printfunction <program name> <function name>\n");
 		return;
 	}
 
-	PRVM_Begin;
-	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
 		return;
 
-	PRVM_PrintFunctionStatements(Cmd_Argv(2));
-
-	PRVM_End;
+	PRVM_PrintFunctionStatements(prog, Cmd_Argv(2));
 }
 
 /*
@@ -213,7 +210,7 @@ void PRVM_PrintFunction_f (void)
 PRVM_StackTrace
 ============
 */
-void PRVM_StackTrace (void)
+void PRVM_StackTrace (prvm_prog_t *prog)
 {
 	mfunction_t	*f;
 	int			i;
@@ -227,14 +224,15 @@ void PRVM_StackTrace (void)
 		if (!f)
 			Con_Print("<NULL FUNCTION>\n");
 		else
-			Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(f->s_file), PRVM_GetString(f->s_name), prog->stack[i].s - f->first_statement);
+			Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
 	}
 }
 
-void PRVM_ShortStackTrace(char *buf, size_t bufsize)
+void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 {
 	mfunction_t	*f;
 	int			i;
+	char vabuf[1024];
 
 	if(prog)
 	{
@@ -254,7 +252,7 @@ void PRVM_ShortStackTrace(char *buf, size_t bufsize)
 
 		if(strlcat(buf,
 			f
-				? va("%s:%s(%i) ", PRVM_GetString(f->s_file), PRVM_GetString(f->s_name), prog->stack[i].s - f->first_statement)
+				? va(vabuf, sizeof(vabuf), "%s:%s(%i) ", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement)
 				: "<NULL> ",
 			bufsize
 		) >= bufsize)
@@ -263,14 +261,15 @@ void PRVM_ShortStackTrace(char *buf, size_t bufsize)
 }
 
 
-void PRVM_CallProfile (void)
+static void PRVM_CallProfile (prvm_prog_t *prog)
 {
 	mfunction_t *f, *best;
 	int i;
 	double max;
 	double sum;
+	double newprofiletime;
 
-	Con_Printf( "%s Call Profile:\n", PRVM_NAME );
+	Con_Printf( "%s Call Profile:\n", prog->name );
 
 	sum = 0;
 	do
@@ -289,18 +288,19 @@ void PRVM_CallProfile (void)
 		if (best)
 		{
 			sum += best->totaltime;
-			Con_Printf("%9.4f %s\n", best->totaltime, PRVM_GetString(best->s_name));
+			Con_Printf("%9.4f %s\n", best->totaltime, PRVM_GetString(prog, best->s_name));
 			best->totaltime = 0;
 		}
 	} while (best);
 
-	Con_Printf("Total time since last profile reset: %9.4f\n", Sys_DoubleTime() - prog->starttime);
+	newprofiletime = Sys_DirtyTime();
+	Con_Printf("Total time since last profile reset: %9.4f\n", newprofiletime - prog->profiletime);
 	Con_Printf("       - used by QC code of this VM: %9.4f\n", sum);
 
-	prog->starttime = Sys_DoubleTime();
+	prog->profiletime = newprofiletime;
 }
 
-void PRVM_Profile (int maxfunctions, double mintime, int sortby)
+void PRVM_Profile (prvm_prog_t *prog, int maxfunctions, double mintime, int sortby)
 {
 	mfunction_t *f, *best;
 	int i, num;
@@ -310,10 +310,10 @@ void PRVM_Profile (int maxfunctions, double mintime, int sortby)
 		mintime *= 10000000; // count each statement as about 0.1µs
 
 	if(prvm_timeprofiling.integer)
-		Con_Printf( "%s Profile:\n[CallCount]      [Time] [BuiltinTm] [Statement] [BuiltinCt] [TimeTotal] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
+		Con_Printf( "%s Profile:\n[CallCount]      [Time] [BuiltinTm] [Statement] [BuiltinCt] [TimeTotal] [StmtTotal] [BltnTotal] [self]\n", prog->name );
 		//                        12345678901 12345678901 12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
 	else
-		Con_Printf( "%s Profile:\n[CallCount] [Statement] [BuiltinCt] [StmtTotal] [BltnTotal] [self]\n", PRVM_NAME );
+		Con_Printf( "%s Profile:\n[CallCount] [Statement] [BuiltinCt] [StmtTotal] [BltnTotal] [self]\n", prog->name );
 		//                        12345678901 12345678901 12345678901 12345678901 12345678901 123.45%
 
 	num = 0;
@@ -381,18 +381,18 @@ void PRVM_Profile (int maxfunctions, double mintime, int sortby)
 				if(prvm_timeprofiling.integer)
 				{
 					if (best->first_statement < 0)
-						Con_Printf("%11.0f %11.6f ------------- builtin ------------- %11.6f ----------- builtin ----------- %s\n", best->callcount, best->tprofile, best->tprofile, PRVM_GetString(best->s_name));
+						Con_Printf("%11.0f %11.6f ------------- builtin ------------- %11.6f ----------- builtin ----------- %s\n", best->callcount, best->tprofile, best->tprofile, PRVM_GetString(prog, best->s_name));
 					//                 %11.6f 12345678901 12345678901 12345678901 %11.6f 12345678901 12345678901 123.45%
 					else
-						Con_Printf("%11.0f %11.6f %11.6f %11.0f %11.0f %11.6f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->tprofile, best->tbprofile, best->profile, best->builtinsprofile, best->tprofile_total, best->profile_total, best->builtinsprofile_total, (best->tprofile_total > 0) ? ((best->tprofile) * 100.0 / (best->tprofile_total)) : -99.99, PRVM_GetString(best->s_name));
+						Con_Printf("%11.0f %11.6f %11.6f %11.0f %11.0f %11.6f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->tprofile, best->tbprofile, best->profile, best->builtinsprofile, best->tprofile_total, best->profile_total, best->builtinsprofile_total, (best->tprofile_total > 0) ? ((best->tprofile) * 100.0 / (best->tprofile_total)) : -99.99, PRVM_GetString(prog, best->s_name));
 				}
 				else
 				{
 					if (best->first_statement < 0)
-						Con_Printf("%11.0f ----------------------- builtin ----------------------- %s\n", best->callcount, PRVM_GetString(best->s_name));
+						Con_Printf("%11.0f ----------------------- builtin ----------------------- %s\n", best->callcount, PRVM_GetString(prog, best->s_name));
 					//                 12345678901 12345678901 12345678901 12345678901 123.45%
 					else
-						Con_Printf("%11.0f %11.0f %11.0f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->profile, best->builtinsprofile, best->profile_total, best->builtinsprofile_total, (best->profile + best->builtinsprofile) * 100.0 / (best->profile_total + best->builtinsprofile_total), PRVM_GetString(best->s_name));
+						Con_Printf("%11.0f %11.0f %11.0f %11.0f %11.0f %6.2f%% %s\n", best->callcount, best->profile, best->builtinsprofile, best->profile_total, best->builtinsprofile_total, (best->profile + best->builtinsprofile) * 100.0 / (best->profile_total + best->builtinsprofile_total), PRVM_GetString(prog, best->s_name));
 				}
 			}
 			num++;
@@ -416,19 +416,17 @@ PRVM_CallProfile_f
 */
 void PRVM_CallProfile_f (void)
 {
+	prvm_prog_t *prog;
 	if (Cmd_Argc() != 2)
 	{
 		Con_Print("prvm_callprofile <program name>\n");
 		return;
 	}
 
-	PRVM_Begin;
-	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
 		return;
 
-	PRVM_CallProfile();
-
-	PRVM_End;
+	PRVM_CallProfile(prog);
 }
 
 /*
@@ -439,6 +437,7 @@ PRVM_Profile_f
 */
 void PRVM_Profile_f (void)
 {
+	prvm_prog_t *prog;
 	int howmany;
 
 	howmany = 1<<30;
@@ -450,17 +449,15 @@ void PRVM_Profile_f (void)
 		return;
 	}
 
-	PRVM_Begin;
-	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
 		return;
 
-	PRVM_Profile(howmany, 0, 0);
-
-	PRVM_End;
+	PRVM_Profile(prog, howmany, 0, 0);
 }
 
 void PRVM_ChildProfile_f (void)
 {
+	prvm_prog_t *prog;
 	int howmany;
 
 	howmany = 1<<30;
@@ -472,35 +469,16 @@ void PRVM_ChildProfile_f (void)
 		return;
 	}
 
-	PRVM_Begin;
-	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
 		return;
 
-	PRVM_Profile(howmany, 0, 1);
-
-	PRVM_End;
+	PRVM_Profile(prog, howmany, 0, 1);
 }
 
-void PRVM_CrashAll(void)
+void PRVM_PrintState(prvm_prog_t *prog)
 {
 	int i;
-	prvm_prog_t *oldprog = prog;
-
-	for(i = 0; i < PRVM_MAXPROGS; i++)
-	{
-		if(!PRVM_ProgLoaded(i))
-			continue;
-		PRVM_SetProg(i);
-		PRVM_Crash();
-	}
-
-	prog = oldprog;
-}
-
-void PRVM_PrintState(void)
-{
-	int i;
-	if(prog->statestring)
+	if (prog->statestring)
 	{
 		Con_Printf("Caller-provided information: %s\n", prog->statestring);
 	}
@@ -508,33 +486,34 @@ void PRVM_PrintState(void)
 	{
 		for (i = -7; i <= 0;i++)
 			if (prog->xstatement + i >= prog->xfunction->first_statement)
-				PRVM_PrintStatement (prog->statements + prog->xstatement + i);
+				PRVM_PrintStatement(prog, prog->statements + prog->xstatement + i);
 	}
 	else
 		Con_Print("null function executing??\n");
-	PRVM_StackTrace ();
+	PRVM_StackTrace(prog);
 }
 
-extern sizebuf_t vm_tempstringsbuf;
 extern cvar_t prvm_errordump;
-void Host_Savegame_to (const char *name);
-void PRVM_Crash(void)
+void PRVM_Crash(prvm_prog_t *prog)
 {
+	char vabuf[1024];
 	if (prog == NULL)
+		return;
+	if (!prog->loaded)
 		return;
 
 	PRVM_serverfunction(SV_Shutdown) = 0; // don't call SV_Shutdown on crash
 
 	if( prog->depth > 0 )
 	{
-		Con_Printf("QuakeC crash report for %s:\n", PRVM_NAME);
-		PRVM_PrintState();
+		Con_Printf("QuakeC crash report for %s:\n", prog->name);
+		PRVM_PrintState(prog);
 	}
 
 	if(prvm_errordump.integer)
 	{
 		// make a savegame
-		Host_Savegame_to(va("crash-%s.dmp", PRVM_NAME));
+		Host_Savegame_to(prog, va(vabuf, sizeof(vabuf), "crash-%s.dmp", prog->name));
 	}
 
 	// dump the stack so host_error can shutdown functions
@@ -542,7 +521,7 @@ void PRVM_Crash(void)
 	prog->localstack_used = 0;
 
 	// delete all tempstrings (FIXME: is this safe in VM->engine->VM recursion?)
-	vm_tempstringsbuf.cursize = 0;
+	prog->tempstringsbuf.cursize = 0;
 
 	// reset the prog pointer
 	prog = NULL;
@@ -563,12 +542,12 @@ PRVM_EnterFunction
 Returns the new program statement counter
 ====================
 */
-int PRVM_EnterFunction (mfunction_t *f)
+static int PRVM_EnterFunction (prvm_prog_t *prog, mfunction_t *f)
 {
 	int		i, j, c, o;
 
 	if (!f)
-		PRVM_ERROR ("PRVM_EnterFunction: NULL function in %s", PRVM_NAME);
+		prog->error_cmd("PRVM_EnterFunction: NULL function in %s", prog->name);
 
 	prog->stack[prog->depth].s = prog->xstatement;
 	prog->stack[prog->depth].f = prog->xfunction;
@@ -577,12 +556,12 @@ int PRVM_EnterFunction (mfunction_t *f)
 	prog->stack[prog->depth].builtinsprofile_acc = -f->builtinsprofile;
 	prog->depth++;
 	if (prog->depth >=PRVM_MAX_STACK_DEPTH)
-		PRVM_ERROR ("stack overflow");
+		prog->error_cmd("stack overflow");
 
 // save off any locals that the new function steps on
 	c = f->locals;
 	if (prog->localstack_used + c > PRVM_LOCALSTACK_SIZE)
-		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack overflow in %s", PRVM_NAME);
+		prog->error_cmd("PRVM_ExecuteProgram: locals stack overflow in %s", prog->name);
 
 	for (i=0 ; i < c ; i++)
 		prog->localstack[prog->localstack_used+i] = ((int *)prog->globals.generic)[f->parm_start + i];
@@ -609,21 +588,21 @@ int PRVM_EnterFunction (mfunction_t *f)
 PRVM_LeaveFunction
 ====================
 */
-int PRVM_LeaveFunction (void)
+static int PRVM_LeaveFunction (prvm_prog_t *prog)
 {
 	int		i, c;
 	mfunction_t *f;
 
 	if (prog->depth <= 0)
-		PRVM_ERROR ("prog stack underflow in %s", PRVM_NAME);
+		prog->error_cmd("prog stack underflow in %s", prog->name);
 
 	if (!prog->xfunction)
-		PRVM_ERROR ("PR_LeaveFunction: NULL function in %s", PRVM_NAME);
+		prog->error_cmd("PR_LeaveFunction: NULL function in %s", prog->name);
 // restore locals from the stack
 	c = prog->xfunction->locals;
 	prog->localstack_used -= c;
 	if (prog->localstack_used < 0)
-		PRVM_ERROR ("PRVM_ExecuteProgram: locals stack underflow in %s", PRVM_NAME);
+		prog->error_cmd("PRVM_ExecuteProgram: locals stack underflow in %s", prog->name);
 
 	for (i=0 ; i < c ; i++)
 		((int *)prog->globals.generic)[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];
@@ -656,7 +635,7 @@ int PRVM_LeaveFunction (void)
 	return prog->stack[prog->depth].s;
 }
 
-void PRVM_Init_Exec(void)
+void PRVM_Init_Exec(prvm_prog_t *prog)
 {
 	// dump the stack
 	prog->depth = 0;
@@ -670,7 +649,6 @@ void PRVM_Init_Exec(void)
 #define OPC ((prvm_eval_t *)&prog->globals.generic[st->operand[2]])
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
-extern sizebuf_t vm_tempstringsbuf;
 extern qboolean prvm_runawaycheck;
 
 #ifdef PROFILING
@@ -679,7 +657,7 @@ extern qboolean prvm_runawaycheck;
 MVM_ExecuteProgram
 ====================
 */
-void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
+void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
 {
 	mstatement_t	*st, *startst;
 	mfunction_t	*f, *newf;
@@ -690,19 +668,19 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	double  calltime;
 	double tm, starttm;
 
-	calltime = Sys_DoubleTime();
+	calltime = Sys_DirtyTime();
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
 		if (PRVM_allglobaledict(self))
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
-		PRVM_ERROR ("MVM_ExecuteProgram: %s", errormessage);
+			PRVM_ED_Print(prog, PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
+		prog->error_cmd("MVM_ExecuteProgram: %s", errormessage);
 	}
 
 	f = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
-	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
 
 	prog->trace = prvm_traceqc.integer;
 
@@ -710,7 +688,7 @@ void MVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction (f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, f)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -753,14 +731,16 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_DPrintf("MVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && prog->tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("MVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog, prog->functions[fnum].s_name), prog->tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
-	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
-	f->totaltime += (Sys_DoubleTime() - calltime);
+	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
+	f->totaltime += tm;
 
-	SV_FlushBroadcastMessages();
+	if (prog == SVVM_prog)
+		SV_FlushBroadcastMessages();
 }
 
 /*
@@ -768,7 +748,7 @@ cleanup:
 CLVM_ExecuteProgram
 ====================
 */
-void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
+void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
 {
 	mstatement_t	*st, *startst;
 	mfunction_t	*f, *newf;
@@ -779,19 +759,19 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	double  calltime;
 	double tm, starttm;
 
-	calltime = Sys_DoubleTime();
+	calltime = Sys_DirtyTime();
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
 		if (PRVM_allglobaledict(self))
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
-		PRVM_ERROR ("CLVM_ExecuteProgram: %s", errormessage);
+			PRVM_ED_Print(prog, PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
+		prog->error_cmd("CLVM_ExecuteProgram: %s", errormessage);
 	}
 
 	f = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
-	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
 
 	prog->trace = prvm_traceqc.integer;
 
@@ -799,7 +779,7 @@ void CLVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction (f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, f)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -842,14 +822,16 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_DPrintf("CLVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && prog->tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("CLVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog, prog->functions[fnum].s_name), prog->tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
-	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
-	f->totaltime += (Sys_DoubleTime() - calltime);
+	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
+	f->totaltime += tm;
 
-	SV_FlushBroadcastMessages();
+	if (prog == SVVM_prog)
+		SV_FlushBroadcastMessages();
 }
 #endif
 
@@ -858,7 +840,11 @@ cleanup:
 SVVM_ExecuteProgram
 ====================
 */
-void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
+#ifdef PROFILING
+void SVVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
+#else
+void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
+#endif
 {
 	mstatement_t	*st, *startst;
 	mfunction_t	*f, *newf;
@@ -869,19 +855,19 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	double  calltime;
 	double tm, starttm;
 
-	calltime = Sys_DoubleTime();
+	calltime = Sys_DirtyTime();
 
 	if (!fnum || fnum >= (unsigned int)prog->numfunctions)
 	{
 		if (PRVM_allglobaledict(self))
-			PRVM_ED_Print(PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
-		PRVM_ERROR ("SVVM_ExecuteProgram: %s", errormessage);
+			PRVM_ED_Print(prog, PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self)), NULL);
+		prog->error_cmd("SVVM_ExecuteProgram: %s", errormessage);
 	}
 
 	f = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
-	restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
+	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
 
 	prog->trace = prvm_traceqc.integer;
 
@@ -889,7 +875,7 @@ void SVVM_ExecuteProgram (func_t fnum, const char *errormessage)
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction (f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, f)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -932,12 +918,14 @@ chooseexecprogram:
 	}
 
 cleanup:
-	if (developer_insane.integer && vm_tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
-		Con_DPrintf("SVVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog->functions[fnum].s_name), vm_tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
+	if (developer_insane.integer && prog->tempstringsbuf.cursize > restorevm_tempstringsbuf_cursize)
+		Con_DPrintf("SVVM_ExecuteProgram: %s used %i bytes of tempstrings\n", PRVM_GetString(prog, prog->functions[fnum].s_name), prog->tempstringsbuf.cursize - restorevm_tempstringsbuf_cursize);
 	// delete tempstrings created by this function
-	vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
-	f->totaltime += (Sys_DoubleTime() - calltime);
+	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
+	f->totaltime += tm;
 
-	SV_FlushBroadcastMessages();
+	if (prog == SVVM_prog)
+		SV_FlushBroadcastMessages();
 }

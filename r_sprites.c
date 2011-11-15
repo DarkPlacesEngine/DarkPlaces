@@ -35,7 +35,7 @@ extern cvar_t r_overheadsprites_scaley;
 #define SIDE_BOTTOM 3
 #define SIDE_RIGHT 4
 
-void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_t up, int *edge, float *dir_angle)
+static void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_t up, int *edge, float *dir_angle)
 {
 	float distance;
 	vec3_t bCoord; // body coordinates of object
@@ -141,7 +141,7 @@ void R_TrackSprite(const entity_render_t *ent, vec3_t origin, vec3_t left, vec3_
 	}
 }
 
-void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec3_t up, int edge, float dir_angle)
+static void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec3_t up, int edge, float dir_angle)
 {
 	if(!(r_track_sprites_flags.integer & TSF_ROTATE))
 	{
@@ -205,7 +205,7 @@ void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t left, vec
 
 static float spritetexcoord2f[4*2] = {0, 1, 0, 0, 1, 0, 1, 1};
 
-void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
 	dp_model_t *model = ent->model;
@@ -424,6 +424,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-	R_MeshQueue_AddTransparent(ent->flags & RENDER_NODEPTHTEST ? r_refdef.view.origin : org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
+	R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((ent->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
 }
 

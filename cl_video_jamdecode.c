@@ -41,7 +41,7 @@ unsigned int jam_getwidth(void *stream);
 unsigned int jam_getheight(void *stream);
 double jam_getframerate(void *stream);
 int jam_video(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow);
-void *jam_open(clvideo_t *video, char *filename, const char **errorstring)
+static void *jam_open(clvideo_t *video, char *filename, const char **errorstring)
 {
 	unsigned char jamHead[16];
 	char *wavename;
@@ -176,7 +176,7 @@ double jam_getframerate(void *stream)
 
 
 // decode JAM frame
-void jam_decodeframe(unsigned char *inbuf, unsigned char *outbuf, unsigned char *prevbuf, int outsize, int frametype)
+static void jam_decodeframe(unsigned char *inbuf, unsigned char *outbuf, unsigned char *prevbuf, int outsize, int frametype)
 {
 	unsigned char *srcptr, *destptr, *prevptr;
 	int bytesleft;

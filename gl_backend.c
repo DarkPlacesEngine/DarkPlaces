@@ -347,7 +347,7 @@ unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
-void GL_VBOStats_f(void)
+static void GL_VBOStats_f(void)
 {
 	GL_Mesh_ListVBOs(true);
 }
@@ -1249,9 +1249,9 @@ static void GL_BindEBO(int bufferobject)
 	}
 }
 
+static const GLuint drawbuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
 int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
 {
-	int temp;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
@@ -1259,17 +1259,111 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
-		if (!vid.support.ext_framebuffer_object)
-			return 0;
-		qglGenFramebuffersEXT(1, (GLuint*)&temp);CHECKGLERROR
-		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
-		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
-		if (depthtexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, depthtexture->gltexturetypeenum, R_GetTexture(depthtexture), 0);CHECKGLERROR
-		if (colortexture) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, colortexture->gltexturetypeenum, R_GetTexture(colortexture), 0);CHECKGLERROR
-		if (colortexture2) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, colortexture2->gltexturetypeenum, R_GetTexture(colortexture2), 0);CHECKGLERROR
-		if (colortexture3) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, colortexture3->gltexturetypeenum, R_GetTexture(colortexture3), 0);CHECKGLERROR
-		if (colortexture4) qglFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, colortexture4->gltexturetypeenum, R_GetTexture(colortexture4), 0);CHECKGLERROR
-		return temp;
+		if (vid.support.arb_framebuffer_object)
+		{
+			int temp;
+			GLuint status;
+			qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
+			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+			// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
+			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, depthtexture->glisdepthstencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, depthtexture->glisdepthstencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
+			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
+			if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
+			if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
+			if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
+			if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
+			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
+			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
+
+			if (colortexture4 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture3 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture2 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture && qglDrawBuffer)
+			{
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+			}
+			else if (qglDrawBuffer)
+			{
+				qglDrawBuffer(GL_NONE);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
+			if (status != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+				qglDeleteFramebuffers(1, (GLuint*)&temp);
+				temp = 0;
+			}
+			return temp;
+		}
+		else if (vid.support.ext_framebuffer_object)
+		{
+			int temp;
+			GLuint status;
+			qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
+			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+			// GL_EXT_framebuffer_object (GL2-class hardware) - no depth stencil attachment, let it break stencil
+			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
+			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
+			if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
+			if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
+			if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
+			if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
+			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
+			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
+
+			if (colortexture4 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture3 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture2 && qglDrawBuffersARB)
+			{
+				qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			else if (colortexture && qglDrawBuffer)
+			{
+				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+			}
+			else if (qglDrawBuffer)
+			{
+				qglDrawBuffer(GL_NONE);CHECKGLERROR
+				qglReadBuffer(GL_NONE);CHECKGLERROR
+			}
+			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
+			if (status != GL_FRAMEBUFFER_COMPLETE)
+			{
+				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+				qglDeleteFramebuffers(1, (GLuint*)&temp);
+				temp = 0;
+			}
+			return temp;
+		}
+		return 0;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -1290,7 +1384,7 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		if (fbo)
-			qglDeleteFramebuffersEXT(1, (GLuint*)&fbo);
+			qglDeleteFramebuffers(1, (GLuint*)&fbo);
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -1304,10 +1398,6 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 #ifdef SUPPORTD3D
 void R_Mesh_SetRenderTargetsD3D9(IDirect3DSurface9 *depthsurface, IDirect3DSurface9 *colorsurface0, IDirect3DSurface9 *colorsurface1, IDirect3DSurface9 *colorsurface2, IDirect3DSurface9 *colorsurface3)
 {
-// LordHavoc: for some weird reason the redundant SetDepthStencilSurface calls are necessary (otherwise the lights fail depth test, as if they were using the shadowmap depth surface and render target still)
-	if (gl_state.d3drt_depthsurface == depthsurface && gl_state.d3drt_colorsurfaces[0] == colorsurface0 && gl_state.d3drt_colorsurfaces[1] == colorsurface1 && gl_state.d3drt_colorsurfaces[2] == colorsurface2 && gl_state.d3drt_colorsurfaces[3] == colorsurface3)
-		return;
-
 	gl_state.framebufferobject = depthsurface != gl_state.d3drt_backbufferdepthsurface || colorsurface0 != gl_state.d3drt_backbuffercolorsurface;
 	if (gl_state.d3drt_depthsurface != depthsurface)
 	{
@@ -1361,7 +1451,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		if (gl_state.framebufferobject != fbo)
 		{
 			gl_state.framebufferobject = fbo;
-			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
+			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -1370,19 +1460,24 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		// TODO: optimize: keep surface pointer around in rtexture_t until texture is freed or lost
 		if (fbo)
 		{
-			IDirect3DSurface9 *colorsurfaces[4];
-			for (i = 0;i < 4;i++)
+			IDirect3DSurface9 *surfaces[5];
+			for (i = 0;i < 5;i++)
 			{
-				colorsurfaces[i] = NULL;
+				surfaces[i] = NULL;
 				if (textures[i])
-					IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)textures[i]->d3dtexture, 0, &colorsurfaces[i]);
+				{
+					if (textures[i]->d3dsurface)
+						surfaces[i] = (IDirect3DSurface9 *)textures[i]->d3dsurface;
+					else
+						IDirect3DTexture9_GetSurfaceLevel((IDirect3DTexture9 *)textures[i]->d3dtexture, 0, &surfaces[i]);
+				}
 			}
 			// set the render targets for real
-			R_Mesh_SetRenderTargetsD3D9(depthtexture ? (IDirect3DSurface9 *)depthtexture->d3dtexture : NULL, colorsurfaces[0], colorsurfaces[1], colorsurfaces[2], colorsurfaces[3]);
+			R_Mesh_SetRenderTargetsD3D9(surfaces[4], surfaces[0], surfaces[1], surfaces[2], surfaces[3]);
 			// release the texture surface levels (they won't be lost while bound...)
-			for (i = 0;i < 4;i++)
-				if (textures[i])
-					IDirect3DSurface9_Release(colorsurfaces[i]);
+			for (i = 0;i < 5;i++)
+				if (textures[i] && !textures[i]->d3dsurface)
+					IDirect3DSurface9_Release(surfaces[i]);
 		}
 		else
 			R_Mesh_SetRenderTargetsD3D9(gl_state.d3drt_backbufferdepthsurface, gl_state.d3drt_backbuffercolorsurface, NULL, NULL, NULL);
@@ -1440,8 +1535,6 @@ static int d3dstencilopforglfunc(int f)
 	}
 }
 #endif
-
-extern cvar_t r_transparent_alphatocoverage;
 
 static void GL_Backend_ResetState(void)
 {
@@ -1514,8 +1607,8 @@ static void GL_Backend_ResetState(void)
 
 		if (vid.support.ext_framebuffer_object)
 		{
-			//qglBindRenderbufferEXT(GL_RENDERBUFFER, 0);
-			qglBindFramebufferEXT(GL_FRAMEBUFFER, 0);
+			//qglBindRenderbuffer(GL_RENDERBUFFER, 0);
+			qglBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 
 		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), NULL);CHECKGLERROR
@@ -1526,7 +1619,7 @@ static void GL_Backend_ResetState(void)
 		qglColor4f(1, 1, 1, 1);CHECKGLERROR
 
 		if (vid.support.ext_framebuffer_object)
-			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.framebufferobject);
+			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebufferobject);
 
 		gl_state.unit = MAX_TEXTUREUNITS;
 		gl_state.clientunit = MAX_TEXTUREUNITS;
@@ -1585,7 +1678,7 @@ static void GL_Backend_ResetState(void)
 			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 		if (vid.support.ext_framebuffer_object)
-			qglBindFramebufferEXT(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
+			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
 		qglEnableVertexAttribArray(GLSLATTRIB_POSITION);
 		qglVertexAttribPointer(GLSLATTRIB_POSITION, 3, GL_FLOAT, false, sizeof(float[3]), NULL);CHECKGLERROR
 		qglDisableVertexAttribArray(GLSLATTRIB_COLOR);
@@ -2525,7 +2618,7 @@ void R_Mesh_Start(void)
 	}
 }
 
-qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
+static qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
 {
 	int shaderobject;
 	int shadercompiled;
@@ -2622,18 +2715,6 @@ void GL_Backend_FreeProgram(unsigned int prog)
 	CHECKGLERROR
 	qglDeleteProgram(prog);
 	CHECKGLERROR
-}
-
-void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
-{
-	int i;
-	if (offset)
-	{
-		for (i = 0;i < count;i++)
-			*out++ = *in++ + offset;
-	}
-	else
-		memcpy(out, in, sizeof(*out) * count);
 }
 
 // renders triangles using vertices from the active arrays

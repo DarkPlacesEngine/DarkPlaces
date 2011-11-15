@@ -104,7 +104,6 @@ CL_ClearState
 
 =====================
 */
-void CL_VM_ShutDown (void);
 void CL_ClearState(void)
 {
 	int i;
@@ -216,6 +215,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 {
 	int i;
 	qboolean fail = false;
+	char vabuf[1024];
 	if (!allowstarkey && key[0] == '*')
 		fail = true;
 	if (!allowmodel && (!strcasecmp(key, "pmodel") || !strcasecmp(key, "emodel")))
@@ -238,22 +238,22 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		{
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("setinfo \"%s\" \"%s\"", key, value));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "setinfo \"%s\" \"%s\"", key, value));
 		}
 		else if (!strcasecmp(key, "name"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("name \"%s\"", value));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", value));
 		}
 		else if (!strcasecmp(key, "playermodel"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("playermodel \"%s\"", value));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "playermodel \"%s\"", value));
 		}
 		else if (!strcasecmp(key, "playerskin"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("playerskin \"%s\"", value));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "playerskin \"%s\"", value));
 		}
 		else if (!strcasecmp(key, "topcolor"))
 		{
@@ -266,7 +266,7 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		else if (!strcasecmp(key, "rate"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va("rate \"%s\"", value));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate \"%s\"", value));
 		}
 	}
 }
@@ -390,6 +390,7 @@ void CL_Disconnect(void)
 		cls.netcon = NULL;
 	}
 	cls.state = ca_disconnected;
+	cl.islocalgame = false;
 
 	cls.demoplayback = cls.timedemo = false;
 	cls.signon = 0;
@@ -435,9 +436,6 @@ void CL_EstablishConnection(const char *host, int firstarg)
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
 
-	// run a network frame
-	//NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-
 	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		cls.connect_trying = true;
@@ -460,15 +458,6 @@ void CL_EstablishConnection(const char *host, int firstarg)
 		}
 
 		M_Update_Return_Reason("Trying to connect...");
-
-		// run several network frames to jump into the game quickly
-		//if (sv.active)
-		//{
-		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-		//	NetConn_ClientFrame();SV_VM_Begin();NetConn_ServerFrame();SV_VM_End();
-		//}
 	}
 	else
 	{
@@ -756,7 +745,7 @@ void CL_AllocLightFlash(entity_render_t *ent, matrix4x4_t *matrix, float radius,
 	dl->specularscale = specularscale;
 }
 
-void CL_DecayLightFlashes(void)
+static void CL_DecayLightFlashes(void)
 {
 	int i, oldmax;
 	dlight_t *dl;
@@ -856,7 +845,7 @@ void CL_RelinkLightFlashes(void)
 	}
 }
 
-void CL_AddQWCTFFlagModel(entity_t *player, int skin)
+static void CL_AddQWCTFFlagModel(entity_t *player, int skin)
 {
 	int frame = player->render.framegroupblend[0].frame;
 	float f;
@@ -915,11 +904,6 @@ matrix4x4_t viewmodelmatrix_nobob;
 
 static const vec3_t muzzleflashorigin = {18, 0, 0};
 
-extern void V_DriftPitch(void);
-extern void V_FadeViewFlashs(void);
-extern void V_CalcViewBlend(void);
-extern void V_CalcRefdef(void);
-
 void CL_SetEntityColormapColors(entity_render_t *ent, int colormap)
 {
 	const unsigned char *cbcolor;
@@ -938,7 +922,7 @@ void CL_SetEntityColormapColors(entity_render_t *ent, int colormap)
 }
 
 // note this is a recursive function, recursionlimit should be 32 or so on the initial call
-void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolate)
+static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolate)
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
@@ -1197,7 +1181,7 @@ void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolat
 }
 
 // creates light and trails from an entity
-void CL_UpdateNetworkEntityTrail(entity_t *e)
+static void CL_UpdateNetworkEntityTrail(entity_t *e)
 {
 	effectnameindex_t trailtype;
 	vec3_t origin;
@@ -1312,7 +1296,7 @@ void CL_UpdateViewEntities(void)
 CL_UpdateNetworkCollisionEntities
 ===============
 */
-void CL_UpdateNetworkCollisionEntities(void)
+static void CL_UpdateNetworkCollisionEntities(void)
 {
 	entity_t *ent;
 	int i;
@@ -1334,14 +1318,12 @@ void CL_UpdateNetworkCollisionEntities(void)
 	}
 }
 
-extern void R_DecalSystem_Reset(decalsystem_t *decalsystem);
-
 /*
 ===============
 CL_UpdateNetworkEntities
 ===============
 */
-void CL_UpdateNetworkEntities(void)
+static void CL_UpdateNetworkEntities(void)
 {
 	entity_t *ent;
 	int i;
@@ -1368,7 +1350,7 @@ void CL_UpdateNetworkEntities(void)
 	}
 }
 
-void CL_UpdateViewModel(void)
+static void CL_UpdateViewModel(void)
 {
 	entity_t *ent;
 	ent = &cl.viewent;
@@ -1403,12 +1385,13 @@ void CL_UpdateViewModel(void)
 }
 
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
-void CL_LinkNetworkEntity(entity_t *e)
+static void CL_LinkNetworkEntity(entity_t *e)
 {
 	effectnameindex_t trailtype;
 	vec3_t origin;
 	vec3_t dlightcolor;
 	vec_t dlightradius;
+	char vabuf[1024];
 
 	// skip inactive entities and world
 	if (!e->state_current.active || e == cl.entities)
@@ -1545,7 +1528,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
 		Matrix4x4_Normalize(&dlightmatrix, &e->render.matrix);
 		Matrix4x4_Scale(&dlightmatrix, light[3], 1);
-		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va("cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &dlightmatrix, light, e->state_current.lightstyle, e->state_current.skin > 0 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", e->state_current.skin) : NULL, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 	}
 	// make the glow dlight
@@ -1576,7 +1559,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 	//	Matrix4x4_Print(&e->render.matrix);
 }
 
-void CL_RelinkWorld(void)
+static void CL_RelinkWorld(void)
 {
 	entity_t *ent = &cl.entities[0];
 	// FIXME: this should be done at load
@@ -1853,7 +1836,7 @@ static void CL_RelinkQWNails(void)
 	}
 }
 
-void CL_LerpPlayer(float frac)
+static void CL_LerpPlayer(float frac)
 {
 	int i;
 
@@ -2035,23 +2018,23 @@ For program optimization
 static void CL_TimeRefresh_f (void)
 {
 	int i;
-	float timestart, timedelta;
+	double timestart, timedelta;
 
 	r_refdef.scene.extraupdate = false;
 
-	timestart = Sys_DoubleTime();
+	timestart = Sys_DirtyTime();
 	for (i = 0;i < 128;i++)
 	{
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, i / 128.0 * 360.0, 0, 1);
 		r_refdef.view.quality = 1;
 		CL_UpdateScreen();
 	}
-	timedelta = Sys_DoubleTime() - timestart;
+	timedelta = Sys_DirtyTime() - timestart;
 
 	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
-void CL_AreaStats_f(void)
+static void CL_AreaStats_f(void)
 {
 	World_PrintAreaStats(&cl.world, "client");
 }
@@ -2091,7 +2074,7 @@ void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point)
 		dpsnprintf(buffer, buffersize, "LOC=%.0f:%.0f:%.0f", point[0], point[1], point[2]);
 }
 
-void CL_Locs_FreeNode(cl_locnode_t *node)
+static void CL_Locs_FreeNode(cl_locnode_t *node)
 {
 	cl_locnode_t **pointer, **next;
 	for (pointer = &cl.locnodes;*pointer;pointer = next)
@@ -2107,7 +2090,7 @@ void CL_Locs_FreeNode(cl_locnode_t *node)
 	Con_Printf("CL_Locs_FreeNode: no such node! (%p)\n", (void *)node);
 }
 
-void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
+static void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
 {
 	cl_locnode_t *node, **pointer;
 	int namelen;
@@ -2126,7 +2109,7 @@ void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
 	*pointer = node;
 }
 
-void CL_Locs_Add_f(void)
+static void CL_Locs_Add_f(void)
 {
 	vec3_t mins, maxs;
 	if (Cmd_Argc() != 5 && Cmd_Argc() != 8)
@@ -2148,7 +2131,7 @@ void CL_Locs_Add_f(void)
 		CL_Locs_AddNode(mins, mins, Cmd_Argv(4));
 }
 
-void CL_Locs_RemoveNearest_f(void)
+static void CL_Locs_RemoveNearest_f(void)
 {
 	cl_locnode_t *loc;
 	loc = CL_Locs_FindNearest(r_refdef.view.origin);
@@ -2158,13 +2141,13 @@ void CL_Locs_RemoveNearest_f(void)
 		Con_Printf("no loc point or box found for your location\n");
 }
 
-void CL_Locs_Clear_f(void)
+static void CL_Locs_Clear_f(void)
 {
 	while (cl.locnodes)
 		CL_Locs_FreeNode(cl.locnodes);
 }
 
-void CL_Locs_Save_f(void)
+static void CL_Locs_Save_f(void)
 {
 	cl_locnode_t *loc;
 	qfile_t *outfile;

@@ -38,11 +38,12 @@ size_t u8_prevbyte(const char*, size_t);
 Uchar  u8_getchar_utf8_enabled(const char*, const char**);
 Uchar  u8_getnchar_utf8_enabled(const char*, const char**, size_t);
 int    u8_fromchar(Uchar, char*, size_t);
+size_t u8_mbstowcs(Uchar *, const char *, size_t);
 size_t u8_wcstombs(char*, const Uchar*, size_t);
 size_t u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
 
 // returns a static buffer, use this for inlining
-char  *u8_encodech(Uchar ch, size_t*);
+char  *u8_encodech(Uchar ch, size_t*, char*buf16);
 
 size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
 

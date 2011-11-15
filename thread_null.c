@@ -15,56 +15,55 @@ qboolean Thread_HasThreads(void)
 	return false;
 }
 
-void *Thread_CreateMutex(void)
+void *_Thread_CreateMutex(const char *filename, int fileline)
 {
 	return NULL;
 }
 
-void Thread_DestroyMutex(void *mutex)
+void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
 }
 
-int Thread_LockMutex(void *mutex)
-{
-	return -1;
-}
-
-int Thread_UnlockMutex(void *mutex)
+int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
 	return -1;
 }
 
-void *Thread_CreateCond(void)
+int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
+{
+	return -1;
+}
+
+void *_Thread_CreateCond(const char *filename, int fileline)
 {
 	return NULL;
 }
 
-void Thread_DestroyCond(void *cond)
+void _Thread_DestroyCond(void *cond, const char *filename, int fileline)
 {
 }
 
-int Thread_CondSignal(void *cond)
-{
-	return -1;
-}
-
-int Thread_CondBroadcast(void *cond)
+int _Thread_CondSignal(void *cond, const char *filename, int fileline)
 {
 	return -1;
 }
 
-int Thread_CondWait(void *cond, void *mutex)
+int _Thread_CondBroadcast(void *cond, const char *filename, int fileline)
 {
 	return -1;
 }
 
-void *Thread_CreateThread(int (*fn)(void *), void *data)
+int _Thread_CondWait(void *cond, void *mutex, const char *filename, int fileline)
+{
+	return -1;
+}
+
+void *_Thread_CreateThread(int (*fn)(void *), void *data, const char *filename, int fileline)
 {
 	return NULL;
 }
 
-int Thread_WaitThread(void *thread, int retval)
+int _Thread_WaitThread(void *thread, int retval, const char *filename, int fileline)
 {
 	return retval;
 }
-	

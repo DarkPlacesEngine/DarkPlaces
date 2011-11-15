@@ -77,6 +77,8 @@ cvar_t r_nearclip = {0, "r_nearclip", "1", "distance from camera of nearclip pla
 cvar_t r_deformvertexes = {0, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
 cvar_t r_transparent = {0, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
 cvar_t r_transparent_alphatocoverage = {0, "r_transparent_alphatocoverage", "1", "enables GL_ALPHA_TO_COVERAGE antialiasing technique on alphablend and alphatest surfaces when using vid_samples 2 or higher"};
+cvar_t r_transparent_sortsurfacesbynearest = {0, "r_transparent_sortsurfacesbynearest", "1", "sort entity and world surfaces by nearest point on bounding box instead of using the center of the bounding box, usually reduces sorting artifacts"};
+cvar_t r_transparent_useplanardistance = {0, "r_transparent_useplanardistance", "0", "sort transparent meshes by distance from view plane rather than spherical distance to the chosen point"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
@@ -147,6 +149,7 @@ cvar_t r_textureunits = {0, "r_textureunits", "32", "number of texture units to 
 static cvar_t gl_combine = {CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
 static cvar_t r_glsl = {CVAR_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
 
+cvar_t r_usedepthtextures = {CVAR_SAVE, "r_usedepthtextures", "1", "use depth texture instead of depth renderbuffer where possible, uses less video memory but may render slower (or faster) depending on hardware"};
 cvar_t r_viewfbo = {CVAR_SAVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
 cvar_t r_viewscale = {CVAR_SAVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
 cvar_t r_viewscale_fpsscaling = {CVAR_SAVE, "r_viewscale_fpsscaling", "0", "change resolution based on framerate"};
@@ -654,6 +657,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEBOUNCEGRID\n", " bouncegrid"},
 	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"}, // TODO make this a static parm
 	{"#define USETRIPPY\n", " trippy"},
+	{"#define USEDEPTHRGB\n", " depthrgb"},
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
@@ -737,7 +741,6 @@ typedef struct r_glsl_permutation_s
 	int tex_Texture_Reflection;
 	int tex_Texture_ShadowMap2D;
 	int tex_Texture_CubeProjection;
-	int tex_Texture_ScreenDepth;
 	int tex_Texture_ScreenNormalMap;
 	int tex_Texture_ScreenDiffuse;
 	int tex_Texture_ScreenSpecular;
@@ -768,7 +771,6 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Reflection;
 	int loc_Texture_ShadowMap2D;
 	int loc_Texture_CubeProjection;
-	int loc_Texture_ScreenDepth;
 	int loc_Texture_ScreenNormalMap;
 	int loc_Texture_ScreenDiffuse;
 	int loc_Texture_ScreenSpecular;
@@ -858,7 +860,7 @@ static int shaderstaticparms_count = 0;
 
 static unsigned int r_compileshader_staticparms[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5] = {0};
 #define R_COMPILESHADER_STATICPARM_ENABLE(p) r_compileshader_staticparms[(p) >> 5] |= (1 << ((p) & 0x1F))
-qboolean R_CompileShader_CheckStaticParms(void)
+static qboolean R_CompileShader_CheckStaticParms(void)
 {
 	static int r_compileshader_staticparms_save[1];
 	memcpy(r_compileshader_staticparms_save, r_compileshader_staticparms, sizeof(r_compileshader_staticparms));
@@ -892,7 +894,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "#define " n "\n"; \
 	else \
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "\n"
-void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
+static void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
 {
 	shaderstaticparms_count = 0;
 
@@ -978,9 +980,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	int vertstrings_count = 0;
 	int geomstrings_count = 0;
 	int fragstrings_count = 0;
-	const char *vertstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *geomstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *fragstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
+	const char *vertstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
+	const char *geomstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
+	const char *fragstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
 
 	if (p->compiled)
 		return;
@@ -1091,7 +1093,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_Reflection         = qglGetUniformLocation(p->program, "Texture_Reflection");
 		p->loc_Texture_ShadowMap2D        = qglGetUniformLocation(p->program, "Texture_ShadowMap2D");
 		p->loc_Texture_CubeProjection     = qglGetUniformLocation(p->program, "Texture_CubeProjection");
-		p->loc_Texture_ScreenDepth        = qglGetUniformLocation(p->program, "Texture_ScreenDepth");
 		p->loc_Texture_ScreenNormalMap    = qglGetUniformLocation(p->program, "Texture_ScreenNormalMap");
 		p->loc_Texture_ScreenDiffuse      = qglGetUniformLocation(p->program, "Texture_ScreenDiffuse");
 		p->loc_Texture_ScreenSpecular     = qglGetUniformLocation(p->program, "Texture_ScreenSpecular");
@@ -1179,7 +1180,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->tex_Texture_Reflection = -1;
 		p->tex_Texture_ShadowMap2D = -1;
 		p->tex_Texture_CubeProjection = -1;
-		p->tex_Texture_ScreenDepth = -1;
 		p->tex_Texture_ScreenNormalMap = -1;
 		p->tex_Texture_ScreenDiffuse = -1;
 		p->tex_Texture_ScreenSpecular = -1;
@@ -1210,7 +1210,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_Reflection      >= 0) {p->tex_Texture_Reflection       = sampler;qglUniform1i(p->loc_Texture_Reflection      , sampler);sampler++;}
 		if (p->loc_Texture_ShadowMap2D     >= 0) {p->tex_Texture_ShadowMap2D      = sampler;qglUniform1i(p->loc_Texture_ShadowMap2D     , sampler);sampler++;}
 		if (p->loc_Texture_CubeProjection  >= 0) {p->tex_Texture_CubeProjection   = sampler;qglUniform1i(p->loc_Texture_CubeProjection  , sampler);sampler++;}
-		if (p->loc_Texture_ScreenDepth     >= 0) {p->tex_Texture_ScreenDepth      = sampler;qglUniform1i(p->loc_Texture_ScreenDepth     , sampler);sampler++;}
 		if (p->loc_Texture_ScreenNormalMap >= 0) {p->tex_Texture_ScreenNormalMap  = sampler;qglUniform1i(p->loc_Texture_ScreenNormalMap , sampler);sampler++;}
 		if (p->loc_Texture_ScreenDiffuse   >= 0) {p->tex_Texture_ScreenDiffuse    = sampler;qglUniform1i(p->loc_Texture_ScreenDiffuse   , sampler);sampler++;}
 		if (p->loc_Texture_ScreenSpecular  >= 0) {p->tex_Texture_ScreenSpecular   = sampler;qglUniform1i(p->loc_Texture_ScreenSpecular  , sampler);sampler++;}
@@ -1232,7 +1231,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		Mem_Free(fragmentstring);
 }
 
-void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutation)
+static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutation)
 {
 	r_glsl_permutation_t *perm = R_GLSL_FindPermutation(mode, permutation);
 	if (r_glsl_permutation != perm)
@@ -1453,13 +1452,14 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 	int psresult = 0;
 	char temp[MAX_INPUTLINE];
 	const char *vsversion = "vs_3_0", *psversion = "ps_3_0";
+	char vabuf[1024];
 	qboolean debugshader = gl_paranoid.integer != 0;
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (p->permutation & SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING) {vsversion = "vs_3_0";psversion = "ps_3_0";}
 	if (!debugshader)
 	{
-		vsbin = (DWORD *)FS_LoadFile(va("%s.vsbin", cachename), r_main_mempool, true, &vsbinsize);
-		psbin = (DWORD *)FS_LoadFile(va("%s.psbin", cachename), r_main_mempool, true, &psbinsize);
+		vsbin = (DWORD *)FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.vsbin", cachename), r_main_mempool, true, &vsbinsize);
+		psbin = (DWORD *)FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.psbin", cachename), r_main_mempool, true, &psbinsize);
 	}
 	if ((!vsbin && vertstring) || (!psbin && fragstring))
 	{
@@ -1510,9 +1510,9 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 				if (debugshader)
 				{
 //					vsresult = qD3DXPreprocessShader(vertstring, strlen(vertstring), NULL, NULL, &vsbuffer, &vslog);
-//					FS_WriteFile(va("%s_vs.fx", cachename), vsbuffer->GetBufferPointer(), vsbuffer->GetBufferSize());
-					FS_WriteFile(va("%s_vs.fx", cachename), vertstring, strlen(vertstring));
-					vsresult = qD3DXCompileShaderFromFileA(va("%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
+//					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_vs.fx", cachename), vsbuffer->GetBufferPointer(), vsbuffer->GetBufferSize());
+					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_vs.fx", cachename), vertstring, strlen(vertstring));
+					vsresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				}
 				else
 					vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
@@ -1535,9 +1535,9 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 				if (debugshader)
 				{
 //					psresult = qD3DXPreprocessShader(fragstring, strlen(fragstring), NULL, NULL, &psbuffer, &pslog);
-//					FS_WriteFile(va("%s_ps.fx", cachename), psbuffer->GetBufferPointer(), psbuffer->GetBufferSize());
-					FS_WriteFile(va("%s_ps.fx", cachename), fragstring, strlen(fragstring));
-					psresult = qD3DXCompileShaderFromFileA(va("%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
+//					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_ps.fx", cachename), psbuffer->GetBufferPointer(), psbuffer->GetBufferSize());
+					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_ps.fx", cachename), fragstring, strlen(fragstring));
+					psresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				}
 				else
 					psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
@@ -1589,9 +1589,9 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 	int vertstrings_count = 0;
 	int geomstrings_count = 0;
 	int fragstrings_count = 0;
-	const char *vertstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *geomstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
-	const char *fragstrings_list[32+3+SHADERSTATICPARMS_COUNT+1];
+	const char *vertstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
+	const char *geomstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
+	const char *fragstrings_list[32+5+SHADERSTATICPARMS_COUNT+1];
 
 	if (p->compiled)
 		return;
@@ -1778,7 +1778,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 }
 #endif
 
-void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutation)
+static void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutation)
 {
 	DPSOFTRAST_SetShader(mode, permutation, r_shadow_glossexact.integer);
 	DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
@@ -1786,7 +1786,7 @@ void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutatio
 	DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_ClientTime, cl.time);
 }
 
-void R_GLSL_Restart_f(void)
+static void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
 	if (glslshaderstring && glslshaderstring != builtinshaderstring)
@@ -1850,7 +1850,7 @@ void R_GLSL_Restart_f(void)
 	}
 }
 
-void R_GLSL_DumpShader_f(void)
+static void R_GLSL_DumpShader_f(void)
 {
 	int i;
 	qfile_t *file;
@@ -1963,11 +1963,13 @@ void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
 	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, usegamma, notrippy, false);
 }
 
-void R_SetupShader_DepthOrShadow(qboolean notrippy)
+void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb)
 {
 	unsigned int permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
+	if (depthrgb)
+		permutation |= SHADERPERMUTATION_DEPTHRGB;
 	if (vid.allowalphatocoverage)
 		GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
@@ -2037,7 +2039,6 @@ void R_SetupShader_ShowDepth(qboolean notrippy)
 }
 
 extern qboolean r_shadow_usingdeferredprepass;
-extern cvar_t r_shadow_deferred_8bitrange;
 extern rtexture_t *r_shadow_attenuationgradienttexture;
 extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
@@ -2048,16 +2049,15 @@ extern float r_shadow_shadowmap_parameters[4];
 extern qboolean r_shadow_shadowmapvsdct;
 extern qboolean r_shadow_shadowmapsampler;
 extern int r_shadow_shadowmappcf;
-extern rtexture_t *r_shadow_shadowmap2dtexture;
-extern rtexture_t *r_shadow_shadowmap2dcolortexture;
+extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
+extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
 extern rtexture_t *r_shadow_shadowmapvsdcttexture;
 extern matrix4x4_t r_shadow_shadowmapmatrix;
 extern int r_shadow_shadowmaplod; // changes for each light based on distance
 extern int r_shadow_prepass_width;
 extern int r_shadow_prepass_height;
-extern rtexture_t *r_shadow_prepassgeometrydepthtexture;
+extern rtexture_t *r_shadow_prepassgeometrydepthbuffer;
 extern rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
-extern rtexture_t *r_shadow_prepassgeometrydepthcolortexture;
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
 
@@ -2221,6 +2221,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
 		if (rsurface.texture->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
@@ -2263,6 +2265,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
@@ -2318,6 +2322,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
@@ -2378,6 +2384,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
@@ -2437,6 +2445,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 			else if (r_shadow_shadowmappcf)
 				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION)
 			permutation |= SHADERPERMUTATION_REFLECTION;
@@ -2559,8 +2569,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity) * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale, specularscale, specularscale);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightColor, rsurface.modellight_diffuse[0], rsurface.modellight_diffuse[1], rsurface.modellight_diffuse[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2569,8 +2579,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				hlslPSSetParameter3f(D3DPSREGISTER_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
-				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
+				hlslPSSetParameter3f(D3DPSREGISTER_DeferredMod_Specular, specularscale, specularscale, specularscale);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
@@ -2643,13 +2653,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (permutation & SHADERPERMUTATION_REFLECTION        ) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
 		}
-//		if (rsurfacepass == RSURFPASS_DEFERREDLIGHT           ) R_Mesh_TexBind(GL20TU_SCREENDEPTH       , r_shadow_prepassgeometrydepthtexture                );
 //		if (rsurfacepass == RSURFPASS_DEFERREDLIGHT           ) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP   , r_shadow_prepassgeometrynormalmaptexture            );
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENDIFFUSE     , r_shadow_prepasslightingdiffusetexture              );
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dcolortexture);
+			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2ddepthtexture);
 			if (rsurface.rtlight)
 			{
 				if (permutation & SHADERPERMUTATION_CUBEFILTER        ) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
@@ -2709,8 +2718,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale, specularscale, specularscale);
 				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
 				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2719,8 +2728,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
-				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
+				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, specularscale, specularscale, specularscale);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
@@ -2810,13 +2819,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (r_glsl_permutation->tex_Texture_Reflection >= 0 && waterplane) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Reflection        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
 		}
-		if (r_glsl_permutation->tex_Texture_ScreenDepth     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDepth       , r_shadow_prepassgeometrydepthtexture                );
 		if (r_glsl_permutation->tex_Texture_ScreenNormalMap >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenNormalMap   , r_shadow_prepassgeometrynormalmaptexture            );
 		if (r_glsl_permutation->tex_Texture_ScreenDiffuse   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDiffuse     , r_shadow_prepasslightingdiffusetexture              );
 		if (r_glsl_permutation->tex_Texture_ScreenSpecular  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenSpecular    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			if (r_glsl_permutation->tex_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D, r_shadow_shadowmap2dtexture                         );
+			if (r_glsl_permutation->tex_Texture_ShadowMap2D     >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D, r_shadow_shadowmap2ddepthtexture                           );
 			if (rsurface.rtlight)
 			{
 				if (r_glsl_permutation->tex_Texture_Cube            >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Cube              , rsurface.rtlight->currentcubemap                    );
@@ -2859,8 +2867,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Ambient, (r_refdef.scene.ambient + rsurface.modellight_ambient[0] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[0], (r_refdef.scene.ambient + rsurface.modellight_ambient[1] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[1], (r_refdef.scene.ambient + rsurface.modellight_ambient[2] * r_refdef.lightmapintensity * r_refdef.scene.rtlightstylevalue[0]) * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Diffuse, r_refdef.lightmapintensity * colormod[0], r_refdef.lightmapintensity * colormod[1], r_refdef.lightmapintensity * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * r_shadow_deferred_8bitrange.value, colormod[1] * r_shadow_deferred_8bitrange.value, colormod[2] * r_shadow_deferred_8bitrange.value);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0], colormod[1], colormod[2]);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale, specularscale, specularscale);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_LightColor, rsurface.modellight_diffuse[0] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[1] * r_refdef.scene.rtlightstylevalue[0], rsurface.modellight_diffuse[2] * r_refdef.scene.rtlightstylevalue[0]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_LightDir, rsurface.modellight_lightdir[0], rsurface.modellight_lightdir[1], rsurface.modellight_lightdir[2]);
 			}
@@ -2869,8 +2877,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Ambient, r_refdef.scene.ambient * colormod[0], r_refdef.scene.ambient * colormod[1], r_refdef.scene.ambient * colormod[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Diffuse, rsurface.texture->lightmapcolor[0], rsurface.texture->lightmapcolor[1], rsurface.texture->lightmapcolor[2]);
 				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Specular, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale, r_refdef.lightmapintensity * r_refdef.view.colorscale * specularscale);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[1] * diffusescale * r_shadow_deferred_8bitrange.value, colormod[2] * diffusescale * r_shadow_deferred_8bitrange.value);
-				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value, specularscale * r_shadow_deferred_8bitrange.value);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Diffuse, colormod[0] * diffusescale, colormod[1] * diffusescale, colormod[2] * diffusescale);
+				DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_DeferredMod_Specular, specularscale, specularscale, specularscale);
 			}
 			// additive passes are only darkened by fog, not tinted
 			if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
@@ -2952,13 +2960,12 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{
 			if (permutation & SHADERPERMUTATION_REFLECTION        ) R_Mesh_TexBind(GL20TU_REFLECTION        , waterplane->texture_reflection ? waterplane->texture_reflection : r_texture_black);
 		}
-//		if (rsurfacepass == RSURFPASS_DEFERREDLIGHT           ) R_Mesh_TexBind(GL20TU_SCREENDEPTH       , r_shadow_prepassgeometrydepthtexture                );
 //		if (rsurfacepass == RSURFPASS_DEFERREDLIGHT           ) R_Mesh_TexBind(GL20TU_SCREENNORMALMAP   , r_shadow_prepassgeometrynormalmaptexture            );
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENDIFFUSE     , r_shadow_prepasslightingdiffusetexture              );
 		if (permutation & SHADERPERMUTATION_DEFERREDLIGHTMAP  ) R_Mesh_TexBind(GL20TU_SCREENSPECULAR    , r_shadow_prepasslightingspeculartexture             );
 		if (rsurface.rtlight || (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW)))
 		{
-			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2dcolortexture);
+			R_Mesh_TexBind(GL20TU_SHADOWMAP2D, r_shadow_shadowmap2ddepthtexture);
 			if (rsurface.rtlight)
 			{
 				if (permutation & SHADERPERMUTATION_CUBEFILTER        ) R_Mesh_TexBind(GL20TU_CUBE              , rsurface.rtlight->currentcubemap                    );
@@ -2987,7 +2994,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	matrix4x4_t viewtolight;
 	matrix4x4_t lighttoview;
 	float viewtolight16f[16];
-	float range = 1.0f / r_shadow_deferred_8bitrange.value;
 	// light source
 	mode = SHADERMODE_DEFERREDLIGHTSOURCE;
 	if (rtlight->currentcubemap != r_texture_whitecube)
@@ -3008,6 +3014,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 			permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
 		else if (r_shadow_shadowmappcf)
 			permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
+		if (r_shadow_shadowmap2ddepthbuffer)
+			permutation |= SHADERPERMUTATION_DEPTHRGB;
 	}
 	if (vid.allowalphatocoverage)
 		GL_AlphaToCoverage(false);
@@ -3022,9 +3030,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationHLSL(mode, permutation);
 		hlslPSSetParameter3f(D3DPSREGISTER_LightPosition, viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		hlslPSSetParameter16f(D3DPSREGISTER_ViewToLight, viewtolight16f);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
+		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
 		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
@@ -3032,10 +3040,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
 
 		R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
-		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthcolortexture           );
 		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dcolortexture                    );
+		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2ddepthtexture                    );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 #endif
 		break;
@@ -3050,9 +3057,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3f(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		if (r_glsl_permutation->loc_ViewToLight               >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ViewToLight              , 1, false, viewtolight16f);
-		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
+		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
+		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
 		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
@@ -3060,10 +3067,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
 
 		if (r_glsl_permutation->tex_Texture_Attenuation       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Attenuation        , r_shadow_attenuationgradienttexture                 );
-		if (r_glsl_permutation->tex_Texture_ScreenDepth       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenDepth        , r_shadow_prepassgeometrydepthtexture                );
 		if (r_glsl_permutation->tex_Texture_ScreenNormalMap   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenNormalMap    , r_shadow_prepassgeometrynormalmaptexture            );
 		if (r_glsl_permutation->tex_Texture_Cube              >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Cube               , rsurface.rtlight->currentcubemap                    );
-		if (r_glsl_permutation->tex_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D        , r_shadow_shadowmap2dtexture                         );
+		if (r_glsl_permutation->tex_Texture_ShadowMap2D       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ShadowMap2D        , r_shadow_shadowmap2ddepthtexture                    );
 		if (r_glsl_permutation->tex_Texture_CubeProjection    >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_CubeProjection     , r_shadow_shadowmapvsdcttexture                      );
 		break;
 	case RENDERPATH_GL11:
@@ -3074,9 +3080,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
 		DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ViewToLightM1            , 1, false, viewtolight16f);
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale  * range, lightcolorbase[1] * ambientscale  * range, lightcolorbase[2] * ambientscale  * range);
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale  * range, lightcolorbase[1] * diffusescale  * range, lightcolorbase[2] * diffusescale  * range);
-		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale * range, lightcolorbase[1] * specularscale * range, lightcolorbase[2] * specularscale * range);
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
+		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
 		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
 		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
 		DPSOFTRAST_Uniform1f(       DPSOFTRAST_UNIFORM_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
@@ -3084,10 +3090,9 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 
 		R_Mesh_TexBind(GL20TU_ATTENUATION        , r_shadow_attenuationgradienttexture                 );
-		R_Mesh_TexBind(GL20TU_SCREENDEPTH        , r_shadow_prepassgeometrydepthtexture                );
 		R_Mesh_TexBind(GL20TU_SCREENNORMALMAP    , r_shadow_prepassgeometrynormalmaptexture            );
 		R_Mesh_TexBind(GL20TU_CUBE               , rsurface.rtlight->currentcubemap                    );
-		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2dtexture                         );
+		R_Mesh_TexBind(GL20TU_SHADOWMAP2D        , r_shadow_shadowmap2ddepthtexture                    );
 		R_Mesh_TexBind(GL20TU_CUBEPROJECTION     , r_shadow_shadowmapvsdcttexture                      );
 		break;
 	}
@@ -3289,6 +3294,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	int miplevel = R_PicmipForFlags(textureflags);
 	int savemiplevel = miplevel;
 	int mymiplevel;
+	char vabuf[1024];
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -3303,7 +3309,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	Image_StripImageExtension(name, basename, sizeof(basename));
 
 	// check for DDS texture file first
-	if (!r_loaddds || !(ddsbase = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s.dds", basename), vid.sRGB3D, textureflags, &ddshasalpha, ddsavgcolor, miplevel)))
+	if (!r_loaddds || !(ddsbase = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", basename), vid.sRGB3D, textureflags, &ddshasalpha, ddsavgcolor, miplevel)))
 	{
 		basepixels = loadimagepixelsbgra(name, complain, true, false, &miplevel);
 		if (basepixels == NULL)
@@ -3337,7 +3343,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		skinframe->hasalpha = ddshasalpha;
 		VectorCopy(ddsavgcolor, skinframe->avgcolor);
 		if (r_loadfog && skinframe->hasalpha)
-			skinframe->fog = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_mask.dds", skinframe->basename), false, textureflags | TEXF_ALPHA, NULL, NULL, miplevel);
+			skinframe->fog = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_mask.dds", skinframe->basename), false, textureflags | TEXF_ALPHA, NULL, NULL, miplevel);
 		//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
 	}
 	else
@@ -3366,7 +3372,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 					pixels[j+2] = 255;
 					pixels[j+3] = basepixels[j+3];
 				}
-				skinframe->fog = R_LoadTexture2D (r_main_texturepool, va("%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), miplevel, NULL);
+				skinframe->fog = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_mask", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), miplevel, NULL);
 				Mem_Free(pixels);
 			}
 		}
@@ -3374,9 +3380,9 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 #ifndef USE_GLES2
 		//Con_Printf("Texture %s has average colors %f %f %f alpha %f\n", name, skinframe->avgcolor[0], skinframe->avgcolor[1], skinframe->avgcolor[2], skinframe->avgcolor[3]);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->base)
-			R_SaveTextureDDSFile(skinframe->base, va("dds/%s.dds", skinframe->basename), r_texture_dds_save.integer < 2, skinframe->hasalpha);
+			R_SaveTextureDDSFile(skinframe->base, va(vabuf, sizeof(vabuf), "dds/%s.dds", skinframe->basename), r_texture_dds_save.integer < 2, skinframe->hasalpha);
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->fog)
-			R_SaveTextureDDSFile(skinframe->fog, va("dds/%s_mask.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
+			R_SaveTextureDDSFile(skinframe->fog, va(vabuf, sizeof(vabuf), "dds/%s_mask.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 #endif
 	}
 
@@ -3384,30 +3390,30 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	{
 		mymiplevel = savemiplevel;
 		if (r_loadnormalmap)
-			skinframe->nmap = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_norm.dds", skinframe->basename), false, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), NULL, NULL, mymiplevel);
-		skinframe->glow = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_glow.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
+			skinframe->nmap = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_norm.dds", skinframe->basename), false, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), NULL, NULL, mymiplevel);
+		skinframe->glow = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_glow.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
 		if (r_loadgloss)
-			skinframe->gloss = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_gloss.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
-		skinframe->pants = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_pants.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
-		skinframe->shirt = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_shirt.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
-		skinframe->reflect = R_LoadTextureDDSFile(r_main_texturepool, va("dds/%s_reflect.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
+			skinframe->gloss = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_gloss.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
+		skinframe->pants = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_pants.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
+		skinframe->shirt = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_shirt.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
+		skinframe->reflect = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s_reflect.dds", skinframe->basename), vid.sRGB3D, textureflags, NULL, NULL, mymiplevel);
 	}
 
 	// _norm is the name used by tenebrae and has been adopted as standard
 	if (r_loadnormalmap && skinframe->nmap == NULL)
 	{
 		mymiplevel = savemiplevel;
-		if ((pixels = loadimagepixelsbgra(va("%s_norm", skinframe->basename), false, false, false, &mymiplevel)) != NULL)
+		if ((pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_norm", skinframe->basename), false, false, false, &mymiplevel)) != NULL)
 		{
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 			Mem_Free(pixels);
 			pixels = NULL;
 		}
-		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixelsbgra(va("%s_bump", skinframe->basename), false, false, false, &mymiplevel)) != NULL)
+		else if (r_shadow_bumpscale_bumpmap.value > 0 && (bumppixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_bump", skinframe->basename), false, false, false, &mymiplevel)) != NULL)
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 			Image_HeightmapToNormalmap_BGRA(bumppixels, pixels, image_width, image_height, false, r_shadow_bumpscale_bumpmap.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), image_width, image_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 			Mem_Free(pixels);
 			Mem_Free(bumppixels);
 		}
@@ -3415,71 +3421,71 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		{
 			pixels = (unsigned char *)Mem_Alloc(tempmempool, basepixels_width * basepixels_height * 4);
 			Image_HeightmapToNormalmap_BGRA(basepixels, pixels, basepixels_width, basepixels_height, false, r_shadow_bumpscale_basetexture.value);
-			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va("%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+			skinframe->nmap = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), basepixels_width, basepixels_height, pixels, TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP) & (gl_texturecompression_normal.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 			Mem_Free(pixels);
 		}
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->nmap)
-			R_SaveTextureDDSFile(skinframe->nmap, va("dds/%s_norm.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
+			R_SaveTextureDDSFile(skinframe->nmap, va(vabuf, sizeof(vabuf), "dds/%s_norm.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 #endif
 	}
 
 	// _luma is supported only for tenebrae compatibility
 	// _glow is the preferred name
 	mymiplevel = savemiplevel;
-	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va("%s_glow",  skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va("%s_luma", skinframe->basename), false, false, false, &mymiplevel))))
+	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_glow",  skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_luma", skinframe->basename), false, false, false, &mymiplevel))))
 	{
-		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va("%s_glow", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_glow", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->glow)
-			R_SaveTextureDDSFile(skinframe->glow, va("dds/%s_glow.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
+			R_SaveTextureDDSFile(skinframe->glow, va(vabuf, sizeof(vabuf), "dds/%s_glow.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 #endif
 		Mem_Free(pixels);pixels = NULL;
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va("%s_gloss", skinframe->basename), false, false, false, &mymiplevel)))
+	if (skinframe->gloss == NULL && r_loadgloss && (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_gloss", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va("%s_gloss", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (gl_texturecompression_gloss.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->gloss = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_gloss", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (TEXF_ALPHA | textureflags) & (gl_texturecompression_gloss.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->gloss)
-			R_SaveTextureDDSFile(skinframe->gloss, va("dds/%s_gloss.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
+			R_SaveTextureDDSFile(skinframe->gloss, va(vabuf, sizeof(vabuf), "dds/%s_gloss.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 #endif
 		Mem_Free(pixels);
 		pixels = NULL;
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va("%s_pants", skinframe->basename), false, false, false, &mymiplevel)))
+	if (skinframe->pants == NULL && (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_pants", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va("%s_pants", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->pants = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_pants", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->pants)
-			R_SaveTextureDDSFile(skinframe->pants, va("dds/%s_pants.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
+			R_SaveTextureDDSFile(skinframe->pants, va(vabuf, sizeof(vabuf), "dds/%s_pants.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
 #endif
 		Mem_Free(pixels);
 		pixels = NULL;
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va("%s_shirt", skinframe->basename), false, false, false, &mymiplevel)))
+	if (skinframe->shirt == NULL && (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_shirt", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va("%s_shirt", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->shirt = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_shirt", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_color.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->shirt)
-			R_SaveTextureDDSFile(skinframe->shirt, va("dds/%s_shirt.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
+			R_SaveTextureDDSFile(skinframe->shirt, va(vabuf, sizeof(vabuf), "dds/%s_shirt.dds", skinframe->basename), r_texture_dds_save.integer < 2, false);
 #endif
 		Mem_Free(pixels);
 		pixels = NULL;
 	}
 
 	mymiplevel = savemiplevel;
-	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va("%s_reflect", skinframe->basename), false, false, false, &mymiplevel)))
+	if (skinframe->reflect == NULL && (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_reflect", skinframe->basename), false, false, false, &mymiplevel)))
 	{
-		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va("%s_reflect", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_reflectmask.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
+		skinframe->reflect = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_reflect", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_reflectmask.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
 		if (r_savedds && qglGetCompressedTexImageARB && skinframe->reflect)
-			R_SaveTextureDDSFile(skinframe->reflect, va("dds/%s_reflect.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
+			R_SaveTextureDDSFile(skinframe->reflect, va(vabuf, sizeof(vabuf), "dds/%s_reflect.dds", skinframe->basename), r_texture_dds_save.integer < 2, true);
 #endif
 		Mem_Free(pixels);
 		pixels = NULL;
@@ -3497,6 +3503,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	int i;
 	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
+	char vabuf[1024];
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -3531,7 +3538,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
 		temp2 = temp1 + width * height * 4;
 		Image_HeightmapToNormalmap_BGRA(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
 		Mem_Free(temp1);
 	}
 	skinframe->base = skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, sRGB ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags, -1, NULL);
@@ -3551,7 +3558,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 			memcpy(fogpixels, skindata, width * height * 4);
 			for (i = 0;i < width * height * 4;i += 4)
 				fogpixels[i] = fogpixels[i+1] = fogpixels[i+2] = 255;
-			skinframe->fog = R_LoadTexture2D(r_main_texturepool, va("%s_fog", skinframe->basename), width, height, fogpixels, TEXTYPE_BGRA, textureflags, -1, NULL);
+			skinframe->fog = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_fog", skinframe->basename), width, height, fogpixels, TEXTYPE_BGRA, textureflags, -1, NULL);
 			Mem_Free(fogpixels);
 		}
 	}
@@ -3624,6 +3631,7 @@ static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboo
 	int width;
 	int height;
 	unsigned char *skindata;
+	char vabuf[1024];
 
 	if (!skinframe->qpixels)
 		return;
@@ -3655,22 +3663,22 @@ static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboo
 		// use either a custom palette or the quake palette
 		Image_Copy8bitBGRA(skindata, temp1, width * height, palette_bgra_complete);
 		Image_HeightmapToNormalmap_BGRA(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va("%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (skinframe->textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (skinframe->textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
 		Mem_Free(temp1);
 	}
 
 	if (skinframe->qgenerateglow)
 	{
 		skinframe->qgenerateglow = false;
-		skinframe->glow = R_LoadTexture2D(r_main_texturepool, va("%s_glow", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_onlyfullbrights); // glow
+		skinframe->glow = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_glow", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_onlyfullbrights); // glow
 	}
 
 	if (colormapped)
 	{
 		skinframe->qgeneratebase = false;
-		skinframe->base  = R_LoadTexture2D(r_main_texturepool, va("%s_nospecial", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nocolormapnofullbrights : palette_bgra_nocolormap);
-		skinframe->pants = R_LoadTexture2D(r_main_texturepool, va("%s_pants", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_pantsaswhite);
-		skinframe->shirt = R_LoadTexture2D(r_main_texturepool, va("%s_shirt", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_shirtaswhite);
+		skinframe->base  = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nospecial", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, skinframe->glow ? palette_bgra_nocolormapnofullbrights : palette_bgra_nocolormap);
+		skinframe->pants = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_pants", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_pantsaswhite);
+		skinframe->shirt = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_shirt", skinframe->basename), width, height, skindata, vid.sRGB3D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, skinframe->textureflags, -1, palette_bgra_shirtaswhite);
 	}
 	else
 	{
@@ -3689,6 +3697,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 {
 	int i;
 	skinframe_t *skinframe;
+	char vabuf[1024];
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -3730,7 +3739,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 			}
 		}
 		if (r_loadfog && skinframe->hasalpha)
-			skinframe->fog = R_LoadTexture2D(r_main_texturepool, va("%s_fog", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, textureflags, -1, alphapalette);
+			skinframe->fog = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_fog", skinframe->basename), width, height, skindata, TEXTYPE_PALETTE, textureflags, -1, alphapalette);
 	}
 
 	R_SKINFRAME_LOAD_AVERAGE_COLORS(width * height, ((unsigned char *)palette)[skindata[pix]*4 + comp]);
@@ -3804,7 +3813,7 @@ static suffixinfo_t suffix[3][6] =
 
 static int componentorder[4] = {0, 1, 2, 3};
 
-rtexture_t *R_LoadCubemap(const char *basename)
+static rtexture_t *R_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize;
 	unsigned char *cubemappixels, *image_buffer;
@@ -3886,44 +3895,7 @@ rtexture_t *R_GetCubemap(const char *basename)
 	return r_texture_cubemaps[i]->texture;
 }
 
-void R_FreeCubemap(const char *basename)
-{
-	int i;
-
-	for (i = 0;i < r_texture_numcubemaps;i++)
-	{
-		if (r_texture_cubemaps[i] != NULL)
-		{
-			if (r_texture_cubemaps[i]->texture)
-			{
-				if (developer_loading.integer)
-					Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i]->basename);
-				R_FreeTexture(r_texture_cubemaps[i]->texture);
-				Mem_Free(r_texture_cubemaps[i]);
-				r_texture_cubemaps[i] = NULL;
-			}
-		}
-	}
-}
-
-void R_FreeCubemaps(void)
-{
-	int i;
-	for (i = 0;i < r_texture_numcubemaps;i++)
-	{
-		if (developer_loading.integer)
-			Con_DPrintf("unloading cubemap \"%s\"\n", r_texture_cubemaps[i]->basename);
-		if (r_texture_cubemaps[i] != NULL)
-		{
-			if (r_texture_cubemaps[i]->texture)
-				R_FreeTexture(r_texture_cubemaps[i]->texture);
-			Mem_Free(r_texture_cubemaps[i]);
-		}
-	}
-	r_texture_numcubemaps = 0;
-}
-
-void R_Main_FreeViewCache(void)
+static void R_Main_FreeViewCache(void)
 {
 	if (r_refdef.viewcache.entityvisible)
 		Mem_Free(r_refdef.viewcache.entityvisible);
@@ -3936,7 +3908,7 @@ void R_Main_FreeViewCache(void)
 	memset(&r_refdef.viewcache, 0, sizeof(r_refdef.viewcache));
 }
 
-void R_Main_ResizeViewCache(void)
+static void R_Main_ResizeViewCache(void)
 {
 	int numentities = r_refdef.scene.numentities;
 	int numclusters = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusters : 1;
@@ -3975,7 +3947,7 @@ void R_Main_ResizeViewCache(void)
 }
 
 extern rtexture_t *loadingscreentexture;
-void gl_main_start(void)
+static void gl_main_start(void)
 {
 	loadingscreentexture = NULL;
 	r_texture_blanknormalmap = NULL;
@@ -4075,7 +4047,7 @@ void gl_main_start(void)
 	r_refdef.fogmasktable_density = 0;
 }
 
-void gl_main_shutdown(void)
+static void gl_main_shutdown(void)
 {
 	R_AnimCache_Free();
 	R_FrameData_Reset();
@@ -4149,8 +4121,7 @@ void gl_main_shutdown(void)
 	hlslshaderstring = NULL;
 }
 
-extern void CL_ParseEntityLump(char *entitystring);
-void gl_main_newmap(void)
+static void gl_main_newmap(void)
 {
 	// FIXME: move this code to client
 	char *entities, entname[MAX_QPATH];
@@ -4217,6 +4188,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_deformvertexes);
 	Cvar_RegisterVariable(&r_transparent);
 	Cvar_RegisterVariable(&r_transparent_alphatocoverage);
+	Cvar_RegisterVariable(&r_transparent_sortsurfacesbynearest);
+	Cvar_RegisterVariable(&r_transparent_useplanardistance);
 	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
 	Cvar_RegisterVariable(&r_showsurfaces);
@@ -4271,6 +4244,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_texture_dds_save);
 	Cvar_RegisterVariable(&r_textureunits);
 	Cvar_RegisterVariable(&gl_combine);
+	Cvar_RegisterVariable(&r_usedepthtextures);
 	Cvar_RegisterVariable(&r_viewfbo);
 	Cvar_RegisterVariable(&r_viewscale);
 	Cvar_RegisterVariable(&r_viewscale_fpsscaling);
@@ -4342,20 +4316,6 @@ void GL_Main_Init(void)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
 }
-
-extern void R_Textures_Init(void);
-extern void GL_Draw_Init(void);
-extern void GL_Main_Init(void);
-extern void R_Shadow_Init(void);
-extern void R_Sky_Init(void);
-extern void GL_Surf_Init(void);
-extern void R_Particles_Init(void);
-extern void R_Explosion_Init(void);
-extern void gl_backend_init(void);
-extern void Sbar_Init(void);
-extern void R_LightningBeams_Init(void);
-extern void Mod_RenderInit(void);
-extern void Font_Init(void);
 
 void Render_Init(void)
 {
@@ -4537,7 +4497,7 @@ void R_FrameData_Reset(void)
 	}
 }
 
-void R_FrameData_Resize(void)
+static void R_FrameData_Resize(void)
 {
 	size_t wantedsize;
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
@@ -4651,7 +4611,7 @@ void R_AnimCache_ClearCache(void)
 	}
 }
 
-void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
+static void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numvertices)
 {
 	int i;
 
@@ -4973,7 +4933,7 @@ static void R_View_UpdateEntityVisible (void)
 }
 
 /// only used if skyrendermasked, and normally returns false
-int R_DrawBrushModelsSky (void)
+static int R_DrawBrushModelsSky (void)
 {
 	int i, sky;
 	entity_render_t *ent;
@@ -5314,7 +5274,7 @@ static void R_View_SetFrustum(const int *scissor)
 	//PlaneClassify(&frustum[4]);
 }
 
-void R_View_UpdateWithScissor(const int *myscissor)
+static void R_View_UpdateWithScissor(const int *myscissor)
 {
 	R_Main_ResizeViewCache();
 	R_View_SetFrustum(myscissor);
@@ -5324,7 +5284,7 @@ void R_View_UpdateWithScissor(const int *myscissor)
 	R_AnimCache_CacheVisibleEntities();
 }
 
-void R_View_Update(void)
+static void R_View_Update(void)
 {
 	R_Main_ResizeViewCache();
 	R_View_SetFrustum(NULL);
@@ -5336,7 +5296,7 @@ void R_View_Update(void)
 
 float viewscalefpsadjusted = 1.0f;
 
-void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
+static void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
 {
 	float scale = r_viewscale.value * sqrt(viewscalefpsadjusted);
 	scale = bound(0.03125f, scale, 1.0f);
@@ -5755,6 +5715,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 	r_waterstate_waterplane_t *p;
 	vec3_t visorigin;
 	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.samples < 2;
+	char vabuf[1024];
 
 	originalview = r_refdef.view;
 
@@ -5788,13 +5749,13 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 		{
 			if (!p->texture_refraction)
-				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				p->texture_refraction = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "waterplane%i_refraction", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_refraction)
 				goto error;
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
+					r_fb.water.depthtexture = R_LoadTextureRenderBuffer(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, TEXTYPE_DEPTHBUFFER24STENCIL8);
 				if (p->fbo_refraction == 0)
 					p->fbo_refraction = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_refraction, NULL, NULL, NULL);
 			}
@@ -5802,13 +5763,13 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 		else if (p->materialflags & MATERIALFLAG_CAMERA)
 		{
 			if (!p->texture_camera)
-				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
+				p->texture_camera = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "waterplane%i_camera", planeindex), r_fb.water.camerawidth, r_fb.water.cameraheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR, -1, NULL);
 			if (!p->texture_camera)
 				goto error;
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
+					r_fb.water.depthtexture = R_LoadTextureRenderBuffer(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, TEXTYPE_DEPTHBUFFER24STENCIL8);
 				if (p->fbo_camera == 0)
 					p->fbo_camera = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_camera, NULL, NULL, NULL);
 			}
@@ -5817,13 +5778,13 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION))
 		{
 			if (!p->texture_reflection)
-				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va("waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				p->texture_reflection = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "waterplane%i_reflection", planeindex), r_fb.water.texturewidth, r_fb.water.textureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (!p->texture_reflection)
 				goto error;
 			if (usewaterfbo)
 			{
 				if (r_fb.water.depthtexture == NULL)
-					r_fb.water.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, 24, false, vid.support.ext_packed_depth_stencil);
+					r_fb.water.depthtexture = R_LoadTextureRenderBuffer(r_main_texturepool, "waterviewdepth", r_fb.water.texturewidth, r_fb.water.textureheight, TEXTYPE_DEPTHBUFFER24STENCIL8);
 				if (p->fbo_reflection == 0)
 					p->fbo_reflection = R_Mesh_CreateFramebufferObject(r_fb.water.depthtexture, p->texture_reflection, NULL, NULL, NULL);
 			}
@@ -6016,7 +5977,7 @@ finish:
 	}
 }
 
-void R_Bloom_StartFrame(void)
+static void R_Bloom_StartFrame(void)
 {
 	int i;
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
@@ -6027,7 +5988,7 @@ void R_Bloom_StartFrame(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
+		r_fb.usedepthtextures = r_usedepthtextures.integer != 0;
 		if (vid.support.ext_framebuffer_object)
 		{
 			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
@@ -6037,10 +5998,14 @@ void R_Bloom_StartFrame(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+	case RENDERPATH_GLES2:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		r_fb.usedepthtextures = false;
+		break;
 	case RENDERPATH_SOFT:
+		r_fb.usedepthtextures = true;
 		break;
 	}
 
@@ -6168,22 +6133,9 @@ void R_Bloom_StartFrame(void)
 			r_fb.colortexture = R_LoadTexture2D(r_main_texturepool, "framebuffercolor", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			if (useviewfbo)
 			{
-				// FIXME: choose depth bits based on a cvar
-				r_fb.depthtexture = R_LoadTextureShadowMap2D(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, 24, false, vid.support.ext_packed_depth_stencil);
+				r_fb.depthtexture = R_LoadTextureRenderBuffer(r_main_texturepool, "framebufferdepth", r_fb.screentexturewidth, r_fb.screentextureheight, TEXTYPE_DEPTHBUFFER24STENCIL8);
 				r_fb.fbo = R_Mesh_CreateFramebufferObject(r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
 				R_Mesh_SetRenderTargets(r_fb.fbo, r_fb.depthtexture, r_fb.colortexture, NULL, NULL, NULL);
-#ifndef USE_GLES2
-				// render depth into one texture and color into the other
-				if (qglDrawBuffer)
-				{
-					int status;
-					qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-					qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-					status = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
-					if (status != GL_FRAMEBUFFER_COMPLETE)
-						Con_Printf("R_Bloom_StartFrame: glCheckFramebufferStatusEXT returned %i\n", status);
-				}
-#endif
 			}
 		}
 
@@ -6258,7 +6210,7 @@ void R_Bloom_StartFrame(void)
 		r_refdef.view.clear = true;
 }
 
-void R_Bloom_MakeTexture(void)
+static void R_Bloom_MakeTexture(void)
 {
 	int x, range, dir;
 	float xoffset, yoffset, r, brighten;
@@ -6821,7 +6773,7 @@ r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
 	}
 }
 
-int R_SortEntities_Compare(const void *ap, const void *bp)
+static int R_SortEntities_Compare(const void *ap, const void *bp)
 {
 	const entity_render_t *a = *(const entity_render_t **)ap;
 	const entity_render_t *b = *(const entity_render_t **)bp;
@@ -6843,7 +6795,7 @@ int R_SortEntities_Compare(const void *ap, const void *bp)
 	// everything we compared is equal
 	return 0;
 }
-void R_SortEntities(void)
+static void R_SortEntities(void)
 {
 	// below or equal 2 ents, sorting never gains anything
 	if(r_refdef.scene.numentities <= 2)
@@ -6858,7 +6810,6 @@ R_RenderView
 ================
 */
 int dpsoftrast_test;
-extern void R_Shadow_UpdateBounceGridTexture(void);
 extern cvar_t r_shadow_bouncegrid;
 void R_RenderView(void)
 {
@@ -6915,7 +6866,7 @@ void R_RenderView(void)
 	if (!r_refdef.scene.entities || r_refdef.view.width * r_refdef.view.height == 0 || !r_renderview.integer || cl_videoplaying/* || !r_refdef.scene.worldmodel*/)
 	{
 		r_refdef.view.matrix = originalmatrix;
-		return; //Host_Error ("R_RenderView: NULL worldmodel");
+		return;
 	}
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
@@ -7005,9 +6956,6 @@ void R_RenderWaterPlanes(int fbo, rtexture_t *depthtexture, rtexture_t *colortex
 	}
 }
 
-extern void R_DrawLightningBeams (void);
-extern void VM_CL_AddPolygonsToMeshQueue (void);
-extern void R_DrawPortals (void);
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(void);
@@ -7178,7 +7126,8 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 			R_TimeReport("lightning");
 	}
 
-	VM_CL_AddPolygonsToMeshQueue();
+	if (cl.csqc_loaded)
+		VM_CL_AddPolygonsToMeshQueue(CLVM_prog);
 
 	if (r_refdef.view.showdebug)
 	{
@@ -7264,7 +7213,7 @@ static const unsigned short bboxelements[36] =
 	1, 0, 2, 1, 2, 3,
 };
 
-void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
+static void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
 {
 	int i;
 	float *v, *c, f1, f2, vertex3f[8*3], color4f[8*4];
@@ -7305,10 +7254,10 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 
 static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	float color[4];
 	prvm_edict_t *edict;
-	prvm_prog_t *prog_save = prog;
 
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
@@ -7317,8 +7266,6 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 	GL_CullFace(GL_NONE);
 	R_SetupShader_Generic_NoTexture(false, false);
 
-	prog = 0;
-	SV_VM_Begin();
 	for (i = 0;i < numsurfaces;i++)
 	{
 		edict = PRVM_EDICT_NUM(surfacelist[i]);
@@ -7337,8 +7284,6 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 		GL_CullFace(r_refdef.view.cullface_front);
 		R_DrawBBoxMesh(edict->priv.server->areamins, edict->priv.server->areamaxs, color[0], color[1], color[2], color[3]);
 	}
-	SV_VM_End();
-	prog = prog_save;
 }
 
 static void R_DrawEntityBBoxes(void)
@@ -7346,14 +7291,12 @@ static void R_DrawEntityBBoxes(void)
 	int i;
 	prvm_edict_t *edict;
 	vec3_t center;
-	prvm_prog_t *prog_save = prog;
+	prvm_prog_t *prog = SVVM_prog;
 
 	// this function draws bounding boxes of server entities
 	if (!sv.active)
 		return;
 
-	prog = 0;
-	SV_VM_Begin();
 	for (i = 0;i < prog->num_edicts;i++)
 	{
 		edict = PRVM_EDICT_NUM(i);
@@ -7365,10 +7308,8 @@ static void R_DrawEntityBBoxes(void)
 		if(PRVM_serveredictedict(edict, viewmodelforclient) != 0)
 			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
-		R_MeshQueue_AddTransparent(center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
+		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
 	}
-	SV_VM_End();
-	prog = prog_save;
 }
 
 static const int nomodelelement3i[24] =
@@ -7415,7 +7356,7 @@ static const float nomodelcolor4f[6*4] =
 	0.5f, 0.0f, 0.0f, 1.0f
 };
 
-void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_DrawNoModel_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i;
 	float f1, f2, *c;
@@ -7475,7 +7416,7 @@ void R_DrawNoModel(entity_render_t *ent)
 	vec3_t org;
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	if ((ent->flags & RENDER_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent(ent->flags & RENDER_NODEPTHTEST ? r_refdef.view.origin : org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
+		R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : MESHQUEUE_SORT_DISTANCE, org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
 	else
 		R_DrawNoModel_TransparentCallback(ent, rsurface.rtlight, 0, NULL);
 }
@@ -7526,7 +7467,7 @@ void R_CalcSprite_Vertex3f(float *vertex3f, const vec3_t origin, const vec3_t le
 	vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
 }
 
-int R_Mesh_AddVertex(rmesh_t *mesh, float x, float y, float z)
+static int R_Mesh_AddVertex(rmesh_t *mesh, float x, float y, float z)
 {
 	int i;
 	float *vertex3f;
@@ -7569,7 +7510,7 @@ void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f)
 	}
 }
 
-void R_Mesh_AddPolygon3d(rmesh_t *mesh, int numvertices, double *vertex3d)
+static void R_Mesh_AddPolygon3d(rmesh_t *mesh, int numvertices, double *vertex3d)
 {
 	int i;
 	int *e, element[3];
@@ -7688,7 +7629,7 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 	return (float) f;
 }
 
-void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
+static void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
 {
 	int w, h, idx;
 	double f;
@@ -7752,7 +7693,7 @@ void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *t
 	Matrix4x4_Concat(texmatrix, &matrix, &temp);
 }
 
-void R_LoadQWSkin(r_qwskincache_t *cache, const char *skinname)
+static void R_LoadQWSkin(r_qwskincache_t *cache, const char *skinname)
 {
 	int textureflags = (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP;
 	char name[MAX_QPATH];
@@ -8541,7 +8482,7 @@ float RSurf_FogVertex(const float *v)
 	return r_refdef.fogmasktable[min(fogmasktableindex, FOGMASKTABLEWIDTH - 1)];
 }
 
-void RSurf_RenumberElements(const int *inelement3i, int *outelement3i, int numelements, int adjust)
+static void RSurf_RenumberElements(const int *inelement3i, int *outelement3i, int numelements, int adjust)
 {
 	int i;
 	for (i = 0;i < numelements;i++)
@@ -9796,7 +9737,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
 		{
-			R_SetupShader_DepthOrShadow(false);
+			R_SetupShader_DepthOrShadow(false, false);
 			// depth-only (masking)
 			GL_ColorMask(0,0,0,0);
 			// just to make sure that braindead drivers don't draw
@@ -10414,7 +10355,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				GL_BlendFunc(GL_ONE, GL_ZERO);
 				GL_DepthMask(true);
 //				R_Mesh_ResetTextureState();
-				R_SetupShader_DepthOrShadow(false);
+				R_SetupShader_DepthOrShadow(false, false);
 			}
 			RSurf_SetupDepthAndCulling();
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, texturenumsurfaces, texturesurfacelist);
@@ -10473,7 +10414,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
 }
 
-static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, const entity_render_t *queueentity)
+static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	// transparent surfaces get pushed off into the transparent queue
 	int surfacelistindex;
@@ -10482,17 +10423,26 @@ static void R_ProcessTransparentTextureSurfaceList(int texturenumsurfaces, const
 	for (surfacelistindex = 0;surfacelistindex < texturenumsurfaces;surfacelistindex++)
 	{
 		surface = texturesurfacelist[surfacelistindex];
-		tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-		tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-		tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-		Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
-		if (queueentity->transparent_offset) // transparent offset
+		if (r_transparent_sortsurfacesbynearest.integer)
 		{
-			center[0] += r_refdef.view.forward[0]*queueentity->transparent_offset;
-			center[1] += r_refdef.view.forward[1]*queueentity->transparent_offset;
-			center[2] += r_refdef.view.forward[2]*queueentity->transparent_offset;
+			tempcenter[0] = bound(surface->mins[0], rsurface.localvieworigin[0], surface->maxs[0]);
+			tempcenter[1] = bound(surface->mins[1], rsurface.localvieworigin[1], surface->maxs[1]);
+			tempcenter[2] = bound(surface->mins[2], rsurface.localvieworigin[2], surface->maxs[2]);
 		}
-		R_MeshQueue_AddTransparent(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST ? r_refdef.view.origin : center, R_DrawSurface_TransparentCallback, queueentity, surface - rsurface.modelsurfaces, rsurface.rtlight);
+		else
+		{
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+		}
+		Matrix4x4_Transform(&rsurface.matrix, tempcenter, center);
+		if (rsurface.entity->transparent_offset) // transparent offset
+		{
+			center[0] += r_refdef.view.forward[0]*rsurface.entity->transparent_offset;
+			center[1] += r_refdef.view.forward[1]*rsurface.entity->transparent_offset;
+			center[2] += r_refdef.view.forward[2]*rsurface.entity->transparent_offset;
+		}
+		R_MeshQueue_AddTransparent((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), center, R_DrawSurface_TransparentCallback, rsurface.entity, surface - rsurface.modelsurfaces, rsurface.rtlight);
 	}
 }
 
@@ -10513,7 +10463,6 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 
 static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
-	const entity_render_t *queueentity = r_refdef.scene.worldentity;
 	CHECKGLERROR
 	if (depthonly)
 		R_DrawTextureSurfaceList_DepthOnly(texturenumsurfaces, texturesurfacelist);
@@ -10522,7 +10471,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		if (!rsurface.texture->currentnumlayers)
 			return;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawWorldTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
@@ -10530,11 +10479,11 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
-	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
+	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))))
 	{
 		// in the deferred case, transparent surfaces were queued during prepass
 		if (!r_shadow_usingdeferredprepass)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 	}
 	else
 	{
@@ -10544,7 +10493,7 @@ static void R_ProcessWorldTextureSurfaceList(int texturenumsurfaces, const msurf
 	CHECKGLERROR
 }
 
-void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass)
+static void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
 	int i, j;
 	texture_t *texture;
@@ -10590,7 +10539,7 @@ void R_QueueWorldSurfaceList(int numsurfaces, const msurface_t **surfacelist, in
 	R_FrameData_ReturnToMark();
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, const entity_render_t *queueentity, qboolean prepass)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
 	CHECKGLERROR
 	if (depthonly)
@@ -10600,7 +10549,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		if (!rsurface.texture->currentnumlayers)
 			return;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 		else
 			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 	}
@@ -10608,11 +10557,11 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
 	else if (!rsurface.texture->currentnumlayers)
 		return;
-	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))) && queueentity)
+	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))))
 	{
 		// in the deferred case, transparent surfaces were queued during prepass
 		if (!r_shadow_usingdeferredprepass)
-			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist, queueentity);
+			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 	}
 	else
 	{
@@ -10622,7 +10571,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	CHECKGLERROR
 }
 
-void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass)
+static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass)
 {
 	int i, j;
 	texture_t *texture;
@@ -10663,7 +10612,7 @@ void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurfa
 				;
 		}
 		// render the range of surfaces
-		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, ent, prepass);
+		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, prepass);
 	}
 	R_FrameData_ReturnToMark();
 }
@@ -10688,7 +10637,7 @@ unsigned short locboxelements[6*2*3] =
 	20,21,22, 20,22,23
 };
 
-void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
+static void R_DrawLoc_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
 	int i, j;
 	cl_locnode_t *loc = (cl_locnode_t *)ent;
@@ -10740,7 +10689,7 @@ void R_DrawLocs(void)
 	for (loc = cl.locnodes, index = 0;loc;loc = loc->next, index++)
 	{
 		VectorLerp(loc->mins, 0.5f, loc->maxs, center);
-		R_MeshQueue_AddTransparent(center, R_DrawLoc_Callback, (entity_render_t *)loc, loc == nearestloc ? -1 : index, NULL);
+		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawLoc_Callback, (entity_render_t *)loc, loc == nearestloc ? -1 : index, NULL);
 	}
 }
 
@@ -11396,7 +11345,7 @@ static void R_DrawModelDecals(void)
 }
 
 extern cvar_t mod_collision_bih;
-void R_DrawDebugModel(void)
+static void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
 	int i, j, k, l, flagsmask;
@@ -11611,7 +11560,6 @@ void R_DrawDebugModel(void)
 #endif
 }
 
-extern void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
 void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass)

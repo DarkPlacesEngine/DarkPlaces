@@ -34,6 +34,7 @@ SV_SetIdealPitch
 #define	MAX_FORWARD	6
 void SV_SetIdealPitch (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float	angleval, sinval, cosval, step, dir;
 	trace_t	tr;
 	vec3_t	top, bottom;
@@ -108,8 +109,9 @@ SV_UserFriction
 
 ==================
 */
-void SV_UserFriction (void)
+static void SV_UserFriction (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float speed, newspeed, control, friction;
 	vec3_t start, stop;
 	trace_t trace;
@@ -148,8 +150,9 @@ void SV_UserFriction (void)
 SV_Accelerate
 ==============
 */
-void SV_Accelerate (void)
+static void SV_Accelerate (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	float addspeed, accelspeed, currentspeed;
 
@@ -166,8 +169,9 @@ void SV_Accelerate (void)
 }
 
 extern cvar_t sv_gameplayfix_q2airaccelerate;
-void SV_AirAccelerate (vec3_t wishveloc)
+static void SV_AirAccelerate (vec3_t wishveloc)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	float addspeed, wishspd, accelspeed, currentspeed;
 
@@ -187,8 +191,9 @@ void SV_AirAccelerate (vec3_t wishveloc)
 }
 
 
-void DropPunchAngle (void)
+static void DropPunchAngle (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float len;
 	vec3_t v;
 
@@ -213,34 +218,13 @@ void DropPunchAngle (void)
 
 /*
 ===================
-SV_FreeMove
-===================
-*/
-void SV_FreeMove (void)
-{
-	int i;
-	float wishspeed;
-
-	AngleVectors (PRVM_serveredictvector(host_client->edict, v_angle), forward, right, up);
-
-	for (i = 0; i < 3; i++)
-		PRVM_serveredictvector(host_client->edict, velocity)[i] = forward[i] * cmd.forwardmove + right[i] * cmd.sidemove;
-
-	PRVM_serveredictvector(host_client->edict, velocity)[2] += cmd.upmove;
-
-	wishspeed = VectorLength(PRVM_serveredictvector(host_client->edict, velocity));
-	if (wishspeed > sv_maxspeed.value)
-		VectorScale(PRVM_serveredictvector(host_client->edict, velocity), sv_maxspeed.value / wishspeed, PRVM_serveredictvector(host_client->edict, velocity));
-}
-
-/*
-===================
 SV_WaterMove
 
 ===================
 */
-void SV_WaterMove (void)
+static void SV_WaterMove (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	vec3_t wishvel;
 	float speed, newspeed, wishspeed, addspeed, accelspeed, temp;
@@ -295,8 +279,9 @@ void SV_WaterMove (void)
 		PRVM_serveredictvector(host_client->edict, velocity)[i] += accelspeed * wishvel[i];
 }
 
-void SV_WaterJump (void)
+static void SV_WaterJump (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (sv.time > PRVM_serveredictfloat(host_client->edict, teleport_time) || !PRVM_serveredictfloat(host_client->edict, waterlevel))
 	{
 		PRVM_serveredictfloat(host_client->edict, flags) = (int)PRVM_serveredictfloat(host_client->edict, flags) & ~FL_WATERJUMP;
@@ -313,8 +298,9 @@ SV_AirMove
 
 ===================
 */
-void SV_AirMove (void)
+static void SV_AirMove (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	vec3_t wishvel;
 	float fmove, smove, temp;
@@ -373,6 +359,7 @@ the angle fields specify an exact angular motion in degrees
 */
 void SV_ClientThink (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	vec3_t v_angle;
 
 	//Con_Printf("clientthink for %ims\n", (int) (sv.frametime * 1000));
@@ -386,7 +373,7 @@ void SV_ClientThink (void)
 	{
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram (PRVM_serverfunction(SV_PlayerPhysics), "QC function SV_PlayerPhysics is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PlayerPhysics), "QC function SV_PlayerPhysics is missing");
 		SV_CheckVelocity(host_client->edict);
 		return;
 	}
@@ -450,21 +437,22 @@ SV_ReadClientMove
 */
 int sv_numreadmoves = 0;
 usercmd_t sv_readmoves[CL_MAX_USERCMDS];
-void SV_ReadClientMove (void)
+static void SV_ReadClientMove (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	usercmd_t newmove;
 	usercmd_t *move = &newmove;
 
 	memset(move, 0, sizeof(*move));
 
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read ping time
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
-		move->sequence = MSG_ReadLong ();
-	move->time = move->clienttime = MSG_ReadFloat ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+		move->sequence = MSG_ReadLong(&sv_message);
+	move->time = move->clienttime = MSG_ReadFloat(&sv_message);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = (float)sv.time;
 
 #if DEBUGMOVES
@@ -478,48 +466,48 @@ void SV_ReadClientMove (void)
 	for (i = 0;i < 3;i++)
 	{
 		if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
-			move->viewangles[i] = MSG_ReadAngle8i();
+			move->viewangles[i] = MSG_ReadAngle8i(&sv_message);
 		else if (sv.protocol == PROTOCOL_DARKPLACES1)
-			move->viewangles[i] = MSG_ReadAngle16i();
+			move->viewangles[i] = MSG_ReadAngle16i(&sv_message);
 		else if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
-			move->viewangles[i] = MSG_ReadAngle32f();
+			move->viewangles[i] = MSG_ReadAngle32f(&sv_message);
 		else
-			move->viewangles[i] = MSG_ReadAngle16i();
+			move->viewangles[i] = MSG_ReadAngle16i(&sv_message);
 	}
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read movement
-	move->forwardmove = MSG_ReadCoord16i ();
-	move->sidemove = MSG_ReadCoord16i ();
-	move->upmove = MSG_ReadCoord16i ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	move->forwardmove = MSG_ReadCoord16i(&sv_message);
+	move->sidemove = MSG_ReadCoord16i(&sv_message);
+	move->upmove = MSG_ReadCoord16i(&sv_message);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read buttons
 	// be sure to bitwise OR them into the move->buttons because we want to
 	// accumulate button presses from multiple packets per actual move
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
-		move->buttons = MSG_ReadByte ();
+		move->buttons = MSG_ReadByte(&sv_message);
 	else
-		move->buttons = MSG_ReadLong ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+		move->buttons = MSG_ReadLong(&sv_message);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// read impulse
-	move->impulse = MSG_ReadByte ();
-	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	move->impulse = MSG_ReadByte(&sv_message);
+	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 
 	// PRYDON_CLIENTCURSOR
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5)
 	{
 		// 30 bytes
-		move->cursor_screen[0] = MSG_ReadShort() * (1.0f / 32767.0f);
-		move->cursor_screen[1] = MSG_ReadShort() * (1.0f / 32767.0f);
-		move->cursor_start[0] = MSG_ReadFloat();
-		move->cursor_start[1] = MSG_ReadFloat();
-		move->cursor_start[2] = MSG_ReadFloat();
-		move->cursor_impact[0] = MSG_ReadFloat();
-		move->cursor_impact[1] = MSG_ReadFloat();
-		move->cursor_impact[2] = MSG_ReadFloat();
-		move->cursor_entitynumber = (unsigned short)MSG_ReadShort();
+		move->cursor_screen[0] = MSG_ReadShort(&sv_message) * (1.0f / 32767.0f);
+		move->cursor_screen[1] = MSG_ReadShort(&sv_message) * (1.0f / 32767.0f);
+		move->cursor_start[0] = MSG_ReadFloat(&sv_message);
+		move->cursor_start[1] = MSG_ReadFloat(&sv_message);
+		move->cursor_start[2] = MSG_ReadFloat(&sv_message);
+		move->cursor_impact[0] = MSG_ReadFloat(&sv_message);
+		move->cursor_impact[1] = MSG_ReadFloat(&sv_message);
+		move->cursor_impact[2] = MSG_ReadFloat(&sv_message);
+		move->cursor_entitynumber = (unsigned short)MSG_ReadShort(&sv_message);
 		if (move->cursor_entitynumber >= prog->max_edicts)
 		{
 			Con_DPrintf("SV_ReadClientMessage: client send bad cursor_entitynumber\n");
@@ -529,7 +517,7 @@ void SV_ReadClientMove (void)
 		// entity is free at time of receipt
 		if (PRVM_EDICT_NUM(move->cursor_entitynumber)->priv.server->free)
 			move->cursor_entitynumber = 0;
-		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+		if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
 
 	// if the previous move has not been applied yet, we need to accumulate
@@ -576,8 +564,9 @@ void SV_ReadClientMove (void)
 	}
 }
 
-void SV_ExecuteClientMoves(void)
+static void SV_ExecuteClientMoves(void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int moveindex;
 	float moveframetime;
 	double oldframetime;
@@ -705,6 +694,7 @@ void SV_ExecuteClientMoves(void)
 
 void SV_ApplyClientMove (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	usercmd_t *move = &host_client->cmd;
 	int j, movementloss, packetloss;
 
@@ -765,7 +755,7 @@ void SV_ApplyClientMove (void)
 	PRVM_serveredictfloat(host_client->edict, ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
 }
 
-void SV_FrameLost(int framenum)
+static void SV_FrameLost(int framenum)
 {
 	if (host_client->entitydatabase5)
 	{
@@ -774,7 +764,7 @@ void SV_FrameLost(int framenum)
 	}
 }
 
-void SV_FrameAck(int framenum)
+static void SV_FrameAck(int framenum)
 {
 	if (host_client->entitydatabase)
 		EntityFrame_AckFrame(host_client->entitydatabase, framenum);
@@ -789,10 +779,9 @@ void SV_FrameAck(int framenum)
 SV_ReadClientMessage
 ===================
 */
-extern void SV_SendServerinfo(client_t *client);
-extern sizebuf_t vm_tempstringsbuf;
 void SV_ReadClientMessage(void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int cmd, num, start;
 	char *s, *p, *q;
 
@@ -811,14 +800,14 @@ void SV_ReadClientMessage(void)
 			return;
 		}
 
-		if (msg_badread)
+		if (sv_message.badread)
 		{
 			Con_Print("SV_ReadClientMessage: badread\n");
 			SV_DropClient (false);
 			return;
 		}
 
-		cmd = MSG_ReadByte ();
+		cmd = MSG_ReadByte(&sv_message);
 		if (cmd == -1)
 		{
 			// end of message
@@ -830,9 +819,9 @@ void SV_ReadClientMessage(void)
 		switch (cmd)
 		{
 		default:
-			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", cmd, msg_readcount);
+			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", cmd, sv_message.readcount);
 			if (developer_networking.integer)
-				Com_HexDumpToConsole(net_message.data, net_message.cursize);
+				Com_HexDumpToConsole(sv_message.data, sv_message.cursize);
 			SV_DropClient (false);
 			return;
 
@@ -843,7 +832,7 @@ void SV_ReadClientMessage(void)
 			// allow reliable messages now as the client is done with initial loading
 			if (host_client->sendsignon == 2)
 				host_client->sendsignon = 0;
-			s = MSG_ReadString ();
+			s = MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring));
 			q = NULL;
 			for(p = s; *p; ++p) switch(*p)
 			{
@@ -862,18 +851,19 @@ void SV_ReadClientMessage(void)
 			if (strncasecmp(s, "spawn", 5) == 0
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
-				Cmd_ExecuteString (s, src_client);
+				Cmd_ExecuteString (s, src_client, true);
 			else if (PRVM_serverfunction(SV_ParseClientCommand))
 			{
 				int restorevm_tempstringsbuf_cursize;
-				restorevm_tempstringsbuf_cursize = vm_tempstringsbuf.cursize;
-				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(s);
+				restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
+				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s);
+				PRVM_serverglobalfloat(time) = sv.time;
 				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-				PRVM_ExecuteProgram (PRVM_serverfunction(SV_ParseClientCommand), "QC function SV_ParseClientCommand is missing");
-				vm_tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_ParseClientCommand), "QC function SV_ParseClientCommand is missing");
+				prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else
-				Cmd_ExecuteString (s, src_client);
+				Cmd_ExecuteString (s, src_client, true);
 			break;
 
 clc_stringcmd_invalid:
@@ -891,8 +881,8 @@ clc_stringcmd_invalid:
 			break;
 
 		case clc_ackdownloaddata:
-			start = MSG_ReadLong();
-			num = MSG_ReadShort();
+			start = MSG_ReadLong(&sv_message);
+			num = MSG_ReadShort(&sv_message);
 			if (host_client->download_file && host_client->download_started)
 			{
 				if (host_client->download_expectedposition == start)
@@ -943,9 +933,9 @@ clc_stringcmd_invalid:
 			break;
 
 		case clc_ackframe:
-			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
-			num = MSG_ReadLong();
-			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+			if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+			num = MSG_ReadLong(&sv_message);
+			if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 			if (developer_networkentities.integer >= 10)
 				Con_Printf("recv clc_ackframe %i\n", num);
 			// if the client hasn't progressed through signons yet,

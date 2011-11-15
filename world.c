@@ -102,13 +102,14 @@ World_SetSize
 
 ===============
 */
-void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs)
+void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs, prvm_prog_t *prog)
 {
 	int i;
 
 	strlcpy(world->filename, filename, sizeof(world->filename));
 	VectorCopy(mins, world->mins);
 	VectorCopy(maxs, world->maxs);
+	world->prog = prog;
 
 	// the areagrid_marknumber is not allowed to be 0
 	if (world->areagrid_marknumber < 1)
@@ -144,6 +145,7 @@ World_UnlinkAll
 */
 void World_UnlinkAll(world_t *world)
 {
+	prvm_prog_t *prog = world->prog;
 	int i;
 	link_t *grid;
 	// unlink all entities one by one
@@ -175,6 +177,7 @@ void World_UnlinkEdict(prvm_edict_t *ent)
 
 int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t requestmaxs, int maxlist, prvm_edict_t **list)
 {
+	prvm_prog_t *prog = world->prog;
 	int numlist;
 	link_t *grid;
 	link_t *l;
@@ -257,8 +260,9 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	return numlist;
 }
 
-void World_LinkEdict_AreaGrid(world_t *world, prvm_edict_t *ent)
+static void World_LinkEdict_AreaGrid(world_t *world, prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = world->prog;
 	link_t *grid;
 	int igrid[3], igridmins[3], igridmaxs[3], gridnum, entitynumber = PRVM_NUM_FOR_EDICT(ent);
 
@@ -298,6 +302,7 @@ World_LinkEdict
 */
 void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const vec3_t maxs)
 {
+	prvm_prog_t *prog = world->prog;
 	// unlink from old position first
 	if (ent->priv.server->areagrid[0].prev)
 		World_UnlinkEdict(ent);
@@ -1738,6 +1743,7 @@ void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f)
 #ifdef USEODE
 static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 {
+	prvm_prog_t *prog = world->prog;
 	const dReal *avel;
 	const dReal *o;
 	const dReal *r; // for some reason dBodyGetRotation returns a [3][4] matrix
@@ -1803,13 +1809,13 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 
 	{
 		float pitchsign = 1;
-		if(!strcmp(prog->name, "server")) // FIXME some better way?
+		if(prog == SVVM_prog) // FIXME some better way?
 		{
-			pitchsign = SV_GetPitchSign(ed);
+			pitchsign = SV_GetPitchSign(prog, ed);
 		}
-		else if(!strcmp(prog->name, "client"))
+		else if(prog == CLVM_prog)
 		{
-			pitchsign = CL_GetPitchSign(ed);
+			pitchsign = CL_GetPitchSign(prog, ed);
 		}
 		angles[PITCH] *= pitchsign;
 		avelocity[PITCH] *= pitchsign;
@@ -1831,7 +1837,7 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 	VectorCopy(avelocity, ed->priv.server->ode_avelocity);
 	ed->priv.server->ode_gravity = dBodyGetGravityMode(body) != 0;
 
-	if(!strcmp(prog->name, "server")) // FIXME some better way?
+	if(prog == SVVM_prog) // FIXME some better way?
 	{
 		SV_LinkEdict(ed);
 		SV_LinkEdict_TouchAreaGrid(ed);
@@ -1840,6 +1846,7 @@ static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 
 static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed)
 {
+	prvm_prog_t *prog = world->prog;
 	dJointID j = 0;
 	dBodyID b1 = 0;
 	dBodyID b2 = 0;
@@ -2021,6 +2028,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 
 static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 {
+	prvm_prog_t *prog = world->prog;
 	const float *iv;
 	const int *ie;
 	dBodyID body = (dBodyID)ed->priv.server->ode_body;
@@ -2074,12 +2082,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	movetype = (int)PRVM_gameedictfloat(ed, movetype);
 	scale = PRVM_gameedictfloat(ed, scale);if (!scale) scale = 1.0f;
 	modelindex = 0;
-	if (world == &sv.world)
-		mempool = sv_mempool;
-	else if (world == &cl.world)
-		mempool = cls.levelmempool;
-	else
-		mempool = NULL;
+	mempool = prog->progs_mempool;
 	model = NULL;
 	switch(solid)
 	{
@@ -2161,7 +2164,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 		if (massval * geomsize[0] * geomsize[1] * geomsize[2] == 0)
 		{
 			if (movetype == MOVETYPE_PHYSICS)
-				Con_Printf("entity %i (classname %s) .mass * .size_x * .size_y * .size_z == 0\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
+				Con_Printf("entity %i (classname %s) .mass * .size_x * .size_y * .size_z == 0\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(prog, PRVM_gameedictstring(ed, classname)));
 			massval = 1.0f;
 			VectorSet(geomsize, 1.0f, 1.0f, 1.0f);
 		}
@@ -2173,7 +2176,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			ed->priv.server->ode_offsetmatrix = identitymatrix;
 			if (!model)
 			{
-				Con_Printf("entity %i (classname %s) has no model\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
+				Con_Printf("entity %i (classname %s) has no model\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(prog, PRVM_gameedictstring(ed, classname)));
 				goto treatasbox;
 			}
 			// add an optimized mesh to the model containing only the SUPERCONTENTS_SOLID surfaces
@@ -2181,7 +2184,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 				Mod_CreateCollisionMesh(model);
 			if (!model->brush.collisionmesh || !model->brush.collisionmesh->numtriangles)
 			{
-				Con_Printf("entity %i (classname %s) has no geometry\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)));
+				Con_Printf("entity %i (classname %s) has no geometry\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(prog, PRVM_gameedictstring(ed, classname)));
 				goto treatasbox;
 			}
 			// ODE requires persistent mesh storage, so we need to copy out
@@ -2328,13 +2331,13 @@ treatasbox:
 		VectorCopy(angles, qangles);
 		VectorCopy(avelocity, qavelocity);
 
-		if(!strcmp(prog->name, "server")) // FIXME some better way?
+		if(prog == SVVM_prog) // FIXME some better way?
 		{
-			pitchsign = SV_GetPitchSign(ed);
+			pitchsign = SV_GetPitchSign(prog, ed);
 		}
-		else if(!strcmp(prog->name, "client"))
+		else if(prog == CLVM_prog)
 		{
-			pitchsign = CL_GetPitchSign(ed);
+			pitchsign = CL_GetPitchSign(prog, ed);
 		}
 		qangles[PITCH] *= pitchsign;
 		qavelocity[PITCH] *= pitchsign;
@@ -2368,7 +2371,7 @@ treatasbox:
 			modified = true;
 			//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
 			if (physics_ode_trick_fixnan.integer >= 2)
-				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
+				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(prog, PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
 			test = VectorLength2(origin);
 			if (IS_NAN(test))
 				VectorClear(origin);
@@ -2513,6 +2516,7 @@ treatasbox:
 static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 {
 	world_t *world = (world_t *)data;
+	prvm_prog_t *prog = world->prog;
 	dContact contact[MAX_CONTACTS]; // max contacts per collision pair
 	dBodyID b1;
 	dBodyID b2;
@@ -2570,7 +2574,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 			bouncestop2 = 60.0f / 800.0f;
 	}
 
-	if(!strcmp(prog->name, "server"))
+	if(prog == SVVM_prog)
 	{
 		if(ed1 && PRVM_serveredictfunction(ed1, touch))
 		{
@@ -2621,9 +2625,10 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 
 void World_Physics_Frame(world_t *world, double frametime, double gravity)
 {
+	prvm_prog_t *prog = world->prog;
 	double tdelta, tdelta2, tdelta3, simulationtime, collisiontime;
 
-	tdelta = Sys_DoubleTime();
+	tdelta = Sys_DirtyTime();
 #ifdef USEODE
 	if (world->physics.ode && physics_ode.integer)
 	{
@@ -2652,7 +2657,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 					World_Physics_Frame_JointFromEntity(world, ed);
 		}
 
-		tdelta2 = Sys_DoubleTime();
+		tdelta2 = Sys_DirtyTime();
 		collisiontime = 0;
 		for (i = 0;i < world->physics.ode_iterations;i++)
 		{
@@ -2662,9 +2667,9 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			dWorldSetContactSurfaceLayer((dWorldID)world->physics.ode_world, max(0, physics_ode_contactsurfacelayer.value));
 
 			// run collisions for the current world state, creating JointGroup
-			tdelta3 = Sys_DoubleTime();
+			tdelta3 = Sys_DirtyTime();
 			dSpaceCollide((dSpaceID)world->physics.ode_space, (void *)world, nearCallback);
-			collisiontime += (Sys_DoubleTime() - tdelta3)*10000;
+			collisiontime += (Sys_DirtyTime() - tdelta3)*10000;
 
 			// run physics (move objects, calculate new velocities)
 			// be sure not to pass 0 as step time because that causes an ODE error
@@ -2675,7 +2680,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			// clear the JointGroup now that we're done with it
 			dJointGroupEmpty((dJointGroupID)world->physics.ode_contactgroup);
 		}
-		simulationtime = (Sys_DoubleTime() - tdelta2)*10000;
+		simulationtime = (Sys_DirtyTime() - tdelta2)*10000;
 
 		// copy physics properties from physics engine to entities and do some stats
 		if (prog)
@@ -2702,7 +2707,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 					if (dBodyIsEnabled(body))
 						world->physics.ode_activeovjects++;
 				}
-				Con_Printf("ODE Stats(%s): %3.01f (%3.01f collision) %3.01f total : %i objects %i active %i disabled\n", prog->name, simulationtime, collisiontime, (Sys_DoubleTime() - tdelta)*10000, world->physics.ode_numobjects, world->physics.ode_activeovjects, (world->physics.ode_numobjects - world->physics.ode_activeovjects));
+				Con_Printf("ODE Stats(%s): %3.01f (%3.01f collision) %3.01f total : %i objects %i active %i disabled\n", prog->name, simulationtime, collisiontime, (Sys_DirtyTime() - tdelta)*10000, world->physics.ode_numobjects, world->physics.ode_activeovjects, (world->physics.ode_numobjects - world->physics.ode_activeovjects));
 			}
 		}
 	}

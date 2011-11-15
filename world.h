@@ -59,12 +59,15 @@ typedef struct world_physics_s
 }
 world_physics_t;
 
+struct prvm_prog_s;
+
 typedef struct world_s
 {
 	// convenient fields
 	char filename[MAX_QPATH];
 	vec3_t mins;
 	vec3_t maxs;
+	struct prvm_prog_s *prog;
 
 	int areagrid_stats_calls;
 	int areagrid_stats_nodechecks;
@@ -95,7 +98,7 @@ void World_Init(void);
 void World_Shutdown(void);
 
 /// called after the world model has been loaded, before linking any entities
-void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs);
+void World_SetSize(world_t *world, const char *filename, const vec3_t mins, const vec3_t maxs, struct prvm_prog_s *prog);
 /// unlinks all entities (used before reallocation of edicts)
 void World_UnlinkAll(world_t *world);
 
@@ -121,7 +124,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity);
 // change physics properties of entity
 struct prvm_edict_s;
 struct edict_odefunc_s;
-//void World_Physics_ApplyCmd(prvm_edict_s *ed, edict_odefunc_s *f);
+void World_Physics_ApplyCmd(struct prvm_edict_s *ed, struct edict_odefunc_s *f);
 
 // remove physics data from entity
 // this is called by entity removal

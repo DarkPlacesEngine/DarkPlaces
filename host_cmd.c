@@ -67,14 +67,16 @@ void Host_Quit_f (void)
 Host_Status_f
 ==================
 */
-void Host_Status_f (void)
+static void Host_Status_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	char qcstatus[256];
 	client_t *client;
 	int seconds = 0, minutes = 0, hours = 0, i, j, k, in, players, ping = 0, packetloss = 0;
 	void (*print) (const char *fmt, ...);
 	char ip[48]; // can contain a full length v6 address with [] and a port
 	int frags;
+	char vabuf[1024];
 
 	if (cmd_source == src_command)
 	{
@@ -91,10 +93,7 @@ void Host_Status_f (void)
 
 	if (!sv.active)
 		return;
-	
-	if(cmd_source == src_command)
-		SV_VM_Begin();
-	
+
 	in = 0;
 	if (Cmd_Argc() == 2)
 	{
@@ -111,7 +110,7 @@ void Host_Status_f (void)
 	print ("version:  %s build %s\n", gamename, buildstring);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
-	print ("timing:   %s\n", Host_TimingReport());
+	print ("timing:   %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 
 	if (in == 1)
@@ -159,7 +158,7 @@ void Host_Status_f (void)
 		if(sv_status_show_qcstatus.integer)
 		{
 			prvm_edict_t *ed = PRVM_EDICT_NUM(i + 1);
-			const char *str = PRVM_GetString(PRVM_serveredictstring(ed, clientstatus));
+			const char *str = PRVM_GetString(prog, PRVM_serveredictstring(ed, clientstatus));
 			if(str && *str)
 			{
 				char *p;
@@ -198,9 +197,6 @@ void Host_Status_f (void)
 			print ("%s%-47s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
 		}
 	}
-
-	if(cmd_source == src_command)
-		SV_VM_End();
 }
 
 
@@ -211,8 +207,9 @@ Host_God_f
 Sets client to godmode
 ==================
 */
-void Host_God_f (void)
+static void Host_God_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -226,8 +223,9 @@ void Host_God_f (void)
 		SV_ClientPrint("godmode ON\n");
 }
 
-void Host_Notarget_f (void)
+static void Host_Notarget_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -243,8 +241,9 @@ void Host_Notarget_f (void)
 
 qboolean noclip_anglehack;
 
-void Host_Noclip_f (void)
+static void Host_Noclip_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -272,8 +271,9 @@ Host_Fly_f
 Sets client to flymode
 ==================
 */
-void Host_Fly_f (void)
+static void Host_Fly_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -300,7 +300,7 @@ Host_Ping_f
 ==================
 */
 void Host_Pings_f (void); // called by Host_Ping_f
-void Host_Ping_f (void)
+static void Host_Ping_f (void)
 {
 	int i;
 	client_t *client;
@@ -352,7 +352,7 @@ map <servername>
 command from the console.  Active clients are kicked off.
 ======================
 */
-void Host_Map_f (void)
+static void Host_Map_f (void)
 {
 	char level[MAX_QPATH];
 
@@ -399,7 +399,7 @@ Host_Changelevel_f
 Goes to a new map, taking all clients along
 ==================
 */
-void Host_Changelevel_f (void)
+static void Host_Changelevel_f (void)
 {
 	char level[MAX_QPATH];
 
@@ -419,9 +419,7 @@ void Host_Changelevel_f (void)
 		MR_ToggleMenu(0);
 	key_dest = key_game;
 
-	SV_VM_Begin();
 	SV_SaveSpawnparms ();
-	SV_VM_End();
 	allowcheats = sv_cheats.integer != 0;
 	strlcpy(level, Cmd_Argv(1), sizeof(level));
 	SV_SpawnServer(level);
@@ -436,7 +434,7 @@ Host_Restart_f
 Restarts the current server for a dead player
 ==================
 */
-void Host_Restart_f (void)
+static void Host_Restart_f (void)
 {
 	char mapname[MAX_QPATH];
 
@@ -526,7 +524,7 @@ Host_Connect_f
 User command to connect to server
 =====================
 */
-void Host_Connect_f (void)
+static void Host_Connect_f (void)
 {
 	if (Cmd_Argc() < 2)
 	{
@@ -550,7 +548,7 @@ LOAD / SAVE GAME
 
 #define	SAVEGAME_VERSION	5
 
-void Host_Savegame_to (const char *name)
+void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 {
 	qfile_t	*f;
 	int		i, k, l, lightstyles = 64;
@@ -565,7 +563,7 @@ void Host_Savegame_to (const char *name)
 		if (sv.lightstyles[i][0])
 			lightstyles = i+1;
 
-	isserver = !strcmp(PRVM_NAME, "server");
+	isserver = prog == SVVM_prog;
 
 	Con_Printf("Saving game to %s...\n", name);
 	f = FS_OpenRealFile(name, "wb", false);
@@ -579,9 +577,9 @@ void Host_Savegame_to (const char *name)
 
 	memset(comment, 0, sizeof(comment));
 	if(isserver)
-		dpsnprintf(comment, sizeof(comment), "%-21.21s kills:%3i/%3i", PRVM_GetString(PRVM_serveredictstring(prog->edicts, message)), (int)PRVM_serverglobalfloat(killed_monsters), (int)PRVM_serverglobalfloat(total_monsters));
+		dpsnprintf(comment, sizeof(comment), "%-21.21s kills:%3i/%3i", PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)), (int)PRVM_serverglobalfloat(killed_monsters), (int)PRVM_serverglobalfloat(total_monsters));
 	else
-		dpsnprintf(comment, sizeof(comment), "(crash dump of %s progs)", PRVM_NAME);
+		dpsnprintf(comment, sizeof(comment), "(crash dump of %s progs)", prog->name);
 	// convert space to _ to make stdio happy
 	// LordHavoc: convert control characters to _ as well
 	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
@@ -616,12 +614,12 @@ void Host_Savegame_to (const char *name)
 			FS_Print(f,"m\n");
 	}
 
-	PRVM_ED_WriteGlobals (f);
+	PRVM_ED_WriteGlobals (prog, f);
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		FS_Printf(f,"// edict %d\n", i);
 		//Con_Printf("edict %d...\n", i);
-		PRVM_ED_Write (f, PRVM_EDICT_NUM(i));
+		PRVM_ED_Write (prog, f, PRVM_EDICT_NUM(i));
 	}
 
 #if 1
@@ -698,8 +696,9 @@ void Host_Savegame_to (const char *name)
 Host_Savegame_f
 ===============
 */
-void Host_Savegame_f (void)
+static void Host_Savegame_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	char	name[MAX_QPATH];
 	qboolean deadflag = false;
 
@@ -709,9 +708,7 @@ void Host_Savegame_f (void)
 		return;
 	}
 
-	SV_VM_Begin();
 	deadflag = cl.islocalgame && svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag);
-	SV_VM_End();
 
 	if (cl.islocalgame)
 	{
@@ -746,9 +743,7 @@ void Host_Savegame_f (void)
 	strlcpy (name, Cmd_Argv(1), sizeof (name));
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
-	SV_VM_Begin();
-	Host_Savegame_to(name);
-	SV_VM_End();
+	Host_Savegame_to(prog, name);
 }
 
 
@@ -758,8 +753,9 @@ Host_Loadgame_f
 ===============
 */
 
-void Host_Loadgame_f (void)
+static void Host_Loadgame_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	char filename[MAX_QPATH];
 	char mapname[MAX_QPATH];
 	float time;
@@ -868,7 +864,6 @@ void Host_Loadgame_f (void)
 
 // load the light styles
 
-	SV_VM_Begin();
 	// -1 is the globals
 	entnum = -1;
 
@@ -934,7 +929,7 @@ void Host_Loadgame_f (void)
 				Con_Printf("Host_Loadgame_f: loading globals\n");
 
 			// parse the global vars
-			PRVM_ED_ParseGlobals (start);
+			PRVM_ED_ParseGlobals (prog, start);
 
 			// restore the autocvar globals
 			Cvar_UpdateAllAutoCvars();
@@ -948,7 +943,7 @@ void Host_Loadgame_f (void)
 				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)", MAX_EDICTS);
 			}
 			while (entnum >= prog->max_edicts)
-				PRVM_MEM_IncreaseEdicts();
+				PRVM_MEM_IncreaseEdicts(prog);
 			ent = PRVM_EDICT_NUM(entnum);
 			memset(ent->fields.vp, 0, prog->entityfields * 4);
 			ent->priv.server->free = false;
@@ -956,7 +951,7 @@ void Host_Loadgame_f (void)
 			if(developer_entityparsing.integer)
 				Con_Printf("Host_Loadgame_f: loading edict %d\n", entnum);
 
-			PRVM_ED_ParseEdict (start, ent);
+			PRVM_ED_ParseEdict (prog, start, ent);
 
 			// link it into the bsp tree
 			if (!ent->priv.server->free)
@@ -1079,8 +1074,6 @@ void Host_Loadgame_f (void)
 	if(developer_entityparsing.integer)
 		Con_Printf("Host_Loadgame_f: finished\n");
 
-	SV_VM_End();
-
 	// make sure we're connected to loopback
 	if (sv.active && cls.state == ca_disconnected)
 		CL_EstablishConnection("local:1", -2);
@@ -1094,8 +1087,9 @@ Host_Name_f
 ======================
 */
 cvar_t cl_name = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
-void Host_Name_f (void)
+static void Host_Name_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
 	qboolean valid_colors;
 	const char *newNameSource;
@@ -1201,7 +1195,7 @@ void Host_Name_f (void)
 	if (j >= 0 && strlen(host_client->name) < sizeof(host_client->name) - 2)
 		memcpy(host_client->name + strlen(host_client->name), STRING_COLOR_DEFAULT_STR, strlen(STRING_COLOR_DEFAULT_STR) + 1);
 
-	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(host_client->name);
+	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
 		if (host_client->spawned)
@@ -1222,8 +1216,9 @@ Host_Playermodel_f
 */
 cvar_t cl_playermodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz/Xonotic (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
-void Host_Playermodel_f (void)
+static void Host_Playermodel_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
 	char newPath[sizeof(host_client->playermodel)];
 
@@ -1261,7 +1256,7 @@ void Host_Playermodel_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
-	PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(host_client->playermodel);
+	PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
 		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
@@ -1278,8 +1273,9 @@ Host_Playerskin_f
 ======================
 */
 cvar_t cl_playerskin = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz/Xonotic (changed by playerskin command)"};
-void Host_Playerskin_f (void)
+static void Host_Playerskin_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
 	char newPath[sizeof(host_client->playerskin)];
 
@@ -1317,7 +1313,7 @@ void Host_Playerskin_f (void)
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
-	PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(host_client->playerskin);
+	PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		//if (host_client->spawned)
@@ -1330,13 +1326,14 @@ void Host_Playerskin_f (void)
 	}
 }
 
-void Host_Version_f (void)
+static void Host_Version_f (void)
 {
 	Con_Printf("Version: %s build %s\n", gamename, buildstring);
 }
 
-void Host_Say(qboolean teamonly)
+static void Host_Say(qboolean teamonly)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	client_t *save;
 	int j, quoted;
 	const char *p1;
@@ -1403,19 +1400,19 @@ void Host_Say(qboolean teamonly)
 }
 
 
-void Host_Say_f(void)
+static void Host_Say_f(void)
 {
 	Host_Say(false);
 }
 
 
-void Host_Say_Team_f(void)
+static void Host_Say_Team_f(void)
 {
 	Host_Say(true);
 }
 
 
-void Host_Tell_f(void)
+static void Host_Tell_f(void)
 {
 	const char *playername_start = NULL;
 	size_t playername_length = 0;
@@ -1550,8 +1547,9 @@ Host_Color_f
 ==================
 */
 cvar_t cl_color = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
-void Host_Color(int changetop, int changebottom)
+static void Host_Color(int changetop, int changebottom)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int top, bottom, playercolor;
 
 	// get top and bottom either from the provided values or the current values
@@ -1581,10 +1579,10 @@ void Host_Color(int changetop, int changebottom)
 	if (host_client->edict && PRVM_serverfunction(SV_ChangeTeam))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
-		PRVM_serverglobalfloat(time) = sv.time;
 		prog->globals.generic[OFS_PARM0] = playercolor;
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram(PRVM_serverfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
@@ -1605,7 +1603,7 @@ void Host_Color(int changetop, int changebottom)
 	}
 }
 
-void Host_Color_f(void)
+static void Host_Color_f(void)
 {
 	int		top, bottom;
 
@@ -1626,7 +1624,7 @@ void Host_Color_f(void)
 	Host_Color(top, bottom);
 }
 
-void Host_TopColor_f(void)
+static void Host_TopColor_f(void)
 {
 	if (Cmd_Argc() == 1)
 	{
@@ -1638,7 +1636,7 @@ void Host_TopColor_f(void)
 	Host_Color(atoi(Cmd_Argv(1)), -1);
 }
 
-void Host_BottomColor_f(void)
+static void Host_BottomColor_f(void)
 {
 	if (Cmd_Argc() == 1)
 	{
@@ -1651,7 +1649,7 @@ void Host_BottomColor_f(void)
 }
 
 cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
-void Host_Rate_f(void)
+static void Host_Rate_f(void)
 {
 	int rate;
 
@@ -1678,8 +1676,9 @@ void Host_Rate_f(void)
 Host_Kill_f
 ==================
 */
-void Host_Kill_f (void)
+static void Host_Kill_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	if (PRVM_serveredictfloat(host_client->edict, health) <= 0)
 	{
 		SV_ClientPrint("Can't suicide -- already dead!\n");
@@ -1688,7 +1687,7 @@ void Host_Kill_f (void)
 
 	PRVM_serverglobalfloat(time) = sv.time;
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-	PRVM_ExecuteProgram (PRVM_serverfunction(ClientKill), "QC function ClientKill is missing");
+	prog->ExecuteProgram(prog, PRVM_serverfunction(ClientKill), "QC function ClientKill is missing");
 }
 
 
@@ -1697,7 +1696,7 @@ void Host_Kill_f (void)
 Host_Pause_f
 ==================
 */
-void Host_Pause_f (void)
+static void Host_Pause_f (void)
 {
 	void (*print) (const char *fmt, ...);
 	if (cmd_source == src_command)
@@ -1742,6 +1741,7 @@ LordHavoc: correction, Mindcrime will be removing pmodel in the future, but it's
 cvar_t cl_pmodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
 static void Host_PModel_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 
 	if (Cmd_Argc () == 1)
@@ -1772,7 +1772,7 @@ static void Host_PModel_f (void)
 Host_PreSpawn_f
 ==================
 */
-void Host_PreSpawn_f (void)
+static void Host_PreSpawn_f (void)
 {
 	if (host_client->spawned)
 	{
@@ -1797,8 +1797,9 @@ void Host_PreSpawn_f (void)
 Host_Spawn_f
 ==================
 */
-void Host_Spawn_f (void)
+static void Host_Spawn_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	client_t *client;
 	int stats[MAX_CL_STATS];
@@ -1827,7 +1828,7 @@ void Host_Spawn_f (void)
 			Con_DPrint("Calling RestoreGame\n");
 			PRVM_serverglobalfloat(time) = sv.time;
 			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-			PRVM_ExecuteProgram(PRVM_serverfunction(RestoreGame), "QC function RestoreGame is missing");
+			prog->ExecuteProgram(prog, PRVM_serverfunction(RestoreGame), "QC function RestoreGame is missing");
 		}
 	}
 	else
@@ -1842,12 +1843,13 @@ void Host_Spawn_f (void)
 		host_client->clientconnectcalled = true;
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram (PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
 
 		if (cls.state == ca_dedicated)
 			Con_Printf("%s connected\n", host_client->name);
 
-		PRVM_ExecuteProgram (PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
+		PRVM_serverglobalfloat(time) = sv.time;
+		prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
 	}
 
 	if (!host_client->netconnection)
@@ -1932,7 +1934,7 @@ void Host_Spawn_f (void)
 Host_Begin_f
 ==================
 */
-void Host_Begin_f (void)
+static void Host_Begin_f (void)
 {
 	host_client->spawned = true;
 
@@ -1961,7 +1963,7 @@ Host_Kick_f
 Kicks a user off of the server
 ==================
 */
-void Host_Kick_f (void)
+static void Host_Kick_f (void)
 {
 	const char *who;
 	const char *message = NULL;
@@ -1972,7 +1974,6 @@ void Host_Kick_f (void)
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
 	save = host_client;
 
 	if (Cmd_Argc() > 2 && strcmp(Cmd_Argv(1), "#") == 0)
@@ -2031,7 +2032,6 @@ void Host_Kick_f (void)
 	}
 
 	host_client = save;
-	SV_VM_End();
 }
 
 /*
@@ -2047,8 +2047,9 @@ DEBUGGING TOOLS
 Host_Give_f
 ==================
 */
-void Host_Give_f (void)
+static void Host_Give_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	const char *t;
 	int v;
 
@@ -2169,7 +2170,7 @@ void Host_Give_f (void)
 	}
 }
 
-prvm_edict_t	*FindViewthing (void)
+static prvm_edict_t	*FindViewthing(prvm_prog_t *prog)
 {
 	int		i;
 	prvm_edict_t	*e;
@@ -2177,7 +2178,7 @@ prvm_edict_t	*FindViewthing (void)
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		e = PRVM_EDICT_NUM(i);
-		if (!strcmp (PRVM_GetString(PRVM_serveredictstring(e, classname)), "viewthing"))
+		if (!strcmp (PRVM_GetString(prog, PRVM_serveredictstring(e, classname)), "viewthing"))
 			return e;
 	}
 	Con_Print("No viewthing on map\n");
@@ -2189,16 +2190,16 @@ prvm_edict_t	*FindViewthing (void)
 Host_Viewmodel_f
 ==================
 */
-void Host_Viewmodel_f (void)
+static void Host_Viewmodel_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
 	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
-	e = FindViewthing ();
+	e = FindViewthing(prog);
 	if (e)
 	{
 		m = Mod_ForName (Cmd_Argv(1), false, true, NULL);
@@ -2209,9 +2210,7 @@ void Host_Viewmodel_f (void)
 		}
 		else
 			Con_Printf("viewmodel: can't load %s\n", Cmd_Argv(1));
-	
 	}
-	SV_VM_End();
 }
 
 /*
@@ -2219,8 +2218,9 @@ void Host_Viewmodel_f (void)
 Host_Viewframe_f
 ==================
 */
-void Host_Viewframe_f (void)
+static void Host_Viewframe_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
 	int		f;
 	dp_model_t	*m;
@@ -2228,8 +2228,7 @@ void Host_Viewframe_f (void)
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
-	e = FindViewthing ();
+	e = FindViewthing(prog);
 	if (e)
 	{
 		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
@@ -2240,11 +2239,10 @@ void Host_Viewframe_f (void)
 
 		PRVM_serveredictfloat(e, frame) = f;
 	}
-	SV_VM_End();
 }
 
 
-void PrintFrameName (dp_model_t *m, int frame)
+static void PrintFrameName (dp_model_t *m, int frame)
 {
 	if (m->animscenes)
 		Con_Printf("frame %i: %s\n", frame, m->animscenes[frame].name);
@@ -2257,17 +2255,16 @@ void PrintFrameName (dp_model_t *m, int frame)
 Host_Viewnext_f
 ==================
 */
-void Host_Viewnext_f (void)
+static void Host_Viewnext_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
 	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
-	e = FindViewthing ();
-	SV_VM_End();
+	e = FindViewthing(prog);
 	if (e)
 	{
 		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
@@ -2285,16 +2282,16 @@ void Host_Viewnext_f (void)
 Host_Viewprev_f
 ==================
 */
-void Host_Viewprev_f (void)
+static void Host_Viewprev_f (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
 	dp_model_t	*m;
 
 	if (!sv.active)
 		return;
 
-	SV_VM_Begin();
-	e = FindViewthing ();
+	e = FindViewthing(prog);
 	if (e)
 	{
 		m = cl.model_precache[(int)PRVM_serveredictfloat(e, modelindex)];
@@ -2305,7 +2302,6 @@ void Host_Viewprev_f (void)
 
 		PrintFrameName (m, (int)PRVM_serveredictfloat(e, frame));
 	}
-	SV_VM_End();
 }
 
 /*
@@ -2322,7 +2318,7 @@ DEMO LOOP CONTROL
 Host_Startdemos_f
 ==================
 */
-void Host_Startdemos_f (void)
+static void Host_Startdemos_f (void)
 {
 	int		i, c;
 
@@ -2361,7 +2357,7 @@ Host_Demos_f
 Return to looping demos
 ==================
 */
-void Host_Demos_f (void)
+static void Host_Demos_f (void)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -2378,7 +2374,7 @@ Host_Stopdemo_f
 Return to looping demos
 ==================
 */
-void Host_Stopdemo_f (void)
+static void Host_Stopdemo_f (void)
 {
 	if (!cls.demoplayback)
 		return;
@@ -2386,12 +2382,13 @@ void Host_Stopdemo_f (void)
 	Host_ShutdownServer ();
 }
 
-void Host_SendCvar_f (void)
+static void Host_SendCvar_f (void)
 {
 	int		i;
 	cvar_t	*c;
 	const char *cvarname;
 	client_t *old;
+	char vabuf[1024];
 
 	if(Cmd_Argc() != 2)
 		return;
@@ -2402,9 +2399,9 @@ void Host_SendCvar_f (void)
 		// LordHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
-			Cmd_ForwardStringToServer(va("sentcvar %s", cvarname));
+			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
 		else
-			Cmd_ForwardStringToServer(va("sentcvar %s \"%s\"", c->name, c->string));
+			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
 	if(!sv.active)// || !PRVM_serverfunction(SV_ParseClientCommand))
@@ -2458,7 +2455,7 @@ Host_PQRcon_f
 ProQuake rcon support
 =====================
 */
-void Host_PQRcon_f (void)
+static void Host_PQRcon_f (void)
 {
 	int n;
 	const char *e;
@@ -2492,15 +2489,18 @@ void Host_PQRcon_f (void)
 	mysocket = NetConn_ChooseClientSocketForAddress(&to);
 	if (mysocket)
 	{
-		SZ_Clear(&net_message);
-		MSG_WriteLong (&net_message, 0);
-		MSG_WriteByte (&net_message, CCREQ_RCON);
-		SZ_Write(&net_message, (const unsigned char*)rcon_password.string, n);
-		MSG_WriteByte (&net_message, 0); // terminate the (possibly partial) string
-		MSG_WriteString (&net_message, Cmd_Args());
-		StoreBigLong(net_message.data, NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-		NetConn_Write(mysocket, net_message.data, net_message.cursize, &to);
-		SZ_Clear (&net_message);
+		sizebuf_t buf;
+		unsigned char bufdata[64];
+		buf.data = bufdata;
+		SZ_Clear(&buf);
+		MSG_WriteLong(&buf, 0);
+		MSG_WriteByte(&buf, CCREQ_RCON);
+		SZ_Write(&buf, (const unsigned char*)rcon_password.string, n);
+		MSG_WriteByte(&buf, 0); // terminate the (possibly partial) string
+		MSG_WriteString(&buf, Cmd_Args());
+		StoreBigLong(buf.data, NETFLAG_CTL | (buf.cursize & NETFLAG_LENGTH_MASK));
+		NetConn_Write(mysocket, buf.data, buf.cursize, &to);
+		SZ_Clear(&buf);
 	}
 }
 
@@ -2516,12 +2516,13 @@ Host_Rcon_f
   an unconnected command.
 =====================
 */
-void Host_Rcon_f (void) // credit: taken from QuakeWorld
+static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 {
 	int i, n;
 	const char *e;
 	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
+	char vabuf[1024];
 
 	if (!rcon_password.string || !rcon_password.string[0])
 	{
@@ -2584,7 +2585,7 @@ void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		}
 		else
 		{
-			NetConn_WriteString(mysocket, va("\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &to);
+			NetConn_WriteString(mysocket, va(vabuf, sizeof(vabuf), "\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &to);
 		}
 	}
 }
@@ -2598,7 +2599,7 @@ user <name or userid>
 Dump userdata / masterdata for a user
 ====================
 */
-void Host_User_f (void) // credit: taken from QuakeWorld
+static void Host_User_f (void) // credit: taken from QuakeWorld
 {
 	int		uid;
 	int		i;
@@ -2631,7 +2632,7 @@ Host_Users_f
 Dump userids for all current players
 ====================
 */
-void Host_Users_f (void) // credit: taken from QuakeWorld
+static void Host_Users_f (void) // credit: taken from QuakeWorld
 {
 	int		i;
 	int		c;
@@ -2659,7 +2660,7 @@ Sent by server when serverinfo changes
 ==================
 */
 // TODO: shouldn't this be a cvar instead?
-void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
+static void Host_FullServerinfo_f (void) // credit: taken from QuakeWorld
 {
 	char temp[512];
 	if (Cmd_Argc() != 2)
@@ -2681,7 +2682,7 @@ Allow clients to change userinfo
 ==================
 Casey was here :)
 */
-void Host_FullInfo_f (void) // credit: taken from QuakeWorld
+static void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 {
 	char key[512];
 	char value[512];
@@ -2730,7 +2731,7 @@ CL_SetInfo_f
 Allow clients to change userinfo
 ==================
 */
-void Host_SetInfo_f (void) // credit: taken from QuakeWorld
+static void Host_SetInfo_f (void) // credit: taken from QuakeWorld
 {
 	if (Cmd_Argc() == 1)
 	{
@@ -2754,7 +2755,7 @@ packet <destination> <contents>
 Contents allows \n escape character
 ====================
 */
-void Host_Packet_f (void) // credit: taken from QuakeWorld
+static void Host_Packet_f (void) // credit: taken from QuakeWorld
 {
 	char send[2048];
 	int i, l;
@@ -2879,7 +2880,7 @@ void Host_Pings_f (void)
 		MSG_WriteString(&host_client->netconnection->message, "\n");
 }
 
-void Host_PingPLReport_f(void)
+static void Host_PingPLReport_f(void)
 {
 	char *errbyte;
 	int i;

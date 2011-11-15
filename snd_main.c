@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_modplug.h"
 #include "csprogs.h"
 #include "cl_collision.h"
+#include "cdaudio.h"
 
 
 #define SND_MIN_SPEED 8000
@@ -344,7 +345,7 @@ static void S_SoundList_f (void)
 }
 
 
-void S_SoundInfo_f(void)
+static void S_SoundInfo_f(void)
 {
 	if (snd_renderbuffer == NULL)
 	{
@@ -776,7 +777,7 @@ void S_Shutdown(void)
 	sound_spatialized = false;
 }
 
-void S_Restart_f(void)
+static void S_Restart_f(void)
 {
 	// NOTE: we can't free all sounds if we are running a map (this frees sfx_t that are still referenced by precaches)
 	// So, refuse to do this if we are connected.
@@ -1220,7 +1221,7 @@ SND_PickChannel
 Picks a channel based on priorities, empty slots, number of channels
 =================
 */
-channel_t *SND_PickChannel(int entnum, int entchannel)
+static channel_t *SND_PickChannel(int entnum, int entchannel)
 {
 	int ch_idx;
 	int first_to_die;
@@ -1293,13 +1294,14 @@ Spatializes a channel
 =================
 */
 extern cvar_t cl_gameplayfix_soundsmovewithentities;
-void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
+static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 {
 	int i;
 	double f;
 	float angle_side, angle_front, angle_factor, mixspeed;
 	vec_t dist, mastervol, intensity;
 	vec3_t source_vec;
+	char vabuf[1024];
 
 	// update sound origin if we know about the entity
 	if (ch->entnum > 0 && cls.state == ca_connected && cl_gameplayfix_soundsmovewithentities.integer)
@@ -1321,6 +1323,13 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 				VectorMAM(0.5f, cl.entities[ch->entnum].render.mins, 0.5f, cl.entities[ch->entnum].render.maxs, ch->origin);
 			else
 				Matrix4x4_OriginFromMatrix(&cl.entities[ch->entnum].render.matrix, ch->origin);
+		}
+		else if (cl.csqc_server2csqcentitynumber[ch->entnum])
+		{
+			//Con_Printf("-- entnum %i (client %i) origin %f %f %f neworigin %f %f %f\n", ch->entnum, cl.csqc_server2csqcentitynumber[ch->entnum], ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
+
+			if (!CL_VM_GetEntitySoundOrigin(cl.csqc_server2csqcentitynumber[ch->entnum] + MAX_EDICTS, ch->origin))
+				ch->entnum = MAX_EDICTS; // entity was removed, disown sound
 		}
 	}
 
@@ -1406,7 +1415,7 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 			case 5:  mastervol *= snd_channel5volume.value; break;
 			case 6:  mastervol *= snd_channel6volume.value; break;
 			case 7:  mastervol *= snd_channel7volume.value; break;
-			default: mastervol *= Cvar_VariableValueOr(va("snd_channel%dvolume", CHAN_ENGINE2CVAR(ch->entchannel)), 1.0); break;
+			default: mastervol *= Cvar_VariableValueOr(va(vabuf, sizeof(vabuf), "snd_channel%dvolume", CHAN_ENGINE2CVAR(ch->entchannel)), 1.0); break;
 		}
 	}
 
@@ -1474,7 +1483,7 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 		f = dist * ch->distfade;
 
 		f =
-			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), snd_attenuation_exponent.value))
+			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), (double)snd_attenuation_exponent.value))
 			*
 			((snd_attenuation_decibel.value == 0) ? 1.0 : pow(0.1, 0.1 * snd_attenuation_decibel.value * f));
 
@@ -1597,7 +1606,7 @@ void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 				ch->volume[i] = 0;
 	}
 }
-void SND_Spatialize(channel_t *ch, qboolean isstatic)
+static void SND_Spatialize(channel_t *ch, qboolean isstatic)
 {
 	sfx_t *sfx = ch->sfx;
 	SND_Spatialize_WithSfx(ch, isstatic, sfx);
@@ -1608,7 +1617,7 @@ void SND_Spatialize(channel_t *ch, qboolean isstatic)
 // Start a sound effect
 // =======================================================================
 
-void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos, float fspeed)
+static void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int flags, vec3_t origin, float fvol, float attenuation, qboolean isstatic, int entnum, int entchannel, int startpos, float fspeed)
 {
 	if (!sfx)
 	{
@@ -1801,7 +1810,6 @@ void S_StopSound(int entnum, int entchannel)
 		}
 }
 
-extern void CDAudio_Stop(void);
 void S_StopAllSounds (void)
 {
 	unsigned int i;
@@ -1923,7 +1931,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 S_UpdateAmbientSounds
 ===================
 */
-void S_UpdateAmbientSounds (void)
+static void S_UpdateAmbientSounds (void)
 {
 	int			i;
 	float		vol;

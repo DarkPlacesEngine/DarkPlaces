@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "csprogs.h"
+#include "thread.h"
 
 /*
 ===============================================================================
@@ -61,7 +62,7 @@ int			in_impulse;
 
 
 
-void KeyDown (kbutton_t *b)
+static void KeyDown (kbutton_t *b)
 {
 	int k;
 	const char *c;
@@ -90,7 +91,7 @@ void KeyDown (kbutton_t *b)
 	b->state |= 1 + 2;	// down + impulse down
 }
 
-void KeyUp (kbutton_t *b)
+static void KeyUp (kbutton_t *b)
 {
 	int k;
 	const char *c;
@@ -120,86 +121,86 @@ void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-void IN_KLookDown (void) {KeyDown(&in_klook);}
-void IN_KLookUp (void) {KeyUp(&in_klook);}
-void IN_MLookDown (void) {KeyDown(&in_mlook);}
-void IN_MLookUp (void)
+static void IN_KLookDown (void) {KeyDown(&in_klook);}
+static void IN_KLookUp (void) {KeyUp(&in_klook);}
+static void IN_MLookDown (void) {KeyDown(&in_mlook);}
+static void IN_MLookUp (void)
 {
 	KeyUp(&in_mlook);
 	if ( !(in_mlook.state&1) && lookspring.value)
 		V_StartPitchDrift();
 }
-void IN_UpDown(void) {KeyDown(&in_up);}
-void IN_UpUp(void) {KeyUp(&in_up);}
-void IN_DownDown(void) {KeyDown(&in_down);}
-void IN_DownUp(void) {KeyUp(&in_down);}
-void IN_LeftDown(void) {KeyDown(&in_left);}
-void IN_LeftUp(void) {KeyUp(&in_left);}
-void IN_RightDown(void) {KeyDown(&in_right);}
-void IN_RightUp(void) {KeyUp(&in_right);}
-void IN_ForwardDown(void) {KeyDown(&in_forward);}
-void IN_ForwardUp(void) {KeyUp(&in_forward);}
-void IN_BackDown(void) {KeyDown(&in_back);}
-void IN_BackUp(void) {KeyUp(&in_back);}
-void IN_LookupDown(void) {KeyDown(&in_lookup);}
-void IN_LookupUp(void) {KeyUp(&in_lookup);}
-void IN_LookdownDown(void) {KeyDown(&in_lookdown);}
-void IN_LookdownUp(void) {KeyUp(&in_lookdown);}
-void IN_MoveleftDown(void) {KeyDown(&in_moveleft);}
-void IN_MoveleftUp(void) {KeyUp(&in_moveleft);}
-void IN_MoverightDown(void) {KeyDown(&in_moveright);}
-void IN_MoverightUp(void) {KeyUp(&in_moveright);}
+static void IN_UpDown(void) {KeyDown(&in_up);}
+static void IN_UpUp(void) {KeyUp(&in_up);}
+static void IN_DownDown(void) {KeyDown(&in_down);}
+static void IN_DownUp(void) {KeyUp(&in_down);}
+static void IN_LeftDown(void) {KeyDown(&in_left);}
+static void IN_LeftUp(void) {KeyUp(&in_left);}
+static void IN_RightDown(void) {KeyDown(&in_right);}
+static void IN_RightUp(void) {KeyUp(&in_right);}
+static void IN_ForwardDown(void) {KeyDown(&in_forward);}
+static void IN_ForwardUp(void) {KeyUp(&in_forward);}
+static void IN_BackDown(void) {KeyDown(&in_back);}
+static void IN_BackUp(void) {KeyUp(&in_back);}
+static void IN_LookupDown(void) {KeyDown(&in_lookup);}
+static void IN_LookupUp(void) {KeyUp(&in_lookup);}
+static void IN_LookdownDown(void) {KeyDown(&in_lookdown);}
+static void IN_LookdownUp(void) {KeyUp(&in_lookdown);}
+static void IN_MoveleftDown(void) {KeyDown(&in_moveleft);}
+static void IN_MoveleftUp(void) {KeyUp(&in_moveleft);}
+static void IN_MoverightDown(void) {KeyDown(&in_moveright);}
+static void IN_MoverightUp(void) {KeyUp(&in_moveright);}
 
-void IN_SpeedDown(void) {KeyDown(&in_speed);}
-void IN_SpeedUp(void) {KeyUp(&in_speed);}
-void IN_StrafeDown(void) {KeyDown(&in_strafe);}
-void IN_StrafeUp(void) {KeyUp(&in_strafe);}
+static void IN_SpeedDown(void) {KeyDown(&in_speed);}
+static void IN_SpeedUp(void) {KeyUp(&in_speed);}
+static void IN_StrafeDown(void) {KeyDown(&in_strafe);}
+static void IN_StrafeUp(void) {KeyUp(&in_strafe);}
 
-void IN_AttackDown(void) {KeyDown(&in_attack);}
-void IN_AttackUp(void) {KeyUp(&in_attack);}
+static void IN_AttackDown(void) {KeyDown(&in_attack);}
+static void IN_AttackUp(void) {KeyUp(&in_attack);}
 
-void IN_UseDown(void) {KeyDown(&in_use);}
-void IN_UseUp(void) {KeyUp(&in_use);}
+static void IN_UseDown(void) {KeyDown(&in_use);}
+static void IN_UseUp(void) {KeyUp(&in_use);}
 
 // LordHavoc: added 6 new buttons
-void IN_Button3Down(void) {KeyDown(&in_button3);}
-void IN_Button3Up(void) {KeyUp(&in_button3);}
-void IN_Button4Down(void) {KeyDown(&in_button4);}
-void IN_Button4Up(void) {KeyUp(&in_button4);}
-void IN_Button5Down(void) {KeyDown(&in_button5);}
-void IN_Button5Up(void) {KeyUp(&in_button5);}
-void IN_Button6Down(void) {KeyDown(&in_button6);}
-void IN_Button6Up(void) {KeyUp(&in_button6);}
-void IN_Button7Down(void) {KeyDown(&in_button7);}
-void IN_Button7Up(void) {KeyUp(&in_button7);}
-void IN_Button8Down(void) {KeyDown(&in_button8);}
-void IN_Button8Up(void) {KeyUp(&in_button8);}
+static void IN_Button3Down(void) {KeyDown(&in_button3);}
+static void IN_Button3Up(void) {KeyUp(&in_button3);}
+static void IN_Button4Down(void) {KeyDown(&in_button4);}
+static void IN_Button4Up(void) {KeyUp(&in_button4);}
+static void IN_Button5Down(void) {KeyDown(&in_button5);}
+static void IN_Button5Up(void) {KeyUp(&in_button5);}
+static void IN_Button6Down(void) {KeyDown(&in_button6);}
+static void IN_Button6Up(void) {KeyUp(&in_button6);}
+static void IN_Button7Down(void) {KeyDown(&in_button7);}
+static void IN_Button7Up(void) {KeyUp(&in_button7);}
+static void IN_Button8Down(void) {KeyDown(&in_button8);}
+static void IN_Button8Up(void) {KeyUp(&in_button8);}
 
-void IN_Button9Down(void) {KeyDown(&in_button9);}
-void IN_Button9Up(void) {KeyUp(&in_button9);}
-void IN_Button10Down(void) {KeyDown(&in_button10);}
-void IN_Button10Up(void) {KeyUp(&in_button10);}
-void IN_Button11Down(void) {KeyDown(&in_button11);}
-void IN_Button11Up(void) {KeyUp(&in_button11);}
-void IN_Button12Down(void) {KeyDown(&in_button12);}
-void IN_Button12Up(void) {KeyUp(&in_button12);}
-void IN_Button13Down(void) {KeyDown(&in_button13);}
-void IN_Button13Up(void) {KeyUp(&in_button13);}
-void IN_Button14Down(void) {KeyDown(&in_button14);}
-void IN_Button14Up(void) {KeyUp(&in_button14);}
-void IN_Button15Down(void) {KeyDown(&in_button15);}
-void IN_Button15Up(void) {KeyUp(&in_button15);}
-void IN_Button16Down(void) {KeyDown(&in_button16);}
-void IN_Button16Up(void) {KeyUp(&in_button16);}
+static void IN_Button9Down(void) {KeyDown(&in_button9);}
+static void IN_Button9Up(void) {KeyUp(&in_button9);}
+static void IN_Button10Down(void) {KeyDown(&in_button10);}
+static void IN_Button10Up(void) {KeyUp(&in_button10);}
+static void IN_Button11Down(void) {KeyDown(&in_button11);}
+static void IN_Button11Up(void) {KeyUp(&in_button11);}
+static void IN_Button12Down(void) {KeyDown(&in_button12);}
+static void IN_Button12Up(void) {KeyUp(&in_button12);}
+static void IN_Button13Down(void) {KeyDown(&in_button13);}
+static void IN_Button13Up(void) {KeyUp(&in_button13);}
+static void IN_Button14Down(void) {KeyDown(&in_button14);}
+static void IN_Button14Up(void) {KeyUp(&in_button14);}
+static void IN_Button15Down(void) {KeyDown(&in_button15);}
+static void IN_Button15Up(void) {KeyUp(&in_button15);}
+static void IN_Button16Down(void) {KeyDown(&in_button16);}
+static void IN_Button16Up(void) {KeyUp(&in_button16);}
 
-void IN_JumpDown (void) {KeyDown(&in_jump);}
-void IN_JumpUp (void) {KeyUp(&in_jump);}
+static void IN_JumpDown (void) {KeyDown(&in_jump);}
+static void IN_JumpUp (void) {KeyUp(&in_jump);}
 
-void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
+static void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
 
 in_bestweapon_info_t in_bestweapon_info[IN_BESTWEAPON_MAX];
 
-void IN_BestWeapon_Register(const char *name, int impulse, int weaponbit, int activeweaponcode, int ammostat, int ammomin)
+static void IN_BestWeapon_Register(const char *name, int impulse, int weaponbit, int activeweaponcode, int ammostat, int ammomin)
 {
 	int i;
 	for(i = 0; i < IN_BESTWEAPON_MAX && in_bestweapon_info[i].impulse; ++i)
@@ -240,7 +241,7 @@ void IN_BestWeapon_ResetData (void)
 	IN_BestWeapon_Register("h", 226, HIT_MJOLNIR, HIT_MJOLNIR, STAT_CELLS, 0); // hipnotic mjolnir hammer
 }
 
-void IN_BestWeapon_Register_f (void)
+static void IN_BestWeapon_Register_f (void)
 {
 	if(Cmd_Argc() == 7)
 	{
@@ -267,7 +268,7 @@ void IN_BestWeapon_Register_f (void)
 	}
 }
 
-void IN_BestWeapon (void)
+static void IN_BestWeapon (void)
 {
 	int i, n;
 	const char *t;
@@ -468,7 +469,7 @@ CL_AdjustAngles
 Moves the local angle positions
 ================
 */
-void CL_AdjustAngles (void)
+static void CL_AdjustAngles (void)
 {
 	float	speed;
 	float	up, down;
@@ -518,7 +519,6 @@ CL_Input
 Send the intended movement message to the server
 ================
 */
-extern qboolean CL_VM_InputEvent (int eventtype, int x, int y);
 void CL_Input (void)
 {
 	float mx, my;
@@ -756,7 +756,7 @@ void CL_Input (void)
 
 #include "cl_collision.h"
 
-void CL_UpdatePrydonCursor(void)
+static void CL_UpdatePrydonCursor(void)
 {
 	vec3_t temp;
 
@@ -806,40 +806,6 @@ void CL_UpdatePrydonCursor(void)
 		cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber, (chase_active.integer || cl.intermission) ? &cl.entities[cl.playerentity].render : NULL);
 }
 
-typedef enum waterlevel_e
-{
-	WATERLEVEL_NONE,
-	WATERLEVEL_WETFEET,
-	WATERLEVEL_SWIMMING,
-	WATERLEVEL_SUBMERGED
-}
-waterlevel_t;
-
-typedef struct cl_clientmovement_state_s
-{
-	// position
-	vec3_t origin;
-	vec3_t velocity;
-	// current bounding box (different if crouched vs standing)
-	vec3_t mins;
-	vec3_t maxs;
-	// currently on the ground
-	qboolean onground;
-	// currently crouching
-	qboolean crouched;
-	// what kind of water (SUPERCONTENTS_LAVA for instance)
-	int watertype;
-	// how deep
-	waterlevel_t waterlevel;
-	// weird hacks when jumping out of water
-	// (this is in seconds and counts down to 0)
-	float waterjumptime;
-
-	// user command
-	usercmd_t cmd;
-}
-cl_clientmovement_state_t;
-
 #define NUMOFFSETS 27
 static vec3_t offsets[NUMOFFSETS] =
 {
@@ -864,7 +830,7 @@ static vec3_t offsets[NUMOFFSETS] =
 	{-0.125,  0.125, -0.125}, { 0.125,  0.125, -0.125},
 };
 
-qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
+static qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 {
 	int i;
 	vec3_t neworigin;
@@ -881,7 +847,7 @@ qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 	return false;
 }
 
-void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 {
 	vec_t f;
 	vec3_t origin1, origin2;
@@ -957,7 +923,7 @@ void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 		s->waterjumptime = 0;
 }
 
-void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 {
 	int bump;
 	double t;
@@ -1019,7 +985,7 @@ void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 }
 
 
-void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 {
 	vec_t wishspeed;
 	vec_t f;
@@ -1146,7 +1112,7 @@ static vec_t CL_GeomLerp(vec_t a, vec_t lerp, vec_t b)
 	return a * pow(fabs(b / a), lerp);
 }
 
-void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
+static void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
 {
 	vec_t zspeed, speed, dot, k;
 
@@ -1181,7 +1147,7 @@ void CL_ClientMovement_Physics_CPM_PM_Aircontrol(cl_clientmovement_state_t *s, v
 	s->velocity[2] = zspeed;
 }
 
-float CL_ClientMovement_Physics_AdjustAirAccelQW(float accelqw, float factor)
+static float CL_ClientMovement_Physics_AdjustAirAccelQW(float accelqw, float factor)
 {
 	return
 		(accelqw < 0 ? -1 : +1)
@@ -1189,7 +1155,7 @@ float CL_ClientMovement_Physics_AdjustAirAccelQW(float accelqw, float factor)
 		bound(0.000001, 1 - (1 - fabs(accelqw)) * factor, 1);
 }
 
-void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t stretchfactor, vec_t sidefric, vec_t speedlimit)
+static void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed, vec_t wishspeed0, vec_t accel, vec_t accelqw, vec_t stretchfactor, vec_t sidefric, vec_t speedlimit)
 {
 	vec_t vel_straight;
 	vec_t vel_z;
@@ -1269,7 +1235,7 @@ void CL_ClientMovement_Physics_PM_Accelerate(cl_clientmovement_state_t *s, vec3_
 	s->velocity[2] += vel_z;
 }
 
-void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
+static void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t *s, vec3_t wishdir, vec_t wishspeed)
 {
     vec3_t curvel, wishvel, acceldir, curdir;
     float addspeed, accelspeed, curspeed;
@@ -1320,7 +1286,7 @@ void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t *s, ve
     VectorMA( s->velocity, accelspeed, acceldir, s->velocity );
 }
 
-void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 {
 	vec_t friction;
 	vec_t wishspeed;
@@ -1585,6 +1551,8 @@ void CL_ClientMovement_Replay(void)
 	double totalmovemsec;
 	cl_clientmovement_state_t s;
 
+	VectorCopy(cl.mvelocity[0], cl.movement_velocity);
+
 	if (cl.movement_predicted && !cl.movement_replay)
 		return;
 
@@ -1650,9 +1618,7 @@ void CL_ClientMovement_Replay(void)
 		s.cmd = cl.movecmd[0];
 	}
 
-	if (cls.demoplayback) // for bob, speedometer
-		VectorCopy(cl.mvelocity[0], cl.movement_velocity);
-	else
+	if (!cls.demoplayback) // for bob, speedometer
 	{
 		cl.movement_replay = false;
 		// update the interpolation target position and velocity
@@ -1680,18 +1646,9 @@ void CL_ClientMovement_Replay(void)
 		if (s.onground)
 			cl.onground = true;
 	}
-
-	// react to onground state changes (for gun bob)
-	if (cl.onground)
-	{
-		if (!cl.oldonground)
-			cl.hitgroundtime = cl.movecmd[0].time;
-		cl.lastongroundtime = cl.movecmd[0].time;
-	}
-	cl.oldonground = cl.onground;
 }
 
-void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
+static void QW_MSG_WriteDeltaUsercmd(sizebuf_t *buf, usercmd_t *from, usercmd_t *to)
 {
 	int bits;
 
@@ -2156,7 +2113,9 @@ void CL_SendMove(void)
 	{
 		Con_Print("CL_SendMove: lost server connection\n");
 		CL_Disconnect();
+		SV_LockThreadMutex();
 		Host_ShutdownServer();
+		SV_UnlockThreadMutex();
 	}
 }
 

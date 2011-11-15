@@ -323,6 +323,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	qboolean ddshasalpha;
 	float ddsavgcolor[4];
 	qboolean loaded = false;
+	char vabuf[1024];
 
 	texflags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
@@ -392,7 +393,7 @@ reload:
 	pic->lastusedframe = draw_frame;
 
 	// load a high quality image from disk if possible
-	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
+	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
 	{
 		// note this loads even if autoload is true, otherwise we can't get the width/height
 		loaded = true;
@@ -423,7 +424,7 @@ reload:
 			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, vid.sRGB2D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
 #ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 #endif
 		}
 	}
@@ -511,20 +512,21 @@ cachepic_t *Draw_CachePic (const char *path)
 
 rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
+	char vabuf[1024];
 	if (pic->autoload && !pic->tex)
 	{
 		if (pic->tex == NULL && r_texture_dds_load.integer != 0)
 		{
 			qboolean ddshasalpha;
 			float ddsavgcolor[4];
-			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va("dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0);
+			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0);
 		}
 		if (pic->tex == NULL)
 		{
 			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, vid.sRGB2D);
 #ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 #endif
 		}
 		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
@@ -532,7 +534,7 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, vid.sRGB2D);
 #ifndef USE_GLES2
 			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va("dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
+				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
 #endif
 		}
 		if (pic->tex == NULL)
@@ -996,6 +998,7 @@ Draw_Init
 static void gl_draw_start(void)
 {
 	int i;
+	char vabuf[1024];
 	drawtexturepool = R_AllocTexturePool();
 
 	numcachepics = 0;
@@ -1006,7 +1009,7 @@ static void gl_draw_start(void)
 	// load default font textures
 	for(i = 0; i < dp_fonts.maxsize; ++i)
 		if (dp_fonts.f[i].title[0])
-			LoadFont(false, va("gfx/font_%s", dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
+			LoadFont(false, va(vabuf, sizeof(vabuf), "gfx/font_%s", dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
 
 	// draw the loading screen so people have something to see in the newly opened window
 	SCR_UpdateLoadingScreen(true);
@@ -1076,7 +1079,7 @@ static void _DrawQ_Setup(void) // see R_ResetViewRendering2D
 }
 
 qboolean r_draw2d_force = false;
-void _DrawQ_SetupAndProcessDrawFlag(int flags, cachepic_t *pic, float alpha)
+static void _DrawQ_SetupAndProcessDrawFlag(int flags, cachepic_t *pic, float alpha)
 {
 	_DrawQ_Setup();
 	if(!r_draw2d.integer && !r_draw2d_force)

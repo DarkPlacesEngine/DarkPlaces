@@ -23,15 +23,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 #include "libcurl.h"
 #include "csprogs.h"
+#include "thread.h"
 
 static void SV_SaveEntFile_f(void);
 static void SV_StartDownload_f(void);
 static void SV_Download_f(void);
 static void SV_VM_Setup(void);
 extern cvar_t net_connecttimeout;
-
-void VM_CustomStats_Clear (void);
-void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
 
 cvar_t sv_worldmessage = {CVAR_READONLY, "sv_worldmessage", "", "title of current level"};
 cvar_t sv_worldname = {CVAR_READONLY, "sv_worldname", "", "name of current worldmodel"};
@@ -156,6 +154,7 @@ cvar_t sv_areadebug = {0, "sv_areadebug", "0", "disables physics culling for deb
 cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
+cvar_t sv_threaded = {0, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
 
 cvar_t saved1 = {CVAR_SAVE, "saved1", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
 cvar_t saved2 = {CVAR_SAVE, "saved2", "0", "unused cvar in quake that is saved to config.cfg on exit, can be used by mods"};
@@ -414,7 +413,7 @@ prvm_required_field_t sv_reqglobals[] =
 
 //============================================================================
 
-void SV_AreaStats_f(void)
+static void SV_AreaStats_f(void)
 {
 	World_PrintAreaStats(&sv.world, "server");
 }
@@ -565,6 +564,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&timelimit);
+	Cvar_RegisterVariable (&sv_threaded);
 
 	Cvar_RegisterVariable (&saved1);
 	Cvar_RegisterVariable (&saved2);
@@ -611,12 +611,13 @@ void SV_Init (void)
 
 static void SV_SaveEntFile_f(void)
 {
+	char vabuf[1024];
 	if (!sv.active || !sv.worldmodel)
 	{
 		Con_Print("Not running a server\n");
 		return;
 	}
-	FS_WriteFile(va("%s.ent", sv.worldnamenoextension), sv.worldmodel->brush.entities, (fs_offset_t)strlen(sv.worldmodel->brush.entities));
+	FS_WriteFile(va(vabuf, sizeof(vabuf), "%s.ent", sv.worldnamenoextension), sv.worldmodel->brush.entities, (fs_offset_t)strlen(sv.worldmodel->brush.entities));
 }
 
 
@@ -707,6 +708,7 @@ Larger attenuations will drop off.  (max 4 attenuation)
 */
 void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable, float speed)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	sizebuf_t *dest;
 	int sound_num, field_mask, i, ent, speed4000;
 
@@ -869,8 +871,10 @@ This will be sent on the initial connection and upon each server load.
 */
 void SV_SendServerinfo (client_t *client)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	char message[128];
+	char vabuf[1024];
 
 	// we know that this client has a netconnection and thus is not a bot
 
@@ -949,11 +953,11 @@ void SV_SendServerinfo (client_t *client)
 	{
 		Con_DPrintf("sending csqc info to client (\"%s\" with size %i and crc %i)\n", sv.csqc_progname, sv.csqc_progsize, sv.csqc_progcrc);
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		MSG_WriteString (&client->netconnection->message, va("csqc_progname %s\n", sv.csqc_progname));
+		MSG_WriteString (&client->netconnection->message, va(vabuf, sizeof(vabuf), "csqc_progname %s\n", sv.csqc_progname));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		MSG_WriteString (&client->netconnection->message, va("csqc_progsize %i\n", sv.csqc_progsize));
+		MSG_WriteString (&client->netconnection->message, va(vabuf, sizeof(vabuf), "csqc_progsize %i\n", sv.csqc_progsize));
 		MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-		MSG_WriteString (&client->netconnection->message, va("csqc_progcrc %i\n", sv.csqc_progcrc));
+		MSG_WriteString (&client->netconnection->message, va(vabuf, sizeof(vabuf), "csqc_progcrc %i\n", sv.csqc_progcrc));
 
 		if(client->sv_demo_file != NULL)
 		{
@@ -969,10 +973,10 @@ void SV_SendServerinfo (client_t *client)
 		}
 
 		//[515]: init stufftext string (it is sent before svc_serverinfo)
-		if (PRVM_GetString(PRVM_serverglobalstring(SV_InitCmd)))
+		if (PRVM_GetString(prog, PRVM_serverglobalstring(SV_InitCmd)))
 		{
 			MSG_WriteByte (&client->netconnection->message, svc_stufftext);
-			MSG_WriteString (&client->netconnection->message, va("%s\n", PRVM_GetString(PRVM_serverglobalstring(SV_InitCmd))));
+			MSG_WriteString (&client->netconnection->message, va(vabuf, sizeof(vabuf), "%s\n", PRVM_GetString(prog, PRVM_serverglobalstring(SV_InitCmd))));
 		}
 	}
 
@@ -1002,7 +1006,7 @@ void SV_SendServerinfo (client_t *client)
 	else
 		MSG_WriteByte (&client->netconnection->message, GAME_COOP);
 
-	MSG_WriteString (&client->netconnection->message,PRVM_GetString(PRVM_serveredictstring(prog->edicts, message)));
+	MSG_WriteString (&client->netconnection->message,PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)));
 
 	for (i = 1;i < MAX_MODELS && sv.model_precache[i][0];i++)
 		MSG_WriteString (&client->netconnection->message, sv.model_precache[i]);
@@ -1055,6 +1059,7 @@ once for a player each game, not once for each level change.
 */
 void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	client_t		*client;
 	int				i;
 
@@ -1107,13 +1112,14 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	{
 		// call the progs to get default spawn parms for the new client
 		// set self to world to intentionally cause errors with broken SetNewParms code in some mods
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = 0;
-		PRVM_ExecuteProgram (PRVM_serverfunction(SetNewParms), "QC function SetNewParms is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SetNewParms), "QC function SetNewParms is missing");
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&PRVM_serverglobalfloat(parm1))[i];
 
 		// set up the entity for this client (including .colormap, .team, etc)
-		PRVM_ED_ClearEdict(client->edict);
+		PRVM_ED_ClearEdict(prog, client->edict);
 	}
 
 	// don't call SendServerinfo for a fresh botclient because its fields have
@@ -1146,6 +1152,7 @@ crosses a waterline.
 
 static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int enumber)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	unsigned int sendflags;
 	unsigned int version;
@@ -1176,7 +1183,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	// LordHavoc: this could kill tags attached to an invisible entity, I
 	// just hope we never have to support that case
 	i = (int)PRVM_serveredictfloat(ent, modelindex);
-	modelindex = (i >= 1 && i < MAX_MODELS && PRVM_serveredictstring(ent, model) && *PRVM_GetString(PRVM_serveredictstring(ent, model)) && sv.models[i]) ? i : 0;
+	modelindex = (i >= 1 && i < MAX_MODELS && PRVM_serveredictstring(ent, model) && *PRVM_GetString(prog, PRVM_serveredictstring(ent, model)) && sv.models[i]) ? i : 0;
 
 	flags = 0;
 	i = (int)(PRVM_serveredictfloat(ent, glow_size) * 0.25f);
@@ -1451,8 +1458,9 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	return true;
 }
 
-void SV_PrepareEntitiesForSending(void)
+static void SV_PrepareEntitiesForSending(void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int e;
 	prvm_edict_t *ent;
 	// send all entities that touch the pvs
@@ -1473,6 +1481,7 @@ void SV_PrepareEntitiesForSending(void)
 
 qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	float pitchsign;
 	float alpha;
 	float starttransformed[3], endtransformed[3];
@@ -1562,7 +1571,7 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 			if(model && model->brush.TraceLineOfSight)
 			{
 				// get the entity matrix
-				pitchsign = SV_GetPitchSign(touch);
+				pitchsign = SV_GetPitchSign(prog, touch);
 				Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2], pitchsign * PRVM_serveredictvector(touch, angles)[0], PRVM_serveredictvector(touch, angles)[1], PRVM_serveredictvector(touch, angles)[2], 1);
 				Matrix4x4_Invert_Simple(&imatrix, &matrix);
 				// see if the ray hits this entity
@@ -1586,8 +1595,9 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 	return false;
 }
 
-void SV_MarkWriteEntityStateToClient(entity_state_t *s)
+static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int isbmodel;
 	dp_model_t *model;
 	prvm_edict_t *ed;
@@ -1598,9 +1608,10 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 
 	if (s->customizeentityforclient)
 	{
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = s->number;
 		PRVM_serverglobaledict(other) = sv.writeentitiestoclient_cliententitynumber;
-		PRVM_ExecuteProgram(s->customizeentityforclient, "customizeentityforclient: NULL function");
+		prog->ExecuteProgram(prog, s->customizeentityforclient, "customizeentityforclient: NULL function");
 		if(!PRVM_G_FLOAT(OFS_RETURN) || !SV_PrepareEntityForSending(PRVM_EDICT_NUM(s->number), s, s->number))
 			return;
 	}
@@ -1714,8 +1725,9 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 
 #if MAX_LEVELNETWORKEYES > 0
 #define MAX_EYE_RECURSION 1 // increase if recursion gets supported by portals
-void SV_AddCameraEyes(void)
+static void SV_AddCameraEyes(void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int e, i, j, k;
 	prvm_edict_t *ed;
 	static int cameras[MAX_LEVELNETWORKEYES];
@@ -1734,12 +1746,13 @@ void SV_AddCameraEyes(void)
 		{
 			if(PRVM_serveredictfunction(ed, camera_transform))
 			{
+				PRVM_serverglobalfloat(time) = sv.time;
 				PRVM_serverglobaledict(self) = e;
 				PRVM_serverglobaledict(other) = sv.writeentitiestoclient_cliententitynumber;
 				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_serverglobalvector(trace_endpos));
 				VectorCopy(sv.writeentitiestoclient_eyes[0], PRVM_G_VECTOR(OFS_PARM0));
 				VectorClear(PRVM_G_VECTOR(OFS_PARM1));
-				PRVM_ExecuteProgram(PRVM_serveredictfunction(ed, camera_transform), "QC function e.camera_transform is missing");
+				prog->ExecuteProgram(prog, PRVM_serveredictfunction(ed, camera_transform), "QC function e.camera_transform is missing");
 				if(!VectorCompare(PRVM_serverglobalvector(trace_endpos), sv.writeentitiestoclient_eyes[0]))
 				{
 					VectorCopy(PRVM_serverglobalvector(trace_endpos), camera_origins[n_cameras]);
@@ -1786,8 +1799,9 @@ void SV_AddCameraEyes(void)
 }
 #endif
 
-void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
+static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	qboolean need_empty = false;
 	int i, numsendstates, numcsqcsendstates;
 	entity_state_t *s;
@@ -1916,6 +1930,7 @@ SV_CleanupEnts
 */
 static void SV_CleanupEnts (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int		e;
 	prvm_edict_t	*ent;
 
@@ -1932,6 +1947,7 @@ SV_WriteClientdataToMessage
 */
 void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int		bits;
 	int		i;
 	prvm_edict_t	*other;
@@ -1997,7 +2013,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 
 	// cache weapon model name and index in client struct to save time
 	// (this search can be almost 1% of cpu time!)
-	s = PRVM_GetString(PRVM_serveredictstring(ent, weaponmodel));
+	s = PRVM_GetString(prog, PRVM_serveredictstring(ent, weaponmodel));
 	if (strcmp(s, client->weaponmodel))
 	{
 		strlcpy(client->weaponmodel, s, sizeof(client->weaponmodel));
@@ -2354,7 +2370,7 @@ static void SV_SendClientDatagram (client_t *client)
 		// add the client specific data to the datagram
 		SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
 		// now update the stats[] array using any registered custom fields
-		VM_SV_UpdateCustomStats (client, client->edict, &msg, stats);
+		VM_SV_UpdateCustomStats(client, client->edict, &msg, stats);
 		// set host_client->statsdeltabits
 		Protocol_UpdateClientStats (stats);
 
@@ -2417,6 +2433,7 @@ SV_UpdateToReliableMessages
 */
 static void SV_UpdateToReliableMessages (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
 	client_t *client;
 	const char *name;
@@ -2431,12 +2448,12 @@ static void SV_UpdateToReliableMessages (void)
 		host_client->edict = PRVM_EDICT_NUM(i+1);
 
 		// DP_SV_CLIENTNAME
-		name = PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname));
+		name = PRVM_GetString(prog, PRVM_serveredictstring(host_client->edict, netname));
 		if (name == NULL)
 			name = "";
 		// always point the string back at host_client->name to keep it safe
 		strlcpy (host_client->name, name, sizeof (host_client->name));
-		PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(host_client->name);
+		PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
 			if (host_client->spawned)
@@ -2461,20 +2478,20 @@ static void SV_UpdateToReliableMessages (void)
 		}
 
 		// NEXUIZ_PLAYERMODEL
-		model = PRVM_GetString(PRVM_serveredictstring(host_client->edict, playermodel));
+		model = PRVM_GetString(prog, PRVM_serveredictstring(host_client->edict, playermodel));
 		if (model == NULL)
 			model = "";
 		// always point the string back at host_client->name to keep it safe
 		strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
-		PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(host_client->playermodel);
+		PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
 
 		// NEXUIZ_PLAYERSKIN
-		skin = PRVM_GetString(PRVM_serveredictstring(host_client->edict, playerskin));
+		skin = PRVM_GetString(prog, PRVM_serveredictstring(host_client->edict, playerskin));
 		if (skin == NULL)
 			skin = "";
 		// always point the string back at host_client->name to keep it safe
 		strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
-		PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(host_client->playerskin);
+		PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 
 		// TODO: add an extension name for this [1/17/2008 Black]
 		clientcamera = PRVM_serveredictedict(host_client->edict, clientcamera);
@@ -2520,7 +2537,7 @@ static void SV_UpdateToReliableMessages (void)
 SV_SendClientMessages
 =======================
 */
-void SV_SendClientMessages (void)
+void SV_SendClientMessages(void)
 {
 	int i, prepared = false;
 
@@ -2552,7 +2569,7 @@ void SV_SendClientMessages (void)
 			// only prepare entities once per frame
 			SV_PrepareEntitiesForSending();
 		}
-		SV_SendClientDatagram (host_client);
+		SV_SendClientDatagram(host_client);
 	}
 
 // clear muzzle flashes
@@ -2834,9 +2851,23 @@ int SV_ModelIndex(const char *s, int precachemode)
 				if (precachemode == 1)
 					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
 				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
-				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
-				if (sv.state != ss_loading)
+				if (sv.state == ss_loading)
 				{
+					// running from SV_SpawnServer which is launched from the client console command interpreter
+					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
+				}
+				else
+				{
+					if (svs.threaded)
+					{
+						// this is running on the server thread, we can't load a model here (it would crash on renderer calls), so only look it up, the svc_precache will cause it to be loaded when it reaches the client
+						sv.models[i] = Mod_FindName (sv.model_precache[i], s[0] == '*' ? sv.worldname : NULL);
+					}
+					else
+					{
+						// running single threaded, so we can load the model here
+						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, s[0] == '*' ? sv.worldname : NULL);
+					}
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i);
 					MSG_WriteString(&sv.reliable_datagram, filename);
@@ -2999,6 +3030,7 @@ dp_model_t *SV_GetModelByIndex(int modelindex)
 
 dp_model_t *SV_GetModelFromEdict(prvm_edict_t *ed)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int modelindex;
 	if (!ed || ed->priv.server->free)
 		return NULL;
@@ -3014,6 +3046,7 @@ SV_CreateBaseline
 */
 static void SV_CreateBaseline (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int i, entnum, large;
 	prvm_edict_t *svent;
 
@@ -3095,7 +3128,7 @@ Load csprogs.dat and comperss it so it doesn't need to be
 reloaded on request.
 ================
 */
-void SV_Prepare_CSQC(void)
+static void SV_Prepare_CSQC(void)
 {
 	fs_offset_t progsize;
 
@@ -3146,6 +3179,7 @@ transition to another level
 */
 void SV_SaveSpawnparms (void)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int		i, j;
 
 	svs.serverflags = (int)PRVM_serverglobalfloat(serverflags);
@@ -3156,8 +3190,9 @@ void SV_SaveSpawnparms (void)
 			continue;
 
 	// call the progs to get default spawn parms for the new client
+		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-		PRVM_ExecuteProgram (PRVM_serverfunction(SetChangeParms), "QC function SetChangeParms is missing");
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SetChangeParms), "QC function SetChangeParms is missing");
 		for (j=0 ; j<NUM_SPAWN_PARMS ; j++)
 			host_client->spawn_parms[j] = (&PRVM_serverglobalfloat(parm1))[j];
 	}
@@ -3173,11 +3208,13 @@ This is called at the start of each level
 
 void SV_SpawnServer (const char *server)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t *ent;
 	int i;
 	char *entities;
 	dp_model_t *worldmodel;
 	char modelname[sizeof(sv.worldname)];
+	char vabuf[1024];
 
 	Con_DPrintf("SpawnServer: %s\n", server);
 
@@ -3193,6 +3230,8 @@ void SV_SpawnServer (const char *server)
 		}
 	}
 
+//	SV_LockThreadMutex();
+
 	if(cls.state == ca_dedicated)
 		Sys_MakeProcessNice();
 
@@ -3204,15 +3243,14 @@ void SV_SpawnServer (const char *server)
 
 	if(sv.active)
 	{
-		SV_VM_Begin();
 		World_End(&sv.world);
 		if(PRVM_serverfunction(SV_Shutdown))
 		{
 			func_t s = PRVM_serverfunction(SV_Shutdown);
+			PRVM_serverglobalfloat(time) = sv.time;
 			PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
-			PRVM_ExecuteProgram(s,"SV_Shutdown() required");
+			prog->ExecuteProgram(prog, s,"SV_Shutdown() required");
 		}
-		SV_VM_End();
 	}
 
 	// free q3 shaders so that any newly downloaded shaders will be active
@@ -3225,6 +3263,8 @@ void SV_SpawnServer (const char *server)
 
 		if(cls.state == ca_dedicated)
 			Sys_MakeProcessMean();
+
+//		SV_UnlockThreadMutex();
 
 		return;
 	}
@@ -3312,8 +3352,6 @@ void SV_SpawnServer (const char *server)
 		sv.protocol = PROTOCOL_QUAKE;
 	}
 
-	SV_VM_Begin();
-
 // load progs to get entity field count
 	//PR_LoadProgs ( sv_progs.string );
 
@@ -3336,7 +3374,7 @@ void SV_SpawnServer (const char *server)
 	prog->allowworldwrites = true;
 	sv.paused = false;
 
-	PRVM_serverglobalfloat(time) = sv.time = 1.0;
+	sv.time = 1.0;
 
 	Mod_ClearUsed();
 	worldmodel->used = true;
@@ -3347,7 +3385,7 @@ void SV_SpawnServer (const char *server)
 //
 // clear world interaction links
 //
-	World_SetSize(&sv.world, sv.worldname, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
+	World_SetSize(&sv.world, sv.worldname, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs, prog);
 	World_Start(&sv.world);
 
 	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
@@ -3369,7 +3407,7 @@ void SV_SpawnServer (const char *server)
 	ent = PRVM_EDICT_NUM(0);
 	memset (ent->fields.vp, 0, prog->entityfields * 4);
 	ent->priv.server->free = false;
-	PRVM_serveredictstring(ent, model) = PRVM_SetEngineString(sv.worldname);
+	PRVM_serveredictstring(ent, model) = PRVM_SetEngineString(prog, sv.worldname);
 	PRVM_serveredictfloat(ent, modelindex) = 1;		// world model
 	PRVM_serveredictfloat(ent, solid) = SOLID_BSP;
 	PRVM_serveredictfloat(ent, movetype) = MOVETYPE_PUSH;
@@ -3383,7 +3421,7 @@ void SV_SpawnServer (const char *server)
 	else
 		PRVM_serverglobalfloat(deathmatch) = deathmatch.integer;
 
-	PRVM_serverglobalstring(mapname) = PRVM_SetEngineString(sv.name);
+	PRVM_serverglobalstring(mapname) = PRVM_SetEngineString(prog, sv.name);
 
 // serverflags are for cross level information (sigils)
 	PRVM_serverglobalfloat(serverflags) = svs.serverflags;
@@ -3396,18 +3434,18 @@ void SV_SpawnServer (const char *server)
 	{
 		host_client->spawned = false;
 		host_client->edict = PRVM_EDICT_NUM(i + 1);
-		PRVM_ED_ClearEdict(host_client->edict);
+		PRVM_ED_ClearEdict(prog, host_client->edict);
 	}
 
 	// load replacement entity file if found
-	if (sv_entpatch.integer && (entities = (char *)FS_LoadFile(va("%s.ent", sv.worldnamenoextension), tempmempool, true, NULL)))
+	if (sv_entpatch.integer && (entities = (char *)FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.ent", sv.worldnamenoextension), tempmempool, true, NULL)))
 	{
 		Con_Printf("Loaded %s.ent\n", sv.worldnamenoextension);
-		PRVM_ED_LoadFromFile (entities);
+		PRVM_ED_LoadFromFile(prog, entities);
 		Mem_Free(entities);
 	}
 	else
-		PRVM_ED_LoadFromFile (sv.worldmodel->brush.entities);
+		PRVM_ED_LoadFromFile(prog, sv.worldmodel->brush.entities);
 
 
 	// LordHavoc: clear world angles (to fix e3m3.bsp)
@@ -3418,7 +3456,7 @@ void SV_SpawnServer (const char *server)
 	prog->allowworldwrites = false;
 
 // run two frames to allow everything to settle
-	PRVM_serverglobalfloat(time) = sv.time = 1.0001;
+	sv.time = 1.0001;
 	for (i = 0;i < 2;i++)
 	{
 		sv.frametime = 0.1;
@@ -3434,9 +3472,6 @@ void SV_SpawnServer (const char *server)
 
 	sv.state = ss_active; // LordHavoc: workaround for svc_precache bug
 
-	// to prevent network timeouts
-	realtime = Sys_DoubleTime();
-	
 // send serverinfo to all connected clients, and set up botclients coming back from a level change
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
@@ -3459,35 +3494,35 @@ void SV_SpawnServer (const char *server)
 			host_client->clientconnectcalled = true;
 			PRVM_serverglobalfloat(time) = sv.time;
 			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
-			PRVM_ExecuteProgram (PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
-			PRVM_ExecuteProgram (PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
+			prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
+			prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
 			host_client->spawned = true;
 		}
 	}
 
 	// update the map title cvar
-	strlcpy(sv.worldmessage, PRVM_GetString(PRVM_serveredictstring(prog->edicts, message)), sizeof(sv.worldmessage)); // map title (not related to filename)
+	strlcpy(sv.worldmessage, PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)), sizeof(sv.worldmessage)); // map title (not related to filename)
 	Cvar_SetQuick(&sv_worldmessage, sv.worldmessage);
 
 	Con_DPrint("Server spawned.\n");
 	NetConn_Heartbeat (2);
 
-	SV_VM_End();
-
 	if(cls.state == ca_dedicated)
 		Sys_MakeProcessMean();
+
+//	SV_UnlockThreadMutex();
 }
 
 /////////////////////////////////////////////////////
 // SV VM stuff
 
-static void SV_VM_CB_BeginIncreaseEdicts(void)
+static void SVVM_begin_increase_edicts(prvm_prog_t *prog)
 {
 	// links don't survive the transition, so unlink everything
 	World_UnlinkAll(&sv.world);
 }
 
-static void SV_VM_CB_EndIncreaseEdicts(void)
+static void SVVM_end_increase_edicts(prvm_prog_t *prog)
 {
 	int i;
 	prvm_edict_t *ent;
@@ -3498,7 +3533,7 @@ static void SV_VM_CB_EndIncreaseEdicts(void)
 			SV_LinkEdict(ent);
 }
 
-static void SV_VM_CB_InitEdict(prvm_edict_t *e)
+static void SVVM_init_edict(prvm_prog_t *prog, prvm_edict_t *e)
 {
 	// LordHavoc: for consistency set these here
 	int num = PRVM_NUM_FOR_EDICT(e) - 1;
@@ -3513,44 +3548,44 @@ static void SV_VM_CB_InitEdict(prvm_edict_t *e)
 		// set netname/clientcolors back to client values so that
 		// DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS will not immediately
 		// reset them
-		PRVM_serveredictstring(e, netname) = PRVM_SetEngineString(svs.clients[num].name);
+		PRVM_serveredictstring(e, netname) = PRVM_SetEngineString(prog, svs.clients[num].name);
 		PRVM_serveredictfloat(e, clientcolors) = svs.clients[num].colors;
 		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
-		PRVM_serveredictstring(e, playermodel) = PRVM_SetEngineString(svs.clients[num].playermodel);
-		PRVM_serveredictstring(e, playerskin) = PRVM_SetEngineString(svs.clients[num].playerskin);
+		PRVM_serveredictstring(e, playermodel) = PRVM_SetEngineString(prog, svs.clients[num].playermodel);
+		PRVM_serveredictstring(e, playerskin) = PRVM_SetEngineString(prog, svs.clients[num].playerskin);
 		// Assign netaddress (IP Address, etc)
 		if(svs.clients[num].netconnection != NULL)
 		{
 			// Acquire Readable Address
 			LHNETADDRESS_ToString(&svs.clients[num].netconnection->peeraddress, svs.clients[num].netaddress, sizeof(svs.clients[num].netaddress), false);
-			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString(svs.clients[num].netaddress);
+			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString(prog, svs.clients[num].netaddress);
 		}
 		else
-			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString("null/botclient");
+			PRVM_serveredictstring(e, netaddress) = PRVM_SetEngineString(prog, "null/botclient");
 		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_idfp[0])
-			PRVM_serveredictstring(e, crypto_idfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_idfp);
+			PRVM_serveredictstring(e, crypto_idfp) = PRVM_SetEngineString(prog, svs.clients[num].netconnection->crypto.client_idfp);
 		else
 			PRVM_serveredictstring(e, crypto_idfp) = 0;
 		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.client_keyfp[0])
-			PRVM_serveredictstring(e, crypto_keyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.client_keyfp);
+			PRVM_serveredictstring(e, crypto_keyfp) = PRVM_SetEngineString(prog, svs.clients[num].netconnection->crypto.client_keyfp);
 		else
 			PRVM_serveredictstring(e, crypto_keyfp) = 0;
 		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.server_keyfp[0])
-			PRVM_serveredictstring(e, crypto_mykeyfp) = PRVM_SetEngineString(svs.clients[num].netconnection->crypto.server_keyfp);
+			PRVM_serveredictstring(e, crypto_mykeyfp) = PRVM_SetEngineString(prog, svs.clients[num].netconnection->crypto.server_keyfp);
 		else
 			PRVM_serveredictstring(e, crypto_mykeyfp) = 0;
 		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated && svs.clients[num].netconnection->crypto.use_aes)
-			PRVM_serveredictstring(e, crypto_encryptmethod) = PRVM_SetEngineString("AES128");
+			PRVM_serveredictstring(e, crypto_encryptmethod) = PRVM_SetEngineString(prog, "AES128");
 		else
 			PRVM_serveredictstring(e, crypto_encryptmethod) = 0;
 		if(svs.clients[num].netconnection != NULL && svs.clients[num].netconnection->crypto.authenticated)
-			PRVM_serveredictstring(e, crypto_signmethod) = PRVM_SetEngineString("HMAC-SHA256");
+			PRVM_serveredictstring(e, crypto_signmethod) = PRVM_SetEngineString(prog, "HMAC-SHA256");
 		else
 			PRVM_serveredictstring(e, crypto_signmethod) = 0;
 	}
 }
 
-static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
+static void SVVM_free_edict(prvm_prog_t *prog, prvm_edict_t *ed)
 {
 	int i;
 	int e;
@@ -3568,7 +3603,7 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	PRVM_serveredictfloat(ed, nextthink) = -1;
 	PRVM_serveredictfloat(ed, solid) = 0;
 
-	VM_RemoveEdictSkeleton(ed);
+	VM_RemoveEdictSkeleton(prog, ed);
 	World_Physics_RemoveFromEntity(&sv.world, ed);
 	World_Physics_RemoveJointFromEntity(&sv.world, ed);
 
@@ -3583,7 +3618,7 @@ static void SV_VM_CB_FreeEdict(prvm_edict_t *ed)
 	}
 }
 
-static void SV_VM_CB_CountEdicts(void)
+static void SVVM_count_edicts(prvm_prog_t *prog)
 {
 	int		i;
 	prvm_edict_t	*ent;
@@ -3611,7 +3646,7 @@ static void SV_VM_CB_CountEdicts(void)
 	Con_Printf("step      :%3i\n", step);
 }
 
-static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
+static qboolean SVVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	// remove things from different skill levels or deathmatch
 	if (gamemode != GAME_TRANSFUSION) //Transfusion does this in QC
@@ -3635,8 +3670,8 @@ static qboolean SV_VM_CB_LoadEdict(prvm_edict_t *ent)
 
 static void SV_VM_Setup(void)
 {
-	PRVM_Begin;
-	PRVM_InitProg( PRVM_SERVERPROG );
+	prvm_prog_t *prog = SVVM_prog;
+	PRVM_Prog_Init(prog);
 
 	// allocate the mempools
 	// TODO: move the magic numbers/constants into #defines [9/13/2006 Black]
@@ -3660,18 +3695,19 @@ static void SV_VM_Setup(void)
 	prog->extensionstring = vm_sv_extensions;
 	prog->loadintoworld = true;
 
-	prog->begin_increase_edicts = SV_VM_CB_BeginIncreaseEdicts;
-	prog->end_increase_edicts = SV_VM_CB_EndIncreaseEdicts;
-	prog->init_edict = SV_VM_CB_InitEdict;
-	prog->free_edict = SV_VM_CB_FreeEdict;
-	prog->count_edicts = SV_VM_CB_CountEdicts;
-	prog->load_edict = SV_VM_CB_LoadEdict;
-	prog->init_cmd = VM_SV_Cmd_Init;
-	prog->reset_cmd = VM_SV_Cmd_Reset;
-	prog->error_cmd = Host_Error;
-	prog->ExecuteProgram = SVVM_ExecuteProgram;
+	// all callbacks must be defined (pointers are not checked before calling)
+	prog->begin_increase_edicts = SVVM_begin_increase_edicts;
+	prog->end_increase_edicts   = SVVM_end_increase_edicts;
+	prog->init_edict            = SVVM_init_edict;
+	prog->free_edict            = SVVM_free_edict;
+	prog->count_edicts          = SVVM_count_edicts;
+	prog->load_edict            = SVVM_load_edict;
+	prog->init_cmd              = SVVM_init_cmd;
+	prog->reset_cmd             = SVVM_reset_cmd;
+	prog->error_cmd             = Host_Error;
+	prog->ExecuteProgram        = SVVM_ExecuteProgram;
 
-	PRVM_LoadProgs( sv_progs.string, SV_REQFUNCS, sv_reqfuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
+	PRVM_Prog_Load(prog, sv_progs.string, SV_REQFUNCS, sv_reqfuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
 
 	// some mods compiled with scrambling compilers lack certain critical
 	// global names and field names such as "self" and "time" and "nextthink"
@@ -3812,27 +3848,176 @@ static void SV_VM_Setup(void)
 //		PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, SetChangeParms);
 	}
 	else
-		Con_DPrintf("%s: %s system vars have been modified (CRC %i != engine %i), will not load in other engines", PRVM_NAME, sv_progs.string, prog->progs_crc, PROGHEADER_CRC);
+		Con_DPrintf("%s: %s system vars have been modified (CRC %i != engine %i), will not load in other engines", prog->name, sv_progs.string, prog->progs_crc, PROGHEADER_CRC);
 
 	// OP_STATE is always supported on server because we add fields/globals for it
 	prog->flag |= PRVM_OP_STATE;
 
 	VM_CustomStats_Clear();//[515]: csqc
 
-	PRVM_End;
-
 	SV_Prepare_CSQC();
 }
 
-void SV_VM_Begin(void)
+extern cvar_t host_maxwait;
+extern cvar_t host_framerate;
+static int SV_ThreadFunc(void *voiddata)
 {
-	PRVM_Begin;
-	PRVM_SetProg( PRVM_SERVERPROG );
+	prvm_prog_t *prog = SVVM_prog;
+	qboolean playing = false;
+	double sv_timer = 0;
+	double sv_deltarealtime, sv_oldrealtime, sv_realtime;
+	double wait;
+	int i;
+	char vabuf[1024];
+	sv_realtime = Sys_DirtyTime();
+	while (!svs.threadstop)
+	{
+		// FIXME: we need to handle Host_Error in the server thread somehow
+//		if (setjmp(sv_abortframe))
+//			continue;			// something bad happened in the server game
 
-	PRVM_serverglobalfloat(time) = (float) sv.time;
+		sv_oldrealtime = sv_realtime;
+		sv_realtime = Sys_DirtyTime();
+		sv_deltarealtime = sv_realtime - sv_oldrealtime;
+		if (sv_deltarealtime < 0 || sv_deltarealtime >= 1800) sv_deltarealtime = 0;
+
+		sv_timer += sv_deltarealtime;
+
+		svs.perf_acc_realtime += sv_deltarealtime;
+
+		// at this point we start doing real server work, and must block on any client activity pertaining to the server (such as executing SV_SpawnServer)
+		SV_LockThreadMutex();
+
+		// Look for clients who have spawned
+		playing = false;
+		if (sv.active)
+			for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+				if(host_client->spawned)
+					if(host_client->netconnection)
+						playing = true;
+		if(!playing)
+		{
+			// Nobody is looking? Then we won't do timing...
+			// Instead, reset it to zero
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
+		else if(svs.perf_acc_realtime > 5)
+		{
+			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
+			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+			if(svs.perf_acc_offset_samples > 0)
+			{
+				svs.perf_offset_max = svs.perf_acc_offset_max;
+				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
+				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+			}
+			if(svs.perf_lost > 0 && developer_extra.integer)
+				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+		}
+
+		// get new packets
+		if (sv.active)
+			NetConn_ServerFrame();
+
+		// if the accumulators haven't become positive yet, wait a while
+		wait = sv_timer * -1000000.0;
+		if (wait >= 1)
+		{
+			double time0, delta;
+			SV_UnlockThreadMutex(); // don't keep mutex locked while sleeping
+			if (host_maxwait.value <= 0)
+				wait = min(wait, 1000000.0);
+			else
+				wait = min(wait, host_maxwait.value * 1000.0);
+			if(wait < 1)
+				wait = 1; // because we cast to int
+			time0 = Sys_DirtyTime();
+			Sys_Sleep((int)wait);
+			delta = Sys_DirtyTime() - time0;if (delta < 0 || delta >= 1800) delta = 0;
+			svs.perf_acc_sleeptime += delta;
+			continue;
+		}
+
+		if (sv.active && sv_timer > 0)
+		{
+			// execute one server frame
+			double advancetime;
+			float offset;
+
+			if (sys_ticrate.value <= 0)
+				advancetime = min(sv_timer, 0.1); // don't step more than 100ms
+			else
+				advancetime = sys_ticrate.value;
+
+			if(advancetime > 0)
+			{
+				offset = sv_timer + (Sys_DirtyTime() - sv_realtime); // LordHavoc: FIXME: I don't understand this line
+				++svs.perf_acc_offset_samples;
+				svs.perf_acc_offset += offset;
+				svs.perf_acc_offset_squared += offset * offset;
+				if(svs.perf_acc_offset_max < offset)
+					svs.perf_acc_offset_max = offset;
+			}
+
+			// only advance time if not paused
+			// the game also pauses in singleplayer when menu or console is used
+			sv.frametime = advancetime * slowmo.value;
+			if (host_framerate.value)
+				sv.frametime = host_framerate.value;
+			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+				sv.frametime = 0;
+
+			sv_timer -= advancetime;
+
+			// move things around and think unless paused
+			if (sv.frametime)
+				SV_Physics();
+
+			// send all messages to the clients
+			SV_SendClientMessages();
+
+			if (sv.paused == 1 && sv_realtime > sv.pausedstart && sv.pausedstart > 0)
+			{
+				PRVM_serverglobalfloat(time) = sv.time;
+				prog->globals.generic[OFS_PARM0] = sv_realtime - sv.pausedstart;
+				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
+			}
+
+			// send an heartbeat if enough time has passed since the last one
+			NetConn_Heartbeat(0);
+
+		}
+
+		// we're back to safe code now
+		SV_UnlockThreadMutex();
+
+		// if there is some time remaining from this frame, reset the timers
+		if (sv_timer >= 0)
+		{
+			svs.perf_acc_lost += sv_timer;
+			sv_timer = 0;
+		}
+	}
+	return 0;
 }
 
-void SV_VM_End(void)
+void SV_StartThread(void)
 {
-	PRVM_End;
+	if (!sv_threaded.integer || !Thread_HasThreads())
+		return;
+	svs.threaded = true;
+	svs.threadstop = false;
+	svs.threadmutex = Thread_CreateMutex();
+	svs.thread = Thread_CreateThread(SV_ThreadFunc, NULL);
+}
+
+void SV_StopThread(void)
+{
+	if (!svs.threaded)
+		return;
+	svs.threadstop = true;
+	Thread_WaitThread(svs.thread, 0);
+	Thread_DestroyMutex(svs.threadmutex);
+	svs.threaded = false;
 }

@@ -16,23 +16,36 @@ qboolean Thread_HasThreads(void)
 	return true;
 }
 
-void *Thread_CreateMutex(void)
+void *_Thread_CreateMutex(const char *filename, int fileline)
 {
-	return (void *)CreateMutex(NULL, FALSE, NULL);
+	void *mutex = (void *)CreateMutex(NULL, FALSE, NULL);
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p mutex create %s:%i\n" , mutex, filename, fileline);
+#endif
+	return mutex;
 }
 
-void Thread_DestroyMutex(void *mutex)
+void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p mutex destroy %s:%i\n", mutex, filename, fileline);
+#endif
 	CloseHandle(mutex);
 }
 
-int Thread_LockMutex(void *mutex)
+int _Thread_LockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p mutex lock %s:%i\n"   , mutex, filename, fileline);
+#endif
 	return (WaitForSingleObject(mutex, INFINITE) == WAIT_FAILED) ? -1 : 0;
 }
 
-int Thread_UnlockMutex(void *mutex)
+int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 {
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p mutex unlock %s:%i\n" , mutex, filename, fileline);
+#endif
 	return (ReleaseMutex(mutex) == FALSE) ? -1 : 0;
 }
 
@@ -89,7 +102,7 @@ typedef struct thread_cond_s
 }
 thread_cond_t;
 
-void *Thread_CreateCond(void)
+void *_Thread_CreateCond(const char *filename, int fileline)
 {
 	thread_cond_t *c = (thread_cond_t *)calloc(sizeof(*c), 1);
 	c->mutex = CreateMutex(NULL, FALSE, NULL);
@@ -97,21 +110,30 @@ void *Thread_CreateCond(void)
 	c->done = Thread_CreateSemaphore(0);
 	c->waiting = 0;
 	c->signals = 0;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond create %s:%i\n"   , c, filename, fileline);
+#endif
 	return c;
 }
 
-void Thread_DestroyCond(void *cond)
+void _Thread_DestroyCond(void *cond, const char *filename, int fileline)
 {
 	thread_cond_t *c = (thread_cond_t *)cond;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond destroy %s:%i\n"   , cond, filename, fileline);
+#endif
 	Thread_DestroySemaphore(c->sem);
 	Thread_DestroySemaphore(c->done);
 	CloseHandle(c->mutex);
 }
 
-int Thread_CondSignal(void *cond)
+int _Thread_CondSignal(void *cond, const char *filename, int fileline)
 {
 	thread_cond_t *c = (thread_cond_t *)cond;
 	int n;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond signal %s:%i\n"   , cond, filename, fileline);
+#endif
 	WaitForSingleObject(c->mutex, INFINITE);
 	n = c->waiting - c->signals;
 	if (n > 0)
@@ -125,11 +147,14 @@ int Thread_CondSignal(void *cond)
 	return 0;
 }
 
-int Thread_CondBroadcast(void *cond)
+int _Thread_CondBroadcast(void *cond, const char *filename, int fileline)
 {
 	thread_cond_t *c = (thread_cond_t *)cond;
 	int i = 0;
 	int n = 0;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond broadcast %s:%i\n"   , cond, filename, fileline);
+#endif
 	WaitForSingleObject(c->mutex, INFINITE);
 	n = c->waiting - c->signals;
 	if (n > 0)
@@ -144,10 +169,13 @@ int Thread_CondBroadcast(void *cond)
 	return 0;
 }
 
-int Thread_CondWait(void *cond, void *mutex)
+int _Thread_CondWait(void *cond, void *mutex, const char *filename, int fileline)
 {
 	thread_cond_t *c = (thread_cond_t *)cond;
 	int waitresult;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p cond wait %s:%i\n"   , cond, filename, fileline);
+#endif
 
 	WaitForSingleObject(c->mutex, INFINITE);
 	c->waiting++;
@@ -189,9 +217,12 @@ unsigned int __stdcall Thread_WrapperFunc(void *d)
 	return w->result;
 }
 
-void *Thread_CreateThread(int (*fn)(void *), void *data)
+void *_Thread_CreateThread(int (*fn)(void *), void *data, const char *filename, int fileline)
 {
 	threadwrapper_t *w = (threadwrapper_t *)calloc(sizeof(*w), 1);
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p thread create %s:%i\n"   , w, filename, fileline);
+#endif
 	w->fn = fn;
 	w->data = data;
 	w->threadid = 0;
@@ -200,9 +231,12 @@ void *Thread_CreateThread(int (*fn)(void *), void *data)
 	return (void *)w;
 }
 
-int Thread_WaitThread(void *d, int retval)
+int _Thread_WaitThread(void *d, int retval, const char *filename, int fileline)
 {
 	threadwrapper_t *w = (threadwrapper_t *)d;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p thread wait %s:%i\n"   , w, filename, fileline);
+#endif
 	WaitForSingleObject(w->handle, INFINITE);
 	CloseHandle(w->handle);
 	retval = w->result;

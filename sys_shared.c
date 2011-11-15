@@ -284,11 +284,11 @@ void Sys_Init_Commands (void)
 #endif
 }
 
-double Sys_DoubleTime(void)
+double Sys_DirtyTime(void)
 {
-	static int first = true;
-	static double oldtime = 0.0, curtime = 0.0;
-	double newtime;
+	// first all the OPTIONAL timers
+
+	// benchmark timer (fake clock)
 	if(sys_usenoclockbutbenchmark.integer)
 	{
 		double old_benchmark_time = benchmark_time;
@@ -297,11 +297,8 @@ double Sys_DoubleTime(void)
 			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
 		return benchmark_time * 0.000001;
 	}
-
-	// first all the OPTIONAL timers
-
 #if HAVE_QUERYPERFORMANCECOUNTER
-	else if (sys_usequeryperformancecounter.integer)
+	if (sys_usequeryperformancecounter.integer)
 	{
 		// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 		// QueryPerformanceCounter
@@ -316,27 +313,29 @@ double Sys_DoubleTime(void)
 		LARGE_INTEGER PerformanceFreq;
 		LARGE_INTEGER PerformanceCount;
 
-		if (!QueryPerformanceFrequency (&PerformanceFreq))
+		if (QueryPerformanceFrequency (&PerformanceFreq))
 		{
-			Con_Printf ("No hardware timer available\n");
-			// fall back to timeGetTime
-			Cvar_SetValueQuick(&sys_usequeryperformancecounter, false);
-			return Sys_DoubleTime();
+			QueryPerformanceCounter (&PerformanceCount);
+	
+			#ifdef __BORLANDC__
+			timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
+			return ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
+			#else
+			timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
+			return ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+			#endif
 		}
-		QueryPerformanceCounter (&PerformanceCount);
-
-		#ifdef __BORLANDC__
-		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
-		#else
-		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-		newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
-		#endif
+		else
+		{
+			Con_Printf("No hardware timer available\n");
+			// fall back to other clock sources
+			Cvar_SetValueQuick(&sys_usequeryperformancecounter, false);
+		}
 	}
 #endif
 
 #if HAVE_CLOCKGETTIME
-	else if (sys_useclockgettime.integer)
+	if (sys_useclockgettime.integer)
 	{
 		struct timespec ts;
 #  ifdef CLOCK_MONOTONIC
@@ -346,24 +345,20 @@ double Sys_DoubleTime(void)
 		// sunos
 		clock_gettime(CLOCK_HIGHRES, &ts);
 #  endif
-		newtime = (double) ts.tv_sec + ts.tv_nsec / 1000000000.0;
+		return (double) ts.tv_sec + ts.tv_nsec / 1000000000.0;
 	}
 #endif
 
 	// now all the FALLBACK timers
-	else if(sys_supportsdlgetticks && sys_usesdlgetticks.integer)
-	{
-		newtime = (double) Sys_SDL_GetTicks() / 1000.0;
-	}
+	if(sys_supportsdlgetticks && sys_usesdlgetticks.integer)
+		return (double) Sys_SDL_GetTicks() / 1000.0;
 #if HAVE_GETTIMEOFDAY
-	else
 	{
 		struct timeval tp;
 		gettimeofday(&tp, NULL);
-		newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+		return (double) tp.tv_sec + tp.tv_usec / 1000000.0;
 	}
 #elif HAVE_TIMEGETTIME
-	else
 	{
 		static int firsttimegettime = true;
 		// timeGetTime
@@ -377,42 +372,17 @@ double Sys_DoubleTime(void)
 		// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
 		if (firsttimegettime)
 		{
-			timeBeginPeriod (1);
+			timeBeginPeriod(1);
 			firsttimegettime = false;
 		}
 
-		newtime = (double) timeGetTime () / 1000.0;
+		return (double) timeGetTime() / 1000.0;
 	}
 #else
 	// fallback for using the SDL timer if no other timer is available
-	else
-	{
-		newtime = (double) Sys_SDL_GetTicks() / 1000.0;
-		// this calls Sys_Error() if not linking against SDL
-	}
+	// this calls Sys_Error() if not linking against SDL
+	return (double) Sys_SDL_GetTicks() / 1000.0;
 #endif
-
-	if (first)
-	{
-		first = false;
-		oldtime = newtime;
-	}
-
-	if (newtime < oldtime)
-	{
-		// warn if it's significant
-		if (newtime - oldtime < -0.01)
-			Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else if (newtime > oldtime + 1800)
-	{
-		Con_Printf("Sys_DoubleTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
-	}
-	else
-		curtime += newtime - oldtime;
-	oldtime = newtime;
-
-	return curtime;
 }
 
 void Sys_Sleep(int microseconds)
@@ -431,7 +401,7 @@ void Sys_Sleep(int microseconds)
 	}
 	if(sys_debugsleep.integer)
 	{
-		t = Sys_DoubleTime();
+		t = Sys_DirtyTime();
 	}
 	if(sys_supportsdlgetticks && sys_usesdldelay.integer)
 	{
@@ -463,12 +433,25 @@ void Sys_Sleep(int microseconds)
 #endif
 	if(sys_debugsleep.integer)
 	{
-		t = Sys_DoubleTime() - t;
-		printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
+		t = Sys_DirtyTime() - t;
+		Sys_PrintfToTerminal("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
 	}
 }
 
-const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)
+void Sys_PrintfToTerminal(const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAX_INPUTLINE];
+
+	va_start(argptr,fmt);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
+
+	Sys_PrintToTerminal(msg);
+}
+
+#ifndef WIN32
+static const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)
 {
 	const char *p = PATH;
 	const char *q;
@@ -490,8 +473,9 @@ const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, cha
 	}
 	return name;
 }
+#endif
 
-const char *Sys_FindExecutableName(void)
+static const char *Sys_FindExecutableName(void)
 {
 #if defined(WIN32)
 	return com_argv[0];

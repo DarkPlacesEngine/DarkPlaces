@@ -143,7 +143,7 @@ void SCR_CenterPrint(const char *str)
 }
 
 
-void SCR_DrawCenterString (void)
+static void SCR_DrawCenterString (void)
 {
 	char	*start;
 	int		x, y;
@@ -200,7 +200,7 @@ void SCR_DrawCenterString (void)
 	} while (1);
 }
 
-void SCR_CheckDrawCenterString (void)
+static void SCR_CheckDrawCenterString (void)
 {
 	if (scr_center_lines > scr_erase_lines)
 		scr_erase_lines = scr_center_lines;
@@ -220,7 +220,7 @@ void SCR_CheckDrawCenterString (void)
 	SCR_DrawCenterString ();
 }
 
-void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
+static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
 {
 	netgraphitem_t *graph;
 	int j, x, y, numlines;
@@ -308,11 +308,12 @@ void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int gra
 SCR_DrawNetGraph
 ==============
 */
-void SCR_DrawNetGraph (void)
+static void SCR_DrawNetGraph (void)
 {
 	int i, separator1, separator2, graphwidth, graphheight, netgraph_x, netgraph_y, textsize, index, netgraphsperrow;
 	float graphscale;
 	netconn_t *c;
+	char vabuf[1024];
 
 	if (cls.state != ca_connected)
 		return;
@@ -348,7 +349,7 @@ void SCR_DrawNetGraph (void)
 				continue;
 			netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (graphwidth * 2 + separator1 + separator2);
 			netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (graphheight + textsize + separator2);
-			SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, va("%s", svs.clients[i].name), textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
+			SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, va(vabuf, sizeof(vabuf), "%s", svs.clients[i].name), textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
 			SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, ""                           , textsize, c->incoming_packetcounter, c->incoming_netgraph);
 			index++;
 		}
@@ -360,7 +361,7 @@ void SCR_DrawNetGraph (void)
 SCR_DrawTurtle
 ==============
 */
-void SCR_DrawTurtle (void)
+static void SCR_DrawTurtle (void)
 {
 	static int	count;
 
@@ -388,7 +389,7 @@ void SCR_DrawTurtle (void)
 SCR_DrawNet
 ==============
 */
-void SCR_DrawNet (void)
+static void SCR_DrawNet (void)
 {
 	if (cls.state != ca_connected)
 		return;
@@ -405,7 +406,7 @@ void SCR_DrawNet (void)
 DrawPause
 ==============
 */
-void SCR_DrawPause (void)
+static void SCR_DrawPause (void)
 {
 	cachepic_t	*pic;
 
@@ -427,7 +428,7 @@ void SCR_DrawPause (void)
 SCR_DrawBrand
 ==============
 */
-void SCR_DrawBrand (void)
+static void SCR_DrawBrand (void)
 {
 	cachepic_t	*pic;
 	float		x, y;
@@ -549,9 +550,10 @@ static int SCR_DrawCurlDownload(int offset)
 	float size = scr_infobar_height.value;
 	Curl_downloadinfo_t *downinfo;
 	char temp[256];
+	char addinfobuf[128];
 	const char *addinfo;
 
-	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
+	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo, addinfobuf, sizeof(addinfobuf));
 	if(!downinfo)
 		return 0;
 
@@ -606,6 +608,7 @@ static int SCR_InfobarHeight(void)
 	Curl_downloadinfo_t *downinfo;
 	const char *addinfo;
 	int nDownloads;
+	char addinfobuf[128];
 
 	if (cl.time > cl.oldtime)
 		scr_infobartime_off -= cl.time - cl.oldtime;
@@ -614,7 +617,7 @@ static int SCR_InfobarHeight(void)
 	if(cls.qw_downloadname[0])
 		offset += 1;
 
-	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo);
+	downinfo = Curl_GetDownloadInfo(&nDownloads, &addinfo, addinfobuf, sizeof(addinfobuf));
 	if(downinfo)
 	{
 		offset += (nDownloads + (addinfo ? 1 : 0));
@@ -630,7 +633,7 @@ static int SCR_InfobarHeight(void)
 SCR_InfoBar_f
 ==============
 */
-void SCR_InfoBar_f(void)
+static void SCR_InfoBar_f(void)
 {
 	if(Cmd_Argc() == 3)
 	{
@@ -649,7 +652,7 @@ void SCR_InfoBar_f(void)
 SCR_SetUpToDrawConsole
 ==================
 */
-void SCR_SetUpToDrawConsole (void)
+static void SCR_SetUpToDrawConsole (void)
 {
 	// lines of console to display
 	float conlines;
@@ -736,7 +739,7 @@ void R_TimeReport(const char *desc)
 		GL_Finish();
 	CHECKGLERROR
 	r_timereport_temp = r_timereport_current;
-	r_timereport_current = Sys_DoubleTime();
+	r_timereport_current = Sys_DirtyTime();
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
 
 	length = dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
@@ -756,7 +759,7 @@ void R_TimeReport(const char *desc)
 	speedstringcount += length;
 }
 
-void R_TimeReport_BeginFrame(void)
+static void R_TimeReport_BeginFrame(void)
 {
 	speedstringcount = 0;
 	r_speeds_timestring[0] = 0;
@@ -766,7 +769,7 @@ void R_TimeReport_BeginFrame(void)
 	if (r_speeds.integer >= 2)
 	{
 		r_timereport_active = true;
-		r_timereport_start = r_timereport_current = Sys_DoubleTime();
+		r_timereport_start = r_timereport_current = Sys_DirtyTime();
 	}
 }
 
@@ -780,7 +783,7 @@ static int R_CountLeafTriangles(const dp_model_t *model, const mleaf_t *leaf)
 
 extern cvar_t r_viewscale;
 extern float viewscalefpsadjusted;
-void R_TimeReport_EndFrame(void)
+static void R_TimeReport_EndFrame(void)
 {
 	int i, j, lines, y;
 	cl_locnode_t *loc;
@@ -829,7 +832,7 @@ void R_TimeReport_EndFrame(void)
 		if (r_speeds.integer >= 2)
 		{
 			r_timereport_active = true;
-			r_timereport_start = r_timereport_current = Sys_DoubleTime();
+			r_timereport_start = r_timereport_current = Sys_DirtyTime();
 		}
 	}
 
@@ -867,7 +870,7 @@ SCR_SizeUp_f
 Keybinding command
 =================
 */
-void SCR_SizeUp_f (void)
+static void SCR_SizeUp_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
 }
@@ -880,7 +883,7 @@ SCR_SizeDown_f
 Keybinding command
 =================
 */
-void SCR_SizeDown_f (void)
+static void SCR_SizeDown_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
 }
@@ -990,6 +993,7 @@ void SCR_ScreenShot_f (void)
 	unsigned char *buffer2;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 	qboolean png = (scr_screenshot_png.integer != 0) && !jpeg;
+	char vabuf[1024];
 
 	if (Cmd_Argc() == 2)
 	{
@@ -1029,9 +1033,9 @@ void SCR_ScreenShot_f (void)
 
 		// find a file name to save it to
 		for (shotnumber100 = 0;shotnumber100 < 100;shotnumber100++)
-			if (!FS_SysFileExists(va("%s/screenshots/%s-%02d.tga", fs_gamedir, prefix_name, shotnumber100))
-			 && !FS_SysFileExists(va("%s/screenshots/%s-%02d.jpg", fs_gamedir, prefix_name, shotnumber100))
-			 && !FS_SysFileExists(va("%s/screenshots/%s-%02d.png", fs_gamedir, prefix_name, shotnumber100)))
+			if (!FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s-%02d.tga", fs_gamedir, prefix_name, shotnumber100))
+			 && !FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s-%02d.jpg", fs_gamedir, prefix_name, shotnumber100))
+			 && !FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s-%02d.png", fs_gamedir, prefix_name, shotnumber100)))
 				break;
 		if (shotnumber100 >= 100)
 		{
@@ -1060,9 +1064,9 @@ void SCR_ScreenShot_f (void)
 
 		// find a file name to save it to
 		for (;shotnumber < 1000000;shotnumber++)
-			if (!FS_SysFileExists(va("%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber))
-			 && !FS_SysFileExists(va("%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber))
-			 && !FS_SysFileExists(va("%s/screenshots/%s%06d.png", fs_gamedir, prefix_name, shotnumber)))
+			if (!FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s%06d.tga", fs_gamedir, prefix_name, shotnumber))
+			 && !FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s%06d.jpg", fs_gamedir, prefix_name, shotnumber))
+			 && !FS_SysFileExists(va(vabuf, sizeof(vabuf), "%s/screenshots/%s%06d.png", fs_gamedir, prefix_name, shotnumber)))
 				break;
 		if (shotnumber >= 1000000)
 		{
@@ -1097,7 +1101,7 @@ void SCR_ScreenShot_f (void)
 	Mem_Free (buffer2);
 }
 
-void SCR_CaptureVideo_BeginVideo(void)
+static void SCR_CaptureVideo_BeginVideo(void)
 {
 	double r, g, b;
 	unsigned int i;
@@ -1132,7 +1136,7 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.soundchannels = S_GetSoundChannels();
 	cls.capturevideo.startrealtime = realtime;
 	cls.capturevideo.frame = cls.capturevideo.lastfpsframe = 0;
-	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = Sys_DoubleTime();
+	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = realtime;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
 	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
@@ -1290,7 +1294,7 @@ static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char
 	}
 }
 
-void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
+static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 {
 	int x = 0, y = 0;
 	int width = cls.capturevideo.width, height = cls.capturevideo.height;
@@ -1311,7 +1315,7 @@ void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	if(cl_capturevideo_printfps.integer)
 	{
 		char buf[80];
-		double t = Sys_DoubleTime();
+		double t = realtime;
 		if(t > cls.capturevideo.lastfpstime + 1)
 		{
 			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
@@ -1330,7 +1334,7 @@ void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size
 	cls.capturevideo.soundframe(paintbuffer, length);
 }
 
-void SCR_CaptureVideo(void)
+static void SCR_CaptureVideo(void)
 {
 	int newframenum;
 	if (cl_capturevideo.integer)
@@ -1475,7 +1479,7 @@ void SHOWLMP_decodehide(void)
 {
 	int i;
 	char *lmplabel;
-	lmplabel = MSG_ReadString();
+	lmplabel = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 	for (i = 0;i < cl.num_showlmps;i++)
 		if (cl.showlmps[i].isactive && strcmp(cl.showlmps[i].label, lmplabel) == 0)
 		{
@@ -1489,17 +1493,17 @@ void SHOWLMP_decodeshow(void)
 	int k;
 	char lmplabel[256], picname[256];
 	float x, y;
-	strlcpy (lmplabel,MSG_ReadString(), sizeof (lmplabel));
-	strlcpy (picname, MSG_ReadString(), sizeof (picname));
+	strlcpy (lmplabel,MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (lmplabel));
+	strlcpy (picname, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (picname));
 	if (gamemode == GAME_NEHAHRA) // LordHavoc: nasty old legacy junk
 	{
-		x = MSG_ReadByte();
-		y = MSG_ReadByte();
+		x = MSG_ReadByte(&cl_message);
+		y = MSG_ReadByte(&cl_message);
 	}
 	else
 	{
-		x = MSG_ReadShort();
-		y = MSG_ReadShort();
+		x = MSG_ReadShort(&cl_message);
+		y = MSG_ReadShort(&cl_message);
 	}
 	if (!cl.showlmps || cl.num_showlmps >= cl.max_showlmps)
 	{
@@ -1637,7 +1641,6 @@ static void SCR_DrawTouchscreenOverlay(void)
 	}
 }
 
-extern void R_UpdateFog(void);
 void R_ClearScreen(qboolean fogcolor)
 {
 	float clearcolor[4];
@@ -1656,14 +1659,9 @@ void R_ClearScreen(qboolean fogcolor)
 	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0), clearcolor, 1.0f, 128);
 }
 
-qboolean CL_VM_UpdateView (void);
-void SCR_DrawConsole (void);
-void R_Shadow_EditLights_DrawSelectedLightProperties(void);
-
 int r_stereo_side;
 
-extern void Sbar_ShowFPS(void);
-void SCR_DrawScreen (void)
+static void SCR_DrawScreen (void)
 {
 	Draw_Frame();
 
@@ -2031,6 +2029,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
 	r_viewport_t viewport;
 	float x, y, w, h, sw, sh, f;
+	char vabuf[1024];
 	// release mouse grab while loading
 	if (!vid.fullscreen)
 		VID_SetMouse(false, false, false);
@@ -2047,7 +2046,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va("gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading", loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
+	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading", loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
 	w = loadingscreenpic->width;
 	h = loadingscreenpic->height;
@@ -2211,7 +2210,6 @@ extern cvar_t cl_minfps_qualityscale;
 extern cvar_t r_viewscale_fpsscaling;
 static double cl_updatescreen_rendertime = 0;
 static double cl_updatescreen_quality = 1;
-extern void Sbar_ShowFPS_Update(void);
 void CL_UpdateScreen(void)
 {
 	vec3_t vieworigin;
@@ -2247,7 +2245,7 @@ void CL_UpdateScreen(void)
 		return;
 	}
 
-	rendertime1 = Sys_DoubleTime();
+	rendertime1 = Sys_DirtyTime();
 
 	conwidth = bound(160, vid_conwidth.value, 32768);
 	conheight = bound(90, vid_conheight.value, 24576);
@@ -2351,7 +2349,7 @@ void CL_UpdateScreen(void)
 
 	if (r_viewscale_fpsscaling.integer)
 		GL_Finish();
-	drawscreenstart = Sys_DoubleTime();
+	drawscreenstart = Sys_DirtyTime();
 #ifndef USE_GLES2
 	if (R_Stereo_Active())
 	{
@@ -2370,6 +2368,7 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 
 		r_stereo_side = 1;
+		r_refdef.view.clear = true;
 
 		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
 		{
@@ -2388,7 +2387,7 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 	if (r_viewscale_fpsscaling.integer)
 		GL_Finish();
-	r_refdef.lastdrawscreentime = Sys_DoubleTime() - drawscreenstart;
+	r_refdef.lastdrawscreentime = Sys_DirtyTime() - drawscreenstart;
 
 	SCR_CaptureVideo();
 
@@ -2396,7 +2395,7 @@ void CL_UpdateScreen(void)
 		qglFlush(); // FIXME: should we really be using qglFlush here?
 
 	// quality adjustment according to render time
-	cl_updatescreen_rendertime += ((Sys_DoubleTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
+	cl_updatescreen_rendertime += ((Sys_DirtyTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
 	if (cl_minfps.value > 0 && cl_updatescreen_rendertime > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
 		cl_updatescreen_quality = 1 / (cl_updatescreen_rendertime * cl_minfps.value);
 	else

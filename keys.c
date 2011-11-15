@@ -23,6 +23,7 @@
 #include "quakedef.h"
 #include "cl_video.h"
 #include "utf8lib.h"
+#include "csprogs.h"
 
 cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
 
@@ -114,7 +115,7 @@ static void Key_History_Push(void)
 		history_matchfound = false;
 }
 
-qboolean Key_History_Get_foundCommand(void)
+static qboolean Key_History_Get_foundCommand(void)
 {
 	if (!history_matchfound)
 		return false;
@@ -201,7 +202,8 @@ static void Key_History_Find_Backwards(void)
 {
 	int i;
 	const char *partial = key_line + 1;
-	size_t digits = strlen(va("%i", HIST_MAXLINES));
+	char vabuf[1024];
+	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 
 	if (history_line == -1) // editing the "new" line
 		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
@@ -219,7 +221,7 @@ static void Key_History_Find_Backwards(void)
 	if (!*partial)
 		partial = "*";
 	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
-		partial = va("*%s*", partial);
+		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	for ( ; i >= 0; i--)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
@@ -235,7 +237,8 @@ static void Key_History_Find_Forwards(void)
 {
 	int i;
 	const char *partial = key_line + 1;
-	size_t digits = strlen(va("%i", HIST_MAXLINES));
+	char vabuf[1024];
+	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 
 	if (history_line == -1) // editing the "new" line
 		return;
@@ -250,7 +253,7 @@ static void Key_History_Find_Forwards(void)
 	if (!*partial)
 		partial = "*";
 	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
-		partial = va("*%s*", partial);
+		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	for ( ; i < CONBUFFER_LINES_COUNT(&history); i++)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
@@ -266,13 +269,14 @@ static void Key_History_Find_All(void)
 {
 	const char *partial = key_line + 1;
 	int i, count = 0;
-	size_t digits = strlen(va("%i", HIST_MAXLINES));
+	char vabuf[1024];
+	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 	Con_Printf("History commands containing \"%s\":\n", key_line + 1);
 
 	if (!*partial)
 		partial = "*";
 	else if (!( strchr(partial, '*') || strchr(partial, '?') )) // no pattern?
-		partial = va("*%s*", partial);
+		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	for (i=0; i<CONBUFFER_LINES_COUNT(&history); i++)
 		if (matchpattern_with_separator(ConBuffer_GetLine(&history, i), partial, true, "", false))
@@ -287,7 +291,8 @@ static void Key_History_f(void)
 {
 	char *errchar = NULL;
 	int i = 0;
-	size_t digits = strlen(va("%i", HIST_MAXLINES));
+	char vabuf[1024];
+	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 
 	if (Cmd_Argc () > 1)
 	{
@@ -1192,17 +1197,16 @@ int chat_mode;
 char		chat_buffer[MAX_INPUTLINE];
 unsigned int	chat_bufferlen = 0;
 
-extern int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
-
 static void
 Key_Message (int key, int ascii)
 {
+	char vabuf[1024];
 	if (key == K_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
-			Cmd_ExecuteString(chat_buffer, src_command); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
+			Cmd_ExecuteString(chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
 		else
-			Cmd_ForwardStringToServer(va("%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
+			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
 		key_dest = key_game;
 		chat_bufferlen = 0;
@@ -1283,10 +1287,9 @@ FIXME: handle quote special (general escape sequence?)
 ===================
 */
 const char *
-Key_KeynumToString (int keynum)
+Key_KeynumToString (int keynum, char *tinystr, size_t tinystrlength)
 {
 	const keyname_t  *kn;
-	static char tinystr[2];
 
 	// -1 is an invalid code
 	if (keynum < 0)
@@ -1300,8 +1303,11 @@ Key_KeynumToString (int keynum)
 	// if it is printable, output it as a single character
 	if (keynum > 32 && keynum < 256)
 	{
-		tinystr[0] = keynum;
-		tinystr[1] = 0;
+		if (tinystrlength >= 2)
+		{
+			tinystr[0] = keynum;
+			tinystr[1] = 0;
+		}
 		return tinystr;
 	}
 
@@ -1494,6 +1500,7 @@ static void
 Key_PrintBindList(int j)
 {
 	char bindbuf[MAX_INPUTLINE];
+	char tinystr[2];
 	const char *p;
 	int i;
 
@@ -1504,9 +1511,9 @@ Key_PrintBindList(int j)
 		{
 			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false);
 			if (j == 0)
-				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i), bindbuf);
+				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
 			else
-				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i), bindbuf);
+				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
 		}
 	}
 }
@@ -1586,6 +1593,7 @@ Key_WriteBindings (qfile_t *f)
 {
 	int         i, j;
 	char bindbuf[MAX_INPUTLINE];
+	char tinystr[2];
 	const char *p;
 
 	for (j = 0; j < MAX_BINDMAPS; j++)
@@ -1597,9 +1605,9 @@ Key_WriteBindings (qfile_t *f)
 			{
 				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false); // don't need to escape $ because cvars are not expanded inside bind
 				if (j == 0)
-					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i), bindbuf);
+					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
 				else
-					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i), bindbuf);
+					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
 			}
 		}
 	}
@@ -1686,8 +1694,6 @@ void Key_FindKeysForCommand (const char *command, int *keys, int numkeys, int bi
 	}
 }
 
-extern qboolean CL_VM_InputEvent (int eventtype, int x, int y);
-
 /*
 ===================
 Called by the system between frames for both key up and key down events
@@ -1741,6 +1747,7 @@ Key_Event (int key, int ascii, qboolean down)
 	const char *bind;
 	qboolean q;
 	keydest_t keydest = key_dest;
+	char vabuf[1024];
 
 	if (key < 0 || key >= MAX_KEYS)
 		return;
@@ -1874,14 +1881,14 @@ Key_Event (int key, int ascii, qboolean down)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')
-					Cbuf_AddText (va("%s %i\n", bind, key));
+					Cbuf_AddText (va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 				else
 				{
 					Cbuf_AddText (bind);
 					Cbuf_AddText ("\n");
 				}
 			} else if(bind[0] == '+' && !down && keydown[key] == 0)
-				Cbuf_AddText(va("-%s %i\n", bind + 1, key));
+				Cbuf_AddText(va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 		}
 		return;
 	}
@@ -1948,14 +1955,14 @@ Key_Event (int key, int ascii, qboolean down)
 				{
 					// button commands add keynum as a parm
 					if (bind[0] == '+')
-						Cbuf_AddText (va("%s %i\n", bind, key));
+						Cbuf_AddText (va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 					else
 					{
 						Cbuf_AddText (bind);
 						Cbuf_AddText ("\n");
 					}
 				} else if(bind[0] == '+' && !down && keydown[key] == 0)
-					Cbuf_AddText(va("-%s %i\n", bind + 1, key));
+					Cbuf_AddText(va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 			}
 			break;
 		default:

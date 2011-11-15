@@ -128,6 +128,7 @@ dp_model_t *CL_GetModelByIndex(int modelindex)
 
 dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
+	prvm_prog_t *prog = CLVM_prog;
 	if (!ed || ed->priv.server->free)
 		return NULL;
 	return CL_GetModelByIndex((int)PRVM_clientedictfloat(ed, modelindex));
@@ -135,6 +136,7 @@ dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 
 void CL_LinkEdict(prvm_edict_t *ent)
 {
+	prvm_prog_t *prog = CLVM_prog;
 	vec3_t mins, maxs;
 
 	if (ent == prog->edicts)
@@ -197,6 +199,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 {
+	prvm_prog_t *prog = CLVM_prog;
 	if (passedict)
 	{
 		int dphitcontentsmask = (int)PRVM_clientedictfloat(passedict, dphitcontentsmask);
@@ -227,6 +230,7 @@ CL_Move
 */
 trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
 {
+	prvm_prog_t *prog = CLVM_prog;
 	int i, bodysupercontents;
 	int passedictprog;
 	prvm_edict_t *traceowner, *touch;
@@ -439,6 +443,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t pEnd, int type, prvm_edict
 trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
 #endif
 {
+	prvm_prog_t *prog = CLVM_prog;
 	int i, bodysupercontents;
 	int passedictprog;
 	prvm_edict_t *traceowner, *touch;
@@ -676,6 +681,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
 #endif
 {
+	prvm_prog_t *prog = CLVM_prog;
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
 	int passedictprog;
@@ -950,6 +956,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t pEnd, int ty
 trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int type, int hitsupercontentsmask)
 #endif
 {
+	prvm_prog_t *prog = CLVM_prog;
 	int i;
 	prvm_edict_t *touch;
 	trace_t trace;

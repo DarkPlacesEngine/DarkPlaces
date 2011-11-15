@@ -74,7 +74,7 @@ void R_SkyStartFrame(void)
 R_SetSkyBox
 ==================
 */
-void R_UnloadSkyBox(void)
+static void R_UnloadSkyBox(void)
 {
 	int i;
 	int c = 0;
@@ -91,13 +91,14 @@ void R_UnloadSkyBox(void)
 		Con_Printf("unloading skybox\n");
 }
 
-int R_LoadSkyBox(void)
+static int R_LoadSkyBox(void)
 {
 	int i, j, success;
 	int indices[4] = {0,1,2,3};
 	char name[MAX_INPUTLINE];
 	unsigned char *image_buffer;
 	unsigned char *temp;
+	char vabuf[1024];
 
 	R_UnloadSkyBox();
 
@@ -122,7 +123,7 @@ int R_LoadSkyBox(void)
 			}
 			temp = (unsigned char *)Mem_Alloc(tempmempool, image_width*image_height*4);
 			Image_CopyMux (temp, image_buffer, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
-			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va("skyboxside%d", i), TEXF_CLAMP | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height, vid.sRGB3D);
+			skyboxskinframe[i] = R_SkinFrame_LoadInternalBGRA(va(vabuf, sizeof(vabuf), "skyboxside%d", i), TEXF_CLAMP | (gl_texturecompression_sky.integer ? TEXF_COMPRESS : 0), temp, image_width, image_height, vid.sRGB3D);
 			Mem_Free(image_buffer);
 			Mem_Free(temp);
 			success++;
@@ -158,7 +159,7 @@ int R_SetSkyBox(const char *sky)
 }
 
 // LordHavoc: added LoadSky console command
-void LoadSky_f (void)
+static void LoadSky_f (void)
 {
 	switch (Cmd_Argc())
 	{

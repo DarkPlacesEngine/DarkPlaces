@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cmd.c -- Quake script command processing module
 
 #include "quakedef.h"
+#include "thread.h"
 
 typedef struct cmdalias_s
 {
@@ -59,7 +60,7 @@ typedef struct cmddeferred_s
 {
 	struct cmddeferred_s *next;
 	char *value;
-	double time;
+	double delay;
 } cmddeferred_t;
 
 static cmddeferred_t *cmd_deferred_list = NULL;
@@ -75,13 +76,12 @@ static void Cmd_Defer_f (void)
 {
 	if(Cmd_Argc() == 1)
 	{
-		double time = Sys_DoubleTime();
 		cmddeferred_t *next = cmd_deferred_list;
 		if(!next)
 			Con_Printf("No commands are pending.\n");
 		while(next)
 		{
-			Con_Printf("-> In %9.2f: %s\n", next->time-time, next->value);
+			Con_Printf("-> In %9.2f: %s\n", next->delay, next->value);
 			next = next->next;
 		}
 	} else if(Cmd_Argc() == 2 && !strcasecmp("clear", Cmd_Argv(1)))
@@ -99,7 +99,7 @@ static void Cmd_Defer_f (void)
 		cmddeferred_t *defcmd = (cmddeferred_t*)Mem_Alloc(tempmempool, sizeof(*defcmd));
 		size_t len = strlen(value);
 
-		defcmd->time = Sys_DoubleTime() + atof(Cmd_Argv(1));
+		defcmd->delay = atof(Cmd_Argv(1));
 		defcmd->value = (char*)Mem_Alloc(tempmempool, len+1);
 		memcpy(defcmd->value, value, len+1);
 		defcmd->next = NULL;
@@ -175,6 +175,10 @@ static void Cmd_Centerprint_f (void)
 
 static sizebuf_t	cmd_text;
 static unsigned char		cmd_text_buf[CMDBUFSIZE];
+void *cmd_text_mutex = NULL;
+
+#define Cbuf_LockThreadMutex() (cmd_text_mutex ? Thread_LockMutex(cmd_text_mutex),1 : 0)
+#define Cbuf_UnlockThreadMutex() (cmd_text_mutex ? Thread_UnlockMutex(cmd_text_mutex),1 : 0)
 
 /*
 ============
@@ -187,15 +191,14 @@ void Cbuf_AddText (const char *text)
 {
 	int		l;
 
-	l = (int)strlen (text);
+	l = (int)strlen(text);
 
+	Cbuf_LockThreadMutex();
 	if (cmd_text.cursize + l >= cmd_text.maxsize)
-	{
 		Con_Print("Cbuf_AddText: overflow\n");
-		return;
-	}
-
-	SZ_Write (&cmd_text, (const unsigned char *)text, (int)strlen (text));
+	else
+		SZ_Write(&cmd_text, (const unsigned char *)text, l);
+	Cbuf_UnlockThreadMutex();
 }
 
 
@@ -210,29 +213,19 @@ FIXME: actually change the command buffer to do less copying
 */
 void Cbuf_InsertText (const char *text)
 {
-	char	*temp;
-	int		templen;
-
-	// copy off any commands still remaining in the exec buffer
-	templen = cmd_text.cursize;
-	if (templen)
-	{
-		temp = (char *)Mem_Alloc (tempmempool, templen);
-		memcpy (temp, cmd_text.data, templen);
-		SZ_Clear (&cmd_text);
-	}
+	size_t l = strlen(text);
+	Cbuf_LockThreadMutex();
+	// we need to memmove the existing text and stuff this in before it...
+	if (cmd_text.cursize + l >= (size_t)cmd_text.maxsize)
+		Con_Print("Cbuf_InsertText: overflow\n");
 	else
-		temp = NULL;
-
-	// add the entire text of the file
-	Cbuf_AddText (text);
-
-	// add the copied off data
-	if (temp != NULL)
 	{
-		SZ_Write (&cmd_text, (const unsigned char *)temp, templen);
-		Mem_Free (temp);
+		// we don't have a SZ_Prepend, so...
+		memmove(cmd_text.data + l, cmd_text.data, cmd_text.cursize);
+		cmd_text.cursize += l;
+		memcpy(cmd_text.data, text, l);
 	}
+	Cbuf_UnlockThreadMutex();
 }
 
 /*
@@ -240,15 +233,22 @@ void Cbuf_InsertText (const char *text)
 Cbuf_Execute_Deferred --blub
 ============
 */
-void Cbuf_Execute_Deferred (void)
+static void Cbuf_Execute_Deferred (void)
 {
+	static double oldrealtime = 0;
 	cmddeferred_t *cmd, *prev;
-	double time = Sys_DoubleTime();
+	double eat;
+	if (realtime - oldrealtime < 0 || realtime - oldrealtime > 1800) oldrealtime = realtime;
+	eat = realtime - oldrealtime;
+	if (eat < (1.0 / 120.0))
+		return;
+	oldrealtime = realtime;
 	prev = NULL;
 	cmd = cmd_deferred_list;
 	while(cmd)
 	{
-		if(cmd->time <= time)
+		cmd->delay -= eat;
+		if(cmd->delay <= 0)
 		{
 			Cbuf_AddText(cmd->value);
 			Cbuf_AddText(";\n");
@@ -289,7 +289,6 @@ void Cbuf_Execute (void)
 	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
 
-	Cbuf_Execute_Deferred();
 	while (cmd_text.cursize)
 	{
 // find a \n or ; line break
@@ -362,11 +361,11 @@ void Cbuf_Execute (void)
 		)
 		{
 			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
-			Cmd_ExecuteString (preprocessed, src_command);
+			Cmd_ExecuteString (preprocessed, src_command, false);
 		}
 		else
 		{
-			Cmd_ExecuteString (line, src_command);
+			Cmd_ExecuteString (line, src_command, false);
 		}
 
 		if (cmd_wait)
@@ -375,6 +374,17 @@ void Cbuf_Execute (void)
 			cmd_wait = false;
 			break;
 		}
+	}
+}
+
+void Cbuf_Frame(void)
+{
+	Cbuf_Execute_Deferred();
+	if (cmd_text.cursize)
+	{
+		SV_LockThreadMutex();
+		Cbuf_Execute();
+		SV_UnlockThreadMutex();
 	}
 }
 
@@ -397,7 +407,7 @@ quake -nosound +cmd amlev1
 ===============
 */
 qboolean host_stuffcmdsrun = false;
-void Cmd_StuffCmds_f (void)
+static void Cmd_StuffCmds_f (void)
 {
 	int		i, j, l;
 	// this is for all commandline options combined (and is bounds checked)
@@ -785,6 +795,7 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 	cvar_t *cvar;
 	long argno;
 	char *endptr;
+	char vabuf[1024];
 
 	if(is_multiple)
 		*is_multiple = false;
@@ -802,7 +813,7 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 		}
 		else if(!strcmp(varname, "#"))
 		{
-			return va("%d", Cmd_Argc());
+			return va(vabuf, sizeof(vabuf), "%d", Cmd_Argc());
 		}
 		else if(varname[strlen(varname) - 1] == '-')
 		{
@@ -907,8 +918,8 @@ fail:
 
 static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *alias)
 {
-	static char varname[MAX_INPUTLINE];
-	static char varval[MAX_INPUTLINE];
+	static char varname[MAX_INPUTLINE]; // cmd_mutex
+	static char varval[MAX_INPUTLINE]; // cmd_mutex
 	const char *varstr;
 	char *varfunc;
 static char asis[] = "asis"; // just to suppress const char warnings
@@ -1097,8 +1108,8 @@ Called for aliases and fills in the alias into the cbuffer
 */
 static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
-	static char buffer[ MAX_INPUTLINE ];
-	static char buffer2[ MAX_INPUTLINE ];
+	static char buffer[ MAX_INPUTLINE ]; // cmd_mutex
+	static char buffer2[ MAX_INPUTLINE ]; // cmd_mutex
 	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
@@ -1168,6 +1179,7 @@ static void Cmd_Apropos_f(void)
 	const char *partial;
 	int count;
 	qboolean ispattern;
+	char vabuf[1024];
 
 	if (Cmd_Argc() > 1)
 		partial = Cmd_Args();
@@ -1179,7 +1191,7 @@ static void Cmd_Apropos_f(void)
 
 	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
 	if(!ispattern)
-		partial = va("*%s*", partial);
+		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	count = 0;
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
@@ -1222,6 +1234,9 @@ void Cmd_Init (void)
 	cmd_text.data = cmd_text_buf;
 	cmd_text.maxsize = sizeof(cmd_text_buf);
 	cmd_text.cursize = 0;
+
+	if (Thread_HasThreads())
+		cmd_text_mutex = Thread_CreateMutex();
 }
 
 void Cmd_Init_Commands (void)
@@ -1269,6 +1284,14 @@ Cmd_Shutdown
 */
 void Cmd_Shutdown(void)
 {
+	if (cmd_text_mutex)
+	{
+		// we usually have this locked when we get here from Host_Quit_f
+		Cbuf_UnlockThreadMutex();
+		Thread_DestroyMutex(cmd_text_mutex);
+	}
+	cmd_text_mutex = NULL;
+
 	Mem_FreePool(&cmd_mempool);
 }
 
@@ -1637,7 +1660,6 @@ void Cmd_ClearCsqcFuncs (void)
 		cmd->csqcfunc = false;
 }
 
-qboolean CL_VM_ConsoleCommand (const char *cmd);
 /*
 ============
 Cmd_ExecuteString
@@ -1646,7 +1668,7 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void Cmd_ExecuteString (const char *text, cmd_source_t src)
+void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex)
 {
 	int oldpos;
 	int found;
@@ -1661,10 +1683,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 
 // execute the command line
 	if (!Cmd_Argc())
-	{
-		cmd_tokenizebufferpos = oldpos;
-		return;		// no tokens
-	}
+		goto done; // no tokens
 
 // check functions
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
@@ -1672,7 +1691,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		if (!strcasecmp (cmd_argv[0],cmd->name))
 		{
 			if (cmd->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
-				return;
+				goto done;
 			switch (src)
 			{
 			case src_command:
@@ -1696,8 +1715,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 				if (cmd->clientfunction)
 				{
 					cmd->clientfunction ();
-					cmd_tokenizebufferpos = oldpos;
-					return;
+					goto done;
 				}
 				break;
 			}
@@ -1710,8 +1728,7 @@ command_found:
 	if (cmd_source == src_client)
 	{
 		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
-		cmd_tokenizebufferpos = oldpos;
-		return;
+		goto done;
 	}
 
 // check alias
@@ -1720,21 +1737,18 @@ command_found:
 		if (!strcasecmp (cmd_argv[0], a->name))
 		{
 			Cmd_ExecuteAlias(a);
-			cmd_tokenizebufferpos = oldpos;
-			return;
+			goto done;
 		}
 	}
 
 	if(found) // if the command was hooked and found, all is good
-	{
-		cmd_tokenizebufferpos = oldpos;
-		return;
-	}
+		goto done;
 
 // check cvars
 	if (!Cvar_Command () && host_framecount > 0)
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
 
+done:
 	cmd_tokenizebufferpos = oldpos;
 }
 
@@ -1876,6 +1890,7 @@ Sends the entire command line over to the server
 void Cmd_ForwardToServer (void)
 {
 	const char *s;
+	char vabuf[1024];
 	if (!strcasecmp(Cmd_Argv(0), "cmd"))
 	{
 		// we want to strip off "cmd", so just send the args
@@ -1884,7 +1899,7 @@ void Cmd_ForwardToServer (void)
 	else
 	{
 		// we need to keep the command name, so send Cmd_Argv(0), a space and then Cmd_Args()
-		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
+		s = va(vabuf, sizeof(vabuf), "%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
 	}
 	// don't send an empty forward message if the user tries "cmd" by itself
 	if (!s || !*s)

@@ -28,7 +28,6 @@ static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
 
 extern speakerlayout_t snd_speakerlayout; // for querying the listeners
 
-extern void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
 static void S_CaptureAVISound(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	size_t i;

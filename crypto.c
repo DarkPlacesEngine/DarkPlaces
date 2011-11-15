@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "crypto.h"
 #include "common.h"
+#include "thread.h"
 
 #include "hmac.h"
 #include "libcurl.h"
@@ -144,6 +145,8 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define qd0_blind_id_util_sha256 d0_blind_id_util_sha256
 #define qd0_blind_id_sign_with_private_id_sign d0_blind_id_sign_with_private_id_sign
 #define qd0_blind_id_sign_with_private_id_sign_detached d0_blind_id_sign_with_private_id_sign_detached
+#define qd0_blind_id_setmallocfuncs d0_blind_id_setmallocfuncs
+#define qd0_blind_id_setmutexfuncs d0_blind_id_setmutexfuncs
 
 #else
 
@@ -155,6 +158,13 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define D0_WARN_UNUSED_RESULT
 #endif
 #define D0_BOOL int
+
+typedef void *(d0_malloc_t)(size_t len);
+typedef void (d0_free_t)(void *p);
+typedef void *(d0_createmutex_t)(void);
+typedef void (d0_destroymutex_t)(void *);
+typedef int (d0_lockmutex_t)(void *); // zero on success
+typedef int (d0_unlockmutex_t)(void *); // zero on success
 
 typedef struct d0_blind_id_s d0_blind_id_t;
 typedef D0_BOOL (*d0_fastreject_function) (const d0_blind_id_t *ctx, void *pass);
@@ -193,6 +203,8 @@ static D0_EXPORT void (*qd0_blind_id_SHUTDOWN) (void);
 static D0_EXPORT void (*qd0_blind_id_util_sha256) (char *out, const char *in, size_t n);
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign_detached) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
+static D0_EXPORT void (*qd0_blind_id_setmallocfuncs)(d0_malloc_t *m, d0_free_t *f);
+static D0_EXPORT void (*qd0_blind_id_setmutexfuncs)(d0_createmutex_t *c, d0_destroymutex_t *d, d0_lockmutex_t *l, d0_unlockmutex_t *u);
 static dllfunction_t d0_blind_id_funcs[] =
 {
 	{"d0_blind_id_new", (void **) &qd0_blind_id_new},
@@ -230,6 +242,8 @@ static dllfunction_t d0_blind_id_funcs[] =
 	{"d0_blind_id_util_sha256", (void **) &qd0_blind_id_util_sha256},
 	{"d0_blind_id_sign_with_private_id_sign", (void **) &qd0_blind_id_sign_with_private_id_sign},
 	{"d0_blind_id_sign_with_private_id_sign_detached", (void **) &qd0_blind_id_sign_with_private_id_sign_detached},
+	{"d0_blind_id_setmallocfuncs", (void **) &qd0_blind_id_setmallocfuncs},
+	{"d0_blind_id_setmutexfuncs", (void **) &qd0_blind_id_setmutexfuncs},
 	{NULL, NULL}
 };
 // end of d0_blind_id interface
@@ -342,12 +356,13 @@ void sha256(unsigned char *out, const unsigned char *in, int n)
 
 static size_t Crypto_LoadFile(const char *path, char *buf, size_t nmax, qboolean inuserdir)
 {
+	char vabuf[1024];
 	qfile_t *f = NULL;
 	fs_offset_t n;
-	if(*fs_userdir)
-		f = FS_SysOpen(va("%s%s", *fs_userdir ? fs_userdir : fs_basedir, path), "rb", false);
-	if(!f)
-		f = FS_SysOpen(va("%s%s", fs_basedir, path), "rb", false);
+	if(inuserdir)
+		f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%s%s", *fs_userdir ? fs_userdir : fs_basedir, path), "rb", false);
+	else
+		f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%s%s", fs_basedir, path), "rb", false);
 	if(!f)
 		return 0;
 	n = FS_Read(f, buf, nmax);
@@ -753,6 +768,7 @@ void Crypto_LoadKeys(void)
 	char buf[8192];
 	size_t len, len2;
 	int i;
+	char vabuf[1024];
 
 	if(!d0_blind_id_dll) // don't if we can't
 		return;
@@ -775,14 +791,14 @@ void Crypto_LoadKeys(void)
 		memset(pubkeys_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		memset(pubkeys_priv_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		pubkeys_havepriv[i] = false;
-		len = Crypto_LoadFile(va("key_%d.d0pk", i), buf, sizeof(buf), false);
+		len = Crypto_LoadFile(va(vabuf, sizeof(vabuf), "key_%d.d0pk", i), buf, sizeof(buf), false);
 		if((pubkeys[i] = Crypto_ReadPublicKey(buf, len)))
 		{
 			len2 = FP64_SIZE;
 			if(qd0_blind_id_fingerprint64_public_key(pubkeys[i], pubkeys_fp64[i], &len2)) // keeps final NUL
 			{
 				Con_Printf("Loaded public key key_%d.d0pk (fingerprint: %s)\n", i, pubkeys_fp64[i]);
-				len = Crypto_LoadFile(va("key_%d.d0si%s", i, sessionid.string), buf, sizeof(buf), true);
+				len = Crypto_LoadFile(va(vabuf, sizeof(vabuf), "key_%d.d0si%s", i, sessionid.string), buf, sizeof(buf), true);
 				if(len)
 				{
 					if(Crypto_AddPrivateKey(pubkeys[i], buf, len))
@@ -792,7 +808,7 @@ void Crypto_LoadKeys(void)
 						{
 							Con_Printf("Loaded private ID key_%d.d0si%s for key_%d.d0pk (public key fingerprint: %s)\n", i, sessionid.string, i, pubkeys_priv_fp64[i]);
 							pubkeys_havepriv[i] = true;
-							strlcat(crypto_idstring_buf, va(" %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
+							strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
 						}
 						else
 						{
@@ -861,6 +877,7 @@ void Crypto_LoadKeys(void)
 static void Crypto_UnloadKeys(void)
 {
 	int i;
+
 	keygen_i = -1;
 	for(i = 0; i < MAX_PUBKEYS; ++i)
 	{
@@ -874,6 +891,45 @@ static void Crypto_UnloadKeys(void)
 	}
 	crypto_idstring = NULL;
 }
+
+static mempool_t *cryptomempool;
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+static void *Crypto_d0_malloc(size_t len)
+{
+	return Mem_Alloc(cryptomempool, len);
+}
+
+static void Crypto_d0_free(void *p)
+{
+	Mem_Free(p);
+}
+
+static void *Crypto_d0_createmutex(void)
+{
+	return Thread_CreateMutex();
+}
+
+static void Crypto_d0_destroymutex(void *m)
+{
+	Thread_DestroyMutex(m);
+}
+
+static int Crypto_d0_lockmutex(void *m)
+{
+	return Thread_LockMutex(m);
+}
+
+static int Crypto_d0_unlockmutex(void *m)
+{
+	return Thread_UnlockMutex(m);
+}
+#ifdef __cplusplus
+}
+#endif
 
 void Crypto_Shutdown(void)
 {
@@ -900,12 +956,20 @@ void Crypto_Shutdown(void)
 
 		Crypto_CloseLibrary();
 	}
+
+	Mem_FreePool(&cryptomempool);
 }
 
 void Crypto_Init(void)
 {
+	cryptomempool = Mem_AllocPool("crypto", 0, NULL);
+
 	if(!Crypto_OpenLibrary())
 		return;
+
+	qd0_blind_id_setmallocfuncs(Crypto_d0_malloc, Crypto_d0_free);
+	if (Thread_HasThreads())
+		qd0_blind_id_setmutexfuncs(Crypto_d0_createmutex, Crypto_d0_destroymutex, Crypto_d0_lockmutex, Crypto_d0_unlockmutex);
 
 	if(!qd0_blind_id_INITIALIZE())
 	{
@@ -940,11 +1004,15 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	d0_blind_id_t *ctx, *ctx2;
 	D0_BOOL status;
 	size_t len2;
+	char vabuf[1024];
+
+	SV_LockThreadMutex();
 
 	if(!d0_blind_id_dll)
 	{
 		Con_Print("libd0_blind_id DLL not found, this command is inactive.\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -952,12 +1020,14 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("overflow of keygen_i\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(keygen_i < 0)
 	{
 		Con_Printf("Unexpected response from keygen server:\n");
 		Com_HexDumpToConsole(buffer, length_received);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!Crypto_ParsePack((const char *) buffer, length_received, FOURCC_D0IR, p, l, 1))
@@ -972,12 +1042,14 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 			Com_HexDumpToConsole(buffer, length_received);
 		}
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_finish_private_id_request(pubkeys[keygen_i], p[0], l[0]))
 	{
 		Con_Printf("d0_blind_id_finish_private_id_request failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 
@@ -987,6 +1059,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("d0_blind_id_new failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	ctx2 = qd0_blind_id_new();
@@ -995,6 +1068,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		Con_Printf("d0_blind_id_new failed\n");
 		qd0_blind_id_free(ctx);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_copy(ctx, pubkeys[keygen_i]))
@@ -1003,6 +1077,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!qd0_blind_id_copy(ctx2, pubkeys[keygen_i]))
@@ -1011,6 +1086,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	bufsize = sizeof(buf);
@@ -1020,6 +1096,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2size = sizeof(buf2);
@@ -1029,6 +1106,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	bufsize = sizeof(buf);
@@ -1038,6 +1116,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2size = sizeof(buf2);
@@ -1047,6 +1126,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		qd0_blind_id_free(ctx);
 		qd0_blind_id_free(ctx2);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	qd0_blind_id_free(ctx);
@@ -1059,7 +1139,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("Received private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
 		pubkeys_havepriv[keygen_i] = true;
-		strlcat(crypto_idstring_buf, va(" %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
+		strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
 		crypto_idstring = crypto_idstring_buf;
 		Crypto_BuildChallengeAppend();
 	}
@@ -1070,21 +1150,24 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		Con_Printf("d0_blind_id_write_private_id failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!(buf2size = Crypto_UnParsePack(buf2, sizeof(buf2), FOURCC_D0SI, p, l, 1)))
 	{
 		Con_Printf("Crypto_UnParsePack failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 
-	FS_CreatePath(va("%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string));
-	f = FS_SysOpen(va("%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "wb", false);
+	FS_CreatePath(va(vabuf, sizeof(vabuf), "%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string));
+	f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "wb", false);
 	if(!f)
 	{
 		Con_Printf("Cannot open key_%d.d0si%s\n", keygen_i, sessionid.string);
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	FS_Write(f, buf2, buf2size);
@@ -1092,6 +1175,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 
 	Con_Printf("Saved to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	keygen_i = -1;
+	SV_UnlockThreadMutex();
 }
 
 static void Crypto_KeyGen_f(void)
@@ -1112,21 +1196,25 @@ static void Crypto_KeyGen_f(void)
 		Con_Printf("usage:\n%s id url\n", Cmd_Argv(0));
 		return;
 	}
+	SV_LockThreadMutex();
 	Crypto_LoadKeys();
 	i = atoi(Cmd_Argv(1));
 	if(!pubkeys[i])
 	{
 		Con_Printf("there is no public key %d\n", i);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(pubkeys_havepriv[i])
 	{
 		Con_Printf("there is already a private key for %d\n", i);
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(keygen_i >= 0)
 	{
 		Con_Printf("there is already a keygen run on the way\n");
+		SV_UnlockThreadMutex();
 		return;
 	}
 	keygen_i = i;
@@ -1134,6 +1222,7 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("d0_blind_id_start failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	p[0] = buf;
@@ -1142,6 +1231,7 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("d0_blind_id_generate_private_id_request failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2pos = strlen(Cmd_Argv(2));
@@ -1150,12 +1240,14 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("Crypto_UnParsePack failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	if(!(buf2l = base64_encode((unsigned char *) (buf2 + buf2pos), buf2l, sizeof(buf2) - buf2pos - 1)))
 	{
 		Con_Printf("base64_encode failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	buf2l += buf2pos;
@@ -1164,9 +1256,11 @@ static void Crypto_KeyGen_f(void)
 	{
 		Con_Printf("curl failed\n");
 		keygen_i = -1;
+		SV_UnlockThreadMutex();
 		return;
 	}
 	Con_Printf("key generation in progress\n");
+	SV_UnlockThreadMutex();
 }
 // end
 
@@ -1529,6 +1623,8 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 	int aeslevel;
 	D0_BOOL aes;
 	D0_BOOL status;
+	char infostringvalue[MAX_INPUTLINE];
+	char vabuf[1024];
 
 	if(!d0_blind_id_dll)
 		return CRYPTO_NOMATCH; // no support
@@ -1539,7 +1635,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 		int i;
 		// sorry, we have to verify the challenge here to not reflect network spam
 
-		if (!(s = SearchInfostring(string + 4, "challenge")))
+		if (!(s = InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue))))
 			return CRYPTO_NOMATCH; // will be later accepted if encryption was set up
 		// validate the challenge
 		for (i = 0;i < MAX_CHALLENGES;i++)
@@ -1559,9 +1655,9 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 		const char *cnt, *s, *p;
 		int id;
 		int clientid = -1, serverid = -1;
-		cnt = SearchInfostring(string + 4, "id");
+		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
 		id = (cnt ? atoi(cnt) : -1);
-		cnt = SearchInfostring(string + 4, "cnt");
+		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
 		if(!cnt)
 			return CRYPTO_DISCARD; // pre-challenge: rather be silent
 		GetUntilNul(&data_in, &len_in);
@@ -1570,7 +1666,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 		if(!strcmp(cnt, "0"))
 		{
 			int i;
-			if (!(s = SearchInfostring(string + 4, "challenge")))
+			if (!(s = InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue))))
 				return CRYPTO_DISCARD; // pre-challenge: rather be silent
 			// validate the challenge
 			for (i = 0;i < MAX_CHALLENGES;i++)
@@ -1581,7 +1677,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			if (i == MAX_CHALLENGES) // challenge mismatch is silent
 				return CRYPTO_DISCARD; // pre-challenge: rather be silent
 
-			if (!(s = SearchInfostring(string + 4, "aeslevel")))
+			if (!(s = InfoString_GetValue(string + 4, "aeslevel", infostringvalue, sizeof(infostringvalue))))
 				aeslevel = 0; // not supported
 			else
 				aeslevel = bound(0, atoi(s), 3);
@@ -1667,7 +1763,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 					CLEAR_CDATA;
 					return Crypto_ServerError(data_out, len_out, "d0_blind_id_copy failed", "Internal error");
 				}
-				PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\1\\id\\%d\\aes\\%d", CDATA->cdata_id, crypto->use_aes));
+				PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\1\\id\\%d\\aes\\%d", CDATA->cdata_id, crypto->use_aes));
 				if(!qd0_blind_id_authenticate_with_private_id_start(CDATA->id, true, false, "XONOTIC", 8, data_out_p, len_out)) // len_out receives used size by this op
 				{
 					CLEAR_CDATA;
@@ -1692,7 +1788,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 					CLEAR_CDATA;
 					return Crypto_ServerError(data_out, len_out, "d0_blind_id_copy failed", "Internal error");
 				}
-				PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\5\\id\\%d\\aes\\%d", CDATA->cdata_id, crypto->use_aes));
+				PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\5\\id\\%d\\aes\\%d", CDATA->cdata_id, crypto->use_aes));
 				if(!qd0_blind_id_authenticate_with_private_id_challenge(CDATA->id, true, false, data_in, len_in, data_out_p, len_out, &status))
 				{
 					CLEAR_CDATA;
@@ -1717,11 +1813,11 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 				return CRYPTO_NOMATCH; // pre-challenge, rather be silent
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 2)
-				return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+				return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
-			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\3\\id\\%d", CDATA->cdata_id));
+			PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\3\\id\\%d", CDATA->cdata_id));
 			if(!qd0_blind_id_authenticate_with_private_id_response(CDATA->id, data_in, len_in, data_out_p, len_out))
 			{
 				CLEAR_CDATA;
@@ -1759,10 +1855,10 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 				return CRYPTO_NOMATCH; // pre-challenge, rather be silent
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 4)
-				return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
-			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\5\\id\\%d", CDATA->cdata_id));
+				return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+			PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\5\\id\\%d", CDATA->cdata_id));
 			if(!qd0_blind_id_authenticate_with_private_id_challenge(CDATA->id, true, false, data_in, len_in, data_out_p, len_out, &status))
 			{
 				CLEAR_CDATA;
@@ -1785,9 +1881,9 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 				return CRYPTO_NOMATCH; // pre-challenge, rather be silent
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 6)
-				return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+				return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
 			if(!qd0_blind_id_authenticate_with_private_id_verify(CDATA->id, data_in, len_in, msgbuf, &msgbuflen, &status))
 			{
@@ -1837,11 +1933,12 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 	const char *cnt;
 	qboolean do_time = false;
 	qboolean do_reject = false;
+	char infostringvalue[MAX_INPUTLINE];
 	if(crypto_servercpupercent.value > 0 || crypto_servercpumaxtime.value > 0)
 		if(len_in > 5 && !memcmp(data_in, "d0pk\\", 5))
 		{
 			do_time = true;
-			cnt = SearchInfostring(data_in + 4, "cnt");
+			cnt = InfoString_GetValue(data_in + 4, "cnt", infostringvalue, sizeof(infostringvalue));
 			if(cnt)
 				if(!strcmp(cnt, "0"))
 					do_reject = true;
@@ -1870,12 +1967,12 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 			*len_out = 0;
 			return CRYPTO_DISCARD;
 		}
-		t = Sys_DoubleTime();
+		t = Sys_DirtyTime();
 	}
 	ret = Crypto_ServerParsePacket_Internal(data_in, len_in, data_out, len_out, peeraddress);
 	if(do_time)
 	{
-		t = Sys_DoubleTime() - t;
+		t = Sys_DirtyTime() - t;if (t < 0.0) t = 0.0; // dirtytime can step backwards
 		if(crypto_servercpudebug.integer)
 			Con_Printf("crypto: accumulator was %.1f ms, used %.1f ms for crypto, ", crypto_servercpu_accumulator * 1000, t * 1000);
 		crypto_servercpu_accumulator -= t;
@@ -1907,6 +2004,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	D0_BOOL aes;
 	char *data_out_p = data_out;
 	D0_BOOL status;
+	char infostringvalue[MAX_INPUTLINE];
+	char vabuf[1024];
 
 	if(!d0_blind_id_dll)
 		return CRYPTO_NOMATCH; // no support
@@ -1942,7 +2041,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	}
 	else if (len_in >= 13 && !memcmp(string, "infoResponse\x0A", 13))
 	{
-		s = SearchInfostring(string + 13, "d0_blind_id");
+		s = InfoString_GetValue(string + 13, "d0_blind_id", infostringvalue, sizeof(infostringvalue));
 		if(s)
 			Crypto_StoreHostKey(peeraddress, s, true);
 		return CRYPTO_NOMATCH;
@@ -1957,7 +2056,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			save = *p;
 			* (char *) p = 0; // cut off the string there
 		}
-		s = SearchInfostring(string + 15, "d0_blind_id");
+		s = InfoString_GetValue(string + 15, "d0_blind_id", infostringvalue, sizeof(infostringvalue));
 		if(s)
 			Crypto_StoreHostKey(peeraddress, s, true);
 		if(p)
@@ -2117,7 +2216,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			// build outgoing message
 			// append regular stuff
-			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\0\\id\\%d\\aeslevel\\%d\\challenge\\%s", CDATA->cdata_id, d0_rijndael_dll ? crypto_aeslevel.integer : 0, challenge));
+			PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\0\\id\\%d\\aeslevel\\%d\\challenge\\%s", CDATA->cdata_id, d0_rijndael_dll ? crypto_aeslevel.integer : 0, challenge));
 			PutWithNul(&data_out_p, len_out, serverid >= 0 ? pubkeys_fp64[serverid] : "");
 			PutWithNul(&data_out_p, len_out, clientid >= 0 ? pubkeys_fp64[clientid] : "");
 
@@ -2187,9 +2286,9 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	{
 		const char *cnt;
 		int id;
-		cnt = SearchInfostring(string + 4, "id");
+		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
 		id = (cnt ? atoi(cnt) : -1);
-		cnt = SearchInfostring(string + 4, "cnt");
+		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
 		if(!cnt)
 			return Crypto_ClientError(data_out, len_out, "d0pk\\ message without cnt");
 		GetUntilNul(&data_in, &len_in);
@@ -2200,13 +2299,13 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		{
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 1)
-				return Crypto_SoftClientError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
 			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
 
-			if((s = SearchInfostring(string + 4, "aes")))
+			if((s = InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue))))
 				aes = atoi(s);
 			else
 				aes = false;
@@ -2230,7 +2329,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			}
 			crypto->use_aes = aes != 0;
 
-			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\2\\id\\%d", CDATA->cdata_id));
+			PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\2\\id\\%d", CDATA->cdata_id));
 			if(!qd0_blind_id_authenticate_with_private_id_challenge(CDATA->id, true, false, data_in, len_in, data_out_p, len_out, &status))
 			{
 				CLEAR_CDATA;
@@ -2249,9 +2348,9 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 3)
-				return Crypto_SoftClientError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
 			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
 
@@ -2285,12 +2384,12 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			}
 
 			// cache the server key
-			Crypto_StoreHostKey(&cls.connect_address, va("%d %s@%s", crypto->use_aes ? 1 : 0, crypto->server_idfp, pubkeys_fp64[CDATA->s]), false);
+			Crypto_StoreHostKey(&cls.connect_address, va(vabuf, sizeof(vabuf), "%d %s@%s", crypto->use_aes ? 1 : 0, crypto->server_idfp, pubkeys_fp64[CDATA->s]), false);
 
 			if(CDATA->c >= 0)
 			{
 				// client will auth next
-				PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\4\\id\\%d", CDATA->cdata_id));
+				PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\4\\id\\%d", CDATA->cdata_id));
 				if(!qd0_blind_id_copy(CDATA->id, pubkeys[CDATA->c]))
 				{
 					CLEAR_CDATA;
@@ -2326,15 +2425,15 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va("Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 5)
-				return Crypto_SoftClientError(data_out, len_out, va("Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
+				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
 			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
 
 			if(CDATA->s < 0) // only if server didn't auth
 			{
-				if((s = SearchInfostring(string + 4, "aes")))
+				if((s = InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue))))
 					aes = atoi(s);
 				else
 					aes = false;
@@ -2357,7 +2456,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				crypto->use_aes = aes != 0;
 			}
 
-			PutWithNul(&data_out_p, len_out, va("d0pk\\cnt\\6\\id\\%d", CDATA->cdata_id));
+			PutWithNul(&data_out_p, len_out, va(vabuf, sizeof(vabuf), "d0pk\\cnt\\6\\id\\%d", CDATA->cdata_id));
 			if(!qd0_blind_id_authenticate_with_private_id_response(CDATA->id, data_in, len_in, data_out_p, len_out))
 			{
 				CLEAR_CDATA;
