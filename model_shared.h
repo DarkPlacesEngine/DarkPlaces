@@ -599,7 +599,6 @@ typedef struct texture_s
 	char name[64];
 	int surfaceflags;
 	int supercontents;
-	int surfaceparms;
 	int textureflags;
 
 	// reflection

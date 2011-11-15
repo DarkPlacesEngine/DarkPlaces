@@ -2442,7 +2442,6 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	{
 		if (developer_loading.integer)
 			Con_Printf("%s: loaded shader for %s\n", loadmodel->name, name);
-		texture->surfaceparms = shader->surfaceparms;
 
 		// allow disabling of picmip or compression by defaulttexflags
 		texture->textureflags = (shader->textureflags & texflagsmask) | texflagsor;
@@ -2631,6 +2630,40 @@ nothing                GL_ZERO GL_ONE
 	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTGRID    ) texture->supercontents |= SUPERCONTENTS_LIGHTGRID    ;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_ANTIPORTAL   ) texture->supercontents |= SUPERCONTENTS_ANTIPORTAL   ;
 
+		texture->surfaceflags = 0;
+		if (shader->surfaceparms & Q3SURFACEPARM_ALPHASHADOW  ) texture->surfaceflags |= Q3SURFACEFLAG_ALPHASHADOW  ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_AREAPORTAL   ) texture->surfaceflags |= Q3SURFACEFLAG_AREAPORTAL   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_CLUSTERPORTAL) texture->surfaceflags |= Q3SURFACEFLAG_CLUSTERPORTAL;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_DETAIL       ) texture->surfaceflags |= Q3SURFACEFLAG_DETAIL       ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_DONOTENTER   ) texture->surfaceflags |= Q3SURFACEFLAG_DONOTENTER   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_FOG          ) texture->surfaceflags |= Q3SURFACEFLAG_FOG          ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_LAVA         ) texture->surfaceflags |= Q3SURFACEFLAG_LAVA         ;
+		if (shader->surfaceparms & Q3SURFACEPARM_LIGHTFILTER  ) texture->surfaceflags |= Q3SURFACEFLAG_LIGHTFILTER  ;
+		if (shader->surfaceparms & Q3SURFACEPARM_METALSTEPS   ) texture->surfaceflags |= Q3SURFACEFLAG_METALSTEPS   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NODAMAGE     ) texture->surfaceflags |= Q3SURFACEFLAG_NODAMAGE     ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NODLIGHT     ) texture->surfaceflags |= Q3SURFACEFLAG_NODLIGHT     ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NODRAW       ) texture->surfaceflags |= Q3SURFACEFLAG_NODRAW       ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NODROP       ) texture->surfaceflags |= Q3SURFACEFLAG_NODROP       ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NOIMPACT     ) texture->surfaceflags |= Q3SURFACEFLAG_NOIMPACT     ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NOLIGHTMAP   ) texture->surfaceflags |= Q3SURFACEFLAG_NOLIGHTMAP   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NOMARKS      ) texture->surfaceflags |= Q3SURFACEFLAG_NOMARKS      ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_NOMIPMAPS    ) texture->surfaceflags |= Q3SURFACEFLAG_NOMIPMAPS    ;
+		if (shader->surfaceparms & Q3SURFACEPARM_NONSOLID     ) texture->surfaceflags |= Q3SURFACEFLAG_NONSOLID     ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_ORIGIN       ) texture->surfaceflags |= Q3SURFACEFLAG_ORIGIN       ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_PLAYERCLIP   ) texture->surfaceflags |= Q3SURFACEFLAG_PLAYERCLIP   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SKY          ) texture->surfaceflags |= Q3SURFACEFLAG_SKY          ;
+		if (shader->surfaceparms & Q3SURFACEPARM_SLICK        ) texture->surfaceflags |= Q3SURFACEFLAG_SLICK        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_SLIME        ) texture->surfaceflags |= Q3SURFACEFLAG_SLIME        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_STRUCTURAL   ) texture->surfaceflags |= Q3SURFACEFLAG_STRUCTURAL   ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_TRANS        ) texture->surfaceflags |= Q3SURFACEFLAG_TRANS        ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_WATER        ) texture->surfaceflags |= Q3SURFACEFLAG_WATER        ;
+		if (shader->surfaceparms & Q3SURFACEPARM_POINTLIGHT   ) texture->surfaceflags |= Q3SURFACEFLAG_POINTLIGHT   ;
+		if (shader->surfaceparms & Q3SURFACEPARM_HINT         ) texture->surfaceflags |= Q3SURFACEFLAG_HINT         ;
+		if (shader->surfaceparms & Q3SURFACEPARM_DUST         ) texture->surfaceflags |= Q3SURFACEFLAG_DUST         ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_BOTCLIP      ) texture->surfaceflags |= Q3SURFACEFLAG_BOTCLIP      ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTGRID    ) texture->surfaceflags |= Q3SURFACEFLAG_LIGHTGRID    ;
+	//	if (shader->surfaceparms & Q3SURFACEPARM_ANTIPORTAL   ) texture->surfaceflags |= Q3SURFACEFLAG_ANTIPORTAL   ;
+
 		if (shader->dpmeshcollisions)
 			texture->basematerialflags |= MATERIALFLAG_MESHCOLLISIONS;
 		if (shader->dpshaderkill && developer_extra.integer)
@@ -2640,14 +2673,12 @@ nothing                GL_ZERO GL_ONE
 	{
 		if (developer_extra.integer)
 			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
-		texture->surfaceparms = 0;
 		texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 	}
 	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
 	{
 		if (developer_extra.integer)
 			Con_DPrintf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
-		texture->surfaceparms = 0;
 		texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 		texture->supercontents = SUPERCONTENTS_SOLID;
 	}
@@ -2655,7 +2686,6 @@ nothing                GL_ZERO GL_ONE
 	{
 		if (developer_extra.integer)
 			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
-		texture->surfaceparms = 0;
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 		{
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
