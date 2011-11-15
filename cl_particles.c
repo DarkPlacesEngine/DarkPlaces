@@ -101,7 +101,9 @@ typedef struct particleeffectinfo_s
 	float stretchfactor;
 	// stretch velocity factor (used for sparks)
 	float originoffset[3];
+	float relativeoriginoffset[3];
 	float velocityoffset[3];
+	float relativevelocityoffset[3];
 	float originjitter[3];
 	float velocityjitter[3];
 	float velocitymultiplier;
@@ -248,7 +250,9 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	1.0f, //float stretchfactor;
 	// stretch velocity factor (used for sparks)
 	{0.0f, 0.0f, 0.0f}, //float originoffset[3];
+	{0.0f, 0.0f, 0.0f}, //float relativeoriginoffset[3];
 	{0.0f, 0.0f, 0.0f}, //float velocityoffset[3];
+	{0.0f, 0.0f, 0.0f}, //float relativevelocityoffset[3];
 	{0.0f, 0.0f, 0.0f}, //float originjitter[3];
 	{0.0f, 0.0f, 0.0f}, //float velocityjitter[3];
 	0.0f, //float velocitymultiplier;
@@ -422,7 +426,9 @@ static void CL_Particles_ParseEffectInfo(const char *textstart, const char *text
 		else if (!strcmp(argv[0], "airfriction")) {readfloat(info->airfriction);}
 		else if (!strcmp(argv[0], "liquidfriction")) {readfloat(info->liquidfriction);}
 		else if (!strcmp(argv[0], "originoffset")) {readfloats(info->originoffset, 3);}
+		else if (!strcmp(argv[0], "relativeoriginoffset")) {readfloats(info->relativeoriginoffset, 3);}
 		else if (!strcmp(argv[0], "velocityoffset")) {readfloats(info->velocityoffset, 3);}
+		else if (!strcmp(argv[0], "relativevelocityoffset")) {readfloats(info->relativevelocityoffset, 3);}
 		else if (!strcmp(argv[0], "originjitter")) {readfloats(info->originjitter, 3);}
 		else if (!strcmp(argv[0], "velocityjitter")) {readfloats(info->velocityjitter, 3);}
 		else if (!strcmp(argv[0], "velocitymultiplier")) {readfloat(info->velocitymultiplier);}
@@ -1433,6 +1439,11 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		vec3_t traildir;
 		vec3_t trailpos;
 		vec3_t rvec;
+		vec3_t angles;
+		vec3_t velocity;
+		vec3_t forward;
+		vec3_t right;
+		vec3_t up;
 		vec_t traillen;
 		vec_t trailstep;
 		qboolean underwater;
@@ -1509,9 +1520,22 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					staintex = min(staintex, info->staintex[1] - 1);
 				}
 				if (info->particletype == pt_decal)
-					CL_SpawnDecalParticleForPoint(center, info->originjitter[0], lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1])*avgtint[3], tex, info->color[0], info->color[1]);
+				{
+					VectorMAM(0.5f, velocitymins, 0.5f, velocitymaxs, velocity);
+					AnglesFromVectors(angles, velocity, NULL, false);
+					AngleVectors(angles, forward, right, up);
+					VectorMAMAMAM(1.0f, center, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
+
+					CL_SpawnDecalParticleForPoint(trailpos, info->originjitter[0], lhrandom(info->size[0], info->size[1]), lhrandom(info->alpha[0], info->alpha[1])*avgtint[3], tex, info->color[0], info->color[1]);
+				}
 				else if (info->orientation == PARTICLE_HBEAM)
-					CL_NewParticle(center, info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, lhrandom(info->time[0], info->time[1]), info->stretchfactor, info->blendmode, info->orientation, info->staincolor[0], info->staincolor[1], staintex, lhrandom(info->stainalpha[0], info->stainalpha[1]), lhrandom(info->stainsize[0], info->stainsize[1]), 0, 0, tintmins ? avgtint : NULL);
+				{
+					AnglesFromVectors(angles, traildir, NULL, false);
+					AngleVectors(angles, forward, right, up);
+					VectorMAMAM(info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
+
+					CL_NewParticle(center, info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], 0, 0, originmins[0] + trailpos[0], originmins[1] + trailpos[1], originmins[2] + trailpos[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, lhrandom(info->time[0], info->time[1]), info->stretchfactor, info->blendmode, info->orientation, info->staincolor[0], info->staincolor[1], staintex, lhrandom(info->stainalpha[0], info->stainalpha[1]), lhrandom(info->stainsize[0], info->stainsize[1]), 0, 0, tintmins ? avgtint : NULL);
+				}
 				else
 				{
 					if (!cl_particles.integer)
@@ -1532,6 +1556,11 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						info->particleaccumulator += traillen / info->trailspacing * cl_particles_quality.value * pcount;
 						trailstep = info->trailspacing / cl_particles_quality.value / max(0.001, pcount);
 						immediatebloodstain = false;
+
+						AnglesFromVectors(angles, traildir, NULL, false);
+						AngleVectors(angles, forward, right, up);
+						VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
+						VectorMAMAM(info->relativevelocityoffset[0], forward, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
 					}
 					else
 					{
@@ -1541,6 +1570,12 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 							((cl_decals_newsystem_immediatebloodstain.integer >= 1) && (info->particletype == pt_blood))
 							||
 							((cl_decals_newsystem_immediatebloodstain.integer >= 2) && staintex);
+
+						VectorMAM(0.5f, velocitymins, 0.5f, velocitymaxs, velocity);
+						AnglesFromVectors(angles, velocity, NULL, false);
+						AngleVectors(angles, forward, right, up);
+						VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], traildir, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
+						VectorMAMAM(info->relativevelocityoffset[0], traildir, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
 					}
 					info->particleaccumulator = bound(0, info->particleaccumulator, 16384);
 					for (;info->particleaccumulator >= 1;info->particleaccumulator--)
@@ -1562,7 +1597,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 							Vector4Lerp(tintmins, tintlerp, tintmaxs, tint);
 						}
 						VectorRandom(rvec);
-						part = CL_NewParticle(center, info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2], info->airfriction, info->liquidfriction, 0, 0, info->countabsolute <= 0, lhrandom(info->time[0], info->time[1]), info->stretchfactor, info->blendmode, info->orientation, info->staincolor[0], info->staincolor[1], staintex, lhrandom(info->stainalpha[0], info->stainalpha[1]), lhrandom(info->stainsize[0], info->stainsize[1]), lhrandom(info->rotate[0], info->rotate[1]), lhrandom(info->rotate[2], info->rotate[3]), tintmins ? tint : NULL);
+						part = CL_NewParticle(center, info->particletype, info->color[0], info->color[1], tex, lhrandom(info->size[0], info->size[1]), info->size[2], lhrandom(info->alpha[0], info->alpha[1]), info->alpha[2], info->gravity, info->bounce, trailpos[0] + info->originoffset[0] + info->originjitter[0] * rvec[0], trailpos[1] + info->originoffset[1] + info->originjitter[1] * rvec[1], trailpos[2] + info->originoffset[2] + info->originjitter[2] * rvec[2], lhrandom(velocitymins[0], velocitymaxs[0]) * info->velocitymultiplier + info->velocityoffset[0] + info->velocityjitter[0] * rvec[0] + velocity[0], lhrandom(velocitymins[1], velocitymaxs[1]) * info->velocitymultiplier + info->velocityoffset[1] + info->velocityjitter[1] * rvec[1] + velocity[1], lhrandom(velocitymins[2], velocitymaxs[2]) * info->velocitymultiplier + info->velocityoffset[2] + info->velocityjitter[2] * rvec[2] + velocity[2], info->airfriction, info->liquidfriction, 0, 0, info->countabsolute <= 0, lhrandom(info->time[0], info->time[1]), info->stretchfactor, info->blendmode, info->orientation, info->staincolor[0], info->staincolor[1], staintex, lhrandom(info->stainalpha[0], info->stainalpha[1]), lhrandom(info->stainsize[0], info->stainsize[1]), lhrandom(info->rotate[0], info->rotate[1]), lhrandom(info->rotate[2], info->rotate[3]), tintmins ? tint : NULL);
 						if (immediatebloodstain && part)
 						{
 							immediatebloodstain = false;
