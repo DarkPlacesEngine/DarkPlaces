@@ -893,3 +893,11 @@ const float VF_MAINVIEW         = 212;
 //this flag is set for the first scene, and not cleared by R_ClearScene
 //this flag is automatically cleared by R_RenderView
 //so when not using this extension, the first view rendered is the main view
+
+//DP_CSQC_MINFPS_QUALITY
+//idea: divVerent
+//darkplaces implementation: divVerent
+//constant definitions:
+const float VF_MINFPS_QUALITY   = 213;
+//use getproperty(VF_MINFPS_QUALITY); to do CSQC based LOD based on cl_minfps
+//1 should lead to an unmodified view
