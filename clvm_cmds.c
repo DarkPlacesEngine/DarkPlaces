@@ -911,6 +911,9 @@ static void VM_CL_R_SetView (prvm_prog_t *prog)
 		case VF_FOG_FADEDEPTH:
 			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.fog_fadedepth;
 			break;
+		case VF_MINFPS_QUALITY:
+			PRVM_G_FLOAT(OFS_RETURN) = r_refdef.view.quality;
+			break;
 		default:
 			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			VM_Warning(prog, "VM_CL_R_GetView : unknown parm %i\n", c);
@@ -1060,6 +1063,9 @@ static void VM_CL_R_SetView (prvm_prog_t *prog)
 		break;
 	case VF_FOG_FADEDEPTH:
 		r_refdef.fog_fadedepth = k;
+		break;
+	case VF_MINFPS_QUALITY:
+		r_refdef.view.quality = k;
 		break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
