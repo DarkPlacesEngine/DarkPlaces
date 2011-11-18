@@ -1100,17 +1100,19 @@ void Host_LockSession(void)
 	if(locksession.integer != 0)
 	{
 		char vabuf[1024];
-		locksession_fh = FS_SysOpen(va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string), "wl", false);
+		char *p = va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
+		FS_CreatePath(p);
+		locksession_fh = FS_SysOpen(p, "wl", false);
 		// TODO maybe write the pid into the lockfile, while we are at it? may help server management tools
 		if(!locksession_fh)
 		{
 			if(locksession.integer == 2)
 			{
-				Con_Printf("WARNING: session lock %slock%s could not be acquired. Please run with -sessionid and an unique session name. Continuing anyway.\n", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
+				Con_Printf("WARNING: session lock %s could not be acquired. Please run with -sessionid and an unique session name. Continuing anyway.\n", p);
 			}
 			else
 			{
-				Sys_Error("session lock %slock%s could not be acquired. Please run with -sessionid and an unique session name.\n", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
+				Sys_Error("session lock %s could not be acquired. Please run with -sessionid and an unique session name.\n", p);
 			}
 		}
 	}
