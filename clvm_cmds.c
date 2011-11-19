@@ -1446,9 +1446,10 @@ static void VM_CL_setsensitivityscale (prvm_prog_t *prog)
 }
 
 //#347 void() runstandardplayerphysics (EXT_CSQC)
-#define PMF_JUMP_HELD 1
-#define PMF_LADDER 2 // not used by DP
-#define PMF_DUCKED 4 // FIXME FTEQW doesn't have this for Q1 like movement
+#define PMF_JUMP_HELD 1 // matches FTEQW
+#define PMF_LADDER 2 // not used by DP, FTEQW sets this in runplayerphysics but does not read it
+#define PMF_DUCKED 4 // FIXME FTEQW doesn't have this for Q1 like movement because Q1 cannot crouch
+#define PMF_ONGROUND 8 // FIXME FTEQW doesn't have this for Q1 like movement and expects CSQC code to do its own trace, this is stupid CPU waste
 static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 {
 	cl_clientmovement_state_t s;
@@ -1479,7 +1480,8 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	VectorCopy(s.velocity, PRVM_clientedictvector(ent, velocity));
 	PRVM_clientedictfloat(ent, pmove_flags) =
 		(s.crouched ? PMF_DUCKED : 0) |
-		(s.cmd.canjump ? 0 : PMF_JUMP_HELD);
+		(s.cmd.canjump ? 0 : PMF_JUMP_HELD) |
+		(s.onground ? PMF_ONGROUND : 0);
 }
 
 //#348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
@@ -4117,6 +4119,39 @@ static void VM_CL_loadcubemap(prvm_prog_t *prog)
 	R_GetCubemap(name);
 }
 
+#define REFDEFFLAG_TELEPORTED 1
+#define REFDEFFLAG_JUMPING 2
+static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
+{
+	matrix4x4_t entrendermatrix;
+	vec3_t clviewangles;
+	qboolean teleported;
+	qboolean clonground;
+	qboolean clcmdjump;
+	float clstatsviewheight;
+	prvm_edict_t *ent;
+	int flags;
+
+	VM_SAFEPARMCOUNT(2, VM_CL_V_CalcRefdef);
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	flags = PRVM_G_FLOAT(OFS_PARM1);
+
+	// use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
+	CL_GetTagMatrix(prog, &entrendermatrix, ent, 0);
+
+	VectorCopy(cl.csqc_viewangles, clviewangles);
+	teleported = (flags & REFDEFFLAG_TELEPORTED) != 0;
+	clonground = ((int)PRVM_clientedictfloat(ent, pmove_flags) & PMF_ONGROUND) != 0;
+	clcmdjump = (flags & REFDEFFLAG_JUMPING) != 0;
+	clstatsviewheight = PRVM_clientedictvector(ent, view_ofs)[2];
+
+	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight);
+
+	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
+	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
+	CSQC_R_RecalcView();
+}
+
 //============================================================================
 
 // To create a almost working builtin file from this replace:
@@ -4771,7 +4806,8 @@ NULL,							// #636
 NULL,							// #637
 VM_CL_RotateMoves,					// #638
 VM_digest_hex,						// #639
-NULL,							// #640
+VM_CL_V_CalcRefdef,					// #640 void(entity e) V_CalcRefdef (DP_CSQC_V_CALCREFDEF)
+NULL,							// #641
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

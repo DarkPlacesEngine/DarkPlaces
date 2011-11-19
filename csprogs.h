@@ -109,4 +109,6 @@ void CSQC_R_RecalcView(void);
 
 dp_model_t *CL_GetModelByIndex(int modelindex);
 
+int CL_VM_GetViewEntity(void);
+
 #endif
