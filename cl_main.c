@@ -2488,6 +2488,3 @@ void CL_Init (void)
 
 	CL_Video_Init();
 }
-
-
-

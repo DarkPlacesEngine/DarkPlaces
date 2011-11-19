@@ -1262,7 +1262,7 @@ static channel_t *SND_PickChannel(int entnum, int entchannel)
 		}
 
 		// don't let monster sounds override player sounds
-		if (ch->entnum == cl.viewentity && entnum != cl.viewentity)
+		if ((ch->entnum == cl.viewentity || ch->entnum == CL_VM_GetViewEntity()) && !(entnum == cl.viewentity || entnum == CL_VM_GetViewEntity()))
 			continue;
 
 		// don't override looped sounds
@@ -1459,7 +1459,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 
 	// anything coming from the view entity will always be full volume
 	// LordHavoc: make sounds with ATTN_NONE have no spatialization
-	if (ch->entnum == cl.viewentity || ch->distfade == 0)
+	if (ch->entnum == cl.viewentity || ch->entnum == CL_VM_GetViewEntity() || ch->distfade == 0)
 	{
 		ch->prologic_invert = 1;
 		if (snd_spatialization_prologic.integer != 0)

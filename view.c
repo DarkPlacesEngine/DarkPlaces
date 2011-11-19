@@ -428,7 +428,7 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
 	out[2] = highpass_limited(value[2], fracz, limitz, &store[2]);
 }
 
-void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump)
+void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight)
 {
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
@@ -505,7 +505,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		// apply the viewofs (even if chasecam is used)
 		// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
 		viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
-		viewheightavg = viewheightavg * (1 - viewheight) + cl.stats[STAT_VIEWHEIGHT] * viewheight;
+		viewheightavg = viewheightavg * (1 - viewheight) + clstatsviewheight * viewheight;
 		vieworg[2] += viewheightavg;
 
 		if (chase_active.value)
@@ -832,7 +832,7 @@ void V_CalcRefdef (void)
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
 
-		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump); // FIXME use a better way to detect teleport/warp than trail_allowed
+		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump, cl.stats[STAT_VIEWHEIGHT]); // FIXME use a better way to detect teleport/warp than trail_allowed
 	}
 	else
 	{

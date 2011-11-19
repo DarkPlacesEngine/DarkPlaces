@@ -373,6 +373,9 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		if(renderflags & RF_ADDITIVE) entrender->flags |= RENDER_ADDITIVE;
 	}
 
+	if(edictnum == CL_VM_GetViewEntity())
+		entrender->flags |= RENDER_EXTERIORMODEL;
+
 	c = (int)PRVM_clientedictfloat(ed, colormap);
 	if (c <= 0)
 		CL_SetEntityColormapColors(entrender, -1);
@@ -1222,4 +1225,11 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 	CSQC_END
 
 	return ret;
+}
+
+int CL_VM_GetViewEntity(void)
+{
+	if(cl.csqc_server2csqcentitynumber[cl.viewentity])
+		return cl.csqc_server2csqcentitynumber[cl.viewentity];
+	return cl.viewentity;
 }
