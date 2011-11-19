@@ -901,3 +901,21 @@ const float VF_MAINVIEW         = 212;
 const float VF_MINFPS_QUALITY   = 213;
 //use getproperty(VF_MINFPS_QUALITY); to do CSQC based LOD based on cl_minfps
 //1 should lead to an unmodified view
+
+//DP_CSQC_V_CALCREFDEF_WIP1
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+void(entity e, float refdefflags) V_CalcRefdef = #640;
+//constant definitions:
+float PMF_DUCKED = 4;
+float PMF_ONGROUND = 8;
+float REFDEFFLAG_TELEPORTED = 1;
+float REFDEFFLAG_JUMPING = 2;
+//- use this on the player entity after performing prediction
+//- pass REFDEFFLAG_TELEPORTED if the player teleported since last frame
+//- pass REFDEFFLAG_JUMPING if jump button is pressed
+//- the player entity needs to have origin, velocity, pmove_flags set according
+//  to prediction (the above two PMF_ flags are used in the player's pmove_flags)
+//- NOTE: to check for this, ALSO OR a check with DP_CSQC_V_CALCREFDEF to also support
+//  the finished extension once done
