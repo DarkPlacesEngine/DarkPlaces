@@ -2017,7 +2017,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	{
 		int wantserverid = -1;
 		Crypto_RetrieveHostKey(&cls.connect_address, &wantserverid, NULL, 0, NULL, 0, NULL);
-		if(!crypto || !crypto->authenticated)
+		//if(!crypto || !crypto->authenticated)
 		{
 			if(wantserverid >= 0)
 				return Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though a host key is present");
@@ -2026,11 +2026,33 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		}
 		return CRYPTO_NOMATCH;
 	}
-	else if (len_in >= 1 && string[0] == 'j' && cls.connect_trying && d0_rijndael_dll && crypto_aeslevel.integer >= 3)
+	else if (len_in >= 1 && string[0] == 'j' && cls.connect_trying && d0_rijndael_dll)
 	{
 		int wantserverid = -1;
 		Crypto_RetrieveHostKey(&cls.connect_address, &wantserverid, NULL, 0, NULL, 0, NULL);
-		if(!crypto || !crypto->authenticated)
+		//if(!crypto || !crypto->authenticated)
+		{
+			if(wantserverid >= 0)
+				return Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though a host key is present");
+			if(crypto_aeslevel.integer >= 3)
+				return Crypto_ClientError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)");
+		}
+		return CRYPTO_NOMATCH;
+	}
+	else if (len_in >= 5 && BuffLittleLong((unsigned char *) string) == ((int)NETFLAG_CTL | (int)len_in))
+	{
+		int wantserverid = -1;
+
+		// these three are harmless
+		if(string[4] == CCREP_SERVER_INFO)
+			return CRYPTO_NOMATCH;
+		if(string[4] == CCREP_PLAYER_INFO)
+			return CRYPTO_NOMATCH;
+		if(string[4] == CCREP_RULE_INFO)
+			return CRYPTO_NOMATCH;
+
+		Crypto_RetrieveHostKey(&cls.connect_address, &wantserverid, NULL, 0, NULL, 0, NULL);
+		//if(!crypto || !crypto->authenticated)
 		{
 			if(wantserverid >= 0)
 				return Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though a host key is present");
