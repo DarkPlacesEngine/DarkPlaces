@@ -1685,7 +1685,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	qboolean fromserver;
-	int ret, c, control;
+	int ret, c;
 	const char *s;
 	char *string, addressstring2[128], ipstring[32];
 	char stringbuf[16384];
@@ -2064,7 +2064,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		return ret;
 	}
 	// netquake control packets, supported for compatibility only
-	if (length >= 5 && (control = BuffBigLong(data)) && (control & (~NETFLAG_LENGTH_MASK)) == (int)NETFLAG_CTL && (control & NETFLAG_LENGTH_MASK) == length && !ENCRYPTION_REQUIRED)
+	if (length >= 5 && BuffBigLong(data) == ((int)NETFLAG_CTL | length) && !ENCRYPTION_REQUIRED)
 	{
 		int n;
 		serverlist_info_t *info;
