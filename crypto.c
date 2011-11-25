@@ -2017,7 +2017,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	{
 		int wantserverid = -1;
 		Crypto_RetrieveHostKey(&cls.connect_address, &wantserverid, NULL, 0, NULL, 0, NULL);
-		//if(!crypto || !crypto->authenticated)
+		if(!crypto || !crypto->authenticated) // we ALSO get here if we are using an encrypted connection, so let's rule this out
 		{
 			if(wantserverid >= 0)
 				return Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though a host key is present");
