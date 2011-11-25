@@ -7300,7 +7300,7 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
 		// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
 		// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
-		mod->lightmapscale *= 0.679942f; // fixes neutral level
+		loadmodel->lightmapscale *= 0.679942f; // fixes neutral level
 	}
 
 	Con_DPrintf("Stats for q3bsp model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
