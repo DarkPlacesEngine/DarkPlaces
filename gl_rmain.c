@@ -6269,9 +6269,17 @@ static void R_Bloom_MakeTexture(void)
 		r_fb.bloomindex ^= 1;
 		R_Mesh_SetRenderTargets(r_fb.bloomfbo[r_fb.bloomindex], NULL, r_fb.bloomtexture[r_fb.bloomindex], NULL, NULL, NULL);
 		x *= 2;
-		r = bound(0, r_bloom_colorexponent.value / x, 1);
-		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-		GL_Color(r,r,r,1);
+		r = bound(0, r_bloom_colorexponent.value / x, 1); // always 0.5 to 1
+		if (!r_fb.bloomfbo[r_fb.bloomindex])
+		{
+			GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR); // square it and multiply by two
+			GL_Color(r,r,r,1); // apply fix factor
+		}
+		else
+		{
+			GL_BlendFunc(GL_SRC_COLOR, GL_ZERO); // square it
+			GL_Color(1,1,1,1); // no fix factor supported here
+		}
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.bloomtexcoord2f);
 		R_SetupShader_Generic(intex, NULL, GL_MODULATE, 1, false, true, false);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
