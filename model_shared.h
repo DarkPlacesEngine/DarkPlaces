@@ -1048,6 +1048,7 @@ typedef struct model_s
 
 	// if set, the model contains light information (lightmap, or vertexlight)
 	qboolean lit;
+	float lightmapscale;
 }
 dp_model_t;
 

@@ -467,6 +467,9 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	// errors can prevent the corresponding mod->loaded = true;
 	mod->loaded = false;
 
+	// default lightmap scale
+	mod->lightmapscale = 1;
+
 	// default model radius and bounding box (mainly for missing models)
 	mod->radius = 16;
 	VectorSet(mod->normalmins, -mod->radius, -mod->radius, -mod->radius);

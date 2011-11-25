@@ -6682,6 +6682,10 @@ void R_UpdateVariables(void)
 	{
 		r_refdef.lightmapintensity *= r_fakelight_intensity.value;
 	}
+	else if (r_refdef.scene.worldmodel)
+	{
+		r_refdef.lightmapintensity *= r_refdef.scene.worldmodel->lightmapscale;
+	}
 	if (r_showsurfaces.integer)
 	{
 		r_refdef.scene.rtworld = false;
