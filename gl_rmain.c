@@ -6277,6 +6277,8 @@ static void R_Bloom_MakeTexture(void)
 		}
 		else
 		{
+			if(x <= 2)
+				GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
 			GL_BlendFunc(GL_SRC_COLOR, GL_ZERO); // square it
 			GL_Color(1,1,1,1); // no fix factor supported here
 		}
