@@ -887,7 +887,7 @@ float(string url, float id, string content_type, string delim, float buf, float 
 //idea: divVerent
 //darkplaces implementation: divVerent
 //constant definitions:
-const float VF_MAINVIEW         = 212;
+const float VF_MAINVIEW         = 400;
 //use setproperty(VF_MAINVIEW, 1); before calling R_RenderView for the render
 //that shall become the "main" view, which is e.g. used by PRYDON_CLIENTCURSOR 
 //this flag is set for the first scene, and not cleared by R_ClearScene
@@ -898,7 +898,7 @@ const float VF_MAINVIEW         = 212;
 //idea: divVerent
 //darkplaces implementation: divVerent
 //constant definitions:
-const float VF_MINFPS_QUALITY   = 213;
+const float VF_MINFPS_QUALITY   = 401;
 //use getproperty(VF_MINFPS_QUALITY); to do CSQC based LOD based on cl_minfps
 //1 should lead to an unmodified view
 
