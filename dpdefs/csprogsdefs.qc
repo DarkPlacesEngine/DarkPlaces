@@ -313,6 +313,14 @@ const float PFL_CROUCH		= 2;
 const float PFL_DEAD		= 4;
 const float PFL_GIBBED		= 8;
 
+// draw flags
+const float DRAWFLAG_NORMAL = 0;
+const float DRAWFLAG_ADDITIVE = 1;
+const float DRAWFLAG_MODULATE = 2;
+const float DRAWFLAG_2XMODULATE = 3;
+const float DRAWFLAG_SCREEN = 4;
+const float DRAWFLAG_MIPMAP = 0x100; // only for R_BeginPolygon
+
 /*
 ==============================================================================
 
@@ -454,7 +462,7 @@ void() renderscene = #304;
 void(vector org, float radius, vector lightcolours) adddynamiclight = #305;
 void(vector org, float radius, vector lightcolours, float style, string cubemapname, float pflags) adddynamiclight2 = #305;
 //void(string texturename, float flag[, float is2d, float lines]) R_BeginPolygon = #306;
-void(string texturename, float flag, float is2d, float lines) R_BeginPolygon = #306;
+void(string texturename, float flag, ...) R_BeginPolygon = #306;
 void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex = #307;
 void() R_EndPolygon = #308;
 vector (vector v) cs_unproject = #310;
@@ -462,7 +470,7 @@ vector (vector v) cs_project = #311;
 
 void(float width, vector pos1, vector pos2, float flag) drawline = #315;
 float(string name) iscachedpic = #316;
-string(string name, float trywad) precache_pic = #317;
+string(string name, ...) precache_pic = #317;
 string(string name) precache_cubemap = #317;
 vector(string picname) draw_getimagesize = #318;
 void(string name) freepic = #319;
@@ -591,7 +599,6 @@ float(string s) strlennocol = #476; // This is the correct name for the function
 string(string s) decolorizedstring = #477;
 string(string s) strdecolorize = #477; // This is the correct name for the function, but not removing the decolorizedstring mapping.
 string(float uselocaltime, string format, ...) strftime = #478;
-float(string s) tokenizebyseparator = #479;
 string(string s) strtolower = #480;
 string(string s) strtoupper = #481;
 string(string s) cvar_defstring = #482;
@@ -919,3 +926,294 @@ float REFDEFFLAG_JUMPING = 2;
 //  to prediction (the above two PMF_ flags are used in the player's pmove_flags)
 //- NOTE: to check for this, ALSO OR a check with DP_CSQC_V_CALCREFDEF to also support
 //  the finished extension once done
+
+// assorted builtins
+float	drawsubpic(vector position, vector size, string pic, vector srcPosition, vector srcSize, vector rgb, float alpha, float flag) = #328;
+vector	drawgetimagesize(string pic) = #318;
+#define SPA_POSITION 0
+#define SPA_S_AXIS 1
+#define SPA_T_AXIS 2
+#define SPA_R_AXIS 3
+#define SPA_TEXCOORDS0 4
+#define SPA_LIGHTMAP0_TEXCOORDS 5
+#define SPA_LIGHTMAP_COLOR 6
+float (entity e, float s)						getsurfacenumpoints = #434;
+vector (entity e, float s, float n)					getsurfacepoint = #435;
+vector (entity e, float s)						getsurfacenormal = #436;
+string (entity e, float s)						getsurfacetexture = #437;
+float (entity e, vector p)						getsurfacenearpoint = #438;
+vector (entity e, float s, vector p)					getsurfaceclippedpoint = #439;
+vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
+float(entity e, float s) getsurfacenumtriangles = #628;
+vector(entity e, float s, float n) getsurfacetriangle = #629;
+
+//DP_QC_ASINACOSATANATAN2TAN
+//idea: Urre
+//darkplaces implementation: LordHavoc
+//constant definitions:
+float DEG2RAD = 0.0174532925199432957692369076848861271344287188854172545609719144;
+float RAD2DEG = 57.2957795130823208767981548141051703324054724665643215491602438612;
+float PI      = 3.1415926535897932384626433832795028841971693993751058209749445923;
+//builtin definitions:
+float(float s) asin = #471; // returns angle in radians for a given sin() value, the result is in the range -PI*0.5 to PI*0.5
+float(float c) acos = #472; // returns angle in radians for a given cos() value, the result is in the range 0 to PI
+float(float t) atan = #473; // returns angle in radians for a given tan() value, the result is in the range -PI*0.5 to PI*0.5
+float(float c, float s) atan2 = #474; // returns angle in radians for a given cos() and sin() value pair, the result is in the range -PI to PI (this is identical to vectoyaw except it returns radians rather than degrees)
+float(float a) tan = #475; // returns tangent value (which is simply sin(a)/cos(a)) for the given angle in radians, the result is in the range -infinity to +infinity
+//description:
+//useful math functions for analyzing vectors, note that these all use angles in radians (just like the cos/sin functions) not degrees unlike makevectors/vectoyaw/vectoangles, so be sure to do the appropriate conversions (multiply by DEG2RAD or RAD2DEG as needed).
+//note: atan2 can take unnormalized vectors (just like vectoyaw), and the function was included only for completeness (more often you want vectoyaw or vectoangles), atan2(v_x,v_y) * RAD2DEG gives the same result as vectoyaw(v)
+
+//DP_QC_SPRINTF
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+string(string format, ...) sprintf = #627;
+//description:
+//you know sprintf :P
+//supported stuff:
+//  %
+//  optional: <argpos>$ for the argument to format
+//  flags: #0- +
+//  optional: <width>, *, or *<argpos>$ for the field width
+//  optional: .<precision>, .*, or .*<argpos>$ for the precision
+//  length modifiers: h for forcing a float, l for forcing an int/entity (by default, %d etc. cast a float to int)
+//  conversions:
+//    d takes a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an int
+//    i takes an int/entity if no length is specified or i is, and a float if h is specified as length, and cast it to an int
+//    ouxXc take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an unsigned int
+//    eEfFgG take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to a double
+//    s takes a string
+//    vV takes a vector, and processes the three components as if it were a gG for all three components, separated by space
+//    For conversions s and c, the flag # makes precision and width interpreted
+//      as byte count, by default it is interpreted as character count in UTF-8
+//      enabled engines. No other conversions can create wide characters, and #
+//      has another meaning in these.
+
+//DP_QC_GETTIME
+//idea: tZork
+//darkplaces implementation: tZork, divVerent
+//constant definitions:
+float GETTIME_FRAMESTART = 0; // time of start of frame
+float GETTIME_REALTIME = 1; // current time (may be OS specific)
+float GETTIME_HIRES = 2; // like REALTIME, but may reset between QC invocations and thus can be higher precision
+float GETTIME_UPTIME = 3; // time since start of the engine
+//builtin definitions:
+float(float tmr) gettime = #519;
+//description:
+//some timers to query...
+
+//DP_QC_GETTIME_CDTRACK
+//idea: divVerent
+//darkplaces implementation: divVerent
+//constant definitions:
+float GETTIME_CDTRACK = 4;
+//description:
+//returns the playing time of the current cdtrack when passed to gettime()
+//see DP_END_GETSOUNDTIME for similar functionality but for entity sound channels
+
+//DP_QC_TOKENIZEBYSEPARATOR
+//idea: Electro, SavageX, LordHavoc
+//darkplaces implementation: LordHavoc
+//builtin definitions:
+float(string s, string separator1, ...) tokenizebyseparator = #479;
+//description:
+//this function returns tokens separated by any of the supplied separator strings, example:
+//numnumbers = tokenizebyseparator("10.2.3.4", ".");
+//returns 4 and the tokens are "10" "2" "3" "4"
+//possibly useful for parsing IPv4 addresses (such as "1.2.3.4") and IPv6 addresses (such as "[1234:5678:9abc:def0:1234:5678:9abc:def0]:26000")
+
+//DP_QC_TOKENIZE_CONSOLE
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+float(string s) tokenize_console = #514;
+float(float i) argv_start_index = #515;
+float(float i) argv_end_index = #516;
+//description:
+//this function returns tokens separated just like the console does
+//also, functions are provided to get the index of the first and last character of each token in the original string
+//Passing negative values to them, or to argv, will be treated as indexes from the LAST token (like lists work in Perl). So argv(-1) will return the LAST token.
+
+//DP_SND_SOUND7_WIP1
+//DP_SND_SOUND7_WIP2
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+void(entity e, float chan, string samp, float vol, float atten, float speed, float flags) sound7 = #8;
+float SOUNDFLAG_RELIABLE = 1;
+//description:
+//plays a sound, with some more flags
+//extensions to sound():
+//- channel may be in the range from -128 to 127; channels -128 to 0 are "auto",
+//  i.e. support multiple sounds at once, but cannot be stopped/restarted
+//- a value 0 in the speed parameter means no change; otherwise, it is a
+//  percentage of playback speed ("pitch shifting"). 100 is normal pitch, 50 is
+//  half speed, 200 is double speed, etc. (DP_SND_SOUND7_WIP2)
+//- the flag SOUNDFLAG_RELIABLE can be specified, which makes the sound send
+//  to MSG_ALL (reliable) instead of MSG_BROADCAST (unreliable, default);
+//  similarily, SOUNDFLAG_RELIABLE_TO_ONE sends to MSG_ONE
+//- channel 0 is controlled by snd_channel0volume; channel 1 and -1 by
+//  snd_channel1volume, etc. (so, a channel shares the cvar with its respective
+//  auto-channel); however, the mod MUST define snd_channel8volume and upwards
+//  in default.cfg if they are to be used, as the engine does not create them
+//  to not litter the cvar list
+//- this extension applies to CSQC as well; CSQC_Event_Sound will get speed and
+//  flags as extra 7th and 8th argument
+//- WIP2 ideas: SOUNDFLAG_RELIABLE_TO_ONE, SOUNDFLAG_NOPHS, SOUNDFLAG_FORCELOOP
+//- NOTE: to check for this, ALSO OR a check with DP_SND_SOUND7 to also support
+//  the finished extension once done
+
+//DP_MOVETYPEFLYWORLDONLY
+//idea: Samual
+//darkplaces implementation: Samual
+//movetype definitions:
+float MOVETYPE_FLY_WORLDONLY = 33;
+//description:
+//like MOVETYPE_FLY, but does all traces with MOVE_WORLDONLY, and is ignored by MOVETYPE_PUSH. Should only be combined with SOLID_NOT and SOLID_TRIGGER.
+
+//DP_QC_TRACE_MOVETYPE_WORLDONLY
+//idea: LordHavoc
+//darkplaces implementation: LordHavoc
+//constant definitions:
+float MOVE_WORLDONLY = 3;
+//description:
+//allows traces to hit only world (ignoring all entities, unlike MOVE_NOMONSTERS which hits all bmodels), use as the nomonsters parameter to trace functions
+
+//DP_SND_GETSOUNDTIME
+//idea: VorteX
+//darkplaces implementation: VorteX
+//constant definitions:
+float(entity e, float channel) getsoundtime = #533; // get currently sound playing position on entity channel, -1 if not playing or error
+float(string sample) soundlength = #534; // returns length of sound sample in seconds, -1 on error (sound not precached, sound system not initialized etc.)
+//description: provides opportunity to query length of sound samples and realtime tracking of sound playing on entities (similar to DP_GETTIME_CDTRACK)
+//note: beware dedicated server not running sound engine at all, so in dedicated mode this builtins will not work in server progs
+//note also: menu progs not supporting getsoundtime() (will give a warning) since it has no sound playing on entities
+//examples of use:
+//  - QC-driven looped sounds
+//  - QC events when sound playing is finished
+//  - toggleable ambientsounds
+//  - subtitles
+
+//DP_QC_NUM_FOR_EDICT
+//idea: Blub\0
+//darkplaces implementation: Blub\0
+//Function to get the number of an entity - a clean way.
+float(entity num) num_for_edict = #512;
+
+//DP_TRACE_HITCONTENTSMASK_SURFACEINFO
+//idea: LordHavoc
+//darkplaces implementation: LordHavoc
+//globals:
+.float dphitcontentsmask; // if non-zero on the entity passed to traceline/tracebox/tracetoss this will override the normal collidable contents rules and instead hit these contents values (for example AI can use tracelines that hit DONOTENTER if it wants to, by simply changing this field on the entity passed to traceline), this affects normal movement as well as trace calls
+float trace_dpstartcontents; // DPCONTENTS_ value at start position of trace
+float trace_dphitcontents; // DPCONTENTS_ value of impacted surface (not contents at impact point, just contents of the surface that was hit)
+float trace_dphitq3surfaceflags; // Q3SURFACEFLAG_ value of impacted surface
+string trace_dphittexturename; // texture name of impacted surface
+//constants:
+float DPCONTENTS_SOLID = 1; // hit a bmodel, not a bounding box
+float DPCONTENTS_WATER = 2;
+float DPCONTENTS_SLIME = 4;
+float DPCONTENTS_LAVA = 8;
+float DPCONTENTS_SKY = 16;
+float DPCONTENTS_BODY = 32; // hit a bounding box, not a bmodel
+float DPCONTENTS_CORPSE = 64; // hit a SOLID_CORPSE entity
+float DPCONTENTS_NODROP = 128; // an area where backpacks should not spawn
+float DPCONTENTS_PLAYERCLIP = 256; // blocks player movement
+float DPCONTENTS_MONSTERCLIP = 512; // blocks monster movement
+float DPCONTENTS_DONOTENTER = 1024; // AI hint brush
+float DPCONTENTS_LIQUIDSMASK = 14; // WATER | SLIME | LAVA
+float DPCONTENTS_BOTCLIP = 2048; // AI hint brush
+float DPCONTENTS_OPAQUE = 4096; // only fully opaque brushes get this (may be useful for line of sight checks)
+float Q3SURFACEFLAG_NODAMAGE = 1;
+float Q3SURFACEFLAG_SLICK = 2; // low friction surface
+float Q3SURFACEFLAG_SKY = 4; // sky surface (also has NOIMPACT and NOMARKS set)
+float Q3SURFACEFLAG_LADDER = 8; // climbable surface
+float Q3SURFACEFLAG_NOIMPACT = 16; // projectiles should remove themselves on impact (this is set on sky)
+float Q3SURFACEFLAG_NOMARKS = 32; // projectiles should not leave marks, such as decals (this is set on sky)
+float Q3SURFACEFLAG_FLESH = 64; // projectiles should do a fleshy effect (blood?) on impact
+float Q3SURFACEFLAG_NODRAW = 128; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_HINT = 256; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_SKIP = 512; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_NOLIGHTMAP = 1024; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_POINTLIGHT = 2048; // compiler hint (not important to qc)
+float Q3SURFACEFLAG_METALSTEPS = 4096; // walking on this surface should make metal step sounds
+float Q3SURFACEFLAG_NOSTEPS = 8192; // walking on this surface should not make footstep sounds
+float Q3SURFACEFLAG_NONSOLID = 16384; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_LIGHTFILTER = 32768; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_ALPHASHADOW = 65536; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_NODLIGHT = 131072; // compiler hint (not important to qc)
+//float Q3SURFACEFLAG_DUST = 262144; // translucent 'light beam' effect (not important to qc)
+//description:
+//adds additional information after a traceline/tracebox/tracetoss call.
+//also (very important) sets trace_* globals before calling .touch functions,
+//this allows them to inspect the nature of the collision (for example
+//determining if a projectile hit sky), clears trace_* variables for the other
+//object in a touch event (that is to say, a projectile moving will see the
+//trace results in its .touch function, but the player it hit will see very
+//little information in the trace_ variables as it was not moving at the time)
+
+//DP_QC_CVAR_TYPE
+//idea: divVerent
+//DarkPlaces implementation: divVerent
+//builtin definitions:
+float(string name) cvar_type = #495;
+float CVAR_TYPEFLAG_EXISTS = 1;
+float CVAR_TYPEFLAG_SAVED = 2;
+float CVAR_TYPEFLAG_PRIVATE = 4;
+float CVAR_TYPEFLAG_ENGINE = 8;
+float CVAR_TYPEFLAG_HASDESCRIPTION = 16;
+float CVAR_TYPEFLAG_READONLY = 32;
+
+//DP_QC_CRC16
+//idea: divVerent
+//darkplaces implementation: divVerent
+//Some hash function to build hash tables with. This has to be be the CRC-16-CCITT that is also required for the QuakeWorld download protocol.
+//When caseinsensitive is set, the CRC is calculated of the lower cased string.
+float(float caseinsensitive, string s, ...) crc16 = #494;
+
+//DP_QC_URI_ESCAPE
+//idea: divVerent
+//darkplaces implementation: divVerent
+//URI::Escape's functionality
+string(string in) uri_escape = #510;
+string(string in) uri_unescape = #511;
+
+//DP_QC_DIGEST
+//idea: motorsep, Spike
+//DarkPlaces implementation: divVerent
+//builtin definitions:
+string(string digest, string data, ...) digest_hex = #639;
+//description:
+//returns a given hex digest of given data
+//the returned digest is always encoded in hexadecimal
+//only the "MD4" digest is always supported!
+//if the given digest is not supported, string_null is returned
+//the digest string is matched case sensitively, use "MD4", not "md4"!
+
+//DP_QC_DIGEST_SHA256
+//idea: motorsep, Spike
+//DarkPlaces implementation: divVerent
+//description:
+//"SHA256" is also an allowed digest type
+
+//DP_QC_LOG
+//darkplaces implementation: divVerent
+//builtin definitions:
+float log(float f) = #532;
+//description:
+//logarithm
+
+// assorted builtins
+const float		STAT_MOVEVARS_TICRATE           = 240;
+const float		STAT_MOVEVARS_TIMESCALE         = 241;
+const float		STAT_FRAGLIMIT					= 235;
+const float		STAT_TIMELIMIT					= 236;
+const float     STAT_MOVEVARS_GRAVITY           = 242;
+string(void)						ReadPicture = #501;
+float PARTICLES_USEALPHA = 1;
+float particles_alphamin, particles_alphamax;
+float PARTICLES_USECOLOR = 2;
+vector particles_colormin, particles_colormax;
+void(float effectindex, entity own, vector org_from, vector org_to, vector dir_from, vector dir_to, float countmultiplier, float flags) boxparticles = #502;
+float trace_networkentity;
