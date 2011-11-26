@@ -22,154 +22,12 @@ void() m_shutdown;
 /////////////////////////////////////////////////////////
 // sys constants
 ///////////////////////////
-// key constants
-
-//
-// these are the key numbers that should be passed to Key_Event
-//
-float K_TAB			=	9;
-float K_ENTER		=	13;
-float K_ESCAPE		=	27;
-float K_SPACE		=	32;
-
-// normal keys should be passed as lowercased ascii
-
-float K_BACKSPACE	=	127;
-float K_UPARROW		=	128;
-float K_DOWNARROW	=	129;
-float K_LEFTARROW	=	130;
-float K_RIGHTARROW	=	131;
-
-float K_ALT		=	132;
-float K_CTRL	=	133;
-float K_SHIFT	=	134;
-float K_F1		=	135;
-float K_F2		=	136;
-float K_F3		=	137;
-float K_F4		=	138;
-float K_F5		=	139;
-float K_F6		=	140;
-float K_F7		=	141;
-float K_F8		=	142;
-float K_F9		=	143;
-float K_F10		=	144;
-float K_F11		=	145;
-float K_F12		=	146;
-float K_INS		=	147;
-float K_DEL		=	148;
-float K_PGDN	=	149;
-float K_PGUP	=	150;
-float K_HOME	=	151;
-float K_END		=	152;
-
-float K_PAUSE	=	153;
-
-float K_NUMLOCK		= 154;
-float K_CAPSLOCK	= 155;
-float K_SCROLLLOCK	= 156;
-
-float K_KP_0	=	157;
-float K_KP_INS	=	K_KP_0;
-float K_KP_1	=	158;
-float K_KP_END	=	K_KP_1;
-float K_KP_2	=	159;
-float K_KP_DOWNARROW = K_KP_2;
-float K_KP_3	=	160;
-float K_KP_PGDN = K_KP_3;
-float K_KP_4	=	161
-float K_KP_LEFTARROW = K_KP_4;
-float K_KP_5	=	162;
-float K_KP_6	=	163;
-float K_KP_RIGHTARROW = K_KP_6;
-float K_KP_7	=	164;
-float K_KP_HOME = K_KP_7;
-float K_KP_8	=	165;
-float K_KP_UPARROW = K_KP_8;
-float K_KP_9	= 166;
-float K_KP_PGUP = K_KP_9;
-float K_KP_PERIOD = 167;
-float K_KP_DEL = K_KP_PERIOD;
-float K_KP_DIVIDE = 168;
-float K_KP_SLASH = K_KP_DIVIDE;
-float K_KP_MULTIPLY = 169;
-float K_KP_MINUS	= 170;
-float K_KP_PLUS		= 171;
-float K_KP_ENTER	= 172;
-float K_KP_EQUALS	= 173;
-
-// mouse buttons generate virtual keys
-
-float K_MOUSE1	=	512;
-float K_MOUSE2	=	513;
-float K_MOUSE3	=	514;
-float K_MOUSE4	=	515;
-float K_MWHEELUP = K_MOUSE4;
-float K_MOUSE5	=	516;
-float K_MWHEELDOWN = K_MOUSE5;
-float K_MOUSE6	=	517;
-float K_MOUSE7	=	518;
-float K_MOUSE8	=	519;
-float K_MOUSE9	=	520;
-float K_MOUSE10	=	521;
-float K_MOUSE11	=	522;
-float K_MOUSE12	=	523;
-float K_MOUSE13	=	524;
-float K_MOUSE14	=	525;
-float K_MOUSE15	=	526;
-float K_MOUSE16	=	527;
-
-//
-// joystick buttons
-//
-float K_JOY1 = 768;
-float K_JOY2 = 769;
-float K_JOY3 = 770;
-float K_JOY4 = 771;
-
-//
-//
-// aux keys are for multi-buttoned joysticks to generate so they can use
-// the normal binding process
-//
-float K_AUX1	=	772;
-float K_AUX2	=	773;
-float K_AUX3	=	774;
-float K_AUX4	=	775;
-float K_AUX5	=	776;
-float K_AUX6	=	777;
-float K_AUX7	=	778;
-float K_AUX8	=	779;
-float K_AUX9	=	780;
-float K_AUX10	=	781;
-float K_AUX11	=	782;
-float K_AUX12	=	783;
-float K_AUX13	=	784;
-float K_AUX14	=	785;
-float K_AUX15	=	786;
-float K_AUX16	=	787;
-float K_AUX17	=	788;
-float K_AUX18	=	789;
-float K_AUX19	=	790;
-float K_AUX20	=	791;
-float K_AUX21	=	792;
-float K_AUX22	=	793;
-float K_AUX23	=	794;
-float K_AUX24	=	795;
-float K_AUX25	=	796;
-float K_AUX26	=	797;
-float K_AUX27	=	798;
-float K_AUX28	=	799;
-float K_AUX29	=	800;
-float K_AUX30	=	801;
-float K_AUX31	=	802;
-float K_AUX32	=	803;
-
-///////////////////////////
 // key dest constants
 
+float KEY_UNKNOWN	= 	-1;
 float KEY_GAME 		=	0;
 float KEY_MENU		=	2;
-float KEY_UNKNOWN	= 	3;
+float KEY_MENU_GRABBED	= 	3;
 
 ///////////////////////////
 // file constants
@@ -241,6 +99,42 @@ float ERR_BADSCALE				= -3;
 float ERR_BADSIZE				= ERR_BADSCALE;
 float ERR_NOTCACHED				= -4;
 
+// server list stuff
+float SLIST_HOSTCACHEVIEWCOUNT  = 0;
+float SLIST_HOSTCACHETOTALCOUNT = 1;
+float SLIST_MASTERQUERYCOUNT 	= 2;
+float SLIST_MASTERREPLYCOUNT 	= 3;
+float SLIST_SERVERQUERYCOUNT 	= 4;
+float SLIST_SERVERREPLYCOUNT 	= 5;
+float SLIST_SORTFIELD		= 6;
+float SLIST_SORTDESCENDING	= 7;
+float SLIST_LEGACY_LINE1 	= 1024;
+float SLIST_LEGACY_LINE2 	= 1025;
+float SLIST_TEST_CONTAINS	= 0;
+float SLIST_TEST_NOTCONTAIN	= 1;
+float SLIST_TEST_LESSEQUAL	= 2;
+float SLIST_TEST_LESS		= 3;
+float SLIST_TEST_EQUAL		= 4;
+float SLIST_TEST_GREATER	= 5;
+float SLIST_TEST_GREATEREQUAL	= 6;
+float SLIST_TEST_NOTEQUAL	= 7;
+float SLIST_TEST_STARTSWITH	= 8;
+float SLIST_TEST_NOTSTARTSWITH	= 9;
+float SLIST_MASK_AND = 0;
+float SLIST_MASK_OR  = 512;
+
+// font stuff
+float FONT_DEFAULT     = 0;
+float FONT_CONSOLE     = 1;
+float FONT_SBAR        = 2;
+float FONT_NOTIFY      = 3;
+float FONT_CHAT        = 4;
+float FONT_CENTERPRINT = 5;
+float FONT_INFOBAR     = 6;
+float FONT_MENU        = 7;
+float FONT_USER        = 8; // add to this the index, like FONT_USER+3 = user3. At least 8 of them are supported.
+float drawfont;
+
 /* not supported at the moment
 ///////////////////////////
 // os constants
@@ -286,7 +180,7 @@ vector 	vectoangles(vector v)		= #11;
 
 float	random(void)  = #12;
 
-void	cmd(string command) = #13;
+void	cmd(string command, ...) = #13;
 
 // cvar cmds
 
@@ -489,3 +383,142 @@ vector gecko_get_texture_extent( string name ) = #493;
 //description:
 //provides an interface to the offscreengecko library and allows for internet browsing in games
 
+//FTE_STRINGS
+//idea: many
+//darkplaces implementation: KrimZon
+//description:
+//various string manipulation functions
+float(string str, string sub, float startpos) strstrofs = #221;
+float(string str, float ofs) str2chr = #222;
+string(float c, ...) chr2str = #223;
+string(float ccase, float calpha, float cnum, string s, ...) strconv = #224;
+string(float chars, string s, ...) strpad = #225;
+string(string info, string key, string value, ...) infoadd = #226;
+string(string info, string key) infoget = #227;
+float(string s1, string s2, float len) strncmp = #228;
+float(string s1, string s2) strcasecmp = #229;
+float(string s1, string s2, float len) strncasecmp = #230;
+
+//DP_QC_CRC16
+//idea: div0
+//darkplaces implementation: div0
+//Some hash function to build hash tables with. This has to be be the CRC-16-CCITT that is also required for the QuakeWorld download protocol.
+//When caseinsensitive is set, the CRC is calculated of the lower cased string.
+float(float caseinsensitive, string s, ...) crc16 = #494;
+
+//DP_QC_CVAR_TYPE
+float(string name) cvar_type = #495;
+float CVAR_TYPEFLAG_EXISTS = 1;
+float CVAR_TYPEFLAG_SAVED = 2;
+float CVAR_TYPEFLAG_PRIVATE = 4;
+float CVAR_TYPEFLAG_ENGINE = 8;
+float CVAR_TYPEFLAG_HASDESCRIPTION = 16;
+float CVAR_TYPEFLAG_READONLY = 32;
+
+//DP_QC_STRINGBUFFERS
+//idea: ??
+//darkplaces implementation: LordHavoc
+//functions to manage string buffer objects - that is, arbitrary length string arrays that are handled by the engine
+float() buf_create = #440;
+void(float bufhandle) buf_del = #441;
+float(float bufhandle) buf_getsize = #442;
+void(float bufhandle_from, float bufhandle_to) buf_copy = #443;
+void(float bufhandle, float sortpower, float backward) buf_sort = #444;
+string(float bufhandle, string glue) buf_implode = #445;
+string(float bufhandle, float string_index) bufstr_get = #446;
+void(float bufhandle, float string_index, string str) bufstr_set = #447;
+float(float bufhandle, string str, float order) bufstr_add = #448;
+void(float bufhandle, float string_index) bufstr_free = #449;
+void(float bufhandle, string pattern, string antipattern) buf_cvarlist = #517;
+
+//DP_QC_CVAR_DESCRIPTION
+//idea: divVerent
+//DarkPlaces implementation: divVerent
+//builtin definitions:
+string(string name) cvar_description = #518;
+//description:
+//returns the description of a cvar
+
+//DP_QC_DIGEST
+//idea: motorsep, Spike
+//DarkPlaces implementation: divVerent
+//builtin definitions:
+string(string digest, string data, ...) digest_hex = #639;
+//description:
+//returns a given hex digest of given data
+//the returned digest is always encoded in hexadecimal
+//only the "MD4" digest is always supported!
+//if the given digest is not supported, string_null is returned
+//the digest string is matched case sensitively, use "MD4", not "md4"!
+
+//DP_QC_URI_ESCAPE
+//idea: div0
+//darkplaces implementation: div0
+//URI::Escape's functionality
+string(string in) uri_escape = #510;
+string(string in) uri_unescape = #511;
+
+//DP_QC_URI_GET
+//idea: divVerent
+//darkplaces implementation: divVerent
+//loads text from an URL into a string
+//returns 1 on success of initiation, 0 if there are too many concurrent
+//connections already or if the URL is invalid
+//the following callback will receive the data and MUST exist!
+//  void(float id, float status, string data) URI_Get_Callback;
+//status is either
+//  negative for an internal error,
+//  0 for success, or
+//  the HTTP response code on server error (e.g. 404)
+//if 1 is returned by uri_get, the callback will be called in the future
+float(string url, float id) uri_get = #513;
+//DP_QC_URI_POST
+//idea: divVerent
+//darkplaces implementation: divVerent
+//loads text from an URL into a string after POSTing via HTTP
+//works like uri_get, but uri_post sends data with Content-Type: content_type to the server
+//and uri_post sends the string buffer buf, joined using the delimiter delim
+float(string url, float id, string content_type, string data) uri_post = #513;
+float(string url, float id, string content_type, string delim, float buf) uri_postbuf = #513;
+
+// assorted undocumented extensions
+string(string, float) netaddress_resolve = #625;
+string(string search, string replace, string subject) strreplace = #484;
+string(float uselocaltime, string format, ...) strftime = #478;
+float(string s) tokenize_console = #514;
+float(float i) argv_start_index = #515;
+float(float i) argv_end_index = #516;
+string(float, float) getgamedirinfo = #626;
+#define GETGAMEDIRINFO_NAME 0
+#define GETGAMEDIRINFO_DESCRIPTION 1
+float log(float f) = #532;
+string(string format, ...) sprintf = #627;
+string(string s) strdecolorize = #477;
+entity	findflags(entity start, .float field, float match) = #87;
+entity	findchainflags(.float field, float match) = #88;
+float(string s, string separator1, ...) tokenizebyseparator = #479;
+float 	etof(entity ent) = #79;
+entity 	ftoe(float num)	 = #80;
+float   validstring(string str) = #81;
+float 	altstr_count(string str) = #82;
+string  altstr_prepare(string str) = #83;
+string  altstr_get(string str, float num) = #84;
+string  altstr_set(string str, float num, string set) = #85;
+string 	altstr_ins(string str, float num, string set) = #86;
+float	isdemo() = #349;
+float	drawsubpic(vector position, vector size, string pic, vector srcPosition, vector srcSize, vector rgb, float alpha, float flag) = #469;
+//vector	getresolution(float number, ...) = #608; // optional argument "isfullscreen"
+void 	parseentitydata(entity ent, string data) = #613;
+void 	resethostcachemasks(void) = #615;
+void 	sethostcachemaskstring(float mask, float fld, string str, float op) = #616;
+void	sethostcachemasknumber(float mask, float fld, float num, float op) = #617;
+void 	resorthostcache(void) = #618;
+void	sethostcachesort(float fld, float descending) = #619;
+void	refreshhostcache(void) = #620;
+float	gethostcachenumber(float fld, float hostnr) = #621;
+float	gethostcacheindexforkey(string key) = #622;
+void	addwantedhostcachekey(string key) = #623;
+string	getextresponse(void) = #624;
+const string cvar_string(string name) = #71;
+const string cvar_defstring(string name) = #89;
+float	stringwidth(string text, float handleColors, vector size) = #468;
