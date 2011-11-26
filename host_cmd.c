@@ -1716,7 +1716,7 @@ static void Host_Pause_f (void)
 	{
 		if (cmd_source == src_client)
 		{
-			if(cls.state == ca_dedicated || host_client == &svs.clients[0]) // non-admin
+			if(cls.state == ca_dedicated || host_client != &svs.clients[0]) // non-admin
 			{
 				print("Pause not allowed.\n");
 				return;
