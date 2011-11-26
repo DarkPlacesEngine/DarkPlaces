@@ -36,9 +36,13 @@
 #define VF_CL_VIEWANGLES_Y	35	//(float)
 #define VF_CL_VIEWANGLES_Z	36	//(float)
 
+// FTEQW's extension range
 #define VF_PERSPECTIVE		200 //(float)
+
+// what is this doing here? This is a DP extension introduced by Black, should be in 4xx range
 #define VF_CLEARSCREEN		201 //(float)
 
+// what is this doing here? This is a DP extension introduced by VorteX, should be in 4xx range
 #define VF_FOG_DENSITY		202 //(float)
 #define VF_FOG_COLOR		203 //(vector)
 #define VF_FOG_COLOR_R		204 //(float)
@@ -49,8 +53,10 @@
 #define VF_FOG_END   		209 //(float)
 #define VF_FOG_HEIGHT		210 //(float)
 #define VF_FOG_FADEDEPTH	211 //(float)
-#define VF_MAINVIEW		212 //(float)
-#define VF_MINFPS_QUALITY	213 //(float)
+
+// DP's extension range
+#define VF_MAINVIEW		400 //(float)
+#define VF_MINFPS_QUALITY	401 //(float)
 
 #define RF_VIEWMODEL		1	// The entity is never drawn in mirrors. In engines with realtime lighting, it casts no shadows.
 #define RF_EXTERNALMODEL	2	// The entity is appears in mirrors but not in the normal view. It does still cast shadows in engines with realtime lighting.
