@@ -7294,13 +7294,28 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			Mod_BuildVBOs();
 	}
 
-	if (mod_q3bsp_sRGBlightmaps.integer && vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+	if (mod_q3bsp_sRGBlightmaps.integer)
 	{
-		// actually we do in sRGB fallback with sRGB lightmaps: Image_sRGBFloatFromLinear_Lightmap(Image_LinearFloatFromsRGBFloat(x))
-		// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
-		// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
-		// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
-		loadmodel->lightmapscale *= 0.679942f; // fixes neutral level
+		if (vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
+		{
+			// actually we do in sRGB fallback with sRGB lightmaps: Image_sRGBFloatFromLinear_Lightmap(Image_LinearFloatFromsRGBFloat(x))
+			// neutral point is at Image_sRGBFloatFromLinearFloat(0.5)
+			// so we need to map Image_sRGBFloatFromLinearFloat(0.5) to 0.5
+			// factor is 0.5 / Image_sRGBFloatFromLinearFloat(0.5)
+			//loadmodel->lightmapscale *= 0.679942f; // fixes neutral level
+		}
+		else // if this is NOT set, regular rendering looks right by this requirement anyway
+		{
+			/*
+			// we want color 1 to do the same as without sRGB
+			// so, we want to map 1 to Image_LinearFloatFromsRGBFloat(2) instead of to 2
+			loadmodel->lightmapscale *= 2.476923f; // fixes max level
+			*/
+
+			// neutral level 0.5 gets uploaded as sRGB and becomes Image_LinearFloatFromsRGBFloat(0.5)
+			// we need to undo that
+			loadmodel->lightmapscale *= 2.336f; // fixes neutral level
+		}
 	}
 
 	Con_DPrintf("Stats for q3bsp model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
