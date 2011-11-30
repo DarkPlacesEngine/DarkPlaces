@@ -290,6 +290,8 @@ typedef enum gamemode_e
 	GAME_PROPHECY,
 	GAME_BLOODOMNICIDE,
 	GAME_STEELSTORM, // added by motorsep
+	GAME_STEELSTORM2, // added by motorsep
+	GAME_TOMESOFMEPHISTOPHELES, // added by motorsep
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
 	GAME_COUNT
