@@ -196,6 +196,7 @@ int r_shadow_shadowmapdepthbits;
 int r_shadow_shadowmapmaxsize;
 qboolean r_shadow_shadowmapvsdct;
 qboolean r_shadow_shadowmapsampler;
+qboolean r_shadow_shadowmapshadowsampler;
 int r_shadow_shadowmappcf;
 int r_shadow_shadowmapborder;
 matrix4x4_t r_shadow_shadowmapmatrix;
@@ -303,6 +304,7 @@ cvar_t r_shadow_realtime_world_compileportalculling = {0, "r_shadow_realtime_wor
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
 cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "1", "enables use of shadowmapping (depth texture sampling) instead of stencil shadow volumes, requires gl_fbo 1"};
 cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
+cvar_t r_shadow_shadowmapping_useshadowsampler = {CVAR_SAVE, "r_shadow_shadowmapping_useshadowsampler", "1", "whether to use sampler2DShadow if available"};
 cvar_t r_shadow_shadowmapping_depthbits = {CVAR_SAVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
 cvar_t r_shadow_shadowmapping_vsdct = {CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
 cvar_t r_shadow_shadowmapping_minsize = {CVAR_SAVE, "r_shadow_shadowmapping_minsize", "32", "shadowmap size limit"};
@@ -427,6 +429,7 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapmaxsize = bound(1, r_shadow_shadowmapping_maxsize.integer, (int)vid.maxtexturesize_2d / 4);
 	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
+	r_shadow_shadowmapshadowsampler = r_shadow_shadowmapping_useshadowsampler.integer != 0;
 	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
 	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
 	r_shadow_shadowmaplod = -1;
@@ -447,23 +450,23 @@ static void R_Shadow_SetShadowMode(void)
 					r_shadow_shadowmappcf = 1;
 				else if(strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) 
 				{
-					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 					r_shadow_shadowmappcf = 1;
 				}
 				else if(strstr(gl_vendor, "ATI")) 
 					r_shadow_shadowmappcf = 1;
 				else 
-					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 			}
 			else 
 			{
 				switch (r_shadow_shadowmapfilterquality)
 				{
 				case 1:
-					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 					break;
 				case 2:
-					r_shadow_shadowmapsampler = vid.support.arb_shadow;
+					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 					r_shadow_shadowmappcf = 1;
 					break;
 				case 3:
@@ -725,6 +728,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_vsdct);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_filterquality);
+	Cvar_RegisterVariable(&r_shadow_shadowmapping_useshadowsampler);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_depthbits);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_precision);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_maxsize);
@@ -4491,6 +4495,7 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20) || 
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
+		r_shadow_shadowmapshadowsampler != (vid.support.arb_shadow && r_shadow_shadowmapping_useshadowsampler.integer) || 
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
 		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
 		R_Shadow_FreeShadowMaps();
