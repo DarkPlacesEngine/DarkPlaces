@@ -867,26 +867,26 @@ static dllfunction_t vbofuncs[] =
 
 static dllfunction_t arbfbofuncs[] =
 {
-	{"glIsRenderbufferARB"                      , (void **) &qglIsRenderbuffer},
-	{"glBindRenderbufferARB"                    , (void **) &qglBindRenderbuffer},
-	{"glDeleteRenderbuffersARB"                 , (void **) &qglDeleteRenderbuffers},
-	{"glGenRenderbuffersARB"                    , (void **) &qglGenRenderbuffers},
-	{"glRenderbufferStorageARB"                 , (void **) &qglRenderbufferStorage},
-	{"glRenderbufferStorageMultisampleARB"      , (void **) &qglRenderbufferStorageMultisample}, // not in GL_EXT_framebuffer_object
-	{"glGetRenderbufferParameterivARB"          , (void **) &qglGetRenderbufferParameteriv},
-	{"glIsFramebufferARB"                       , (void **) &qglIsFramebuffer},
-	{"glBindFramebufferARB"                     , (void **) &qglBindFramebuffer},
-	{"glDeleteFramebuffersARB"                  , (void **) &qglDeleteFramebuffers},
-	{"glGenFramebuffersARB"                     , (void **) &qglGenFramebuffers},
-	{"glCheckFramebufferStatusARB"              , (void **) &qglCheckFramebufferStatus},
-	{"glFramebufferTexture1DARB"                , (void **) &qglFramebufferTexture1D},
-	{"glFramebufferTexture2DARB"                , (void **) &qglFramebufferTexture2D},
-	{"glFramebufferTexture3DARB"                , (void **) &qglFramebufferTexture3D},
-	{"glFramebufferTextureLayerARB"             , (void **) &qglFramebufferTextureLayer}, // not in GL_EXT_framebuffer_object
-	{"glFramebufferRenderbufferARB"             , (void **) &qglFramebufferRenderbuffer},
-	{"glGetFramebufferAttachmentParameterivARB" , (void **) &qglGetFramebufferAttachmentParameteriv},
-	{"glBlitFramebufferARB"                     , (void **) &qglBlitFramebuffer}, // not in GL_EXT_framebuffer_object
-	{"glGenerateMipmapARB"                      , (void **) &qglGenerateMipmap},
+	{"glIsRenderbuffer"                      , (void **) &qglIsRenderbuffer},
+	{"glBindRenderbuffer"                    , (void **) &qglBindRenderbuffer},
+	{"glDeleteRenderbuffers"                 , (void **) &qglDeleteRenderbuffers},
+	{"glGenRenderbuffers"                    , (void **) &qglGenRenderbuffers},
+	{"glRenderbufferStorage"                 , (void **) &qglRenderbufferStorage},
+	{"glRenderbufferStorageMultisample"      , (void **) &qglRenderbufferStorageMultisample}, // not in GL_EXT_framebuffer_object
+	{"glGetRenderbufferParameteriv"          , (void **) &qglGetRenderbufferParameteriv},
+	{"glIsFramebuffer"                       , (void **) &qglIsFramebuffer},
+	{"glBindFramebuffer"                     , (void **) &qglBindFramebuffer},
+	{"glDeleteFramebuffers"                  , (void **) &qglDeleteFramebuffers},
+	{"glGenFramebuffers"                     , (void **) &qglGenFramebuffers},
+	{"glCheckFramebufferStatus"              , (void **) &qglCheckFramebufferStatus},
+	{"glFramebufferTexture1D"                , (void **) &qglFramebufferTexture1D},
+	{"glFramebufferTexture2D"                , (void **) &qglFramebufferTexture2D},
+	{"glFramebufferTexture3D"                , (void **) &qglFramebufferTexture3D},
+	{"glFramebufferTextureLayer"             , (void **) &qglFramebufferTextureLayer}, // not in GL_EXT_framebuffer_object
+	{"glFramebufferRenderbuffer"             , (void **) &qglFramebufferRenderbuffer},
+	{"glGetFramebufferAttachmentParameteriv" , (void **) &qglGetFramebufferAttachmentParameteriv},
+	{"glBlitFramebuffer"                     , (void **) &qglBlitFramebuffer}, // not in GL_EXT_framebuffer_object
+	{"glGenerateMipmap"                      , (void **) &qglGenerateMipmap},
 	{NULL, NULL}
 };
 
