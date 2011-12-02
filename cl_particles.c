@@ -112,9 +112,9 @@ typedef struct particleeffectinfo_s
 	float lightradiusfade;
 	float lighttime;
 	float lightcolor[3];
-	float lightcorona[2];
 	qboolean lightshadow;
 	int lightcubemapnum;
+	float lightcorona[2];
 	unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
 	int staintex[2];
 	float stainalpha[2];
