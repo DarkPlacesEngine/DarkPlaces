@@ -112,6 +112,7 @@ typedef struct particleeffectinfo_s
 	float lightradiusfade;
 	float lighttime;
 	float lightcolor[3];
+	float lightcorona[2];
 	qboolean lightshadow;
 	int lightcubemapnum;
 	unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
@@ -263,6 +264,7 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	{1.0f, 1.0f, 1.0f}, //float lightcolor[3];
 	true, //qboolean lightshadow;
 	0, //int lightcubemapnum;
+	{1.0f, 0.25f}, //float lightcorona[2];
 	{(unsigned int)-1, (unsigned int)-1}, //unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
 	{-1, -1}, //int staintex[2];
 	{1.0f, 1.0f}, //float stainalpha[2];
@@ -438,6 +440,7 @@ static void CL_Particles_ParseEffectInfo(const char *textstart, const char *text
 		else if (!strcmp(argv[0], "lightcolor")) {readfloats(info->lightcolor, 3);}
 		else if (!strcmp(argv[0], "lightshadow")) {readbool(info->lightshadow);}
 		else if (!strcmp(argv[0], "lightcubemapnum")) {readint(info->lightcubemapnum);}
+		else if (!strcmp(argv[0], "lightcorona")) {readints(info->lightcorona, 2);}
 		else if (!strcmp(argv[0], "underwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_UNDERWATER;}
 		else if (!strcmp(argv[0], "notunderwater")) {checkparms(1);info->flags |= PARTICLEEFFECT_NOTUNDERWATER;}
 		else if (!strcmp(argv[0], "trailspacing")) {readfloat(info->trailspacing);if (info->trailspacing > 0) info->countmultiplier = 1.0f / info->trailspacing;}
@@ -1487,7 +1490,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					{
 						// light flash (explosion, etc)
 						// called when effect starts
-						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0]*avgtint[0]*avgtint[3], info->lightcolor[1]*avgtint[1]*avgtint[3], info->lightcolor[2]*avgtint[2]*avgtint[3], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0]*avgtint[0]*avgtint[3], info->lightcolor[1]*avgtint[1]*avgtint[3], info->lightcolor[2]*avgtint[2]*avgtint[3], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 					}
 					else if (r_refdef.scene.numlights < MAX_DLIGHTS)
 					{
@@ -1497,7 +1500,7 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 						rvec[0] = info->lightcolor[0]*avgtint[0]*avgtint[3];
 						rvec[1] = info->lightcolor[1]*avgtint[1]*avgtint[3];
 						rvec[2] = info->lightcolor[2]*avgtint[2]*avgtint[3];
-						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, info->lightcubemapnum > 0 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, 1, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, info->lightcubemapnum > 0 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 						r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 					}
 				}
