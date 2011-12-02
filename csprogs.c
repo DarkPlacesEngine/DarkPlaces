@@ -373,8 +373,27 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		if(renderflags & RF_ADDITIVE) entrender->flags |= RENDER_ADDITIVE;
 	}
 
-	if(edictnum == CL_VM_GetViewEntity())
-		entrender->flags |= RENDER_EXTERIORMODEL;
+	// walk attachments to find RENDER_EXTERIORMODEL status
+	{
+		prvm_edict_t *ent = ed;
+		prvm_edict_t *v = PRVM_EDICT_NUM(CL_VM_GetViewEntity());
+		int attachloop = 0;
+		for(;;)
+		{
+			if(attachloop >= 256)
+				break;
+			if(ent == v)
+			{
+				entrender->flags |= RENDER_EXTERIORMODEL;
+				break;
+			}
+			if (PRVM_clientedictedict(ent, tag_entity))
+				ent = PRVM_EDICT_NUM(PRVM_clientedictedict(ent, tag_entity));
+			else
+				break;
+			attachloop++;
+		}
+	}
 
 	c = (int)PRVM_clientedictfloat(ed, colormap);
 	if (c <= 0)
