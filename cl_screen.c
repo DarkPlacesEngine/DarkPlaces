@@ -2205,19 +2205,83 @@ extern cvar_t cl_minfps;
 extern cvar_t cl_minfps_fade;
 extern cvar_t cl_minfps_qualitymax;
 extern cvar_t cl_minfps_qualitymin;
-extern cvar_t cl_minfps_qualitypower;
-extern cvar_t cl_minfps_qualityscale;
-extern cvar_t r_viewscale_fpsscaling;
-static double cl_updatescreen_rendertime = 0;
+extern cvar_t cl_minfps_qualitymultiply;
+extern cvar_t cl_minfps_qualityhysteresis;
+extern cvar_t cl_minfps_qualitystepmax;
 static double cl_updatescreen_quality = 1;
 void CL_UpdateScreen(void)
 {
 	vec3_t vieworigin;
-	double rendertime1;
-	double drawscreenstart;
+	static double drawscreenstart = 0.0;
+	double drawscreendelta;
 	float conwidth, conheight;
-	float f;
 	r_viewport_t viewport;
+
+	if(drawscreenstart)
+	{
+		drawscreendelta = Sys_DirtyTime() - drawscreenstart;
+		if (cl_minfps.value > 0 && !cls.timedemo && (!cls.capturevideo.active || cls.capturevideo.realtime) && drawscreendelta >= 0 && drawscreendelta < 60)
+		{
+			// quality adjustment according to render time
+			double actualframetime;
+			double targetframetime;
+			double adjust;
+			double f;
+			double h;
+			r_refdef.lastdrawscreentime += (drawscreendelta - r_refdef.lastdrawscreentime) * cl_minfps_fade.value;
+			actualframetime = r_refdef.lastdrawscreentime;
+			targetframetime = (1.0 / cl_minfps.value);
+
+			// assume render time scales linearily / cl_minfps_qualitymultiply.value with quality...
+			f = cl_updatescreen_quality / actualframetime * cl_minfps_qualitymultiply.value;
+			// we scale hysteresis by quality
+			h = cl_updatescreen_quality * cl_minfps_qualityhysteresis.value;
+
+			targetframetime -= h / f; // this makes sure resulting fps is > minfps despite hysteresis
+
+			adjust = (targetframetime - actualframetime) * f;
+			if(adjust > h)
+				adjust -= h;
+			else if(adjust > -h)
+				adjust = 0;
+			else
+				adjust += h;
+
+			// adjust > 0 if:
+			//   (targetframetime - actualframetime) * f > h
+			//   (targetframetime - actualframetime) * (cl_updatescreen_quality / actualframetime * qualitymultiply) > h
+			//   (1.0 / minfps - h / (quality / actualframetime * qualitymultiply) - actualframetime) * (quality / actualframetime * qualitymultiply) > h
+			//   (1.0 / minfps - actualframetime) * (quality / actualframetime * qualitymultiply) > 2 * h
+			//   actualframetime < quality qualitymultiply / (minfps quality qualitymultiply + 2 minfps h)
+			//   actualframetime < 1.0 / minfps * (quality qualitymultiply) / (quality qualitymultiply + 2 h)
+			//   actualframetime < 1.0 / minfps / (1 + 2 h / (quality qualitymultiply))
+			//   actualframetime < 1.0 / minfps / (1 + 2 qualityhysteresis / qualitymultiply)
+
+			// adjust < 0 if:
+			//   (targetframetime - actualframetime) * f < -h
+			//   (targetframetime - actualframetime) * (cl_updatescreen_quality / actualframetime * qualitymultiply) < -h
+			//   (1.0 / minfps - h / (quality / actualframetime * qualitymultiply) - actualframetime) * (quality / actualframetime * qualitymultiply) < -h
+			//   (1.0 / minfps - actualframetime) * (quality / actualframetime * qualitymultiply) < 0
+			//   actualframetime > 1.0 / minfps
+
+			/*
+			Con_Printf("adjust UP if fps > %f, adjust DOWN if fps < %f\n",
+					cl_minfps.value * (1.0 + 2.0 * cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value),
+					cl_minfps.value);
+			*/
+
+			adjust = bound(-cl_minfps_qualitystepmax.value, adjust, cl_minfps_qualitystepmax.value);
+			cl_updatescreen_quality += adjust;
+			cl_updatescreen_quality = bound(max(0.01, cl_minfps_qualitymin.value), cl_updatescreen_quality, cl_minfps_qualitymax.value);
+		}
+		else
+		{
+			cl_updatescreen_quality = 1;
+			r_refdef.lastdrawscreentime = 0;
+		}
+	}
+
+	drawscreenstart = Sys_DirtyTime();
 
 	Sbar_ShowFPS_Update();
 
@@ -2244,8 +2308,6 @@ void CL_UpdateScreen(void)
 		VID_Finish();
 		return;
 	}
-
-	rendertime1 = Sys_DirtyTime();
 
 	conwidth = bound(160, vid_conwidth.value, 32768);
 	conheight = bound(90, vid_conheight.value, 24576);
@@ -2315,8 +2377,9 @@ void CL_UpdateScreen(void)
 	R_ClearScreen(false);
 	r_refdef.view.clear = false;
 	r_refdef.view.isoverlay = false;
-	f = pow((float)cl_updatescreen_quality, cl_minfps_qualitypower.value) * cl_minfps_qualityscale.value;
-	r_refdef.view.quality = bound(cl_minfps_qualitymin.value, f, cl_minfps_qualitymax.value);
+
+	// calculate r_refdef.view.quality
+	r_refdef.view.quality = cl_updatescreen_quality;
 
 #ifndef USE_GLES2
 	if (qglPolygonStipple)
@@ -2347,9 +2410,6 @@ void CL_UpdateScreen(void)
 	}
 #endif
 
-	if (r_viewscale_fpsscaling.integer)
-		GL_Finish();
-	drawscreenstart = Sys_DirtyTime();
 #ifndef USE_GLES2
 	if (R_Stereo_Active())
 	{
@@ -2385,21 +2445,11 @@ void CL_UpdateScreen(void)
 	else
 #endif
 		SCR_DrawScreen();
-	if (r_viewscale_fpsscaling.integer)
-		GL_Finish();
-	r_refdef.lastdrawscreentime = Sys_DirtyTime() - drawscreenstart;
 
 	SCR_CaptureVideo();
 
 	if (qglFlush)
 		qglFlush(); // FIXME: should we really be using qglFlush here?
-
-	// quality adjustment according to render time
-	cl_updatescreen_rendertime += ((Sys_DirtyTime() - rendertime1) - cl_updatescreen_rendertime) * bound(0, cl_minfps_fade.value, 1);
-	if (cl_minfps.value > 0 && cl_updatescreen_rendertime > 0 && !cls.timedemo && (!cls.capturevideo.active || !cls.capturevideo.realtime))
-		cl_updatescreen_quality = 1 / (cl_updatescreen_rendertime * cl_minfps.value);
-	else
-		cl_updatescreen_quality = 1;
 
 	if (!vid_activewindow)
 		VID_SetMouse(false, false, false);
