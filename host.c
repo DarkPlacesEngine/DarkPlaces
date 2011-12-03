@@ -72,6 +72,7 @@ cvar_t cl_minfps_qualitymin = {CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowes
 cvar_t cl_minfps_qualitymultiply = {CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
 cvar_t cl_minfps_qualityhysteresis = {CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
 cvar_t cl_minfps_qualitystepmax = {CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
+cvar_t cl_minfps_force = {0, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
@@ -244,6 +245,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_minfps_qualitystepmax);
 	Cvar_RegisterVariable (&cl_minfps_qualityhysteresis);
 	Cvar_RegisterVariable (&cl_minfps_qualitymultiply);
+	Cvar_RegisterVariable (&cl_minfps_force);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
 	Cvar_RegisterVariable (&cl_maxidlefps);
