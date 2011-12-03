@@ -66,11 +66,12 @@ cvar_t cl_maxphysicsframesperserverframe = {0, "cl_maxphysicsframesperserverfram
 cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
 cvar_t host_maxwait = {0, "host_maxwait","1000", "maximum sleep time requested from the operating system in millisecond. Larger sleeps will be done using multiple host_maxwait length sleeps. Lowering this value will increase CPU load, but may help working around problems with accuracy of sleep times."};
 cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
-cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "0.2", "how fast the quality adapts to varying framerate"};
+cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
 cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
 cvar_t cl_minfps_qualitymin = {CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
-cvar_t cl_minfps_qualitypower = {CVAR_SAVE, "cl_minfps_qualitypower", "4", "raises quality value to a power of itself, higher values make quality drop more sharply in relation to framerate"};
-cvar_t cl_minfps_qualityscale = {CVAR_SAVE, "cl_minfps_qualityscale", "0.5", "multiplier for quality"};
+cvar_t cl_minfps_qualitymultiply = {CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
+cvar_t cl_minfps_qualityhysteresis = {CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.025", "reduce all quality changes by this to reduce flickering"};
+cvar_t cl_minfps_qualitystepmax = {CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
 cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
 cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
@@ -240,8 +241,9 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&cl_minfps_fade);
 	Cvar_RegisterVariable (&cl_minfps_qualitymax);
 	Cvar_RegisterVariable (&cl_minfps_qualitymin);
-	Cvar_RegisterVariable (&cl_minfps_qualitypower);
-	Cvar_RegisterVariable (&cl_minfps_qualityscale);
+	Cvar_RegisterVariable (&cl_minfps_qualitystepmax);
+	Cvar_RegisterVariable (&cl_minfps_qualityhysteresis);
+	Cvar_RegisterVariable (&cl_minfps_qualitymultiply);
 	Cvar_RegisterVariable (&cl_maxfps);
 	Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
 	Cvar_RegisterVariable (&cl_maxidlefps);
