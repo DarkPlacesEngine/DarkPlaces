@@ -2228,49 +2228,54 @@ void CL_UpdateScreen(void)
 			double adjust;
 			double f;
 			double h;
+
+			// fade lastdrawscreentime
 			r_refdef.lastdrawscreentime += (drawscreendelta - r_refdef.lastdrawscreentime) * cl_minfps_fade.value;
+
+			// find actual and target frame times
 			actualframetime = r_refdef.lastdrawscreentime;
 			targetframetime = (1.0 / cl_minfps.value);
 
-			// assume render time scales linearily / cl_minfps_qualitymultiply.value with quality...
-			f = cl_updatescreen_quality / actualframetime * cl_minfps_qualitymultiply.value;
 			// we scale hysteresis by quality
 			h = cl_updatescreen_quality * cl_minfps_qualityhysteresis.value;
 
-			targetframetime -= h / f; // this makes sure resulting fps is > minfps despite hysteresis
-
+			// calculate adjustment assuming linearity
+			f = cl_updatescreen_quality / actualframetime * cl_minfps_qualitymultiply.value;
 			adjust = (targetframetime - actualframetime) * f;
-			if(adjust > h)
-				adjust -= h;
-			else if(adjust > -h)
-				adjust = 0;
-			else
-				adjust += h;
+
+			// one sided hysteresis
+			if(adjust > 0)
+				adjust = max(0, adjust - h);
 
 			// adjust > 0 if:
 			//   (targetframetime - actualframetime) * f > h
-			//   (targetframetime - actualframetime) * (cl_updatescreen_quality / actualframetime * qualitymultiply) > h
-			//   (1.0 / minfps - h / (quality / actualframetime * qualitymultiply) - actualframetime) * (quality / actualframetime * qualitymultiply) > h
-			//   (1.0 / minfps - actualframetime) * (quality / actualframetime * qualitymultiply) > 2 * h
-			//   actualframetime < quality qualitymultiply / (minfps quality qualitymultiply + 2 minfps h)
-			//   actualframetime < 1.0 / minfps * (quality qualitymultiply) / (quality qualitymultiply + 2 h)
-			//   actualframetime < 1.0 / minfps / (1 + 2 h / (quality qualitymultiply))
-			//   actualframetime < 1.0 / minfps / (1 + 2 qualityhysteresis / qualitymultiply)
+			//   ((1.0 / cl_minfps.value) - actualframetime) * (cl_updatescreen_quality / actualframetime * cl_minfps_qualitymultiply.value) > (cl_updatescreen_quality * cl_minfps_qualityhysteresis.value)
+			//   ((1.0 / cl_minfps.value) - actualframetime) * (cl_minfps_qualitymultiply.value / actualframetime) > cl_minfps_qualityhysteresis.value
+			//   (1.0 / cl_minfps.value) * (cl_minfps_qualitymultiply.value / actualframetime) - cl_minfps_qualitymultiply.value > cl_minfps_qualityhysteresis.value
+			//   (1.0 / cl_minfps.value) * (cl_minfps_qualitymultiply.value / actualframetime) > cl_minfps_qualityhysteresis.value + cl_minfps_qualitymultiply.value
+			//   (1.0 / cl_minfps.value) / actualframetime > (cl_minfps_qualityhysteresis.value + cl_minfps_qualitymultiply.value) / cl_minfps_qualitymultiply.value
+			//   (1.0 / cl_minfps.value) / actualframetime > 1.0 + cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value
+			//   cl_minfps.value * actualframetime < 1.0 / (1.0 + cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value)
+			//   actualframetime < 1.0 / cl_minfps.value / (1.0 + cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value)
+			//   actualfps > cl_minfps.value * (1.0 + cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value)
 
 			// adjust < 0 if:
-			//   (targetframetime - actualframetime) * f < -h
-			//   (targetframetime - actualframetime) * (cl_updatescreen_quality / actualframetime * qualitymultiply) < -h
-			//   (1.0 / minfps - h / (quality / actualframetime * qualitymultiply) - actualframetime) * (quality / actualframetime * qualitymultiply) < -h
-			//   (1.0 / minfps - actualframetime) * (quality / actualframetime * qualitymultiply) < 0
-			//   actualframetime > 1.0 / minfps
+			//   (targetframetime - actualframetime) * f < 0
+			//   ((1.0 / cl_minfps.value) - actualframetime) * (cl_updatescreen_quality / actualframetime * cl_minfps_qualitymultiply.value) < 0
+			//   ((1.0 / cl_minfps.value) - actualframetime) < 0
+			//   -actualframetime) < -(1.0 / cl_minfps.value)
+			//   actualfps < cl_minfps.value
 
 			/*
 			Con_Printf("adjust UP if fps > %f, adjust DOWN if fps < %f\n",
-					cl_minfps.value * (1.0 + 2.0 * cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value),
+					cl_minfps.value * (1.0 + cl_minfps_qualityhysteresis.value / cl_minfps_qualitymultiply.value),
 					cl_minfps.value);
 			*/
 
+			// don't adjust too much at once
 			adjust = bound(-cl_minfps_qualitystepmax.value, adjust, cl_minfps_qualitystepmax.value);
+
+			// adjust!
 			cl_updatescreen_quality += adjust;
 			cl_updatescreen_quality = bound(max(0.01, cl_minfps_qualitymin.value), cl_updatescreen_quality, cl_minfps_qualitymax.value);
 		}
