@@ -2208,6 +2208,7 @@ extern cvar_t cl_minfps_qualitymin;
 extern cvar_t cl_minfps_qualitymultiply;
 extern cvar_t cl_minfps_qualityhysteresis;
 extern cvar_t cl_minfps_qualitystepmax;
+extern cvar_t cl_minfps_force;
 static double cl_updatescreen_quality = 1;
 void CL_UpdateScreen(void)
 {
@@ -2220,7 +2221,7 @@ void CL_UpdateScreen(void)
 	if(drawscreenstart)
 	{
 		drawscreendelta = Sys_DirtyTime() - drawscreenstart;
-		if (cl_minfps.value > 0 && !cls.timedemo && (!cls.capturevideo.active || cls.capturevideo.realtime) && drawscreendelta >= 0 && drawscreendelta < 60)
+		if (cl_minfps.value > 0 && (cl_minfps_force.integer || !(cls.timedemo || (cls.capturevideo.active && !cls.capturevideo.realtime))) && drawscreendelta >= 0 && drawscreendelta < 60)
 		{
 			// quality adjustment according to render time
 			double actualframetime;
