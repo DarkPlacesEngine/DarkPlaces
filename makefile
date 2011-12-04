@@ -326,3 +326,10 @@ include makefile.inc
 ##### Dependency files #####
 
 -include *.d
+
+# hack to deal with no-longer-needed .h files
+%.h:
+	@echo
+	@echo "NOTE: file $@ mentioned in dependencies missing, continuing..."
+	@echo "HINT: consider 'make clean'"
+	@echo
