@@ -587,3 +587,9 @@ clean-profile: clean
 	-$(CMD_RM) *.gcda
 	-$(CMD_RM) *.gcno
 
+# hack to deal with no-longer-needed .h files
+%.h:
+	@echo
+	@echo "NOTE: file $@ mentioned in dependencies missing, continuing..."
+	@echo "HINT: consider 'make clean'"
+	@echo
