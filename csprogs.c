@@ -376,13 +376,13 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	// walk attachments to find RENDER_EXTERIORMODEL status
 	{
 		prvm_edict_t *ent = ed;
-		prvm_edict_t *v = PRVM_EDICT_NUM(CL_VM_GetViewEntity());
+		int vn = CL_VM_GetViewEntity();
 		int attachloop = 0;
 		for(;;)
 		{
 			if(attachloop >= 256)
 				break;
-			if(ent == v)
+			if(MAX_EDICTS + PRVM_NUM_FOR_EDICT(ent) == vn)
 			{
 				entrender->flags |= RENDER_EXTERIORMODEL;
 				break;
@@ -1249,6 +1249,6 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 int CL_VM_GetViewEntity(void)
 {
 	if(cl.csqc_server2csqcentitynumber[cl.viewentity])
-		return cl.csqc_server2csqcentitynumber[cl.viewentity];
+		return cl.csqc_server2csqcentitynumber[cl.viewentity] + MAX_EDICTS;
 	return cl.viewentity;
 }
