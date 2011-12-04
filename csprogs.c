@@ -249,6 +249,8 @@ static void CSQC_SetGlobals (void)
 		VectorCopy(cl.punchvector, PRVM_clientglobalvector(view_punchvector));
 		PRVM_clientglobalfloat(maxclients) = cl.maxclients;
 
+		PRVM_clientglobalfloat(player_localentnum) = cl.viewentity;
+
 		CSQC_R_RecalcView();
 	CSQC_END
 }
@@ -1134,7 +1136,8 @@ void CL_VM_Init (void)
 	PRVM_clientglobaledict(self) = 0;
 
 	PRVM_clientglobalstring(mapname) = PRVM_SetEngineString(prog, cl.worldname);
-	PRVM_clientglobalfloat(player_localentnum) = cl.playerentity;
+	PRVM_clientglobalfloat(player_localnum) = cl.realplayerentity - 1;
+	PRVM_clientglobalfloat(player_localentnum) = cl.viewentity;
 
 	// set map description (use world entity 0)
 	PRVM_clientedictstring(prog->edicts, message) = PRVM_SetEngineString(prog, cl.worldmessage);
