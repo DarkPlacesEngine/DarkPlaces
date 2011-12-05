@@ -3921,6 +3921,18 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	qboolean nolight;
 
 	rtlight->draw = false;
+	rtlight->cached_numlightentities               = 0;
+	rtlight->cached_numlightentities_noselfshadow  = 0;
+	rtlight->cached_numshadowentities              = 0;
+	rtlight->cached_numshadowentities_noselfshadow = 0;
+	rtlight->cached_numsurfaces                    = 0;
+	rtlight->cached_lightentities                  = NULL;
+	rtlight->cached_lightentities_noselfshadow     = NULL;
+	rtlight->cached_shadowentities                 = NULL;
+	rtlight->cached_shadowentities_noselfshadow    = NULL;
+	rtlight->cached_shadowtrispvs                  = NULL;
+	rtlight->cached_lighttrispvs                   = NULL;
+	rtlight->cached_surfacelist                    = NULL;
 
 	// skip lights that don't light because of ambientscale+diffusescale+specularscale being 0 (corona only lights)
 	// skip lights that are basically invisible (color 0 0 0)
@@ -3967,6 +3979,10 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	VectorCopy(rtlight->cullmaxs, rtlight->cached_cullmaxs);
 
 	R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
+
+	// don't allow lights to be drawn if using r_shadow_bouncegrid 2, except if we're using static bouncegrid where dynamic lights still need to draw
+	if (r_shadow_bouncegrid.integer == 2 && (rtlight->isstatic || !r_shadow_bouncegrid_static.integer))
+		return;
 
 	if (rtlight->compiled && r_shadow_realtime_world_compile.integer)
 	{
@@ -4567,24 +4583,21 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 	R_Shadow_EnlargeLeafSurfaceTrisBuffer(r_refdef.scene.worldmodel->brush.num_leafs, r_refdef.scene.worldmodel->num_surfaces, r_refdef.scene.worldmodel->brush.shadowmesh ? r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles : r_refdef.scene.worldmodel->surfmesh.num_triangles, r_refdef.scene.worldmodel->surfmesh.num_triangles);
 
 	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-	if (r_shadow_bouncegrid.integer != 2)
+	if (r_shadow_debuglight.integer >= 0)
 	{
-		if (r_shadow_debuglight.integer >= 0)
+		lightindex = r_shadow_debuglight.integer;
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light)
+			R_Shadow_PrepareLight(&light->rtlight);
+	}
+	else
+	{
+		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		for (lightindex = 0;lightindex < range;lightindex++)
 		{
-			lightindex = r_shadow_debuglight.integer;
 			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-			if (light)
+			if (light && (light->flags & flag))
 				R_Shadow_PrepareLight(&light->rtlight);
-		}
-		else
-		{
-			range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
-			for (lightindex = 0;lightindex < range;lightindex++)
-			{
-				light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-				if (light && (light->flags & flag))
-					R_Shadow_PrepareLight(&light->rtlight);
-			}
 		}
 	}
 	if (r_refdef.scene.rtdlight)
@@ -4616,25 +4629,22 @@ void R_Shadow_DrawLights(void)
 
 	R_Shadow_RenderMode_Begin();
 
-	if (r_shadow_bouncegrid.integer != 2)
+	flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
+	if (r_shadow_debuglight.integer >= 0)
 	{
-		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-		if (r_shadow_debuglight.integer >= 0)
+		lightindex = r_shadow_debuglight.integer;
+		light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+		if (light)
+			R_Shadow_DrawLight(&light->rtlight);
+	}
+	else
+	{
+		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		for (lightindex = 0;lightindex < range;lightindex++)
 		{
-			lightindex = r_shadow_debuglight.integer;
 			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-			if (light)
+			if (light && (light->flags & flag))
 				R_Shadow_DrawLight(&light->rtlight);
-		}
-		else
-		{
-			range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
-			for (lightindex = 0;lightindex < range;lightindex++)
-			{
-				light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
-				if (light && (light->flags & flag))
-					R_Shadow_DrawLight(&light->rtlight);
-			}
 		}
 	}
 	if (r_refdef.scene.rtdlight)
