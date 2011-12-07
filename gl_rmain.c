@@ -7290,6 +7290,7 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 			case SOLID_BBOX:     Vector4Set(color, 0, 1, 0, 0.10);break;
 			case SOLID_SLIDEBOX: Vector4Set(color, 1, 0, 0, 0.10);break;
 			case SOLID_BSP:      Vector4Set(color, 0, 0, 1, 0.05);break;
+			case SOLID_CORPSE:   Vector4Set(color, 1, 0.5, 0, 0.05);break;
 			default:             Vector4Set(color, 0, 0, 0, 0.50);break;
 		}
 		color[3] *= r_showbboxes.value;
