@@ -2316,6 +2316,8 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 {
 	int bits;
+	int startoffset = cl_message.readcount;
+	int bytes = 0;
 	bits = MSG_ReadByte(&cl_message);
 	if (bits & E5_EXTEND1)
 	{
@@ -2531,9 +2533,10 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 		s->traileffectnum = (unsigned short) MSG_ReadShort(&cl_message);
 
 
+	bytes = cl_message.readcount - startoffset;
 	if (developer_networkentities.integer >= 2)
 	{
-		Con_Printf("ReadFields e%i", number);
+		Con_Printf("ReadFields e%i (%i bytes)", number, bytes);
 
 		if (bits & E5_ORIGIN)
 			Con_Printf(" E5_ORIGIN %f %f %f", s->origin[0], s->origin[1], s->origin[2]);
@@ -2586,6 +2589,10 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			Con_Printf(" E5_COLORMOD %f:%f:%f", s->colormod[0] / 32.0f, s->colormod[1] / 32.0f, s->colormod[2] / 32.0f);
 		if (bits & E5_GLOWMOD)
 			Con_Printf(" E5_GLOWMOD %f:%f:%f", s->glowmod[0] / 32.0f, s->glowmod[1] / 32.0f, s->glowmod[2] / 32.0f);
+		if (bits & E5_COMPLEXANIMATION)
+			Con_Printf(" E5_COMPLEXANIMATION");
+		if (bits & E5_TRAILEFFECTNUM)
+			Con_Printf(" E5_TRAILEFFECTNUM %i", s->traileffectnum);
 		Con_Print("\n");
 	}
 }
