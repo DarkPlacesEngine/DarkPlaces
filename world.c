@@ -2527,6 +2527,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	float bouncestop1 = 60.0f / 800.0f;
 	float bouncefactor2 = 0.0f;
 	float bouncestop2 = 60.0f / 800.0f;
+	float erp;
 	dVector3 grav;
 	prvm_edict_t *ed1, *ed2;
 
@@ -2606,6 +2607,10 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	dWorldGetGravity((dWorldID)world->physics.ode_world, grav);
 	bouncestop1 *= fabs(grav[2]);
 
+	// get erp
+	// select object that moves faster ang get it's erp
+	erp = (VectorLength2(PRVM_gameedictvector(ed1, velocity)) > VectorLength2(PRVM_gameedictvector(ed2, velocity))) ? PRVM_gameedictfloat(ed1, erp) : PRVM_gameedictfloat(ed2, erp);
+
 	// generate contact points between the two non-space geoms
 	numcontacts = dCollide(o1, o2, MAX_CONTACTS, &(contact[0].geom), sizeof(contact[0]));
 	// add these contact points to the simulation
@@ -2613,7 +2618,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	{
 		contact[i].surface.mode = (physics_ode_contact_mu.value != -1 ? dContactApprox1 : 0) | (physics_ode_contact_erp.value != -1 ? dContactSoftERP : 0) | (physics_ode_contact_cfm.value != -1 ? dContactSoftCFM : 0) | (bouncefactor1 > 0 ? dContactBounce : 0);
 		contact[i].surface.mu = physics_ode_contact_mu.value * ed1->priv.server->ode_friction * ed2->priv.server->ode_friction;
-		contact[i].surface.soft_erp = physics_ode_contact_erp.value;
+		contact[i].surface.soft_erp = physics_ode_contact_erp.value + erp;
 		contact[i].surface.soft_cfm = physics_ode_contact_cfm.value;
 		contact[i].surface.bounce = bouncefactor1;
 		contact[i].surface.bounce_vel = bouncestop1;
