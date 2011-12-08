@@ -357,15 +357,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	if (renderflags & RF_USETRANSPARENTOFFSET)
 		entrender->transparent_offset = PRVM_clientglobalfloat(transparent_offset);
 
-	// model light
-	if (renderflags & RF_MODELLIGHT)
-	{
-		if(PRVM_clientedictvector(ed, modellight_ambient)) VectorCopy(PRVM_clientedictvector(ed, modellight_ambient), entrender->modellight_ambient);
-		if(PRVM_clientedictvector(ed, modellight_diffuse)) VectorCopy(PRVM_clientedictvector(ed, modellight_diffuse), entrender->modellight_diffuse);
-		if(PRVM_clientedictvector(ed, modellight_dir))     VectorCopy(PRVM_clientedictvector(ed, modellight_dir), entrender->modellight_lightdir);
-		entrender->flags |= RENDER_CUSTOMIZEDMODELLIGHT;
-	}
-
 	if(renderflags)
 	{
 		if(renderflags & RF_VIEWMODEL) entrender->flags |= RENDER_VIEWMODEL | RENDER_NODEPTHTEST;
@@ -413,6 +404,19 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	// make the other useful stuff
 	memcpy(entrender->framegroupblend, ed->priv.server->framegroupblend, sizeof(ed->priv.server->framegroupblend));
 	CL_UpdateRenderEntity(entrender);
+
+	// model light
+	if (renderflags & RF_MODELLIGHT)
+	{
+		if(PRVM_clientedictvector(ed, modellight_ambient)) VectorCopy(PRVM_clientedictvector(ed, modellight_ambient), entrender->modellight_ambient);
+		if(PRVM_clientedictvector(ed, modellight_diffuse)) VectorCopy(PRVM_clientedictvector(ed, modellight_diffuse), entrender->modellight_diffuse);
+		if(PRVM_clientedictvector(ed, modellight_dir))     Matrix4x4_Transform3x3(&entrender->matrix, PRVM_clientedictvector(ed, modellight_dir), entrender->modellight_lightdir);
+		if (VectorLength2(entrender->modellight_lightdir) == 0)
+			VectorSet(entrender->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+		VectorNormalize(entrender->modellight_lightdir);
+		entrender->flags |= RENDER_CUSTOMIZEDMODELLIGHT;
+	}
+
 	// override animation data with full control
 	memcpy(entrender->frameblend, ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend));
 	if (ed->priv.server->skeleton.relativetransforms)
