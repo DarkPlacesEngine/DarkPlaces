@@ -817,8 +817,18 @@ void Crypto_LoadKeys(void)
 						if(qd0_blind_id_fingerprint64_public_id(pubkeys[i], pubkeys_priv_fp64[i], &len2)) // keeps final NUL
 						{
 							D0_BOOL status = 0;
+							qfile_t *f;
 
 							Con_Printf("Loaded private ID key_%d.d0si%s for key_%d.d0pk (public key fingerprint: %s)\n", i, sessionid.string, i, pubkeys_priv_fp64[i]);
+
+							f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d-public-fp%s.txt", *fs_userdir ? fs_userdir : fs_basedir, i, sessionid.string), "w", false);
+							if(f)
+							{
+								// we ignore errors for this file, as it's not necessary to have
+								FS_Write(f, pubkeys_priv_fp64[i], FP64_SIZE);
+								FS_Write(f, "\n", 1);
+								FS_Close(f);
+							}
 
 							// verify the key we just loaded (just in case)
 							if(qd0_blind_id_verify_private_id(pubkeys[i]) && qd0_blind_id_verify_public_id(pubkeys[i], &status))
@@ -1242,6 +1252,15 @@ static void Crypto_KeyGen_f(void)
 		}
 		FS_Write(f, buf2, buf2size);
 		FS_Close(f);
+
+		f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d-public-fp%s.txt", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "w", false);
+		if(f)
+		{
+			// we ignore errors for this file, as it's not necessary to have
+			FS_Write(f, pubkeys_priv_fp64[keygen_i], FP64_SIZE);
+			FS_Write(f, "\n", 1);
+			FS_Close(f);
+		}
 
 		Con_Printf("Saved unsigned key to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	}
