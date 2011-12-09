@@ -772,6 +772,34 @@ static void Crypto_BuildChallengeAppend(void)
 	challenge_append_length = p - challenge_append;
 }
 
+static qboolean Crypto_SavePubKeyTextFile(int i)
+{
+	qfile_t *f;
+	char vabuf[1024];
+
+	if(!pubkeys_havepriv[i])
+		return false;
+	f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d-public-fp%s.txt", *fs_userdir ? fs_userdir : fs_basedir, i, sessionid.string), "w", false);
+	if(!f)
+		return false;
+
+	// we ignore errors for this file, as it's not necessary to have
+	FS_Printf(f, "ID-Fingerprint: %s\n", pubkeys_priv_fp64[i]);
+	FS_Printf(f, "ID-Is-Signed: %s\n", pubkeys_havesig[i] ? "yes" : "no");
+	FS_Printf(f, "ID-Is-For-Key: %s\n", pubkeys_fp64[i]);
+	FS_Printf(f, "\n");
+	FS_Printf(f, "This is a PUBLIC ID file for DarkPlaces.\n");
+	FS_Printf(f, "You are free to share this file or its contents.\n");
+	FS_Printf(f, "\n");
+	FS_Printf(f, "This file will be automatically generated again if deleted.\n");
+	FS_Printf(f, "\n");
+	FS_Printf(f, "However, NEVER share the accompanying SECRET ID file called\n");
+	FS_Printf(f, "key_%d.d0si%s, as doing so would compromise security!\n", i, sessionid.string);
+	FS_Close(f);
+
+	return true;
+}
+
 void Crypto_LoadKeys(void)
 {
 	char buf[8192];
@@ -817,18 +845,8 @@ void Crypto_LoadKeys(void)
 						if(qd0_blind_id_fingerprint64_public_id(pubkeys[i], pubkeys_priv_fp64[i], &len2)) // keeps final NUL
 						{
 							D0_BOOL status = 0;
-							qfile_t *f;
 
 							Con_Printf("Loaded private ID key_%d.d0si%s for key_%d.d0pk (public key fingerprint: %s)\n", i, sessionid.string, i, pubkeys_priv_fp64[i]);
-
-							f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d-public-fp%s.txt", *fs_userdir ? fs_userdir : fs_basedir, i, sessionid.string), "w", false);
-							if(f)
-							{
-								// we ignore errors for this file, as it's not necessary to have
-								FS_Write(f, pubkeys_priv_fp64[i], FP64_SIZE);
-								FS_Write(f, "\n", 1);
-								FS_Close(f);
-							}
 
 							// verify the key we just loaded (just in case)
 							if(qd0_blind_id_verify_private_id(pubkeys[i]) && qd0_blind_id_verify_public_id(pubkeys[i], &status))
@@ -841,6 +859,8 @@ void Crypto_LoadKeys(void)
 									pubkeys_havesig[i] = true;
 								else
 									Con_Printf("NOTE: this ID has not yet been signed!\n");
+
+								Crypto_SavePubKeyTextFile(i);
 							}
 							else
 							{
@@ -1136,7 +1156,10 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	FS_Write(f, buf2, buf2size);
 	FS_Close(f);
 
+	Crypto_SavePubKeyTextFile(keygen_i);
+
 	Con_Printf("Saved to key_%d.d0si%s\n", keygen_i, sessionid.string);
+
 	keygen_i = -1;
 	SV_UnlockThreadMutex();
 }
@@ -1253,14 +1276,7 @@ static void Crypto_KeyGen_f(void)
 		FS_Write(f, buf2, buf2size);
 		FS_Close(f);
 
-		f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d-public-fp%s.txt", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "w", false);
-		if(f)
-		{
-			// we ignore errors for this file, as it's not necessary to have
-			FS_Write(f, pubkeys_priv_fp64[keygen_i], FP64_SIZE);
-			FS_Write(f, "\n", 1);
-			FS_Close(f);
-		}
+		Crypto_SavePubKeyTextFile(keygen_i);
 
 		Con_Printf("Saved unsigned key to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	}
