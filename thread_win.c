@@ -4,6 +4,9 @@
 
 int Thread_Init(void)
 {
+#ifdef THREADDISABLE
+	Con_Printf("Threading disabled in this build\n");
+#endif
 	return 0;
 }
 
@@ -13,7 +16,11 @@ void Thread_Shutdown(void)
 
 qboolean Thread_HasThreads(void)
 {
+#ifdef THREADDISABLE
+	return false;
+#else
 	return true;
+#endif
 }
 
 void *_Thread_CreateMutex(const char *filename, int fileline)
