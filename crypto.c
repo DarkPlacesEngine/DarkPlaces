@@ -147,8 +147,8 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define qd0_blind_id_sign_with_private_id_sign_detached d0_blind_id_sign_with_private_id_sign_detached
 #define qd0_blind_id_setmallocfuncs d0_blind_id_setmallocfuncs
 #define qd0_blind_id_setmutexfuncs d0_blind_id_setmutexfuncs
-#define qd0_blind_id_verify_public_id d0_bind_id_verify_public_id
-#define qd0_blind_id_verify_private_id d0_bind_id_verify_private_id
+#define qd0_blind_id_verify_public_id d0_blind_id_verify_public_id
+#define qd0_blind_id_verify_private_id d0_blind_id_verify_private_id
 
 #else
 
