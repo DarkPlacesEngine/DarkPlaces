@@ -812,7 +812,7 @@ static void VM_M_crypto_getmykeyfp(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
 
 	i = PRVM_G_FLOAT( OFS_PARM0 );
-	switch(Crypto_RetrieveLocalKey(i, keyfp, sizeof(keyfp), NULL, 0))
+	switch(Crypto_RetrieveLocalKey(i, keyfp, sizeof(keyfp), NULL, 0, NULL))
 	{
 		case -1:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "");
@@ -834,7 +834,7 @@ static void VM_M_crypto_getmyidfp(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
 
 	i = PRVM_G_FLOAT( OFS_PARM0 );
-	switch(Crypto_RetrieveLocalKey(i, NULL, 0, idfp, sizeof(idfp)))
+	switch(Crypto_RetrieveLocalKey(i, NULL, 0, idfp, sizeof(idfp), NULL))
 	{
 		case -1:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "");
@@ -845,6 +845,28 @@ static void VM_M_crypto_getmyidfp(prvm_prog_t *prog)
 		default:
 		case 1:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, idfp);
+			break;
+	}
+}
+static void VM_M_crypto_getmyidstatus(prvm_prog_t *prog)
+{
+	int i;
+	qboolean issigned;
+
+	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+
+	i = PRVM_G_FLOAT( OFS_PARM0 );
+	switch(Crypto_RetrieveLocalKey(i, NULL, 0, NULL, 0, &issigned))
+	{
+		case -1:
+			PRVM_G_FLOAT( OFS_RETURN ) = 0; // have no ID there
+			break;
+		case 0:
+			PRVM_G_FLOAT( OFS_RETURN ) = -1; // out of range
+			break;
+		default:
+		case 1:
+			PRVM_G_FLOAT( OFS_RETURN ) = issigned ? 2 : 1;
 			break;
 	}
 }
@@ -1517,6 +1539,8 @@ VM_M_crypto_getmykeyfp,					// #636 string(float addr) crypto_getmykeyfp
 VM_M_crypto_getmyidfp,					// #637 string(float addr) crypto_getmyidfp
 NULL,							// #638
 VM_digest_hex,						// #639
+NULL,							// #640
+VM_M_crypto_getmyidstatus,				// #641 float(float i) crypto_getmyidstatus
 NULL
 };
 
