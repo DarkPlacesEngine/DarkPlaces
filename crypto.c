@@ -147,6 +147,8 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 #define qd0_blind_id_sign_with_private_id_sign_detached d0_blind_id_sign_with_private_id_sign_detached
 #define qd0_blind_id_setmallocfuncs d0_blind_id_setmallocfuncs
 #define qd0_blind_id_setmutexfuncs d0_blind_id_setmutexfuncs
+#define qd0_blind_id_verify_public_id d0_bind_id_verify_public_id
+#define qd0_blind_id_verify_private_id d0_bind_id_verify_private_id
 
 #else
 
@@ -205,6 +207,8 @@ static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_
 static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_sign_with_private_id_sign_detached) (d0_blind_id_t *ctx, D0_BOOL is_first, D0_BOOL send_modulus, const char *message, size_t msglen, char *outbuf, size_t *outbuflen);
 static D0_EXPORT void (*qd0_blind_id_setmallocfuncs)(d0_malloc_t *m, d0_free_t *f);
 static D0_EXPORT void (*qd0_blind_id_setmutexfuncs)(d0_createmutex_t *c, d0_destroymutex_t *d, d0_lockmutex_t *l, d0_unlockmutex_t *u);
+static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_verify_public_id)(const d0_blind_id_t *ctx, D0_BOOL *status);
+static D0_EXPORT D0_WARN_UNUSED_RESULT D0_BOOL (*qd0_blind_id_verify_private_id)(const d0_blind_id_t *ctx);
 static dllfunction_t d0_blind_id_funcs[] =
 {
 	{"d0_blind_id_new", (void **) &qd0_blind_id_new},
@@ -244,6 +248,8 @@ static dllfunction_t d0_blind_id_funcs[] =
 	{"d0_blind_id_sign_with_private_id_sign_detached", (void **) &qd0_blind_id_sign_with_private_id_sign_detached},
 	{"d0_blind_id_setmallocfuncs", (void **) &qd0_blind_id_setmallocfuncs},
 	{"d0_blind_id_setmutexfuncs", (void **) &qd0_blind_id_setmutexfuncs},
+	{"d0_blind_id_verify_public_id", (void **) &qd0_blind_id_verify_public_id},
+	{"d0_blind_id_verify_private_id", (void **) &qd0_blind_id_verify_private_id},
 	{NULL, NULL}
 };
 // end of d0_blind_id interface
@@ -456,6 +462,7 @@ static qboolean Crypto_AddPrivateKey(d0_blind_id_t *pk, char *buf, size_t len)
 static d0_blind_id_t *pubkeys[MAX_PUBKEYS];
 static char pubkeys_fp64[MAX_PUBKEYS][FP64_SIZE+1];
 static qboolean pubkeys_havepriv[MAX_PUBKEYS];
+static qboolean pubkeys_havesig[MAX_PUBKEYS];
 static char pubkeys_priv_fp64[MAX_PUBKEYS][FP64_SIZE+1];
 static char challenge_append[1400];
 static size_t challenge_append_length;
@@ -714,7 +721,7 @@ qboolean Crypto_RetrieveHostKey(lhnetaddress_t *peeraddress, int *keyid, char *k
 
 	return true;
 }
-int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen) // return value: -1 if more to come, +1 if valid, 0 if end of list
+int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, qboolean *issigned) // return value: -1 if more to come, +1 if valid, 0 if end of list
 {
 	if(keyid < 0 || keyid >= MAX_PUBKEYS)
 		return 0;
@@ -729,6 +736,8 @@ int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp,
 	if(idfp)
 		if(pubkeys_havepriv[keyid])
 			strlcpy(idfp, pubkeys_priv_fp64[keyid], keyfplen);
+	if(issigned)
+		*issigned = pubkeys_havesig[keyid];
 	return 1;
 }
 // end
@@ -791,6 +800,7 @@ void Crypto_LoadKeys(void)
 		memset(pubkeys_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		memset(pubkeys_priv_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		pubkeys_havepriv[i] = false;
+		pubkeys_havesig[i] = false;
 		len = Crypto_LoadFile(va(vabuf, sizeof(vabuf), "key_%d.d0pk", i), buf, sizeof(buf), false);
 		if((pubkeys[i] = Crypto_ReadPublicKey(buf, len)))
 		{
@@ -806,14 +816,34 @@ void Crypto_LoadKeys(void)
 						len2 = FP64_SIZE;
 						if(qd0_blind_id_fingerprint64_public_id(pubkeys[i], pubkeys_priv_fp64[i], &len2)) // keeps final NUL
 						{
+							D0_BOOL status = 0;
+
 							Con_Printf("Loaded private ID key_%d.d0si%s for key_%d.d0pk (public key fingerprint: %s)\n", i, sessionid.string, i, pubkeys_priv_fp64[i]);
-							pubkeys_havepriv[i] = true;
-							strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
+
+							// verify the key we just loaded (just in case)
+							if(qd0_blind_id_verify_private_id(pubkeys[i]) && qd0_blind_id_verify_public_id(pubkeys[i], &status))
+							{
+								pubkeys_havepriv[i] = true;
+								strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[i], pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
+
+								// verify the key we just got (just in case)
+								if(status)
+									pubkeys_havesig[i] = true;
+								else
+									Con_Printf("NOTE: this ID has not yet been signed!\n");
+							}
+							else
+							{
+								Con_Printf("d0_blind_id_verify_private_id failed, this is not a valid key!\n");
+								qd0_blind_id_free(pubkeys[i]);
+								pubkeys[i] = NULL;
+							}
 						}
 						else
 						{
-							// can't really happen
-							// but nothing leaked here
+							Con_Printf("d0_blind_id_fingerprint64_public_id failed\n");
+							qd0_blind_id_free(pubkeys[i]);
+							pubkeys[i] = NULL;
 						}
 					}
 				}
@@ -885,6 +915,7 @@ static void Crypto_UnloadKeys(void)
 			qd0_blind_id_free(pubkeys[i]);
 		pubkeys[i] = NULL;
 		pubkeys_havepriv[i] = false;
+		pubkeys_havesig[i] = false;
 		memset(pubkeys_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		memset(pubkeys_priv_fp64[i], 0, sizeof(pubkeys_fp64[i]));
 		challenge_append_length = 0;
@@ -999,11 +1030,9 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	size_t l[1];
 	static char buf[8192];
 	static char buf2[8192];
-	size_t bufsize, buf2size;
+	size_t buf2size;
 	qfile_t *f = NULL;
-	d0_blind_id_t *ctx, *ctx2;
 	D0_BOOL status;
-	size_t len2;
 	char vabuf[1024];
 
 	SV_LockThreadMutex();
@@ -1054,95 +1083,19 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	}
 
 	// verify the key we just got (just in case)
-	ctx = qd0_blind_id_new();
-	if(!ctx)
+	if(!qd0_blind_id_verify_public_id(pubkeys[keygen_i], &status) || !status)
 	{
-		Con_Printf("d0_blind_id_new failed\n");
+		Con_Printf("d0_blind_id_verify_public_id failed\n");
 		keygen_i = -1;
 		SV_UnlockThreadMutex();
 		return;
 	}
-	ctx2 = qd0_blind_id_new();
-	if(!ctx2)
-	{
-		Con_Printf("d0_blind_id_new failed\n");
-		qd0_blind_id_free(ctx);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	if(!qd0_blind_id_copy(ctx, pubkeys[keygen_i]))
-	{
-		Con_Printf("d0_blind_id_copy failed\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	if(!qd0_blind_id_copy(ctx2, pubkeys[keygen_i]))
-	{
-		Con_Printf("d0_blind_id_copy failed\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	bufsize = sizeof(buf);
-	if(!qd0_blind_id_authenticate_with_private_id_start(ctx, 1, 1, "hello world", 11, buf, &bufsize))
-	{
-		Con_Printf("d0_blind_id_authenticate_with_private_id_start failed\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	buf2size = sizeof(buf2);
-	if(!qd0_blind_id_authenticate_with_private_id_challenge(ctx2, 1, 1, buf, bufsize, buf2, &buf2size, &status) || !status)
-	{
-		Con_Printf("d0_blind_id_authenticate_with_private_id_challenge failed (server does not have the requested private key)\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	bufsize = sizeof(buf);
-	if(!qd0_blind_id_authenticate_with_private_id_response(ctx, buf2, buf2size, buf, &bufsize))
-	{
-		Con_Printf("d0_blind_id_authenticate_with_private_id_response failed\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	buf2size = sizeof(buf2);
-	if(!qd0_blind_id_authenticate_with_private_id_verify(ctx2, buf, bufsize, buf2, &buf2size, &status) || !status)
-	{
-		Con_Printf("d0_blind_id_authenticate_with_private_id_verify failed (server does not have the requested private key)\n");
-		qd0_blind_id_free(ctx);
-		qd0_blind_id_free(ctx2);
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
-	qd0_blind_id_free(ctx);
-	qd0_blind_id_free(ctx2);
 
 	// we have a valid key now!
 	// make the rest of crypto.c know that
-	len2 = FP64_SIZE;
-	if(qd0_blind_id_fingerprint64_public_id(pubkeys[keygen_i], pubkeys_priv_fp64[keygen_i], &len2)) // keeps final NUL
-	{
-		Con_Printf("Received private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
-		pubkeys_havepriv[keygen_i] = true;
-		strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
-		crypto_idstring = crypto_idstring_buf;
-		Crypto_BuildChallengeAppend();
-	}
+	Con_Printf("Received signature for private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
+	pubkeys_havesig[keygen_i] = true;
+
 	// write the key to disk
 	p[0] = buf;
 	l[0] = sizeof(buf);
@@ -1185,7 +1138,12 @@ static void Crypto_KeyGen_f(void)
 	size_t l[1];
 	static char buf[8192];
 	static char buf2[8192];
+	size_t buf2size;
 	size_t buf2l, buf2pos;
+	char vabuf[1024];
+	size_t len2;
+	qfile_t *f = NULL;
+
 	if(!d0_blind_id_dll)
 	{
 		Con_Print("libd0_blind_id DLL not found, this command is inactive.\n");
@@ -1205,12 +1163,6 @@ static void Crypto_KeyGen_f(void)
 		SV_UnlockThreadMutex();
 		return;
 	}
-	if(pubkeys_havepriv[i])
-	{
-		Con_Printf("there is already a private key for %d\n", i);
-		SV_UnlockThreadMutex();
-		return;
-	}
 	if(keygen_i >= 0)
 	{
 		Con_Printf("there is already a keygen run on the way\n");
@@ -1218,12 +1170,80 @@ static void Crypto_KeyGen_f(void)
 		return;
 	}
 	keygen_i = i;
-	if(!qd0_blind_id_generate_private_id_start(pubkeys[keygen_i]))
+
+	// how to START the keygenning...
+	if(pubkeys_havepriv[keygen_i])
 	{
-		Con_Printf("d0_blind_id_start failed\n");
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
+		if(pubkeys_havesig[keygen_i])
+		{
+			Con_Printf("there is already a signed private key for %d\n", i);
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+		// if we get here, we only need a signature, no new keygen run needed
+		Con_Printf("Only need a signature for an existing key...\n");
+	}
+	else
+	{
+		// we also need a new ID itself
+		if(!qd0_blind_id_generate_private_id_start(pubkeys[keygen_i]))
+		{
+			Con_Printf("d0_blind_id_start failed\n");
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+		// verify the key we just got (just in case)
+		if(!qd0_blind_id_verify_private_id(pubkeys[keygen_i]))
+		{
+			Con_Printf("d0_blind_id_verify_private_id failed\n");
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+		// we have a valid key now!
+		// make the rest of crypto.c know that
+		len2 = FP64_SIZE;
+		if(qd0_blind_id_fingerprint64_public_id(pubkeys[keygen_i], pubkeys_priv_fp64[keygen_i], &len2)) // keeps final NUL
+		{
+			Con_Printf("Generated private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
+			pubkeys_havepriv[keygen_i] = true;
+			strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
+			crypto_idstring = crypto_idstring_buf;
+			Crypto_BuildChallengeAppend();
+		}
+		// write the key to disk
+		p[0] = buf;
+		l[0] = sizeof(buf);
+		if(!qd0_blind_id_write_private_id(pubkeys[keygen_i], buf, &l[0]))
+		{
+			Con_Printf("d0_blind_id_write_private_id failed\n");
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+		if(!(buf2size = Crypto_UnParsePack(buf2, sizeof(buf2), FOURCC_D0SI, p, l, 1)))
+		{
+			Con_Printf("Crypto_UnParsePack failed\n");
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+
+		FS_CreatePath(va(vabuf, sizeof(vabuf), "%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string));
+		f = FS_SysOpen(va(vabuf, sizeof(vabuf), "%skey_%d.d0si%s", *fs_userdir ? fs_userdir : fs_basedir, keygen_i, sessionid.string), "wb", false);
+		if(!f)
+		{
+			Con_Printf("Cannot open key_%d.d0si%s\n", keygen_i, sessionid.string);
+			keygen_i = -1;
+			SV_UnlockThreadMutex();
+			return;
+		}
+		FS_Write(f, buf2, buf2size);
+		FS_Close(f);
+
+		Con_Printf("Saved unsigned key to key_%d.d0si%s\n", keygen_i, sessionid.string);
 	}
 	p[0] = buf;
 	l[0] = sizeof(buf);
@@ -1259,7 +1279,7 @@ static void Crypto_KeyGen_f(void)
 		SV_UnlockThreadMutex();
 		return;
 	}
-	Con_Printf("key generation in progress\n");
+	Con_Printf("Signature generation in progress...\n");
 	SV_UnlockThreadMutex();
 }
 // end
@@ -1286,7 +1306,11 @@ static void Crypto_Keys_f(void)
 		{
 			Con_Printf("%2d: public key key_%d.d0pk (fingerprint: %s)\n", i, i, pubkeys_fp64[i]);
 			if(pubkeys_havepriv[i])
+			{
 				Con_Printf("    private ID key_%d.d0si%s (public key fingerprint: %s)\n", i, sessionid.string, pubkeys_priv_fp64[i]);
+				if(!pubkeys_havesig[i])
+					Con_Printf("    NOTE: this ID has not yet been signed!\n");
+			}
 		}
 	}
 }
