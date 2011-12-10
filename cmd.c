@@ -275,7 +275,7 @@ static void Cbuf_Execute_Deferred (void)
 Cbuf_Execute
 ============
 */
-static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
+static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
 void Cbuf_Execute (void)
 {
 	int i;
@@ -360,8 +360,8 @@ void Cbuf_Execute (void)
 			(strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7]))
 		)
 		{
-			Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL );
-			Cmd_ExecuteString (preprocessed, src_command, false);
+			if(Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL ))
+				Cmd_ExecuteString (preprocessed, src_command, false);
 		}
 		else
 		{
@@ -920,9 +920,11 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 {
 	static char varname[MAX_INPUTLINE]; // cmd_mutex
 	static char varval[MAX_INPUTLINE]; // cmd_mutex
-	const char *varstr;
+	const char *varstr = NULL;
 	char *varfunc;
-static char asis[] = "asis"; // just to suppress const char warnings
+	qboolean required = false;
+	qboolean optional = false;
+	static char asis[] = "asis"; // just to suppress const char warnings
 
 	if(varlen >= MAX_INPUTLINE)
 		varlen = MAX_INPUTLINE - 1;
@@ -939,10 +941,34 @@ static char asis[] = "asis"; // just to suppress const char warnings
 	if(*var == 0)
 	{
 		// empty cvar name?
-		return NULL;
+		if(alias)
+			Con_Printf("Warning: Could not expand $ in alias %s\n", alias->name);
+		else
+			Con_Printf("Warning: Could not expand $\n");
+		return "$";
 	}
 
-	varstr = NULL;
+	if(varfunc)
+	{
+		char *p;
+		// ? means optional
+		while((p = strchr(varfunc, '?')))
+		{
+			optional = true;
+			memmove(p, p+1, strlen(p)); // with final NUL
+		}
+		// ! means required
+		while((p = strchr(varfunc, '!')))
+		{
+			required = true;
+			memmove(p, p+1, strlen(p)); // with final NUL
+		}
+		// kill spaces
+		while((p = strchr(varfunc, ' ')))
+		{
+			memmove(p, p+1, strlen(p)); // with final NUL
+		}
+	}
 
 	if(varname[0] == '$')
 		varstr = Cmd_GetDirectCvarValue(Cmd_GetDirectCvarValue(varname + 1, alias, NULL), alias, NULL);
@@ -958,11 +984,27 @@ static char asis[] = "asis"; // just to suppress const char warnings
 
 	if(!varstr)
 	{
-		if(alias)
-			Con_Printf("Warning: Could not expand $%s in alias %s\n", varname, alias->name);
+		if(required)
+		{
+			if(alias)
+				Con_Printf("Error: Could not expand $%s in alias %s\n", varname, alias->name);
+			else
+				Con_Printf("Error: Could not expand $%s\n", varname);
+			return NULL;
+		}
+		else if(optional)
+		{
+			return "";
+		}
 		else
-			Con_Printf("Warning: Could not expand $%s\n", varname);
-		return NULL;
+		{
+			if(alias)
+				Con_Printf("Warning: Could not expand $%s in alias %s\n", varname, alias->name);
+			else
+				Con_Printf("Warning: Could not expand $%s\n", varname);
+			dpsnprintf(varval, sizeof(varval), "$%s", varname);
+			return varval;
+		}
 	}
 
 	if(!varfunc || !strcmp(varfunc, "q")) // note: quoted form is default, use "asis" to override!
@@ -987,7 +1029,7 @@ Cmd_PreprocessString
 
 Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
 */
-static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
+static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
 	size_t eat, varlen;
 	unsigned outlen;
@@ -995,7 +1037,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 
 	// don't crash if there's no room in the outtext buffer
 	if( maxoutlen == 0 ) {
-		return;
+		return false;
 	}
 	maxoutlen--; // because of \0
 
@@ -1016,6 +1058,10 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			//   that way)
 			// - ${var asis} inserts the cvar value as is, without doing this
 			//   quoting
+			// - ${var ?} silently expands to the empty string if
+			//   $var does not exist
+			// - ${var !} fails expansion and executes nothing if
+			//   $var does not exist
 			// - prefix the cvar name with a dollar sign to do indirection;
 			//   for example, if $x has the value timelimit, ${$x} will return
 			//   the value of $timelimit
@@ -1026,6 +1072,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			//   parameters, without extra quoting, so one can use $* to just
 			//   pass all parameters around. All parameters starting from $n
 			//   can be referred to as $n- (so $* is equivalent to $1-).
+			// - ${* q} and ${n- q} force quoting anyway
 			//
 			// Note: when expanding an alias, cvar expansion is done in the SAME step
 			// as alias expansion so that alias parameters or cvar values containing
@@ -1062,6 +1109,8 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 				if(in[varlen + 1] == '}')
 				{
 					val = Cmd_GetCvarValue(in + 1, varlen, alias);
+					if(!val)
+						return false;
 					eat = varlen + 2;
 				}
 				else
@@ -1073,6 +1122,8 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			} else {
 				varlen = strspn(in, "#*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
 				val = Cmd_GetCvarValue(in, varlen, alias);
+				if(!val)
+					return false;
 				eat = varlen;
 			}
 			if(val)
@@ -1097,6 +1148,7 @@ static void Cmd_PreprocessString( const char *intext, char *outtext, unsigned ma
 			outtext[outlen++] = *in++;
 	}
 	outtext[outlen] = 0;
+	return true;
 }
 
 /*
@@ -1110,7 +1162,9 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE ]; // cmd_mutex
 	static char buffer2[ MAX_INPUTLINE ]; // cmd_mutex
-	Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
+	qboolean ret = Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
+	if(!ret)
+		return;
 	// insert at start of command buffer, so that aliases execute in order
 	// (fixes bug introduced by Black on 20050705)
 
