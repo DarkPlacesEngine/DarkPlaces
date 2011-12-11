@@ -968,6 +968,9 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 		{
 			memmove(p, p+1, strlen(p)); // with final NUL
 		}
+		// if no function is left, NULL it
+		if(!*varfunc)
+			varfunc = NULL;
 	}
 
 	if(varname[0] == '$')
