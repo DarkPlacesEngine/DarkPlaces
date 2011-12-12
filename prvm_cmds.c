@@ -6326,7 +6326,10 @@ nolength:
 							{
 								if(precision < 0) // not set
 									precision = end - o - 1;
-								o += u8_strpad(o, end - o, GETARG_STRING(thisarg), (flags & PRINTF_LEFT) != 0, width, precision);
+								if(flags & PRINTF_SIGNPOSITIVE)
+									o += u8_strpad(o, end - o, GETARG_STRING(thisarg), (flags & PRINTF_LEFT) != 0, width, precision);
+								else
+									o += u8_strpad_colorcodes(o, end - o, GETARG_STRING(thisarg), (flags & PRINTF_LEFT) != 0, width, precision);
 							}
 							break;
 						default:
