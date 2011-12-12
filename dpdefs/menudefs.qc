@@ -16,7 +16,7 @@ void		end_sys_fields;
 void() m_init;
 void(float keynr, float ascii) m_keydown;
 void() m_draw;
-void() m_toggle;
+void(float mode) m_toggle;
 void() m_shutdown;
 
 /////////////////////////////////////////////////////////
