@@ -5313,7 +5313,7 @@ static void MP_ToggleMenu(int mode)
 	prvm_prog_t *prog = MVM_prog;
 
 	prog->globals.generic[OFS_PARM0] = (float) mode;
-	prog->ExecuteProgram(prog, PRVM_menufunction(m_toggle),"m_toggle() required");
+	prog->ExecuteProgram(prog, PRVM_menufunction(m_toggle),"m_toggle(float mode) required");
 }
 
 static void MP_NewMap(void)
