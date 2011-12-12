@@ -1027,7 +1027,9 @@ string(string format, ...) sprintf = #627;
 //    For conversions s and c, the flag # makes precision and width interpreted
 //      as byte count, by default it is interpreted as character count in UTF-8
 //      enabled engines. No other conversions can create wide characters, and #
-//      has another meaning in these.
+//      has another meaning in these. When in character count mode, color codes
+//      are ignored. To get UTF-8 semantics WITHOUT color code parsing, use
+//      the + flag.
 
 //DP_QC_STRFTIME
 //idea: LordHavoc

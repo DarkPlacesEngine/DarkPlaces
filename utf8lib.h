@@ -46,6 +46,7 @@ size_t u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid
 char  *u8_encodech(Uchar ch, size_t*, char*buf16);
 
 size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
+size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
 
 /* Careful: if we disable utf8 but not freetype, we wish to see freetype chars
  * for normal letters. So use E000+x for special chars, but leave the freetype stuff for the
