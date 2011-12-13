@@ -2572,6 +2572,8 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_NOSHADOW;
 		if (shader->dpnortlight)
 			texture->basematerialflags |= MATERIALFLAG_NORTLIGHT;
+		if (shader->vertexalpha)
+			texture->basematerialflags |= MATERIALFLAG_ALPHAGEN_VERTEX;
 		memcpy(texture->deforms, shader->deforms, sizeof(texture->deforms));
 		texture->reflectmin = shader->reflectmin;
 		texture->reflectmax = shader->reflectmax;
