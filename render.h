@@ -578,5 +578,7 @@ void R_LightningBeams_Init(void);
 void Mod_RenderInit(void);
 void Font_Init(void);
 
-#endif
+qboolean R_CompileShader_CheckStaticParms(void);
+void R_GLSL_Restart_f(void);
 
+#endif
