@@ -645,9 +645,6 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEOFFSETMAPPING\n", " offsetmapping"},
 	{"#define USEOFFSETMAPPING_RELIEFMAPPING\n", " reliefmapping"},
 	{"#define USESHADOWMAP2D\n", " shadowmap2d"},
-	{"#define USESHADOWMAPPCF 1\n", " shadowmappcf"}, // TODO make this a static parm
-	{"#define USESHADOWMAPPCF 2\n", " shadowmappcf2"}, // TODO make this a static parm
-	{"#define USESHADOWSAMPLER\n", " shadowsampler"}, // TODO make this a static parm
 	{"#define USESHADOWMAPVSDCT\n", " shadowmapvsdct"}, // TODO make this a static parm
 	{"#define USESHADOWMAPORTHO\n", " shadowmaportho"},
 	{"#define USEDEFERREDLIGHTMAP\n", " deferredlightmap"},
@@ -852,15 +849,21 @@ enum
 	SHADERSTATICPARM_POSTPROCESS_USERVEC4 = 5,  ///< postprocess uservec4 is enabled
 	SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS = 6, // use both alpha layers while blending materials, allows more advanced microblending
 	SHADERSTATICPARM_OFFSETMAPPING_USELOD = 7,  ///< LOD for offsetmapping
+	SHADERSTATICPARM_SHADOWMAPPCF_1 = 8, ///< PCF 1
+	SHADERSTATICPARM_SHADOWMAPPCF_2 = 9, ///< PCF 2
+	SHADERSTATICPARM_SHADOWSAMPLER = 10, ///< sampler
 };
-#define SHADERSTATICPARMS_COUNT 8
+#define SHADERSTATICPARMS_COUNT 11
 
 static const char *shaderstaticparmstrings_list[SHADERSTATICPARMS_COUNT];
 static int shaderstaticparms_count = 0;
 
 static unsigned int r_compileshader_staticparms[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5] = {0};
 #define R_COMPILESHADER_STATICPARM_ENABLE(p) r_compileshader_staticparms[(p) >> 5] |= (1 << ((p) & 0x1F))
-static qboolean R_CompileShader_CheckStaticParms(void)
+
+extern qboolean r_shadow_shadowmapsampler;
+extern int r_shadow_shadowmappcf;
+qboolean R_CompileShader_CheckStaticParms(void)
 {
 	static int r_compileshader_staticparms_save[1];
 	memcpy(r_compileshader_staticparms_save, r_compileshader_staticparms, sizeof(r_compileshader_staticparms));
@@ -886,6 +889,14 @@ static qboolean R_CompileShader_CheckStaticParms(void)
 	}
 	if (r_glsl_offsetmapping_lod.integer && r_glsl_offsetmapping_lod_distance.integer > 0)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_OFFSETMAPPING_USELOD);
+
+	if (r_shadow_shadowmapsampler)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SHADOWSAMPLER);
+	if (r_shadow_shadowmappcf > 1)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SHADOWMAPPCF_2);
+	else if (r_shadow_shadowmappcf)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SHADOWMAPPCF_1);
+
 	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
 
@@ -907,6 +918,9 @@ static void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permu
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_POSTPROCESS_USERVEC4, "USERVEC4");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_VERTEXTEXTUREBLEND_USEBOTHALPHAS, "USEBOTHALPHAS");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_OFFSETMAPPING_USELOD, "USEOFFSETMAPPING_LOD");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWMAPPCF_1, "USESHADOWMAPPCF 1");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWMAPPCF_2, "USESHADOWMAPPCF 2");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWSAMPLER, "USESHADOWSAMPLER");
 }
 
 /// information about each possible shader permutation
@@ -1786,7 +1800,7 @@ static void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int per
 	DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_ClientTime, cl.time);
 }
 
-static void R_GLSL_Restart_f(void)
+void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
 	if (glslshaderstring && glslshaderstring != builtinshaderstring)
@@ -2047,8 +2061,6 @@ extern qboolean r_shadow_usingshadowmaportho;
 extern float r_shadow_shadowmap_texturescale[2];
 extern float r_shadow_shadowmap_parameters[4];
 extern qboolean r_shadow_shadowmapvsdct;
-extern qboolean r_shadow_shadowmapsampler;
-extern int r_shadow_shadowmappcf;
 extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
 extern rtexture_t *r_shadow_shadowmapvsdcttexture;
@@ -2215,12 +2227,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if(r_shadow_shadowmapvsdct)
 				permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
-			if (r_shadow_shadowmapsampler)
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-			if (r_shadow_shadowmappcf > 1)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-			else if (r_shadow_shadowmappcf)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 			if (r_shadow_shadowmap2ddepthbuffer)
 				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
@@ -2259,12 +2265,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
-			if (r_shadow_shadowmapsampler)
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-			if (r_shadow_shadowmappcf > 1)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-			else if (r_shadow_shadowmappcf)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 			if (r_shadow_shadowmap2ddepthbuffer)
 				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
@@ -2316,12 +2316,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
-			if (r_shadow_shadowmapsampler)
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-			if (r_shadow_shadowmappcf > 1)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-			else if (r_shadow_shadowmappcf)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 			if (r_shadow_shadowmap2ddepthbuffer)
 				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
@@ -2378,12 +2372,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
-			if (r_shadow_shadowmapsampler)
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-			if (r_shadow_shadowmappcf > 1)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-			else if (r_shadow_shadowmappcf)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 			if (r_shadow_shadowmap2ddepthbuffer)
 				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
@@ -2439,12 +2427,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
 			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
 
-			if (r_shadow_shadowmapsampler)
-				permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-			if (r_shadow_shadowmappcf > 1)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-			else if (r_shadow_shadowmappcf)
-				permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 			if (r_shadow_shadowmap2ddepthbuffer)
 				permutation |= SHADERPERMUTATION_DEPTHRGB;
 		}
@@ -3008,12 +2990,6 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_shadow_shadowmapvsdct)
 			permutation |= SHADERPERMUTATION_SHADOWMAPVSDCT;
 
-		if (r_shadow_shadowmapsampler)
-			permutation |= SHADERPERMUTATION_SHADOWSAMPLER;
-		if (r_shadow_shadowmappcf > 1)
-			permutation |= SHADERPERMUTATION_SHADOWMAPPCF2;
-		else if (r_shadow_shadowmappcf)
-			permutation |= SHADERPERMUTATION_SHADOWMAPPCF;
 		if (r_shadow_shadowmap2ddepthbuffer)
 			permutation |= SHADERPERMUTATION_DEPTHRGB;
 	}
