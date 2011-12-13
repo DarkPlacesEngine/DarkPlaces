@@ -496,6 +496,9 @@ static void R_Shadow_SetShadowMode(void)
 			break;
 		}
 	}
+
+	if(R_CompileShader_CheckStaticParms())
+		R_GLSL_Restart_f();
 }
 
 qboolean R_Shadow_ShadowMappingEnabled(void)
