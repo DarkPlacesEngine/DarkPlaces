@@ -655,6 +655,7 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"}, // TODO make this a static parm
 	{"#define USETRIPPY\n", " trippy"},
 	{"#define USEDEPTHRGB\n", " depthrgb"},
+	{"#define USEALPHAGENVERTEX\n", "alphagenvertex"}
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
@@ -2209,6 +2210,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// light source
 		mode = SHADERMODE_LIGHTSOURCE;
 		if (rsurface.rtlight->currentcubemap != r_texture_whitecube)
@@ -2251,6 +2254,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// unshaded geometry (fullbright or ambient model lighting)
 		mode = SHADERMODE_FLATCOLOR;
 		ambientscale = diffusescale = specularscale = 0;
@@ -2300,6 +2305,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// directional model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
@@ -2359,6 +2366,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// ambient model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
 		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
@@ -2415,6 +2424,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
 			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// lightmapped wall
 		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
