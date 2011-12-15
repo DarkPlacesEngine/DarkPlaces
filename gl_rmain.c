@@ -2146,6 +2146,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERSHADER)
 		{
 			mode = SHADERMODE_WATER;
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+				permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 			if((r_wateralpha.value < 1) && (rsurface.texture->currentmaterialflags & MATERIALFLAG_WATERALPHA))
 			{
 				// this is the right thing to do for wateralpha
@@ -2162,6 +2164,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		else if (rsurface.texture->currentmaterialflags & MATERIALFLAG_REFRACTION)
 		{
 			mode = SHADERMODE_REFRACTION;
+			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+				permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
