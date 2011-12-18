@@ -2129,6 +2129,8 @@ void Mod_LoadQ3Shaders(void)
 						shader.surfaceparms |= Q3SURFACEPARM_POINTLIGHT;
 					else if (!strcasecmp(parameter[1], "antiportal"))
 						shader.surfaceparms |= Q3SURFACEPARM_ANTIPORTAL;
+					else if (!strcasecmp(parameter[1], "skip"))
+						; // shader.surfaceparms |= Q3SURFACEPARM_SKIP; FIXME we don't have enough #defines for this any more, and the engine doesn't need this one anyway
 					else
 					{
 						// try custom surfaceparms
