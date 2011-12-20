@@ -1794,7 +1794,10 @@ void CL_SendMove(void)
 	cl.cmd.msec = (unsigned char)bound(0, msecdelta, 255);
 	// ridiculous value rejection (matches qw)
 	if (cl.cmd.msec > 250)
+	{
+		Con_Printf("RIDICULOUS! %f - %f > 0.25 sec, namely, %d ms, quemove=%d\n", cl.cmd.time, cl.movecmd[1].time, (int) msecdelta, (int) quemove);
 		cl.cmd.msec = 100;
+	}
 	cl.cmd.frametime = cl.cmd.msec * (1.0 / 1000.0);
 
 	cl.cmd.predicted = cl_movement.integer != 0;
