@@ -432,6 +432,7 @@ typedef struct q3shaderinfo_s
 	char name[Q3PATHLENGTH];
 #define Q3SHADERINFO_COMPARE_START surfaceparms
 	int surfaceparms;
+	int surfaceflags;
 	int textureflags;
 	int numlayers;
 	qboolean lighting;
