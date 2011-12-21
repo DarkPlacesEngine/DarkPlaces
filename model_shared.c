@@ -1665,8 +1665,8 @@ void Mod_LoadQ3Shaders(void)
 	int numparameters;
 	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
 	char *custsurfaceparmnames[256]; // VorteX: q3map2 has 64 but well, someone will need more
-	unsigned long custsurfaceparms[256]; 
-	int numcustsurfaceparms;
+	unsigned long custsurfaceflags[256]; 
+	int numcustsurfaceflags;
 	qboolean dpshaderkill;
 
 	Mod_FreeQ3Shaders();
@@ -1680,7 +1680,7 @@ void Mod_LoadQ3Shaders(void)
 		q3shaders_mem, sizeof (char**), 256);
 
 	// parse custinfoparms.txt
-	numcustsurfaceparms = 0;
+	numcustsurfaceflags = 0;
 	if ((text = f = (char *)FS_LoadFile("scripts/custinfoparms.txt", tempmempool, false, NULL)) != NULL)
 	{
 		if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -1700,21 +1700,21 @@ void Mod_LoadQ3Shaders(void)
 					if (!strcasecmp(com_token, "}"))
 						break;	
 					// register surfaceflag
-					if (numcustsurfaceparms >= 256)
+					if (numcustsurfaceflags >= 256)
 					{
 						Con_Printf("scripts/custinfoparms.txt: surfaceflags section parsing error - max 256 surfaceflags exceeded\n");
 						break;
 					}
 					// name
 					j = strlen(com_token)+1;
-					custsurfaceparmnames[numcustsurfaceparms] = (char *)Mem_Alloc(tempmempool, j);
-					strlcpy(custsurfaceparmnames[numcustsurfaceparms], com_token, j+1);
+					custsurfaceparmnames[numcustsurfaceflags] = (char *)Mem_Alloc(tempmempool, j);
+					strlcpy(custsurfaceparmnames[numcustsurfaceflags], com_token, j+1);
 					// value
 					if (COM_ParseToken_QuakeC(&text, false))
-						custsurfaceparms[numcustsurfaceparms] = strtol(com_token, NULL, 0);
+						custsurfaceflags[numcustsurfaceflags] = strtol(com_token, NULL, 0);
 					else
-						custsurfaceparms[numcustsurfaceparms] = 0;
-					numcustsurfaceparms++;
+						custsurfaceflags[numcustsurfaceflags] = 0;
+					numcustsurfaceflags++;
 				}
 			}
 		}
@@ -2134,16 +2134,16 @@ void Mod_LoadQ3Shaders(void)
 					else
 					{
 						// try custom surfaceparms
-						for (j = 0; j < numcustsurfaceparms; j++)
+						for (j = 0; j < numcustsurfaceflags; j++)
 						{
 							if (!strcasecmp(custsurfaceparmnames[j], parameter[1]))
 							{
-								shader.surfaceparms |= custsurfaceparms[j];
+								shader.surfaceflags |= custsurfaceflags[j];
 								break;
 							}
 						}
 						// failed all
-						if (j == numcustsurfaceparms)
+						if (j == numcustsurfaceflags)
 							Con_DPrintf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[fileindex], parameter[1]);
 					}
 				}
@@ -2390,7 +2390,7 @@ void Mod_LoadQ3Shaders(void)
 	}
 	FS_FreeSearch(search);
 	// free custinfoparm values
-	for (j = 0; j < numcustsurfaceparms; j++)
+	for (j = 0; j < numcustsurfaceflags; j++)
 		Mem_Free(custsurfaceparmnames[j]);
 }
 
@@ -2637,7 +2637,7 @@ nothing                GL_ZERO GL_ONE
 	//	if (shader->surfaceparms & Q3SURFACEPARM_LIGHTGRID    ) texture->supercontents |= SUPERCONTENTS_LIGHTGRID    ;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_ANTIPORTAL   ) texture->supercontents |= SUPERCONTENTS_ANTIPORTAL   ;
 
-		texture->surfaceflags = 0;
+		texture->surfaceflags = shader->surfaceflags;
 		if (shader->surfaceparms & Q3SURFACEPARM_ALPHASHADOW  ) texture->surfaceflags |= Q3SURFACEFLAG_ALPHASHADOW  ;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_AREAPORTAL   ) texture->surfaceflags |= Q3SURFACEFLAG_AREAPORTAL   ;
 	//	if (shader->surfaceparms & Q3SURFACEPARM_CLUSTERPORTAL) texture->surfaceflags |= Q3SURFACEFLAG_CLUSTERPORTAL;

@@ -1665,12 +1665,19 @@ void(float effectnum, vector org, vector vel, float howmany) pointparticles = #3
 //globals:
 //new movetypes:
 const float MOVETYPE_PHYSICS = 32; // need to be set before any physics_* builtins applied
-//new solid types:
+//new solid types (deprecated):
 const float SOLID_PHYSICS_BOX = 32;
 const float SOLID_PHYSICS_SPHERE = 33;
 const float SOLID_PHYSICS_CAPSULE = 34;
 const float SOLID_PHYSICS_TRIMESH = 35;
 const float SOLID_PHYSICS_CYLINDER = 36;
+//geometry types:
+const float GEOMTYPE_NULL = 0;
+const float GEOMTYPE_BOX = 1;
+const float GEOMTYPE_SPHERE = 2;
+const float GEOMTYPE_CAPSULE = 3;
+const float GEOMTYPE_TRIMESH = 4;
+const float GEOMTYPE_CYLINDER = 5;
 //SOLID_BSP;
 //joint types:
 const float JOINTTYPE_POINT = 1;
@@ -1692,6 +1699,7 @@ const float JOINTTYPE_FIXED = -1;
 //     movedir_z = stop position (+/-), set to 0 for no stop
 //   note that ODE does not support both in one anyway
 //field definitions:
+.float geomtype; // see GEOMTYPE_*, a more correct way to set collision shape, allows to set SOLID_CORPSE and trimesh collisions
 .float mass; // ODE mass, standart value is 1
 .vector massofs; // offsets a mass center out of object center, if not set a center of model bounds is used
 .float friction;

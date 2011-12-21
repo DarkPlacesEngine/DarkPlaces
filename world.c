@@ -2045,7 +2045,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	int movetype = MOVETYPE_NONE;
 	int numtriangles;
 	int numvertices;
-	int solid = SOLID_NOT;
+	int solid = SOLID_NOT, geomtype = 0;
 	int triangleindex;
 	int vertexindex;
 	mempool_t *mempool;
@@ -2078,16 +2078,32 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 #endif
 	VectorClear(entmins);
 	VectorClear(entmaxs);
+
 	solid = (int)PRVM_gameedictfloat(ed, solid);
+	geomtype = (int)PRVM_gameedictfloat(ed, geomtype);
 	movetype = (int)PRVM_gameedictfloat(ed, movetype);
 	scale = PRVM_gameedictfloat(ed, scale);if (!scale) scale = 1.0f;
 	modelindex = 0;
 	mempool = prog->progs_mempool;
 	model = NULL;
-	switch(solid)
+	if (!geomtype)
 	{
-	case SOLID_BSP:
-	case SOLID_PHYSICS_TRIMESH:
+		// VorteX: keep support for deprecated solid fields to not break mods
+		if (solid == SOLID_PHYSICS_TRIMESH || solid == SOLID_BSP)
+			geomtype = GEOMTYPE_TRIMESH;
+		else if (solid == SOLID_PHYSICS_SPHERE)
+			geomtype = GEOMTYPE_SPHERE;
+		else if (solid == SOLID_PHYSICS_CAPSULE)
+			geomtype = GEOMTYPE_CAPSULE;
+		else if (solid == SOLID_PHYSICS_CYLINDER)
+			geomtype = GEOMTYPE_CYLINDER;
+		else if (solid == SOLID_PHYSICS_BOX)
+			geomtype = GEOMTYPE_BOX;
+		else
+			geomtype = GEOMTYPE_BOX;
+	}
+	if (geomtype == GEOMTYPE_TRIMESH)
+	{
 		modelindex = (int)PRVM_gameedictfloat(ed, modelindex);
 		if (world == &sv.world)
 			model = SV_GetModelByIndex(modelindex);
@@ -2106,18 +2122,16 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			modelindex = 0;
 			massval = 1.0f;
 		}
-		break;
-	case SOLID_BBOX:
-	//case SOLID_SLIDEBOX:
-	case SOLID_CORPSE:
-	case SOLID_PHYSICS_BOX:
-	case SOLID_PHYSICS_SPHERE:
-	case SOLID_PHYSICS_CAPSULE:
+	}
+	else if (geomtype)
+	{
 		VectorCopy(PRVM_gameedictvector(ed, mins), entmins);
 		VectorCopy(PRVM_gameedictvector(ed, maxs), entmaxs);
 		massval = PRVM_gameedictfloat(ed, mass);
-		break;
-	default:
+	}
+	else
+	{
+		// geometry type not set, falling back
 		if (ed->priv.server->ode_physics)
 			World_Physics_RemoveFromEntity(world, ed);
 		return;
@@ -2169,10 +2183,9 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			VectorSet(geomsize, 1.0f, 1.0f, 1.0f);
 		}
 
-		switch(solid)
+		switch(geomtype)
 		{
-		case SOLID_BSP:
-		case SOLID_PHYSICS_TRIMESH:
+		case GEOMTYPE_TRIMESH:
 			ed->priv.server->ode_offsetmatrix = identitymatrix;
 			if (!model)
 			{
@@ -2216,22 +2229,19 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 			ed->priv.server->ode_geom = (void *)dCreateTriMesh((dSpaceID)world->physics.ode_space, (dTriMeshDataID)dataID, NULL, NULL, NULL);
 			dMassSetBoxTotal(&mass, massval, geomsize[0], geomsize[1], geomsize[2]);
 			break;
-		case SOLID_BBOX:
-		case SOLID_SLIDEBOX:
-		case SOLID_CORPSE:
-		case SOLID_PHYSICS_BOX:
+		case GEOMTYPE_BOX:
 treatasbox:
 			Matrix4x4_CreateTranslate(&ed->priv.server->ode_offsetmatrix, geomcenter[0], geomcenter[1], geomcenter[2]);
 			ed->priv.server->ode_geom = (void *)dCreateBox((dSpaceID)world->physics.ode_space, geomsize[0], geomsize[1], geomsize[2]);
 			dMassSetBoxTotal(&mass, massval, geomsize[0], geomsize[1], geomsize[2]);
 			break;
-		case SOLID_PHYSICS_SPHERE:
+		case GEOMTYPE_SPHERE:
 			Matrix4x4_CreateTranslate(&ed->priv.server->ode_offsetmatrix, geomcenter[0], geomcenter[1], geomcenter[2]);
 			ed->priv.server->ode_geom = (void *)dCreateSphere((dSpaceID)world->physics.ode_space, geomsize[0] * 0.5f);
 			dMassSetSphereTotal(&mass, massval, geomsize[0] * 0.5f);
 			break;
-		case SOLID_PHYSICS_CAPSULE:
-		case SOLID_PHYSICS_CYLINDER:
+		case GEOMTYPE_CAPSULE:
+		case GEOMTYPE_CYLINDER:
 			axisindex = 0;
 			if (geomsize[axisindex] < geomsize[1])
 				axisindex = 1;
@@ -2253,7 +2263,7 @@ treatasbox:
 			// because we want to support more than one axisindex, we have to
 			// create a transform, and turn on its cleanup setting (which will
 			// cause the child to be destroyed when it is destroyed)
-			if (solid == SOLID_PHYSICS_CAPSULE)
+			if (geomtype == GEOMTYPE_CYLINDER)
 			{
 				ed->priv.server->ode_geom = (void *)dCreateCapsule((dSpaceID)world->physics.ode_space, radius, length);
 				dMassSetCapsuleTotal(&mass, massval, axisindex+1, radius, length);
@@ -2265,7 +2275,7 @@ treatasbox:
 			}
 			break;
 		default:
-			Sys_Error("World_Physics_BodyFromEntity: unrecognized solid value %i was accepted by filter\n", solid);
+			Sys_Error("World_Physics_BodyFromEntity: unrecognized geomtype value %i was accepted by filter\n", solid);
 			// this goto only exists to prevent warnings from the compiler
 			// about uninitialized variables (mass), while allowing it to
 			// catch legitimate uninitialized variable warnings
@@ -2443,9 +2453,9 @@ treatasbox:
 		r[0][2] = up[0];
 		r[1][2] = up[1];
 		r[2][2] = up[2];
-		if(body)
+		if (body)
 		{
-			if(movetype == MOVETYPE_PHYSICS)
+			if (movetype == MOVETYPE_PHYSICS)
 			{
 				dGeomSetBody((dGeomID)ed->priv.server->ode_geom, body);
 				dBodySetPosition(body, origin[0], origin[1], origin[2]);
@@ -2474,7 +2484,7 @@ treatasbox:
 		}
 	}
 
-	if(body)
+	if (body)
 	{
 
 		// limit movement speed to prevent missed collisions at high speed
@@ -2548,7 +2558,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	// at least one object has to be using MOVETYPE_PHYSICS or we just don't care
 	if (!b1 && !b2)
 		return;
-
+	
 	// exit without doing anything if the two bodies are connected by a joint
 	if (b1 && b2 && dAreConnectedExcluding(b1, b2, dJointTypeContact))
 		return;
