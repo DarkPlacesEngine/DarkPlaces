@@ -4731,8 +4731,8 @@ static void R_View_UpdateEntityLighting (void)
 	{
 		ent = r_refdef.scene.entities[i];
 
-		// skip unseen models and models that updated by CSQC
-		if ((!r_refdef.viewcache.entityvisible[i] && skipunseen) || ent->flags & RENDER_CUSTOMIZEDMODELLIGHT)
+		// skip unseen models
+		if ((!r_refdef.viewcache.entityvisible[i] && skipunseen))
 			continue;
 
 		// skip bsp models
@@ -4744,74 +4744,83 @@ static void R_View_UpdateEntityLighting (void)
 			VectorSet(ent->modellight_lightdir, 0, 0, 1);
 			continue;
 		}
-
-		// fetch the lighting from the worldmodel data
-		VectorClear(ent->modellight_ambient);
-		VectorClear(ent->modellight_diffuse);
-		VectorClear(tempdiffusenormal);
-		if (ent->flags & RENDER_LIGHT)
+		
+		if (ent->flags & RENDER_CUSTOMIZEDMODELLIGHT)
 		{
-			vec3_t org;
-			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-
-			// complete lightning for lit sprites
-			// todo: make a EF_ field so small ents could be lit purely by modellight and skipping real rtlight pass (like EF_NORTLIGHT)?
-			if (ent->model->type == mod_sprite && !(ent->model->data_textures[0].basematerialflags & MATERIALFLAG_FULLBRIGHT))
+			// aleady updated by CSQC
+			// TODO: force modellight on BSP models in this case?
+			VectorCopy(ent->modellight_lightdir, tempdiffusenormal); 
+		}
+		else
+		{
+			// fetch the lighting from the worldmodel data
+			VectorClear(ent->modellight_ambient);
+			VectorClear(ent->modellight_diffuse);
+			VectorClear(tempdiffusenormal);
+			if (ent->flags & RENDER_LIGHT)
 			{
-				if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
-					org[2] = org[2] + r_overheadsprites_pushback.value;
-				R_LightPoint(ent->modellight_ambient, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
-			}
-			else
-				R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP);
+				vec3_t org;
+				Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 
-			if(ent->flags & RENDER_EQUALIZE)
-			{
-				// first fix up ambient lighting...
-				if(r_equalize_entities_minambient.value > 0)
+				// complete lightning for lit sprites
+				// todo: make a EF_ field so small ents could be lit purely by modellight and skipping real rtlight pass (like EF_NORTLIGHT)?
+				if (ent->model->type == mod_sprite && !(ent->model->data_textures[0].basematerialflags & MATERIALFLAG_FULLBRIGHT))
 				{
-					fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
-					if(fd > 0)
+					if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
+						org[2] = org[2] + r_overheadsprites_pushback.value;
+					R_LightPoint(ent->modellight_ambient, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+				}
+				else
+					R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP);
+
+				if(ent->flags & RENDER_EQUALIZE)
+				{
+					// first fix up ambient lighting...
+					if(r_equalize_entities_minambient.value > 0)
 					{
-						fa = (0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2]);
-						if(fa < r_equalize_entities_minambient.value * fd)
+						fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
+						if(fd > 0)
 						{
-							// solve:
-							//   fa'/fd' = minambient
-							//   fa'+0.25*fd' = fa+0.25*fd
-							//   ...
-							//   fa' = fd' * minambient
-							//   fd'*(0.25+minambient) = fa+0.25*fd
-							//   ...
-							//   fd' = (fa+0.25*fd) * 1 / (0.25+minambient)
-							//   fa' = (fa+0.25*fd) * minambient / (0.25+minambient)
-							//   ...
-							fdd = (fa + 0.25f * fd) / (0.25f + r_equalize_entities_minambient.value);
-							f = fdd / fd; // f>0 because all this is additive; f<1 because fdd<fd because this follows from fa < r_equalize_entities_minambient.value * fd
-							VectorMA(ent->modellight_ambient, (1-f)*0.25f, ent->modellight_diffuse, ent->modellight_ambient);
-							VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+							fa = (0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2]);
+							if(fa < r_equalize_entities_minambient.value * fd)
+							{
+								// solve:
+								//   fa'/fd' = minambient
+								//   fa'+0.25*fd' = fa+0.25*fd
+								//   ...
+								//   fa' = fd' * minambient
+								//   fd'*(0.25+minambient) = fa+0.25*fd
+								//   ...
+								//   fd' = (fa+0.25*fd) * 1 / (0.25+minambient)
+								//   fa' = (fa+0.25*fd) * minambient / (0.25+minambient)
+								//   ...
+								fdd = (fa + 0.25f * fd) / (0.25f + r_equalize_entities_minambient.value);
+								f = fdd / fd; // f>0 because all this is additive; f<1 because fdd<fd because this follows from fa < r_equalize_entities_minambient.value * fd
+								VectorMA(ent->modellight_ambient, (1-f)*0.25f, ent->modellight_diffuse, ent->modellight_ambient);
+								VectorScale(ent->modellight_diffuse, f, ent->modellight_diffuse);
+							}
+						}
+					}
+
+					if(r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
+					{
+						fa = 0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2];
+						fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
+						f = fa + 0.25 * fd;
+						if(f > 0)
+						{
+							// adjust brightness and saturation to target
+							avg[0] = avg[1] = avg[2] = fa / f;
+							VectorLerp(ent->modellight_ambient, r_equalize_entities_by.value, avg, ent->modellight_ambient);
+							avg[0] = avg[1] = avg[2] = fd / f;
+							VectorLerp(ent->modellight_diffuse, r_equalize_entities_by.value, avg, ent->modellight_diffuse);
 						}
 					}
 				}
-
-				if(r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
-				{
-					fa = 0.299f * ent->modellight_ambient[0] + 0.587f * ent->modellight_ambient[1] + 0.114f * ent->modellight_ambient[2];
-					fd = 0.299f * ent->modellight_diffuse[0] + 0.587f * ent->modellight_diffuse[1] + 0.114f * ent->modellight_diffuse[2];
-					f = fa + 0.25 * fd;
-					if(f > 0)
-					{
-						// adjust brightness and saturation to target
-						avg[0] = avg[1] = avg[2] = fa / f;
-						VectorLerp(ent->modellight_ambient, r_equalize_entities_by.value, avg, ent->modellight_ambient);
-						avg[0] = avg[1] = avg[2] = fd / f;
-						VectorLerp(ent->modellight_diffuse, r_equalize_entities_by.value, avg, ent->modellight_diffuse);
-					}
-				}
 			}
+			else // highly rare
+				VectorSet(ent->modellight_ambient, 1, 1, 1);
 		}
-		else // highly rare
-			VectorSet(ent->modellight_ambient, 1, 1, 1);
 
 		// move the light direction into modelspace coordinates for lighting code
 		Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
