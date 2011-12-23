@@ -40,6 +40,7 @@ cvar_t r_subdivisions_collision_maxtess = {0, "r_subdivisions_collision_maxtess"
 cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225", "maximum vertices allowed per subdivided curve"};
 cvar_t r_trippy = {0, "r_trippy", "0", "easter egg"};
 cvar_t mod_noshader_default_offsetmapping = {CVAR_SAVE, "mod_noshader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces that are not using q3 shader files"};
+cvar_t mod_obj_orientation = {0, "mod_obj_orientation", "1", "fix orientation of OBJ models to the usual conventions (if zero, use coordinates as is)"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
 cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "16", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
 cvar_t mod_q3bsp_curves_stride = {0, "mod_q3bsp_curves_stride", "16", "particle effect collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
@@ -81,6 +82,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_subdivisions_collision_maxvertices);
 	Cvar_RegisterVariable(&r_trippy);
 	Cvar_RegisterVariable(&mod_noshader_default_offsetmapping);
+	Cvar_RegisterVariable(&mod_obj_orientation);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions_stride);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_stride);
@@ -7496,9 +7498,18 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				maxv = max(maxv * 2, 1024);
 				v = (float *)Mem_Realloc(tempmempool, v, maxv * sizeof(float[3]));
 			}
-			v[numv*3+0] = atof(argv[1]);
-			v[numv*3+2] = atof(argv[2]);
-			v[numv*3+1] = atof(argv[3]);
+			if(mod_obj_orientation.integer)
+			{
+				v[numv*3+0] = atof(argv[1]);
+				v[numv*3+2] = atof(argv[2]);
+				v[numv*3+1] = atof(argv[3]);
+			}
+			else
+			{
+				v[numv*3+0] = atof(argv[1]);
+				v[numv*3+1] = atof(argv[2]);
+				v[numv*3+2] = atof(argv[3]);
+			}
 			numv++;
 		}
 		else if (!strcmp(argv[0], "vt"))
@@ -7519,9 +7530,18 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				maxvn = max(maxvn * 2, 1024);
 				vn = (float *)Mem_Realloc(tempmempool, vn, maxvn * sizeof(float[3]));
 			}
-			vn[numvn*3+0] = atof(argv[1]);
-			vn[numvn*3+2] = atof(argv[2]);
-			vn[numvn*3+1] = atof(argv[3]);
+			if(mod_obj_orientation.integer)
+			{
+				vn[numvn*3+0] = atof(argv[1]);
+				vn[numvn*3+2] = atof(argv[2]);
+				vn[numvn*3+1] = atof(argv[3]);
+			}
+			else
+			{
+				vn[numvn*3+0] = atof(argv[1]);
+				vn[numvn*3+1] = atof(argv[2]);
+				vn[numvn*3+2] = atof(argv[3]);
+			}
 			numvn++;
 		}
 		else if (!strcmp(argv[0], "f"))
@@ -7590,9 +7610,18 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 						maxtriangles = max(maxtriangles * 2, 32768);
 						vertices = (objvertex_t*)Mem_Realloc(loadmodel->mempool, vertices, maxtriangles * sizeof(objvertex_t[3]));
 					}
-					vertices[numtriangles*3+0] = vfirst;
-					vertices[numtriangles*3+1] = vprev;
-					vertices[numtriangles*3+2] = vcurrent;
+					if(mod_obj_orientation.integer)
+					{
+						vertices[numtriangles*3+0] = vfirst;
+						vertices[numtriangles*3+1] = vprev;
+						vertices[numtriangles*3+2] = vcurrent;
+					}
+					else
+					{
+						vertices[numtriangles*3+0] = vfirst;
+						vertices[numtriangles*3+2] = vprev;
+						vertices[numtriangles*3+1] = vcurrent;
+					}
 					numtriangles++;
 				}
 				vprev = vcurrent;
