@@ -1490,7 +1490,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	s.cmd.jump = (s.cmd.buttons & 2) != 0;
 	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
 
-	CL_ClientMovement_PlayerMove(&s);
+	CL_ClientMovement_PlayerMove_Frame(&s);
 
 	if(ent == prog->edicts)
 	{
