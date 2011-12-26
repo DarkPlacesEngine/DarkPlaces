@@ -1871,7 +1871,7 @@ typedef struct cl_clientmovement_state_s
 	usercmd_t cmd;
 }
 cl_clientmovement_state_t;
-void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s);
+void CL_ClientMovement_PlayerMove_Frame(cl_clientmovement_state_t *s);
 
 // warpzone prediction hack (CSQC builtin)
 void CL_RotateMoves(const matrix4x4_t *m);
