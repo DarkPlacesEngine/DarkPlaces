@@ -1440,7 +1440,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	}
 }
 
-void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 {
 	//Con_Printf(" %f", frametime);
 	if (!s->cmd.jump)
@@ -1545,6 +1545,27 @@ void CL_UpdateMoveVars(void)
 		cl.movevars_aircontrol_power = 2; // CPMA default
 }
 
+void CL_ClientMovement_PlayerMove_Frame(cl_clientmovement_state_t *s)
+{
+	// if a move is more than 50ms, do it as two moves (matching qwsv)
+	//Con_Printf("%i ", s.cmd.msec);
+	if(s->cmd.frametime > 0.0005)
+	{
+		if (s->cmd.frametime > 0.05)
+		{
+			s->cmd.frametime /= 2;
+			CL_ClientMovement_PlayerMove(s);
+		}
+		CL_ClientMovement_PlayerMove(s);
+	}
+	else
+	{
+		// we REALLY need this handling to happen, even if the move is not executed
+		if (!s->cmd.jump)
+			s->cmd.canjump = true;
+	}
+}
+
 void CL_ClientMovement_Replay(void)
 {
 	int i;
@@ -1590,23 +1611,8 @@ void CL_ClientMovement_Replay(void)
 			if (i < CL_MAX_USERCMDS - 1)
 				s.cmd.canjump = cl.movecmd[i+1].canjump;
 
-			// if a move is more than 50ms, do it as two moves (matching qwsv)
-			//Con_Printf("%i ", s.cmd.msec);
-			if(s.cmd.frametime > 0.0005)
-			{
-				if (s.cmd.frametime > 0.05)
-				{
-					s.cmd.frametime /= 2;
-					CL_ClientMovement_PlayerMove(&s);
-				}
-				CL_ClientMovement_PlayerMove(&s);
-			}
-			else
-			{
-				// we REALLY need this handling to happen, even if the move is not executed
-				if (!s.cmd.jump)
-					s.cmd.canjump = true;
-			}
+			CL_ClientMovement_PlayerMove_Frame(&s);
+
 			cl.movecmd[i].canjump = s.cmd.canjump;
 		}
 		//Con_Printf("\n");
