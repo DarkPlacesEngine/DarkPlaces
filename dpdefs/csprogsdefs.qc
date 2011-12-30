@@ -166,7 +166,7 @@ const float MASK_NORMAL			= 4;
 const float RF_VIEWMODEL	= 1;
 const float RF_EXTERNALMODEL	= 2;
 const float RF_DEPTHHACK	= 4;
-const float RF_ADDATIVE		= 8;
+const float RF_ADDITIVE		= 8;
 const float RF_USEAXIS		= 16;
 
 const float VF_MIN		= 1;	//(vector)
@@ -484,7 +484,7 @@ float(vector position, string text, vector scale, float alpha, float flag) drawc
 vector(vector position, string text, vector scale, vector rgb, float alpha, float flag) drawcolorcodedstring2 = #326;
 
 float(float stnum) getstatf = #330;
-float(float stnum) getstati = #331;
+float(float stnum, ...) getstati = #331; // can optionally take first bit and count
 string(float firststnum) getstats = #332;
 void(entity e, float mdlindex) setmodelindex = #333;
 string(float mdlindex) modelnameforindex = #334;
@@ -1204,6 +1204,191 @@ float log(float f) = #532;
 //description:
 //logarithm
 
+//FTE_CSQC_SKELETONOBJECTS
+//idea: Spike, LordHavoc
+//darkplaces implementation: LordHavoc
+//builtin definitions:
+// all skeleton numbers are 1-based (0 being no skeleton)
+// all bone numbers are 1-based (0 being invalid)
+float(float modlindex) skel_create = #263; // create a skeleton (be sure to assign this value into .skeletonindex for use), returns skeleton index (1 or higher) on success, returns 0 on failure (for example if the modelindex is not skeletal), it is recommended that you create a new skeleton if you change modelindex, as the skeleton uses the hierarchy from the model.
+float(float skel, entity ent, float modlindex, float retainfrac, float firstbone, float lastbone) skel_build = #264; // blend in a percentage of standard animation, 0 replaces entirely, 1 does nothing, 0.5 blends half, etc, and this only alters the bones in the specified range for which out of bounds values like 0,100000 are safe (uses .frame, .frame2, .frame3, .frame4, .lerpfrac, .lerpfrac3, .lerpfrac4, .frame1time, .frame2time, .frame3time, .frame4time), returns skel on success, 0 on failure
+float(float skel) skel_get_numbones = #265; // returns how many bones exist in the created skeleton, 0 if skeleton does not exist
+string(float skel, float bonenum) skel_get_bonename = #266; // returns name of bone (as a tempstring), "" if invalid bonenum (< 1 for example) or skeleton does not exist
+float(float skel, float bonenum) skel_get_boneparent = #267; // returns parent num for supplied bonenum, 0 if bonenum has no parent or bone does not exist (returned value is always less than bonenum, you can loop on this)
+float(float skel, string tagname) skel_find_bone = #268; // get number of bone with specified name, 0 on failure, bonenum (1-based) on success, same as using gettagindex but takes modelindex instead of entity
+vector(float skel, float bonenum) skel_get_bonerel = #269; // get matrix of bone in skeleton relative to its parent - sets v_forward, v_right, v_up, returns origin (relative to parent bone)
+vector(float skel, float bonenum) skel_get_boneabs = #270; // get matrix of bone in skeleton in model space - sets v_forward, v_right, v_up, returns origin (relative to entity)
+void(float skel, float bonenum, vector org) skel_set_bone = #271; // set matrix of bone relative to its parent, reads v_forward, v_right, v_up, takes origin as parameter (relative to parent bone)
+void(float skel, float bonenum, vector org) skel_mul_bone = #272; // transform bone matrix (relative to its parent) by the supplied matrix in v_forward, v_right, v_up, takes origin as parameter (relative to parent bone)
+void(float skel, float startbone, float endbone, vector org) skel_mul_bones = #273; // transform bone matrices (relative to their parents) by the supplied matrix in v_forward, v_right, v_up, takes origin as parameter (relative to parent bones)
+void(float skeldst, float skelsrc, float startbone, float endbone) skel_copybones = #274; // copy bone matrices (relative to their parents) from one skeleton to another, useful for copying a skeleton to a corpse
+void(float skel) skel_delete = #275; // deletes skeleton at the beginning of the next frame (you can add the entity, delete the skeleton, renderscene, and it will still work)
+float(float modlindex, string framename) frameforname = #276; // finds number of a specified frame in the animation, returns -1 if no match found
+float(float modlindex, float framenum) frameduration = #277; // returns the intended play time (in seconds) of the specified framegroup, if it does not exist the result is 0, if it is a single frame it may be a small value around 0.1 or 0.
+//fields:
+.float skeletonindex; // active skeleton overriding standard animation on model
+.float frame; // primary framegroup animation (strength = 1 - lerpfrac - lerpfrac3 - lerpfrac4)
+.float frame2; // secondary framegroup animation (strength = lerpfrac)
+.float frame3; // tertiary framegroup animation (strength = lerpfrac3)
+.float frame4; // quaternary framegroup animation (strength = lerpfrac4)
+.float lerpfrac; // strength of framegroup blend
+.float lerpfrac3; // strength of framegroup blend
+.float lerpfrac4; // strength of framegroup blend
+.float frame1time; // start time of framegroup animation
+.float frame2time; // start time of framegroup animation
+.float frame3time; // start time of framegroup animation
+.float frame4time; // start time of framegroup animation
+//description:
+//this extension provides a way to do complex skeletal animation on an entity.
+//
+//see also DP_SKELETONOBJECTS (this extension implemented on server as well as client)
+//
+//notes:
+//each model contains its own skeleton, reusing a skeleton with incompatible models will yield garbage (or not render).
+//each model contains its own animation data, you can use animations from other model files (for example saving out all character animations as separate model files).
+//if an engine supports loading an animation-only file format such as .md5anim in FTEQW, it can be used to animate any model with a compatible skeleton.
+//proper use of this extension may require understanding matrix transforms (v_forward, v_right, v_up, origin), and you must keep in mind that v_right is negative for this purpose.
+//
+//features include:
+//multiple animations blended together.
+//animating a model with animations from another model with a compatible skeleton.
+//restricting animation blends to certain bones of a model - for example independent animation of legs, torso, head.
+//custom bone controllers - for example making eyes track a target location.
+//
+//
+//
+//example code follows...
+//
+//this helper function lets you identify (by parentage) what group a bone
+//belongs to - for example "torso", "leftarm", would return 1 ("torso") for
+//all children of the bone named "torso", unless they are children of
+//"leftarm" (which is a child of "torso") which would return 2 instead...
+float(float skel, float bonenum, string g1, string g2, string g3, string g4, string g5, string g6) example_skel_findbonegroup =
+{
+	local string bonename;
+	while (bonenum >= 0)
+	{
+		bonename = skel_get_bonename(skel, bonenum);
+		if (bonename == g1) return 1;
+		if (bonename == g2) return 2;
+		if (bonename == g3) return 3;
+		if (bonename == g4) return 4;
+		if (bonename == g5) return 5;
+		if (bonename == g6) return 6;
+		bonenum = skel_get_boneparent(skel, bonenum);
+	}
+	return 0;
+};
+// create a skeletonindex for our player using current modelindex
+void() example_skel_player_setup =
+{
+	self.skeletonindex = skel_create(self.modelindex);
+};
+// setup bones of skeleton based on an animation
+// note: animmodelindex can be a different model than self.modelindex
+void(float animmodelindex, float framegroup, float framegroupstarttime) example_skel_player_update_begin =
+{
+	// start with our standard animation
+	self.frame = framegroup;
+	self.frame2 = 0;
+	self.frame3 = 0;
+	self.frame4 = 0;
+	self.frame1time = framegroupstarttime;
+	self.frame2time = 0;
+	self.frame3time = 0;
+	self.frame4time = 0;
+	self.lerpfrac = 0;
+	self.lerpfrac3 = 0;
+	self.lerpfrac4 = 0;
+	skel_build(self.skeletonindex, self, animmodelindex, 0, 0, 100000);
+};
+// apply a different framegroup animation to bones with a specified parent
+void(float animmodelindex, float framegroup, float framegroupstarttime, float blendalpha, string groupbonename, string excludegroupname1, string excludegroupname2) example_skel_player_update_applyoverride =
+{
+	local float bonenum;
+	local float numbones;
+	self.frame = framegroup;
+	self.frame2 = 0;
+	self.frame3 = 0;
+	self.frame4 = 0;
+	self.frame1time = framegroupstarttime;
+	self.frame2time = 0;
+	self.frame3time = 0;
+	self.frame4time = 0;
+	self.lerpfrac = 0;
+	self.lerpfrac3 = 0;
+	self.lerpfrac4 = 0;
+	bonenum = 0;
+	numbones = skel_get_numbones(self.skeletonindex);
+	while (bonenum < numbones)
+	{
+		if (example_skel_findbonegroup(self.skeletonindex, bonenum, groupbonename, excludegroupname1, excludegroupname2, "", "", "") == 1)
+			skel_build(self.skeletonindex, self, animmodelindex, 1 - blendalpha, bonenum, bonenum + 1);
+		bonenum = bonenum + 1;
+	}
+};
+// make eyes point at a target location, be sure v_forward, v_right, v_up are set correctly before calling
+void(vector eyetarget, string bonename) example_skel_player_update_eyetarget =
+{
+	local float bonenum;
+	local vector ang;
+	local vector oldforward, oldright, oldup;
+	local vector relforward, relright, relup, relorg;
+	local vector boneforward, boneright, boneup, boneorg;
+	local vector parentforward, parentright, parentup, parentorg;
+	local vector u, v;
+	local vector modeleyetarget;
+	bonenum = skel_find_bone(self.skeletonindex, bonename) - 1;
+	if (bonenum < 0)
+		return;
+	oldforward = v_forward;
+	oldright = v_right;
+	oldup = v_up;
+	v = eyetarget - self.origin;
+	modeleyetarget_x =   v * v_forward;
+	modeleyetarget_y = 0-v * v_right;
+	modeleyetarget_z =   v * v_up;
+	// this is an eyeball, make it point at the target location
+	// first get all the data we can...
+	relorg = skel_get_bonerel(self.skeletonindex, bonenum);
+	relforward = v_forward;
+	relright = v_right;
+	relup = v_up;
+	boneorg = skel_get_boneabs(self.skeletonindex, bonenum);
+	boneforward = v_forward;
+	boneright = v_right;
+	boneup = v_up;
+	parentorg = skel_get_boneabs(self.skeletonindex, skel_get_boneparent(self.skeletonindex, bonenum));
+	parentforward = v_forward;
+	parentright = v_right;
+	parentup = v_up;
+	// get the vector from the eyeball to the target
+	u = modeleyetarget - boneorg;
+	// now transform it inversely by the parent matrix to produce new rel vectors
+	v_x = u * parentforward;
+	v_y = u * parentright;
+	v_z = u * parentup;
+	ang = vectoangles2(v, relup);
+	ang_x = 0 - ang_x;
+	makevectors(ang);
+	// set the relative bone matrix
+	skel_set_bone(self.skeletonindex, bonenum, relorg);
+	// restore caller's v_ vectors
+	v_forward = oldforward;
+	v_right = oldright;
+	v_up = oldup;
+};
+// delete skeleton when we're done with it
+// note: skeleton remains valid until next frame when it is really deleted
+void() example_skel_player_delete =
+{
+	skel_delete(self.skeletonindex);
+	self.skeletonindex = 0;
+};
+//
+// END OF EXAMPLES FOR FTE_CSQC_SKELETONOBJECTS
+//
+
 // assorted builtins
 const float		STAT_MOVEVARS_TICRATE           = 240;
 const float		STAT_MOVEVARS_TIMESCALE         = 241;
@@ -1217,3 +1402,5 @@ float PARTICLES_USECOLOR = 2;
 vector particles_colormin, particles_colormax;
 void(float effectindex, entity own, vector org_from, vector org_to, vector dir_from, vector dir_to, float countmultiplier, float flags) boxparticles = #502;
 float trace_networkentity;
+const float RF_FULLBRIGHT	= 256;
+const float RF_NOSHADOW	= 512;
