@@ -202,7 +202,7 @@ float	stof(string val,...)  = #21;
 entity	spawn(void) 		= #22;
 void	remove(entity e) 	= #23;
 
-entity	findstring(entity start, .string field, string match)  	= #24;
+entity	find(entity start, .string field, string match)  	= #24;
 entity	findfloat(entity start, .float field, float match) 	= #25;
 entity	findentity(entity start, .entity field, entity match) 	= #25;
 
