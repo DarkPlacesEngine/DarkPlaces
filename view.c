@@ -827,7 +827,7 @@ void V_CalcRefdef (void)
 {
 	entity_t *ent;
 
-	if (cls.state == ca_connected && cls.signon == SIGNONS && !cl.csqc_server2csqcentitynumber[cl.playerentity])
+	if (cls.state == ca_connected && cls.signon == SIGNONS && !cl.csqc_server2csqcentitynumber[cl.viewentity])
 	{
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
