@@ -4736,7 +4736,7 @@ static void R_View_UpdateEntityLighting (void)
 			continue;
 
 		// skip bsp models
-		if (ent->model && (ent->model == cl.worldmodel || ent->model->brush.parentmodel == cl.worldmodel))
+		if (ent->model && ent->model == cl.worldmodel)
 		{
 			// TODO: use modellight for r_ambient settings on world?
 			VectorSet(ent->modellight_ambient, 0, 0, 0);
@@ -7815,7 +7815,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	{
 		// no modellight if using fakelight for the map
 	}
-	else if (rsurface.modeltexcoordlightmap2f == NULL && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+	else if ((rsurface.modeltexcoordlightmap2f == NULL || (rsurface.ent_flags & (RENDER_DYNAMICMODELLIGHT | RENDER_CUSTOMIZEDMODELLIGHT))) && !(t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
 	{
 		// pick a model lighting mode
 		if (VectorLength2(rsurface.modellight_diffuse) >= (1.0f / 256.0f))
