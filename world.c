@@ -1864,20 +1864,20 @@ static void World_Physics_Frame_ForceFromEntity(world_t *world, prvm_edict_t *ed
 		return;
 	VectorCopy(PRVM_gameedictvector(ed, movedir), movedir);
 	VectorCopy(PRVM_gameedictvector(ed, origin), origin);
-	dBodyEnable(prog->edicts[enemy].priv.server->ode_body);
+	dBodyEnable((dBodyID)prog->edicts[enemy].priv.server->ode_body);
 	switch(forcetype)
 	{
 		case FORCETYPE_FORCE:
 			if (movedir[0] || movedir[1] || movedir[2])
-				dBodyAddForce(prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2]);
+				dBodyAddForce((dBodyID)prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2]);
 			break;
 		case FORCETYPE_FORCEATPOS:
 			if (movedir[0] || movedir[1] || movedir[2])
-				dBodyAddForceAtPos(prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2], origin[0], origin[1], origin[2]);
+				dBodyAddForceAtPos((dBodyID)prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2], origin[0], origin[1], origin[2]);
 			break;
 		case FORCETYPE_TORQUE:
 			if (movedir[0] || movedir[1] || movedir[2])
-				dBodyAddTorque(prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2]);
+				dBodyAddTorque((dBodyID)prog->edicts[enemy].priv.server->ode_body, movedir[0], movedir[1], movedir[2]);
 			break;
 		case FORCETYPE_NONE:
 		default:
