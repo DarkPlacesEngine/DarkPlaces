@@ -50,6 +50,8 @@ typedef struct world_physics_s
 	int ode_iterations;
 	// actual step (server frametime / ode_iterations)
 	vec_t ode_step;
+	// time we need to simulate, for constantstep
+	vec_t ode_time;
 	// stats
 	int ode_numobjects; // total objects cound
 	int ode_activeovjects; // active objects count

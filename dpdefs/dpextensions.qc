@@ -1680,22 +1680,37 @@ const float SOLID_PHYSICS_CAPSULE = 34;
 const float SOLID_PHYSICS_TRIMESH = 35;
 const float SOLID_PHYSICS_CYLINDER = 36;
 //geometry types:
-const float GEOMTYPE_NULL = 0;
-const float GEOMTYPE_BOX = 1;
-const float GEOMTYPE_SPHERE = 2;
-const float GEOMTYPE_CAPSULE = 3;
-const float GEOMTYPE_TRIMESH = 4;
-const float GEOMTYPE_CYLINDER = 5;
-//SOLID_BSP;
+const float GEOMTYPE_NONE = -1;       // entity will be entirely skipped by ODE
+const float GEOMTYPE_SOLID = 0;       // geometry type will be set based on .solid field
+const float GEOMTYPE_BOX = 1;         // entity bound box
+const float GEOMTYPE_SPHERE = 2;      // sphere with radius picked from x axis of entity bound box
+const float GEOMTYPE_CAPSULE = 3;     // with leading axis automatically determined from longest one, radius is picked as minimal of the rest 2 axes
+const float GEOMTYPE_TRIMESH = 4;     // triangle mesh
+const float GEOMTYPE_CYLINDER = 5;    // like capsule but not capped
+                                      // note that ODE's builtin cylinder support is experimental, somewhat bugged and unfinished (no cylinder-cylinder collision)
+									  // to use properly working cylinder should build ODE with LIBCCD extension
+const float GEOMTYPE_CAPSULE_X = 6;   // capsule with fixed leading axis
+const float GEOMTYPE_CAPSULE_Y = 7;
+const float GEOMTYPE_CAPSULE_Z = 8;
+const float GEOMTYPE_CYLINDER_X	= 9;  // cylinder with fixed leading axis
+const float GEOMTYPE_CYLINDER_Y	= 10;
+const float GEOMTYPE_CYLINDER_Z	= 11;
 //joint types:
+const float JOINTTYPE_NONE = 0;
 const float JOINTTYPE_POINT = 1;
 const float JOINTTYPE_HINGE = 2;
 const float JOINTTYPE_SLIDER = 3;
 const float JOINTTYPE_UNIVERSAL = 4;
 const float JOINTTYPE_HINGE2 = 5;
 const float JOINTTYPE_FIXED = -1;
+//force types:
+const float FORCETYPE_NONE = 0;
+const float FORCETYPE_FORCE = 1; // applied at center of mass
+const float FORCETYPE_FORCEATPOS = 2;
+const float FORCETYPE_TORQUE = 3;
 // common joint properties:
-// .entity aiment, enemy; // connected objects
+// .entity aiment; // connected objects
+// .entity enemy; // connected objects, forces
 // .vector movedir;
 //   for a spring:
 //     movedir_x = spring constant (force multiplier, must be > 0)
@@ -1706,18 +1721,26 @@ const float JOINTTYPE_FIXED = -1;
 //     movedir_y = -1 * max motor force to use
 //     movedir_z = stop position (+/-), set to 0 for no stop
 //   note that ODE does not support both in one anyway
+//   for a force:
+//     force vector to apply
 //field definitions:
-.float geomtype; // see GEOMTYPE_*, a more correct way to set collision shape, allows to set SOLID_CORPSE and trimesh collisions
-.float mass; // ODE mass, standart value is 1
-.vector massofs; // offsets a mass center out of object center, if not set a center of model bounds is used
-.float friction;
-.float bouncefactor;
-.float bouncestop;
-.float jointtype;
+.float  geomtype;     // see GEOMTYPE_*, a more correct way to set collision shape, allows to set SOLID_CORPSE and trimesh collisions
+.float  maxcontacts;  // maximum number of contacts to make for this object, lesser = faster (but setting it too low will could make object pass though walls), default is 16, maximum is 32
+.float  mass;         // ODE mass, standart value is 1
+.vector massofs;      // offsets a mass center out of object center, if not set a center of model bounds is used
+.float  friction;     // a friction of object, get multiplied by second objects's friction on contact
+.float  bouncefactor;
+.float  bouncestop; 
+.float  jointtype;    // type of joint
+.float  forcetype;    // type of force
+.float  erp;          // error restitution parameter, makes ODE solver attempt to fix errors in contacts, 
+                      // bringing together 2 joints or fixing object being stuch in other object, 
+			          // a value of 0.1 will fix slightly, a value of 1.0 attempts to fix whole error in one frame
+			          // use with care as high values makes system unstable and likely to explode
 //builtin definitions:
 void(entity e, float physics_enabled) physics_enable = #540; // enable or disable physics on object
-void(entity e, vector force, vector force_pos) physics_addforce = #541; // apply a force from certain origin, length of force vector is power of force
-void(entity e, vector torque) physics_addtorque = #542; // add relative torque
+void(entity e, vector force, vector force_pos) physics_addforce = #541; // deprecated, apply a force from certain origin, length of force vector is power of force
+void(entity e, vector torque) physics_addtorque = #542; // deprecated, add relative torque
 //description: provides Open Dynamics Engine support, requires extenal dll to be present or engine compiled with statical link option
 //be sure to checkextension for it to know if library is loaded and ready, also to enable physics set "physics_ode" cvar to 1
 //note: this extension is highly experimental and may be unstable
