@@ -373,6 +373,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		if(renderflags & RF_WORLDOBJECT) entrender->flags |= RENDER_WORLDOBJECT;
 		if(renderflags & RF_DEPTHHACK) entrender->flags |= RENDER_NODEPTHTEST;
 		if(renderflags & RF_ADDITIVE) entrender->flags |= RENDER_ADDITIVE;
+		if(renderflags & RF_DYNAMICMODELLIGHT) entrender->flags |= RENDER_DYNAMICMODELLIGHT;
 	}
 
 	c = (int)PRVM_clientedictfloat(ed, colormap);
@@ -409,6 +410,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 		entrender->flags |= RENDER_ADDITIVE;
 	if (entrender->effects & EF_DOUBLESIDED)
 		entrender->flags |= RENDER_DOUBLESIDED;
+	if (entrender->effects & EF_DYNAMICMODELLIGHT)
+		entrender->flags |= RENDER_DYNAMICMODELLIGHT;
 
 	// make the other useful stuff
 	memcpy(entrender->framegroupblend, ed->priv.server->framegroupblend, sizeof(ed->priv.server->framegroupblend));

@@ -113,6 +113,14 @@ float EF_DOUBLESIDED = 32768;
 //description:
 //render entity as double sided (backfaces are visible, I.E. you see the 'interior' of the model, rather than just the front), can be occasionally useful on transparent stuff.
 
+//DP_EF_DYNAMICMODELLIGHT
+//idea: C.Brutail, divVerent, maikmerten
+//darkplaces implementation: divVerent
+//effects bit:
+float   EF_DYNAMICMODELLIGHT     = 131072;
+//description:
+//force dynamic model light on the entity, even if it's a BSP model (or anything else with lightmaps or light colors)
+
 //DP_EF_FLAME
 //idea: LordHavoc
 //darkplaces implementation: LordHavoc

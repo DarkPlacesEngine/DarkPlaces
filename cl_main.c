@@ -1174,6 +1174,8 @@ static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean int
 		e->render.flags |= RENDER_ADDITIVE;
 	if (e->render.effects & EF_DOUBLESIDED)
 		e->render.flags |= RENDER_DOUBLESIDED;
+	if (e->render.effects & EF_DYNAMICMODELLIGHT)
+		e->render.flags |= RENDER_DYNAMICMODELLIGHT;
 
 	// make the other useful stuff
 	e->render.allowdecals = true;
