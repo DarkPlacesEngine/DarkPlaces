@@ -6829,9 +6829,9 @@ void VM_physics_addforce(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_physics_addforce: entity is not MOVETYPE_PHYSICS!\n");
 		return;
 	}
-	f.type = ODEFUNC_FORCE;
+	f.type = ODEFUNC_RELFORCEATPOS;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
-	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), f.v2);
+	VectorSubtract(PRVM_serveredictvector(ed, origin), PRVM_G_VECTOR(OFS_PARM2), f.v2);
 	VM_physics_ApplyCmd(ed, &f);
 }
 
@@ -6855,7 +6855,7 @@ void VM_physics_addtorque(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_physics_addtorque: entity is not MOVETYPE_PHYSICS!\n");
 		return;
 	}
-	f.type = ODEFUNC_TORQUE;
+	f.type = ODEFUNC_RELTORQUE;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VM_physics_ApplyCmd(ed, &f);
 }
