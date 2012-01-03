@@ -3911,7 +3911,7 @@ void VM_getimagesize(prvm_prog_t *prog)
 	VM_CheckEmptyString(prog, p);
 
 	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_NOTPERSISTENT);
-	if( Draw_CachePic_Flags(p, 0)->tex == r_texture_notexture )
+	if( pic->tex == r_texture_notexture )
 	{
 		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
 		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
