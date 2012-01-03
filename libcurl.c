@@ -9,6 +9,8 @@ static cvar_t sv_curl_defaulturl = {CVAR_SAVE, "sv_curl_defaulturl","", "default
 static cvar_t sv_curl_serverpackages = {CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
 static cvar_t sv_curl_maxspeed = {CVAR_SAVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
 static cvar_t cl_curl_enabled = {CVAR_SAVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
+static cvar_t cl_curl_useragent = {0, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
+static cvar_t cl_curl_useragent_append = {0, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
 
 /*
 =================================================================
@@ -637,7 +639,27 @@ static void CheckPendingDownloads(void)
 				di->curle = qcurl_easy_init();
 				di->slist = NULL;
 				qcurl_easy_setopt(di->curle, CURLOPT_URL, di->url);
-				qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, engineversion);
+				if(cl_curl_useragent.integer)
+				{
+					const char *ua
+#ifdef HTTP_USER_AGENT
+						= HTTP_USER_AGENT;
+#else
+						= engineversion;
+#endif
+					if(!ua)
+						ua = "";
+					if(*cl_curl_useragent_append.string)
+						ua = va(vabuf, sizeof(vabuf), "%s%s%s",
+							ua,
+							(ua[0] && ua[strlen(ua)-1] != ' ')
+								? " "
+								: "",
+							cl_curl_useragent_append.string);
+					qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, ua);
+				}
+				else
+					qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, "");
 				qcurl_easy_setopt(di->curle, CURLOPT_REFERER, di->referer);
 				qcurl_easy_setopt(di->curle, CURLOPT_RESUME_FROM, (long) di->startpos);
 				qcurl_easy_setopt(di->curle, CURLOPT_FOLLOWLOCATION, 1);
@@ -1395,6 +1417,8 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_defaulturl);
 	Cvar_RegisterVariable (&sv_curl_serverpackages);
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
+	Cvar_RegisterVariable (&cl_curl_useragent);
+	Cvar_RegisterVariable (&cl_curl_useragent_append);
 	Cmd_AddCommand ("curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand ("curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
