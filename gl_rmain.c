@@ -2263,7 +2263,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		// unshaded geometry (fullbright or ambient model lighting)
 		mode = SHADERMODE_FLATCOLOR;
 		ambientscale = diffusescale = specularscale = 0;
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+		if ((rsurface.texture->glowtexture || rsurface.texture->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
@@ -2313,7 +2313,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// directional model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+		if ((rsurface.texture->glowtexture || rsurface.texture->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		permutation |= SHADERPERMUTATION_DIFFUSE;
 		if (specularscale > 0)
@@ -2374,7 +2374,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// ambient model lighting
 		mode = SHADERMODE_LIGHTDIRECTION;
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+		if ((rsurface.texture->glowtexture || rsurface.texture->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
@@ -2431,7 +2431,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
 			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
 		// lightmapped wall
-		if (rsurface.texture->glowtexture && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+		if ((rsurface.texture->glowtexture || rsurface.texture->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
 		if (r_refdef.fogenabled)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
