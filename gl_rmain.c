@@ -7891,6 +7891,11 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->backgroundglowtexture = t->backgroundcurrentskinframe->glow;
 		if (!t->backgroundnmaptexture)
 			t->backgroundnmaptexture = r_texture_blanknormalmap;
+		// make sure that if glow is going to be used, both textures are not NULL
+		if (!t->backgroundglowtexture && t->glowtexture)
+			t->backgroundglowtexture = r_texture_black;
+		if (!t->glowtexture && t->backgroundglowtexture)
+			t->glowtexture = r_texture_black;
 	}
 	else
 	{
