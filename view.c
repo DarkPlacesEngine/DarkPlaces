@@ -458,8 +458,7 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.qw_weaponkick
  *   cls.protocol
  *   cl.time
- *   cl.velocity (TODO should these be parameters?)
- *   cl.viewangles (TODO should these be parameters?)
+ *   cl.velocity (TODO should this be a parameter?)
  * Output:
  *   cl.csqc_viewanglesfromengine
  *   cl.csqc_viewmodelmatrixfromengine
@@ -645,7 +644,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			if (cldead && v_deathtilt.integer)
 				viewangles[ROLL] = v_deathtiltangle.value;
 			VectorAdd(viewangles, cl.punchangle, viewangles);
-			viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
+			viewangles[ROLL] += V_CalcRoll(clviewangles, cl.velocity);
 			if (v_dmg_time > 0)
 			{
 				viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
