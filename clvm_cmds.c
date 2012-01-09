@@ -4150,6 +4150,8 @@ static void VM_CL_loadcubemap(prvm_prog_t *prog)
 
 #define REFDEFFLAG_TELEPORTED 1
 #define REFDEFFLAG_JUMPING 2
+#define REFDEFFLAG_DEAD 4
+#define REFDEFFLAG_INTERMISSION 8
 static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 {
 	matrix4x4_t entrendermatrix;
@@ -4157,6 +4159,8 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	qboolean teleported;
 	qboolean clonground;
 	qboolean clcmdjump;
+	qboolean cldead;
+	qboolean clintermission;
 	float clstatsviewheight;
 	prvm_edict_t *ent;
 	int flags;
@@ -4173,8 +4177,10 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	clonground = ((int)PRVM_clientedictfloat(ent, pmove_flags) & PMF_ONGROUND) != 0;
 	clcmdjump = (flags & REFDEFFLAG_JUMPING) != 0;
 	clstatsviewheight = PRVM_clientedictvector(ent, view_ofs)[2];
+	cldead = (flags & REFDEFFLAG_DEAD) != 0;
+	clintermission = (flags & REFDEFFLAG_INTERMISSION) != 0;
 
-	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight);
+	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight, cldead, clintermission);
 
 	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
