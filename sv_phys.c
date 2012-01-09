@@ -1235,23 +1235,19 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 		return 0;
 	gravity = 0;
 
-	if(sv_gameplayfix_nogravityonground.integer)
-		if((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND)
-			applygravity = false;
-
-	if (applygravity)
+	if(applygravity)
 	{
-		if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
+		gravity = SV_Gravity(ent);
+
+		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
 		{
-			gravity = SV_Gravity(ent) * 0.5f;
-			PRVM_serveredictvector(ent, velocity)[2] -= gravity;
-		}
-		else
-		{
-			applygravity = false;
-			PRVM_serveredictvector(ent, velocity)[2] -= SV_Gravity(ent);
+			if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
+				PRVM_serveredictvector(ent, velocity)[2] -= gravity * 0.5f;
+			else
+				PRVM_serveredictvector(ent, velocity)[2] -= gravity;
 		}
 	}
+
 	blocked = 0;
 	VectorCopy(PRVM_serveredictvector(ent, velocity), original_velocity);
 	VectorCopy(PRVM_serveredictvector(ent, velocity), primal_velocity);
@@ -1437,8 +1433,16 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	// LordHavoc: this came from QW and allows you to get out of water more easily
 	if (sv_gameplayfix_easierwaterjump.integer && ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP) && !(blocked & 8))
 		VectorCopy(primal_velocity, PRVM_serveredictvector(ent, velocity));
-	if (applygravity && !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
-		PRVM_serveredictvector(ent, velocity)[2] -= gravity;
+
+	if(applygravity)
+	{
+		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
+		{
+			if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
+				PRVM_serveredictvector(ent, velocity)[2] -= gravity * 0.5f;
+		}
+	}
+
 	return blocked;
 }
 
