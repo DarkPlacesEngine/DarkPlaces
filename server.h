@@ -302,6 +302,10 @@ typedef struct client_s
 	// number of skipped entity frames
 	// if it exceeds a limit, an empty entity frame is sent
 	int num_skippedentityframes;
+
+	// last sent move sequence
+	// if the move sequence changed, an empty entity frame is sent
+	int lastmovesequence;
 } client_t;
 
 

@@ -1895,8 +1895,17 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 	else
 		EntityFrameCSQC_WriteFrame(msg, maxsize, numcsqcsendstates, sv.writeentitiestoclient_csqcsendstates, 0);
 
-	if(client->num_skippedentityframes >= 10)
-		need_empty = true; // force every 10th frame to be not empty (or cl_movement replay takes too long)
+	// force every 16th frame to be not empty (or cl_movement replay takes
+	// too long)
+	// BTW, this should normally not kick in any more due to the check
+	// below, except if the client stopped sending movement frames
+	if(client->num_skippedentityframes >= 16)
+		need_empty = true;
+
+	// help cl_movement a bit more
+	if(client->movesequence != client->lastmovesequence)
+		need_empty = true;
+	client->lastmovesequence = client->movesequence;
 
 	if (client->entitydatabase5)
 		success = EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence, need_empty);
