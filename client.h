@@ -996,6 +996,7 @@ typedef struct client_state_s
 	float bob2_smooth;
 	float bobfall_speed;
 	float bobfall_swing;
+	double calcrefdef_prevtime;
 
 	// don't change view angle, full screen, etc
 	int intermission;

@@ -446,6 +446,7 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.oldongrounbd
  *   cl.stairsmoothtime
  *   cl.stairsmoothz
+ *   cl.calcrefdef_prevtime
  * Extra input:
  *   cl.movecmd[0].time
  *   cl.movevars_stepheight
@@ -490,6 +491,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		cl.lastongroundtime = cl.movecmd[0].time;
 	}
 	cl.oldonground = clonground;
+	cl.calcrefdef_prevtime = max(cl.calcrefdef_prevtime, cl.oldtime);
 
 	VectorClear(gunorg);
 	viewmodelmatrix_nobob = identitymatrix;
@@ -548,7 +550,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 
 		// apply the viewofs (even if chasecam is used)
 		// Samual: Lets add smoothing for this too so that things like crouching are done with a transition.
-		viewheight = bound(0, (cl.time - cl.oldtime) / max(0.0001, cl_smoothviewheight.value), 1);
+		viewheight = bound(0, (cl.time - cl.calcrefdef_prevtime) / max(0.0001, cl_smoothviewheight.value), 1);
 		viewheightavg = viewheightavg * (1 - viewheight) + clstatsviewheight * viewheight;
 		vieworg[2] += viewheightavg;
 
@@ -657,7 +659,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				float cycle;
 				vec_t frametime;
 
-				frametime = (cl.time - cl.oldtime) * cl.movevars_timescale;
+				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
 
 				// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
 				if(teleported)
