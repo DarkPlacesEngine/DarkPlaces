@@ -120,7 +120,7 @@ V_CalcRoll
 Used by view and sv_user
 ===============
 */
-float V_CalcRoll (vec3_t angles, vec3_t velocity)
+float V_CalcRoll (const vec3_t angles, const vec3_t velocity)
 {
 	vec3_t	right;
 	float	sign;
@@ -458,7 +458,6 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.qw_weaponkick
  *   cls.protocol
  *   cl.time
- *   cl.velocity (TODO should this be a parameter?)
  * Output:
  *   cl.csqc_viewanglesfromengine
  *   cl.csqc_viewmodelmatrixfromengine
@@ -467,7 +466,7 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   viewmodelmatrix_nobob
  *   viewmodelmatrix_withbob
  */
-void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight, qboolean cldead, qboolean clintermission)
+void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight, qboolean cldead, qboolean clintermission, const vec3_t clvelocity)
 {
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
@@ -644,7 +643,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			if (cldead && v_deathtilt.integer)
 				viewangles[ROLL] = v_deathtiltangle.value;
 			VectorAdd(viewangles, cl.punchangle, viewangles);
-			viewangles[ROLL] += V_CalcRoll(clviewangles, cl.velocity);
+			viewangles[ROLL] += V_CalcRoll(clviewangles, clvelocity);
 			if (v_dmg_time > 0)
 			{
 				viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
@@ -706,7 +705,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				VectorAdd(viewangles, gunangles, gunangles);
 
 				// bounded XY speed, used by several effects below
-				xyspeed = bound (0, sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]), 400);
+				xyspeed = bound (0, sqrt(clvelocity[0]*clvelocity[0] + clvelocity[1]*clvelocity[1]), 400);
 
 				// vertical view bobbing code
 				if (cl_bob.value && cl_bobcycle.value)
@@ -763,8 +762,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					// calculate the front and side of the player between the X and Y axes
 					AngleVectors(viewangles, forward, right, up);
 					// now get the speed based on those angles. The bounds should match the same value as xyspeed's
-					side = bound(-400, DotProduct (cl.velocity, right) * cl.bob2_smooth, 400);
-					front = bound(-400, DotProduct (cl.velocity, forward) * cl.bob2_smooth, 400);
+					side = bound(-400, DotProduct (clvelocity, right) * cl.bob2_smooth, 400);
+					front = bound(-400, DotProduct (clvelocity, forward) * cl.bob2_smooth, 400);
 					VectorScale(forward, bob, forward);
 					VectorScale(right, bob, right);
 					// we use side with forward and front with right, so the bobbing goes
@@ -786,8 +785,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				{
 					if (!clonground)
 					{
-						cl.bobfall_speed = bound(-400, cl.velocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
-						if (cl.velocity[2] < -cl_bobfallminspeed.value)
+						cl.bobfall_speed = bound(-400, clvelocity[2], 0) * bound(0, cl_bobfall.value, 0.1);
+						if (clvelocity[2] < -cl_bobfallminspeed.value)
 							cl.bobfall_swing = 1;
 						else
 							cl.bobfall_swing = 0; // TODO really?
@@ -878,7 +877,7 @@ void V_CalcRefdef (void)
 		ent = &cl.entities[cl.viewentity];
 
 		cldead = (cl.stats[STAT_HEALTH] <= 0 && cl.stats[STAT_HEALTH] != -666 && cl.stats[STAT_HEALTH] != -2342);
-		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump, cl.stats[STAT_VIEWHEIGHT], cldead, cl.intermission); // FIXME use a better way to detect teleport/warp than trail_allowed
+		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump, cl.stats[STAT_VIEWHEIGHT], cldead, cl.intermission, cl.velocity); // FIXME use a better way to detect teleport/warp than trail_allowed
 	}
 	else
 	{

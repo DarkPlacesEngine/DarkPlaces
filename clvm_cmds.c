@@ -4156,6 +4156,7 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 {
 	matrix4x4_t entrendermatrix;
 	vec3_t clviewangles;
+	vec3_t clvelocity;
 	qboolean teleported;
 	qboolean clonground;
 	qboolean clcmdjump;
@@ -4179,8 +4180,9 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	clstatsviewheight = PRVM_clientedictvector(ent, view_ofs)[2];
 	cldead = (flags & REFDEFFLAG_DEAD) != 0;
 	clintermission = (flags & REFDEFFLAG_INTERMISSION) != 0;
+	VectorCopy(PRVM_clientedictvector(ent, velocity), clvelocity);
 
-	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight, cldead, clintermission);
+	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight, cldead, clintermission, clvelocity);
 
 	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
