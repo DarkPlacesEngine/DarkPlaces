@@ -447,7 +447,6 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  * Extra input:
  *   cl.bobfall_speed
  *   cl.bobfall_swing
- *   cl.intermission
  *   cl.movecmd[0].time
  *   cl.movevars_stepheight
  *   cl.movevars_timescale
@@ -458,7 +457,6 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.qw_intermission_origin
  *   cl.qw_weaponkick
  *   cls.protocol
- *   cl.stats[STAT_HEALTH]
  *   cl.time
  *   cl.velocity
  *   cl.viewangles
@@ -470,7 +468,7 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   viewmodelmatrix_nobob
  *   viewmodelmatrix_withbob
  */
-void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight)
+void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight, qboolean cldead, qboolean clintermission)
 {
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
@@ -513,7 +511,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 	if (v_dmg_time > 0)
 		v_dmg_time -= bound(0, smoothtime, 0.1);
 
-	if (cl.intermission)
+	if (clintermission)
 	{
 		// entity is a fixed camera, just copy the matrix
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
@@ -644,7 +642,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		{
 			// first person view from entity
 			// angles
-			if (cl.stats[STAT_HEALTH] <= 0 && v_deathtilt.integer)
+			if (cldead && v_deathtilt.integer)
 				viewangles[ROLL] = v_deathtiltangle.value;
 			VectorAdd(viewangles, cl.punchangle, viewangles);
 			viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
@@ -655,7 +653,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			}
 			// origin
 			VectorAdd(vieworg, cl.punchvector, vieworg);
-			if (cl.stats[STAT_HEALTH] > 0)
+			if (!cldead)
 			{
 				double xyspeed, bob, bobfall;
 				float cycle;
@@ -873,13 +871,15 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 void V_CalcRefdef (void)
 {
 	entity_t *ent;
+	qboolean cldead;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS && !cl.csqc_server2csqcentitynumber[cl.viewentity])
 	{
 		// ent is the view entity (visible when out of body)
 		ent = &cl.entities[cl.viewentity];
 
-		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump, cl.stats[STAT_VIEWHEIGHT]); // FIXME use a better way to detect teleport/warp than trail_allowed
+		cldead = (cl.stats[STAT_HEALTH] <= 0 && cl.stats[STAT_HEALTH] != -666 && cl.stats[STAT_HEALTH] != -2342);
+		V_CalcRefdefUsing(&ent->render.matrix, cl.viewangles, !ent->persistent.trail_allowed, cl.onground, cl.cmd.jump, cl.stats[STAT_VIEWHEIGHT], cldead, cl.intermission); // FIXME use a better way to detect teleport/warp than trail_allowed
 	}
 	else
 	{
