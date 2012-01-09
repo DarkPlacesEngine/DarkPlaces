@@ -428,6 +428,48 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
 	out[2] = highpass_limited(value[2], fracz, limitz, &store[2]);
 }
 
+/*
+ * State:
+ *   cl.bob2_smooth
+ *   cl.gunangles_adjustment_highpass
+ *   cl.gunangles_adjustment_lowpass
+ *   cl.gunangles_highpass
+ *   cl.gunangles_prev
+ *   cl.gunorg_adjustment_highpass
+ *   cl.gunorg_adjustment_lowpass
+ *   cl.gunorg_highpass
+ *   cl.gunorg_prev
+ *   cl.hitgroundtime
+ *   cl.lastongroundtime
+ *   cl.oldongrounbd
+ *   cl.stairsmoothtime
+ *   cl.stairsmoothz
+ * Extra input:
+ *   cl.bobfall_speed
+ *   cl.bobfall_swing
+ *   cl.intermission
+ *   cl.movecmd[0].time
+ *   cl.movevars_stepheight
+ *   cl.movevars_timescale
+ *   cl.oldtime
+ *   cl.punchangle
+ *   cl.punchvector
+ *   cl.qw_intermission_angles
+ *   cl.qw_intermission_origin
+ *   cl.qw_weaponkick
+ *   cls.protocol
+ *   cl.stats[STAT_HEALTH]
+ *   cl.time
+ *   cl.velocity
+ *   cl.viewangles
+ * Output:
+ *   cl.csqc_viewanglesfromengine
+ *   cl.csqc_viewmodelmatrixfromengine
+ *   cl.csqc_vieworiginfromengine
+ *   r_refdef.view.matrix
+ *   viewmodelmatrix_nobob
+ *   viewmodelmatrix_withbob
+ */
 void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight)
 {
 	float vieworg[3], viewangles[3], smoothtime;
@@ -479,14 +521,17 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		else
 		{
 			r_refdef.view.matrix = *entrendermatrix;
-			Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, cl.stats[STAT_VIEWHEIGHT]);
+			Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, clstatsviewheight);
 		}
 		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 		Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
-		
+
 		VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
 		VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
+
+		Matrix4x4_Invert_Simple(&tmpmatrix, &r_refdef.view.matrix);
+		Matrix4x4_CreateScale(&cl.csqc_viewmodelmatrixfromengine, cl_viewmodel_scale.value);
 	}
 	else
 	{
@@ -616,7 +661,6 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				float cycle;
 				vec_t frametime;
 
-				//frametime = cl.realframetime * cl.movevars_timescale;
 				frametime = (cl.time - cl.oldtime) * cl.movevars_timescale;
 
 				// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
