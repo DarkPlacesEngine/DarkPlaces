@@ -972,8 +972,12 @@ static void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 		if (trace.fraction == 1)
 			break;
 
-		//if (trace.plane.normal[2] > 0.7)
-		//	s->onground = true;
+		// this is only really needed for nogravityonground combined with gravityunaffectedbyticrate
+		// <LordHavoc> I'm pretty sure I commented it out solely because it seemed redundant
+		// this got commented out in a change that supposedly makes the code match QW better
+		// so if this is broken, maybe put it in an if(cls.protocol != PROTOCOL_QUAKEWORLD) block
+		if (trace.plane.normal[2] > 0.7)
+			s->onground = true;
 
 		t -= t * trace.fraction;
 
@@ -1366,20 +1370,23 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			accelspeed = min(cl.movevars_accelerate * s->cmd.frametime * wishspeed, addspeed);
 			VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 		}
-		if(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND)
-			gravity = 0;
-		else
-			gravity = cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
-		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
-			s->velocity[2] -= gravity * 0.5f;
-		else
-			s->velocity[2] -= gravity;
+		gravity = cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND))
+		{
+			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+				s->velocity[2] -= gravity * 0.5f;
+			else
+				s->velocity[2] -= gravity;
+		}
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 			s->velocity[2] = 0;
 		if (VectorLength2(s->velocity))
 			CL_ClientMovement_Move(s);
-		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
-			s->velocity[2] -= gravity * 0.5f;
+		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground)
+		{
+			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+				s->velocity[2] -= gravity * 0.5f;
+		}
 	}
 	else
 	{
@@ -1435,8 +1442,11 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		else
 			s->velocity[2] -= gravity;
 		CL_ClientMovement_Move(s);
-		if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
-			s->velocity[2] -= gravity * 0.5f;
+		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground)
+		{
+			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
+				s->velocity[2] -= gravity * 0.5f;
+		}
 	}
 }
 
