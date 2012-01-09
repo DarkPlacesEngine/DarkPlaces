@@ -431,6 +431,8 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
 /*
  * State:
  *   cl.bob2_smooth
+ *   cl.bobfall_speed
+ *   cl.bobfall_swing
  *   cl.gunangles_adjustment_highpass
  *   cl.gunangles_adjustment_lowpass
  *   cl.gunangles_highpass
@@ -445,8 +447,6 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.stairsmoothtime
  *   cl.stairsmoothz
  * Extra input:
- *   cl.bobfall_speed
- *   cl.bobfall_swing
  *   cl.movecmd[0].time
  *   cl.movevars_stepheight
  *   cl.movevars_timescale
@@ -458,8 +458,8 @@ static void highpass3_limited(vec3_t value, vec_t fracx, vec_t limitx, vec_t fra
  *   cl.qw_weaponkick
  *   cls.protocol
  *   cl.time
- *   cl.velocity
- *   cl.viewangles
+ *   cl.velocity (TODO should these be parameters?)
+ *   cl.viewangles (TODO should these be parameters?)
  * Output:
  *   cl.csqc_viewanglesfromengine
  *   cl.csqc_viewmodelmatrixfromengine
