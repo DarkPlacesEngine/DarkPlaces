@@ -484,6 +484,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 		Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
+		
+		VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
+		VectorCopy(viewangles, cl.csqc_viewanglesfromengine);
 	}
 	else
 	{
