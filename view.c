@@ -866,6 +866,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 		Matrix4x4_Invert_Simple(&tmpmatrix, &r_refdef.view.matrix);
 		Matrix4x4_Concat(&cl.csqc_viewmodelmatrixfromengine, &tmpmatrix, &viewmodelmatrix_withbob);
 	}
+
+	cl.calcrefdef_prevtime = cl.time;
 }
 
 void V_CalcRefdef (void)
