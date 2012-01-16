@@ -2041,7 +2041,7 @@ void VID_Soft_SharedSetup(void)
 	vid.support.arb_vertex_buffer_object = true;
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
-	vid.support.ext_framebuffer_object = true;
+	vid.support.ext_framebuffer_object = false; // FIXME actually dpsoftrast has code for this, but everything is downside up then
 	vid.support.ext_texture_3d = true;
 	//vid.support.ext_texture_compression_s3tc = true;
 	vid.support.ext_texture_filter_anisotropic = true;
