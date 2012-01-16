@@ -748,12 +748,12 @@ void DPSOFTRAST_Texture_UpdatePartial(int index, int mip, const unsigned char *p
 		DPSOFTRAST_Flush();
 	if (pixels)
 	{
-		dst = texture->bytes + (blocky * texture->mipmap[0][2] + blockx) * 4;
+		dst = texture->bytes + texture->mipmap[0][1] +(-blocky * texture->mipmap[0][2] + blockx) * 4;
 		while (blockheight > 0)
 		{
+			dst -= texture->mipmap[0][2] * 4;
 			memcpy(dst, pixels, blockwidth * 4);
 			pixels += blockwidth * 4;
-			dst += texture->mipmap[0][2] * 4;
 			blockheight--;
 		}
 	}
@@ -766,7 +766,16 @@ void DPSOFTRAST_Texture_UpdateFull(int index, const unsigned char *pixels)
 	if (texture->binds)
 		DPSOFTRAST_Flush();
 	if (pixels)
-		memcpy(texture->bytes, pixels, texture->mipmap[0][1]);
+	{
+		int i, stride = texture->mipmap[0][2]*4;
+		unsigned char *dst = texture->bytes + texture->mipmap[0][1];
+		for (i = texture->mipmap[0][3];i > 0;i--)
+		{
+			dst -= stride;
+			memcpy(dst, pixels, stride);
+			pixels += stride;
+		}
+	}
 	DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
 int DPSOFTRAST_Texture_GetWidth(int index, int mip)
@@ -1269,9 +1278,10 @@ void DPSOFTRAST_CopyRectangleToTexture(int index, int mip, int tx, int ty, int s
 	if (th > sh) th = sh;
 	if (tw < 1 || th < 1)
 		return;
-	sy1 = sheight - 1 - sy1;
+	sy1 = sheight - sy1 - th;
+	ty1 = theight - ty1 - th;
 	for (y = 0;y < th;y++)
-		memcpy(tpixels + ((ty1 + y) * twidth + tx1), spixels + ((sy1 - y) * swidth + sx1), tw*4);
+		memcpy(tpixels + ((ty1 + y) * twidth + tx1), spixels + ((sy1 + y) * swidth + sx1), tw*4);
 	if (texture->mipmaps > 1)
 		DPSOFTRAST_Texture_CalculateMipmaps(index);
 }
@@ -2294,7 +2304,7 @@ static void DPSOFTRAST_Texture2DBGRA8(DPSOFTRAST_Texture *texture, int mip, floa
 	const unsigned char * RESTRICT pixel[4];
 	int width = texture->mipmap[mip][2], height = texture->mipmap[mip][3];
 	int wrapmask[2] = { width-1, height-1 };
-	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0];
+	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0] + texture->mipmap[mip][1] - 4*width;
 	if(texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR)
 	{
 		unsigned int tc[2] = { x * (width<<12) - 2048, y * (height<<12) - 2048};
@@ -2317,10 +2327,10 @@ static void DPSOFTRAST_Texture2DBGRA8(DPSOFTRAST_Texture *texture, int mip, floa
 			tci1[0] &= wrapmask[0];
 			tci1[1] &= wrapmask[1];
 		}
-		pixel[0] = pixelbase + 4 * (tci[1]*width+tci[0]);
-		pixel[1] = pixelbase + 4 * (tci[1]*width+tci1[0]);
-		pixel[2] = pixelbase + 4 * (tci1[1]*width+tci[0]);
-		pixel[3] = pixelbase + 4 * (tci1[1]*width+tci1[0]);
+		pixel[0] = pixelbase + 4 * (tci[0] - tci[1]*width);
+		pixel[1] = pixelbase + 4 * (tci[0] - tci[1]*width);
+		pixel[2] = pixelbase + 4 * (tci[0] - tci1[1]*width);
+		pixel[3] = pixelbase + 4 * (tci[0] - tci1[1]*width);
 		c[0] = (pixel[0][0]*lerp[0]+pixel[1][0]*lerp[1]+pixel[2][0]*lerp[2]+pixel[3][0]*lerp[3])>>24;
 		c[1] = (pixel[0][1]*lerp[0]+pixel[1][1]*lerp[1]+pixel[2][1]*lerp[2]+pixel[3][1]*lerp[3])>>24;
 		c[2] = (pixel[0][2]*lerp[0]+pixel[1][2]*lerp[1]+pixel[2][2]*lerp[2]+pixel[3][2]*lerp[3])>>24;
@@ -2339,7 +2349,7 @@ static void DPSOFTRAST_Texture2DBGRA8(DPSOFTRAST_Texture *texture, int mip, floa
 			tci[0] &= wrapmask[0];
 			tci[1] &= wrapmask[1];
 		}
-		pixel[0] = pixelbase + 4 * (tci[1]*width+tci[0]);
+		pixel[0] = pixelbase + 4 * (tci[0] - tci[1]*width);
 		c[0] = pixel[0][0];
 		c[1] = pixel[0][1];
 		c[2] = pixel[0][2];
@@ -2383,7 +2393,7 @@ static void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *threa
 		return;
 	}
 	mip = triangle->mip[texunitindex];
-	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0];
+	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0] + texture->mipmap[mip][1] - 4*texture->mipmap[mip][2];
 	// if this mipmap of the texture is 1 pixel, just fill it with that color
 	if (texture->mipmap[mip][1] == 4)
 	{
@@ -2405,7 +2415,7 @@ static void DPSOFTRAST_Draw_Span_Texture2DVarying(DPSOFTRAST_State_Thread *threa
 	flags = texture->flags;
 	tcscale[0] = texture->mipmap[mip][2];
 	tcscale[1] = texture->mipmap[mip][3];
-	tciwidth = texture->mipmap[mip][2];
+	tciwidth = -texture->mipmap[mip][2];
 	tcimin[0] = 0;
 	tcimin[1] = 0;
 	tcimax[0] = texture->mipmap[mip][2]-1;
@@ -2570,7 +2580,7 @@ static void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *
 		return;
 	}
 	mip = triangle->mip[texunitindex];
-	pixelbase = (const unsigned char *)texture->bytes + texture->mipmap[mip][0];
+	pixelbase = (const unsigned char *)texture->bytes + texture->mipmap[mip][0] + texture->mipmap[mip][1] - 4*texture->mipmap[mip][2];
 	// if this mipmap of the texture is 1 pixel, just fill it with that color
 	if (texture->mipmap[mip][1] == 4)
 	{
@@ -2592,7 +2602,7 @@ static void DPSOFTRAST_Draw_Span_Texture2DVaryingBGRA8(DPSOFTRAST_State_Thread *
 	if (filter)
 		endtc = _mm_sub_ps(endtc, _mm_set1_ps(0.5f));
 	endsubtc = _mm_cvtps_epi32(_mm_mul_ps(endtc, _mm_set1_ps(65536.0f)));
-	tcoffset = _mm_add_epi32(_mm_slli_epi32(_mm_shuffle_epi32(tcsize, _MM_SHUFFLE(0, 0, 0, 0)), 18), _mm_set1_epi32(4));
+	tcoffset = _mm_add_epi32(_mm_slli_epi32(_mm_sub_epi32(_mm_setzero_si128(), _mm_shuffle_epi32(tcsize, _MM_SHUFFLE(0, 0, 0, 0))), 18), _mm_set1_epi32(4));
 	tcmax = _mm_packs_epi32(tcmask, tcmask);
 	for (x = startx;x < endx;)
 	{
