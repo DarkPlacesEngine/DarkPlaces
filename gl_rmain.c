@@ -6168,6 +6168,14 @@ static void R_Bloom_StartFrame(void)
 	r_fb.screentexcoord2f[6] = 0;
 	r_fb.screentexcoord2f[7] = 0;
 
+	if(r_fb.fbo) 
+	{
+		for (i = 1;i < 8;i += 2)
+		{
+			r_fb.screentexcoord2f[i] += 1 - (float)(viewheight + r_refdef.view.y) / (float)r_fb.screentextureheight;
+		}
+	}
+
 	// set up a texcoord array for the reduced resolution bloom image
 	// (which will be additive blended over the screen image)
 	r_fb.bloomtexcoord2f[0] = 0;
@@ -6191,20 +6199,17 @@ static void R_Bloom_StartFrame(void)
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
+		for (i = 0;i < 4;i++)
 		{
-			int i;
-			for (i = 0;i < 4;i++)
-			{
-				r_fb.screentexcoord2f[i*2+0] += 0.5f / (float)r_fb.screentexturewidth;
-				r_fb.screentexcoord2f[i*2+1] += 0.5f / (float)r_fb.screentextureheight;
-				r_fb.bloomtexcoord2f[i*2+0] += 0.5f / (float)r_fb.bloomtexturewidth;
-				r_fb.bloomtexcoord2f[i*2+1] += 0.5f / (float)r_fb.bloomtextureheight;
-			}
+			r_fb.screentexcoord2f[i*2+0] += 0.5f / (float)r_fb.screentexturewidth;
+			r_fb.screentexcoord2f[i*2+1] += 0.5f / (float)r_fb.screentextureheight;
+			r_fb.bloomtexcoord2f[i*2+0] += 0.5f / (float)r_fb.bloomtexturewidth;
+			r_fb.bloomtexcoord2f[i*2+1] += 0.5f / (float)r_fb.bloomtextureheight;
 		}
 		break;
 	}
 
-	R_Viewport_InitOrtho(&r_fb.bloomviewport, &identitymatrix, r_refdef.view.x, (r_fb.bloomfbo[0] ? r_fb.bloomtextureheight : vid.height) - r_fb.bloomheight - r_refdef.view.y, r_fb.bloomwidth, r_fb.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
+	R_Viewport_InitOrtho(&r_fb.bloomviewport, &identitymatrix, 0, 0, r_fb.bloomwidth, r_fb.bloomheight, 0, 0, 1, 1, -10, 100, NULL);
 
 	if (r_fb.fbo)
 		r_refdef.view.clear = true;
@@ -6318,14 +6323,14 @@ static void R_Bloom_MakeTexture(void)
 			xoffset /= (float)r_fb.bloomtexturewidth;
 			yoffset /= (float)r_fb.bloomtextureheight;
 			// compute a texcoord array with the specified x and y offset
-			r_fb.offsettexcoord2f[0] = xoffset+0;
-			r_fb.offsettexcoord2f[1] = yoffset+(float)r_fb.bloomheight / (float)r_fb.bloomtextureheight;
-			r_fb.offsettexcoord2f[2] = xoffset+(float)r_fb.bloomwidth / (float)r_fb.bloomtexturewidth;
-			r_fb.offsettexcoord2f[3] = yoffset+(float)r_fb.bloomheight / (float)r_fb.bloomtextureheight;
-			r_fb.offsettexcoord2f[4] = xoffset+(float)r_fb.bloomwidth / (float)r_fb.bloomtexturewidth;
-			r_fb.offsettexcoord2f[5] = yoffset+0;
-			r_fb.offsettexcoord2f[6] = xoffset+0;
-			r_fb.offsettexcoord2f[7] = yoffset+0;
+			r_fb.offsettexcoord2f[0] = xoffset+r_fb.bloomtexcoord2f[0];
+			r_fb.offsettexcoord2f[1] = yoffset+r_fb.bloomtexcoord2f[1];
+			r_fb.offsettexcoord2f[2] = xoffset+r_fb.bloomtexcoord2f[2];
+			r_fb.offsettexcoord2f[3] = yoffset+r_fb.bloomtexcoord2f[3];
+			r_fb.offsettexcoord2f[4] = xoffset+r_fb.bloomtexcoord2f[4];
+			r_fb.offsettexcoord2f[5] = yoffset+r_fb.bloomtexcoord2f[5];
+			r_fb.offsettexcoord2f[6] = xoffset+r_fb.bloomtexcoord2f[6];
+			r_fb.offsettexcoord2f[7] = yoffset+r_fb.bloomtexcoord2f[7];
 			// this r value looks like a 'dot' particle, fading sharply to
 			// black at the edges
 			// (probably not realistic but looks good enough)
