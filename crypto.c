@@ -13,7 +13,7 @@ cvar_t crypto_servercpumaxtime = {CVAR_SAVE, "crypto_servercpumaxtime", "0.01", 
 cvar_t crypto_servercpudebug = {CVAR_SAVE, "crypto_servercpudebug", "0", "print statistics about time usage by crypto"};
 static double crypto_servercpu_accumulator = 0;
 static double crypto_servercpu_lastrealtime = 0;
-cvar_t crypto_aeslevel = {CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required); changing this may require crypto_reload to fully apply"};
+cvar_t crypto_aeslevel = {CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required)"};
 int crypto_keyfp_recommended_length;
 static const char *crypto_idstring = NULL;
 static char crypto_idstring_buf[512];
