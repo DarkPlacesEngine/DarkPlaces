@@ -1508,6 +1508,14 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
 	vid.support.ext_framebuffer_object = true;
+
+	// FIXME remove this workaround once FBO + npot texture mapping is fixed
+	if(!vid.support.arb_texture_non_power_of_two)
+	{
+		vid.support.arb_framebuffer_object = false;
+		vid.support.ext_framebuffer_object = false;
+	}
+
 	vid.support.ext_texture_3d = true;
 	vid.support.ext_texture_compression_s3tc = true;
 	vid.support.ext_texture_filter_anisotropic = true;
