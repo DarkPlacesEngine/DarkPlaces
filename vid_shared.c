@@ -1038,6 +1038,14 @@ void VID_CheckExtensions(void)
 		vid.support.ext_framebuffer_object = true;
 	else
 		vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", extfbofuncs, "-nofbo", false);
+
+	// FIXME remove this workaround once FBO + npot texture mapping is fixed
+	if(!vid.support.arb_texture_non_power_of_two)
+	{
+		vid.support.arb_framebuffer_object = false;
+		vid.support.ext_framebuffer_object = false;
+	}
+
 	vid.support.ext_packed_depth_stencil = GL_CheckExtension("GL_EXT_packed_depth_stencil", NULL, "-nopackeddepthstencil", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
@@ -2042,6 +2050,14 @@ void VID_Soft_SharedSetup(void)
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
 	vid.support.ext_framebuffer_object = true;
+
+	// FIXME remove this workaround once FBO + npot texture mapping is fixed
+	if(!vid.support.arb_texture_non_power_of_two)
+	{
+		vid.support.arb_framebuffer_object = false;
+		vid.support.ext_framebuffer_object = false;
+	}
+
 	vid.support.ext_texture_3d = true;
 	//vid.support.ext_texture_compression_s3tc = true;
 	vid.support.ext_texture_filter_anisotropic = true;
