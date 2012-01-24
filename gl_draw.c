@@ -343,7 +343,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 			// if it was created (or replaced) by Draw_NewPic, just return it
 			if(pic->flags & CACHEPICFLAG_NEWPIC)
 				return pic;
-			if (!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag
+			if (!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
 			{
 				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 				{
