@@ -3243,7 +3243,7 @@ string	precache_pic(string pic)
 */
 #define PRECACHE_PIC_FROMWAD 1 /* FTEQW, not supported here */
 #define PRECACHE_PIC_NOTPERSISTENT 2
-#define PRECACHE_PIC_NOCLAMP 4
+//#define PRECACHE_PIC_NOCLAMP 4
 #define PRECACHE_PIC_MIPMAP 8
 void VM_precache_pic(prvm_prog_t *prog)
 {
@@ -3261,8 +3261,8 @@ void VM_precache_pic(prvm_prog_t *prog)
 		int f = PRVM_G_FLOAT(OFS_PARM1);
 		if(f & PRECACHE_PIC_NOTPERSISTENT)
 			flags |= CACHEPICFLAG_NOTPERSISTENT;
-		if(f & PRECACHE_PIC_NOCLAMP)
-			flags |= CACHEPICFLAG_NOCLAMP;
+		//if(f & PRECACHE_PIC_NOCLAMP)
+		//	flags |= CACHEPICFLAG_NOCLAMP;
 		if(f & PRECACHE_PIC_MIPMAP)
 			flags |= CACHEPICFLAG_MIPMAP;
 	}

@@ -410,7 +410,6 @@ float(string s1, string s2, float len) strncasecmp = #230;
 //constant definitions:
 float PRECACHE_PIC_FROMWAD = 1; // this one actually is part of EXT_CSQC
 float PRECACHE_PIC_NOTPERSISTENT = 2; // picture may get deallocated when unused
-float PRECACHE_PIC_NOCLAMP = 4; // do not clamp to edge
 float PRECACHE_PIC_MIPMAP = 8; // mipmap the texture for possibly better downscaling at memory expense
 //notes: these constants are given as optional second argument to precache_pic()
 
