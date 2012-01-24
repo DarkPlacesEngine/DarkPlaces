@@ -3045,6 +3045,7 @@ void Mod_BuildVBOs(void)
 	}
 }
 
+extern cvar_t mod_obj_orientation;
 static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const char *mtlfilename, const char *originalfilename)
 {
 	int submodelindex, vertexindex, surfaceindex, triangleindex, textureindex, countvertices = 0, countsurfaces = 0, countfaces = 0, counttextures = 0;
@@ -3112,7 +3113,10 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 			memcpy(outbuffer, oldbuffer, outbufferpos);
 			Z_Free(oldbuffer);
 		}
-		l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
+		if(mod_obj_orientation.integer)
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[2], v[1], vn[0], vn[2], vn[1], vt[0], 1-vt[1]);
+		else
+			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "v %f %f %f\nvn %f %f %f\nvt %f %f\n", v[0], v[1], v[2], vn[0], vn[1], vn[2], vt[0], 1-vt[1]);
 		if (l > 0)
 			outbufferpos += l;
 	}
@@ -3142,7 +3146,10 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 				a = e[0]+1;
 				b = e[1]+1;
 				c = e[2]+1;
-				l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,b,b,b,c,c,c);
+				if(mod_obj_orientation.integer)
+					l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,b,b,b,c,c,c);
+				else
+					l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", a,a,a,c,c,c,b,b,b);
 				if (l > 0)
 					outbufferpos += l;
 			}
