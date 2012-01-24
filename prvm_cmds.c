@@ -3241,18 +3241,34 @@ VM_precache_pic
 string	precache_pic(string pic)
 =========
 */
+#define PRECACHE_PIC_FROMWAD 1 /* FTEQW, not supported here */
+#define PRECACHE_PIC_NOTPERSISTENT 2
+#define PRECACHE_PIC_NOCLAMP 4
+#define PRECACHE_PIC_MIPMAP 8
 void VM_precache_pic(prvm_prog_t *prog)
 {
 	const char	*s;
+	int flags = 0;
 
-	VM_SAFEPARMCOUNT(1, VM_precache_pic);
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_precache_pic);
 
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	VM_CheckEmptyString(prog, s);
 
+	if(prog->argc >= 2)
+	{
+		int f = PRVM_G_FLOAT(OFS_PARM1);
+		if(f & PRECACHE_PIC_NOTPERSISTENT)
+			flags |= CACHEPICFLAG_NOTPERSISTENT;
+		if(f & PRECACHE_PIC_NOCLAMP)
+			flags |= CACHEPICFLAG_NOCLAMP;
+		if(f & PRECACHE_PIC_MIPMAP)
+			flags |= CACHEPICFLAG_MIPMAP;
+	}
+
 	// AK Draw_CachePic is supposed to always return a valid pointer
-	if( Draw_CachePic_Flags(s, 0)->tex == r_texture_notexture )
+	if( Draw_CachePic_Flags(s, flags)->tex == r_texture_notexture )
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
