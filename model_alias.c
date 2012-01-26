@@ -1020,8 +1020,8 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < numverts;i++)
 	{
 		vertonseam[i] = LittleLong(pinstverts[i].onseam);
-		vertst[i*2+0] = (LittleLong(pinstverts[i].s) + 0.5) * scales;
-		vertst[i*2+1] = (LittleLong(pinstverts[i].t) + 0.5) * scalet;
+		vertst[i*2+0] = LittleLong(pinstverts[i].s) * scales;
+		vertst[i*2+1] = LittleLong(pinstverts[i].t) * scalet;
 		vertst[(i+numverts)*2+0] = vertst[i*2+0] + 0.5;
 		vertst[(i+numverts)*2+1] = vertst[i*2+1];
 	}
