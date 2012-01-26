@@ -2457,7 +2457,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 				avgcolor[1] += ((c >>  5) & 0x3F) + ((c >> 21) & 0x3F);
 				avgcolor[2] += ((c      ) & 0x1F) + ((c >> 16) & 0x1F);
 				if(textype == TEXTYPE_DXT5)
-					avgcolor[3] += (0.5 * mippixels[i-8] + 0.5 * mippixels[i-7]);
+					avgcolor[3] += (mippixels[i-8] + (int) mippixels[i-7]) * (0.5f / 255.0f);
 				else if(textype == TEXTYPE_DXT3)
 					avgcolor[3] += (
 						  (mippixels_start[i-8] & 0x0F)
@@ -2468,11 +2468,11 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 						+ (mippixels_start[i-6] >> 4)
 						+ (mippixels_start[i-5] & 0x0F)
 						+ (mippixels_start[i-5] >> 4)
-					       ) * (0.125f / 15.0f * 255.0f);
+					       ) * (0.125f / 15.0f);
 				else
-					avgcolor[3] += 255;
+					avgcolor[3] += 1.0f;
 			}
-			f = (float)bytesperblock / size;
+			f = (float)bytesperblock / mipsize;
 			avgcolor[0] *= (0.5f / 31.0f) * f;
 			avgcolor[1] *= (0.5f / 63.0f) * f;
 			avgcolor[2] *= (0.5f / 31.0f) * f;
@@ -2487,7 +2487,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 				avgcolor[2] += mippixels[i];
 				avgcolor[3] += mippixels[i+3];
 			}
-			f = (1.0f / 255.0f) * bytesperpixel / size;
+			f = (1.0f / 255.0f) * bytesperpixel / mipsize;
 			avgcolor[0] *= f;
 			avgcolor[1] *= f;
 			avgcolor[2] *= f;
