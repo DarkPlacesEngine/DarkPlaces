@@ -2726,9 +2726,7 @@ int PRVM_SetEngineString(prvm_prog_t *prog, const char *s)
 	// if it's in the tempstrings area, use a reserved range
 	// (otherwise we'd get millions of useless string offsets cluttering the database)
 	if (s >= (char *)prog->tempstringsbuf.data && s < (char *)prog->tempstringsbuf.data + prog->tempstringsbuf.maxsize)
-#if 1
 		return prog->stringssize + (s - (char *)prog->tempstringsbuf.data);
-#endif
 	// see if it's a known string address
 	for (i = 0;i < prog->numknownstrings;i++)
 		if (prog->knownstrings[i] == s)
