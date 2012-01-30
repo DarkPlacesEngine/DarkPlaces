@@ -1314,7 +1314,8 @@ void DPSOFTRAST_SetTexture(int unitnum, int index)
 	command->texture = texture;
 
 	dpsoftrast.texbound[unitnum] = texture;
-	ATOMIC_ADD(texture->binds, dpsoftrast.numthreads);
+	if (texture)
+		ATOMIC_ADD(texture->binds, dpsoftrast.numthreads);
 }
 
 void DPSOFTRAST_SetVertexPointer(const float *vertex3f, size_t stride)
