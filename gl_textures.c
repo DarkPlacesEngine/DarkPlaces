@@ -2702,8 +2702,14 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		{
 			upload_mipwidth = (glt->tilewidth >> mip);
 			upload_mipheight = (glt->tileheight >> mip);
-			upload_mippixels = Mem_Alloc(tempmempool, 4 * upload_mipwidth * upload_mipheight);
-			Image_Resample32(mippixels, mipwidth, mipheight, 1, upload_mippixels, upload_mipwidth, upload_mipheight, 1, r_lerpimages.integer);
+			if(upload_mipwidth != mipwidth || upload_mipheight != mipheight)
+			// I _think_ they always mismatch, but I was too lazy
+			// to properly check, and this test here is really
+			// harmless
+			{
+				upload_mippixels = (unsigned char *) Mem_Alloc(tempmempool, 4 * upload_mipwidth * upload_mipheight);
+				Image_Resample32(mippixels, mipwidth, mipheight, 1, upload_mippixels, upload_mipwidth, upload_mipheight, 1, r_lerpimages.integer);
+			}
 		}
 		switch(vid.renderpath)
 		{
