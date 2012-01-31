@@ -1765,17 +1765,17 @@ void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean frees
 	
 	ch = &channels[channel_ind];
 	sfx = ch->sfx;
-	if (ch->sfx != NULL)
+	if (sfx != NULL)
 	{
 		if (sfx->fetcher != NULL && sfx->fetcher->stopchannel != NULL)
 			sfx->fetcher->stopchannel(ch);
 		ch->fetcher_data = NULL;
 		ch->sfx = NULL;
+		if (freesfx)
+			S_FreeSfx(sfx, true);
 	}
 	if (lockmutex && !simsound)
 		SndSys_UnlockRenderBuffer();
-	if (freesfx)
-		S_FreeSfx(sfx, true);
 }
 
 
