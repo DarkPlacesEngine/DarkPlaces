@@ -2241,19 +2241,20 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			{
 				int numbones = s->skeletonobject.model->num_bones;
 				int bonenum;
-				short pose6s[6];
+				short pose7s[7];
 				MSG_WriteByte(msg, 4);
 				MSG_WriteShort(msg, s->modelindex);
 				MSG_WriteByte(msg, numbones);
 				for (bonenum = 0;bonenum < numbones;bonenum++)
 				{
-					Matrix4x4_ToBonePose6s(s->skeletonobject.relativetransforms + bonenum, 64, pose6s);
-					MSG_WriteShort(msg, pose6s[0]);
-					MSG_WriteShort(msg, pose6s[1]);
-					MSG_WriteShort(msg, pose6s[2]);
-					MSG_WriteShort(msg, pose6s[3]);
-					MSG_WriteShort(msg, pose6s[4]);
-					MSG_WriteShort(msg, pose6s[5]);
+					Matrix4x4_ToBonePose7s(s->skeletonobject.relativetransforms + bonenum, 64, pose7s);
+					MSG_WriteShort(msg, pose7s[0]);
+					MSG_WriteShort(msg, pose7s[1]);
+					MSG_WriteShort(msg, pose7s[2]);
+					MSG_WriteShort(msg, pose7s[3]);
+					MSG_WriteShort(msg, pose7s[4]);
+					MSG_WriteShort(msg, pose7s[5]);
+					MSG_WriteShort(msg, pose7s[6]);
 				}
 			}
 			else
@@ -2436,7 +2437,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 		int type;
 		int bonenum;
 		int numbones;
-		short pose6s[6];
+		short pose7s[7];
 		type = MSG_ReadByte(&cl_message);
 		switch(type)
 		{
@@ -2514,13 +2515,14 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			}
 			for (bonenum = 0;bonenum < numbones;bonenum++)
 			{
-				pose6s[0] = (short)MSG_ReadShort(&cl_message);
-				pose6s[1] = (short)MSG_ReadShort(&cl_message);
-				pose6s[2] = (short)MSG_ReadShort(&cl_message);
-				pose6s[3] = (short)MSG_ReadShort(&cl_message);
-				pose6s[4] = (short)MSG_ReadShort(&cl_message);
-				pose6s[5] = (short)MSG_ReadShort(&cl_message);
-				Matrix4x4_FromBonePose6s(skeleton->relativetransforms + bonenum, 1.0f / 64.0f, pose6s);
+				pose7s[0] = (short)MSG_ReadShort(&cl_message);
+				pose7s[1] = (short)MSG_ReadShort(&cl_message);
+				pose7s[2] = (short)MSG_ReadShort(&cl_message);
+				pose7s[3] = (short)MSG_ReadShort(&cl_message);
+				pose7s[4] = (short)MSG_ReadShort(&cl_message);
+				pose7s[5] = (short)MSG_ReadShort(&cl_message);
+				pose7s[6] = (short)MSG_ReadShort(&cl_message);
+				Matrix4x4_FromBonePose7s(skeleton->relativetransforms + bonenum, 1.0f / 64.0f, pose7s);
 			}
 			s->skeletonobject = *skeleton;
 			break;

@@ -52,32 +52,31 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	{
 		float originscale = model->num_posescale;
 		float x,y,z,w,lerp;
-		const short * RESTRICT pose6s;
+		const short * RESTRICT pose7s;
 
 		for (i = 0;i < model->num_bones;i++)
 		{
 			memset(m, 0, sizeof(m));
 			for (blends = 0;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
-				pose6s = model->data_poses6s + 6 * (frameblend[blends].subframe * model->num_bones + i);
+				pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
 				lerp = frameblend[blends].lerp;
-				x = pose6s[3] * (1.0f / 32767.0f);
-				y = pose6s[4] * (1.0f / 32767.0f);
-				z = pose6s[5] * (1.0f / 32767.0f);
-				w = 1.0f - (x*x+y*y+z*z);
-				w = w > 0.0f ? -sqrt(w) : 0.0f;
+				x = pose7s[3] * (1.0f / 32767.0f);
+				y = pose7s[4] * (1.0f / 32767.0f);
+				z = pose7s[5] * (1.0f / 32767.0f);
+				w = pose7s[6] * (1.0f / 32767.0f);
 				m[ 0] += (1-2*(y*y+z*z)) * lerp;
 				m[ 1] += (  2*(x*y-z*w)) * lerp;
 				m[ 2] += (  2*(x*z+y*w)) * lerp;
-				m[ 3] += (pose6s[0] * originscale) * lerp;
+				m[ 3] += (pose7s[0] * originscale) * lerp;
 				m[ 4] += (  2*(x*y+z*w)) * lerp;
 				m[ 5] += (1-2*(x*x+z*z)) * lerp;
 				m[ 6] += (  2*(y*z-x*w)) * lerp;
-				m[ 7] += (pose6s[1] * originscale) * lerp;
+				m[ 7] += (pose7s[1] * originscale) * lerp;
 				m[ 8] += (  2*(x*z-y*w)) * lerp;
 				m[ 9] += (  2*(y*z+x*w)) * lerp;
 				m[10] += (1-2*(x*x+y*y)) * lerp;
-				m[11] += (pose6s[2] * originscale) * lerp;
+				m[11] += (pose7s[2] * originscale) * lerp;
 			}
 			VectorNormalize(m	);
 			VectorNormalize(m + 4);
