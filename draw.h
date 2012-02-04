@@ -57,7 +57,8 @@ typedef enum cachepicflags_e
 	CACHEPICFLAG_NOCOMPRESSION = 4,
 	CACHEPICFLAG_NOCLAMP = 8,
 	CACHEPICFLAG_NEWPIC = 16, // disables matching texflags check, because a pic created with Draw_NewPic should not be subject to that
-	CACHEPICFLAG_MIPMAP = 32
+	CACHEPICFLAG_MIPMAP = 32,
+	CACHEPICFLAG_NEAREST = 64 // force nearest filtering instead of linear
 }
 cachepicflags_t;
 

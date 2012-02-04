@@ -42,6 +42,8 @@ cvar_t r_font_postprocess_shadow_y = {CVAR_SAVE, "r_font_postprocess_shadow_y", 
 cvar_t r_font_postprocess_shadow_z = {CVAR_SAVE, "r_font_postprocess_shadow_z", "0", "font shadow Z shift amount, applied during blurring"};
 cvar_t r_font_hinting = {CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
 cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
+cvar_t r_nearest_2d = {CVAR_SAVE, "r_nearest_2d", "0", "use nearest filtering on all 2d textures (including conchars)"};
+cvar_t r_nearest_conchars = {CVAR_SAVE, "r_nearest_conchars", "0", "use nearest filtering on conchars texture"};
 
 extern cvar_t v_glslgamma;
 
@@ -109,7 +111,7 @@ static rtexture_t *draw_generateconchars(void)
 	Image_WriteTGABGRA ("gfx/generated_conchars.tga", 256, 256, data);
 #endif
 
-	tex = R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, data, TEXTYPE_BGRA, TEXF_ALPHA, -1, NULL);
+	tex = R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, data, TEXTYPE_BGRA, TEXF_ALPHA | (r_nearest_conchars.integer ? TEXF_FORCENEAREST : 0), -1, NULL);
 	Mem_Free(data);
 	return tex;
 }
@@ -332,6 +334,8 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		texflags |= TEXF_MIPMAP;
 	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer && gl_texturecompression.integer)
 		texflags |= TEXF_COMPRESS;
+	if ((cachepicflags & CACHEPICFLAG_NEAREST) || r_nearest_2d.integer)
+		texflags |= TEXF_FORCENEAREST;
 
 	// check whether the picture has already been cached
 	crc = CRC_Block((unsigned char *)path, strlen(path));
@@ -675,20 +679,20 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 			Con_DPrintf("Failed to load font-file for '%s', it will not support as many characters.\n", fnt->texpath);
 	}
 
-	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
+	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
 	if(fnt->tex == r_texture_notexture)
 	{
 		for (i = 0; i < MAX_FONT_FALLBACKS; ++i)
 		{
 			if (!fnt->fallbacks[i][0])
 				break;
-			fnt->tex = Draw_CachePic_Flags(fnt->fallbacks[i], CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION)->tex;
+			fnt->tex = Draw_CachePic_Flags(fnt->fallbacks[i], CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
 			if(fnt->tex != r_texture_notexture)
 				break;
 		}
 		if(fnt->tex == r_texture_notexture)
 		{
-			fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION)->tex;
+			fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
 			strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
 		}
 		else
@@ -1046,6 +1050,8 @@ void GL_Draw_Init (void)
 	Cvar_RegisterVariable(&r_textshadow);
 	Cvar_RegisterVariable(&r_textbrightness);
 	Cvar_RegisterVariable(&r_textcontrast);
+	Cvar_RegisterVariable(&r_nearest_2d);
+	Cvar_RegisterVariable(&r_nearest_conchars);
 
 	// allocate fonts storage
 	fonts_mempool = Mem_AllocPool("FONTS", 0, NULL);
@@ -1711,10 +1717,20 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				//thisw = fnt->width_of[num];
 				thisw = fnt->width_of[ch];
 				// FIXME make these smaller to just include the occupied part of the character for slightly faster rendering
-				s = (ch & 15)*0.0625f + (0.5f / tw);
-				t = (ch >> 4)*0.0625f + (0.5f / th);
-				u = 0.0625f * thisw - (1.0f / tw);
-				v = 0.0625f - (1.0f / th);
+				if (r_nearest_conchars.integer)
+				{
+					s = (ch & 15)*0.0625f;
+					t = (ch >> 4)*0.0625f;
+					u = 0.0625f * thisw;
+					v = 0.0625f;
+				}
+				else
+				{
+					s = (ch & 15)*0.0625f + (0.5f / tw);
+					t = (ch >> 4)*0.0625f + (0.5f / th);
+					u = 0.0625f * thisw - (1.0f / tw);
+					v = 0.0625f - (1.0f / th);
+				}
 				ac[ 0] = DrawQ_Color[0];ac[ 1] = DrawQ_Color[1];ac[ 2] = DrawQ_Color[2];ac[ 3] = DrawQ_Color[3];
 				ac[ 4] = DrawQ_Color[0];ac[ 5] = DrawQ_Color[1];ac[ 6] = DrawQ_Color[2];ac[ 7] = DrawQ_Color[3];
 				ac[ 8] = DrawQ_Color[0];ac[ 9] = DrawQ_Color[1];ac[10] = DrawQ_Color[2];ac[11] = DrawQ_Color[3];
