@@ -747,7 +747,7 @@ void EntityFrame4_CL_ReadFrame(void);
 // byte type=1 short frames[2] short times[2] byte lerps[2]
 // byte type=2 short frames[3] short times[3] byte lerps[3]
 // byte type=3 short frames[4] short times[4] byte lerps[4]
-// byte type=4 short modelindex byte numbones {short pose6s[6]}
+// byte type=4 short modelindex byte numbones {short pose7s[7]}
 // see also RENDER_COMPLEXANIMATION
 #define E5_COMPLEXANIMATION (1<<25)
 // ushort traileffectnum

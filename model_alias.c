@@ -393,11 +393,11 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameble
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
-			Matrix4x4_FromBonePose6s(&bonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
+			Matrix4x4_FromBonePose7s(&bonematrix, model->num_posescale, model->data_poses7s + 7 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
 			parenttagindex = tagindex;
 			while ((parenttagindex = model->data_bones[parenttagindex].parent) >= 0)
 			{
-				Matrix4x4_FromBonePose6s(&parentbonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + parenttagindex));
+				Matrix4x4_FromBonePose7s(&parentbonematrix, model->num_posescale, model->data_poses7s + 7 * (frameblend[blendindex].subframe * model->num_bones + parenttagindex));
 				tempbonematrix = bonematrix;
 				Matrix4x4_Concat(&bonematrix, &parentbonematrix, &tempbonematrix);
 			}
@@ -456,7 +456,7 @@ int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int s
 		for (blendindex = 0;blendindex < MAX_FRAMEBLENDS && frameblend[blendindex].lerp > 0;blendindex++)
 		{
 			lerp = frameblend[blendindex].lerp;
-			Matrix4x4_FromBonePose6s(&bonematrix, model->num_posescale, model->data_poses6s + 6 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
+			Matrix4x4_FromBonePose7s(&bonematrix, model->num_posescale, model->data_poses7s + 7 * (frameblend[blendindex].subframe * model->num_bones + tagindex));
 			Matrix4x4_Accumulate(&blendmatrix, &bonematrix, lerp);
 		}
 		*tag_localmatrix = blendmatrix;
@@ -512,7 +512,7 @@ static void Mod_BuildBaseBonePoses(void)
 	basebonepose = (matrix4x4_t *)Mem_Alloc(tempmempool, loadmodel->num_bones * sizeof(matrix4x4_t));
 	for (boneindex = 0;boneindex < loadmodel->num_bones;boneindex++)
 	{
-		Matrix4x4_FromBonePose6s(&bonematrix, loadmodel->num_posescale, loadmodel->data_poses6s + 6 * boneindex);
+		Matrix4x4_FromBonePose7s(&bonematrix, loadmodel->num_posescale, loadmodel->data_poses7s + 7 * boneindex);
 		if (loadmodel->data_bones[boneindex].parent >= 0)
 		{
 			tempbonematrix = bonematrix;
@@ -1889,7 +1889,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1912,7 +1912,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
 	}
-	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
+	loadmodel->data_poses7s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
 	loadmodel->surfmesh.data_blendweights = NULL;
 
 	//zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
@@ -1953,7 +1953,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			VectorNormalize(pose + 4);
 			VectorNormalize(pose + 8);
 			Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
-			Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*(i*loadmodel->num_bones+j));
+			Matrix4x4_ToBonePose7s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses7s + 7*(i*loadmodel->num_bones+j));
 		}
 	}
 
@@ -2210,7 +2210,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer;
 	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short)) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short)) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -2236,7 +2236,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
 	}
-	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
+	loadmodel->data_poses7s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
 	loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Alloc(loadmodel->mempool, meshvertices * sizeof(blendweights_t));
 
 	for (i = 0;i < loadmodel->numskins;i++)
@@ -2306,7 +2306,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			VectorNormalize(pose + 4);
 			VectorNormalize(pose + 8);
 			Matrix4x4_FromArray12FloatD3D(&posematrix, pose);
-			Matrix4x4_ToBonePose6s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses6s + 6*(i*loadmodel->num_bones+j));
+			Matrix4x4_ToBonePose7s(&posematrix, loadmodel->num_poseinvscale, loadmodel->data_poses7s + 7*(i*loadmodel->num_bones+j));
 		}
 	}
 
@@ -2867,7 +2867,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer;
 	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
-	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0)  + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
+	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0)  + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -2892,7 +2892,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
 	}
-	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
+	loadmodel->data_poses7s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
 	loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(blendweights_t));
 
 	for (i = 0;i < loadmodel->numskins;i++)
@@ -3046,13 +3046,14 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (quat[3] > 0)
 				Vector4Negate(quat, quat);
 			Vector4Normalize2(quat, quat);
-			// compress poses to the short[6] format for longterm storage
-			loadmodel->data_poses6s[index*6+0] = k->origin[0] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+1] = k->origin[1] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+2] = k->origin[2] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
-			loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
-			loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
+			// compress poses to the short[7] format for longterm storage
+			loadmodel->data_poses7s[index*7+0] = k->origin[0] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+1] = k->origin[1] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+2] = k->origin[2] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+3] = quat[0] * 32767.0f;
+			loadmodel->data_poses7s[index*7+4] = quat[1] * 32767.0f;
+			loadmodel->data_poses7s[index*7+5] = quat[2] * 32767.0f;
+			loadmodel->data_poses7s[index*7+6] = quat[3] * 32767.0f;
 		}
 	}
 	else
@@ -3084,13 +3085,14 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (quat[3] > 0)
 				Vector4Negate(quat, quat);
 			Vector4Normalize2(quat, quat);
-			// compress poses to the short[6] format for longterm storage
-			loadmodel->data_poses6s[index*6+0] = p->basepose.origin[0] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+1] = p->basepose.origin[1] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+2] = p->basepose.origin[2] * loadmodel->num_poseinvscale;
-			loadmodel->data_poses6s[index*6+3] = quat[0] * 32767.0f;
-			loadmodel->data_poses6s[index*6+4] = quat[1] * 32767.0f;
-			loadmodel->data_poses6s[index*6+5] = quat[2] * 32767.0f;
+			// compress poses to the short[7] format for longterm storage
+			loadmodel->data_poses7s[index*7+0] = p->basepose.origin[0] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+1] = p->basepose.origin[1] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+2] = p->basepose.origin[2] * loadmodel->num_poseinvscale;
+			loadmodel->data_poses7s[index*7+3] = quat[0] * 32767.0f;
+			loadmodel->data_poses7s[index*7+4] = quat[1] * 32767.0f;
+			loadmodel->data_poses7s[index*7+5] = quat[2] * 32767.0f;
+			loadmodel->data_poses7s[index*7+6] = quat[3] * 32767.0f;
 		}
 	}
 
@@ -3349,7 +3351,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = header.num_triangles;
 
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * sizeof(unsigned short) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * sizeof(unsigned short) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -3382,7 +3384,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	{
 		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
 	}
-	loadmodel->data_poses6s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[6]);
+	loadmodel->data_poses7s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
 	if (vblendindexes && vblendweights)
 		loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Alloc(loadmodel->mempool, meshvertices * sizeof(blendweights_t));
 
@@ -3570,12 +3572,19 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 			for (j = 0;j < (int)header.num_poses;j++, k++)
 			{
-				loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[0] + (pose1[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[0] : 0));
-				loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[1] + (pose1[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[1] : 0));
-				loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[2] + (pose1[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[2] : 0));
-				loadmodel->data_poses6s[k*6 + 3] = 32767.0f * (pose1[j].channeloffset[3] + (pose1[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[3] : 0));
-				loadmodel->data_poses6s[k*6 + 4] = 32767.0f * (pose1[j].channeloffset[4] + (pose1[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[4] : 0));
-				loadmodel->data_poses6s[k*6 + 5] = 32767.0f * (pose1[j].channeloffset[5] + (pose1[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[5] : 0));
+				float qx, qy, qz, qw;
+				loadmodel->data_poses7s[k*7 + 0] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[0] + (pose1[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[0] : 0));
+				loadmodel->data_poses7s[k*7 + 1] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[1] + (pose1[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[1] : 0));
+				loadmodel->data_poses7s[k*7 + 2] = loadmodel->num_poseinvscale * (pose1[j].channeloffset[2] + (pose1[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[2] : 0));
+				qx = pose1[j].channeloffset[3] + (pose1[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[3] : 0);
+				qy = pose1[j].channeloffset[4] + (pose1[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[4] : 0);
+				qz = pose1[j].channeloffset[5] + (pose1[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose1[j].channelscale[5] : 0);
+				qw = 1.0f - (qx*qx + qy*qy + qz*qz);
+				qw = qw > 0.0f ? -sqrt(qw) : 0.0f;
+				loadmodel->data_poses7s[k*7 + 3] = 32767.0f * qx;
+				loadmodel->data_poses7s[k*7 + 4] = 32767.0f * qy;
+				loadmodel->data_poses7s[k*7 + 5] = 32767.0f * qz;
+				loadmodel->data_poses7s[k*7 + 6] = 32767.0f * qw;
 				// skip scale data for now
 				if(pose1[j].channelmask&64) framedata++;
 				if(pose1[j].channelmask&128) framedata++;
@@ -3586,12 +3595,19 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 			for (i = 0;i < loadmodel->num_bones;i++)
 			{
-				loadmodel->data_poses6s[i*6 + 0] = loadmodel->num_poseinvscale * joint1[i].origin[0];
-				loadmodel->data_poses6s[i*6 + 1] = loadmodel->num_poseinvscale * joint1[i].origin[1];
-				loadmodel->data_poses6s[i*6 + 2] = loadmodel->num_poseinvscale * joint1[i].origin[2];
-				loadmodel->data_poses6s[i*6 + 3] = 32767.0f * joint1[i].rotation[0];
-				loadmodel->data_poses6s[i*6 + 4] = 32767.0f * joint1[i].rotation[1];
-				loadmodel->data_poses6s[i*6 + 5] = 32767.0f * joint1[i].rotation[2];
+				float qx, qy, qz, qw;
+				loadmodel->data_poses7s[i*7 + 0] = loadmodel->num_poseinvscale * joint1[i].origin[0];
+				loadmodel->data_poses7s[i*7 + 1] = loadmodel->num_poseinvscale * joint1[i].origin[1];
+				loadmodel->data_poses7s[i*7 + 2] = loadmodel->num_poseinvscale * joint1[i].origin[2];
+				qx = joint1[i].rotation[0];
+				qy = joint1[i].rotation[1];
+				qz = joint1[i].rotation[2];
+				qw = 1.0f - (qx*qx + qy*qy + qz*qz);
+				qw = qw > 0.0f ? -sqrt(qw) : 0.0f;
+				loadmodel->data_poses7s[i*7 + 3] = 32767.0f * qx;
+				loadmodel->data_poses7s[i*7 + 4] = 32767.0f * qy;
+				loadmodel->data_poses7s[i*7 + 5] = 32767.0f * qz;
+				loadmodel->data_poses7s[i*7 + 6] = 32767.0f * qw;
 			}
 		}
 	}
@@ -3602,9 +3618,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			for (j = 0;j < (int)header.num_poses;j++, k++)
 			{
 				float rot[4];
-				loadmodel->data_poses6s[k*6 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
-				loadmodel->data_poses6s[k*6 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
-				loadmodel->data_poses6s[k*6 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
+				loadmodel->data_poses7s[k*7 + 0] = loadmodel->num_poseinvscale * (pose[j].channeloffset[0] + (pose[j].channelmask&1 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[0] : 0));
+				loadmodel->data_poses7s[k*7 + 1] = loadmodel->num_poseinvscale * (pose[j].channeloffset[1] + (pose[j].channelmask&2 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[1] : 0));
+				loadmodel->data_poses7s[k*7 + 2] = loadmodel->num_poseinvscale * (pose[j].channeloffset[2] + (pose[j].channelmask&4 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[2] : 0));
 				rot[0] = pose[j].channeloffset[3] + (pose[j].channelmask&8 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[3] : 0);
 				rot[1] = pose[j].channeloffset[4] + (pose[j].channelmask&16 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[4] : 0);
 				rot[2] = pose[j].channeloffset[5] + (pose[j].channelmask&32 ? (unsigned short)LittleShort(*framedata++) * pose[j].channelscale[5] : 0);
@@ -3612,9 +3628,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if (rot[3] > 0)
 					Vector4Negate(rot, rot);
 				Vector4Normalize2(rot, rot);
-				loadmodel->data_poses6s[k*6 + 3] = 32767.0f * rot[0];
-				loadmodel->data_poses6s[k*6 + 4] = 32767.0f * rot[1];
-				loadmodel->data_poses6s[k*6 + 5] = 32767.0f * rot[2];
+				loadmodel->data_poses7s[k*7 + 3] = 32767.0f * rot[0];
+				loadmodel->data_poses7s[k*7 + 4] = 32767.0f * rot[1];
+				loadmodel->data_poses7s[k*7 + 5] = 32767.0f * rot[2];
+				loadmodel->data_poses7s[k*7 + 6] = 32767.0f * rot[3];
 				// skip scale data for now
 				if(pose[j].channelmask&128) framedata++;
 				if(pose[j].channelmask&256) framedata++;
@@ -3625,12 +3642,13 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 			for (i = 0;i < loadmodel->num_bones;i++)
 			{
-				loadmodel->data_poses6s[i*6 + 0] = loadmodel->num_poseinvscale * joint[i].origin[0];
-				loadmodel->data_poses6s[i*6 + 1] = loadmodel->num_poseinvscale * joint[i].origin[1];
-				loadmodel->data_poses6s[i*6 + 2] = loadmodel->num_poseinvscale * joint[i].origin[2];
-				loadmodel->data_poses6s[i*6 + 3] = 32767.0f * joint[i].rotation[0];
-				loadmodel->data_poses6s[i*6 + 4] = 32767.0f * joint[i].rotation[1];
-				loadmodel->data_poses6s[i*6 + 5] = 32767.0f * joint[i].rotation[2];
+				loadmodel->data_poses7s[i*7 + 0] = loadmodel->num_poseinvscale * joint[i].origin[0];
+				loadmodel->data_poses7s[i*7 + 1] = loadmodel->num_poseinvscale * joint[i].origin[1];
+				loadmodel->data_poses7s[i*7 + 2] = loadmodel->num_poseinvscale * joint[i].origin[2];
+				loadmodel->data_poses7s[i*7 + 3] = 32767.0f * joint[i].rotation[0];
+				loadmodel->data_poses7s[i*7 + 4] = 32767.0f * joint[i].rotation[1];
+				loadmodel->data_poses7s[i*7 + 5] = 32767.0f * joint[i].rotation[2];
+				loadmodel->data_poses7s[i*7 + 6] = 32767.0f * joint[i].rotation[3];
 			}
 		}
 	}
