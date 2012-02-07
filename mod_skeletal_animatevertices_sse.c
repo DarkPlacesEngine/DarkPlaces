@@ -50,54 +50,54 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	}
 	else
 	{
-        float originscale = -model->num_posescale;
-        for (i = 0;i < model->num_bones;i++)
-        {
-            const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
-            float lerp = frameblend[0].lerp,
-                tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
-                rx = pose7s[3] * lerp,
-                ry = pose7s[4] * lerp,
-                rz = pose7s[5] * lerp,
-                rw = pose7s[6] * lerp,
-                dx = tx*rw + ty*rz - tz*ry,
-                dy = -tx*rz + ty*rw + tz*rx,
-                dz = tx*ry - ty*rx + tz*rw,
-                dw = -tx*rx - ty*ry - tz*rz,
-                scale;
-            for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
-            {
-                const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
-                float lerp = frameblend[blends].lerp,
-                    tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
-                    qx = pose7s[3], qy = pose7s[4], qz = pose7s[5], qw = pose7s[6];
-                if(rx*qx + ry*qy + rz*qz + rw*qw < 0) lerp = -lerp;
-                qx *= lerp;
-                qy *= lerp;
-                qz *= lerp;
-                qw *= lerp;
-                rx += qx;
-                ry += qy;
-                rz += qz;
-                rw += qw;
-                dx += tx*qw + ty*qz - tz*qy;
-                dy += -tx*qz + ty*qw + tz*qx;
-                dz += tx*qy - ty*qx + tz*qw;
-                dw += -tx*qx - ty*qy - tz*qz;
-            }
-            scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
-            m[0] = scale*(rw*rw + rx*rx - ry*ry - rz*rz);
-            m[1] = 2*scale*(rx*ry - rw*rz);
-            m[2] = 2*scale*(rx*rz + rw*ry);
-            m[3] = originscale*scale*(dw*rx - dx*rw + dy*rz - dz*ry);
-            m[4] = 2*scale*(rx*ry + rw*rz);
-            m[5] = scale*(rw*rw + ry*ry - rx*rx - rz*rz);
-            m[6] = 2*scale*(ry*rz - rw*rx);
-            m[7] = originscale*scale*(dw*ry - dx*rz - dy*rw + dz*rx);
-            m[8] = 2*scale*(rx*rz - rw*ry);
-            m[9] = 2*scale*(ry*rz + rw*rx);
-            m[10] = scale*(rw*rw + rz*rz - rx*rx - ry*ry);
-            m[11] = originscale*scale*(dw*rz + dx*ry - dy*rx - dz*rw);
+		float originscale = -model->num_posescale;
+		for (i = 0;i < model->num_bones;i++)
+		{
+			const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
+			float lerp = frameblend[0].lerp,
+				tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
+				rx = pose7s[3] * lerp,
+				ry = pose7s[4] * lerp,
+				rz = pose7s[5] * lerp,
+				rw = pose7s[6] * lerp,
+				dx = tx*rw + ty*rz - tz*ry,
+				dy = -tx*rz + ty*rw + tz*rx,
+				dz = tx*ry - ty*rx + tz*rw,
+				dw = -tx*rx - ty*ry - tz*rz,
+				scale;
+			for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
+			{
+				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
+				float lerp = frameblend[blends].lerp,
+					tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
+					qx = pose7s[3], qy = pose7s[4], qz = pose7s[5], qw = pose7s[6];
+				if(rx*qx + ry*qy + rz*qz + rw*qw < 0) lerp = -lerp;
+				qx *= lerp;
+				qy *= lerp;
+				qz *= lerp;
+				qw *= lerp;
+				rx += qx;
+				ry += qy;
+				rz += qz;
+				rw += qw;
+				dx += tx*qw + ty*qz - tz*qy;
+				dy += -tx*qz + ty*qw + tz*qx;
+				dz += tx*qy - ty*qx + tz*qw;
+				dw += -tx*qx - ty*qy - tz*qz;
+			}
+			scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
+			m[0] = scale*(rw*rw + rx*rx - ry*ry - rz*rz);
+			m[1] = 2*scale*(rx*ry - rw*rz);
+			m[2] = 2*scale*(rx*rz + rw*ry);
+			m[3] = originscale*scale*(dw*rx - dx*rw + dy*rz - dz*ry);
+			m[4] = 2*scale*(rx*ry + rw*rz);
+			m[5] = scale*(rw*rw + ry*ry - rx*rx - rz*rz);
+			m[6] = 2*scale*(ry*rz - rw*rx);
+			m[7] = originscale*scale*(dw*ry - dx*rz - dy*rw + dz*rx);
+			m[8] = 2*scale*(rx*rz - rw*ry);
+			m[9] = 2*scale*(ry*rz + rw*rx);
+			m[10] = scale*(rw*rw + rz*rz - rx*rx - ry*ry);
+			m[11] = originscale*scale*(dw*rz + dx*ry - dy*rx - dz*rw);
 			if (i == r_skeletal_debugbone.integer)
 				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
 			m[3] *= r_skeletal_debugtranslatex.value;
