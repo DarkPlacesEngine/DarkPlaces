@@ -5896,7 +5896,7 @@ out1:
 out2:
 		handle->postdata = NULL;
 		handle->postlen = 0;
-		ret = Curl_Begin_ToMemory(url, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, NULL, NULL, 0, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	if(ret)
 	{
