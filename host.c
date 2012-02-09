@@ -1342,7 +1342,7 @@ static void Host_Init (void)
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText("togglemenu\n");
+		Cbuf_AddText("togglemenu 1\n");
 		Cbuf_Execute();
 	}
 
