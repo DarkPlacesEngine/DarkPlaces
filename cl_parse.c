@@ -2947,6 +2947,7 @@ static void CL_IPLog_Load(void);
 static void CL_IPLog_Add(const char *address, const char *name, qboolean checkexisting, qboolean addtofile)
 {
 	int i;
+	size_t sz_name, sz_address;
 	if (!address || !address[0] || !name || !name[0])
 		return;
 	if (!cl_iplog_loaded)
@@ -2979,12 +2980,14 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 			Mem_Free(olditems);
 		}
 	}
-	cl_iplog_items[cl_iplog_numitems].address = (char *) Mem_Alloc(cls.permanentmempool, strlen(address) + 1);
-	cl_iplog_items[cl_iplog_numitems].name = (char *) Mem_Alloc(cls.permanentmempool, strlen(name) + 1);
-	strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, strlen(address) + 1);
+	sz_address = strlen(address) + 1;
+	sz_name = strlen(name) + 1;
+	cl_iplog_items[cl_iplog_numitems].address = (char *) Mem_Alloc(cls.permanentmempool, sz_address);
+	cl_iplog_items[cl_iplog_numitems].name = (char *) Mem_Alloc(cls.permanentmempool, sz_name);
+	strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, sz_address);
 	// TODO: maybe it would be better to strip weird characters from name when
 	// copying it here rather than using a straight strcpy?
-	strlcpy(cl_iplog_items[cl_iplog_numitems].name, name, strlen(name) + 1);
+	strlcpy(cl_iplog_items[cl_iplog_numitems].name, name, sz_name);
 	cl_iplog_numitems++;
 	if (addtofile)
 	{
