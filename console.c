@@ -2485,7 +2485,7 @@ static void Nicks_CutMatchesAlphaNumeric(int count)
 	if(Nicks_strcleanlen(Nicks_sanlist[0]) < strlen(tempstr))
 	{
 		// if the clean sanitized one is longer than the current one, use it, it has crap chars which definitely are in there
-		strlcpy(Nicks_sanlist[0], tempstr, sizeof(tempstr));
+		strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
 	}
 }
 
@@ -2541,7 +2541,7 @@ static void Nicks_CutMatchesNoSpaces(int count)
 	if(Nicks_strcleanlen(Nicks_sanlist[0]) < strlen(tempstr))
 	{
 		// if the clean sanitized one is longer than the current one, use it, it has crap chars which definitely are in there
-		strlcpy(Nicks_sanlist[0], tempstr, sizeof(tempstr));
+		strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
 	}
 }
 
