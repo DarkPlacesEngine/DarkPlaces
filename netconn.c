@@ -1588,7 +1588,7 @@ static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol,
 
 	entry = &serverlist_cache[n];
 
-	memset(entry, 0, sizeof(entry));
+	memset(entry, 0, sizeof(*entry));
 	entry->protocol =	protocol;
 	//	store	the data	the engine cares about (address and	ping)
 	strlcpy (entry->info.cname, ipstring, sizeof(entry->info.cname));
