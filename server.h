@@ -594,8 +594,8 @@ void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, 
 
 void SV_StartThread(void);
 void SV_StopThread(void);
-#define SV_LockThreadMutex() (svs.threaded ? Thread_LockMutex(svs.threadmutex),1 : 0)
-#define SV_UnlockThreadMutex() (svs.threaded ? Thread_UnlockMutex(svs.threadmutex),1 : 0)
+#define SV_LockThreadMutex() (void)(svs.threaded ? Thread_LockMutex(svs.threadmutex) : 0)
+#define SV_UnlockThreadMutex() (void)(svs.threaded ? Thread_UnlockMutex(svs.threadmutex) : 0)
 
 void VM_CustomStats_Clear(void);
 void VM_SV_UpdateCustomStats(client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
