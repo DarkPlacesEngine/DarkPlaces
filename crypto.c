@@ -545,7 +545,7 @@ qboolean Crypto_ServerFinishInstance(crypto_t *out, crypto_t *crypto)
 	}
 	CLEAR_CDATA;
 	memcpy(out, crypto, sizeof(*out));
-	memset(crypto, 0, sizeof(crypto));
+	memset(crypto, 0, sizeof(*crypto));
 	return true;
 }
 
