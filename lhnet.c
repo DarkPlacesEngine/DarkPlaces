@@ -154,7 +154,7 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *vaddress, lhnetaddresstype_t addressty
 }
 
 #ifdef SUPPORTIPV6
-int LHNETADDRESS_Resolve(lhnetaddressnative_t *address, const char *name, int port)
+static int LHNETADDRESS_Resolve(lhnetaddressnative_t *address, const char *name, int port)
 {
 	char port_buff [16];
 	struct addrinfo hints;
