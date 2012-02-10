@@ -1722,10 +1722,11 @@ void FS_Init_SelfPack (void)
 				p = buf;
 				while(COM_ParseToken_Console(&p))
 				{
+					size_t sz = strlen(com_token) + 1; // shut up clang
 					if(i >= args_left)
 						break;
-					q = (char *)Mem_Alloc(fs_mempool, strlen(com_token) + 1);
-					strlcpy(q, com_token, strlen(com_token) + 1);
+					q = (char *)Mem_Alloc(fs_mempool, sz);
+					strlcpy(q, com_token, sz);
 					new_argv[com_argc + i] = q;
 					++i;
 				}
