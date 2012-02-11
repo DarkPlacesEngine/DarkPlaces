@@ -16,7 +16,6 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	matrix4x4_t *bonepose;
 	matrix4x4_t *boneposerelative;
 	float m[12];
-	matrix4x4_t mm, mm2;
 	const blendweights_t * RESTRICT weights;
 	int num_vertices_minus_one;
 
@@ -34,23 +33,74 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	{
 		for (i = 0;i < model->num_bones;i++)
 		{
-			// relativetransforms is in GL column-major order, which is what we need for SSE
-			// transposed style processing
+			const float * RESTRICT n = model->data_baseboneposeinverse + i * 12;
+			matrix4x4_t * RESTRICT s = &skeleton->relativetransforms[i];
+			matrix4x4_t * RESTRICT b = &bonepose[i];
+			matrix4x4_t * RESTRICT r = &boneposerelative[i];
+			__m128 b0, b1, b2, b3, r0, r1, r2, r3, nr;
 			if (model->data_bones[i].parent >= 0)
-				Matrix4x4_Concat(&bonepose[i], &bonepose[model->data_bones[i].parent], &skeleton->relativetransforms[i]);
+			{
+				const matrix4x4_t * RESTRICT p = &bonepose[model->data_bones[i].parent];
+				__m128 s0 = _mm_loadu_ps(s->m[0]), s1 = _mm_loadu_ps(s->m[1]), s2 = _mm_loadu_ps(s->m[2]);
+#ifdef OPENGLORIENTATION
+#define SKELETON_MATRIX(r, c) _mm_shuffle_ps(s##c, s##c, _MM_SHUFFLE(r, r, r, r))
+#else
+#define SKELETON_MATRIX(r, c) _mm_shuffle_ps(s##r, s##r, _MM_SHUFFLE(c, c, c, c))
+#endif
+				__m128 pr = _mm_load_ps(p->m[0]);
+				b0 = _mm_mul_ps(pr, SKELETON_MATRIX(0, 0));
+				b1 = _mm_mul_ps(pr, SKELETON_MATRIX(0, 1));
+				b2 = _mm_mul_ps(pr, SKELETON_MATRIX(0, 2));
+				b3 = _mm_mul_ps(pr, SKELETON_MATRIX(0, 3));
+				pr = _mm_load_ps(p->m[1]);
+				b0 = _mm_add_ps(b0, _mm_mul_ps(pr, SKELETON_MATRIX(1, 0)));
+				b1 = _mm_add_ps(b1, _mm_mul_ps(pr, SKELETON_MATRIX(1, 1)));
+				b2 = _mm_add_ps(b2, _mm_mul_ps(pr, SKELETON_MATRIX(1, 2)));
+				b3 = _mm_add_ps(b3, _mm_mul_ps(pr, SKELETON_MATRIX(1, 3)));
+				pr = _mm_load_ps(p->m[2]);
+				b0 = _mm_add_ps(b0, _mm_mul_ps(pr, SKELETON_MATRIX(2, 0)));
+				b1 = _mm_add_ps(b1, _mm_mul_ps(pr, SKELETON_MATRIX(2, 1)));
+				b2 = _mm_add_ps(b2, _mm_mul_ps(pr, SKELETON_MATRIX(2, 2)));
+				b3 = _mm_add_ps(b3, _mm_mul_ps(pr, SKELETON_MATRIX(2, 3)));
+				b3 = _mm_add_ps(b3, _mm_load_ps(p->m[3]));
+			}
 			else
-				memcpy(&bonepose[i], &skeleton->relativetransforms[i], sizeof(matrix4x4_t));
-
-			// create a relative deformation matrix to describe displacement
-			// from the base mesh, which is used by the actual weighting
-			Matrix4x4_FromArray12FloatD3D(&mm, model->data_baseboneposeinverse + i * 12); // baseboneposeinverse is 4x3 row-major
-			Matrix4x4_Concat(&mm2, &bonepose[i], &mm);
-			Matrix4x4_Transpose(&boneposerelative[i], &mm2); // TODO: Eliminate this transpose
+			{
+				b0 = _mm_loadu_ps(s->m[0]);
+				b1 = _mm_loadu_ps(s->m[1]);
+				b2 = _mm_loadu_ps(s->m[2]);
+				b3 = _mm_loadu_ps(s->m[3]);
+#ifndef OPENGLORIENTATION
+				_MM_TRANSPOSE4_PS(b0, b1, b2, b3);
+#endif
+			}
+			_mm_store_ps(b->m[0], b0);
+			_mm_store_ps(b->m[1], b1);
+			_mm_store_ps(b->m[2], b2);
+			_mm_store_ps(b->m[3], b3);
+			nr = _mm_loadu_ps(n);
+			r0 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0)));
+			r1 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1)));
+			r2 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2)));
+			r3 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3)));
+			nr = _mm_loadu_ps(n+4);
+			r0 = _mm_add_ps(r0, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0))));
+			r1 = _mm_add_ps(r1, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1))));
+			r2 = _mm_add_ps(r2, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2))));
+			r3 = _mm_add_ps(r3, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3))));
+			nr = _mm_loadu_ps(n+8);
+			r0 = _mm_add_ps(r0, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0))));
+			r1 = _mm_add_ps(r1, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1))));
+			r2 = _mm_add_ps(r2, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2))));
+			r3 = _mm_add_ps(r3, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3))));
+			_mm_store_ps(r->m[0], r0);
+			_mm_store_ps(r->m[1], r1);
+			_mm_store_ps(r->m[2], r2);
+			_mm_store_ps(r->m[3], r3);
 		}
 	}
 	else
 	{
-		float originscale = -model->num_posescale;
 		for (i = 0;i < model->num_bones;i++)
 		{
 			const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
@@ -64,7 +114,7 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 				dy = -tx*rz + ty*rw + tz*rx,
 				dz = tx*ry - ty*rx + tz*rw,
 				dw = -tx*rx - ty*ry - tz*rz,
-				scale;
+				scale, originscale;
 			for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
 				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
@@ -86,33 +136,81 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 				dw += -tx*qx - ty*qy - tz*qz;
 			}
 			scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
+			originscale = -model->num_posescale * scale;
 			m[0] = scale*(rw*rw + rx*rx - ry*ry - rz*rz);
 			m[1] = 2*scale*(rx*ry - rw*rz);
 			m[2] = 2*scale*(rx*rz + rw*ry);
-			m[3] = originscale*scale*(dw*rx - dx*rw + dy*rz - dz*ry);
+			m[3] = originscale*(dw*rx - dx*rw + dy*rz - dz*ry);
 			m[4] = 2*scale*(rx*ry + rw*rz);
 			m[5] = scale*(rw*rw + ry*ry - rx*rx - rz*rz);
 			m[6] = 2*scale*(ry*rz - rw*rx);
-			m[7] = originscale*scale*(dw*ry - dx*rz - dy*rw + dz*rx);
+			m[7] = originscale*(dw*ry - dx*rz - dy*rw + dz*rx);
 			m[8] = 2*scale*(rx*rz - rw*ry);
 			m[9] = 2*scale*(ry*rz + rw*rx);
 			m[10] = scale*(rw*rw + rz*rz - rx*rx - ry*ry);
-			m[11] = originscale*scale*(dw*rz + dx*ry - dy*rx - dz*rw);
+			m[11] = originscale*(dw*rz + dx*ry - dy*rx - dz*rw);
 			if (i == r_skeletal_debugbone.integer)
 				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
 			m[3] *= r_skeletal_debugtranslatex.value;
 			m[7] *= r_skeletal_debugtranslatey.value;
 			m[11] *= r_skeletal_debugtranslatez.value;
-			Matrix4x4_FromArray12FloatD3D(&mm, m);
-			if (model->data_bones[i].parent >= 0)
-				Matrix4x4_Concat(&bonepose[i], &bonepose[model->data_bones[i].parent], &mm);
-			else
-				memcpy(&bonepose[i], &mm, sizeof(mm));
-			// create a relative deformation matrix to describe displacement
-			// from the base mesh, which is used by the actual weighting
-			Matrix4x4_FromArray12FloatD3D(&mm, model->data_baseboneposeinverse + i * 12); // baseboneposeinverse is 4x3 row-major
-			Matrix4x4_Concat(&mm2, &bonepose[i], &mm);
-			Matrix4x4_Transpose(&boneposerelative[i], &mm2); // TODO: Eliminate this transpose
+			{
+				const float * RESTRICT n = model->data_baseboneposeinverse + i * 12;
+				matrix4x4_t * RESTRICT b = &bonepose[i];
+				matrix4x4_t * RESTRICT r = &boneposerelative[i];
+				__m128 b0, b1, b2, b3, r0, r1, r2, r3, nr;
+				if (model->data_bones[i].parent >= 0)
+				{
+					const matrix4x4_t * RESTRICT p = &bonepose[model->data_bones[i].parent];
+					__m128 pr = _mm_load_ps(p->m[0]);
+					b0 = _mm_mul_ps(pr, _mm_set1_ps(m[0]));
+					b1 = _mm_mul_ps(pr, _mm_set1_ps(m[1]));
+					b2 = _mm_mul_ps(pr, _mm_set1_ps(m[2]));
+					b3 = _mm_mul_ps(pr, _mm_set1_ps(m[3]));
+					pr = _mm_load_ps(p->m[1]);
+					b0 = _mm_add_ps(b0, _mm_mul_ps(pr, _mm_set1_ps(m[4])));
+					b1 = _mm_add_ps(b1, _mm_mul_ps(pr, _mm_set1_ps(m[5])));
+					b2 = _mm_add_ps(b2, _mm_mul_ps(pr, _mm_set1_ps(m[6])));
+					b3 = _mm_add_ps(b3, _mm_mul_ps(pr, _mm_set1_ps(m[7])));
+					pr = _mm_load_ps(p->m[2]);
+					b0 = _mm_add_ps(b0, _mm_mul_ps(pr, _mm_set1_ps(m[8])));
+					b1 = _mm_add_ps(b1, _mm_mul_ps(pr, _mm_set1_ps(m[9])));
+					b2 = _mm_add_ps(b2, _mm_mul_ps(pr, _mm_set1_ps(m[10])));
+					b3 = _mm_add_ps(b3, _mm_mul_ps(pr, _mm_set1_ps(m[11])));
+					b3 = _mm_add_ps(b3, _mm_load_ps(p->m[3]));
+				}
+				else
+				{
+					b0 = _mm_setr_ps(m[0], m[4], m[8], 0.0f);
+					b1 = _mm_setr_ps(m[1], m[5], m[9], 0.0f);
+					b2 = _mm_setr_ps(m[2], m[6], m[10], 0.0f);
+					b3 = _mm_setr_ps(m[3], m[7], m[11], 1.0f);
+				}
+				_mm_store_ps(b->m[0], b0);
+				_mm_store_ps(b->m[1], b1);
+				_mm_store_ps(b->m[2], b2);
+				_mm_store_ps(b->m[3], b3);
+				nr = _mm_loadu_ps(n);
+				r0 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0)));
+				r1 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1)));
+				r2 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2)));
+				r3 = _mm_mul_ps(b0, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3)));
+				nr = _mm_loadu_ps(n+4);
+				r0 = _mm_add_ps(r0, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0))));
+				r1 = _mm_add_ps(r1, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1))));
+				r2 = _mm_add_ps(r2, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2))));
+				r3 = _mm_add_ps(r3, _mm_mul_ps(b1, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3))));
+				nr = _mm_loadu_ps(n+8);
+				r0 = _mm_add_ps(r0, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(0, 0, 0, 0))));
+				r1 = _mm_add_ps(r1, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1))));
+				r2 = _mm_add_ps(r2, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2))));
+				r3 = _mm_add_ps(r3, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3))));
+				r3 = _mm_add_ps(r3, b3);
+				_mm_store_ps(r->m[0], r0);
+				_mm_store_ps(r->m[1], r1);
+				_mm_store_ps(r->m[2], r2);
+				_mm_store_ps(r->m[3], r3);
+			}	
 		}
 	}
 
