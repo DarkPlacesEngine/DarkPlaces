@@ -43,6 +43,7 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 				const matrix4x4_t * RESTRICT p = &bonepose[model->data_bones[i].parent];
 				__m128 s0 = _mm_loadu_ps(s->m[0]), s1 = _mm_loadu_ps(s->m[1]), s2 = _mm_loadu_ps(s->m[2]);
 #ifdef OPENGLORIENTATION
+				__m128 s3 = _mm_loadu_ps(s->m[3]);
 #define SKELETON_MATRIX(r, c) _mm_shuffle_ps(s##c, s##c, _MM_SHUFFLE(r, r, r, r))
 #else
 #define SKELETON_MATRIX(r, c) _mm_shuffle_ps(s##r, s##r, _MM_SHUFFLE(c, c, c, c))
