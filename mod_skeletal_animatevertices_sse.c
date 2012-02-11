@@ -94,6 +94,7 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 			r1 = _mm_add_ps(r1, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(1, 1, 1, 1))));
 			r2 = _mm_add_ps(r2, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(2, 2, 2, 2))));
 			r3 = _mm_add_ps(r3, _mm_mul_ps(b2, _mm_shuffle_ps(nr, nr, _MM_SHUFFLE(3, 3, 3, 3))));
+			r3 = _mm_add_ps(r3, b3);
 			_mm_store_ps(r->m[0], r0);
 			_mm_store_ps(r->m[1], r1);
 			_mm_store_ps(r->m[2], r2);
