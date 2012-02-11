@@ -41,7 +41,6 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 	}
 	else
 	{
-		float originscale = -model->num_posescale;
 		for (i = 0;i < model->num_bones;i++)
 		{
 		    const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
@@ -55,7 +54,7 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 				dy = -tx*rz + ty*rw + tz*rx,
 				dz = tx*ry - ty*rx + tz*rw,
 				dw = -tx*rx - ty*ry - tz*rz,
-				scale;
+				scale, sx, sy, sz, sw;
 			for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
 				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
@@ -77,18 +76,22 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 				dw += -tx*qx - ty*qy - tz*qz;
 			}
 			scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
-			m[0] = scale*(rw*rw + rx*rx - ry*ry - rz*rz);
-			m[1] = 2*scale*(rx*ry - rw*rz);
-			m[2] = 2*scale*(rx*rz + rw*ry);
-			m[3] = originscale*scale*(dw*rx - dx*rw + dy*rz - dz*ry);
-			m[4] = 2*scale*(rx*ry + rw*rz);
-			m[5] = scale*(rw*rw + ry*ry - rx*rx - rz*rz);
-			m[6] = 2*scale*(ry*rz - rw*rx);
-			m[7] = originscale*scale*(dw*ry - dx*rz - dy*rw + dz*rx);
-			m[8] = 2*scale*(rx*rz - rw*ry);
-			m[9] = 2*scale*(ry*rz + rw*rx);
-			m[10] = scale*(rw*rw + rz*rz - rx*rx - ry*ry);
-			m[11] = originscale*scale*(dw*rz + dx*ry - dy*rx - dz*rw);
+			sx = rx * scale;
+			sy = ry * scale;
+			sz = rz * scale;
+			sw = rw * scale;
+			m[0] = sw*rw + sx*rx - sy*ry - sz*rz;
+			m[1] = 2*(sx*ry - sw*rz);
+			m[2] = 2*(sx*rz + sw*ry);
+			m[3] = model->num_posescale*(dx*sw - dy*sz + dz*sy - dw*sx);
+			m[4] = 2*(sx*ry + sw*rz);
+			m[5] = sw*rw + sy*ry - sx*rx - sz*rz;
+			m[6] = 2*(sy*rz - sw*rx);
+			m[7] = model->num_posescale*(dx*sz + dy*sw - dz*sx - dw*sy);
+			m[8] = 2*(sx*rz - sw*ry);
+			m[9] = 2*(sy*rz + sw*rx);
+			m[10] = sw*rw + sz*rz - sx*rx - sy*ry;
+			m[11] = model->num_posescale*(dy*sx + dz*sw - dx*sy - dw*sz);
 			if (i == r_skeletal_debugbone.integer)
 				m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
 			m[3] *= r_skeletal_debugtranslatex.value;
