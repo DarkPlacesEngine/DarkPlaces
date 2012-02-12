@@ -30,18 +30,6 @@
 #include "image.h"
 #include "image_png.h"
 
-#ifdef __cplusplus
-#ifdef WIN64
-typedef _JBTYPE *qpng_jmpbuf_t;
-#elif defined(MACOSX) || defined(WIN32)
-typedef int *qpng_jmpbuf_t;
-#else
-typedef __jmp_buf_tag *qpng_jmpbuf_t;
-#endif
-#else
-typedef void *qpng_jmpbuf_t;
-#endif
-// why not: typedef jmp_buf qpng_jmpbuf_t;
 
 static void				(*qpng_set_sig_bytes)		(void*, int);
 static int				(*qpng_sig_cmp)				(const unsigned char*, size_t, size_t);
@@ -76,7 +64,11 @@ static unsigned int			(*qpng_access_version_number)		(void); // FIXME is this re
 static void				(*qpng_write_info)			(void*, void*);
 static void				(*qpng_write_row)			(void*, unsigned char*);
 static void				(*qpng_write_end)			(void*, void*);
-static qpng_jmpbuf_t			(*qpng_jmpbuf)		(void*);
+
+// libpng longjmp hack
+typedef void (*qpng_longjmp_ptr) (jmp_buf, int);
+static jmp_buf* (*qpng_set_longjmp_fn) (void *, qpng_longjmp_ptr, size_t);
+#define qpng_jmpbuf(png_ptr) (*qpng_set_longjmp_fn((png_ptr), longjmp, sizeof (jmp_buf)))
 
 static dllfunction_t pngfuncs[] =
 {
@@ -113,7 +105,7 @@ static dllfunction_t pngfuncs[] =
 	{"png_write_info",			(void **) &qpng_write_info},
 	{"png_write_row",			(void **) &qpng_write_row},
 	{"png_write_end",			(void **) &qpng_write_end},
-	{"png_jmpbuf",		(void **) &qpng_jmpbuf},
+	{"png_set_longjmp_fn",		(void **) &qpng_set_longjmp_fn},
 	{NULL, NULL}
 };
 
