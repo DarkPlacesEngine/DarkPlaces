@@ -30,7 +30,6 @@
 #include "image.h"
 #include "image_png.h"
 
-/*
 #ifdef __cplusplus
 #ifdef WIN64
 typedef _JBTYPE *qpng_jmpbuf_t;
@@ -42,8 +41,7 @@ typedef __jmp_buf_tag *qpng_jmpbuf_t;
 #else
 typedef void *qpng_jmpbuf_t;
 #endif
-*/
-typedef jmp_buf qpng_jmpbuf_t;
+// why not: typedef jmp_buf qpng_jmpbuf_t;
 
 static void				(*qpng_set_sig_bytes)		(void*, int);
 static int				(*qpng_sig_cmp)				(const unsigned char*, size_t, size_t);
