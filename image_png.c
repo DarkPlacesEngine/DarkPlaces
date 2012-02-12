@@ -65,10 +65,17 @@ static void				(*qpng_write_info)			(void*, void*);
 static void				(*qpng_write_row)			(void*, unsigned char*);
 static void				(*qpng_write_end)			(void*, void*);
 
-// libpng longjmp hack
+// libpng 1.4+ longjmp hack
 typedef void (*qpng_longjmp_ptr) (jmp_buf, int);
 static jmp_buf* (*qpng_set_longjmp_fn) (void *, qpng_longjmp_ptr, size_t);
-#define qpng_jmpbuf(png_ptr) (*qpng_set_longjmp_fn((png_ptr), longjmp, sizeof (jmp_buf)))
+#define qpng_jmpbuf_14(png_ptr) (*qpng_set_longjmp_fn((png_ptr), longjmp, sizeof (jmp_buf)))
+
+// libpng 1.2 longjmp hack
+#define qpng_jmpbuf_12(png_ptr) (*((jmp_buf *) png_ptr))
+
+// all version support
+#define qpng_jmpbuf(png_ptr) \
+	(qpng_set_longjmp_fn ? qpng_jmpbuf_14(png_ptr) : qpng_jmpbuf_12(png_ptr))
 
 static dllfunction_t pngfuncs[] =
 {
@@ -105,12 +112,17 @@ static dllfunction_t pngfuncs[] =
 	{"png_write_info",			(void **) &qpng_write_info},
 	{"png_write_row",			(void **) &qpng_write_row},
 	{"png_write_end",			(void **) &qpng_write_end},
+	{NULL, NULL}
+};
+static dllfunction_t png14funcs[] =
+{
 	{"png_set_longjmp_fn",		(void **) &qpng_set_longjmp_fn},
 	{NULL, NULL}
 };
 
 // Handle for PNG DLL
 dllhandle_t png_dll = NULL;
+dllhandle_t png14_dll = NULL;
 
 
 /*
@@ -156,7 +168,15 @@ qboolean PNG_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &png_dll, pngfuncs);
+	if(!Sys_LoadLibrary (dllnames, &png_dll, pngfuncs))
+		return false;
+	if(qpng_access_version_number() / 100 >= 104)
+		if(!Sys_LoadLibrary (dllnames, &png14_dll, png14funcs))
+		{
+			Sys_UnloadLibrary (&png_dll);
+			return false;
+		}
+	return true;
 }
 
 
@@ -169,6 +189,7 @@ Unload the PNG DLL
 */
 void PNG_CloseLibrary (void)
 {
+	Sys_UnloadLibrary (&png14_dll);
 	Sys_UnloadLibrary (&png_dll);
 }
 
