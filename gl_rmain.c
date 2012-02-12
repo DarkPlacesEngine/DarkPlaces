@@ -6045,7 +6045,7 @@ static void R_Bloom_StartFrame(void)
 
 	// set bloomwidth and bloomheight to the bloom resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, vid.height);
+	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, vid.width);
 	r_fb.bloomheight = r_fb.bloomwidth * vid.height / vid.width;
 	r_fb.bloomheight = bound(1, r_fb.bloomheight, vid.height);
 	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, (int)vid.maxtexturesize_2d);
@@ -6151,7 +6151,7 @@ static void R_Bloom_StartFrame(void)
 	}
 
 	// bloom texture is a different resolution
-	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, r_refdef.view.height);
+	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, r_refdef.view.width);
 	r_fb.bloomheight = r_fb.bloomwidth * r_refdef.view.height / r_refdef.view.width;
 	r_fb.bloomheight = bound(1, r_fb.bloomheight, r_refdef.view.height);
 	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, r_fb.bloomtexturewidth);
@@ -6223,12 +6223,15 @@ static void R_Bloom_MakeTexture(void)
 	float colorscale = r_bloom_colorscale.value;
 
 	r_refdef.stats.bloom++;
-
+    
+#if 0
+    // this copy is unnecessary since it happens in R_BlendView already
 	if (!r_fb.fbo)
 	{
 		R_Mesh_CopyToTexture(r_fb.colortexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 		r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 	}
+#endif
 
 	// scale down screen texture to the bloom texture size
 	CHECKGLERROR
