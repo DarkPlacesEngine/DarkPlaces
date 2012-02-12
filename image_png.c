@@ -30,6 +30,21 @@
 #include "image.h"
 #include "image_png.h"
 
+/*
+#ifdef __cplusplus
+#ifdef WIN64
+typedef _JBTYPE *qpng_jmpbuf_t;
+#elif defined(MACOSX) || defined(WIN32)
+typedef int *qpng_jmpbuf_t;
+#else
+typedef __jmp_buf_tag *qpng_jmpbuf_t;
+#endif
+#else
+typedef void *qpng_jmpbuf_t;
+#endif
+*/
+typedef jmp_buf qpng_jmpbuf_t;
+
 static void				(*qpng_set_sig_bytes)		(void*, int);
 static int				(*qpng_sig_cmp)				(const unsigned char*, size_t, size_t);
 static void*			(*qpng_create_read_struct)	(const char*, void*, void(*)(void *png, const char *message), void(*)(void *png, const char *message));
@@ -63,7 +78,7 @@ static unsigned int			(*qpng_access_version_number)		(void); // FIXME is this re
 static void				(*qpng_write_info)			(void*, void*);
 static void				(*qpng_write_row)			(void*, unsigned char*);
 static void				(*qpng_write_end)			(void*, void*);
-static void*				(*qpng_jmpbuf)		(void*);
+static qpng_jmpbuf_t			(*qpng_jmpbuf)		(void*);
 
 static dllfunction_t pngfuncs[] =
 {
