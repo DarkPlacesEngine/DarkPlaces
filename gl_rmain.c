@@ -132,6 +132,8 @@ cvar_t r_transparentdepthmasking = {CVAR_SAVE, "r_transparentdepthmasking", "0",
 cvar_t r_transparent_sortmindist = {CVAR_SAVE, "r_transparent_sortmindist", "0", "lower distance limit for transparent sorting"};
 cvar_t r_transparent_sortmaxdist = {CVAR_SAVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
 cvar_t r_transparent_sortarraysize = {CVAR_SAVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
+cvar_t r_celshading = {CVAR_SAVE, "r_celshading", "0", "cartoon-style light shading"};
+cvar_t r_celoutlines = {CVAR_SAVE, "r_celoutlines", "0", "cartoon-style outlines (requires r_shadow_deferred)"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
@@ -853,8 +855,10 @@ enum
 	SHADERSTATICPARM_SHADOWMAPPCF_1 = 8, ///< PCF 1
 	SHADERSTATICPARM_SHADOWMAPPCF_2 = 9, ///< PCF 2
 	SHADERSTATICPARM_SHADOWSAMPLER = 10, ///< sampler
+	SHADERSTATICPARM_CELSHADING = 11, ///< celshading (alternative diffuse and specular math)
+	SHADERSTATICPARM_CELOUTLINE = 12, ///< celoutline (depth buffer analysis to produce outlines)
 };
-#define SHADERSTATICPARMS_COUNT 11
+#define SHADERSTATICPARMS_COUNT 13
 
 static const char *shaderstaticparmstrings_list[SHADERSTATICPARMS_COUNT];
 static int shaderstaticparms_count = 0;
@@ -897,6 +901,10 @@ qboolean R_CompileShader_CheckStaticParms(void)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SHADOWMAPPCF_2);
 	else if (r_shadow_shadowmappcf)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_SHADOWMAPPCF_1);
+	else if (r_celshading.integer)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELSHADING);
+	else if (r_celoutlines.integer)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELOUTLINE);
 
 	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
@@ -922,6 +930,8 @@ static void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permu
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWMAPPCF_1, "USESHADOWMAPPCF 1");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWMAPPCF_2, "USESHADOWMAPPCF 2");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_SHADOWSAMPLER, "USESHADOWSAMPLER");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_CELSHADING, "USECELSHADING");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_CELOUTLINES, "USECELOUTLINES");
 }
 
 /// information about each possible shader permutation
@@ -4263,6 +4273,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2_enable);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3_enable);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4_enable);
+	Cvar_RegisterVariable(&r_celshading);
+	Cvar_RegisterVariable(&r_celoutlines);
 
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_resolutionmultiplier);
