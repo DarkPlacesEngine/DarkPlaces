@@ -142,4 +142,83 @@ int _Thread_WaitThread(void *thread, int retval, const char *filename, int filel
 	return (int) (intptr_t) status;
 }
 
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline)
+{
+	pthread_barrier_t *b = (pthread_barrier_t *) Z_Malloc(sizeof(pthread_barrier_t));
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier create(%d) %s:%i\n", b, count, filename, fileline);
+#endif
+	pthread_barrier_init(b, NULL, count);
+	return (void *) b;
+}
 
+void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline)
+{
+	pthread_barrier_t *b = (pthread_barrier_t *) barrier;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier destroy %s:%i\n", b, filename, fileline);
+#endif
+	pthread_barrier_destroy(b);
+}
+
+void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline)
+{
+	pthread_barrier_t *b = (pthread_barrier_t *) barrier;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier wait %s:%i\n", b, filename, fileline);
+#endif
+	pthread_barrier_wait(b);
+}
+#else
+// standard barrier implementation using conds and mutexes
+// see: http://www.howforge.com/implementing-barrier-in-pthreads
+typedef struct {
+	unsigned int needed;
+	unsigned int called;
+	void *mutex;
+	void *cond;
+} barrier_t;
+
+void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline)
+{
+	barrier_t *b = Z_Malloc(sizeof(barrier_t));
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier create(%d) %s:%i\n", b, count, filename, fileline);
+#endif
+	b->needed = count;
+	b->called = 0;
+	b->mutex = Thread_CreateMutex();
+	b->cond = Thread_CreateCond();
+	return (void *) b;
+}
+
+void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline)
+{
+	barrier_t *b = (barrier_t *) barrier;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier destroy %s:%i\n", b, filename, fileline);
+#endif
+	Thread_DestroyMutex(b->mutex);
+	Thread_DestroyCond(b->cond);
+}
+
+void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline)
+{
+	barrier_t *b = (barrier_t *) barrier;
+#ifdef THREADDEBUG
+	Sys_PrintfToTerminal("%p barrier wait %s:%i\n", b, filename, fileline);
+#endif
+	Thread_LockMutex(b->mutex);
+	b->called++;
+	if (b->called == b->needed) {
+		b->called = 0;
+		Thread_CondBroadcast(b->cond);
+	} else {
+		do {
+			Thread_CondWait(b->cond, b->mutex);
+		} while(b->called);
+	}
+	Thread_UnlockMutex(b->mutex);
+}
+#endif

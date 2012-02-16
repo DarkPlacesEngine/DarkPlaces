@@ -5281,7 +5281,6 @@ static void R_View_UpdateWithScissor(const int *myscissor)
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
 	R_View_UpdateEntityLighting();
-	R_AnimCache_CacheVisibleEntities();
 }
 
 static void R_View_Update(void)
@@ -5291,7 +5290,6 @@ static void R_View_Update(void)
 	R_View_WorldVisibility(r_refdef.view.useclipplane);
 	R_View_UpdateEntityVisible();
 	R_View_UpdateEntityLighting();
-	R_AnimCache_CacheVisibleEntities();
 }
 
 float viewscalefpsadjusted = 1.0f;
@@ -5835,6 +5833,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				R_View_UpdateWithScissor(myscissor);
 			else
 				R_View_Update();
+			R_AnimCache_CacheVisibleEntities();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene(p->fbo_reflection, r_fb.water.depthtexture, p->texture_reflection);
@@ -5883,6 +5882,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				R_View_UpdateWithScissor(myscissor);
 			else
 				R_View_Update();
+			R_AnimCache_CacheVisibleEntities();
 			if(r_water_scissormode.integer & 1)
 				GL_Scissor(myscissor[0], myscissor[1], myscissor[2], myscissor[3]);
 			R_RenderScene(p->fbo_refraction, r_fb.water.depthtexture, p->texture_refraction);
@@ -5937,6 +5937,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			R_ResetViewRendering3D(p->fbo_camera, r_fb.water.depthtexture, p->texture_camera);
 			R_ClearScreen(r_refdef.fogenabled);
 			R_View_Update();
+			R_AnimCache_CacheVisibleEntities();
 			R_RenderScene(p->fbo_camera, r_fb.water.depthtexture, p->texture_camera);
 
 			if (!p->fbo_camera)
@@ -5952,6 +5953,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 	if (!r_fb.water.depthtexture)
 		R_ClearScreen(r_refdef.fogenabled);
 	R_View_Update();
+	R_AnimCache_CacheVisibleEntities();
 	goto finish;
 error:
 	r_refdef.view = originalview;
@@ -6925,6 +6927,10 @@ void R_RenderView(void)
 	R_View_Update();
 	if (r_timereport_active)
 		R_TimeReport("visibility");
+
+	R_AnimCache_CacheVisibleEntities();
+	if (r_timereport_active)
+		R_TimeReport("animcache");
 
 	R_Shadow_UpdateBounceGridTexture();
 	if (r_timereport_active && r_shadow_bouncegrid.integer)
