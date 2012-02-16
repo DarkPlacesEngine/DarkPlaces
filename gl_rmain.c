@@ -856,7 +856,7 @@ enum
 	SHADERSTATICPARM_SHADOWMAPPCF_2 = 9, ///< PCF 2
 	SHADERSTATICPARM_SHADOWSAMPLER = 10, ///< sampler
 	SHADERSTATICPARM_CELSHADING = 11, ///< celshading (alternative diffuse and specular math)
-	SHADERSTATICPARM_CELOUTLINE = 12, ///< celoutline (depth buffer analysis to produce outlines)
+	SHADERSTATICPARM_CELOUTLINES = 12, ///< celoutline (depth buffer analysis to produce outlines)
 };
 #define SHADERSTATICPARMS_COUNT 13
 
@@ -904,7 +904,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 	else if (r_celshading.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELSHADING);
 	else if (r_celoutlines.integer)
-		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELOUTLINE);
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELOUTLINES);
 
 	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
