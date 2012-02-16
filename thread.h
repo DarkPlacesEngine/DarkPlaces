@@ -17,6 +17,9 @@
 #define Thread_CondWait(cond, mutex)      (_Thread_CondWait(cond, mutex, __FILE__, __LINE__))
 #define Thread_CreateThread(fn, data)     (_Thread_CreateThread(fn, data, __FILE__, __LINE__))
 #define Thread_WaitThread(thread, retval) (_Thread_WaitThread(thread, retval, __FILE__, __LINE__))
+#define Thread_CreateBarrier(count)       (_Thread_CreateBarrier(count, __FILE__, __LINE__))
+#define Thread_DestroyBarrier(barrier)    (_Thread_DestroyBarrier(barrier, __FILE__, __LINE__))
+#define Thread_WaitBarrier(barrier)       (_Thread_WaitBarrier(barrier, __FILE__, __LINE__))
 
 int Thread_Init(void);
 void Thread_Shutdown(void);
@@ -32,6 +35,8 @@ int _Thread_CondBroadcast(void *cond, const char *filename, int fileline);
 int _Thread_CondWait(void *cond, void *mutex, const char *filename, int fileline);
 void *_Thread_CreateThread(int (*fn)(void *), void *data, const char *filename, int fileline);
 int _Thread_WaitThread(void *thread, int retval, const char *filename, int fileline);
+void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline);
+void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline);
+void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline);
 
 #endif
-
