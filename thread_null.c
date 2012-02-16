@@ -67,3 +67,16 @@ int _Thread_WaitThread(void *thread, int retval, const char *filename, int filel
 {
 	return retval;
 }
+
+void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline)
+{
+	return NULL;
+}
+
+void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline)
+{
+}
+
+void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline)
+{
+}
