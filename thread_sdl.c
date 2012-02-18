@@ -128,7 +128,7 @@ typedef struct {
 
 void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline)
 {
-	barrier_t *b = (barrier_t)Z_Malloc(sizeof(barrier_t));
+	barrier_t *b = (barrier_t *)Z_Malloc(sizeof(barrier_t));
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p barrier create(%d) %s:%i\n", b, count, filename, fileline);
 #endif
