@@ -1810,19 +1810,6 @@ void Matrix4x4_Scale (matrix4x4_t *out, double rotatescale, double originscale)
 #endif
 }
 
-void Matrix4x4_OriginScale3 (matrix4x4_t *out, double x, double y, double z)
-{
-#ifdef MATRIX4x4_OPENGLORIENTATION
-	out->m[3][0] *= x;
-	out->m[3][1] *= y;
-	out->m[3][2] *= z;
-#else
-	out->m[0][3] *= x;
-	out->m[1][3] *= y;
-	out->m[2][3] *= z;
-#endif
-}
-
 void Matrix4x4_Abs (matrix4x4_t *out)
 {
 	out->m[0][0] = fabs(out->m[0][0]);

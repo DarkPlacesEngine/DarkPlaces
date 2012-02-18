@@ -125,6 +125,7 @@ typedef struct edict_engineprivate_s
 	edict_odefunc_t *ode_func;
 	vec3_t ode_mins;
 	vec3_t ode_maxs;
+	vec3_t ode_scale;
 	vec_t ode_mass;
 	float ode_friction;
 	vec3_t ode_origin;
