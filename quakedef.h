@@ -484,10 +484,7 @@ extern cvar_t sessionid;
 # undef SSE2_PRESENT
 #endif
 
-#ifdef SSE2_PRESENT
-#define Sys_HaveSSE() true
-#define Sys_HaveSSE2() true
-#elif defined(SSE_POSSIBLE)
+#ifdef SSE_POSSIBLE
 // runtime detection of SSE/SSE2 capabilities for x86
 qboolean Sys_HaveSSE(void);
 qboolean Sys_HaveSSE2(void);
