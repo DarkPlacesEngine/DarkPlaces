@@ -262,7 +262,7 @@ typedef struct {
 
 void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileline)
 {
-	barrier_t *b = Z_Malloc(sizeof(barrier_t));
+	volatile barrier_t *b = (volatile barrier_t *) Z_Malloc(sizeof(barrier_t));
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p barrier create(%d) %s:%i\n", b, count, filename, fileline);
 #endif
@@ -275,7 +275,7 @@ void *_Thread_CreateBarrier(unsigned int count, const char *filename, int fileli
 
 void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline)
 {
-	barrier_t *b = (barrier_t *) barrier;
+	volatile barrier_t *b = (volatile barrier_t *) barrier;
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p barrier destroy %s:%i\n", b, filename, fileline);
 #endif
@@ -285,7 +285,7 @@ void _Thread_DestroyBarrier(void *barrier, const char *filename, int fileline)
 
 void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline)
 {
-	barrier_t *b = (barrier_t *) barrier;
+	volatile barrier_t *b = (volatile barrier_t *) barrier;
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p barrier wait %s:%i\n", b, filename, fileline);
 #endif
