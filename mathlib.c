@@ -212,6 +212,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	VectorMA(right, -d, forward, right);
 	VectorNormalize(right);
 	CrossProduct(right, forward, up);
+	VectorNormalize(up); // CrossProduct in this case returns 'up thats length is not 1
 }
 
 void VectorVectorsDouble(const double *forward, double *right, double *up)
