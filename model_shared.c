@@ -1391,7 +1391,7 @@ void Mod_CreateCollisionMesh(dp_model_t *mod)
 	for (k = 0;k < mod->nummodelsurfaces;k++)
 	{
 		surface = mod->data_surfaces + mod->firstmodelsurface + k;
-		if (!strcmp(surface->texture->name, "collision")) // found collision mesh
+		if (!strcmp(surface->texture->name, "collision") || !strcmp(surface->texture->name, "collisionconvex")) // found collision mesh
 		{
 			usesinglecollisionmesh = true;
 			numcollisionmeshtriangles = surface->num_triangles;
