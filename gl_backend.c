@@ -2637,7 +2637,7 @@ static qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenu
 			for (j = 0;strings[i][j];j++)
 				if (strings[i][j] == '\n')
 					pretextlines++;
-		Con_Printf("%s shader compile log:\n%s\n(line offset for any above warnings/errors: %i)\n", shadertype, compilelog, pretextlines);
+		Con_DPrintf("%s shader compile log:\n%s\n(line offset for any above warnings/errors: %i)\n", shadertype, compilelog, pretextlines);
 	}
 	if (!shadercompiled)
 	{
