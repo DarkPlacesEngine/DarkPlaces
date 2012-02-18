@@ -166,8 +166,6 @@ void Matrix4x4_SetOrigin (matrix4x4_t *out, double x, double y, double z);
 void Matrix4x4_AdjustOrigin (matrix4x4_t *out, double x, double y, double z);
 // scales vectors of a matrix in place and allows you to scale origin as well
 void Matrix4x4_Scale (matrix4x4_t *out, double rotatescale, double originscale);
-// scales origin of matrix by 3 axes
-void Matrix4x4_OriginScale3 (matrix4x4_t *out, double x, double y, double z);
 // ensures each element of the 3x3 rotation matrix is facing in the + direction
 void Matrix4x4_Abs (matrix4x4_t *out);
 
