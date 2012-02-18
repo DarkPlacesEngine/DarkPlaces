@@ -399,7 +399,7 @@ reload:
 	pic->lastusedframe = draw_frame;
 
 	// load a high quality image from disk if possible
-	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0)))
+	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0, false)))
 	{
 		// note this loads even if autoload is true, otherwise we can't get the width/height
 		loaded = true;
@@ -525,7 +525,7 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 		{
 			qboolean ddshasalpha;
 			float ddsavgcolor[4];
-			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0);
+			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0, false);
 		}
 		if (pic->tex == NULL)
 		{
@@ -1931,10 +1931,10 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
+		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1, (flags & (DRAWFLAGS_BLEND+DRAWFLAG_NOGAMMA)) ? false : true, true, false);
 	}
 	else
-		R_SetupShader_Generic_NoTexture((flags & DRAWFLAGS_BLEND) ? false : true, true);
+		R_SetupShader_Generic_NoTexture((flags & (DRAWFLAGS_BLEND+DRAWFLAG_NOGAMMA)) ? false : true, true);
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
 	floats[0] = floats[9] = x;
