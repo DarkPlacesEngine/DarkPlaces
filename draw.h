@@ -99,7 +99,7 @@ DRAWFLAG_MASK = 0xFF,   // ONLY R_BeginPolygon()
 DRAWFLAG_MIPMAP = 0x100, // ONLY R_BeginPolygon()
 DRAWFLAG_NOGAMMA = 0x200 // ONLY R_DrawQSuperPic()
 };
-#define DRAWFLAGS_BLEND (DRAWFLAG_ADDITIVE + DRAWFLAG_MODULATE + DRAWFLAG_2XMODULATE + DRAWFLAG_SCREEN)
+#define DRAWFLAGS_BLEND 0xFF /* this matches all blending flags */
 
 typedef struct ft2_settings_s
 {
