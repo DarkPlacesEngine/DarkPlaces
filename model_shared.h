@@ -724,6 +724,8 @@ typedef struct model_brush_s
 {
 	// true if this model is a HalfLife .bsp file
 	qboolean ishlbsp;
+	// true if this model is a BSP2 .bsp file (expanded 32bit bsp format for DarkPlaces, RMQ, others?)
+	qboolean isbsp2;
 	// string of entity definitions (.map format)
 	char *entities;
 
@@ -821,7 +823,7 @@ model_brush_t;
 
 typedef struct model_brushq1_s
 {
-	dmodel_t		*submodels;
+	mmodel_t		*submodels;
 
 	int				numvertexes;
 	mvertex_t		*vertexes;

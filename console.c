@@ -2057,11 +2057,10 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					lumplen = LittleLong(header->lumps[Q2LUMP_ENTITIES].filelen);
 				}
 			}
-			else if((p = BuffLittleLong(buf)) == BSPVERSION || p == 30)
+			else if((p = BuffLittleLong(buf)) == BSPVERSION || p == 30 || !memcmp(buf, "BSP2", 4))
 			{
-				dheader_t *header = (dheader_t *)buf;
-				lumpofs = LittleLong(header->lumps[LUMP_ENTITIES].fileofs);
-				lumplen = LittleLong(header->lumps[LUMP_ENTITIES].filelen);
+				lumpofs = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES);
+				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
 			}
 			else
 				p = 0;
