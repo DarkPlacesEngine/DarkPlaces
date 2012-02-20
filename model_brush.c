@@ -3718,7 +3718,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	unsigned char *datapointer;
 	sizebuf_t sb;
 
-	MSG_InitReadBuffer(&sb, (unsigned char *)buffer, bufferend - buffer);
+	MSG_InitReadBuffer(&sb, (unsigned char *)buffer, (unsigned char *)bufferend - (unsigned char *)buffer);
 
 	mod->type = mod_brushq1;
 
