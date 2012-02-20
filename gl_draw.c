@@ -1931,10 +1931,10 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 			width = pic->width;
 		if (height == 0)
 			height = pic->height;
-		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1, (flags & (DRAWFLAGS_BLEND+DRAWFLAG_NOGAMMA)) ? false : true, true, false);
+		R_SetupShader_Generic(Draw_GetPicTexture(pic), NULL, GL_MODULATE, 1, (flags & (DRAWFLAGS_BLEND | DRAWFLAG_NOGAMMA)) ? false : true, true, false);
 	}
 	else
-		R_SetupShader_Generic_NoTexture((flags & (DRAWFLAGS_BLEND+DRAWFLAG_NOGAMMA)) ? false : true, true);
+		R_SetupShader_Generic_NoTexture((flags & (DRAWFLAGS_BLEND | DRAWFLAG_NOGAMMA)) ? false : true, true);
 
 	floats[2] = floats[5] = floats[8] = floats[11] = 0;
 	floats[0] = floats[9] = x;
