@@ -54,6 +54,16 @@ typedef struct hullinfo_s
 	float		hullsizes[MAX_MAP_HULLS][2][3];
 } hullinfo_t;
 
+typedef struct mmodel_s
+{
+	float		mins[3], maxs[3];
+	float		origin[3];
+	int			headnode[MAX_MAP_HULLS];
+	int			visleafs;		// not including the solid leaf 0
+	int			firstface, numfaces;
+} mmodel_t;
+
+/*
 // WARNING: this struct does NOT match q1bsp's disk format because MAX_MAP_HULLS has been changed by Sajt's MCBSP code, this struct is only being used in memory as a result
 typedef struct dmodel_s
 {
@@ -75,8 +85,10 @@ typedef struct dmiptexlump_s
 	int			nummiptex;
 	int			dataofs[4];		// [nummiptex]
 } dmiptexlump_t;
+*/
 
 #define	MIPLEVELS	4
+/*
 typedef struct miptex_s
 {
 	char		name[16];
@@ -89,6 +101,7 @@ typedef struct dvertex_s
 {
 	float	point[3];
 } dvertex_t;
+*/
 
 
 // 0-2 are axial planes
@@ -101,12 +114,14 @@ typedef struct dvertex_s
 #define	PLANE_ANYY		4
 #define	PLANE_ANYZ		5
 
+/*
 typedef struct dplane_s
 {
 	float	normal[3];
 	float	dist;
 	int		type;		// PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
 } dplane_t;
+*/
 
 
 // contents values in Q1 maps
@@ -223,7 +238,7 @@ typedef struct dplane_s
 #define SUPERCONTENTS_WINDOW		0x00000000
 */
 
-
+/*
 typedef struct dnode_s
 {
 	int			planenum;
@@ -247,16 +262,20 @@ typedef struct texinfo_s
 	int			miptex;
 	int			flags;
 } texinfo_t;
+*/
 #define	TEX_SPECIAL		1		// sky or slime, no lightmap or 256 subdivision
 
 // note that edge 0 is never used, because negative edge nums are used for
 // counterclockwise use of the edge in a face
+/*
 typedef struct dedge_s
 {
 	unsigned short	v[2];		// vertex numbers
 } dedge_t;
+*/
 
 #define	MAXLIGHTMAPS	4
+/*
 typedef struct dface_s
 {
 	// LordHavoc: changed from short to unsigned short for q2 support
@@ -271,6 +290,7 @@ typedef struct dface_s
 	unsigned char		styles[MAXLIGHTMAPS];
 	int			lightofs;		// start of [numstyles*surfsize] samples
 } dface_t;
+*/
 
 
 
@@ -283,6 +303,7 @@ typedef struct dface_s
 
 // leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
 // all other leafs need visibility info
+/*
 typedef struct dleaf_s
 {
 	int			contents;
@@ -296,4 +317,5 @@ typedef struct dleaf_s
 
 	unsigned char		ambient_level[NUM_AMBIENTS];
 } dleaf_t;
+*/
 

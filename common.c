@@ -405,6 +405,14 @@ void MSG_WriteAngle (sizebuf_t *sb, float f, protocolversion_t protocol)
 // reading functions
 //
 
+void MSG_InitReadBuffer (sizebuf_t *buf, unsigned char *data, int size)
+{
+	memset(buf, 0, sizeof(*buf));
+	buf->data = data;
+	buf->maxsize = buf->cursize = size;
+	MSG_BeginReading(buf);
+}
+
 void MSG_BeginReading(sizebuf_t *sb)
 {
 	sb->readcount = 0;
