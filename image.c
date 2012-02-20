@@ -966,11 +966,13 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 					{
 						int mymiplevel2 = miplevel ? *miplevel : 0;
 						data2 = format->loadfunc(f, (int)filesize, &mymiplevel2);
-						if(mymiplevel != mymiplevel2)
-							Host_Error("loadimagepixelsbgra: miplevels differ");
+						if(data2 && mymiplevel == mymiplevel2)
+							Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
+						else
+							Con_Printf("loadimagepixelsrgba: corrupt or invalid alpha image %s_alpha\n", basename);
+						if(data2)
+							Mem_Free(data2);
 						Mem_Free(f);
-						Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
-						Mem_Free(data2);
 					}
 				}
 				if (developer_loading.integer)
