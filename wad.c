@@ -217,23 +217,43 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	// leaves the file open
 }
 
-unsigned char *W_ConvertWAD3TextureBGRA(miptex_t *tex)
+unsigned char *W_ConvertWAD3TextureBGRA(sizebuf_t *sb)
 {
 	unsigned char *in, *data, *out, *pal;
 	int d, p;
+	unsigned char name[16];
+	unsigned int mipoffset[4];
 
-	in = (unsigned char *)tex + tex->offsets[0];
-	data = out = (unsigned char *)Mem_Alloc(tempmempool, tex->width * tex->height * 4);
+	MSG_BeginReading(sb);
+	MSG_ReadBytes(sb, 16, name);
+	image_width = MSG_ReadLittleLong(sb);
+	image_height = MSG_ReadLittleLong(sb);
+	mipoffset[0] = MSG_ReadLittleLong(sb);
+	mipoffset[1] = MSG_ReadLittleLong(sb); // should be mipoffset[0] + image_width*image_height
+	mipoffset[2] = MSG_ReadLittleLong(sb); // should be mipoffset[1] + image_width*image_height/4
+	mipoffset[3] = MSG_ReadLittleLong(sb); // should be mipoffset[2] + image_width*image_height/16
+	pal = sb->data + mipoffset[3] + (image_width / 8 * image_height / 8) + 2;
+
+	// bail if any data looks wrong
+	if (image_width < 0
+	 || image_width > 4096
+	 || image_height < 0
+	 || image_height > 4096
+	 || mipoffset[0] != 40
+	 || mipoffset[1] != mipoffset[0] + image_width * image_height
+	 || mipoffset[2] != mipoffset[1] + image_width / 2 * image_height / 2
+	 || mipoffset[3] != mipoffset[2] + image_width / 4 * image_height / 4
+	 || (unsigned int)sb->cursize < (mipoffset[3] + image_width / 8 * image_height / 8 + 2 + 768))
+		return NULL;
+
+	in = (unsigned char *)sb->data + mipoffset[0];
+	data = out = (unsigned char *)Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!data)
 		return NULL;
-	image_width = tex->width;
-	image_height = tex->height;
-	pal = in + (((image_width * image_height) * 85) >> 6);
-	pal += 2;
 	for (d = 0;d < image_width * image_height;d++)
 	{
 		p = *in++;
-		if (tex->name[0] == '{' && p == 255)
+		if (name[0] == '{' && p == 255)
 			out[0] = out[1] = out[2] = out[3] = 0;
 		else
 		{
@@ -250,8 +270,8 @@ unsigned char *W_ConvertWAD3TextureBGRA(miptex_t *tex)
 
 unsigned char *W_GetTextureBGRA(char *name)
 {
-	unsigned int i, j, k;
-	miptex_t *tex;
+	unsigned int i, k;
+	sizebuf_t sb;
 	unsigned char *data;
 	mwad_t *w;
 	char texname[17];
@@ -274,18 +294,14 @@ unsigned char *W_GetTextureBGRA(char *name)
 				if (FS_Seek(w->file, w->lumps[i].filepos, SEEK_SET))
 				{Con_Print("W_GetTexture: corrupt WAD3 file\n");return NULL;}
 
-				tex = (miptex_t *)Mem_Alloc(tempmempool, w->lumps[i].disksize);
-				if (!tex)
+				MSG_InitReadBuffer(&sb, (unsigned char *)Mem_Alloc(tempmempool, w->lumps[i].disksize), w->lumps[i].disksize);
+				if (!sb.data)
 					return NULL;
-				if (FS_Read(w->file, tex, w->lumps[i].size) < w->lumps[i].disksize)
+				if (FS_Read(w->file, sb.data, w->lumps[i].size) < w->lumps[i].disksize)
 				{Con_Print("W_GetTexture: corrupt WAD3 file\n");return NULL;}
 
-				tex->width = LittleLong(tex->width);
-				tex->height = LittleLong(tex->height);
-				for (j = 0;j < MIPLEVELS;j++)
-					tex->offsets[j] = LittleLong(tex->offsets[j]);
-				data = W_ConvertWAD3TextureBGRA(tex);
-				Mem_Free(tex);
+				data = W_ConvertWAD3TextureBGRA(&sb);
+				Mem_Free(sb.data);
 				return data;
 			}
 		}

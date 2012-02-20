@@ -147,6 +147,7 @@ protocolversion_t;
  * @{
  */
 
+void MSG_InitReadBuffer (sizebuf_t *buf, unsigned char *data, int size);
 void MSG_WriteChar (sizebuf_t *sb, int c);
 void MSG_WriteByte (sizebuf_t *sb, int c);
 void MSG_WriteShort (sizebuf_t *sb, int c);
