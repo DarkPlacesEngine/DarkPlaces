@@ -40,15 +40,26 @@ unsigned int sentinel_seed;
 qboolean mem_bigendian = false;
 void *mem_mutex = NULL;
 
+// divVerent: enables file backed malloc using mmap to conserve swap space (instead of malloc)
+#ifndef FILE_BACKED_MALLOC
+# define FILE_BACKED_MALLOC 0
+#endif
+
 // LordHavoc: enables our own low-level allocator (instead of malloc)
-#define MEMCLUMPING 0
-#define MEMCLUMPING_FREECLUMPS 0
+#ifndef MEMCLUMPING
+# define MEMCLUMPING 0
+#endif
+#ifndef MEMCLUMPING_FREECLUMPS
+# define MEMCLUMPING_FREECLUMPS 0
+#endif
 
 #if MEMCLUMPING
 // smallest unit we care about is this many bytes
 #define MEMUNIT 128
 // try to do 32MB clumps, but overhead eats into this
-#define MEMWANTCLUMPSIZE (1<<27)
+#ifndef MEMWANTCLUMPSIZE
+# define MEMWANTCLUMPSIZE (1<<27)
+#endif
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (MEMWANTCLUMPSIZE - MEMWANTCLUMPSIZE/MEMUNIT/32 - 128)
 #define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
@@ -91,6 +102,49 @@ static mempool_t *poolchain = NULL;
 
 void Mem_PrintStats(void);
 void Mem_PrintList(size_t minallocationsize);
+
+#if FILE_BACKED_MALLOC
+#include <stdlib.h>
+#include <sys/mman.h>
+typedef struct mmap_data_s
+{
+	size_t len;
+}
+mmap_data_t;
+#define MMAP_PAGE_SIZE max(sizeof(mmap_data_t), (size_t)sysconf(_SC_PAGE_SIZE))
+static void *mmap_malloc(size_t size)
+{
+	char vabuf[MAX_OSPATH + 1];
+	char *tmpdir = getenv("TEMP");
+	unsigned char *data;
+	int fd;
+	size += MMAP_PAGE_SIZE; // waste block
+	size += MMAP_PAGE_SIZE - 1; // also, waste up to this amount for management info
+	size -= (size % MMAP_PAGE_SIZE); // round down
+	dpsnprintf(vabuf, sizeof(vabuf), "%s/darkplaces.XXXXXX", tmpdir ? tmpdir : "/tmp");
+	fd = mkstemp(vabuf);
+	if(fd < 0)
+		return NULL;
+	ftruncate(fd, size);
+	data = (unsigned char *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, fd, 0);
+	close(fd);
+	unlink(vabuf);
+	if(!data)
+		return NULL;
+	((mmap_data_t *) data)->len = size;
+	return (void *) (data + MMAP_PAGE_SIZE);
+}
+static void mmap_free(void *mem)
+{
+	unsigned char *data;
+	if(!mem)
+		return;
+	data = (unsigned char *) mem - MMAP_PAGE_SIZE;
+	munmap(data, ((mmap_data_t *) data)->len);
+}
+#define malloc mmap_malloc
+#define free mmap_free
+#endif
 
 #if MEMCLUMPING != 2
 // some platforms have a malloc that returns NULL but succeeds later
