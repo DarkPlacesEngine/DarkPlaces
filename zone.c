@@ -111,16 +111,13 @@ typedef struct mmap_data_s
 	size_t len;
 }
 mmap_data_t;
-#define MMAP_PAGE_SIZE max(sizeof(mmap_data_t), (size_t)sysconf(_SC_PAGE_SIZE))
 static void *mmap_malloc(size_t size)
 {
 	char vabuf[MAX_OSPATH + 1];
 	char *tmpdir = getenv("TEMP");
-	unsigned char *data;
+	mmap_data_t *data;
 	int fd;
-	size += MMAP_PAGE_SIZE; // waste block
-	size += MMAP_PAGE_SIZE - 1; // also, waste up to this amount for management info
-	size -= (size % MMAP_PAGE_SIZE); // round down
+	size += sizeof(mmap-data_t); // waste block
 	dpsnprintf(vabuf, sizeof(vabuf), "%s/darkplaces.XXXXXX", tmpdir ? tmpdir : "/tmp");
 	fd = mkstemp(vabuf);
 	if(fd < 0)
@@ -131,16 +128,16 @@ static void *mmap_malloc(size_t size)
 	unlink(vabuf);
 	if(!data)
 		return NULL;
-	((mmap_data_t *) data)->len = size;
-	return (void *) (data + MMAP_PAGE_SIZE);
+	data->len = size;
+	return (void *) (data + 1);
 }
 static void mmap_free(void *mem)
 {
-	unsigned char *data;
+	mmap_data_t *data;
 	if(!mem)
 		return;
-	data = (unsigned char *) mem - MMAP_PAGE_SIZE;
-	munmap(data, ((mmap_data_t *) data)->len);
+	data = ((mmap_data_t *) mem) - 1;
+	munmap(data, data->len);
 }
 #define malloc mmap_malloc
 #define free mmap_free
