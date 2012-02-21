@@ -117,7 +117,7 @@ static void *mmap_malloc(size_t size)
 	char *tmpdir = getenv("TEMP");
 	mmap_data_t *data;
 	int fd;
-	size += sizeof(mmap-data_t); // waste block
+	size += sizeof(mmap_data_t); // waste block
 	dpsnprintf(vabuf, sizeof(vabuf), "%s/darkplaces.XXXXXX", tmpdir ? tmpdir : "/tmp");
 	fd = mkstemp(vabuf);
 	if(fd < 0)
