@@ -2008,15 +2008,10 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		host_client->fixangle_angles_set = FALSE;
 	}
 
-	// stuff the sigil bits into the high bits of items for sbar, or else
-	// mix in items2
-	// LordHavoc: detecting items2 turned out to be tricky, check if the field
-	// was forcefully declared, we want to override serverflags if it was
-	// declared by the qc intentionally, but not if we added it in the engine.
-	if (prog->fieldoffsets.items2 < (int)(prog->numfielddefs - SV_REQGLOBALS))
-		items = (int)PRVM_serveredictfloat(ent, items) | ((int)PRVM_serveredictfloat(ent, items2) << 23);
-	else
-		items = (int)PRVM_serveredictfloat(ent, items) | ((int)PRVM_serverglobalfloat(serverflags) << 28);
+	// the runes are in serverflags, pack them into the items value, also pack
+	// in the items2 value for mission pack huds
+	// (used only in the mission packs, which do not use serverflags)
+	items = (int)PRVM_serveredictfloat(ent, items) | ((int)PRVM_serveredictfloat(ent, items2) << 23) | ((int)PRVM_serverglobalfloat(serverflags) << 28);
 
 	VectorCopy(PRVM_serveredictvector(ent, punchvector), punchvector);
 
