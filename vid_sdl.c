@@ -67,6 +67,7 @@ int cl_available = true;
 qboolean vid_supportrefreshrate = false;
 
 static qboolean vid_usingmouse = false;
+static qboolean vid_usingmouse_relativeworks = false; // SDL2 workaround for unimplemented RelativeMouse mode
 static qboolean vid_usinghidecursor = false;
 static qboolean vid_hasfocus = false;
 static qboolean vid_isfullscreen;
@@ -410,7 +411,8 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 #if SDL_MAJOR_VERSION == 1
 		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
 #else
-		SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE);
+		vid_usingmouse_relativeworks = SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE) == 0;
+//		Con_Printf("VID_SetMouse(%i, %i, %i) relativeworks = %i\n", (int)fullscreengrab, (int)relative, (int)hidecursor, (int)vid_usingmouse_relativeworks);
 #endif
 #ifdef MACOSX
 		if(relative)
@@ -659,7 +661,7 @@ void IN_Move( void )
 	{
 		if (vid_usingmouse)
 		{
-			if (vid_stick_mouse.integer)
+			if (vid_stick_mouse.integer || !vid_usingmouse_relativeworks)
 			{
 				// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 				// window grabbing. --blub
