@@ -66,25 +66,11 @@ int cl_available = true;
 
 qboolean vid_supportrefreshrate = false;
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-# define SETVIDEOMODE 1
-#else
-# ifdef USE_GLES2
-#  define SETVIDEOMODE 0
-# else
-// LordHavoc: SDL 1.3's SDL_CreateWindow API is not finished enough to use yet, but you can set this to 0 if you want to try it...
-#   ifndef SETVIDEOMODE
-#    define SETVIDEOMODE 1
-#   endif
-#  endif
-# endif
-
 static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
 static qboolean vid_hasfocus = false;
 static qboolean vid_isfullscreen;
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-#else
+#if SDL_MAJOR_VERSION != 1
 static qboolean vid_usingvsync = false;
 #endif
 static SDL_Joystick *vid_sdljoystick = NULL;
@@ -93,7 +79,7 @@ static int win_half_width = 50;
 static int win_half_height = 50;
 static int video_bpp;
 
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 static SDL_Surface *screen;
 static int video_flags;
 #else
@@ -213,8 +199,10 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_F10:                return K_F10;
 	case SDLK_F11:                return K_F11;
 	case SDLK_F12:                return K_F12;
+#if SDL_MAJOR_VERSION == 1
 	case SDLK_PRINTSCREEN:        return K_PRINTSCREEN;
 	case SDLK_SCROLLLOCK:         return K_SCROLLOCK;
+#endif
 	case SDLK_PAUSE:              return K_PAUSE;
 	case SDLK_INSERT:             return K_INS;
 	case SDLK_HOME:               return K_HOME;
@@ -230,12 +218,15 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_LEFT:               return K_LEFTARROW;
 	case SDLK_DOWN:               return K_DOWNARROW;
 	case SDLK_UP:                 return K_UPARROW;
+#if SDL_MAJOR_VERSION == 1
 	case SDLK_NUMLOCKCLEAR:       return K_NUMLOCK;
+#endif
 	case SDLK_KP_DIVIDE:          return K_KP_DIVIDE;
 	case SDLK_KP_MULTIPLY:        return K_KP_MULTIPLY;
 	case SDLK_KP_MINUS:           return K_KP_MINUS;
 	case SDLK_KP_PLUS:            return K_KP_PLUS;
 	case SDLK_KP_ENTER:           return K_KP_ENTER;
+#if SDL_MAJOR_VERSION == 1
 	case SDLK_KP_1:               return K_KP_1;
 	case SDLK_KP_2:               return K_KP_2;
 	case SDLK_KP_3:               return K_KP_3;
@@ -246,6 +237,7 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_KP_8:               return K_KP_8;
 	case SDLK_KP_9:               return K_KP_9;
 	case SDLK_KP_0:               return K_KP_0;
+#endif
 	case SDLK_KP_PERIOD:          return K_KP_PERIOD;
 //	case SDLK_APPLICATION:        return K_APPLICATION;
 //	case SDLK_POWER:              return K_POWER;
@@ -415,7 +407,7 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	{
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
 #else
 		SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE);
@@ -675,7 +667,7 @@ void IN_Move( void )
 				// we need 2 frames to initialize the center position
 				if(!stuck)
 				{
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 					SDL_WarpMouse(win_half_width, win_half_height);
 #else
 					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
@@ -690,7 +682,7 @@ void IN_Move( void )
 					SDL_GetMouseState(&x, &y);
 					old_x = x - win_half_width;
 					old_y = y - win_half_height;
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 					SDL_WarpMouse(win_half_width, win_half_height);
 #else
 					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
@@ -754,8 +746,8 @@ static keynum_t buttonremap[18] =
 };
 #endif
 
-#if SETVIDEOMODE
-// SDL 1.2
+#if SDL_MAJOR_VERSION == 1
+// SDL
 void Sys_SendKeyEvents( void )
 {
 	static qboolean sound_active = true;
@@ -825,13 +817,10 @@ void Sys_SendKeyEvents( void )
 #endif
 				}
 				break;
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-#else
+#if SDL_MAJOR_VERSION != 1
 			case SDL_TEXTEDITING:
-				// unused when SETVIDEOMODE API is used
 				break;
 			case SDL_TEXTINPUT:
-				// this occurs with SETVIDEOMODE but we are not using it
 				break;
 #endif
 			case SDL_MOUSEMOTION:
@@ -862,11 +851,10 @@ void Sys_SendKeyEvents( void )
 
 #else
 
-// SDL 1.3
+// SDL2
 void Sys_SendKeyEvents( void )
 {
 	static qboolean sound_active = true;
-	static qboolean missingunicodehack = true;
 	int keycode;
 	int i;
 	int j;
@@ -898,8 +886,6 @@ void Sys_SendKeyEvents( void )
 			case SDL_JOYBALLMOTION:
 			case SDL_JOYHATMOTION:
 				break;
-			case SDL_VIDEOEXPOSE:
-				break;
 			case SDL_WINDOWEVENT:
 				//if (event.window.windowID == window) // how to compare?
 				{
@@ -925,7 +911,6 @@ void Sys_SendKeyEvents( void )
 								SDL_FreeSurface(vid_softsurface);
 								vid_softsurface = SDL_CreateRGBSurface(SDL_SWSURFACE, vid.width, vid.height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 								vid.softpixels = (unsigned int *)vid_softsurface->pixels;
-								SDL_SetAlpha(vid_softsurface, 0, 255);
 								if (vid.softdepthpixels)
 									free(vid.softdepthpixels);
 								vid.softdepthpixels = (unsigned int*)calloc(1, vid.width * vid.height * 4);
@@ -968,7 +953,6 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_TEXTINPUT:
 				// we have some characters to parse
-				missingunicodehack = false;
 				{
 					unicode = 0;
 					for (i = 0;event.text.text[i];)
@@ -1305,7 +1289,7 @@ void wrapglGetVertexAttribiv(GLuint index, GLenum pname, GLint *params) {PRECALL
 void wrapglGetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer) {PRECALL;glGetVertexAttribPointerv(index, pname, pointer);POSTCALL;}
 #endif
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#if SDL_MAJOR_VERSION == 1
 #define SDL_GL_ExtensionSupported(x) (strstr(gl_extensions, x) || strstr(gl_platformextensions, x))
 #endif
 
@@ -1733,7 +1717,7 @@ void VID_EnableJoystick(qboolean enable)
 		Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
 }
 
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 // set the icon (we dont use SDL here since it would be too much a PITA)
 #ifdef WIN32
 #include "resource.h"
@@ -1951,7 +1935,7 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 	SDL_WM_SetCaption( gamename, NULL );
 	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#if SDL_MAJOR_VERSION == 1
 // LordHavoc: info.info.x11.lock_func and accompanying code do not seem to compile with SDL 1.3
 #if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
 
@@ -2013,18 +1997,22 @@ static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, 
 
 static void VID_OutputVersion(void)
 {
-	const SDL_version *version;
-	version = SDL_Linked_Version();
+	SDL_version version;
+#if SDL_MAJOR_VERSION == 1
+	version = *SDL_Linked_Version();
+#else
+	SDL_GetVersion(&version);
+#endif
 	Con_Printf(	"Linked against SDL version %d.%d.%d\n"
 					"Using SDL library version %d.%d.%d\n",
 					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
-					version->major, version->minor, version->patch );
+					version.major, version.minor, version.patch );
 }
 
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int i;
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	static int notfirstvideomode = false;
 	int flags = SDL_OPENGL;
 #else
@@ -2036,7 +2024,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 		flags |= SDL_RESIZABLE;
 #else
 		windowflags |= SDL_WINDOW_RESIZABLE;
@@ -2044,7 +2032,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	VID_OutputVersion();
 
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	/*
 	SDL 1.2 Hack
 		We cant switch from one OpenGL video mode to another.
@@ -2089,7 +2077,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	vid_isfullscreen = false;
 	if (mode->fullscreen) {
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 		flags |= SDL_FULLSCREEN;
 #else
 		windowflags |= SDL_WINDOW_FULLSCREEN;
@@ -2123,7 +2111,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, mode->samples);
 	}
 
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
+#if SDL_MAJOR_VERSION == 1
 	if (vid_vsync.integer)
 		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
 	else
@@ -2137,7 +2125,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 #endif
 
 	video_bpp = mode->bitsperpixel;
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	video_flags = flags;
 	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	if (screen == NULL)
@@ -2170,12 +2158,14 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_softsurface = NULL;
 	vid.softpixels = NULL;
 
+#if SDL_MAJOR_VERSION == 1
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+#endif
 
-#if !(SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2)
+#if SDL_MAJOR_VERSION != 1
 	SDL_GL_SetSwapInterval(vid_vsync.integer != 0);
 	vid_usingvsync = (vid_vsync.integer != 0);
 #endif
@@ -2195,7 +2185,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 		
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
 #endif
 	return true;
@@ -2210,7 +2200,7 @@ extern cvar_t gl_info_driver;
 
 static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 {
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	int flags = SDL_HWSURFACE;
 	if(!COM_CheckParm("-noasyncblit")) flags |= SDL_ASYNCBLIT;
 #else
@@ -2221,7 +2211,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 		flags |= SDL_RESIZABLE;
 #else
 		windowflags |= SDL_WINDOW_RESIZABLE;
@@ -2231,7 +2221,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	vid_isfullscreen = false;
 	if (mode->fullscreen) {
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 		flags |= SDL_FULLSCREEN;
 #else
 		windowflags |= SDL_WINDOW_FULLSCREEN;
@@ -2240,7 +2230,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	}
 
 	video_bpp = mode->bitsperpixel;
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	video_flags = flags;
 	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
 	if (screen == NULL)
@@ -2271,7 +2261,9 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 		VID_Shutdown();
 		return false;
 	}
+#if SDL_MAJOR_VERSION == 1
 	SDL_SetAlpha(vid_softsurface, 0, 255);
+#endif
 
 	vid.softpixels = (unsigned int *)vid_softsurface->pixels;
 	vid.softdepthpixels = (unsigned int *)calloc(1, mode->width * mode->height * 4);
@@ -2282,10 +2274,12 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 		return false;
 	}
 
+#if SDL_MAJOR_VERSION == 1
 	// init keyboard
 	SDL_EnableUNICODE( SDL_ENABLE );
 	// enable key repeat since everyone expects it
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+#endif
 
 	VID_Soft_SharedSetup();
 
@@ -2295,7 +2289,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	SDL_WM_GrabInput(SDL_GRAB_OFF);
 #endif
 	return true;
@@ -2319,7 +2313,7 @@ void VID_Shutdown (void)
 	VID_SetMouse(false, false, false);
 	VID_RestoreSystemGamma();
 
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 #ifndef WIN32
 #ifndef MACOSX
 	if (icon)
@@ -2337,8 +2331,7 @@ void VID_Shutdown (void)
 		free(vid.softdepthpixels);
 	vid.softdepthpixels = NULL;
 
-#if SETVIDEOMODE
-#else
+#if SDL_MAJOR_VERSION != 1
 	SDL_DestroyWindow(window);
 	window = NULL;
 #endif
@@ -2353,17 +2346,25 @@ void VID_Shutdown (void)
 
 int VID_SetGamma (unsigned short *ramps, int rampsize)
 {
+#if SDL_MAJOR_VERSION == 1
 	return !SDL_SetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
+#else
+	return !SDL_SetWindowGammaRamp (window, ramps, ramps + rampsize, ramps + rampsize*2);
+#endif
 }
 
 int VID_GetGamma (unsigned short *ramps, int rampsize)
 {
+#if SDL_MAJOR_VERSION == 1
 	return !SDL_GetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
+#else
+	return !SDL_GetWindowGammaRamp (window, ramps, ramps + rampsize, ramps + rampsize*2);
+#endif
 }
 
 void VID_Finish (void)
 {
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 	Uint8 appstate;
 
 	//react on appstate changes
@@ -2388,8 +2389,7 @@ void VID_Finish (void)
 			CHECKGLERROR
 			if (r_speeds.integer == 2 || gl_finish.integer)
 				GL_Finish();
-#if SDL_MAJOR_VERSION == 1 && SDL_MINOR_VERSION == 2
-#else
+#if SDL_MAJOR_VERSION != 1
 {
 	qboolean vid_usevsync;
 	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
@@ -2402,7 +2402,7 @@ void VID_Finish (void)
 	}
 }
 #endif
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 			SDL_GL_SwapBuffers();
 #else
 			SDL_GL_SwapWindow(window);
@@ -2410,7 +2410,7 @@ void VID_Finish (void)
 			break;
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_Finish();
-#if SETVIDEOMODE
+#if SDL_MAJOR_VERSION == 1
 //		if (!r_test.integer)
 		{
 			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
@@ -2436,11 +2436,11 @@ void VID_Finish (void)
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
-	size_t k;
+	size_t k = 0;
+#if SDL_MAJOR_VERSION == 1
 	SDL_Rect **vidmodes;
 	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
 
-	k = 0;
 	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); vidmodes && vidmodes != (SDL_Rect**)(-1) && *vidmodes; ++vidmodes)
 	{
 		if(k >= maxcount)
@@ -2453,5 +2453,24 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 		modes[k].pixelheight_denom = 1; // SDL does not provide this
 		++k;
 	}
+#else
+	int modenum;
+	int nummodes = SDL_GetNumDisplayModes(0);
+	SDL_DisplayMode mode;
+	for (modenum = 0;modenum < nummodes;modenum++)
+	{
+		if (k >= maxcount)
+			break;
+		if (SDL_GetDisplayMode(0, modenum, &mode))
+			continue;
+		modes[k].width = mode.w;
+		modes[k].height = mode.h;
+		modes[k].refreshrate = mode.refresh_rate;
+		modes[k].pixelheight_num = 1;
+		modes[k].pixelheight_num = 1;
+		modes[k].pixelheight_denom = 1; // SDL does not provide this
+		k++;
+	}
+#endif
 	return k;
 }
