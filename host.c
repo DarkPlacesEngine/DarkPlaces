@@ -667,6 +667,7 @@ void Host_Main(void)
 	double wait;
 	int pass1, pass2, pass3, i;
 	char vabuf[1024];
+	qboolean playing;
 
 	Host_Init();
 
