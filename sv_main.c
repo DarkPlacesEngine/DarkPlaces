@@ -3909,7 +3909,7 @@ static int SV_ThreadFunc(void *voiddata)
 		{
 			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
 			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
-			if(svs.perf_acc_offset_samples > 0 && sv.time > 10)
+			if(svs.perf_acc_offset_samples > 0)
 			{
 				svs.perf_offset_max = svs.perf_acc_offset_max;
 				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
