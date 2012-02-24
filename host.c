@@ -712,7 +712,13 @@ void Host_Main(void)
 				if(host_client->spawned)
 					if(host_client->netconnection)
 						playing = true;
-			if(svs.perf_acc_realtime > 5)
+			if(sv.time < 10)
+			{
+				// don't accumulate time for the first 10 seconds of a match
+				// so things can settle
+				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+			}
+			else if(svs.perf_acc_realtime > 5)
 			{
 				svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
 				svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
