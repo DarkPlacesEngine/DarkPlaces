@@ -303,19 +303,6 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 	//if (info.channels == 2)
 	//	Log_Printf("stereosounds.log", "%s\n", sfx->name);
 
-	// We must convert the WAV data from little endian
-	// to the machine endianess before resampling it
-	if (info.width == 2 && mem_bigendian)
-	{
-		unsigned int len, i;
-		short* ptr;
-
-		len = info.samples * info.channels;
-		ptr = (short*)(data + info.dataofs);
-		for (i = 0; i < len; i++)
-			ptr[i] = LittleShort (ptr[i]);
-	}
-
 	sfx->format.speed = info.rate;
 	sfx->format.width = info.width;
 	sfx->format.channels = info.channels;
