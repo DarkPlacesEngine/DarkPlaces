@@ -244,6 +244,7 @@ typedef struct rsurfacestate_s
 	//
 	// this indicates the model* arrays are pointed at array_model* buffers
 	// (in other words, the model has been animated in software)
+	qboolean                    forcecurrenttextureupdate; // set for RSurf_ActiveCustomEntity to force R_GetCurrentTexture to recalculate the texture parameters (such as entity alpha)
 	qboolean                    modelgeneratedvertex;
 	float                      *modelvertex3f;
 	const r_meshbuffer_t       *modelvertex3f_vertexbuffer;
