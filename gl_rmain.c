@@ -7769,7 +7769,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	dp_model_t *model = ent->model;
 	q3shaderinfo_layer_tcmod_t *tcmod;
 
-	if (t->update_lastrenderframe == r_textureframe && t->update_lastrenderentity == (void *)ent)
+	if (t->update_lastrenderframe == r_textureframe && t->update_lastrenderentity == (void *)ent && !rsurface.forcecurrenttextureupdate)
 		return t->currentframe;
 	t->update_lastrenderframe = r_textureframe;
 	t->update_lastrenderentity = (void *)ent;
@@ -8184,6 +8184,7 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.passcolor4f = NULL;
 	rsurface.passcolor4f_vertexbuffer = NULL;
 	rsurface.passcolor4f_bufferoffset = 0;
+	rsurface.forcecurrenttextureupdate = false;
 }
 
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass)
@@ -8357,6 +8358,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.passcolor4f = NULL;
 	rsurface.passcolor4f_vertexbuffer = NULL;
 	rsurface.passcolor4f_bufferoffset = 0;
+	rsurface.forcecurrenttextureupdate = false;
 }
 
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
@@ -8480,6 +8482,7 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.passcolor4f = NULL;
 	rsurface.passcolor4f_vertexbuffer = NULL;
 	rsurface.passcolor4f_bufferoffset = 0;
+	rsurface.forcecurrenttextureupdate = true;
 
 	if (rsurface.modelnumvertices && rsurface.modelelement3i)
 	{
