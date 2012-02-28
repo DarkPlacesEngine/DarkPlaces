@@ -1850,6 +1850,8 @@ waterlevel_t;
 
 typedef struct cl_clientmovement_state_s
 {
+	// entity to be ignored for movement
+	struct prvm_edict_s *self;
 	// position
 	vec3_t origin;
 	vec3_t velocity;

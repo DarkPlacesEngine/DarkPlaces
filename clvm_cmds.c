@@ -1455,12 +1455,15 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	cl_clientmovement_state_t s;
 	prvm_edict_t *ent;
 
+	memset(&s, 0, sizeof(s));
+
 	VM_SAFEPARMCOUNTRANGE(0, 1, VM_CL_runplayerphysics);
 
 	ent = (prog->argc == 1 ? PRVM_G_EDICT(OFS_PARM0) : prog->edicts);
 	if(ent == prog->edicts)
 	{
 		// deprecated use
+		s.self = NULL;
 		VectorCopy(PRVM_clientglobalvector(pmove_org), s.origin);
 		VectorCopy(PRVM_clientglobalvector(pmove_vel), s.velocity);
 		VectorCopy(PRVM_clientglobalvector(pmove_mins), s.mins);
@@ -1472,6 +1475,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	else
 	{
 		// new use
+		s.self = PRVM_PROG_TO_EDICT(ent);
 		VectorCopy(PRVM_clientedictvector(ent, origin), s.origin);
 		VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
 		VectorCopy(PRVM_clientedictvector(ent, mins), s.mins);
