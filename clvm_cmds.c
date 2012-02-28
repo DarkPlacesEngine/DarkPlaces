@@ -1475,7 +1475,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	else
 	{
 		// new use
-		s.self = PRVM_PROG_TO_EDICT(ent);
+		s.self = ent;
 		VectorCopy(PRVM_clientedictvector(ent, origin), s.origin);
 		VectorCopy(PRVM_clientedictvector(ent, velocity), s.velocity);
 		VectorCopy(PRVM_clientedictvector(ent, mins), s.mins);
