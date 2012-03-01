@@ -590,7 +590,8 @@ void Con_ClearNotify (void)
 {
 	int i;
 	for(i = 0; i < CON_LINES_COUNT; ++i)
-		CON_LINES(i).mask |= CON_MASK_HIDENOTIFY;
+		if(!(CON_LINES(i).mask & CON_MASK_CHAT))
+			CON_LINES(i).mask |= CON_MASK_HIDENOTIFY;
 }
 
 
