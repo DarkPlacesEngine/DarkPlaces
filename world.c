@@ -327,14 +327,6 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 // physics engine support
 //============================================================================
 
-#ifndef ODE_STATIC
-# define ODE_DYNAMIC 1
-#endif
-
-#if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
-#define USEODE 1
-#endif
-
 #ifdef USEODE
 cvar_t physics_ode_quadtree_depth = {0, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
 cvar_t physics_ode_allowconvex = {0, "physics_ode_allowconvex", "0", "allow usage of Convex Hull primitive type on trimeshes that have custom 'collisionconvex' mesh. If disabled, trimesh primitive type are used."};

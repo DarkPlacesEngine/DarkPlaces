@@ -277,10 +277,14 @@ static qboolean checkextension(prvm_prog_t *prog, const char *name)
 			// special sheck for ODE
 			if (!strncasecmp("DP_PHYSICS_ODE", name, 14))
 			{
-#ifdef USEODE
+#ifdef ODE_DYNAMIC
 				return ode_dll ? true : false;
 #else
+#ifdef ODE_STATIC
+				return true;
+#else
 				return false;
+#endif
 #endif
 			}
 
