@@ -1587,7 +1587,6 @@ static void R_ReplaceWorldTexture (void)
 			{
 //				t->skinframes[0] = skinframe;
 				t->currentskinframe = skinframe;
-				t->currentskinframe = skinframe;
 				Con_Printf("%s replaced with %s\n", r, newt);
 			}
 			else
