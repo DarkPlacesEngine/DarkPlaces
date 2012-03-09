@@ -7989,7 +7989,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			blendfunc2 = GL_ZERO;
 		}
 		// don't colormod evilblend textures
-		if(!R_BlendFuncFlags(blendfunc1, blendfunc2) & BLENDFUNC_ALLOWS_COLORMOD)
+		if(!(R_BlendFuncFlags(blendfunc1, blendfunc2) & BLENDFUNC_ALLOWS_COLORMOD))
 			VectorSet(t->lightmapcolor, 1, 1, 1);
 		depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
 		if (t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT)
@@ -11812,10 +11812,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 			}
 		}
 	}
-	if (update)
-		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
-			if (update[j])
-				R_BuildLightMap(ent, surfaces + j);
+
 	R_QueueModelSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, prepass);
 
 	// add to stats if desired
