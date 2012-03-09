@@ -17,6 +17,7 @@
 #include "mdfour.h"
 
 extern cvar_t prvm_backtraceforwarnings;
+extern dllhandle_t ode_dll;
 
 // LordHavoc: changed this to NOT use a return statement, so that it can be used in functions that must return a value
 void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
