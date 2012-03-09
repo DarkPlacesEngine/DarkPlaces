@@ -463,7 +463,8 @@ static void Cmd_StuffCmds_f (void)
 static void Cmd_Exec(const char *filename)
 {
 	char *f;
-	qboolean isdefaultcfg = strlen(filename) >= 11 && !strcmp(filename + strlen(filename) - 11, "default.cfg");
+	size_t filenameLen = strlen(filename);
+	qboolean isdefaultcfg = filenameLen >= 11 && !strcmp(filename + filenameLen - 11, "default.cfg");
 
 	if (!strcmp(filename, "config.cfg"))
 	{

@@ -1606,7 +1606,7 @@ static void PRVM_PO_UnparseString(char *out, const char *in, size_t outsize)
 						*out++ = '\\';
 						*out++ = '0' + ((*in & 0700) >> 6);
 						*out++ = '0' + ((*in & 0070) >> 3);
-						*out++ = '0' + ((*in & 0007));
+						*out++ = '0' +  (*in & 0007)      ;
 						outsize -= 4;
 					}
 				}

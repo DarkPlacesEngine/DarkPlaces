@@ -2069,7 +2069,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 	mipinfo[0][0] = glt->tilewidth;
 	mipinfo[0][1] = glt->tileheight;
 	mipmaps = 1;
-	if ((glt->flags & TEXF_MIPMAP) && !(glt->tilewidth == 1 && glt->tilewidth == 1))
+	if ((glt->flags & TEXF_MIPMAP) && !(glt->tilewidth == 1 && glt->tileheight == 1))
 	{
 		for (mip = 1;mip < 16;mip++)
 		{
