@@ -609,6 +609,5 @@ void CL_TimeDemo_f (void)
 	cls.timedemo = true;
 	cls.td_frames = -2;		// skip the first frame
 	cls.demonum = -1;		// stop demo loop
-	cls.demonum = -1;		// stop demo loop
 }
 
