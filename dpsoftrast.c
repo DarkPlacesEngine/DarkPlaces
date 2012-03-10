@@ -3263,6 +3263,12 @@ static void DPSOFTRAST_PixelShader_Generic(DPSOFTRAST_State_Thread *thread, cons
 	}
 	else
 		DPSOFTRAST_Draw_Span_VaryingBGRA8(triangle, span, buffer_FragColorbgra8, 1, buffer_z);
+	if(thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL)
+	{
+		int x;
+		for (x = span->startx;x < span->endx;x++)
+			buffer_FragColorbgra8[x*4+3] = buffer_FragColorbgra8[x*4+3] * thread->uniform4f[DPSOFTRAST_UNIFORM_Alpha*4+0];
+	}
 	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
 }
 
