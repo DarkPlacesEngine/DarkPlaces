@@ -188,7 +188,7 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<19, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
 	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<20, ///< (lightsource) use orthographic shadowmap projection
 	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<21, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
-	SHADERPERMUTATION_ALPHAKILL = 1<<22, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5
+	SHADERPERMUTATION_ALPHAKILL = 1<<22, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5, (generic) apply global alpha
 	SHADERPERMUTATION_REFLECTCUBE = 1<<23, ///< fake reflections using global cubemap (not HDRI light probe)
 	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<24, ///< (water) counter-direction normalmaps scrolling
 	SHADERPERMUTATION_BOUNCEGRID = 1<<25, ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
