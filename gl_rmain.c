@@ -2182,9 +2182,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		else
 		{
 			mode = SHADERMODE_GENERIC;
-			permutation |= SHADERPERMUTATION_DIFFUSE;
-			GL_BlendFunc(GL_ONE, GL_ZERO);
-			blendfuncflags = R_BlendFuncFlags(GL_ONE, GL_ZERO);
+			permutation |= SHADERPERMUTATION_DIFFUSE | SHADERPERMUTATION_ALPHAKILL;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			blendfuncflags = R_BlendFuncFlags(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 		if (vid.allowalphatocoverage)
 			GL_AlphaToCoverage(false);
