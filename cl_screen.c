@@ -39,6 +39,7 @@ cvar_t scr_loadingscreen_scale = {0, "scr_loadingscreen_scale","1", "scale facto
 cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
 cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
 cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
+cvar_t scr_loadingscreen_firstforstartup = {0, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
 cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
 cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
 cvar_t scr_infobar_height = {0, "scr_infobar_height", "8", "the height of the infobar items"};
@@ -709,13 +710,13 @@ SCR_BeginLoadingPlaque
 
 ================
 */
-void SCR_BeginLoadingPlaque (void)
+void SCR_BeginLoadingPlaque (qboolean startup)
 {
 	// save console log up to this point to log_file if it was set by configs
 	Log_Start();
 
 	Host_StartVideo();
-	SCR_UpdateLoadingScreen(false);
+	SCR_UpdateLoadingScreen(false, startup);
 }
 
 //=============================================================================
@@ -916,6 +917,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_loadingscreen_scale_base);
 	Cvar_RegisterVariable (&scr_loadingscreen_scale_limit);
 	Cvar_RegisterVariable (&scr_loadingscreen_count);
+	Cvar_RegisterVariable (&scr_loadingscreen_firstforstartup);
 	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
 	Cvar_RegisterVariable (&scr_loadingscreen_barheight);
 	Cvar_RegisterVariable (&scr_infobar_height);
@@ -1890,7 +1892,7 @@ static void SCR_SetLoadingScreenTexture(void)
 void SCR_UpdateLoadingScreenIfShown(void)
 {
 	if(loadingscreendone)
-		SCR_UpdateLoadingScreen(loadingscreencleared);
+		SCR_UpdateLoadingScreen(loadingscreencleared, false);
 }
 
 void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent)
@@ -2128,7 +2130,7 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 	VID_Finish();
 }
 
-void SCR_UpdateLoadingScreen (qboolean clear)
+void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 {
 	keydest_t	old_key_dest;
 	int			old_key_consoleactive;
@@ -2144,7 +2146,17 @@ void SCR_UpdateLoadingScreen (qboolean clear)
 		clear |= loadingscreencleared;
 
 	if(!loadingscreendone)
-		loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
+	{
+		if(startup && scr_loadingscreen_firstforstartup.integer)
+			loadingscreenpic_number = 0;
+		else if(scr_loadingscreen_firstforstartup.integer)
+			if(scr_loadingscreen_count.integer > 1)
+				loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer - 1) + 1;
+			else
+				loadingscreenpic_number = 0;
+		else
+			loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
+	}
 
 	if(clear)
 	        SCR_ClearLoadingScreenTexture();

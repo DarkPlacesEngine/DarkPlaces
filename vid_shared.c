@@ -1873,7 +1873,7 @@ void VID_Restart_f(void)
 
 	if (!vid_opened)
 	{
-		SCR_BeginLoadingPlaque();
+		SCR_BeginLoadingPlaque(false);
 		return;
 	}
 

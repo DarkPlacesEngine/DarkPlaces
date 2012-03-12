@@ -3241,7 +3241,7 @@ void SV_SpawnServer (const char *server)
 
 	if (cls.state != ca_dedicated)
 	{
-		SCR_BeginLoadingPlaque();
+		SCR_BeginLoadingPlaque(false);
 		S_StopAllSounds();
 	}
 

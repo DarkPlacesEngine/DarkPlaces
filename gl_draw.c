@@ -1018,7 +1018,7 @@ static void gl_draw_start(void)
 			LoadFont(false, va(vabuf, sizeof(vabuf), "gfx/font_%s", dp_fonts.f[i].title), &dp_fonts.f[i], 1, 0);
 
 	// draw the loading screen so people have something to see in the newly opened window
-	SCR_UpdateLoadingScreen(true);
+	SCR_UpdateLoadingScreen(true, true);
 }
 
 static void gl_draw_shutdown(void)
