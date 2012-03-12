@@ -26,10 +26,10 @@ void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
-void SCR_BeginLoadingPlaque (void);
+void SCR_BeginLoadingPlaque (qboolean startup);
 
 // invoke refresh of loading plaque (nothing else seen)
-void SCR_UpdateLoadingScreen(qboolean clear);
+void SCR_UpdateLoadingScreen(qboolean clear, qboolean startup);
 void SCR_UpdateLoadingScreenIfShown(void);
 
 // pushes an item on the loading screen
