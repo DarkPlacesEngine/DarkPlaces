@@ -1300,7 +1300,7 @@ static void Host_Init (void)
 	}
 
 	// put up the loading image so the user doesn't stare at a black screen...
-	SCR_BeginLoadingPlaque();
+	SCR_BeginLoadingPlaque(true);
 
 	if (cls.state != ca_dedicated)
 	{

@@ -1119,7 +1119,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				+	cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				)
 			);
-			SCR_BeginLoadingPlaque();
+			SCR_BeginLoadingPlaque(false);
 		}
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
@@ -1651,7 +1651,7 @@ static void CL_ParseServerInfo (void)
 	// if server is active, we already began a loading plaque
 	if (!sv.active)
 	{
-		SCR_BeginLoadingPlaque();
+		SCR_BeginLoadingPlaque(false);
 		S_StopAllSounds();
 		// free q3 shaders so that any newly downloaded shaders will be active
 		Mod_FreeQ3Shaders();
