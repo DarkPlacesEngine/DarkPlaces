@@ -3183,6 +3183,22 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					// or coming back from a timeout
 					// (if so, keep their stuff intact)
 
+					crypto_t *crypto = Crypto_ServerGetInstance(peeraddress);
+					if((crypto && crypto->authenticated) || client->netconnection->crypto.authenticated)
+					{
+						if (developer_extra.integer)
+							Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Attempt to downgrade crypto.\" to %s.\n", addressstring2);
+						SZ_Clear(&sv_message);
+						// save space for the header, filled in later
+						MSG_WriteLong(&sv_message, 0);
+						MSG_WriteByte(&sv_message, CCREP_REJECT);
+						MSG_WriteString(&sv_message, "Attempt to downgrade crypto.\n");
+						StoreBigLong(sv_message.data, NETFLAG_CTL | (sv_message.cursize & NETFLAG_LENGTH_MASK));
+						NetConn_Write(mysocket, sv_message.data, sv_message.cursize, peeraddress);
+						SZ_Clear(&sv_message);
+						return true;
+					}
+
 					// send a reply
 					if (developer_extra.integer)
 						Con_DPrintf("Datagram_ParseConnectionless: sending duplicate CCREP_ACCEPT to %s.\n", addressstring2);
