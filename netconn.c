@@ -78,7 +78,9 @@ char sv_readstring[MAX_INPUTLINE];
 
 cvar_t net_messagetimeout = {0, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
 cvar_t net_connecttimeout = {0, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
-cvar_t net_connectfloodblockingtimeout = {0, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods)"};
+cvar_t net_connectfloodblockingtimeout = {0, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
+cvar_t net_challengefloodblockingtimeout = {0, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
+cvar_t net_getstatusfloodblockingtimeout = {0, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
 cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
@@ -1056,14 +1058,14 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	return conn;
 }
 
-void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress);
+void NetConn_ClearFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floodlist, size_t floodlength);
 void NetConn_Close(netconn_t *conn)
 {
 	netconn_t *c;
 	// remove connection from list
 
 	// allow the client to reconnect immediately
-	NetConn_ClearConnectFlood(&(conn->peeraddress));
+	NetConn_ClearFlood(&(conn->peeraddress), sv.connectfloodaddresses, sizeof(sv.connectfloodaddresses) / sizeof(sv.connectfloodaddresses[0]));
 
 	if (conn == netconn_list)
 		netconn_list = conn->next;
@@ -2496,31 +2498,34 @@ bad:
 	return false;
 }
 
-static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
+static qboolean NetConn_PreventFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floodlist, size_t floodlength, double floodtime, qboolean renew)
 {
-	int floodslotnum, bestfloodslotnum;
+	size_t floodslotnum, bestfloodslotnum;
 	double bestfloodtime;
 	lhnetaddress_t noportpeeraddress;
 	// see if this is a connect flood
 	noportpeeraddress = *peeraddress;
 	LHNETADDRESS_SetPort(&noportpeeraddress, 0);
 	bestfloodslotnum = 0;
-	bestfloodtime = sv.connectfloodaddresses[bestfloodslotnum].lasttime;
-	for (floodslotnum = 0;floodslotnum < MAX_CONNECTFLOODADDRESSES;floodslotnum++)
+	bestfloodtime = floodlist[bestfloodslotnum].lasttime;
+	for (floodslotnum = 0;floodslotnum < floodlength;floodslotnum++)
 	{
-		if (bestfloodtime >= sv.connectfloodaddresses[floodslotnum].lasttime)
+		if (bestfloodtime >= floodlist[floodslotnum].lasttime)
 		{
-			bestfloodtime = sv.connectfloodaddresses[floodslotnum].lasttime;
+			bestfloodtime = floodlist[floodslotnum].lasttime;
 			bestfloodslotnum = floodslotnum;
 		}
-		if (sv.connectfloodaddresses[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &sv.connectfloodaddresses[floodslotnum].address) == 0)
+		if (floodlist[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &floodlist[floodslotnum].address) == 0)
 		{
 			// this address matches an ongoing flood address
-			if (realtime < sv.connectfloodaddresses[floodslotnum].lasttime + net_connectfloodblockingtimeout.value)
+			if (realtime < floodlist[floodslotnum].lasttime + floodtime)
 			{
-				// renew the ban on this address so it does not expire
-				// until the flood has subsided
-				sv.connectfloodaddresses[floodslotnum].lasttime = realtime;
+				if(renew)
+				{
+					// renew the ban on this address so it does not expire
+					// until the flood has subsided
+					floodlist[floodslotnum].lasttime = realtime;
+				}
 				//Con_Printf("Flood detected!\n");
 				return true;
 			}
@@ -2530,27 +2535,27 @@ static qboolean NetConn_PreventConnectFlood(lhnetaddress_t *peeraddress)
 		}
 	}
 	// begin a new timeout on this address
-	sv.connectfloodaddresses[bestfloodslotnum].address = noportpeeraddress;
-	sv.connectfloodaddresses[bestfloodslotnum].lasttime = realtime;
+	floodlist[bestfloodslotnum].address = noportpeeraddress;
+	floodlist[bestfloodslotnum].lasttime = realtime;
 	//Con_Printf("Flood detection initiated!\n");
 	return false;
 }
 
-void NetConn_ClearConnectFlood(lhnetaddress_t *peeraddress)
+void NetConn_ClearFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floodlist, size_t floodlength)
 {
-	int floodslotnum;
+	size_t floodslotnum;
 	lhnetaddress_t noportpeeraddress;
 	// see if this is a connect flood
 	noportpeeraddress = *peeraddress;
 	LHNETADDRESS_SetPort(&noportpeeraddress, 0);
-	for (floodslotnum = 0;floodslotnum < MAX_CONNECTFLOODADDRESSES;floodslotnum++)
+	for (floodslotnum = 0;floodslotnum < floodlength;floodslotnum++)
 	{
-		if (sv.connectfloodaddresses[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &sv.connectfloodaddresses[floodslotnum].address) == 0)
+		if (floodlist[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &floodlist[floodslotnum].address) == 0)
 		{
 			// this address matches an ongoing flood address
 			// remove the ban
-			sv.connectfloodaddresses[floodslotnum].address.addresstype = LHNETADDRESSTYPE_NONE;
-			sv.connectfloodaddresses[floodslotnum].lasttime = 0;
+			floodlist[floodslotnum].address.addresstype = LHNETADDRESSTYPE_NONE;
+			floodlist[floodslotnum].lasttime = 0;
 			//Con_Printf("Flood cleared!\n");
 		}
 	}
@@ -2835,6 +2840,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				challenge[i].address = *peeraddress;
 				NetConn_BuildChallengeString(challenge[i].string, sizeof(challenge[i].string));
 			}
+			else
+			{
+				// flood control: drop if requesting challenge too often
+				if(challenge[i].time < realtime - net_challengefloodblockingtimeout.value)
+					return true;
+			}
 			challenge[i].time = realtime;
 			// send the challenge
 			dpsnprintf(response, sizeof(response), "\377\377\377\377challenge %s", challenge[i].string);
@@ -2964,7 +2975,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				}
 			}
 
-			if (NetConn_PreventConnectFlood(peeraddress))
+			if (NetConn_PreventFlood(peeraddress, sv.connectfloodaddresses, sizeof(sv.connectfloodaddresses) / sizeof(sv.connectfloodaddresses[0]), net_connectfloodblockingtimeout.value, true))
 				return true;
 
 			// find an empty client slot for this new client
@@ -2997,6 +3008,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			const char *challenge = NULL;
 
+			if (NetConn_PreventFlood(peeraddress, sv.getstatusfloodaddresses, sizeof(sv.getstatusfloodaddresses) / sizeof(sv.getstatusfloodaddresses[0]), net_getstatusfloodblockingtimeout.value, false))
+				return true;
+
 			// If there was a challenge in the getinfo message
 			if (length > 8 && string[7] == ' ')
 				challenge = string + 8;
@@ -3012,6 +3026,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length >= 9 && !memcmp(string, "getstatus", 9) && (islocal || sv_public.integer > -1))
 		{
 			const char *challenge = NULL;
+
+			if (NetConn_PreventFlood(peeraddress, sv.getstatusfloodaddresses, sizeof(sv.getstatusfloodaddresses) / sizeof(sv.getstatusfloodaddresses[0]), net_getstatusfloodblockingtimeout.value, false))
+				return true;
 
 			// If there was a challenge in the getinfo message
 			if (length > 10 && string[9] == ' ')
@@ -3187,7 +3204,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			// this is a new client, check for connection flood
-			if (NetConn_PreventConnectFlood(peeraddress))
+			if (NetConn_PreventFlood(peeraddress, sv.connectfloodaddresses, sizeof(sv.connectfloodaddresses) / sizeof(sv.connectfloodaddresses[0]), net_connectfloodblockingtimeout.value, true))
 				break;
 
 			// find a slot for the new client
@@ -3234,6 +3251,10 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_SERVER_INFO from %s.\n", addressstring2);
 			if(!(islocal || sv_public.integer > -1))
 				break;
+
+			if (NetConn_PreventFlood(peeraddress, sv.getstatusfloodaddresses, sizeof(sv.getstatusfloodaddresses) / sizeof(sv.getstatusfloodaddresses[0]), net_getstatusfloodblockingtimeout.value, false))
+				break;
+
 			if (sv.active && !strcmp(MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring)), "QUAKE"))
 			{
 				int numclients;
@@ -3265,6 +3286,10 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_PLAYER_INFO from %s.\n", addressstring2);
 			if(!(islocal || sv_public.integer > -1))
 				break;
+
+			if (NetConn_PreventFlood(peeraddress, sv.getstatusfloodaddresses, sizeof(sv.getstatusfloodaddresses) / sizeof(sv.getstatusfloodaddresses[0]), net_getstatusfloodblockingtimeout.value, false))
+				break;
+
 			if (sv.active)
 			{
 				int playerNumber, activeNumber, clientNumber;
@@ -3301,6 +3326,9 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREQ_RULE_INFO from %s.\n", addressstring2);
 			if(!(islocal || sv_public.integer > -1))
 				break;
+
+			// no flood check here, as it only returns one cvar for one cvar and clients may iterate quickly
+
 			if (sv.active)
 			{
 				char *prevCvarName;
@@ -3645,6 +3673,8 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
+	Cvar_RegisterVariable(&net_challengefloodblockingtimeout);
+	Cvar_RegisterVariable(&net_getstatusfloodblockingtimeout);
 	Cvar_RegisterVariable(&cl_netlocalping);
 	Cvar_RegisterVariable(&cl_netpacketloss_send);
 	Cvar_RegisterVariable(&cl_netpacketloss_receive);
