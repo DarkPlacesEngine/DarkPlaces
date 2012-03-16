@@ -2843,7 +2843,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			else
 			{
 				// flood control: drop if requesting challenge too often
-				if(challenge[i].time < realtime - net_challengefloodblockingtimeout.value)
+				if(challenge[i].time > realtime - net_challengefloodblockingtimeout.value)
 					return true;
 			}
 			challenge[i].time = realtime;
