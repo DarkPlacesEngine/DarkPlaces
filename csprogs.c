@@ -348,7 +348,7 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 
 	// set up the animation data
 	VM_GenerateFrameGroupBlend(prog, ed->priv.server->framegroupblend, ed);
-	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model, cl.time);
 	VM_UpdateEdictSkeleton(prog, ed, model, ed->priv.server->frameblend);
 	if (PRVM_clientedictfloat(ed, shadertime)) // hack for csprogs.dat files that do not set shadertime, leaves the value at entity spawn time
 		entrender->shadertime = PRVM_clientedictfloat(ed, shadertime);

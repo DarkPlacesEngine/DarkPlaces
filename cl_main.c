@@ -552,7 +552,7 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 	// update the inverse matrix for the renderer
 	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 	// update the animation blend state
-	VM_FrameBlendFromFrameGroupBlend(ent->frameblend, ent->framegroupblend, ent->model);
+	VM_FrameBlendFromFrameGroupBlend(ent->frameblend, ent->framegroupblend, ent->model, cl.time);
 	// we need the matrix origin to center the box
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	// update entity->render.scale because the renderer needs it
@@ -1600,7 +1600,7 @@ static void CL_RelinkStaticEntities(void)
 			e->render.flags |= RENDER_SHADOW;
 		VectorSet(e->render.colormod, 1, 1, 1);
 		VectorSet(e->render.glowmod, 1, 1, 1);
-		VM_FrameBlendFromFrameGroupBlend(e->render.frameblend, e->render.framegroupblend, e->render.model);
+		VM_FrameBlendFromFrameGroupBlend(e->render.frameblend, e->render.framegroupblend, e->render.model, cl.time);
 		e->render.allowdecals = true;
 		CL_UpdateRenderEntity(&e->render);
 		r_refdef.scene.entities[r_refdef.scene.numentities++] = &e->render;

@@ -2380,7 +2380,7 @@ static int CL_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 	 && model->animscenes)
 	{
 		VM_GenerateFrameGroupBlend(prog, ent->priv.server->framegroupblend, ent);
-		VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
+		VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model, cl.time);
 		VM_UpdateEdictSkeleton(prog, ent, model, ent->priv.server->frameblend);
 		return Mod_Alias_GetTagMatrix(model, ent->priv.server->frameblend, &ent->priv.server->skeleton, tagindex, out);
 	}
@@ -2532,7 +2532,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 	VectorScale(le, -1, PRVM_clientglobalvector(v_right));
 	model = CL_GetModelFromEdict(e);
 	VM_GenerateFrameGroupBlend(prog, e->priv.server->framegroupblend, e);
-	VM_FrameBlendFromFrameGroupBlend(e->priv.server->frameblend, e->priv.server->framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(e->priv.server->frameblend, e->priv.server->framegroupblend, model, cl.time);
 	VM_UpdateEdictSkeleton(prog, e, model, e->priv.server->frameblend);
 	CL_GetExtendedTagInfo(prog, e, tagindex, &parentindex, &tagname, &tag_localmatrix);
 	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
@@ -3846,7 +3846,7 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	lastbone = min(lastbone, model->num_bones - 1);
 	lastbone = min(lastbone, skeleton->model->num_bones - 1);
 	VM_GenerateFrameGroupBlend(prog, framegroupblend, ed);
-	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model, cl.time);
 	blendfrac = 1.0f - retainfrac;
 	for (numblends = 0;numblends < MAX_FRAMEBLENDS && frameblend[numblends].lerp;numblends++)
 		frameblend[numblends].lerp *= blendfrac;

@@ -2430,7 +2430,7 @@ static int SV_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 	if (tagindex >= 0 && (model = SV_GetModelFromEdict(ent)) && model->animscenes)
 	{
 		VM_GenerateFrameGroupBlend(prog, ent->priv.server->framegroupblend, ent);
-		VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
+		VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model, sv.time);
 		VM_UpdateEdictSkeleton(prog, ent, model, ent->priv.server->frameblend);
 		return Mod_Alias_GetTagMatrix(model, ent->priv.server->frameblend, &ent->priv.server->skeleton, tagindex, out);
 	}
@@ -2469,7 +2469,7 @@ static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *e
 	model = SV_GetModelByIndex(modelindex);
 
 	VM_GenerateFrameGroupBlend(prog, ent->priv.server->framegroupblend, ent);
-	VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(ent->priv.server->frameblend, ent->priv.server->framegroupblend, model, sv.time);
 	VM_UpdateEdictSkeleton(prog, ent, model, ent->priv.server->frameblend);
 
 	tagmatrix = identitymatrix;
@@ -2593,7 +2593,7 @@ static void VM_SV_gettaginfo(prvm_prog_t *prog)
 	VectorScale(le, -1, PRVM_serverglobalvector(v_right));
 	model = SV_GetModelFromEdict(e);
 	VM_GenerateFrameGroupBlend(prog, e->priv.server->framegroupblend, e);
-	VM_FrameBlendFromFrameGroupBlend(e->priv.server->frameblend, e->priv.server->framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(e->priv.server->frameblend, e->priv.server->framegroupblend, model, sv.time);
 	VM_UpdateEdictSkeleton(prog, e, model, e->priv.server->frameblend);
 	SV_GetExtendedTagInfo(prog, e, tagindex, &parentindex, &tagname, &tag_localmatrix);
 	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
@@ -2902,7 +2902,7 @@ static void VM_SV_skel_build(prvm_prog_t *prog)
 	lastbone = min(lastbone, model->num_bones - 1);
 	lastbone = min(lastbone, skeleton->model->num_bones - 1);
 	VM_GenerateFrameGroupBlend(prog, framegroupblend, ed);
-	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model, sv.time);
 	blendfrac = 1.0f - retainfrac;
 	for (numblends = 0;numblends < MAX_FRAMEBLENDS && frameblend[numblends].lerp;numblends++)
 		frameblend[numblends].lerp *= blendfrac;
