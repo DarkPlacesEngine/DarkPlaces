@@ -894,7 +894,7 @@ static void VM_SV_checkpvs(prvm_prog_t *prog)
 	}
 
 #if 1
-	if(!sv.worldmodel->brush.GetPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	if(!sv.worldmodel || !sv.worldmodel->brush.GetPVS || !sv.worldmodel->brush.BoxTouchingPVS)
 	{
 		// no PVS support on this worldmodel... darn
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
@@ -910,7 +910,7 @@ static void VM_SV_checkpvs(prvm_prog_t *prog)
 	PRVM_G_FLOAT(OFS_RETURN) = sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, pvs, PRVM_serveredictvector(viewee, absmin), PRVM_serveredictvector(viewee, absmax));
 #else
 	// using fat PVS like FTEQW does (slow)
-	if(!sv.worldmodel->brush.FatPVS || !sv.worldmodel->brush.BoxTouchingPVS)
+	if(!sv.worldmodel || !sv.worldmodel->brush.FatPVS || !sv.worldmodel->brush.BoxTouchingPVS)
 	{
 		// no PVS support on this worldmodel... darn
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
