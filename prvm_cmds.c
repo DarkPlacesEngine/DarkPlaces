@@ -85,7 +85,7 @@ void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroup
 // LordHavoc: quite tempting to break apart this function to reuse the
 //            duplicated code, but I suspect it is better for performance
 //            this way
-void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model)
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model, double curtime)
 {
 	int sub2, numframes, f, i, k;
 	int isfirstframegroup = true;
@@ -134,7 +134,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 			if (scene->framecount > 1)
 			{
 				// this code path is only used on .zym models and torches
-				sublerp = scene->framerate * (cl.time - g->start);
+				sublerp = scene->framerate * (curtime - g->start);
 				f = (int) floor(sublerp);
 				sublerp -= f;
 				sub2 = f + 1;
@@ -6429,7 +6429,7 @@ static void animatemodel(prvm_prog_t *prog, dp_model_t *model, prvm_edict_t *ed)
 		memset(&animatemodel_cache, 0, sizeof(animatemodel_cache));
 	need |= (animatemodel_cache.model != model);
 	VM_GenerateFrameGroupBlend(prog, ed->priv.server->framegroupblend, ed);
-	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model);
+	VM_FrameBlendFromFrameGroupBlend(ed->priv.server->frameblend, ed->priv.server->framegroupblend, model, PRVM_serverglobalfloat(time));
 	need |= (memcmp(&animatemodel_cache.frameblend, &ed->priv.server->frameblend, sizeof(ed->priv.server->frameblend))) != 0;
 	skeletonindex = (int)PRVM_gameedictfloat(ed, skeletonindex) - 1;
 	if (!(skeletonindex >= 0 && skeletonindex < MAX_EDICTS && (skeleton = prog->skeletons[skeletonindex]) && skeleton->model->num_bones == ed->priv.server->skeleton.model->num_bones))
