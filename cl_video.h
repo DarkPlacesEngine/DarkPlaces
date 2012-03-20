@@ -59,6 +59,7 @@ typedef struct clvideo_s
 	unsigned int (*getwidth) (void *stream);
 	unsigned int (*getheight) (void *stream);
 	double (*getframerate) (void *stream);
+	double (*getaspectratio) (void *stream);
 	int (*decodeframe) (void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow);
 
 	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)

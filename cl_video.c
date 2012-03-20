@@ -2,13 +2,6 @@
 #include "quakedef.h"
 #include "cl_dyntexture.h"
 #include "cl_video.h"
-#include "dpvsimpledecode.h"
-
-// VorteX: JAM video module used by Blood Omnicide
-#define USEJAM
-#ifdef USEJAM
-  #include "cl_video_jamdecode.c"
-#endif
 
 // cvars
 cvar_t cl_video_subtitles = {CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are present)"};
@@ -21,6 +14,19 @@ cvar_t cl_video_brightness = {CVAR_SAVE, "cl_video_brightness", "1", "brightness
 cvar_t cl_video_keepaspectratio = {CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with top & bottom being sliced out"};
 cvar_t cl_video_fadein = {CVAR_SAVE, "cl_video_fadein", "0", "fading-from-black effect once video is started, in seconds"};
 cvar_t cl_video_fadeout = {CVAR_SAVE, "cl_video_fadeout", "0", "fading-to-black effect once video is ended, in seconds"};
+
+cvar_t v_glslgamma_video = {CVAR_SAVE, "v_glslgamma_video", "1", "applies GLSL gamma to played video, could be a fraction, requires r_glslgamma_2d 1."};
+
+// DPV stream decoder
+#include "dpvsimpledecode.h"
+
+// VorteX: libavcodec implementation
+#include "cl_video_libavw.c"
+
+// JAM video decoder used by Blood Omnicide
+#ifdef JAMVIDEO
+#include "cl_video_jamdecode.c"
+#endif
 
 // constants (and semi-constants)
 static int  cl_videormask;
@@ -44,18 +50,23 @@ static clvideo_t *FindUnusedVid( void )
 static qboolean OpenStream( clvideo_t * video )
 {
 	const char *errorstring;
+
 	video->stream = dpvsimpledecode_open( video, video->filename, &errorstring);
-	if (!video->stream )
-	{
-#ifdef USEJAM
-		video->stream = jam_open( video, video->filename, &errorstring);
-		if (video->stream)
-			return true;
+	if (video->stream)
+		return true;
+
+#ifdef JAMVIDEO
+	video->stream = jam_open( video, video->filename, &errorstring);
+	if (video->stream)
+		return true;
 #endif
-		Con_Printf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
-		return false;
-	}
-	return true;
+
+	video->stream = LibAvW_OpenVideo( video, video->filename, &errorstring);
+	if (video->stream)
+		return true;
+
+	Con_Printf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
+	return false;
 }
 
 static void VideoUpdateCallback(rtexture_t *rt, void *data)
@@ -89,7 +100,11 @@ static void SuspendVideo( clvideo_t * video )
 	UnlinkVideoTexture(video);
 	// if we are in firstframe mode, also close the stream
 	if (video->state == CLVIDEO_FIRSTFRAME)
-		video->close(video->stream);
+	{
+		if (video->stream)
+			video->close(video->stream);
+		video->stream = NULL;
+	}
 }
 
 static qboolean WakeVideo( clvideo_t * video )
@@ -129,7 +144,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		subtitle_text = NULL;
 		if (langcvar)
 		{
-			dpsnprintf(overridename, sizeof(overridename), "script/locale/%s/%s", langcvar->string, subtitlesfile);
+			dpsnprintf(overridename, sizeof(overridename), "locale/%s/%s", langcvar->string, subtitlesfile);
 			subtitle_text = (char *)FS_LoadFile(overridename, cls.permanentmempool, false, NULL);
 		}
 		if (!subtitle_text)
@@ -303,7 +318,9 @@ void CL_RestartVideo(clvideo_t *video)
 	video->framenum = -1;
 
 	// reopen stream
-	video->close(video->stream);
+	if (video->stream)
+		video->close(video->stream);
+	video->stream = NULL;
 	if (!OpenStream(video))
 		video->state = CLVIDEO_UNUSED;
 }
@@ -318,7 +335,11 @@ void CL_CloseVideo(clvideo_t * video)
 
 	// close stream
 	if (!video->suspended || video->state != CLVIDEO_FIRSTFRAME)
-		video->close(video->stream);
+	{
+		if (video->stream)
+			video->close(video->stream);
+		video->stream = NULL;
+	}
 	// unlink texture
 	if (!video->suspended)
 		UnlinkVideoTexture(video);
@@ -387,13 +408,6 @@ void CL_Video_Frame(void)
 	// reduce range to exclude unnecessary entries
 	while(cl_num_videos > 0 && cl_videos[cl_num_videos-1].state == CLVIDEO_UNUSED)
 		cl_num_videos--;
-}
-
-void CL_Video_Shutdown( void )
-{
-	int i;
-	for (i = 0 ; i < cl_num_videos ; i++)
-		CL_CloseVideo(&cl_videos[ i ]);
 }
 
 void CL_PurgeOwner( int owner )
@@ -474,7 +488,7 @@ void CL_DrawVideo(void)
 	st[6] = 1.0; st[7] = 1.0; 
 	if (cl_video_keepaspectratio.integer)
 	{
-		float a = ((float)video->cpif.width / (float)video->cpif.height) / ((float)vid.width / (float)vid.height);
+		float a = video->getaspectratio(video->stream) / ((float)vid.width / (float)vid.height);
 		if (cl_video_keepaspectratio.integer >= 2)
 		{
 			// clip instead of scale
@@ -542,7 +556,14 @@ void CL_DrawVideo(void)
 #endif
 
 	// draw video
-	DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
+	if (v_glslgamma_video.value >= 1)
+		DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
+	else
+	{
+		DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, DRAWFLAG_NOGAMMA);
+		if (v_glslgamma_video.value > 0.0)
+			DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, v_glslgamma_video.value, st[2], st[3], b, b, b, v_glslgamma_video.value, st[4], st[5], b, b, b, v_glslgamma_video.value, st[6], st[7], b, b, b, v_glslgamma_video.value, 0);
+	}
 
 #ifndef USE_GLES2
 	// disable video-only stipple
@@ -704,5 +725,19 @@ void CL_Video_Init( void )
 	Cvar_RegisterVariable(&cl_video_fadein);
 	Cvar_RegisterVariable(&cl_video_fadeout);
 
+	Cvar_RegisterVariable(&v_glslgamma_video);
+
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap, NULL, NULL );
+
+	LibAvW_OpenLibrary();
+}
+
+void CL_Video_Shutdown( void )
+{
+	int i;
+
+	for (i = 0 ; i < cl_num_videos ; i++)
+		CL_CloseVideo(&cl_videos[ i ]);
+
+	LibAvW_CloseLibrary();
 }

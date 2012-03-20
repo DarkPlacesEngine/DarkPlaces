@@ -40,6 +40,9 @@ unsigned int dpvsimpledecode_getheight(void *stream);
 // returns the framerate of the stream
 double dpvsimpledecode_getframerate(void *stream);
 
+// returns aspect ratio of the stream
+double dpvsimpledecode_getaspectratio(void *stream);
+
 // decodes a video frame to the supplied output pixels
 int dpvsimpledecode_video(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow);
 
