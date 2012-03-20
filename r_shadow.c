@@ -356,6 +356,22 @@ cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0", "ho
 cvar_t r_editlights_cursorpushoff = {0, "r_editlights_cursorpushoff", "4", "how far to push the cursor off the impacted surface"};
 cvar_t r_editlights_cursorgrid = {0, "r_editlights_cursorgrid", "4", "snaps cursor to this grid size"};
 cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "1", "changes size of light entities loaded from a map"};
+cvar_t r_editlights_drawproperties = {0, "r_editlights_drawproperties", "1", "draw properties of currently selected light"};
+cvar_t r_editlights_current_origin = {0, "r_editlights_current_origin", "0 0 0", "origin of selected light"};
+cvar_t r_editlights_current_angles = {0, "r_editlights_current_angles", "0 0 0", "angles of selected light"};
+cvar_t r_editlights_current_color = {0, "r_editlights_current_color", "1 1 1", "color of selected light"};
+cvar_t r_editlights_current_radius = {0, "r_editlights_current_radius", "0", "radius of selected light"};
+cvar_t r_editlights_current_corona = {0, "r_editlights_current_corona", "0", "corona intensity of selected light"};
+cvar_t r_editlights_current_coronasize = {0, "r_editlights_current_coronasize", "0", "corona size of selected light"};
+cvar_t r_editlights_current_style = {0, "r_editlights_current_style", "0", "style of selected light"};
+cvar_t r_editlights_current_shadows = {0, "r_editlights_current_shadows", "0", "shadows flag of selected light"};
+cvar_t r_editlights_current_cubemap = {0, "r_editlights_current_cubemap", "0", "cubemap of selected light"};
+cvar_t r_editlights_current_ambient = {0, "r_editlights_current_ambient", "0", "ambient intensity of selected light"};
+cvar_t r_editlights_current_diffuse = {0, "r_editlights_current_diffuse", "1", "diffuse intensity of selected light"};
+cvar_t r_editlights_current_specular = {0, "r_editlights_current_specular", "1", "specular intensity of selected light"};
+cvar_t r_editlights_current_normalmode = {0, "r_editlights_current_normalmode", "0", "normalmode flag of selected light"};
+cvar_t r_editlights_current_realtimemode = {0, "r_editlights_current_realtimemode", "0", "realtimemode flag of selected light"};
+
 
 typedef struct r_shadow_bouncegrid_settings_s
 {
@@ -6390,9 +6406,36 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	int lightnumber, lightcount;
 	size_t lightindex, range;
 	dlight_t *light;
-	float x, y;
 	char temp[256];
+	float x, y;
+
 	if (!r_editlights.integer)
+		return;
+
+	// update cvars so QC can query them
+	if (r_shadow_selectedlight)
+	{
+		dpsnprintf(temp, sizeof(temp), "%f %f %f", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);
+		Cvar_SetQuick(&r_editlights_current_origin, temp);
+		dpsnprintf(temp, sizeof(temp), "%f %f %f", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);
+		Cvar_SetQuick(&r_editlights_current_angles, temp);
+		dpsnprintf(temp, sizeof(temp), "%f %f %f", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);
+		Cvar_SetQuick(&r_editlights_current_color, temp);
+		Cvar_SetValueQuick(&r_editlights_current_radius, r_shadow_selectedlight->radius);
+		Cvar_SetValueQuick(&r_editlights_current_corona, r_shadow_selectedlight->corona);
+		Cvar_SetValueQuick(&r_editlights_current_coronasize, r_shadow_selectedlight->coronasizescale);
+		Cvar_SetValueQuick(&r_editlights_current_style, r_shadow_selectedlight->style);
+		Cvar_SetValueQuick(&r_editlights_current_shadows, r_shadow_selectedlight->shadow);
+		Cvar_SetQuick(&r_editlights_current_cubemap, r_shadow_selectedlight->cubemapname);
+		Cvar_SetValueQuick(&r_editlights_current_ambient, r_shadow_selectedlight->ambientscale);
+		Cvar_SetValueQuick(&r_editlights_current_diffuse, r_shadow_selectedlight->diffusescale);
+		Cvar_SetValueQuick(&r_editlights_current_specular, r_shadow_selectedlight->specularscale);
+		Cvar_SetValueQuick(&r_editlights_current_normalmode, (r_shadow_selectedlight->flags & LIGHTFLAG_NORMALMODE) ? 1 : 0);
+		Cvar_SetValueQuick(&r_editlights_current_realtimemode, (r_shadow_selectedlight->flags & LIGHTFLAG_REALTIMEMODE) ? 1 : 0);
+	}
+
+	// draw properties on screen
+	if (!r_editlights_drawproperties.integer)
 		return;
 	x = vid_conwidth.value - 240;
 	y = 5;
@@ -6521,7 +6564,7 @@ static void R_Shadow_EditLights_Help_f(void)
 "sizescale scale : multiply radius (size) of light (1 does nothing)\n"
 "originscale x y z : multiply origin of light (1 1 1 does nothing)\n"
 "style style : set lightstyle of light (flickering patterns, switches, etc)\n"
-"cubemap basename : set filter cubemap of light (not yet supported)\n"
+"cubemap basename : set filter cubemap of light\n"
 "shadows 1/0 : turn on/off shadows\n"
 "corona n : set corona intensity\n"
 "coronasize n : set corona size (0-1)\n"
@@ -6606,6 +6649,21 @@ static void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_cursorpushoff);
 	Cvar_RegisterVariable(&r_editlights_cursorgrid);
 	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
+	Cvar_RegisterVariable(&r_editlights_drawproperties);
+	Cvar_RegisterVariable(&r_editlights_current_origin);
+	Cvar_RegisterVariable(&r_editlights_current_angles);
+	Cvar_RegisterVariable(&r_editlights_current_color);
+	Cvar_RegisterVariable(&r_editlights_current_radius);
+	Cvar_RegisterVariable(&r_editlights_current_corona);
+	Cvar_RegisterVariable(&r_editlights_current_coronasize);
+	Cvar_RegisterVariable(&r_editlights_current_style);
+	Cvar_RegisterVariable(&r_editlights_current_shadows);
+	Cvar_RegisterVariable(&r_editlights_current_cubemap);
+	Cvar_RegisterVariable(&r_editlights_current_ambient);
+	Cvar_RegisterVariable(&r_editlights_current_diffuse);
+	Cvar_RegisterVariable(&r_editlights_current_specular);
+	Cvar_RegisterVariable(&r_editlights_current_normalmode);
+	Cvar_RegisterVariable(&r_editlights_current_realtimemode);
 	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
 	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
 	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
