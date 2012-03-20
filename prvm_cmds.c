@@ -4627,7 +4627,7 @@ void VM_buf_create (prvm_prog_t *prog)
 	int i;
 	
 	VM_SAFEPARMCOUNTRANGE(0, 2, VM_buf_create);
-
+	
 	// VorteX: optional parm1 (buffer format) is unfinished, to keep intact with future databuffers extension must be set to "string"
 	if(prog->argc >= 1 && strcmp(PRVM_G_STRING(OFS_PARM0), "string"))
 	{
@@ -4991,11 +4991,358 @@ void VM_bufstr_free (prvm_prog_t *prog)
 	BufStr_Shrink(prog, stringbuffer);
 }
 
+/*
+========================
+VM_buf_loadfile
+load a file into string buffer, return 0 or 1
+float buf_loadfile(string filename, float bufhandle) = #535;
+========================
+*/
+void VM_buf_loadfile(prvm_prog_t *prog)
+{
+	size_t alloclen;
+	prvm_stringbuffer_t *stringbuffer;
+	char string[VM_STRINGTEMP_LENGTH];
+	int filenum, strindex, c, end;
+	const char *filename;
+	char vabuf[1024];
 
+	VM_SAFEPARMCOUNT(2, VM_buf_loadfile);
 
+	// get file
+	filename = PRVM_G_STRING(OFS_PARM0);
+	for (filenum = 0;filenum < PRVM_MAX_OPENFILES;filenum++)
+		if (prog->openfiles[filenum] == NULL)
+			break;
+	prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", filename), false);
+	if (prog->openfiles[filenum] == NULL)
+		prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", filename), false);
+	if (prog->openfiles[filenum] == NULL)
+	{
+		if (developer_extra.integer)
+			VM_Warning(prog, "VM_buf_loadfile: failed to open file %s in %s\n", filename, prog->name, filename);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
 
+	// get string buffer
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM1));
+	if(!stringbuffer)
+	{
+		VM_Warning(prog, "VM_buf_loadfile: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), prog->name);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
 
+	// read file (append to the end of buffer)
+	strindex = stringbuffer->num_strings;
+	while(1)
+	{
+		// read line
+		end = 0;
+		for (;;)
+		{
+			c = FS_Getc(prog->openfiles[filenum]);
+			if (c == '\r' || c == '\n' || c < 0)
+				break;
+			if (end < VM_STRINGTEMP_LENGTH - 1)
+				string[end++] = c;
+		}
+		string[end] = 0;
+		// remove \n following \r
+		if (c == '\r')
+		{
+			c = FS_Getc(prog->openfiles[filenum]);
+			if (c != '\n')
+				FS_UnGetc(prog->openfiles[filenum], (unsigned char)c);
+		}
+		// add and continue
+		if (c >= 0 || end)
+		{
+			BufStr_Expand(prog, stringbuffer, strindex);
+			stringbuffer->num_strings = max(stringbuffer->num_strings, strindex + 1);
+			alloclen = strlen(string) + 1;
+			stringbuffer->strings[strindex] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
+			memcpy(stringbuffer->strings[strindex], string, alloclen);
+			strindex = stringbuffer->num_strings;
+		}
+		else
+			break;
+	}
 
+	// close file
+	FS_Close(prog->openfiles[filenum]);
+	prog->openfiles[filenum] = NULL;
+	if (prog->openfiles_origin[filenum])
+		PRVM_Free((char *)prog->openfiles_origin[filenum]);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+========================
+VM_buf_writefile
+writes stringbuffer to a file, returns 0 or 1
+float buf_writefile(float filehandle, float bufhandle, [, float startpos, float numstrings]) = #468;
+========================
+*/
+
+void VM_buf_writefile(prvm_prog_t *prog)
+{
+	int filenum, strindex, strnum, strlength;
+	prvm_stringbuffer_t *stringbuffer;
+
+	VM_SAFEPARMCOUNTRANGE(2, 4, VM_buf_writefile);
+
+	// get file
+	filenum = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= PRVM_MAX_OPENFILES)
+	{
+		VM_Warning(prog, "VM_buf_writefile: invalid file handle %i used in %s\n", filenum, prog->name);
+		return;
+	}
+	if (prog->openfiles[filenum] == NULL)
+	{
+		VM_Warning(prog, "VM_buf_writefile: no such file handle %i (or file has been closed) in %s\n", filenum, prog->name);
+		return;
+	}
+	
+	// get string buffer
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM1));
+	if(!stringbuffer)
+	{
+		VM_Warning(prog, "VM_buf_writefile: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM1), prog->name);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	// get start and end parms
+	if (prog->argc > 3)
+	{
+		strindex = (int)PRVM_G_FLOAT(OFS_PARM2);
+		strnum = (int)PRVM_G_FLOAT(OFS_PARM3);
+	}
+	else if (prog->argc > 2)
+	{
+		strindex = (int)PRVM_G_FLOAT(OFS_PARM2);
+		strnum = stringbuffer->num_strings - strindex;
+	}
+	else
+	{
+		strindex = 0;
+		strnum = stringbuffer->num_strings;
+	}
+	if (strindex < 0 || strindex >= stringbuffer->num_strings)
+	{
+		VM_Warning(prog, "VM_buf_writefile: wrong start string index %i used in %s\n", strindex, prog->name);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+	if (strnum < 0)
+	{
+		VM_Warning(prog, "VM_buf_writefile: wrong strings count %i used in %s\n", strnum, prog->name);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	// write
+	while(strindex < stringbuffer->num_strings && strnum)
+	{
+		if (stringbuffer->strings[strindex])
+		{
+			if ((strlength = strlen(stringbuffer->strings[strindex])))
+				FS_Write(prog->openfiles[filenum], stringbuffer->strings[strindex], strlength);
+			FS_Write(prog->openfiles[filenum], "\n", 1);
+		}
+		strindex++;
+		strnum--;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+#define MATCH_AUTO     0
+#define MATCH_WHOLE    1
+#define MATCH_LEFT     2
+#define MATCH_RIGHT    3
+#define MATCH_MIDDLE   4
+#define MATCH_PATTERN  5
+
+const char *detect_match_rule(char *pattern, int *matchrule)
+{
+	char *ppos, *qpos;
+	int patternlength;
+
+	patternlength = strlen(pattern);
+	ppos = strchr(pattern, '*');
+	qpos = strchr(pattern, '?');
+	// has ? - pattern
+	if (qpos) 
+	{
+		*matchrule = MATCH_PATTERN;
+		return pattern;
+	}
+	// has * - left, mid, right or pattern
+	if (ppos)
+	{
+		// starts with * - may be right/mid or pattern
+		if ((ppos - pattern) == 0)
+		{
+			ppos = strchr(pattern+1, '*');
+			// *something 
+			if (!ppos) 
+			{
+				*matchrule = MATCH_RIGHT;
+				return pattern+1;
+			}
+			// *something*
+			if ((ppos - pattern) == patternlength)
+			{
+				*matchrule = MATCH_MIDDLE;
+				*ppos = 0;
+				return pattern+1;
+			}
+			// *som*thing
+			*matchrule = MATCH_PATTERN;
+			return pattern;
+		}
+		// end with * - left
+		if ((ppos - pattern) == patternlength)
+		{
+			*matchrule = MATCH_LEFT;
+			*ppos = 0;
+			return pattern;
+		}
+		// som*thing
+		*matchrule = MATCH_PATTERN;
+		return pattern;
+	}
+	// have no wildcards - whole string
+	*matchrule = MATCH_WHOLE;
+	return pattern;
+}
+
+// todo: support UTF8
+qboolean match_rule(const char *string, int max_string, const char *pattern, int patternlength, int rule)
+{
+	const char *mid;
+
+	if (rule == 1)
+		return !strncmp(string, pattern, max_string) ? true : false;
+	if (rule == 2)
+		return !strncmp(string, pattern, patternlength) ? true : false;
+	if (rule == 3)
+	{
+		mid = strstr(string, pattern);
+		return mid && !*(mid+patternlength);
+	}
+	if (rule == 4)
+		return strstr(string, pattern) ? true : false;
+	// pattern
+	return matchpattern_with_separator(string, pattern, false, "", false) ? true : false;
+}
+
+/*
+========================
+VM_bufstr_find
+find an index of bufstring matching rule
+float bufstr_find(float bufhandle, string match, float matchrule, float startpos, float step) = #468;
+========================
+*/
+
+void VM_bufstr_find(prvm_prog_t *prog)
+{
+	prvm_stringbuffer_t *stringbuffer;
+	char string[VM_STRINGTEMP_LENGTH];
+	int matchrule, matchlen, i, step;
+	const char *match;
+	
+	VM_SAFEPARMCOUNTRANGE(3, 5, VM_bufstr_find);
+
+	PRVM_G_FLOAT(OFS_RETURN) = -1;
+
+	// get string buffer
+	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
+	if(!stringbuffer)
+	{
+		VM_Warning(prog, "VM_bufstr_find: invalid buffer %i used in %s\n", (int)PRVM_G_FLOAT(OFS_PARM0), prog->name);
+		return;
+	}
+
+	// get pattern/rule
+	matchrule = (int)PRVM_G_FLOAT(OFS_PARM2);
+	if (matchrule < 0 && matchrule > 5)
+	{
+		VM_Warning(prog, "VM_bufstr_find: invalid match rule %i in %s\n", matchrule, prog->name);
+		return;
+	}
+	if (matchrule)
+		match = PRVM_G_STRING(OFS_PARM1);
+	else
+	{
+		strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
+		match = detect_match_rule(string, &matchrule);
+	}
+	matchlen = strlen(match);
+
+	// find
+	i = (prog->argc > 3) ? (int)PRVM_G_FLOAT(OFS_PARM3) : 0;
+	step = (prog->argc > 4) ? (int)PRVM_G_FLOAT(OFS_PARM4) : 1;
+	while(i < stringbuffer->num_strings)
+	{
+		if (stringbuffer->strings[i] && match_rule(stringbuffer->strings[i], VM_STRINGTEMP_LENGTH, match, matchlen, matchrule))
+		{
+			PRVM_G_FLOAT(OFS_RETURN) = i;
+			break;
+		}
+		i += step;
+	}
+}
+
+/*
+========================
+VM_matchpattern
+float matchpattern(string s, string pattern, float matchrule, float startpos) = #468;
+========================
+*/
+void VM_matchpattern(prvm_prog_t *prog)
+{
+	const char *s, *match;
+	char string[VM_STRINGTEMP_LENGTH];
+	int matchrule, l;
+
+	VM_SAFEPARMCOUNTRANGE(2, 4, VM_matchpattern);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+
+	// get pattern/rule
+	matchrule = (int)PRVM_G_FLOAT(OFS_PARM2);
+	if (matchrule < 0 && matchrule > 5)
+	{
+		VM_Warning(prog, "VM_bufstr_find: invalid match rule %i in %s\n", matchrule, prog->name);
+		return;
+	}
+	if (matchrule)
+		match = PRVM_G_STRING(OFS_PARM1);
+	else
+	{
+		strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
+		match = detect_match_rule(string, &matchrule);
+	}
+
+	// offset
+	l = strlen(match);
+	if (prog->argc > 3)
+		s += max(0, min((unsigned int)PRVM_G_FLOAT(OFS_PARM3), strlen(s)-1));
+
+	// match
+	PRVM_G_FLOAT(OFS_RETURN) = match_rule(s, VM_STRINGTEMP_LENGTH, match, l, matchrule);
+}
+
+/*
+========================
+VM_buf_cvarlist
+========================
+*/
 
 void VM_buf_cvarlist(prvm_prog_t *prog)
 {
