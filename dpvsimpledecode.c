@@ -230,6 +230,7 @@ typedef struct dpvsimpledecodestream_s
 	unsigned int info_imageBmask;
 	unsigned int info_imageBshift;
 	unsigned int info_imagesize;
+	double info_aspectratio;
 
 	// current video frame (needed because of delta compression)
 	int videoframenum;
@@ -360,6 +361,7 @@ void *dpvsimpledecode_open(clvideo_t *video, char *filename, const char **errors
 						s->info_imagewidth = hz_bitstream_read_short(s->framedatablocks);
 						s->info_imageheight = hz_bitstream_read_short(s->framedatablocks);
 						s->info_framerate = (double) hz_bitstream_read_int(s->framedatablocks) * (1.0 / 65536.0);
+						s->info_aspectratio = (double)s->info_imagewidth / (double)s->info_imageheight;
 
 						if (s->info_framerate > 0.0)
 						{
@@ -391,6 +393,7 @@ void *dpvsimpledecode_open(clvideo_t *video, char *filename, const char **errors
 								video->getheight = dpvsimpledecode_getheight;
 								video->getframerate = dpvsimpledecode_getframerate;
 								video->decodeframe = dpvsimpledecode_video;
+								video->getaspectratio = dpvsimpledecode_getaspectratio;
 
 								return s;
 							}
@@ -510,6 +513,13 @@ double dpvsimpledecode_getframerate(void *stream)
 {
 	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
 	return s->info_framerate;
+}
+
+// return aspect ratio of the stream
+double dpvsimpledecode_getaspectratio(void *stream)
+{
+	dpvsimpledecodestream_t *s = (dpvsimpledecodestream_t *)stream;
+	return s->info_aspectratio;
 }
 
 static int dpvsimpledecode_convertpixels(dpvsimpledecodestream_t *s, void *imagedata, int imagebytesperrow)
