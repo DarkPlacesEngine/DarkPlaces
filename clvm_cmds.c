@@ -4742,10 +4742,10 @@ VM_CL_setpause,					// #531 float(float ispaused) setpause = #531 (DP_CSQC_SETPA
 VM_log,							// #532
 VM_getsoundtime,				// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
 VM_soundlength,					// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
-NULL,							// #535
-NULL,							// #536
-NULL,							// #537
-NULL,							// #538
+VM_buf_loadfile,                // #535 float(string filename, float bufhandle) buf_loadfile (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_buf_writefile,               // #536 float(float filehandle, float bufhandle, float startpos, float numstrings) buf_writefile (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_bufstr_find,                 // #537 float(float bufhandle, string match, float matchrule, float startpos) bufstr_find (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_matchpattern,                // #538 float(string s, string pattern, float matchrule) matchpattern (DP_QC_STRINGBUFFERS_EXT_WIP)
 NULL,							// #539
 VM_physics_enable,				// #540 void(entity e, float physics_enabled) physics_enable = #540; (DP_PHYSICS_ODE)
 VM_physics_addforce,			// #541 void(entity e, vector force, vector relative_ofs) physics_addforce = #541; (DP_PHYSICS_ODE)

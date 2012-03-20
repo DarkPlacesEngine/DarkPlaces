@@ -512,7 +512,6 @@ prvm_prog_funcoffsets_t;
 
 // stringbuffer flags
 #define STRINGBUFFER_SAVED	1 // saved in savegames
-
 typedef struct prvm_stringbuffer_s
 {
 	int max_strings;
