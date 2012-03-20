@@ -518,7 +518,7 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 	"SVC_PARTICLE"
 };
 
-static void CL_Particles_LoadEffectInfo(void)
+static void CL_Particles_LoadEffectInfo(const char *customfile)
 {
 	int i;
 	int filepass;
@@ -533,10 +533,15 @@ static void CL_Particles_LoadEffectInfo(void)
 	for (filepass = 0;;filepass++)
 	{
 		if (filepass == 0)
-			dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
+		{
+			if (customfile)
+				dpsnprintf(filename, sizeof(filename), customfile);
+			else
+				dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
+		}
 		else if (filepass == 1)
 		{
-			if (!cl.worldbasename[0])
+			if (!cl.worldbasename[0] || customfile)
 				continue;
 			dpsnprintf(filename, sizeof(filename), "%s_effectinfo.txt", cl.worldnamenoextension);
 		}
@@ -550,6 +555,11 @@ static void CL_Particles_LoadEffectInfo(void)
 	}
 }
 
+void CL_Particles_LoadEffectInfo_f(void)
+{
+	CL_Particles_LoadEffectInfo(Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL);
+}
+
 /*
 ===============
 CL_InitParticles
@@ -559,7 +569,7 @@ void CL_ReadPointFile_f (void);
 void CL_Particles_Init (void)
 {
 	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
-	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map)");
+	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo_f, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map) if parameter is given, loads from custom file (no levelname_effectinfo are loaded in this case)");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
@@ -2369,7 +2379,7 @@ static void r_part_start(void)
 		particlepalette[i] = palette_rgb[i][0] * 65536 + palette_rgb[i][1] * 256 + palette_rgb[i][2];
 	particletexturepool = R_AllocTexturePool();
 	R_InitParticleTexture ();
-	CL_Particles_LoadEffectInfo();
+	CL_Particles_LoadEffectInfo(NULL);
 }
 
 static void r_part_shutdown(void)
@@ -2381,7 +2391,7 @@ static void r_part_newmap(void)
 {
 	if (decalskinframe)
 		R_SkinFrame_MarkUsed(decalskinframe);
-	CL_Particles_LoadEffectInfo();
+	CL_Particles_LoadEffectInfo(NULL);
 }
 
 unsigned short particle_elements[MESHQUEUE_TRANSPARENT_BATCHSIZE*6];
