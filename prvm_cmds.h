@@ -410,6 +410,11 @@ void VM_bufstr_set (prvm_prog_t *prog);
 void VM_bufstr_add (prvm_prog_t *prog);
 void VM_bufstr_free (prvm_prog_t *prog);
 
+void VM_buf_loadfile(prvm_prog_t *prog);
+void VM_buf_writefile(prvm_prog_t *prog);
+void VM_bufstr_find(prvm_prog_t *prog);
+void VM_matchpattern(prvm_prog_t *prog);
+
 void VM_changeyaw (prvm_prog_t *prog);
 void VM_changepitch (prvm_prog_t *prog);
 

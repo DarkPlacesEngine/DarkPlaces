@@ -36,6 +36,7 @@ const char *vm_m_extensions =
 "DP_QC_STRFTIME "
 "DP_QC_STRINGBUFFERS "
 "DP_QC_STRINGBUFFERS_CVARLIST "
+"DP_QC_STRINGBUFFERS_EXT_WIP "
 "DP_QC_STRINGCOLORFUNCTIONS "
 "DP_QC_STRING_CASE_FUNCTIONS "
 "DP_QC_STRREPLACE "
@@ -1434,10 +1435,10 @@ NULL,									// #531
 VM_log,									// #532
 VM_getsoundtime,						// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
 VM_soundlength,							// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
-NULL,									// #535
-NULL,									// #536
-NULL,									// #537
-NULL,									// #538
+VM_buf_loadfile,                        // #535 float(string filename, float bufhandle) buf_loadfile (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_buf_writefile,                       // #536 float(float filehandle, float bufhandle, float startpos, float numstrings) buf_writefile (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_bufstr_find,                         // #537 float(float bufhandle, string match, float matchrule, float startpos) bufstr_find (DP_QC_STRINGBUFFERS_EXT_WIP)
+VM_matchpattern,                        // #538 float(string s, string pattern, float matchrule) matchpattern (DP_QC_STRINGBUFFERS_EXT_WIP)
 NULL,									// #539
 NULL,									// #540
 NULL,									// #541
