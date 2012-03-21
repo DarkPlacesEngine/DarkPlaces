@@ -20,6 +20,9 @@ cvar_t collision_endposnudge = {0, "collision_endposnudge", "0", "workaround to 
 #endif
 cvar_t collision_debug_tracelineasbox = {0, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
 cvar_t collision_cache = {0, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
+//cvar_t collision_triangle_neighborsides = {0, "collision_triangle_neighborsides", "1", "override automatic side generation if triangle has neighbors with face planes that form a convex edge (perfect solution, but can not work for all edges)"};
+cvar_t collision_triangle_bevelsides = {0, "collision_triangle_bevelsides", "1", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
+cvar_t collision_triangle_axialsides = {0, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
 
 mempool_t *collision_mempool;
 
@@ -36,6 +39,9 @@ void Collision_Init (void)
 #endif
 	Cvar_RegisterVariable(&collision_debug_tracelineasbox);
 	Cvar_RegisterVariable(&collision_cache);
+//	Cvar_RegisterVariable(&collision_triangle_neighborsides);
+	Cvar_RegisterVariable(&collision_triangle_bevelsides);
+	Cvar_RegisterVariable(&collision_triangle_axialsides);
 	collision_mempool = Mem_AllocPool("collision cache", 0, NULL);
 	Collision_Cache_Init(collision_mempool);
 }
@@ -448,164 +454,98 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 
 
 
-void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
+void Collision_CalcPlanesForTriangleBrushFloat(colbrushf_t *brush)
 {
 	int i;
-	float edge0[3], edge1[3], edge2[3], normal[3], dist, bestdist;
-	colpointf_t *p, *p2;
+	float edge0[3], edge1[3], edge2[3];
+	colpointf_t *p;
 
-	// FIXME: these probably don't actually need to be normalized if the collision code does not care
-	if (brush->numpoints == 3)
+	TriangleNormal(brush->points[0].v, brush->points[1].v, brush->points[2].v, brush->planes[0].normal);
+	if (DotProduct(brush->planes[0].normal, brush->planes[0].normal) < 0.0001f)
 	{
-		// optimized triangle case
-		TriangleNormal(brush->points[0].v, brush->points[1].v, brush->points[2].v, brush->planes[0].normal);
-		if (DotProduct(brush->planes[0].normal, brush->planes[0].normal) < 0.0001f)
+		// there's no point in processing a degenerate triangle (GIGO - Garbage In, Garbage Out)
+		// note that some of these exist in q3bsp bspline patches
+		brush->numplanes = 0;
+		return;
+	}
+
+	// there are 5 planes (front, back, sides) and 3 edges
+	brush->numplanes = 5;
+	brush->numedgedirs = 3;
+	VectorNormalize(brush->planes[0].normal);
+	brush->planes[0].dist = DotProduct(brush->points->v, brush->planes[0].normal);
+	VectorNegate(brush->planes[0].normal, brush->planes[1].normal);
+	brush->planes[1].dist = -brush->planes[0].dist;
+	// edge directions are easy to calculate
+	VectorSubtract(brush->points[2].v, brush->points[0].v, edge0);
+	VectorSubtract(brush->points[0].v, brush->points[1].v, edge1);
+	VectorSubtract(brush->points[1].v, brush->points[2].v, edge2);
+	VectorCopy(edge0, brush->edgedirs[0].v);
+	VectorCopy(edge1, brush->edgedirs[1].v);
+	VectorCopy(edge2, brush->edgedirs[2].v);
+	// now select an algorithm to generate the side planes
+	if (collision_triangle_bevelsides.integer)
+	{
+		// use 45 degree slopes at the edges of the triangle to make a sinking trace error turn into "riding up" the slope rather than getting stuck
+		CrossProduct(edge0, brush->planes->normal, brush->planes[2].normal);
+		CrossProduct(edge1, brush->planes->normal, brush->planes[3].normal);
+		CrossProduct(edge2, brush->planes->normal, brush->planes[4].normal);
+		VectorNormalize(brush->planes[2].normal);
+		VectorNormalize(brush->planes[3].normal);
+		VectorNormalize(brush->planes[4].normal);
+		VectorAdd(brush->planes[2].normal, brush->planes[0].normal, brush->planes[2].normal);
+		VectorAdd(brush->planes[3].normal, brush->planes[0].normal, brush->planes[3].normal);
+		VectorAdd(brush->planes[4].normal, brush->planes[0].normal, brush->planes[4].normal);
+		VectorNormalize(brush->planes[2].normal);
+		VectorNormalize(brush->planes[3].normal);
+		VectorNormalize(brush->planes[4].normal);
+	}
+	else if (collision_triangle_axialsides.integer)
+	{
+		float projectionnormal[3], projectionedge0[3], projectionedge1[3], projectionedge2[3];
+		int i, best;
+		float dist, bestdist;
+		bestdist = fabs(brush->planes[0].normal[0]);
+		best = 0;
+		for (i = 1;i < 3;i++)
 		{
-			// there's no point in processing a degenerate triangle (GIGO - Garbage In, Garbage Out)
-			brush->numplanes = 0;
-			return;
+			dist = fabs(brush->planes[0].normal[i]);
+			if (bestdist < dist)
+			{
+				bestdist = dist;
+				best = i;
+			}
 		}
+		VectorClear(projectionnormal);
+		if (brush->planes[0].normal[best] < 0)
+			projectionnormal[best] = -1;
 		else
-		{
-			brush->numplanes = 5;
-			brush->numedgedirs = 3;
-			VectorNormalize(brush->planes[0].normal);
-			brush->planes[0].dist = DotProduct(brush->points->v, brush->planes[0].normal);
-			VectorNegate(brush->planes[0].normal, brush->planes[1].normal);
-			brush->planes[1].dist = -brush->planes[0].dist;
-			VectorSubtract(brush->points[2].v, brush->points[0].v, edge0);
-			VectorSubtract(brush->points[0].v, brush->points[1].v, edge1);
-			VectorSubtract(brush->points[1].v, brush->points[2].v, edge2);
-			VectorCopy(edge0, brush->edgedirs[0].v);
-			VectorCopy(edge1, brush->edgedirs[1].v);
-			VectorCopy(edge2, brush->edgedirs[2].v);
-#if 1
-			{
-				float projectionnormal[3], projectionedge0[3], projectionedge1[3], projectionedge2[3];
-				int i, best;
-				float dist, bestdist;
-				bestdist = fabs(brush->planes[0].normal[0]);
-				best = 0;
-				for (i = 1;i < 3;i++)
-				{
-					dist = fabs(brush->planes[0].normal[i]);
-					if (bestdist < dist)
-					{
-						bestdist = dist;
-						best = i;
-					}
-				}
-				VectorClear(projectionnormal);
-				if (brush->planes[0].normal[best] < 0)
-					projectionnormal[best] = -1;
-				else
-					projectionnormal[best] = 1;
-				VectorCopy(edge0, projectionedge0);
-				VectorCopy(edge1, projectionedge1);
-				VectorCopy(edge2, projectionedge2);
-				projectionedge0[best] = 0;
-				projectionedge1[best] = 0;
-				projectionedge2[best] = 0;
-				CrossProduct(projectionedge0, projectionnormal, brush->planes[2].normal);
-				CrossProduct(projectionedge1, projectionnormal, brush->planes[3].normal);
-				CrossProduct(projectionedge2, projectionnormal, brush->planes[4].normal);
-			}
-#else
-			CrossProduct(edge0, brush->planes->normal, brush->planes[2].normal);
-			CrossProduct(edge1, brush->planes->normal, brush->planes[3].normal);
-			CrossProduct(edge2, brush->planes->normal, brush->planes[4].normal);
-#endif
-			VectorNormalize(brush->planes[2].normal);
-			VectorNormalize(brush->planes[3].normal);
-			VectorNormalize(brush->planes[4].normal);
-			brush->planes[2].dist = DotProduct(brush->points[2].v, brush->planes[2].normal);
-			brush->planes[3].dist = DotProduct(brush->points[0].v, brush->planes[3].normal);
-			brush->planes[4].dist = DotProduct(brush->points[1].v, brush->planes[4].normal);
-
-			if (developer_extra.integer)
-			{
-				// validation code
-#if 0
-				float temp[3];
-
-				VectorSubtract(brush->points[0].v, brush->points[1].v, edge0);
-				VectorSubtract(brush->points[2].v, brush->points[1].v, edge1);
-				CrossProduct(edge0, edge1, normal);
-				VectorNormalize(normal);
-				VectorSubtract(normal, brush->planes[0].normal, temp);
-				if (VectorLength(temp) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: TriangleNormal gave wrong answer (%f %f %f != correct answer %f %f %f)\n", brush->planes->normal[0], brush->planes->normal[1], brush->planes->normal[2], normal[0], normal[1], normal[2]);
-				if (fabs(DotProduct(brush->planes[1].normal, brush->planes[0].normal) - -1.0f) > 0.01f || fabs(brush->planes[1].dist - -brush->planes[0].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 1 (%f %f %f %f) is not opposite plane 0 (%f %f %f %f)\n", brush->planes[1].normal[0], brush->planes[1].normal[1], brush->planes[1].normal[2], brush->planes[1].dist, brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[0].dist);
-#if 0
-				if (fabs(DotProduct(brush->planes[2].normal, brush->planes[0].normal)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 2 (%f %f %f %f) is not perpendicular to plane 0 (%f %f %f %f)\n", brush->planes[2].normal[0], brush->planes[2].normal[1], brush->planes[2].normal[2], brush->planes[2].dist, brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[2].dist);
-				if (fabs(DotProduct(brush->planes[3].normal, brush->planes[0].normal)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 3 (%f %f %f %f) is not perpendicular to plane 0 (%f %f %f %f)\n", brush->planes[3].normal[0], brush->planes[3].normal[1], brush->planes[3].normal[2], brush->planes[3].dist, brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[3].dist);
-				if (fabs(DotProduct(brush->planes[4].normal, brush->planes[0].normal)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 4 (%f %f %f %f) is not perpendicular to plane 0 (%f %f %f %f)\n", brush->planes[4].normal[0], brush->planes[4].normal[1], brush->planes[4].normal[2], brush->planes[4].dist, brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[4].dist);
-				if (fabs(DotProduct(brush->planes[2].normal, edge0)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 2 (%f %f %f %f) is not perpendicular to edge 0 (%f %f %f to %f %f %f)\n", brush->planes[2].normal[0], brush->planes[2].normal[1], brush->planes[2].normal[2], brush->planes[2].dist, brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2]);
-				if (fabs(DotProduct(brush->planes[3].normal, edge1)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 3 (%f %f %f %f) is not perpendicular to edge 1 (%f %f %f to %f %f %f)\n", brush->planes[3].normal[0], brush->planes[3].normal[1], brush->planes[3].normal[2], brush->planes[3].dist, brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2]);
-				if (fabs(DotProduct(brush->planes[4].normal, edge2)) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: plane 4 (%f %f %f %f) is not perpendicular to edge 2 (%f %f %f to %f %f %f)\n", brush->planes[4].normal[0], brush->planes[4].normal[1], brush->planes[4].normal[2], brush->planes[4].dist, brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2]);
-#endif
-#endif
-				if (fabs(DotProduct(brush->points[0].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f || fabs(DotProduct(brush->points[1].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f || fabs(DotProduct(brush->points[2].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: edges (%f %f %f to %f %f %f to %f %f %f) off front plane 0 (%f %f %f %f)\n", brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[0].dist);
-				if (fabs(DotProduct(brush->points[0].v, brush->planes[1].normal) - brush->planes[1].dist) > 0.01f || fabs(DotProduct(brush->points[1].v, brush->planes[1].normal) - brush->planes[1].dist) > 0.01f || fabs(DotProduct(brush->points[2].v, brush->planes[1].normal) - brush->planes[1].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: edges (%f %f %f to %f %f %f to %f %f %f) off back plane 1 (%f %f %f %f)\n", brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->planes[1].normal[0], brush->planes[1].normal[1], brush->planes[1].normal[2], brush->planes[1].dist);
-				if (fabs(DotProduct(brush->points[2].v, brush->planes[2].normal) - brush->planes[2].dist) > 0.01f || fabs(DotProduct(brush->points[0].v, brush->planes[2].normal) - brush->planes[2].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: edge 0 (%f %f %f to %f %f %f) off front plane 2 (%f %f %f %f)\n", brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->planes[2].normal[0], brush->planes[2].normal[1], brush->planes[2].normal[2], brush->planes[2].dist);
-				if (fabs(DotProduct(brush->points[0].v, brush->planes[3].normal) - brush->planes[3].dist) > 0.01f || fabs(DotProduct(brush->points[1].v, brush->planes[3].normal) - brush->planes[3].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: edge 0 (%f %f %f to %f %f %f) off front plane 2 (%f %f %f %f)\n", brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->planes[3].normal[0], brush->planes[3].normal[1], brush->planes[3].normal[2], brush->planes[3].dist);
-				if (fabs(DotProduct(brush->points[1].v, brush->planes[4].normal) - brush->planes[4].dist) > 0.01f || fabs(DotProduct(brush->points[2].v, brush->planes[4].normal) - brush->planes[4].dist) > 0.01f)
-					Con_DPrintf("Collision_CalcPlanesForPolygonBrushFloat: edge 0 (%f %f %f to %f %f %f) off front plane 2 (%f %f %f %f)\n", brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->planes[4].normal[0], brush->planes[4].normal[1], brush->planes[4].normal[2], brush->planes[4].dist);
-			}
-		}
+			projectionnormal[best] = 1;
+		VectorCopy(edge0, projectionedge0);
+		VectorCopy(edge1, projectionedge1);
+		VectorCopy(edge2, projectionedge2);
+		projectionedge0[best] = 0;
+		projectionedge1[best] = 0;
+		projectionedge2[best] = 0;
+		CrossProduct(projectionedge0, projectionnormal, brush->planes[2].normal);
+		CrossProduct(projectionedge1, projectionnormal, brush->planes[3].normal);
+		CrossProduct(projectionedge2, projectionnormal, brush->planes[4].normal);
+		VectorNormalize(brush->planes[2].normal);
+		VectorNormalize(brush->planes[3].normal);
+		VectorNormalize(brush->planes[4].normal);
 	}
 	else
 	{
-		// choose best surface normal for polygon's plane
-		bestdist = 0;
-		for (i = 0, p = brush->points + 1;i < brush->numpoints - 2;i++, p++)
-		{
-			VectorSubtract(p[-1].v, p[0].v, edge0);
-			VectorSubtract(p[1].v, p[0].v, edge1);
-			CrossProduct(edge0, edge1, normal);
-			//TriangleNormal(p[-1].v, p[0].v, p[1].v, normal);
-			dist = DotProduct(normal, normal);
-			if (i == 0 || bestdist < dist)
-			{
-				bestdist = dist;
-				VectorCopy(normal, brush->planes->normal);
-			}
-		}
-		if (bestdist < 0.0001f)
-		{
-			// there's no point in processing a degenerate triangle (GIGO - Garbage In, Garbage Out)
-			brush->numplanes = 0;
-			return;
-		}
-		else
-		{
-			brush->numplanes = brush->numpoints + 2;
-			VectorNormalize(brush->planes->normal);
-			brush->planes->dist = DotProduct(brush->points->v, brush->planes->normal);
-
-			// negate plane to create other side
-			VectorNegate(brush->planes[0].normal, brush->planes[1].normal);
-			brush->planes[1].dist = -brush->planes[0].dist;
-			for (i = 0, p = brush->points + (brush->numpoints - 1), p2 = brush->points;i < brush->numpoints;i++, p = p2, p2++)
-			{
-				VectorSubtract(p->v, p2->v, edge0);
-				CrossProduct(edge0, brush->planes->normal, brush->planes[i + 2].normal);
-				VectorNormalize(brush->planes[i + 2].normal);
-				brush->planes[i + 2].dist = DotProduct(p->v, brush->planes[i + 2].normal);
-			}
-		}
+		CrossProduct(edge0, brush->planes->normal, brush->planes[2].normal);
+		CrossProduct(edge1, brush->planes->normal, brush->planes[3].normal);
+		CrossProduct(edge2, brush->planes->normal, brush->planes[4].normal);
+		VectorNormalize(brush->planes[2].normal);
+		VectorNormalize(brush->planes[3].normal);
+		VectorNormalize(brush->planes[4].normal);
 	}
+	brush->planes[2].dist = DotProduct(brush->points[2].v, brush->planes[2].normal);
+	brush->planes[3].dist = DotProduct(brush->points[0].v, brush->planes[3].normal);
+	brush->planes[4].dist = DotProduct(brush->points[1].v, brush->planes[4].normal);
 
 	if (developer_extra.integer)
 	{
@@ -1085,7 +1025,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 					VectorCopy(vertex3f + element3i[tri * 3 + 2] * 3, points[2].v);
 					Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
 					Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
-					Collision_CalcPlanesForPolygonBrushFloat(&brush);
+					Collision_CalcPlanesForTriangleBrushFloat(&brush);
 					//Collision_PrintBrushAsQHull(&brush, "brush");
 					Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
 				}
@@ -1103,7 +1043,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 				VectorCopy(vertex3f + element3i[2] * 3, points[2].v);
 				Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
 				Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
-				Collision_CalcPlanesForPolygonBrushFloat(&brush);
+				Collision_CalcPlanesForTriangleBrushFloat(&brush);
 				//Collision_PrintBrushAsQHull(&brush, "brush");
 				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
 			}
@@ -1118,7 +1058,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 			VectorCopy(vertex3f + element3i[2] * 3, points[2].v);
 			Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
 			Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
-			Collision_CalcPlanesForPolygonBrushFloat(&brush);
+			Collision_CalcPlanesForTriangleBrushFloat(&brush);
 			//Collision_PrintBrushAsQHull(&brush, "brush");
 			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
 		}
@@ -1183,7 +1123,7 @@ void Collision_TraceBrushTriangleFloat(trace_t *trace, const colbrushf_t *thisbr
 	VectorCopy(v2, points[2].v);
 	Collision_SnapCopyPoints(brush.numpoints, points, points, COLLISION_SNAPSCALE, COLLISION_SNAP);
 	Collision_CalcEdgeDirsForPolygonBrushFloat(&brush);
-	Collision_CalcPlanesForPolygonBrushFloat(&brush);
+	Collision_CalcPlanesForTriangleBrushFloat(&brush);
 	//Collision_PrintBrushAsQHull(&brush, "brush");
 	Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, &brush, &brush);
 }
