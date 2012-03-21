@@ -121,7 +121,7 @@ typedef struct colboxbrushf_s
 }
 colboxbrushf_t;
 
-void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush);
+void Collision_CalcPlanesForTriangleBrushFloat(colbrushf_t *brush);
 colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, int numpoints, float *points, int supercontents, int q3surfaceflags, const texture_t *texture);
 colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, const texture_t *texture, int hasaabbplanes);
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
