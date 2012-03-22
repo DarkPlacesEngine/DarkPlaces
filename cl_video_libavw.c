@@ -154,7 +154,7 @@ double libavw_getframerate(void *stream);
 double libavw_getaspectratio(void *stream);
 void libavw_close(void *stream);
 
-int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow)
+static int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow)
 {
 	int pixel_format = LIBAVW_PIXEL_FORMAT_BGR;
 	int errorcode;
@@ -232,21 +232,21 @@ void libavw_close(void *stream)
 }
 
 // IO wrapper
-int LibAvW_FS_Read(void *opaque, unsigned char *buf, int buf_size)
+static int LibAvW_FS_Read(void *opaque, unsigned char *buf, int buf_size)
 {
 	return FS_Read((qfile_t *)opaque, buf, buf_size);
 }
-fs_offset_t LibAvW_FS_Seek(void *opaque, fs_offset_t pos, int whence)
+static fs_offset_t LibAvW_FS_Seek(void *opaque, fs_offset_t pos, int whence)
 {
 	return (fs_offset_t)FS_Seek((qfile_t *)opaque, pos, whence);
 }
-fs_offset_t LibAvW_FS_SeekSize(void *opaque)
+static fs_offset_t LibAvW_FS_SeekSize(void *opaque)
 {
 	return (fs_offset_t)FS_FileSize((qfile_t *)opaque);
 }
 
 // open as DP video stream
-void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstring)
+static void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstring)
 {
 	libavwstream_t *s;
 	char filebase[MAX_OSPATH], check[MAX_OSPATH];
@@ -340,7 +340,7 @@ void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstrin
 	return s;
 }
 
-void libavw_message(int level, const char *message)
+static void libavw_message(int level, const char *message)
 {
 	if (level == LIBAVW_PRINT_WARNING)
 		Con_Printf("LibAvcodec warning: %s\n", message);
@@ -352,7 +352,7 @@ void libavw_message(int level, const char *message)
 		Con_Printf("LibAvcodec panic: %s\n", message);
 }
 
-qboolean LibAvW_OpenLibrary(void)
+static qboolean LibAvW_OpenLibrary(void)
 {
 	int errorcode;
 
@@ -379,7 +379,7 @@ qboolean LibAvW_OpenLibrary(void)
 	return true;
 }
 
-void LibAvW_CloseLibrary(void)
+static void LibAvW_CloseLibrary(void)
 {
 	Sys_UnloadLibrary(&libavw_dll);
 }
