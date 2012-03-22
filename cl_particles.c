@@ -555,7 +555,7 @@ static void CL_Particles_LoadEffectInfo(const char *customfile)
 	}
 }
 
-void CL_Particles_LoadEffectInfo_f(void)
+static void CL_Particles_LoadEffectInfo_f(void)
 {
 	CL_Particles_LoadEffectInfo(Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL);
 }

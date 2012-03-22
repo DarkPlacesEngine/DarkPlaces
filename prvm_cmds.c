@@ -5020,7 +5020,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 	if (prog->openfiles[filenum] == NULL)
 	{
 		if (developer_extra.integer)
-			VM_Warning(prog, "VM_buf_loadfile: failed to open file %s in %s\n", filename, prog->name, filename);
+			VM_Warning(prog, "VM_buf_loadfile: failed to open file %s in %s\n", filename, prog->name);
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
 	}
@@ -5167,7 +5167,7 @@ void VM_buf_writefile(prvm_prog_t *prog)
 #define MATCH_MIDDLE   4
 #define MATCH_PATTERN  5
 
-const char *detect_match_rule(char *pattern, int *matchrule)
+static const char *detect_match_rule(char *pattern, int *matchrule)
 {
 	char *ppos, *qpos;
 	int patternlength;
@@ -5222,7 +5222,7 @@ const char *detect_match_rule(char *pattern, int *matchrule)
 }
 
 // todo: support UTF8
-qboolean match_rule(const char *string, int max_string, const char *pattern, int patternlength, int rule)
+static qboolean match_rule(const char *string, int max_string, const char *pattern, int patternlength, int rule)
 {
 	const char *mid;
 
