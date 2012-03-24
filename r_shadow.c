@@ -1546,15 +1546,16 @@ int R_Shadow_CalcSphereSideMask(const vec3_t p, float radius, float bias)
 static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
 {
 	int i;
-	vec3_t p, n;
+	vec3_t o, p, n;
 	int sides = 0x3F, masks[6] = { 3<<4, 3<<4, 3<<0, 3<<0, 3<<2, 3<<2 };
 	float scale = (size - 2*border)/size, len;
 	float bias = border / (float)(size - border), dp, dn, ap, an;
 	// check if cone enclosing side would cross frustum plane 
 	scale = 2 / (scale*scale + 2);
+	Matrix4x4_OriginFromMatrix(&rtlight->matrix_lighttoworld, o);
 	for (i = 0;i < 5;i++)
 	{
-		if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[i]) > -0.03125)
+		if (PlaneDiff(o, &r_refdef.view.frustum[i]) > -0.03125)
 			continue;
 		Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[i].normal, n);
 		len = scale*VectorLength2(n);
@@ -1562,10 +1563,10 @@ static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float borde
 		if(n[1]*n[1] > len) sides &= n[1] < 0 ? ~(1<<2) : ~(2 << 2);
 		if(n[2]*n[2] > len) sides &= n[2] < 0 ? ~(1<<4) : ~(2 << 4);
 	}
-	if (PlaneDiff(rtlight->shadoworigin, &r_refdef.view.frustum[4]) >= r_refdef.farclip - r_refdef.nearclip + 0.03125)
+	if (PlaneDiff(o, &r_refdef.view.frustum[4]) >= r_refdef.farclip - r_refdef.nearclip + 0.03125)
 	{
         Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, n);
-        len = scale*VectorLength(n);
+        len = scale*VectorLength2(n);
 		if(n[0]*n[0] > len) sides &= n[0] >= 0 ? ~(1<<0) : ~(2 << 0);
 		if(n[1]*n[1] > len) sides &= n[1] >= 0 ? ~(1<<2) : ~(2 << 2);
 		if(n[2]*n[2] > len) sides &= n[2] >= 0 ? ~(1<<4) : ~(2 << 4);
