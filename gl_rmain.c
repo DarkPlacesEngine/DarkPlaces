@@ -3511,7 +3511,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 
 	// if already loaded just return it, otherwise make a new skinframe
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (textureflags & TEXF_FORCE_RELOAD) ? -1 : skindata ? CRC_Block(skindata, width*height*4) : 0, true);
-	if (skinframe && skinframe->base)
+	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
 
@@ -3581,7 +3581,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 
 	// if already loaded just return it, otherwise make a new skinframe
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
-	if (skinframe && skinframe->base)
+	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
 
@@ -3705,7 +3705,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 
 	// if already loaded just return it, otherwise make a new skinframe
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
-	if (skinframe && skinframe->base)
+	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
 
@@ -7766,7 +7766,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 {
 	int i;
 	const entity_render_t *ent = rsurface.entity;
-	dp_model_t *model = ent->model;
+	dp_model_t *model = ent->model; // when calling this, ent must not be NULL
 	q3shaderinfo_layer_tcmod_t *tcmod;
 
 	if (t->update_lastrenderframe == r_textureframe && t->update_lastrenderentity == (void *)ent && !rsurface.forcecurrenttextureupdate)
@@ -7774,7 +7774,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->update_lastrenderframe = r_textureframe;
 	t->update_lastrenderentity = (void *)ent;
 
-	if(ent && ent->entitynumber >= MAX_EDICTS && ent->entitynumber < 2 * MAX_EDICTS)
+	if(ent->entitynumber >= MAX_EDICTS && ent->entitynumber < 2 * MAX_EDICTS)
 		t->camera_entity = ent->entitynumber;
 	else
 		t->camera_entity = 0;
