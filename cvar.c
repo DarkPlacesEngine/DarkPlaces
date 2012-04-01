@@ -851,14 +851,14 @@ void Cvar_List_f (void)
 	{
 		partial = Cmd_Argv (1);
 		len = strlen(partial);
+		ispattern = (strchr(partial, '*') || strchr(partial, '?'));
 	}
 	else
 	{
 		partial = NULL;
 		len = 0;
+		ispattern = false;
 	}
-
-	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
 
 	count = 0;
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
