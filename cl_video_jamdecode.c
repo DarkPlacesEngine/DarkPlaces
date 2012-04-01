@@ -53,12 +53,12 @@ void *jam_open(clvideo_t *video, char *filename, const char **errorstring)
 	// allocate stream structure
 	s = (jamdecodestream_t *)Z_Malloc(sizeof(jamdecodestream_t));
 	memset(s, 0, sizeof(jamdecodestream_t));
-	s->sndchan = -1;
 	if (s == NULL)
 	{
 		*errorstring = "unable to allocate memory for stream info structure";
 		return NULL;
 	}
+	s->sndchan = -1;
 
 	// open file
 	s->file = FS_OpenVirtualFile(filename, true);
