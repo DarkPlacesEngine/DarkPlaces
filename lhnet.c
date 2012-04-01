@@ -945,6 +945,20 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 							lhnetaddressnative_t *localaddress = (lhnetaddressnative_t *)&lhnetsocket->address;
 							SOCKLEN_T namelen;
 							int bindresult;
+
+#if defined(SOL_RFC1149) && defined(RFC1149_1149ONLY)
+							// we got reports of massive lags when this protocol was chosen as transport
+							// so better turn it off
+							{
+								int rfc1149only = 0;
+								int rfc1149enabled = 0;
+								if(setsockopt(lhnetsocket->inetsocket, SOL_RFC1149, RFC1149_1149ONLY, &rfc1149only))
+									Con_Printf("LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_1149ONLY) returned error: %s\n", LHNETPRIVATE_StrError());
+								if(setsockopt(lhnetsocket->inetsocket, SOL_RFC1149, RFC1149_ENABLED, &rfc1149enabled))
+									Con_Printf("LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_ENABLED) returned error: %s\n", LHNETPRIVATE_StrError());
+							}
+#endif
+
 #ifdef SUPPORTIPV6
 							if (address->addresstype == LHNETADDRESSTYPE_INET6)
 							{
