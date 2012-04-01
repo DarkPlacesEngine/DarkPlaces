@@ -21,12 +21,8 @@
 
 */
 
-#include "common.h"
-#ifdef _MSC_VERSION
-#include "stdint.h"
-#else
-#include <stdint.h>
-#endif
+// LordHavoc: for some reason this is being #include'd rather than treated as its own file...
+// LordHavoc: adapted to not require stdint.h as this is not available on MSVC++, using unsigned char instead of uint8_t and fs_offset_t instead of int64_t.
 
 // scaler type
 #define LIBAVW_SCALER_BILINEAR  0
@@ -49,9 +45,9 @@
 #define LIBAVW_PRINT_PANIC   4
 // exported callback functions:
 typedef void    avwCallbackPrint(int, const char *);
-typedef int     avwCallbackIoRead(void *, uint8_t *, int);
-typedef int64_t avwCallbackIoSeek(void *, int64_t, int);
-typedef int64_t avwCallbackIoSeekSize(void *);
+typedef int     avwCallbackIoRead(void *, unsigned char *, int);
+typedef fs_offset_t avwCallbackIoSeek(void *, fs_offset_t, int);
+typedef fs_offset_t avwCallbackIoSeekSize(void *);
 // exported functions:
 int         (*qLibAvW_Init)(avwCallbackPrint *printfunction); // init library, returns error code
 const char *(*qLibAvW_ErrorString)(int errorcode); // get string for error code
@@ -158,7 +154,7 @@ double libavw_getframerate(void *stream);
 double libavw_getaspectratio(void *stream);
 void libavw_close(void *stream);
 
-int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow)
+static int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask, unsigned int Gmask, unsigned int Bmask, unsigned int bytesperpixel, int imagebytesperrow)
 {
 	int pixel_format = LIBAVW_PIXEL_FORMAT_BGR;
 	int errorcode;
@@ -236,21 +232,21 @@ void libavw_close(void *stream)
 }
 
 // IO wrapper
-int LibAvW_FS_Read(void *opaque, uint8_t *buf, int buf_size)
+static int LibAvW_FS_Read(void *opaque, unsigned char *buf, int buf_size)
 {
 	return FS_Read((qfile_t *)opaque, buf, buf_size);
 }
-int64_t LibAvW_FS_Seek(void *opaque, int64_t pos, int whence)
+static fs_offset_t LibAvW_FS_Seek(void *opaque, fs_offset_t pos, int whence)
 {
-	return (int64_t)FS_Seek((qfile_t *)opaque, pos, whence);
+	return (fs_offset_t)FS_Seek((qfile_t *)opaque, pos, whence);
 }
-int64_t LibAvW_FS_SeekSize(void *opaque)
+static fs_offset_t LibAvW_FS_SeekSize(void *opaque)
 {
-	return (int64_t)FS_FileSize((qfile_t *)opaque);
+	return (fs_offset_t)FS_FileSize((qfile_t *)opaque);
 }
 
 // open as DP video stream
-void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstring)
+static void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstring)
 {
 	libavwstream_t *s;
 	char filebase[MAX_OSPATH], check[MAX_OSPATH];
@@ -344,7 +340,7 @@ void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstrin
 	return s;
 }
 
-void libavw_message(int level, const char *message)
+static void libavw_message(int level, const char *message)
 {
 	if (level == LIBAVW_PRINT_WARNING)
 		Con_Printf("LibAvcodec warning: %s\n", message);
@@ -356,7 +352,7 @@ void libavw_message(int level, const char *message)
 		Con_Printf("LibAvcodec panic: %s\n", message);
 }
 
-qboolean LibAvW_OpenLibrary(void)
+static qboolean LibAvW_OpenLibrary(void)
 {
 	int errorcode;
 
@@ -383,7 +379,7 @@ qboolean LibAvW_OpenLibrary(void)
 	return true;
 }
 
-void LibAvW_CloseLibrary(void)
+static void LibAvW_CloseLibrary(void)
 {
 	Sys_UnloadLibrary(&libavw_dll);
 }
