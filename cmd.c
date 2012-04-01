@@ -1200,14 +1200,14 @@ static void Cmd_List_f (void)
 	{
 		partial = Cmd_Argv (1);
 		len = strlen(partial);
+		ispattern = (strchr(partial, '*') || strchr(partial, '?'));
 	}
 	else
 	{
 		partial = NULL;
 		len = 0;
+		ispattern = false;
 	}
-
-	ispattern = partial && (strchr(partial, '*') || strchr(partial, '?'));
 
 	count = 0;
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
