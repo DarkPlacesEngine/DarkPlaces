@@ -301,7 +301,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 
 		// paint in the channels.
 		// channels with zero volumes still advance in time but don't paint.
-		ch = channels;
+		ch = channels; // cppcheck complains here but it is wrong, channels is a channel_t[MAX_CHANNELS] and not an int
 		for (channelindex = 0;channelindex < (int)total_channels;channelindex++, ch++)
 		{
 			sfx = ch->sfx;
