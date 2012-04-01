@@ -598,7 +598,7 @@ int S_LoadSound(sfx_t *sfx, int complain){
 	void* decoder_ptr=NULL;
 	if(ras_version>0 && ras_dll){
 
-		fileext[4]=0; //Terminator
+		fileext[3]=0; //Terminator
 		// See if already loaded
 		if (sfx->rasptr) return true;
 
