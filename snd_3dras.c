@@ -789,13 +789,13 @@ int S_StartSound_OnEnt (int entnum, int entchannel, sfx_t *sfx, float fvol, floa
 		S_KillChannel(now_c);
 	}else{ //We found no channel .... So we need to make a new one ...
 		channel_new_smart(&prev_c,&now_c);
-		now_c->entnum    =entnum;
-		now_c->entchannel=entchannel;
 		if(!now_c){
 			Con_Printf("S_StartSound_OnEnt: could not make new channel_t\n");
 			channel_delete_and_next(&prev_c,&now_c);
 			return -1;
 		}
+		now_c->entnum    =entnum;
+		now_c->entchannel=entchannel;
 	}
 
 	//Lets start the sound on the acquired sound source and channel
