@@ -260,13 +260,13 @@ static void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **err
 
 	// allocate stream
 	s = (libavwstream_t *)Z_Malloc(sizeof(libavwstream_t));
-	s->sndchan = -1;
-	memset(s, 0, sizeof(libavwstream_t));
 	if (s == NULL)
 	{
 		*errorstring = "unable to allocate memory for stream info structure";
 		return NULL;
 	}
+	memset(s, 0, sizeof(libavwstream_t));
+	s->sndchan = -1;
 
 	// open file
 	s->file = FS_OpenVirtualFile(filename, true);
