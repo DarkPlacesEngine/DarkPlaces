@@ -73,13 +73,13 @@ static void PRVM_MEM_Alloc(prvm_prog_t *prog)
 
 	// alloc edict fields
 	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
-	prog->edictsfields = (vec_t *)Mem_Alloc(prog->progs_mempool, prog->entityfieldsarea * sizeof(vec_t));
+	prog->edictsfields = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, prog->entityfieldsarea * sizeof(prvm_vec_t));
 
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = prog->edictsfields + i * prog->entityfields;
+		prog->edicts[i].fields.fp = prog->edictsfields + i * prog->entityfields;
 	}
 }
 
@@ -101,14 +101,14 @@ void PRVM_MEM_IncreaseEdicts(prvm_prog_t *prog)
 	prog->max_edicts = min(prog->max_edicts + 256, prog->limit_edicts);
 
 	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
-	prog->edictsfields = (vec_t*)Mem_Realloc(prog->progs_mempool, (void *)prog->edictsfields, prog->entityfieldsarea * sizeof(vec_t));
+	prog->edictsfields = (prvm_vec_t*)Mem_Realloc(prog->progs_mempool, (void *)prog->edictsfields, prog->entityfieldsarea * sizeof(prvm_vec_t));
 	prog->edictprivate = (void *)Mem_Realloc(prog->progs_mempool, (void *)prog->edictprivate, prog->max_edicts * prog->edictprivate_size);
 
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.vp = prog->edictsfields + i * prog->entityfields;
+		prog->edicts[i].fields.fp = prog->edictsfields + i * prog->entityfields;
 	}
 
 	prog->end_increase_edicts(prog);
@@ -190,7 +190,7 @@ Sets everything to NULL
 */
 void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e)
 {
-	memset(e->fields.vp, 0, prog->entityfields * 4);
+	memset(e->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 	e->priv.required->free = false;
 
 	// AK: Let the init_edict function determine if something needs to be initialized
@@ -552,16 +552,16 @@ char *PRVM_GlobalString (prvm_prog_t *prog, int ofs, char *line, size_t lineleng
 	char	*s;
 	//size_t	i;
 	ddef_t	*def;
-	void	*val;
+	prvm_eval_t	*val;
 	char valuebuf[MAX_INPUTLINE];
 
-	val = (void *)&prog->globals.generic[ofs];
+	val = (prvm_eval_t *)&prog->globals.fp[ofs];
 	def = PRVM_ED_GlobalAtOfs(prog, ofs);
 	if (!def)
 		dpsnprintf (line, linelength, "GLOBAL%i", ofs);
 	else
 	{
-		s = PRVM_ValueString (prog, (etype_t)def->type, (prvm_eval_t *)val, valuebuf, sizeof(valuebuf));
+		s = PRVM_ValueString (prog, (etype_t)def->type, val, valuebuf, sizeof(valuebuf));
 		dpsnprintf (line, linelength, "%s (=%s)", PRVM_GetString(prog, def->s_name), s);
 	}
 
@@ -606,7 +606,7 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 {
 	size_t	l;
 	ddef_t	*d;
-	int		*v;
+	prvm_eval_t	*val;
 	int		i, j;
 	const char	*name;
 	int		type;
@@ -634,13 +634,13 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 				// Didn't match; skip
 				continue;
 
-		v = (int *)(ed->fields.vp + d->ofs);
+		val = (prvm_eval_t *)(ed->fields.fp + d->ofs);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
 
 		for (j=0 ; j<prvm_type_size[type] ; j++)
-			if (v[j])
+			if (val->ivector[j])
 				break;
 		if (j == prvm_type_size[type])
 			continue;
@@ -657,7 +657,7 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 			strlcat(tempstring, " ", sizeof(tempstring));
 		strlcat(tempstring, " ", sizeof(tempstring));
 
-		name = PRVM_ValueString(prog, (etype_t)d->type, (prvm_eval_t *)v, valuebuf, sizeof(valuebuf));
+		name = PRVM_ValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf));
 		if (strlen(name) > sizeof(tempstring2)-4)
 		{
 			memcpy (tempstring2, name, sizeof(tempstring2)-4);
@@ -688,7 +688,7 @@ extern cvar_t developer_entityparsing;
 void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 {
 	ddef_t	*d;
-	int		*v;
+	prvm_eval_t	*val;
 	int		i, j;
 	const char	*name;
 	int		type;
@@ -715,19 +715,19 @@ void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 		if(strlen(name) > 1 && name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars, and ALSO other _? vars as some mods expect them to be never saved (TODO: a gameplayfix for using the "more precise" condition above?)
 
-		v = (int *)(ed->fields.vp + d->ofs);
+		val = (prvm_eval_t *)(ed->fields.fp + d->ofs);
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
 		for (j=0 ; j<prvm_type_size[type] ; j++)
-			if (v[j])
+			if (val->ivector[j])
 				break;
 		if (j == prvm_type_size[type])
 			continue;
 
 		FS_Printf(f,"\"%s\" ",name);
 		prog->statestring = va(vabuf, sizeof(vabuf), "PRVM_ED_Write, ent=%d, name=%s", i, name);
-		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(prog, (etype_t)d->type, (prvm_eval_t *)v, valuebuf, sizeof(valuebuf)));
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf)));
 		prog->statestring = NULL;
 	}
 
@@ -875,7 +875,7 @@ void PRVM_ED_WriteGlobals (prvm_prog_t *prog, qfile_t *f)
 
 		prog->statestring = va(vabuf, sizeof(vabuf), "PRVM_ED_WriteGlobals, name=%s", name);
 		FS_Printf(f,"\"%s\" ", name);
-		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(prog, (etype_t)type, (prvm_eval_t *)&prog->globals.generic[def->ofs], valuebuf, sizeof(valuebuf)));
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(prog, (etype_t)type, (prvm_eval_t *)&prog->globals.fp[def->ofs], valuebuf, sizeof(valuebuf)));
 		prog->statestring = NULL;
 	}
 	FS_Print(f,"}\n");
@@ -946,9 +946,9 @@ qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, ddef_t *key, c
 	mfunction_t *func;
 
 	if (ent)
-		val = (prvm_eval_t *)(ent->fields.vp + key->ofs);
+		val = (prvm_eval_t *)(ent->fields.fp + key->ofs);
 	else
-		val = (prvm_eval_t *)(prog->globals.generic + key->ofs);
+		val = (prvm_eval_t *)(prog->globals.fp + key->ofs);
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
@@ -1002,7 +1002,7 @@ qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, ddef_t *key, c
 			PRVM_MEM_IncreaseEdicts(prog);
 		// if IncreaseEdicts was called the base pointer needs to be updated
 		if (ent)
-			val = (prvm_eval_t *)(ent->fields.vp + key->ofs);
+			val = (prvm_eval_t *)(ent->fields.fp + key->ofs);
 		val->edict = PRVM_EDICT_TO_PROG(PRVM_EDICT_NUM((int)i));
 		break;
 
@@ -1129,7 +1129,7 @@ static void PRVM_ED_EdictGet_f(void)
 		goto fail;
 	}
 
-	v = (prvm_eval_t *)(ed->fields.vp + key->ofs);
+	v = (prvm_eval_t *)(ed->fields.fp + key->ofs);
 	s = PRVM_UglyValueString(prog, (etype_t)key->type, v, valuebuf, sizeof(valuebuf));
 	if(Cmd_Argc() == 5)
 	{
@@ -1172,7 +1172,7 @@ static void PRVM_ED_GlobalGet_f(void)
 		goto fail;
 	}
 
-	v = (prvm_eval_t *) &prog->globals.generic[key->ofs];
+	v = (prvm_eval_t *) &prog->globals.fp[key->ofs];
 	s = PRVM_UglyValueString(prog, (etype_t)key->type, v, valuebuf, sizeof(valuebuf));
 	if(Cmd_Argc() == 4)
 	{
@@ -1370,7 +1370,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 
 		// clear it
 		if (ent != prog->edicts)	// hack
-			memset (ent->fields.vp, 0, prog->entityfields * 4);
+			memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 
 		data = PRVM_ED_ParseEdict (prog, data, ent);
 		parsed++;
@@ -1882,7 +1882,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	dstatement_t *instatements;
 	ddef_t *infielddefs;
 	ddef_t *inglobaldefs;
-	float *inglobals;
+	int *inglobals;
 	dfunction_t *infunctions;
 	char *instrings;
 	fs_offset_t filesize;
@@ -1891,6 +1891,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	int a;
 	int b;
 	int c;
+	union
+	{
+		unsigned int i;
+		float f;
+	}
+	u;
+	unsigned int d;
 	char vabuf[1024];
 
 	if (prog->loaded)
@@ -1930,7 +1937,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	prog->progs_numfunctions = LittleLong(dprograms->numfunctions);
 	instrings = (char *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_strings));
 	prog->progs_numstrings = LittleLong(dprograms->numstrings);
-	inglobals = (float *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_globals));
+	inglobals = (int *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_globals));
 	prog->progs_numglobals = LittleLong(dprograms->numglobals);
 	prog->progs_entityfields = LittleLong(dprograms->entityfields);
 
@@ -1957,7 +1964,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 
 	// we need to expand the globaldefs and fielddefs to include engine defs
 	prog->globaldefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobaldefs + numrequiredglobals) * sizeof(ddef_t));
-	prog->globals.generic = (float *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobals + requiredglobalspace) * sizeof(float));
+	prog->globals.fp = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobals + requiredglobalspace) * sizeof(prvm_vec_t));
 	prog->fielddefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numfielddefs + numrequiredfields) * sizeof(ddef_t));
 	// we need to convert the statements to our memory format
 	prog->statements = (mstatement_t *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(mstatement_t));
@@ -2032,8 +2039,26 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 #define remapfield(index) (index)
 
 	// copy globals
+	// FIXME: LordHavoc: this uses a crude way to identify integer constants, rather than checking for matching globaldefs and checking their type
 	for (i = 0;i < prog->progs_numglobals;i++)
-		((int *)prog->globals.generic)[remapglobal(i)] = LittleLong(((int *)inglobals)[i]);
+	{
+		u.i = LittleLong(inglobals[i]);
+		// most globals are 0, we only need to deal with the ones that are not
+		if (u.i)
+		{
+			d = u.i & 0xFF800000;
+			if ((d == 0xFF800000) || (d == 0))
+			{
+				// Looks like an integer (expand to int64)
+				prog->globals.ip[remapglobal(i)] = u.i;
+			}
+			else
+			{
+				// Looks like a float (expand to double)
+				prog->globals.fp[remapglobal(i)] = u.f;
+			}
+		}
+	}
 
 	// LordHavoc: TODO: support 32bit progs statement formats
 	// copy, remap globals in statements, bounds check
@@ -2385,7 +2410,7 @@ static void PRVM_Fields_f (void)
 	const char *name;
 	prvm_edict_t *ed;
 	ddef_t *d;
-	int *v;
+	prvm_eval_t *val;
 
 	// TODO
 	/*
@@ -2417,11 +2442,11 @@ static void PRVM_Fields_f (void)
 			name = PRVM_GetString(prog, d->s_name);
 			if (name[strlen(name)-2] == '_')
 				continue;	// skip _x, _y, _z vars
-			v = (int *)(ed->fields.vp + d->ofs);
+			val = (prvm_eval_t *)(ed->fields.fp + d->ofs);
 			// if the value is still all 0, skip the field
 			for (j = 0;j < prvm_type_size[d->type & ~DEF_SAVEGLOBAL];j++)
 			{
-				if (v[j])
+				if (val->ivector[j])
 				{
 					counts[i]++;
 					break;

@@ -28,19 +28,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
-typedef float vec_t;
-typedef vec_t vec2_t[2];
-typedef vec_t vec3_t[3];
-typedef vec_t vec4_t[4];
-typedef vec_t vec5_t[5];
-typedef vec_t vec6_t[6];
-typedef vec_t vec7_t[7];
-typedef vec_t vec8_t[8];
 struct mplane_s;
 extern vec3_t vec3_origin;
 
-#define nanmask (255<<23)
-#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
+#define float_nanmask (0x7F800000)
+#define double_nanmask (0x7FF8000000000000)
+#define FLOAT_IS_NAN(x) (((*(int *)&x)&float_nanmask)==float_nanmask)
+#define DOUBLE_IS_NAN(x) (((*(long long *)&x)&double_nanmask)==double_nanmask)
+
+#ifdef VEC_64
+#define VEC_IS_NAN(x) DOUBLE_IS_NAN(x)
+#else
+#define VEC_IS_NAN(x) FLOAT_IS_NAN(x)
+#endif
+
+#ifdef PRVM_64
+#define PRVM_IS_NAN(x) DOUBLE_IS_NAN(x)
+#else
+#define PRVM_IS_NAN(x) FLOAT_IS_NAN(x)
+#endif
 
 #define bound(min,num,max) ((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
@@ -82,7 +88,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector2Compare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1]))
 #define Vector2Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1])
 #define Vector2Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]))
-#define Vector2Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c))
+#define Vector2Set(a,b,c) ((a)[0]=(b),(a)[1]=(c))
 #define Vector2Scale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale))
 #define Vector2Normalize2(v,dest) {float ilength = (float) sqrt(DotProduct2((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;}
 
@@ -287,7 +293,7 @@ float RadiusFromBoundsAndOrigin (const vec3_t mins, const vec3_t maxs, const vec
 struct matrix4x4_s;
 /// print a matrix to the console
 void Matrix4x4_Print(const struct matrix4x4_s *in);
-int Math_atov(const char *s, vec3_t out);
+int Math_atov(const char *s, prvm_vec3_t out);
 
 void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f);
 

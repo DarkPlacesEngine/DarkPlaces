@@ -574,7 +574,7 @@ void IN_Move( void )
 	scr_numtouchscreenareas = 0;
 	if (vid_touchscreen.integer)
 	{
-		vec3_t move, aim, click;
+		float move[3], aim[3], click[3];
 		static qboolean buttons[16];
 		static keydest_t oldkeydest;
 		keydest_t keydest = (key_consoleactive & KEY_CONSOLEACTIVE_USER) ? key_console : key_dest;

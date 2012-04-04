@@ -152,18 +152,18 @@ void MSG_WriteChar (sizebuf_t *sb, int c);
 void MSG_WriteByte (sizebuf_t *sb, int c);
 void MSG_WriteShort (sizebuf_t *sb, int c);
 void MSG_WriteLong (sizebuf_t *sb, int c);
-void MSG_WriteFloat (sizebuf_t *sb, float f);
+void MSG_WriteFloat (sizebuf_t *sb, vec_t f);
 void MSG_WriteString (sizebuf_t *sb, const char *s);
 void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s);
-void MSG_WriteAngle8i (sizebuf_t *sb, float f);
-void MSG_WriteAngle16i (sizebuf_t *sb, float f);
-void MSG_WriteAngle32f (sizebuf_t *sb, float f);
-void MSG_WriteCoord13i (sizebuf_t *sb, float f);
-void MSG_WriteCoord16i (sizebuf_t *sb, float f);
-void MSG_WriteCoord32f (sizebuf_t *sb, float f);
-void MSG_WriteCoord (sizebuf_t *sb, float f, protocolversion_t protocol);
-void MSG_WriteVector (sizebuf_t *sb, float *v, protocolversion_t protocol);
-void MSG_WriteAngle (sizebuf_t *sb, float f, protocolversion_t protocol);
+void MSG_WriteAngle8i (sizebuf_t *sb, vec_t f);
+void MSG_WriteAngle16i (sizebuf_t *sb, vec_t f);
+void MSG_WriteAngle32f (sizebuf_t *sb, vec_t f);
+void MSG_WriteCoord13i (sizebuf_t *sb, vec_t f);
+void MSG_WriteCoord16i (sizebuf_t *sb, vec_t f);
+void MSG_WriteCoord32f (sizebuf_t *sb, vec_t f);
+void MSG_WriteCoord (sizebuf_t *sb, vec_t f, protocolversion_t protocol);
+void MSG_WriteVector (sizebuf_t *sb, const vec3_t v, protocolversion_t protocol);
+void MSG_WriteAngle (sizebuf_t *sb, vec_t f, protocolversion_t protocol);
 
 void MSG_BeginReading (sizebuf_t *sb);
 int MSG_ReadLittleShort (sizebuf_t *sb);
@@ -188,7 +188,7 @@ float MSG_ReadCoord13i (sizebuf_t *sb);
 float MSG_ReadCoord16i (sizebuf_t *sb);
 float MSG_ReadCoord32f (sizebuf_t *sb);
 float MSG_ReadCoord (sizebuf_t *sb, protocolversion_t protocol);
-void MSG_ReadVector (sizebuf_t *sb, float *v, protocolversion_t protocol);
+void MSG_ReadVector (sizebuf_t *sb, vec3_t v, protocolversion_t protocol);
 float MSG_ReadAngle (sizebuf_t *sb, protocolversion_t protocol);
 //@}
 //============================================================================

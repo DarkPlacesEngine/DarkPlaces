@@ -194,26 +194,32 @@ static void SV_AirAccelerate (vec3_t wishveloc)
 static void DropPunchAngle (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	float len;
-	vec3_t v;
+	vec_t len;
+	vec3_t punchangle, punchvector;
 
-	len = VectorNormalizeLength (PRVM_serveredictvector(host_client->edict, punchangle));
+	VectorCopy(PRVM_serveredictvector(host_client->edict, punchangle), punchangle);
+	VectorCopy(PRVM_serveredictvector(host_client->edict, punchvector), punchvector);
 
-	len -= 10*sv.frametime;
-	if (len < 0)
-		len = 0;
-	VectorScale (PRVM_serveredictvector(host_client->edict, punchangle), len, PRVM_serveredictvector(host_client->edict, punchangle));
+	len = VectorNormalizeLength(punchangle);
+	if (len > 0)
+	{
+		len -= 10*sv.frametime;
+		if (len < 0)
+			len = 0;
+		VectorScale(punchangle, len, punchangle);
+	}
 
-	VectorCopy(PRVM_serveredictvector(host_client->edict, punchvector), v);
-	len = VectorNormalizeLength(v);
+	len = VectorNormalizeLength(punchvector);
 	if (len > 0)
 	{
 		len -= 20*sv.frametime;
 		if (len < 0)
 			len = 0;
-		VectorScale(v, len, v);
+		VectorScale(punchvector, len, punchvector);
 	}
-	VectorCopy(v, PRVM_serveredictvector(host_client->edict, punchvector));
+
+	VectorCopy(punchangle, PRVM_serveredictvector(host_client->edict, punchangle));
+	VectorCopy(punchvector, PRVM_serveredictvector(host_client->edict, punchvector));
 }
 
 /*
@@ -226,11 +232,12 @@ static void SV_WaterMove (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
-	vec3_t wishvel;
-	float speed, newspeed, wishspeed, addspeed, accelspeed, temp;
+	vec3_t wishvel, v_angle;
+	vec_t speed, newspeed, wishspeed, addspeed, accelspeed, temp;
 
 	// user intentions
-	AngleVectors (PRVM_serveredictvector(host_client->edict, v_angle), forward, right, up);
+	VectorCopy(PRVM_serveredictvector(host_client->edict, v_angle), v_angle);
+	AngleVectors(v_angle, forward, right, up);
 
 	for (i=0 ; i<3 ; i++)
 		wishvel[i] = forward[i]*cmd.forwardmove + right[i]*cmd.sidemove;
@@ -360,7 +367,7 @@ the angle fields specify an exact angular motion in degrees
 void SV_ClientThink (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	vec3_t v_angle;
+	vec3_t v_angle, angles, velocity;
 
 	//Con_Printf("clientthink for %ims\n", (int) (sv.frametime * 1000));
 
@@ -394,7 +401,9 @@ void SV_ClientThink (void)
 	// angles
 	// show 1/3 the pitch angle and all the roll angle
 	VectorAdd (PRVM_serveredictvector(host_client->edict, v_angle), PRVM_serveredictvector(host_client->edict, punchangle), v_angle);
-	PRVM_serveredictvector(host_client->edict, angles)[ROLL] = V_CalcRoll (PRVM_serveredictvector(host_client->edict, angles), PRVM_serveredictvector(host_client->edict, velocity))*4;
+	VectorCopy(PRVM_serveredictvector(host_client->edict, angles), angles);
+	VectorCopy(PRVM_serveredictvector(host_client->edict, velocity), velocity);
+	PRVM_serveredictvector(host_client->edict, angles)[ROLL] = V_CalcRoll (angles, velocity)*4;
 	if (!PRVM_serveredictfloat(host_client->edict, fixangle))
 	{
 		PRVM_serveredictvector(host_client->edict, angles)[PITCH] = -v_angle[PITCH]/3;

@@ -1160,7 +1160,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	unsigned int customizeentityforclient;
 	unsigned int sendentity;
 	float f;
-	float *v;
+	prvm_vec_t *v;
 	vec3_t cullmins, cullmaxs;
 	dp_model_t *model;
 
@@ -1993,7 +1993,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	{
 		// angle fixing was requested by global thinking code...
 		// so store the current angles for later use
-		memcpy(host_client->fixangle_angles, PRVM_serveredictvector(ent, angles), sizeof(host_client->fixangle_angles));
+		VectorCopy(PRVM_serveredictvector(ent, angles), host_client->fixangle_angles);
 		host_client->fixangle_angles_set = TRUE;
 
 		// and clear fixangle for the next frame
@@ -3409,7 +3409,7 @@ void SV_SpawnServer (const char *server)
 //
 	// AK possible hack since num_edicts is still 0
 	ent = PRVM_EDICT_NUM(0);
-	memset (ent->fields.vp, 0, prog->entityfields * 4);
+	memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 	ent->priv.server->free = false;
 	PRVM_serveredictstring(ent, model) = PRVM_SetEngineString(prog, sv.worldname);
 	PRVM_serveredictfloat(ent, modelindex) = 1;		// world model
@@ -3985,7 +3985,7 @@ static int SV_ThreadFunc(void *voiddata)
 			if (sv.paused == 1 && sv_realtime > sv.pausedstart && sv.pausedstart > 0)
 			{
 				PRVM_serverglobalfloat(time) = sv.time;
-				prog->globals.generic[OFS_PARM0] = sv_realtime - sv.pausedstart;
+				prog->globals.fp[OFS_PARM0] = sv_realtime - sv.pausedstart;
 				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
 			}
 

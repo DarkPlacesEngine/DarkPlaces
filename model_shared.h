@@ -801,7 +801,7 @@ typedef struct model_brush_s
 	int (*FindBoxClusters)(struct model_s *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
-	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
+	mleaf_t *(*PointInLeaf)(struct model_s *model, const vec3_t p);
 	// these are actually only found on brushq1, but NULL is handled gracefully
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, unsigned char *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);

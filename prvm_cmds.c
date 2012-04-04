@@ -455,7 +455,7 @@ vector normalize(vector)
 */
 void VM_normalize(prvm_prog_t *prog)
 {
-	float	*value1;
+	prvm_vec_t	*value1;
 	vec3_t	newvalue;
 	double	f;
 
@@ -497,8 +497,8 @@ float vectoyaw(vector)
 */
 void VM_vectoyaw(prvm_prog_t *prog)
 {
-	float	*value1;
-	float	yaw;
+	prvm_vec_t	*value1;
+	prvm_vec_t	yaw;
 
 	VM_SAFEPARMCOUNT(1,VM_vectoyaw);
 
@@ -526,9 +526,18 @@ vector vectoangles(vector[, vector])
 */
 void VM_vectoangles(prvm_prog_t *prog)
 {
+	vec3_t result, forward, up;
 	VM_SAFEPARMCOUNTRANGE(1, 2,VM_vectoangles);
 
-	AnglesFromVectors(PRVM_G_VECTOR(OFS_RETURN), PRVM_G_VECTOR(OFS_PARM0), prog->argc >= 2 ? PRVM_G_VECTOR(OFS_PARM1) : NULL, true);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), forward);
+	if (prog->argc >= 2)
+	{
+		VectorCopy(PRVM_G_VECTOR(OFS_PARM1), up);
+		AnglesFromVectors(result, forward, up, true);
+	}
+	else
+		AnglesFromVectors(result, forward, NULL, true);
+	VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 /*
@@ -2069,7 +2078,7 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 	// put the data into a string
 	ddef_t *d;
 	int type, j;
-	int *v;
+	prvm_eval_t *val;
 	prvm_edict_t * ent;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	char valuebuf[MAX_INPUTLINE];
@@ -2091,12 +2100,12 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_entityfielddata: %s: entity %i is free !\n", prog->name, PRVM_NUM_FOR_EDICT(ent));
 		return;
 	}
-	v = (int *)((char *)ent->fields.vp + d->ofs*4);
+	val = (prvm_eval_t *)(ent->fields.fp + d->ofs);
 	
 	// if it's 0 or blank, return an empty string
 	type = d->type & ~DEF_SAVEGLOBAL;
 	for (j=0 ; j<prvm_type_size[type] ; j++)
-		if (v[j])
+		if (val->ivector[j])
 			break;
 	if (j == prvm_type_size[type])
 	{
@@ -2104,7 +2113,7 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 		return;
 	}
 		
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_UglyValueString(prog, (etype_t)d->type, (prvm_eval_t *)v, valuebuf, sizeof(valuebuf)));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_UglyValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf)));
 }
 
 // KrimZon - DP_QC_ENTITYDATA
@@ -3325,7 +3334,7 @@ float	drawcharacter(vector position, float character, vector scale, vector rgb, 
 */
 void VM_drawcharacter(prvm_prog_t *prog)
 {
-	float *pos,*scale,*rgb;
+	prvm_vec_t *pos,*scale,*rgb;
 	char   character;
 	int flag;
 	float sx, sy;
@@ -3375,7 +3384,7 @@ float	drawstring(vector position, string text, vector scale, vector rgb, float a
 */
 void VM_drawstring(prvm_prog_t *prog)
 {
-	float *pos,*scale,*rgb;
+	prvm_vec_t *pos,*scale,*rgb;
 	const char  *string;
 	int flag = 0;
 	float sx, sy;
@@ -3422,7 +3431,7 @@ float	drawcolorcodedstring(vector position, string text, vector scale, vector rg
 */
 void VM_drawcolorcodedstring(prvm_prog_t *prog)
 {
-	float *pos, *scale;
+	prvm_vec_t *pos, *scale;
 	const char  *string;
 	int flag;
 	vec3_t rgb;
@@ -3485,7 +3494,7 @@ float	stringwidth(string text, float allowColorCodes, float size)
 void VM_stringwidth(prvm_prog_t *prog)
 {
 	const char  *string;
-	float *szv;
+	vec2_t szv;
 	float mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
 	int colors;
 	float sx, sy;
@@ -3495,14 +3504,13 @@ void VM_stringwidth(prvm_prog_t *prog)
 	getdrawfontscale(prog, &sx, &sy);
 	if(prog->argc == 3)
 	{
-		szv = PRVM_G_VECTOR(OFS_PARM2);
+		Vector2Copy(PRVM_G_VECTOR(OFS_PARM2), szv);
 		mult = 1;
 	}
 	else
 	{
 		// we want the width for 8x8 font size, divided by 8
-		static float defsize[] = {8, 8};
-		szv = defsize;
+		Vector2Set(szv, 8, 8);
 		mult = 0.125;
 		// to make sure snapping is turned off, ALWAYS use a nontrivial scale in this case
 		if(sx >= 0.9 && sx <= 1.1)
@@ -3711,7 +3719,7 @@ float	drawpic(vector position, string pic, vector size, vector rgb, float alpha,
 void VM_drawpic(prvm_prog_t *prog)
 {
 	const char *picname;
-	float *size, *pos, *rgb;
+	prvm_vec_t *size, *pos, *rgb;
 	int flag = 0;
 
 	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawpic);
@@ -3756,7 +3764,7 @@ float	drawrotpic(vector position, string pic, vector size, vector org, float ang
 void VM_drawrotpic(prvm_prog_t *prog)
 {
 	const char *picname;
-	float *size, *pos, *org, *rgb;
+	prvm_vec_t *size, *pos, *org, *rgb;
 	int flag;
 
 	VM_SAFEPARMCOUNT(8,VM_drawrotpic);
@@ -3802,7 +3810,7 @@ float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector
 void VM_drawsubpic(prvm_prog_t *prog)
 {
 	const char *picname;
-	float *size, *pos, *rgb, *srcPos, *srcSize, alpha;
+	prvm_vec_t *size, *pos, *rgb, *srcPos, *srcSize, alpha;
 	int flag;
 
 	VM_SAFEPARMCOUNT(8,VM_drawsubpic);
@@ -3855,7 +3863,7 @@ float drawfill(vector position, vector size, vector rgb, float alpha, float flag
 */
 void VM_drawfill(prvm_prog_t *prog)
 {
-	float *size, *pos, *rgb;
+	prvm_vec_t *size, *pos, *rgb;
 	int flag;
 
 	VM_SAFEPARMCOUNT(5,VM_drawfill);
@@ -4298,8 +4306,13 @@ void makevectors(vector angle)
 */
 void VM_makevectors (prvm_prog_t *prog)
 {
+	vec3_t angles, forward, right, up;
 	VM_SAFEPARMCOUNT(1, VM_makevectors);
-	AngleVectors(PRVM_G_VECTOR(OFS_PARM0), PRVM_gameglobalvector(v_forward), PRVM_gameglobalvector(v_right), PRVM_gameglobalvector(v_up));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), angles);
+	AngleVectors(angles, forward, right, up);
+	VectorCopy(forward, PRVM_gameglobalvector(v_forward));
+	VectorCopy(right, PRVM_gameglobalvector(v_right));
+	VectorCopy(up, PRVM_gameglobalvector(v_up));
 }
 
 /*
@@ -4312,9 +4325,13 @@ vectorvectors(vector)
 */
 void VM_vectorvectors (prvm_prog_t *prog)
 {
+	vec3_t forward, right, up;
 	VM_SAFEPARMCOUNT(1, VM_vectorvectors);
-	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), PRVM_gameglobalvector(v_forward));
-	VectorVectors(PRVM_gameglobalvector(v_forward), PRVM_gameglobalvector(v_right), PRVM_gameglobalvector(v_up));
+	VectorNormalize2(PRVM_G_VECTOR(OFS_PARM0), forward);
+	VectorVectors(forward, right, up);
+	VectorCopy(forward, PRVM_gameglobalvector(v_forward));
+	VectorCopy(right, PRVM_gameglobalvector(v_right));
+	VectorCopy(up, PRVM_gameglobalvector(v_up));
 }
 
 /*
@@ -4326,7 +4343,7 @@ void drawline(float width, vector pos1, vector pos2, vector rgb, float alpha, fl
 */
 void VM_drawline (prvm_prog_t *prog)
 {
-	float	*c1, *c2, *rgb;
+	prvm_vec_t	*c1, *c2, *rgb;
 	float	alpha, width;
 	unsigned char	flags;
 
@@ -6421,8 +6438,8 @@ void VM_sprintf(prvm_prog_t *prog)
 	char formatbuf[16];
 	char *f;
 	int isfloat;
-	static int dummyivec[3] = {0, 0, 0};
-	static float dummyvec[3] = {0, 0, 0};
+	static prvm_int_t dummyivec[3] = {0, 0, 0};
+	static prvm_vec_t dummyvec[3] = {0, 0, 0};
 	char vabuf[1024];
 
 #define PRINTF_ALTERNATE 1
@@ -6438,7 +6455,7 @@ void VM_sprintf(prvm_prog_t *prog)
 #define GETARG_FLOAT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_FLOAT(OFS_PARM0 + 3 * (a))) : 0)
 #define GETARG_VECTOR(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_VECTOR(OFS_PARM0 + 3 * (a))) : dummyvec)
 #define GETARG_INT(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_INT(OFS_PARM0 + 3 * (a))) : 0)
-#define GETARG_INTVECTOR(a) (((a)>=1 && (a)<prog->argc) ? ((int*) PRVM_G_VECTOR(OFS_PARM0 + 3 * (a))) : dummyivec)
+#define GETARG_INTVECTOR(a) (((a)>=1 && (a)<prog->argc) ? ((prvm_int_t*) PRVM_G_VECTOR(OFS_PARM0 + 3 * (a))) : dummyivec)
 #define GETARG_STRING(a) (((a)>=1 && (a)<prog->argc) ? (PRVM_G_STRING(OFS_PARM0 + 3 * (a))) : "")
 
 	for(;;)
@@ -6921,6 +6938,7 @@ void VM_getsurfacepoint(prvm_prog_t *prog)
 	dp_model_t *model;
 	msurface_t *surface;
 	int pointnum;
+	vec3_t result;
 	VM_SAFEPARMCOUNT(3, VM_getsurfacepoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
@@ -6931,7 +6949,8 @@ void VM_getsurfacepoint(prvm_prog_t *prog)
 	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
 	animatemodel(prog, model, ed);
-	applytransform_forward(prog, &(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+	applytransform_forward(prog, &(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, result);
+	VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacepointattribute,     // #486 vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
 // float SPA_POSITION = 0;
@@ -6948,6 +6967,7 @@ void VM_getsurfacepointattribute(prvm_prog_t *prog)
 	msurface_t *surface;
 	int pointnum;
 	int attributetype;
+	vec3_t result;
 
 	VM_SAFEPARMCOUNT(4, VM_getsurfacepoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
@@ -6964,36 +6984,40 @@ void VM_getsurfacepointattribute(prvm_prog_t *prog)
 	switch( attributetype ) {
 		// float SPA_POSITION = 0;
 		case 0:
-			applytransform_forward(prog, &(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward(prog, &(animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, result);
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_S_AXIS = 1;
 		case 1:
-			applytransform_forward_direction(prog, &(animatemodel_cache.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(prog, &(animatemodel_cache.data_svector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, result);
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_T_AXIS = 2;
 		case 2:
-			applytransform_forward_direction(prog, &(animatemodel_cache.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(prog, &(animatemodel_cache.data_tvector3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, result);
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_R_AXIS = 3; // same as SPA_NORMAL
 		case 3:
-			applytransform_forward_direction(prog, &(animatemodel_cache.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, PRVM_G_VECTOR(OFS_RETURN));
+			applytransform_forward_direction(prog, &(animatemodel_cache.data_normal3f + 3 * surface->num_firstvertex)[pointnum * 3], ed, result);
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		// float SPA_TEXCOORDS0 = 4;
 		case 4: {
-			float *ret = PRVM_G_VECTOR(OFS_RETURN);
 			float *texcoord = &(model->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[pointnum * 2];
-			ret[0] = texcoord[0];
-			ret[1] = texcoord[1];
-			ret[2] = 0.0f;
+			result[0] = texcoord[0];
+			result[1] = texcoord[1];
+			result[2] = 0.0f;
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		}
 		// float SPA_LIGHTMAP0_TEXCOORDS = 5;
 		case 5: {
-			float *ret = PRVM_G_VECTOR(OFS_RETURN);
 			float *texcoord = &(model->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[pointnum * 2];
-			ret[0] = texcoord[0];
-			ret[1] = texcoord[1];
-			ret[2] = 0.0f;
+			result[0] = texcoord[0];
+			result[1] = texcoord[1];
+			result[2] = 0.0f;
+			VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		}
 		// float SPA_LIGHTMAP0_COLOR = 6;
@@ -7012,6 +7036,7 @@ void VM_getsurfacenormal(prvm_prog_t *prog)
 	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
+	vec3_t result;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacenormal);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	if (!(model = getmodel(prog, PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -7020,8 +7045,9 @@ void VM_getsurfacenormal(prvm_prog_t *prog)
 	// well for curved surfaces or arbitrary meshes
 	animatemodel(prog, model, PRVM_G_EDICT(OFS_PARM0));
 	TriangleNormal((animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex), (animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex) + 3, (animatemodel_cache.data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
-	applytransform_forward_normal(prog, normal, PRVM_G_EDICT(OFS_PARM0), PRVM_G_VECTOR(OFS_RETURN));
-	VectorNormalize(PRVM_G_VECTOR(OFS_RETURN));
+	applytransform_forward_normal(prog, normal, PRVM_G_EDICT(OFS_PARM0), result);
+	VectorNormalize(result);
+	VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 void VM_getsurfacetexture(prvm_prog_t *prog)
@@ -7043,11 +7069,11 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 	prvm_edict_t *ed;
 	dp_model_t *model;
 	msurface_t *surface;
-	vec_t *point;
+	vec3_t point;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacenearpoint);
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
 	ed = PRVM_G_EDICT(OFS_PARM0);
-	point = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), point);
 
 	if (!ed || ed->priv.server->free)
 		return;
@@ -7090,14 +7116,15 @@ void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 	prvm_edict_t *ed;
 	dp_model_t *model;
 	msurface_t *surface;
-	vec3_t p, out;
+	vec3_t p, out, inp;
 	VM_SAFEPARMCOUNT(3, VM_te_getsurfaceclippedpoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(prog, ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
 	animatemodel(prog, model, ed);
-	applytransform_inverted(prog, PRVM_G_VECTOR(OFS_PARM2), ed, p);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), inp);
+	applytransform_inverted(prog, inp, ed, p);
 	clippointtosurface(prog, ed, model, surface, p, out);
 	VectorAdd(out, PRVM_serveredictvector(ed, origin), PRVM_G_VECTOR(OFS_RETURN));
 }
