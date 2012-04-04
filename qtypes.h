@@ -36,7 +36,7 @@ typedef bool qboolean;
 #endif
 
 // LordHavoc: upgrade the prvm to double precision for better time values
-#define PRVM_64
+//#define PRVM_64
 #ifdef PRVM_64
 typedef double prvm_vec_t;
 typedef long long prvm_int_t;
