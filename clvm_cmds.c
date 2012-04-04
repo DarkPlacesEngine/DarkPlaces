@@ -29,15 +29,20 @@ r_refdef_view_t csqc_main_r_refdef_view;
 // #1 void(vector ang) makevectors
 static void VM_CL_makevectors (prvm_prog_t *prog)
 {
+	vec3_t angles, forward, right, up;
 	VM_SAFEPARMCOUNT(1, VM_CL_makevectors);
-	AngleVectors (PRVM_G_VECTOR(OFS_PARM0), PRVM_clientglobalvector(v_forward), PRVM_clientglobalvector(v_right), PRVM_clientglobalvector(v_up));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), angles);
+	AngleVectors(angles, forward, right, up);
+	VectorCopy(forward, PRVM_clientglobalvector(v_forward));
+	VectorCopy(right, PRVM_clientglobalvector(v_right));
+	VectorCopy(up, PRVM_clientglobalvector(v_up));
 }
 
 // #2 void(entity e, vector o) setorigin
 static void VM_CL_setorigin (prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
-	float	*org;
+	prvm_vec_t	*org;
 	VM_SAFEPARMCOUNT(2, VM_CL_setorigin);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
@@ -58,7 +63,7 @@ static void VM_CL_setorigin (prvm_prog_t *prog)
 	CL_LinkEdict(e);
 }
 
-static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, float *min, float *max)
+static void SetMinMaxSizePRVM (prvm_prog_t *prog, prvm_edict_t *e, prvm_vec_t *min, prvm_vec_t *max)
 {
 	int		i;
 
@@ -72,6 +77,14 @@ static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, float *min, float
 	VectorSubtract (max, min, PRVM_clientedictvector(e, size));
 
 	CL_LinkEdict (e);
+}
+
+static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, const vec_t *min, const vec_t *max)
+{
+	prvm_vec3_t mins, maxs;
+	VectorCopy(min, mins);
+	VectorCopy(max, maxs);
+	SetMinMaxSizePRVM(prog, e, mins, maxs);
 }
 
 // #3 void(entity e, string m) setmodel
@@ -116,7 +129,8 @@ static void VM_CL_setmodel (prvm_prog_t *prog)
 
 	if( mod ) {
 		// TODO: check if this breaks needed consistency and maybe add a cvar for it too?? [1/10/2008 Black]
-		//SetMinMaxSize (e, mod->normalmins, mod->normalmaxs);
+		// LordHavoc: erm you broke it by commenting this out - setmodel must do setsize or else the qc can't find out the model size, and ssqc does this by necessity, consistency.
+		SetMinMaxSize (prog, e, mod->normalmins, mod->normalmaxs);
 	}
 	else
 	{
@@ -129,7 +143,7 @@ static void VM_CL_setmodel (prvm_prog_t *prog)
 static void VM_CL_setsize (prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
-	float			*min, *max;
+	vec3_t		mins, maxs;
 	VM_SAFEPARMCOUNT(3, VM_CL_setsize);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
@@ -143,10 +157,10 @@ static void VM_CL_setsize (prvm_prog_t *prog)
 		VM_Warning(prog, "setsize: can not modify free entity\n");
 		return;
 	}
-	min = PRVM_G_VECTOR(OFS_PARM1);
-	max = PRVM_G_VECTOR(OFS_PARM2);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), mins);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), maxs);
 
-	SetMinMaxSize( prog, e, min, max );
+	SetMinMaxSize( prog, e, mins, maxs );
 
 	CL_LinkEdict(e);
 }
@@ -257,7 +271,7 @@ static void CL_VM_SetTraceGlobals(prvm_prog_t *prog, const trace_t *trace, int s
 // #16 void(vector v1, vector v2, float movetype, entity ignore) traceline
 static void VM_CL_traceline (prvm_prog_t *prog)
 {
-	float	*v1, *v2;
+	vec3_t	v1, v2;
 	trace_t	trace;
 	int		move, svent;
 	prvm_edict_t	*ent;
@@ -268,12 +282,12 @@ static void VM_CL_traceline (prvm_prog_t *prog)
 
 	prog->xfunction->builtinsprofile += 30;
 
-	v1 = PRVM_G_VECTOR(OFS_PARM0);
-	v2 = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), v1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), v2);
 	move = (int)PRVM_G_FLOAT(OFS_PARM2);
 	ent = PRVM_G_EDICT(OFS_PARM3);
 
-	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v2[1]) || IS_NAN(v2[2]))
+	if (VEC_IS_NAN(v1[0]) || VEC_IS_NAN(v1[1]) || VEC_IS_NAN(v1[2]) || VEC_IS_NAN(v2[0]) || VEC_IS_NAN(v2[1]) || VEC_IS_NAN(v2[2]))
 		prog->error_cmd("%s: NAN errors detected in traceline('%f %f %f', '%f %f %f', %i, entity %i)\n", prog->name, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
 	trace = CL_TraceLine(v1, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true, false);
@@ -296,7 +310,7 @@ tracebox (vector1, vector mins, vector maxs, vector2, tryents)
 // LordHavoc: added this for my own use, VERY useful, similar to traceline
 static void VM_CL_tracebox (prvm_prog_t *prog)
 {
-	float	*v1, *v2, *m1, *m2;
+	vec3_t	v1, v2, m1, m2;
 	trace_t	trace;
 	int		move, svent;
 	prvm_edict_t	*ent;
@@ -306,14 +320,14 @@ static void VM_CL_tracebox (prvm_prog_t *prog)
 
 	prog->xfunction->builtinsprofile += 30;
 
-	v1 = PRVM_G_VECTOR(OFS_PARM0);
-	m1 = PRVM_G_VECTOR(OFS_PARM1);
-	m2 = PRVM_G_VECTOR(OFS_PARM2);
-	v2 = PRVM_G_VECTOR(OFS_PARM3);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), v1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), m1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), m2);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM3), v2);
 	move = (int)PRVM_G_FLOAT(OFS_PARM4);
 	ent = PRVM_G_EDICT(OFS_PARM5);
 
-	if (IS_NAN(v1[0]) || IS_NAN(v1[1]) || IS_NAN(v1[2]) || IS_NAN(v2[0]) || IS_NAN(v2[1]) || IS_NAN(v2[2]))
+	if (VEC_IS_NAN(v1[0]) || VEC_IS_NAN(v1[1]) || VEC_IS_NAN(v1[2]) || VEC_IS_NAN(v2[0]) || VEC_IS_NAN(v2[1]) || VEC_IS_NAN(v2[2]))
 		prog->error_cmd("%s: NAN errors detected in tracebox('%f %f %f', '%f %f %f', '%f %f %f', '%f %f %f', %i, entity %i)\n", prog->name, v1[0], v1[1], v1[2], m1[0], m1[1], m1[2], m2[0], m2[1], m2[2], v2[0], v2[1], v2[2], move, PRVM_EDICT_TO_PROG(ent));
 
 	trace = CL_TraceBox(v1, m1, m2, v2, move, ent, CL_GenericHitSuperContentsMask(ent), CL_HitNetworkBrushModels(move), CL_HitNetworkPlayers(move), &svent, true);
@@ -326,7 +340,7 @@ static trace_t CL_Trace_Toss (prvm_prog_t *prog, prvm_edict_t *tossent, prvm_edi
 {
 	int i;
 	float gravity;
-	vec3_t move, end;
+	vec3_t start, end, mins, maxs, move;
 	vec3_t original_origin;
 	vec3_t original_velocity;
 	vec3_t original_angles;
@@ -349,7 +363,10 @@ static trace_t CL_Trace_Toss (prvm_prog_t *prog, prvm_edict_t *tossent, prvm_edi
 		VectorMA (PRVM_clientedictvector(tossent, angles), 0.05, PRVM_clientedictvector(tossent, avelocity), PRVM_clientedictvector(tossent, angles));
 		VectorScale (PRVM_clientedictvector(tossent, velocity), 0.05, move);
 		VectorAdd (PRVM_clientedictvector(tossent, origin), move, end);
-		trace = CL_TraceBox(PRVM_clientedictvector(tossent, origin), PRVM_clientedictvector(tossent, mins), PRVM_clientedictvector(tossent, maxs), end, MOVE_NORMAL, tossent, CL_GenericHitSuperContentsMask(tossent), true, true, NULL, true);
+		VectorCopy(PRVM_clientedictvector(tossent, origin), start);
+		VectorCopy(PRVM_clientedictvector(tossent, mins), mins);
+		VectorCopy(PRVM_clientedictvector(tossent, maxs), maxs);
+		trace = CL_TraceBox(start, mins, maxs, end, MOVE_NORMAL, tossent, CL_GenericHitSuperContentsMask(tossent), true, true, NULL, true);
 		VectorCopy (trace.endpos, PRVM_clientedictvector(tossent, origin));
 
 		if (trace.fraction < 1)
@@ -513,7 +530,7 @@ static void VM_CL_findradius (prvm_prog_t *prog)
 static void VM_CL_droptofloor (prvm_prog_t *prog)
 {
 	prvm_edict_t		*ent;
-	vec3_t				end;
+	vec3_t				start, end, mins, maxs;
 	trace_t				trace;
 
 	VM_SAFEPARMCOUNTRANGE(0, 2, VM_CL_droptofloor); // allow 2 parameters because the id1 defs.qc had an incorrect prototype
@@ -533,10 +550,13 @@ static void VM_CL_droptofloor (prvm_prog_t *prog)
 		return;
 	}
 
-	VectorCopy (PRVM_clientedictvector(ent, origin), end);
+	VectorCopy(PRVM_clientedictvector(ent, origin), start);
+	VectorCopy(PRVM_clientedictvector(ent, mins), mins);
+	VectorCopy(PRVM_clientedictvector(ent, maxs), maxs);
+	VectorCopy(PRVM_clientedictvector(ent, origin), end);
 	end[2] -= 256;
 
-	trace = CL_TraceBox(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), PRVM_clientedictvector(ent, maxs), end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
+	trace = CL_TraceBox(start, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, NULL, true);
 
 	if (trace.fraction != 1)
 	{
@@ -643,20 +663,22 @@ realcheck:
 // #41 float(vector v) pointcontents
 static void VM_CL_pointcontents (prvm_prog_t *prog)
 {
+	vec3_t point;
 	VM_SAFEPARMCOUNT(1, VM_CL_pointcontents);
-	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CL_PointSuperContents(PRVM_G_VECTOR(OFS_PARM0)));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), point);
+	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CL_PointSuperContents(point));
 }
 
 // #48 void(vector o, vector d, float color, float count) particle
 static void VM_CL_particle (prvm_prog_t *prog)
 {
-	float	*org, *dir;
+	vec3_t org, dir;
 	int		count;
 	unsigned char	color;
 	VM_SAFEPARMCOUNT(4, VM_CL_particle);
 
-	org = PRVM_G_VECTOR(OFS_PARM0);
-	dir = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
 	color = (int)PRVM_G_FLOAT(OFS_PARM2);
 	count = (int)PRVM_G_FLOAT(OFS_PARM3);
 	CL_ParticleEffect(EFFECT_SVC_PARTICLE, count, org, org, dir, dir, NULL, color);
@@ -665,11 +687,11 @@ static void VM_CL_particle (prvm_prog_t *prog)
 // #74 void(vector pos, string samp, float vol, float atten) ambientsound
 static void VM_CL_ambientsound (prvm_prog_t *prog)
 {
-	float	*f;
+	vec3_t f;
 	sfx_t	*s;
 	VM_SAFEPARMCOUNT(4, VM_CL_ambientsound);
 	s = S_FindName(PRVM_G_STRING(OFS_PARM0));
-	f = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f);
 	S_StaticSound (s, f, PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3)*64);
 }
 
@@ -677,11 +699,11 @@ static void VM_CL_ambientsound (prvm_prog_t *prog)
 static void VM_CL_getlight (prvm_prog_t *prog)
 {
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
-	vec_t *p;
+	vec3_t p;
 
 	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getlight);
 
-	p = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), p);
 	VectorClear(ambientcolor);
 	VectorClear(diffusecolor);
 	VectorClear(diffusenormal);
@@ -783,7 +805,7 @@ static void VM_CL_R_AddEntity (prvm_prog_t *prog)
 static void VM_CL_R_SetView (prvm_prog_t *prog)
 {
 	int		c;
-	float	*f;
+	prvm_vec_t	*f;
 	float	k;
 
 	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_R_SetView);
@@ -1079,9 +1101,9 @@ static void VM_CL_R_SetView (prvm_prog_t *prog)
 static void VM_CL_R_AddDynamicLight (prvm_prog_t *prog)
 {
 	double t = Sys_DirtyTime();
-	vec_t *org;
+	vec3_t org;
 	float radius = 300;
-	vec_t *col;
+	vec3_t col;
 	int style = -1;
 	const char *cubemapname = NULL;
 	int pflags = PFLAGS_CORONA | PFLAGS_FULLDYNAMIC;
@@ -1099,9 +1121,9 @@ static void VM_CL_R_AddDynamicLight (prvm_prog_t *prog)
 	if (r_refdef.scene.numlights >= MAX_DLIGHTS)
 		return;
 
-	org = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	radius = PRVM_G_FLOAT(OFS_PARM1);
-	col = PRVM_G_VECTOR(OFS_PARM2);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), col);
 	if (prog->argc >= 4)
 	{
 		style = (int)PRVM_G_FLOAT(OFS_PARM3);
@@ -1134,29 +1156,31 @@ static void VM_CL_R_AddDynamicLight (prvm_prog_t *prog)
 //#310 vector (vector v) cs_unproject (EXT_CSQC)
 static void VM_CL_unproject (prvm_prog_t *prog)
 {
-	float	*f;
-	vec3_t	temp;
+	vec3_t f;
+	vec3_t temp;
+	vec3_t result;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_unproject);
-	f = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), f);
 	VectorSet(temp,
 		f[2],
 		(-1.0 + 2.0 * (f[0] / vid_conwidth.integer)) * f[2] * -r_refdef.view.frustum_x,
 		(-1.0 + 2.0 * (f[1] / vid_conheight.integer)) * f[2] * -r_refdef.view.frustum_y);
 	if(v_flipped.integer)
 		temp[1] = -temp[1];
-	Matrix4x4_Transform(&r_refdef.view.matrix, temp, PRVM_G_VECTOR(OFS_RETURN));
+	Matrix4x4_Transform(&r_refdef.view.matrix, temp, result);
+	VectorCopy(result, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //#311 vector (vector v) cs_project (EXT_CSQC)
 static void VM_CL_project (prvm_prog_t *prog)
 {
-	float	*f;
-	vec3_t	v;
+	vec3_t f;
+	vec3_t v;
 	matrix4x4_t m;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_project);
-	f = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), f);
 	Matrix4x4_Invert_Simple(&m, &r_refdef.view.matrix);
 	Matrix4x4_Transform(&m, f, v);
 	if(v_flipped.integer)
@@ -1305,18 +1329,19 @@ static void VM_CL_particleeffectnum (prvm_prog_t *prog)
 static void VM_CL_trailparticles (prvm_prog_t *prog)
 {
 	int				i;
-	float			*start, *end;
+	vec3_t			start, end, velocity;
 	prvm_edict_t	*t;
 	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_trailparticles);
 
 	t = PRVM_G_EDICT(OFS_PARM0);
 	i		= (int)PRVM_G_FLOAT(OFS_PARM1);
-	start	= PRVM_G_VECTOR(OFS_PARM2);
-	end		= PRVM_G_VECTOR(OFS_PARM3);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), start);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM3), end);
+	VectorCopy(PRVM_clientedictvector(t, velocity), velocity);
 
 	if (i < 0)
 		return;
-	CL_ParticleEffect(i, 1, start, end, PRVM_clientedictvector(t, velocity), PRVM_clientedictvector(t, velocity), NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
+	CL_ParticleEffect(i, 1, start, end, velocity, velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count[, float color]) pointparticles (EXT_CSQC)
@@ -1324,11 +1349,11 @@ static void VM_CL_pointparticles (prvm_prog_t *prog)
 {
 	int			i;
 	float n;
-	float		*f, *v;
+	vec3_t f, v;
 	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_pointparticles);
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	f = PRVM_G_VECTOR(OFS_PARM1);
-	v = PRVM_G_VECTOR(OFS_PARM2);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), v);
 	n = PRVM_G_FLOAT(OFS_PARM3);
 	if (i < 0)
 		return;
@@ -1340,7 +1365,7 @@ static void VM_CL_boxparticles (prvm_prog_t *prog)
 {
 	int effectnum;
 	// prvm_edict_t *own;
-	float *origin_from, *origin_to, *dir_from, *dir_to;
+	vec3_t origin_from, origin_to, dir_from, dir_to;
 	float count;
 	int flags;
 	float tintmins[4], tintmaxs[4];
@@ -1348,10 +1373,10 @@ static void VM_CL_boxparticles (prvm_prog_t *prog)
 
 	effectnum = (int)PRVM_G_FLOAT(OFS_PARM0);
 	// own = PRVM_G_EDICT(OFS_PARM1); // TODO find use for this
-	origin_from = PRVM_G_VECTOR(OFS_PARM2);
-	origin_to = PRVM_G_VECTOR(OFS_PARM3);
-	dir_from = PRVM_G_VECTOR(OFS_PARM4);
-	dir_to = PRVM_G_VECTOR(OFS_PARM5);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), origin_from);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM3), origin_to  );
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM4), dir_from   );
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM5), dir_to     );
 	count = PRVM_G_FLOAT(OFS_PARM6);
 	if(prog->argc >= 8)
 		flags = PRVM_G_FLOAT(OFS_PARM7);
@@ -1588,8 +1613,13 @@ static void VM_CL_getplayerkey (prvm_prog_t *prog)
 //#351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
 static void VM_CL_setlistener (prvm_prog_t *prog)
 {
+	vec3_t origin, forward, left, up;
 	VM_SAFEPARMCOUNT(4, VM_CL_setlistener);
-	Matrix4x4_FromVectors(&cl.csqc_listenermatrix, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), PRVM_G_VECTOR(OFS_PARM3), PRVM_G_VECTOR(OFS_PARM0));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), origin);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), forward);
+	VectorNegate(PRVM_G_VECTOR(OFS_PARM2), left);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM3), up);
+	Matrix4x4_FromVectors(&cl.csqc_listenermatrix, forward, left, up, origin);
 	cl.csqc_usecsqclistener = true;	//use csqc listener at this frame
 }
 
@@ -1769,9 +1799,12 @@ static void VM_CL_makestatic (prvm_prog_t *prog)
 		renderflags = (int)PRVM_clientedictfloat(ent, renderflags);
 		if (renderflags & RF_USEAXIS)
 		{
-			vec3_t left;
+			vec3_t forward, left, up, origin;
+			VectorCopy(PRVM_clientglobalvector(v_forward), forward);
 			VectorNegate(PRVM_clientglobalvector(v_right), left);
-			Matrix4x4_FromVectors(&staticent->render.matrix, PRVM_clientglobalvector(v_forward), left, PRVM_clientglobalvector(v_up), PRVM_clientedictvector(ent, origin));
+			VectorCopy(PRVM_clientglobalvector(v_up), up);
+			VectorCopy(PRVM_clientedictvector(ent, origin), origin);
+			Matrix4x4_FromVectors(&staticent->render.matrix, forward, left, up, origin);
 			Matrix4x4_Scale(&staticent->render.matrix, staticent->render.scale, 1);
 		}
 		else
@@ -1842,7 +1875,7 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 		VM_Warning(prog, "copyentity: can not modify free entity\n");
 		return;
 	}
-	memcpy(out->fields.vp, in->fields.vp, prog->entityfields * 4);
+	memcpy(out->fields.fp, in->fields.fp, prog->entityfields * sizeof(prvm_vec_t));
 	CL_LinkEdict(out);
 }
 
@@ -1851,28 +1884,30 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 // #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
 static void VM_CL_effect (prvm_prog_t *prog)
 {
+	vec3_t org;
 	VM_SAFEPARMCOUNT(5, VM_CL_effect);
-	CL_Effect(PRVM_G_VECTOR(OFS_PARM0), (int)PRVM_G_FLOAT(OFS_PARM1), (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
+	CL_Effect(org, (int)PRVM_G_FLOAT(OFS_PARM1), (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
 }
 
 // #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
 static void VM_CL_te_blood (prvm_prog_t *prog)
 {
-	float	*pos;
-	vec3_t	pos2;
+	vec3_t pos, vel, pos2;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_blood);
 	if (PRVM_G_FLOAT(OFS_PARM2) < 1)
 		return;
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), vel);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
+	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, vel, vel, NULL, 0);
 }
 
 // #406 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower (DP_TE_BLOODSHOWER)
 static void VM_CL_te_bloodshower (prvm_prog_t *prog)
 {
 	vec_t speed;
-	vec3_t vel1, vel2;
+	vec3_t mincorner, maxcorner, vel1, vel2;
 	VM_SAFEPARMCOUNT(4, VM_CL_te_bloodshower);
 	if (PRVM_G_FLOAT(OFS_PARM3) < 1)
 		return;
@@ -1883,17 +1918,19 @@ static void VM_CL_te_bloodshower (prvm_prog_t *prog)
 	vel2[0] = speed;
 	vel2[1] = speed;
 	vel2[2] = speed;
-	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM3), PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), vel1, vel2, NULL, 0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), mincorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), maxcorner);
+	CL_ParticleEffect(EFFECT_TE_BLOOD, PRVM_G_FLOAT(OFS_PARM3), mincorner, maxcorner, vel1, vel2, NULL, 0);
 }
 
 // #407 void(vector org, vector color) te_explosionrgb (DP_TE_EXPLOSIONRGB)
 static void VM_CL_te_explosionrgb (prvm_prog_t *prog)
 {
-	float		*pos;
+	vec3_t		pos;
 	vec3_t		pos2;
 	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(2, VM_CL_te_explosionrgb);
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleExplosion(pos2);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
@@ -1903,46 +1940,57 @@ static void VM_CL_te_explosionrgb (prvm_prog_t *prog)
 // #408 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube (DP_TE_PARTICLECUBE)
 static void VM_CL_te_particlecube (prvm_prog_t *prog)
 {
+	vec3_t mincorner, maxcorner, vel;
 	VM_SAFEPARMCOUNT(7, VM_CL_te_particlecube);
-	CL_ParticleCube(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), PRVM_G_FLOAT(OFS_PARM5), PRVM_G_FLOAT(OFS_PARM6));
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), mincorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), maxcorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
+	CL_ParticleCube(mincorner, maxcorner, vel, (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), PRVM_G_FLOAT(OFS_PARM5), PRVM_G_FLOAT(OFS_PARM6));
 }
 
 // #409 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain (DP_TE_PARTICLERAIN)
 static void VM_CL_te_particlerain (prvm_prog_t *prog)
 {
+	vec3_t mincorner, maxcorner, vel;
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlerain);
-	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), mincorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), maxcorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
+	CL_ParticleRain(mincorner, maxcorner, vel, (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 0);
 }
 
 // #410 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow (DP_TE_PARTICLESNOW)
 static void VM_CL_te_particlesnow (prvm_prog_t *prog)
 {
+	vec3_t mincorner, maxcorner, vel;
 	VM_SAFEPARMCOUNT(5, VM_CL_te_particlesnow);
-	CL_ParticleRain(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), mincorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), maxcorner);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), vel);
+	CL_ParticleRain(mincorner, maxcorner, vel, (int)PRVM_G_FLOAT(OFS_PARM3), (int)PRVM_G_FLOAT(OFS_PARM4), 1);
 }
 
 // #411 void(vector org, vector vel, float howmany) te_spark
 static void VM_CL_te_spark (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t pos, pos2, vel;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_spark);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), vel);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_ParticleEffect(EFFECT_TE_SPARK, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
+	CL_ParticleEffect(EFFECT_TE_SPARK, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, vel, vel, NULL, 0);
 }
 
 extern cvar_t cl_sound_ric_gunshot;
 // #412 void(vector org) te_gunshotquad (DP_QUADEFFECTS1)
 static void VM_CL_te_gunshotquad (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_gunshotquad);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOTQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if(cl_sound_ric_gunshot.integer >= 2)
@@ -1961,12 +2009,11 @@ static void VM_CL_te_gunshotquad (prvm_prog_t *prog)
 // #413 void(vector org) te_spikequad (DP_QUADEFFECTS1)
 static void VM_CL_te_spikequad (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_spikequad);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_SPIKEQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
@@ -1982,12 +2029,11 @@ static void VM_CL_te_spikequad (prvm_prog_t *prog)
 // #414 void(vector org) te_superspikequad (DP_QUADEFFECTS1)
 static void VM_CL_te_superspikequad (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_superspikequad);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_SUPERSPIKEQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos, 1, 1);
@@ -2003,11 +2049,10 @@ static void VM_CL_te_superspikequad (prvm_prog_t *prog)
 // #415 void(vector org) te_explosionquad (DP_QUADEFFECTS1)
 static void VM_CL_te_explosionquad (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_explosionquad);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleEffect(EFFECT_TE_EXPLOSIONQUAD, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
@@ -2016,11 +2061,10 @@ static void VM_CL_te_explosionquad (prvm_prog_t *prog)
 // #416 void(vector org) te_smallflash (DP_TE_SMALLFLASH)
 static void VM_CL_te_smallflash (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_smallflash);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleEffect(EFFECT_TE_SMALLFLASH, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
@@ -2028,12 +2072,11 @@ static void VM_CL_te_smallflash (prvm_prog_t *prog)
 // #417 void(vector org, float radius, float lifetime, vector color) te_customflash (DP_TE_CUSTOMFLASH)
 static void VM_CL_te_customflash (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	matrix4x4_t	tempmatrix;
 	VM_SAFEPARMCOUNT(4, VM_CL_te_customflash);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	Matrix4x4_CreateTranslate(&tempmatrix, pos2[0], pos2[1], pos2[2]);
 	CL_AllocLightFlash(NULL, &tempmatrix, PRVM_G_FLOAT(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM3)[0], PRVM_G_VECTOR(OFS_PARM3)[1], PRVM_G_VECTOR(OFS_PARM3)[2], PRVM_G_FLOAT(OFS_PARM1) / PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM2), 0, -1, true, 1, 0.25, 1, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
@@ -2042,12 +2085,11 @@ static void VM_CL_te_customflash (prvm_prog_t *prog)
 // #418 void(vector org) te_gunshot (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_gunshot (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_gunshot);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_GUNSHOT, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if(cl_sound_ric_gunshot.integer == 1 || cl_sound_ric_gunshot.integer == 3)
@@ -2066,12 +2108,11 @@ static void VM_CL_te_gunshot (prvm_prog_t *prog)
 // #419 void(vector org) te_spike (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_spike (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_spike);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_SPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
@@ -2087,12 +2128,11 @@ static void VM_CL_te_spike (prvm_prog_t *prog)
 // #420 void(vector org) te_superspike (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_superspike (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	int			rnd;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_superspike);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_SUPERSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	if (rand() % 5)			S_StartSound(-1, 0, cl.sfx_tink1, pos2, 1, 1);
@@ -2108,11 +2148,10 @@ static void VM_CL_te_superspike (prvm_prog_t *prog)
 // #421 void(vector org) te_explosion (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_explosion (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_explosion);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
@@ -2121,11 +2160,10 @@ static void VM_CL_te_explosion (prvm_prog_t *prog)
 // #422 void(vector org) te_tarexplosion (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_tarexplosion (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_tarexplosion);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 10);
 	CL_ParticleEffect(EFFECT_TE_TAREXPLOSION, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_r_exp3, pos2, 1, 1);
@@ -2134,11 +2172,10 @@ static void VM_CL_te_tarexplosion (prvm_prog_t *prog)
 // #423 void(vector org) te_wizspike (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_wizspike (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_wizspike);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_WIZSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_wizhit, pos2, 1, 1);
@@ -2147,11 +2184,10 @@ static void VM_CL_te_wizspike (prvm_prog_t *prog)
 // #424 void(vector org) te_knightspike (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_knightspike (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_knightspike);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_KNIGHTSPIKE, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 	S_StartSound(-1, 0, cl.sfx_knighthit, pos2, 1, 1);
@@ -2160,28 +2196,31 @@ static void VM_CL_te_knightspike (prvm_prog_t *prog)
 // #425 void(vector org) te_lavasplash (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_lavasplash (prvm_prog_t *prog)
 {
+	vec3_t		pos;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_lavasplash);
-	CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM0), vec3_origin, vec3_origin, NULL, 0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
+	CL_ParticleEffect(EFFECT_TE_LAVASPLASH, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #426 void(vector org) te_teleport (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_teleport (prvm_prog_t *prog)
 {
+	vec3_t		pos;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_teleport);
-	CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM0), vec3_origin, vec3_origin, NULL, 0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
+	CL_ParticleEffect(EFFECT_TE_TELEPORT, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 }
 
 // #427 void(vector org, float colorstart, float colorlength) te_explosion2 (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_explosion2 (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2, color;
+	vec3_t		pos, pos2, color;
 	matrix4x4_t	tempmatrix;
 	int			colorStart, colorLength;
 	unsigned char		*tempcolor;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_explosion2);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	colorStart = (int)PRVM_G_FLOAT(OFS_PARM1);
 	colorLength = (int)PRVM_G_FLOAT(OFS_PARM2);
 	CL_FindNonSolidLocation(pos, pos2, 10);
@@ -2199,39 +2238,50 @@ static void VM_CL_te_explosion2 (prvm_prog_t *prog)
 // #428 void(entity own, vector start, vector end) te_lightning1 (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_lightning1 (prvm_prog_t *prog)
 {
+	vec3_t		start, end;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning1);
-	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt, true);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), start);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), end);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), start, end, cl.model_bolt, true);
 }
 
 // #429 void(entity own, vector start, vector end) te_lightning2 (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_lightning2 (prvm_prog_t *prog)
 {
+	vec3_t		start, end;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning2);
-	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt2, true);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), start);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), end);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), start, end, cl.model_bolt2, true);
 }
 
 // #430 void(entity own, vector start, vector end) te_lightning3 (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_lightning3 (prvm_prog_t *prog)
 {
+	vec3_t		start, end;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_lightning3);
-	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_bolt3, false);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), start);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), end);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), start, end, cl.model_bolt3, false);
 }
 
 // #431 void(entity own, vector start, vector end) te_beam (DP_TE_STANDARDEFFECTBUILTINS)
 static void VM_CL_te_beam (prvm_prog_t *prog)
 {
+	vec3_t		start, end;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_beam);
-	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM2), cl.model_beam, false);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), start);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), end);
+	CL_NewBeam(PRVM_G_EDICTNUM(OFS_PARM0), start, end, cl.model_beam, false);
 }
 
 // #433 void(vector org) te_plasmaburn (DP_TE_PLASMABURN)
 static void VM_CL_te_plasmaburn (prvm_prog_t *prog)
 {
-	float		*pos;
-	vec3_t		pos2;
+	vec3_t		pos, pos2;
 	VM_SAFEPARMCOUNT(1, VM_CL_te_plasmaburn);
 
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
 	CL_FindNonSolidLocation(pos, pos2, 4);
 	CL_ParticleEffect(EFFECT_TE_PLASMABURN, 1, pos2, pos2, vec3_origin, vec3_origin, NULL, 0);
 }
@@ -2239,14 +2289,14 @@ static void VM_CL_te_plasmaburn (prvm_prog_t *prog)
 // #457 void(vector org, vector velocity, float howmany) te_flamejet (DP_TE_FLAMEJET)
 static void VM_CL_te_flamejet (prvm_prog_t *prog)
 {
-	float *pos;
-	vec3_t pos2;
+	vec3_t		pos, pos2, vel;
 	VM_SAFEPARMCOUNT(3, VM_CL_te_flamejet);
 	if (PRVM_G_FLOAT(OFS_PARM2) < 1)
 		return;
-	pos = PRVM_G_VECTOR(OFS_PARM0);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), pos);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), vel);
 	CL_FindNonSolidLocation(pos, pos2, 4);
-	CL_ParticleEffect(EFFECT_TE_FLAMEJET, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, PRVM_G_VECTOR(OFS_PARM1), PRVM_G_VECTOR(OFS_PARM1), NULL, 0);
+	CL_ParticleEffect(EFFECT_TE_FLAMEJET, PRVM_G_FLOAT(OFS_PARM2), pos2, pos2, vel, vel, NULL, 0);
 }
 
 
@@ -2520,7 +2570,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 	int parentindex;
 	const char *tagname;
 	int returncode;
-	vec3_t fo, le, up, trans;
+	vec3_t forward, left, up, origin;
 	const dp_model_t *model;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_gettaginfo);
@@ -2528,21 +2578,24 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 	e = PRVM_G_EDICT(OFS_PARM0);
 	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
 	returncode = CL_GetTagMatrix(prog, &tag_matrix, e, tagindex);
-	Matrix4x4_ToVectors(&tag_matrix, PRVM_clientglobalvector(v_forward), le, PRVM_clientglobalvector(v_up), PRVM_G_VECTOR(OFS_RETURN));
-	VectorScale(le, -1, PRVM_clientglobalvector(v_right));
+	Matrix4x4_ToVectors(&tag_matrix, forward, left, up, origin);
+	VectorCopy(forward, PRVM_clientglobalvector(v_forward));
+	VectorScale(left, -1, PRVM_clientglobalvector(v_right));
+	VectorCopy(up, PRVM_clientglobalvector(v_up));
+	VectorCopy(origin, PRVM_G_VECTOR(OFS_RETURN));
 	model = CL_GetModelFromEdict(e);
 	VM_GenerateFrameGroupBlend(prog, e->priv.server->framegroupblend, e);
 	VM_FrameBlendFromFrameGroupBlend(e->priv.server->frameblend, e->priv.server->framegroupblend, model, cl.time);
 	VM_UpdateEdictSkeleton(prog, e, model, e->priv.server->frameblend);
 	CL_GetExtendedTagInfo(prog, e, tagindex, &parentindex, &tagname, &tag_localmatrix);
-	Matrix4x4_ToVectors(&tag_localmatrix, fo, le, up, trans);
+	Matrix4x4_ToVectors(&tag_localmatrix, forward, left, up, origin);
 
 	PRVM_clientglobalfloat(gettaginfo_parent) = parentindex;
 	PRVM_clientglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(prog, tagname) : 0;
-	VectorCopy(trans, PRVM_clientglobalvector(gettaginfo_offset));
-	VectorCopy(fo, PRVM_clientglobalvector(gettaginfo_forward));
-	VectorScale(le, -1, PRVM_clientglobalvector(gettaginfo_right));
+	VectorCopy(forward, PRVM_clientglobalvector(gettaginfo_forward));
+	VectorScale(left, -1, PRVM_clientglobalvector(gettaginfo_right));
 	VectorCopy(up, PRVM_clientglobalvector(gettaginfo_up));
+	VectorCopy(origin, PRVM_clientglobalvector(gettaginfo_offset));
 
 	switch(returncode)
 	{
@@ -2613,35 +2666,6 @@ typedef struct vmparticlespawner_s
 	qboolean			verified;
 	vmparticletheme_t	*themes;
 	int					max_themes;
-	// global addresses
-	float *particle_type;
-	float *particle_blendmode; 
-	float *particle_orientation;
-	float *particle_color1;
-	float *particle_color2;
-	float *particle_tex;
-	float *particle_size;
-	float *particle_sizeincrease;
-	float *particle_alpha;
-	float *particle_alphafade;
-	float *particle_time;
-	float *particle_gravity;
-	float *particle_bounce;
-	float *particle_airfriction;
-	float *particle_liquidfriction;
-	float *particle_originjitter;
-	float *particle_velocityjitter;
-	float *particle_qualityreduction;
-	float *particle_stretch;
-	float *particle_staincolor1;
-	float *particle_staincolor2;
-	float *particle_stainalpha;
-	float *particle_stainsize;
-	float *particle_staintex;
-	float *particle_delayspawn;
-	float *particle_delaycollision;
-	float *particle_angle;
-	float *particle_spin;
 }vmparticlespawner_t;
 
 vmparticlespawner_t vmpartspawner;
@@ -2665,38 +2689,6 @@ static void VM_InitParticleSpawner (prvm_prog_t *prog, int maxthemes)
 	vmpartspawner.max_themes = maxthemes;
 	vmpartspawner.initialized = true;
 	vmpartspawner.verified = true;
-	// get field addresses for fast querying (we can do 1000 calls of spawnparticle in a frame)
-	vmpartspawner.particle_type = &PRVM_clientglobalfloat(particle_type);
-	vmpartspawner.particle_blendmode = &PRVM_clientglobalfloat(particle_blendmode);
-	vmpartspawner.particle_orientation = &PRVM_clientglobalfloat(particle_orientation);
-	vmpartspawner.particle_color1 = PRVM_clientglobalvector(particle_color1);
-	vmpartspawner.particle_color2 = PRVM_clientglobalvector(particle_color2);
-	vmpartspawner.particle_tex = &PRVM_clientglobalfloat(particle_tex);
-	vmpartspawner.particle_size = &PRVM_clientglobalfloat(particle_size);
-	vmpartspawner.particle_sizeincrease = &PRVM_clientglobalfloat(particle_sizeincrease);
-	vmpartspawner.particle_alpha = &PRVM_clientglobalfloat(particle_alpha);
-	vmpartspawner.particle_alphafade = &PRVM_clientglobalfloat(particle_alphafade);
-	vmpartspawner.particle_time = &PRVM_clientglobalfloat(particle_time);
-	vmpartspawner.particle_gravity = &PRVM_clientglobalfloat(particle_gravity);
-	vmpartspawner.particle_bounce = &PRVM_clientglobalfloat(particle_bounce);
-	vmpartspawner.particle_airfriction = &PRVM_clientglobalfloat(particle_airfriction);
-	vmpartspawner.particle_liquidfriction = &PRVM_clientglobalfloat(particle_liquidfriction);
-	vmpartspawner.particle_originjitter = &PRVM_clientglobalfloat(particle_originjitter);
-	vmpartspawner.particle_velocityjitter = &PRVM_clientglobalfloat(particle_velocityjitter);
-	vmpartspawner.particle_qualityreduction = &PRVM_clientglobalfloat(particle_qualityreduction);
-	vmpartspawner.particle_stretch = &PRVM_clientglobalfloat(particle_stretch);
-	vmpartspawner.particle_staincolor1 = PRVM_clientglobalvector(particle_staincolor1);
-	vmpartspawner.particle_staincolor2 = PRVM_clientglobalvector(particle_staincolor2);
-	vmpartspawner.particle_stainalpha = &PRVM_clientglobalfloat(particle_stainalpha);
-	vmpartspawner.particle_stainsize = &PRVM_clientglobalfloat(particle_stainsize);
-	vmpartspawner.particle_staintex = &PRVM_clientglobalfloat(particle_staintex);
-	vmpartspawner.particle_staintex = &PRVM_clientglobalfloat(particle_staintex);
-	vmpartspawner.particle_delayspawn = &PRVM_clientglobalfloat(particle_delayspawn);
-	vmpartspawner.particle_delaycollision = &PRVM_clientglobalfloat(particle_delaycollision);
-	vmpartspawner.particle_angle = &PRVM_clientglobalfloat(particle_angle);
-	vmpartspawner.particle_spin = &PRVM_clientglobalfloat(particle_spin);
-	#undef getglobal
-	#undef getglobalvector
 }
 
 // reset particle theme to default values
@@ -2732,77 +2724,70 @@ static void VM_ResetParticleTheme (vmparticletheme_t *theme)
 }
 
 // particle theme -> QC globals
-static void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme)
+static void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme, prvm_prog_t *prog)
 {
-	*vmpartspawner.particle_type = theme->typeindex;
-	*vmpartspawner.particle_blendmode = theme->blendmode;
-	*vmpartspawner.particle_orientation = theme->orientation;
-	vmpartspawner.particle_color1[0] = (theme->color1 >> 16) & 0xFF; // VorteX: int only can store 0-255, not 0-256 which means 0 - 0,99609375...
-	vmpartspawner.particle_color1[1] = (theme->color1 >> 8) & 0xFF;
-	vmpartspawner.particle_color1[2] = (theme->color1 >> 0) & 0xFF;
-	vmpartspawner.particle_color2[0] = (theme->color2 >> 16) & 0xFF;
-	vmpartspawner.particle_color2[1] = (theme->color2 >> 8) & 0xFF;
-	vmpartspawner.particle_color2[2] = (theme->color2 >> 0) & 0xFF;
-	*vmpartspawner.particle_tex = (float)theme->tex;
-	*vmpartspawner.particle_size = theme->size;
-	*vmpartspawner.particle_sizeincrease = theme->sizeincrease;
-	*vmpartspawner.particle_alpha = theme->alpha/256;
-	*vmpartspawner.particle_alphafade = theme->alphafade/256;
-	*vmpartspawner.particle_time = theme->lifetime;
-	*vmpartspawner.particle_gravity = theme->gravity;
-	*vmpartspawner.particle_bounce = theme->bounce;
-	*vmpartspawner.particle_airfriction = theme->airfriction;
-	*vmpartspawner.particle_liquidfriction = theme->liquidfriction;
-	*vmpartspawner.particle_originjitter = theme->originjitter;
-	*vmpartspawner.particle_velocityjitter = theme->velocityjitter;
-	*vmpartspawner.particle_qualityreduction = theme->qualityreduction;
-	*vmpartspawner.particle_stretch = theme->stretch;
-	vmpartspawner.particle_staincolor1[0] = ((int)theme->staincolor1 >> 16) & 0xFF;
-	vmpartspawner.particle_staincolor1[1] = ((int)theme->staincolor1 >> 8) & 0xFF;
-	vmpartspawner.particle_staincolor1[2] = ((int)theme->staincolor1 >> 0) & 0xFF;
-	vmpartspawner.particle_staincolor2[0] = ((int)theme->staincolor2 >> 16) & 0xFF;
-	vmpartspawner.particle_staincolor2[1] = ((int)theme->staincolor2 >> 8) & 0xFF;
-	vmpartspawner.particle_staincolor2[2] = ((int)theme->staincolor2 >> 0) & 0xFF;
-	*vmpartspawner.particle_staintex = (float)theme->staintex;
-	*vmpartspawner.particle_stainalpha = (float)theme->stainalpha/256;
-	*vmpartspawner.particle_stainsize = (float)theme->stainsize;
-	*vmpartspawner.particle_delayspawn = theme->delayspawn;
-	*vmpartspawner.particle_delaycollision = theme->delaycollision;
-	*vmpartspawner.particle_angle = theme->angle;
-	*vmpartspawner.particle_spin = theme->spin;
+	PRVM_clientglobalfloat(particle_type) = theme->typeindex;
+	PRVM_clientglobalfloat(particle_blendmode) = theme->blendmode;
+	PRVM_clientglobalfloat(particle_orientation) = theme->orientation;
+	// VorteX: int only can store 0-255, not 0-256 which means 0 - 0,99609375...
+	VectorSet(PRVM_clientglobalvector(particle_color1), (theme->color1 >> 16) & 0xFF, (theme->color1 >> 8) & 0xFF, (theme->color1 >> 0) & 0xFF);
+	VectorSet(PRVM_clientglobalvector(particle_color2), (theme->color2 >> 16) & 0xFF, (theme->color2 >> 8) & 0xFF, (theme->color2 >> 0) & 0xFF);
+	PRVM_clientglobalfloat(particle_tex) = (float)theme->tex;
+	PRVM_clientglobalfloat(particle_size) = theme->size;
+	PRVM_clientglobalfloat(particle_sizeincrease) = theme->sizeincrease;
+	PRVM_clientglobalfloat(particle_alpha) = theme->alpha/256;
+	PRVM_clientglobalfloat(particle_alphafade) = theme->alphafade/256;
+	PRVM_clientglobalfloat(particle_time) = theme->lifetime;
+	PRVM_clientglobalfloat(particle_gravity) = theme->gravity;
+	PRVM_clientglobalfloat(particle_bounce) = theme->bounce;
+	PRVM_clientglobalfloat(particle_airfriction) = theme->airfriction;
+	PRVM_clientglobalfloat(particle_liquidfriction) = theme->liquidfriction;
+	PRVM_clientglobalfloat(particle_originjitter) = theme->originjitter;
+	PRVM_clientglobalfloat(particle_velocityjitter) = theme->velocityjitter;
+	PRVM_clientglobalfloat(particle_qualityreduction) = theme->qualityreduction;
+	PRVM_clientglobalfloat(particle_stretch) = theme->stretch;
+	VectorSet(PRVM_clientglobalvector(particle_staincolor1), ((int)theme->staincolor1 >> 16) & 0xFF, ((int)theme->staincolor1 >> 8) & 0xFF, ((int)theme->staincolor1 >> 0) & 0xFF);
+	VectorSet(PRVM_clientglobalvector(particle_staincolor2), ((int)theme->staincolor2 >> 16) & 0xFF, ((int)theme->staincolor2 >> 8) & 0xFF, ((int)theme->staincolor2 >> 0) & 0xFF);
+	PRVM_clientglobalfloat(particle_staintex) = (float)theme->staintex;
+	PRVM_clientglobalfloat(particle_stainalpha) = (float)theme->stainalpha/256;
+	PRVM_clientglobalfloat(particle_stainsize) = (float)theme->stainsize;
+	PRVM_clientglobalfloat(particle_delayspawn) = theme->delayspawn;
+	PRVM_clientglobalfloat(particle_delaycollision) = theme->delaycollision;
+	PRVM_clientglobalfloat(particle_angle) = theme->angle;
+	PRVM_clientglobalfloat(particle_spin) = theme->spin;
 }
 
 // QC globals ->  particle theme
-static void VM_CL_ParticleThemeFromGlobals(vmparticletheme_t *theme)
+static void VM_CL_ParticleThemeFromGlobals(vmparticletheme_t *theme, prvm_prog_t *prog)
 {
-	theme->typeindex = (unsigned short)*vmpartspawner.particle_type;
-	theme->blendmode = (pblend_t)(int)*vmpartspawner.particle_blendmode;
-	theme->orientation = (porientation_t)(int)*vmpartspawner.particle_orientation;
-	theme->color1 = ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]);
-	theme->color2 = ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]);
-	theme->tex = (int)*vmpartspawner.particle_tex;
-	theme->size = *vmpartspawner.particle_size;
-	theme->sizeincrease = *vmpartspawner.particle_sizeincrease;
-	theme->alpha = *vmpartspawner.particle_alpha*256;
-	theme->alphafade = *vmpartspawner.particle_alphafade*256;
-	theme->lifetime = *vmpartspawner.particle_time;
-	theme->gravity = *vmpartspawner.particle_gravity;
-	theme->bounce = *vmpartspawner.particle_bounce;
-	theme->airfriction = *vmpartspawner.particle_airfriction;
-	theme->liquidfriction = *vmpartspawner.particle_liquidfriction;
-	theme->originjitter = *vmpartspawner.particle_originjitter;
-	theme->velocityjitter = *vmpartspawner.particle_velocityjitter;
-	theme->qualityreduction = (*vmpartspawner.particle_qualityreduction) ? true : false;
-	theme->stretch = *vmpartspawner.particle_stretch;
-	theme->staincolor1 = ((int)vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]);
-	theme->staincolor2 = (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]);
-	theme->staintex =(int)*vmpartspawner.particle_staintex;
-	theme->stainalpha = *vmpartspawner.particle_stainalpha*256;
-	theme->stainsize = *vmpartspawner.particle_stainsize;
-	theme->delayspawn = *vmpartspawner.particle_delayspawn;
-	theme->delaycollision = *vmpartspawner.particle_delaycollision;
-	theme->angle = *vmpartspawner.particle_angle;
-	theme->spin = *vmpartspawner.particle_spin;
+	theme->typeindex = (unsigned short)PRVM_clientglobalfloat(particle_type);
+	theme->blendmode = (pblend_t)(int)PRVM_clientglobalfloat(particle_blendmode);
+	theme->orientation = (porientation_t)(int)PRVM_clientglobalfloat(particle_orientation);
+	theme->color1 = ((int)PRVM_clientglobalvector(particle_color1)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color1)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color1)[2]);
+	theme->color2 = ((int)PRVM_clientglobalvector(particle_color2)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color2)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color2)[2]);
+	theme->tex = (int)PRVM_clientglobalfloat(particle_tex);
+	theme->size = PRVM_clientglobalfloat(particle_size);
+	theme->sizeincrease = PRVM_clientglobalfloat(particle_sizeincrease);
+	theme->alpha = PRVM_clientglobalfloat(particle_alpha)*256;
+	theme->alphafade = PRVM_clientglobalfloat(particle_alphafade)*256;
+	theme->lifetime = PRVM_clientglobalfloat(particle_time);
+	theme->gravity = PRVM_clientglobalfloat(particle_gravity);
+	theme->bounce = PRVM_clientglobalfloat(particle_bounce);
+	theme->airfriction = PRVM_clientglobalfloat(particle_airfriction);
+	theme->liquidfriction = PRVM_clientglobalfloat(particle_liquidfriction);
+	theme->originjitter = PRVM_clientglobalfloat(particle_originjitter);
+	theme->velocityjitter = PRVM_clientglobalfloat(particle_velocityjitter);
+	theme->qualityreduction = PRVM_clientglobalfloat(particle_qualityreduction) != 0 ? true : false;
+	theme->stretch = PRVM_clientglobalfloat(particle_stretch);
+	theme->staincolor1 = ((int)PRVM_clientglobalvector(particle_staincolor1)[0])*65536 + (int)(PRVM_clientglobalvector(particle_staincolor1)[1])*256 + (int)(PRVM_clientglobalvector(particle_staincolor1)[2]);
+	theme->staincolor2 = (int)(PRVM_clientglobalvector(particle_staincolor2)[0])*65536 + (int)(PRVM_clientglobalvector(particle_staincolor2)[1])*256 + (int)(PRVM_clientglobalvector(particle_staincolor2)[2]);
+	theme->staintex =(int)PRVM_clientglobalfloat(particle_staintex);
+	theme->stainalpha = PRVM_clientglobalfloat(particle_stainalpha)*256;
+	theme->stainsize = PRVM_clientglobalfloat(particle_stainsize);
+	theme->delayspawn = PRVM_clientglobalfloat(particle_delayspawn);
+	theme->delaycollision = PRVM_clientglobalfloat(particle_delaycollision);
+	theme->angle = PRVM_clientglobalfloat(particle_angle);
+	theme->spin = PRVM_clientglobalfloat(particle_spin);
 }
 
 // init particle spawner interface
@@ -2825,7 +2810,7 @@ static void VM_CL_ResetParticle (prvm_prog_t *prog)
 		VM_Warning(prog, "VM_CL_ResetParticle: particle spawner not initialized\n");
 		return;
 	}
-	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0], prog);
 }
 
 // void(float themenum) particletheme
@@ -2843,17 +2828,17 @@ static void VM_CL_ParticleTheme (prvm_prog_t *prog)
 	if (themenum < 0 || themenum >= vmpartspawner.max_themes)
 	{
 		VM_Warning(prog, "VM_CL_ParticleTheme: bad theme number %i\n", themenum);
-		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0], prog);
 		return;
 	}
 	if (vmpartspawner.themes[themenum].initialized == false)
 	{
 		VM_Warning(prog, "VM_CL_ParticleTheme: theme #%i not exists\n", themenum);
-		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0], prog);
 		return;
 	}
 	// load particle theme into globals
-	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[themenum]);
+	VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[themenum], prog);
 }
 
 // float() saveparticletheme
@@ -2884,7 +2869,7 @@ static void VM_CL_ParticleThemeSave (prvm_prog_t *prog)
 			return;
 		}
 		vmpartspawner.themes[themenum].initialized = true;
-		VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum]);
+		VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum], prog);
 		PRVM_G_FLOAT(OFS_RETURN) = themenum;
 		return;
 	}
@@ -2896,7 +2881,7 @@ static void VM_CL_ParticleThemeSave (prvm_prog_t *prog)
 		return;
 	}
 	vmpartspawner.themes[themenum].initialized = true;
-	VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum]);
+	VM_CL_ParticleThemeFromGlobals(&vmpartspawner.themes[themenum], prog);
 }
 
 // void(float themenum) freeparticletheme
@@ -2920,7 +2905,7 @@ static void VM_CL_ParticleThemeFree (prvm_prog_t *prog)
 	if (vmpartspawner.themes[themenum].initialized == false)
 	{
 		VM_Warning(prog, "VM_CL_ParticleThemeFree: theme #%i already freed\n", themenum);
-		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0]);
+		VM_CL_ParticleThemeToGlobals(&vmpartspawner.themes[0], prog);
 		return;
 	}
 	// free theme
@@ -2932,7 +2917,7 @@ static void VM_CL_ParticleThemeFree (prvm_prog_t *prog)
 // returns 0 if failed, 1 if succesful
 static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 {
-	float *org, *dir;
+	vec3_t org, dir;
 	vmparticletheme_t *theme;
 	particle_t *part;
 	int themenum;
@@ -2944,21 +2929,54 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 		PRVM_G_FLOAT(OFS_RETURN) = 0; 
 		return;
 	}
-	org = PRVM_G_VECTOR(OFS_PARM0);
-	dir = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
 	
 	if (prog->argc < 3) // global-set particle
 	{
-		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)(vmpartspawner.particle_color1[0]) << 16) + ((int)(vmpartspawner.particle_color1[1]) << 8) + ((int)(vmpartspawner.particle_color1[2])), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)(int)*vmpartspawner.particle_blendmode, (porientation_t)(int)*vmpartspawner.particle_orientation, (int)(vmpartspawner.particle_staincolor1[0])*65536 + (int)(vmpartspawner.particle_staincolor1[1])*256 + (int)(vmpartspawner.particle_staincolor1[2]), (int)(vmpartspawner.particle_staincolor2[0])*65536 + (int)(vmpartspawner.particle_staincolor2[1])*256 + (int)(vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin, NULL);
+		part = CL_NewParticle(org,
+			(unsigned short)PRVM_clientglobalfloat(particle_type),
+			((int)PRVM_clientglobalvector(particle_color1)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color1)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color1)[2]),
+			((int)PRVM_clientglobalvector(particle_color2)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color2)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color2)[2]),
+			(int)PRVM_clientglobalfloat(particle_tex),
+			PRVM_clientglobalfloat(particle_size),
+			PRVM_clientglobalfloat(particle_sizeincrease),
+			PRVM_clientglobalfloat(particle_alpha)*256,
+			PRVM_clientglobalfloat(particle_alphafade)*256,
+			PRVM_clientglobalfloat(particle_gravity),
+			PRVM_clientglobalfloat(particle_bounce),
+			org[0],
+			org[1],
+			org[2],
+			dir[0],
+			dir[1],
+			dir[2],
+			PRVM_clientglobalfloat(particle_airfriction),
+			PRVM_clientglobalfloat(particle_liquidfriction),
+			PRVM_clientglobalfloat(particle_originjitter),
+			PRVM_clientglobalfloat(particle_velocityjitter),
+			(PRVM_clientglobalfloat(particle_qualityreduction)) ? true : false,
+			PRVM_clientglobalfloat(particle_time),
+			PRVM_clientglobalfloat(particle_stretch),
+			(pblend_t)(int)PRVM_clientglobalfloat(particle_blendmode),
+			(porientation_t)(int)PRVM_clientglobalfloat(particle_orientation),
+			(int)(PRVM_clientglobalvector(particle_staincolor1)[0])*65536 + (int)(PRVM_clientglobalvector(particle_staincolor1)[1])*256 + (int)(PRVM_clientglobalvector(particle_staincolor1)[2]),
+			(int)(PRVM_clientglobalvector(particle_staincolor2)[0])*65536 + (int)(PRVM_clientglobalvector(particle_staincolor2)[1])*256 + (int)(PRVM_clientglobalvector(particle_staincolor2)[2]),
+			(int)PRVM_clientglobalfloat(particle_staintex),
+			PRVM_clientglobalfloat(particle_stainalpha)*256,
+			PRVM_clientglobalfloat(particle_stainsize),
+			PRVM_clientglobalfloat(particle_angle),
+			PRVM_clientglobalfloat(particle_spin),
+			NULL);
 		if (!part)
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = 0; 
 			return;
 		}
-		if (*vmpartspawner.particle_delayspawn)
-			part->delayedspawn = cl.time + *vmpartspawner.particle_delayspawn;
-		//if (*vmpartspawner.particle_delaycollision)
-		//	part->delayedcollisions = cl.time + *vmpartspawner.particle_delaycollision;
+		if (PRVM_clientglobalfloat(particle_delayspawn))
+			part->delayedspawn = cl.time + PRVM_clientglobalfloat(particle_delayspawn);
+		//if (PRVM_clientglobalfloat(particle_delaycollision))
+		//	part->delayedcollisions = cl.time + PRVM_clientglobalfloat(particle_delaycollision);
 	}
 	else // quick themed particle
 	{
@@ -2970,7 +2988,40 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
-		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin, NULL);
+		part = CL_NewParticle(org,
+			theme->typeindex,
+			theme->color1,
+			theme->color2,
+			theme->tex,
+			theme->size,
+			theme->sizeincrease,
+			theme->alpha,
+			theme->alphafade,
+			theme->gravity,
+			theme->bounce,
+			org[0],
+			org[1],
+			org[2],
+			dir[0],
+			dir[1],
+			dir[2],
+			theme->airfriction,
+			theme->liquidfriction,
+			theme->originjitter,
+			theme->velocityjitter,
+			theme->qualityreduction,
+			theme->lifetime,
+			theme->stretch,
+			theme->blendmode,
+			theme->orientation,
+			theme->staincolor1,
+			theme->staincolor2,
+			theme->staintex,
+			theme->stainalpha,
+			theme->stainsize,
+			theme->angle,
+			theme->spin,
+			NULL);
 		if (!part)
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = 0; 
@@ -2988,7 +3039,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 // returns 0 if failed, 1 if success
 static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 {
-	float *org, *dir;
+	vec3_t org, dir;
 	vmparticletheme_t *theme;
 	particle_t *part;
 	int themenum;
@@ -3000,10 +3051,43 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 		PRVM_G_FLOAT(OFS_RETURN) = 0; 
 		return;
 	}
-	org = PRVM_G_VECTOR(OFS_PARM0);
-	dir = PRVM_G_VECTOR(OFS_PARM1);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
 	if (prog->argc < 5) // global-set particle
-		part = CL_NewParticle(org, (unsigned short)*vmpartspawner.particle_type, ((int)vmpartspawner.particle_color1[0] << 16) + ((int)vmpartspawner.particle_color1[1] << 8) + ((int)vmpartspawner.particle_color1[2]), ((int)vmpartspawner.particle_color2[0] << 16) + ((int)vmpartspawner.particle_color2[1] << 8) + ((int)vmpartspawner.particle_color2[2]), (int)*vmpartspawner.particle_tex, *vmpartspawner.particle_size, *vmpartspawner.particle_sizeincrease, *vmpartspawner.particle_alpha*256, *vmpartspawner.particle_alphafade*256, *vmpartspawner.particle_gravity, *vmpartspawner.particle_bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], *vmpartspawner.particle_airfriction, *vmpartspawner.particle_liquidfriction, *vmpartspawner.particle_originjitter, *vmpartspawner.particle_velocityjitter, (*vmpartspawner.particle_qualityreduction) ? true : false, *vmpartspawner.particle_time, *vmpartspawner.particle_stretch, (pblend_t)(int)*vmpartspawner.particle_blendmode, (porientation_t)(int)*vmpartspawner.particle_orientation, ((int)vmpartspawner.particle_staincolor1[0] << 16) + ((int)vmpartspawner.particle_staincolor1[1] << 8) + ((int)vmpartspawner.particle_staincolor1[2]), ((int)vmpartspawner.particle_staincolor2[0] << 16) + ((int)vmpartspawner.particle_staincolor2[1] << 8) + ((int)vmpartspawner.particle_staincolor2[2]), (int)*vmpartspawner.particle_staintex, *vmpartspawner.particle_stainalpha*256, *vmpartspawner.particle_stainsize, *vmpartspawner.particle_angle, *vmpartspawner.particle_spin, NULL);
+		part = CL_NewParticle(org,
+			(unsigned short)PRVM_clientglobalfloat(particle_type),
+			((int)PRVM_clientglobalvector(particle_color1)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color1)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color1)[2]),
+			((int)PRVM_clientglobalvector(particle_color2)[0] << 16) + ((int)PRVM_clientglobalvector(particle_color2)[1] << 8) + ((int)PRVM_clientglobalvector(particle_color2)[2]),
+			(int)PRVM_clientglobalfloat(particle_tex),
+			PRVM_clientglobalfloat(particle_size),
+			PRVM_clientglobalfloat(particle_sizeincrease),
+			PRVM_clientglobalfloat(particle_alpha)*256,
+			PRVM_clientglobalfloat(particle_alphafade)*256,
+			PRVM_clientglobalfloat(particle_gravity),
+			PRVM_clientglobalfloat(particle_bounce),
+			org[0],
+			org[1],
+			org[2],
+			dir[0],
+			dir[1],
+			dir[2],
+			PRVM_clientglobalfloat(particle_airfriction),
+			PRVM_clientglobalfloat(particle_liquidfriction),
+			PRVM_clientglobalfloat(particle_originjitter),
+			PRVM_clientglobalfloat(particle_velocityjitter),
+			(PRVM_clientglobalfloat(particle_qualityreduction)) ? true : false,
+			PRVM_clientglobalfloat(particle_time),
+			PRVM_clientglobalfloat(particle_stretch),
+			(pblend_t)(int)PRVM_clientglobalfloat(particle_blendmode),
+			(porientation_t)(int)PRVM_clientglobalfloat(particle_orientation),
+			((int)PRVM_clientglobalvector(particle_staincolor1)[0] << 16) + ((int)PRVM_clientglobalvector(particle_staincolor1)[1] << 8) + ((int)PRVM_clientglobalvector(particle_staincolor1)[2]),
+			((int)PRVM_clientglobalvector(particle_staincolor2)[0] << 16) + ((int)PRVM_clientglobalvector(particle_staincolor2)[1] << 8) + ((int)PRVM_clientglobalvector(particle_staincolor2)[2]),
+			(int)PRVM_clientglobalfloat(particle_staintex),
+			PRVM_clientglobalfloat(particle_stainalpha)*256,
+			PRVM_clientglobalfloat(particle_stainsize),
+			PRVM_clientglobalfloat(particle_angle),
+			PRVM_clientglobalfloat(particle_spin),
+			NULL);
 	else // themed particle
 	{
 		themenum = (int)PRVM_G_FLOAT(OFS_PARM4);
@@ -3014,7 +3098,40 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
-		part = CL_NewParticle(org, theme->typeindex, theme->color1, theme->color2, theme->tex, theme->size, theme->sizeincrease, theme->alpha, theme->alphafade, theme->gravity, theme->bounce, org[0], org[1], org[2], dir[0], dir[1], dir[2], theme->airfriction, theme->liquidfriction, theme->originjitter, theme->velocityjitter, theme->qualityreduction, theme->lifetime, theme->stretch, theme->blendmode, theme->orientation, theme->staincolor1, theme->staincolor2, theme->staintex, theme->stainalpha, theme->stainsize, theme->angle, theme->spin, NULL);
+		part = CL_NewParticle(org,
+			theme->typeindex,
+			theme->color1,
+			theme->color2,
+			theme->tex,
+			theme->size,
+			theme->sizeincrease,
+			theme->alpha,
+			theme->alphafade,
+			theme->gravity,
+			theme->bounce,
+			org[0],
+			org[1],
+			org[2],
+			dir[0],
+			dir[1],
+			dir[2],
+			theme->airfriction,
+			theme->liquidfriction,
+			theme->originjitter,
+			theme->velocityjitter,
+			theme->qualityreduction,
+			theme->lifetime,
+			theme->stretch,
+			theme->blendmode,
+			theme->orientation,
+			theme->staincolor1,
+			theme->staincolor2,
+			theme->staintex,
+			theme->stainalpha,
+			theme->stainsize,
+			theme->angle,
+			theme->spin,
+			NULL);
 	}
 	if (!part) 
 	{ 
@@ -3037,7 +3154,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 static void VM_CL_GetEntity (prvm_prog_t *prog)
 {
 	int entnum, fieldnum;
-	float org[3], v1[3], v2[3];
+	vec3_t forward, left, up, org;
 	VM_SAFEPARMCOUNT(2, VM_CL_GetEntityVec);
 
 	entnum = PRVM_G_FLOAT(OFS_PARM0);
@@ -3053,22 +3170,30 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities_active[entnum];
 			break;
 		case 1: // origin
-			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, PRVM_G_VECTOR(OFS_RETURN));
+			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
+			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
 			break; 
 		case 2: // forward
-			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, PRVM_G_VECTOR(OFS_RETURN), v1, v2, org);	
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
+			VectorCopy(forward, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case 3: // right
-			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, v1, PRVM_G_VECTOR(OFS_RETURN), v2, org);	
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
+			VectorNegate(left, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case 4: // up
-			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, v1, v2, PRVM_G_VECTOR(OFS_RETURN), org);	
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
+			VectorCopy(up, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case 5: // scale
 			PRVM_G_FLOAT(OFS_RETURN) = Matrix4x4_ScaleFromMatrix(&cl.entities[entnum].render.matrix);
 			break;	
 		case 6: // origin + v_forward, v_right, v_up
-			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, PRVM_clientglobalvector(v_forward), PRVM_clientglobalvector(v_right), PRVM_clientglobalvector(v_up), PRVM_G_VECTOR(OFS_RETURN));	
+			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
+			VectorCopy(forward, PRVM_clientglobalvector(v_forward));
+			VectorNegate(left, PRVM_clientglobalvector(v_right));
+			VectorCopy(up, PRVM_clientglobalvector(v_up));
+			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
 			break;	
 		case 7: // alpha
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.alpha;
@@ -3547,11 +3672,14 @@ static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qb
 	prvm_prog_t *prog = CLVM_prog;
 	float		dz;
 	vec3_t		oldorg, neworg, end, traceendpos;
+	vec3_t		mins, maxs, start;
 	trace_t		trace;
 	int			i, svent;
 	prvm_edict_t		*enemy;
 
 // try the move
+	VectorCopy(PRVM_clientedictvector(ent, mins), mins);
+	VectorCopy(PRVM_clientedictvector(ent, maxs), maxs);
 	VectorCopy (PRVM_clientedictvector(ent, origin), oldorg);
 	VectorAdd (PRVM_clientedictvector(ent, origin), move, neworg);
 
@@ -3571,7 +3699,8 @@ static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qb
 				if (dz < 30)
 					neworg[2] += 8;
 			}
-			trace = CL_TraceBox(PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), PRVM_clientedictvector(ent, maxs), neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+			VectorCopy(PRVM_clientedictvector(ent, origin), start);
+			trace = CL_TraceBox(start, mins, maxs, neworg, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 			if (settrace)
 				CL_VM_SetTraceGlobals(prog, &trace, svent);
 
@@ -3599,14 +3728,14 @@ static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qb
 	VectorCopy (neworg, end);
 	end[2] -= sv_stepheight.value*2;
 
-	trace = CL_TraceBox(neworg, PRVM_clientedictvector(ent, mins), PRVM_clientedictvector(ent, maxs), end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+	trace = CL_TraceBox(neworg, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 	if (settrace)
 		CL_VM_SetTraceGlobals(prog, &trace, svent);
 
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
-		trace = CL_TraceBox(neworg, PRVM_clientedictvector(ent, mins), PRVM_clientedictvector(ent, maxs), end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
+		trace = CL_TraceBox(neworg, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), true, true, &svent, true);
 		if (settrace)
 			CL_VM_SetTraceGlobals(prog, &trace, svent);
 		if (trace.startsolid)
@@ -4135,9 +4264,10 @@ static void VM_CL_RotateMoves(prvm_prog_t *prog)
     */
 	matrix4x4_t m;
 	vec3_t v = {0, 0, 0};
-	vec3_t x, y, z;
+	vec3_t a, x, y, z;
 	VM_SAFEPARMCOUNT(1, VM_CL_RotateMoves);
-	AngleVectorsFLU(PRVM_G_VECTOR(OFS_PARM0), x, y, z);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), a);
+	AngleVectorsFLU(a, x, y, z);
 	Matrix4x4_FromVectors(&m, x, y, z, v);
 	CL_RotateMoves(&m);
 }

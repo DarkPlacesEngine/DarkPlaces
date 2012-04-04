@@ -393,32 +393,22 @@ typedef struct entity_render_s
 	double last_trace_visibility;
 
 	// user wavefunc parameters (from csqc)
-	float userwavefunc_param[Q3WAVEFUNC_USER_COUNT];
+	vec_t userwavefunc_param[Q3WAVEFUNC_USER_COUNT];
 }
 entity_render_t;
 
 typedef struct entity_persistent_s
 {
-	vec3_t trail_origin;
-
-	// particle trail
-	float trail_time;
+	vec3_t trail_origin; // previous position for particle trail spawning
+	vec3_t oldorigin; // lerp
+	vec3_t oldangles; // lerp
+	vec3_t neworigin; // lerp
+	vec3_t newangles; // lerp
+	vec_t lerpstarttime; // lerp
+	vec_t lerpdeltatime; // lerp
+	float muzzleflash; // muzzleflash intensity, fades over time
+	float trail_time; // residual error accumulation for particle trail spawning (to keep spacing across frames)
 	qboolean trail_allowed; // set to false by teleports, true by update code, prevents bad lerps
-
-	// muzzleflash fading
-	float muzzleflash;
-
-	// interpolated movement
-
-	// start time of move
-	float lerpstarttime;
-	// time difference from start to end of move
-	float lerpdeltatime;
-	// the move itself, start and end
-	float oldorigin[3];
-	float oldangles[3];
-	float neworigin[3];
-	float newangles[3];
 }
 entity_persistent_t;
 

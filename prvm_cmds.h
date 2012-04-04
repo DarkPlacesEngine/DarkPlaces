@@ -210,7 +210,7 @@ float	getserverlistindexforkey(string key)
 #define VM_SAFEPARMCOUNT(p,f)
 #endif
 
-#define	VM_RETURN_EDICT(e)		(((int *)prog->globals.generic)[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
+#define	VM_RETURN_EDICT(e)		(prog->globals.ip[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
 
 #define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
 

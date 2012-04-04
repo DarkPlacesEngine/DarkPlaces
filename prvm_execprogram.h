@@ -74,10 +74,10 @@
 				}
 				break;
 			case OP_BITAND:
-				OPC->_float = (int)OPA->_float & (int)OPB->_float;
+				OPC->_float = (prvm_int_t)OPA->_float & (prvm_int_t)OPB->_float;
 				break;
 			case OP_BITOR:
-				OPC->_float = (int)OPA->_float | (int)OPB->_float;
+				OPC->_float = (prvm_int_t)OPA->_float | (prvm_int_t)OPB->_float;
 				break;
 			case OP_GE:
 				OPC->_float = OPA->_float >= OPB->_float;
@@ -165,13 +165,13 @@
 				if (OPB->_int < 0 || OPB->_int + 1 > prog->entityfieldsarea)
 				{
 					PreError();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, OPB->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
 				{
 					prog->xstatement = st - prog->statements;
-					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), OPB->_int, prog->name);
+					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
@@ -180,13 +180,13 @@
 				if (OPB->_int < 0 || OPB->_int + 3 > prog->entityfieldsarea)
 				{
 					PreError();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, OPB->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
 				{
 					prog->xstatement = st - prog->statements;
-					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), OPB->_int, prog->name);
+					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
@@ -204,7 +204,7 @@
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
 				{
 					PreError();
-					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, OPB->_int);
+					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 #if 0
@@ -216,7 +216,7 @@
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ed->fields.vp - prog->edictsfields + OPB->_int;
+				OPC->_int = ed->fields.fp - prog->edictsfields + OPB->_int;
 				break;
 
 			case OP_LOAD_F:
@@ -233,11 +233,11 @@
 				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
 				{
 					PreError();
-					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, OPB->_int);
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->_int;
+				OPC->_int = ((prvm_eval_t *)(ed->fields.fp + OPB->_int))->_int;
 				break;
 
 			case OP_LOAD_V:
@@ -250,13 +250,13 @@
 				if (OPB->_int < 0 || OPB->_int + 2 >= prog->entityfields)
 				{
 					PreError();
-					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, OPB->_int);
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->ivector[0] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[0];
-				OPC->ivector[1] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[1];
-				OPC->ivector[2] = ((prvm_eval_t *)((int *)ed->fields.vp + OPB->_int))->ivector[2];
+				OPC->ivector[0] = ((prvm_eval_t *)(ed->fields.fp + OPB->_int))->ivector[0];
+				OPC->ivector[1] = ((prvm_eval_t *)(ed->fields.fp + OPB->_int))->ivector[1];
+				OPC->ivector[2] = ((prvm_eval_t *)(ed->fields.fp + OPB->_int))->ivector[2];
 				break;
 
 		//==================
@@ -333,7 +333,7 @@
 				if (!OPA->function)
 					prog->error_cmd("NULL function in %s", prog->name);
 
-				if(!OPA->function || OPA->function >= (unsigned int)prog->numfunctions)
+				if(!OPA->function || OPA->function < 0 || OPA->function >= prog->numfunctions)
 				{
 					PreError();
 					prog->error_cmd("%s CALL outside the program", prog->name);
@@ -376,9 +376,9 @@
 				prog->xfunction->profile += (st - startst);
 				prog->xstatement = st - prog->statements;
 
-				prog->globals.generic[OFS_RETURN] = prog->globals.generic[st->operand[0]];
-				prog->globals.generic[OFS_RETURN+1] = prog->globals.generic[st->operand[0]+1];
-				prog->globals.generic[OFS_RETURN+2] = prog->globals.generic[st->operand[0]+2];
+				prog->globals.ip[OFS_RETURN  ] = prog->globals.ip[st->operand[0]  ];
+				prog->globals.ip[OFS_RETURN+1] = prog->globals.ip[st->operand[0]+1];
+				prog->globals.ip[OFS_RETURN+2] = prog->globals.ip[st->operand[0]+2];
 
 				st = prog->statements + PRVM_LeaveFunction(prog);
 				startst = st;
@@ -410,33 +410,33 @@
 				OPC->_int = OPA->_int + OPB->_int;
 				break;
 			case OP_ADD_IF:
-				OPC->_int = OPA->_int + (int) OPB->_float;
+				OPC->_int = OPA->_int + (prvm_int_t) OPB->_float;
 				break;
 			case OP_ADD_FI:
-				OPC->_float = OPA->_float + (float) OPB->_int;
+				OPC->_float = OPA->_float + (prvm_vec_t) OPB->_int;
 				break;
 			case OP_SUB_I:
 				OPC->_int = OPA->_int - OPB->_int;
 				break;
 			case OP_SUB_IF:
-				OPC->_int = OPA->_int - (int) OPB->_float;
+				OPC->_int = OPA->_int - (prvm_int_t) OPB->_float;
 				break;
 			case OP_SUB_FI:
-				OPC->_float = OPA->_float - (float) OPB->_int;
+				OPC->_float = OPA->_float - (prvm_vec_t) OPB->_int;
 				break;
 			case OP_MUL_I:
 				OPC->_int = OPA->_int * OPB->_int;
 				break;
 			case OP_MUL_IF:
-				OPC->_int = OPA->_int * (int) OPB->_float;
+				OPC->_int = OPA->_int * (prvm_int_t) OPB->_float;
 				break;
 			case OP_MUL_FI:
-				OPC->_float = OPA->_float * (float) OPB->_int;
+				OPC->_float = OPA->_float * (prvm_vec_t) OPB->_int;
 				break;
 			case OP_MUL_VI:
-				OPC->vector[0] = (float) OPB->_int * OPA->vector[0];
-				OPC->vector[1] = (float) OPB->_int * OPA->vector[1];
-				OPC->vector[2] = (float) OPB->_int * OPA->vector[2];
+				OPC->vector[0] = (prvm_vec_t) OPB->_int * OPA->vector[0];
+				OPC->vector[1] = (prvm_vec_t) OPB->_int * OPA->vector[1];
+				OPC->vector[2] = (prvm_vec_t) OPB->_int * OPA->vector[2];
 				break;
 			case OP_DIV_VF:
 				{
@@ -450,10 +450,10 @@
 				OPC->_int = OPA->_int / OPB->_int;
 				break;
 			case OP_DIV_IF:
-				OPC->_int = OPA->_int / (int) OPB->_float;
+				OPC->_int = OPA->_int / (prvm_int_t) OPB->_float;
 				break;
 			case OP_DIV_FI:
-				OPC->_float = OPA->_float / (float) OPB->_int;
+				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
 				break;
 			case OP_CONV_IF:
 				OPC->_float = OPA->_int;
@@ -468,16 +468,16 @@
 				OPC->_int = OPA->_int | OPB->_int;
 				break;
 			case OP_BITAND_IF:
-				OPC->_int = OPA->_int & (int)OPB->_float;
+				OPC->_int = OPA->_int & (prvm_int_t)OPB->_float;
 				break;
 			case OP_BITOR_IF:
-				OPC->_int = OPA->_int | (int)OPB->_float;
+				OPC->_int = OPA->_int | (prvm_int_t)OPB->_float;
 				break;
 			case OP_BITAND_FI:
-				OPC->_float = (int)OPA->_float & OPB->_int;
+				OPC->_float = (prvm_int_t)OPA->_float & OPB->_int;
 				break;
 			case OP_BITOR_FI:
-				OPC->_float = (int)OPA->_float | OPB->_int;
+				OPC->_float = (prvm_int_t)OPA->_float | OPB->_int;
 				break;
 			case OP_GE_I:
 				OPC->_float = OPA->_int >= OPB->_int;
@@ -498,40 +498,40 @@
 				OPC->_float = OPA->_int || OPB->_int;
 				break;
 			case OP_GE_IF:
-				OPC->_float = (float)OPA->_int >= OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int >= OPB->_float;
 				break;
 			case OP_LE_IF:
-				OPC->_float = (float)OPA->_int <= OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int <= OPB->_float;
 				break;
 			case OP_GT_IF:
-				OPC->_float = (float)OPA->_int > OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int > OPB->_float;
 				break;
 			case OP_LT_IF:
-				OPC->_float = (float)OPA->_int < OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int < OPB->_float;
 				break;
 			case OP_AND_IF:
-				OPC->_float = (float)OPA->_int && OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int && OPB->_float;
 				break;
 			case OP_OR_IF:
-				OPC->_float = (float)OPA->_int || OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int || OPB->_float;
 				break;
 			case OP_GE_FI:
-				OPC->_float = OPA->_float >= (float)OPB->_int;
+				OPC->_float = OPA->_float >= (prvm_vec_t)OPB->_int;
 				break;
 			case OP_LE_FI:
-				OPC->_float = OPA->_float <= (float)OPB->_int;
+				OPC->_float = OPA->_float <= (prvm_vec_t)OPB->_int;
 				break;
 			case OP_GT_FI:
-				OPC->_float = OPA->_float > (float)OPB->_int;
+				OPC->_float = OPA->_float > (prvm_vec_t)OPB->_int;
 				break;
 			case OP_LT_FI:
-				OPC->_float = OPA->_float < (float)OPB->_int;
+				OPC->_float = OPA->_float < (prvm_vec_t)OPB->_int;
 				break;
 			case OP_AND_FI:
-				OPC->_float = OPA->_float && (float)OPB->_int;
+				OPC->_float = OPA->_float && (prvm_vec_t)OPB->_int;
 				break;
 			case OP_OR_FI:
-				OPC->_float = OPA->_float || (float)OPB->_int;
+				OPC->_float = OPA->_float || (prvm_vec_t)OPB->_int;
 				break;
 			case OP_NOT_I:
 				OPC->_float = !OPA->_int;
@@ -540,19 +540,19 @@
 				OPC->_float = OPA->_int == OPB->_int;
 				break;
 			case OP_EQ_IF:
-				OPC->_float = (float)OPA->_int == OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int == OPB->_float;
 				break;
 			case OP_EQ_FI:
-				OPC->_float = OPA->_float == (float)OPB->_int;
+				OPC->_float = OPA->_float == (prvm_vec_t)OPB->_int;
 				break;
 			case OP_NE_I:
 				OPC->_float = OPA->_int != OPB->_int;
 				break;
 			case OP_NE_IF:
-				OPC->_float = (float)OPA->_int != OPB->_float;
+				OPC->_float = (prvm_vec_t)OPA->_int != OPB->_float;
 				break;
 			case OP_NE_FI:
-				OPC->_float = OPA->_float != (float)OPB->_int;
+				OPC->_float = OPA->_float != (prvm_vec_t)OPB->_int;
 				break;
 			case OP_STORE_I:
 				OPB->_int = OPA->_int;
@@ -619,7 +619,7 @@
 				break;
 
 			case OP_GADDRESS:
-				i = OPA->_int + (int) OPB->_float;
+				i = OPA->_int + (prvm_int_t) OPB->_float;
 #if PRBOUNDSCHECK
 				if (i < 0 || i >= pr_globaldefs)
 				{

@@ -945,7 +945,7 @@ static void Host_Loadgame_f (void)
 			while (entnum >= prog->max_edicts)
 				PRVM_MEM_IncreaseEdicts(prog);
 			ent = PRVM_EDICT_NUM(entnum);
-			memset(ent->fields.vp, 0, prog->entityfields * 4);
+			memset(ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 			ent->priv.server->free = false;
 
 			if(developer_entityparsing.integer)
@@ -1579,7 +1579,7 @@ static void Host_Color(int changetop, int changebottom)
 	if (host_client->edict && PRVM_serverfunction(SV_ChangeTeam))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
-		prog->globals.generic[OFS_PARM0] = playercolor;
+		prog->globals.fp[OFS_PARM0] = playercolor;
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");

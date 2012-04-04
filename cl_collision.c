@@ -11,9 +11,9 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	float maxfrac, maxrealfrac;
 	int n;
 	entity_render_t *ent;
-	float tracemins[3], tracemaxs[3];
+	vec_t tracemins[3], tracemaxs[3];
 	trace_t trace;
-	float tempnormal[3], starttransformed[3], endtransformed[3];
+	vec_t tempnormal[3], starttransformed[3], endtransformed[3];
 #ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
 	vec3_t end;
 	vec_t len = 0;
@@ -194,7 +194,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 	VectorCopy(mins, PRVM_clientedictvector(ent, absmin));
 	VectorCopy(maxs, PRVM_clientedictvector(ent, absmax));
 
-	World_LinkEdict(&cl.world, ent, PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax));
+	World_LinkEdict(&cl.world, ent, mins, maxs);
 }
 
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
@@ -235,6 +235,8 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	int passedictprog;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
+	// temporary storage because prvm_vec_t may need conversion
+	vec3_t touchmins, touchmaxs;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
 	// size when clipping against monsters
@@ -418,10 +420,12 @@ skipnetworkplayers:
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
+		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
 		else
-			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
+			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -448,6 +452,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	int passedictprog;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
+	// temporary storage because prvm_vec_t may need conversion
+	vec3_t touchmins, touchmaxs;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
 	// size when clipping against monsters
@@ -652,10 +658,12 @@ skipnetworkplayers:
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
+		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if (type == MOVE_MISSILE && (int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
+			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -688,6 +696,8 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	qboolean pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
+	// temporary storage because prvm_vec_t may need conversion
+	vec3_t touchmins, touchmaxs;
 	// bounding box of entire move area
 	vec3_t clipboxmins, clipboxmaxs;
 	// size of the moving object
@@ -927,10 +937,12 @@ skipnetworkplayers:
 		else
 			Matrix4x4_CreateTranslate(&matrix, PRVM_clientedictvector(touch, origin)[0], PRVM_clientedictvector(touch, origin)[1], PRVM_clientedictvector(touch, origin)[2]);
 		Matrix4x4_Invert_Simple(&imatrix, &matrix);
+		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
+		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
 		else
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs), bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;

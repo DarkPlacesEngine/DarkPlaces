@@ -35,4 +35,28 @@ typedef bool qboolean;
 #define RESTRICT
 #endif
 
+// LordHavoc: upgrade the prvm to double precision for better time values
+//#define PRVM_64
+#ifdef PRVM_64
+typedef double prvm_vec_t;
+typedef long long prvm_int_t;
+#else
+typedef float prvm_vec_t;
+typedef int prvm_int_t;
+#endif
+typedef prvm_vec_t prvm_vec3_t[3];
+
+#ifdef VEC_64
+typedef double vec_t;
+#else
+typedef float vec_t;
+#endif
+typedef vec_t vec2_t[2];
+typedef vec_t vec3_t[3];
+typedef vec_t vec4_t[4];
+typedef vec_t vec5_t[5];
+typedef vec_t vec6_t[6];
+typedef vec_t vec7_t[7];
+typedef vec_t vec8_t[8];
+
 #endif

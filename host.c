@@ -899,7 +899,7 @@ void Host_Main(void)
 			SV_SendClientMessages();
 
 			if (sv.paused == 1 && realtime > sv.pausedstart && sv.pausedstart > 0) {
-				prog->globals.generic[OFS_PARM0] = realtime - sv.pausedstart;
+				prog->globals.fp[OFS_PARM0] = realtime - sv.pausedstart;
 				PRVM_serverglobalfloat(time) = sv.time;
 				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
 			}

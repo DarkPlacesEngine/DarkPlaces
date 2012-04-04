@@ -760,7 +760,7 @@ void Matrix4x4_Print(const matrix4x4_t *in)
 	, in->m[3][0], in->m[3][1], in->m[3][2], in->m[3][3]);
 }
 
-int Math_atov(const char *s, vec3_t out)
+int Math_atov(const char *s, prvm_vec3_t out)
 {
 	int i;
 	VectorClear(out);
