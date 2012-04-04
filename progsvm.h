@@ -49,13 +49,13 @@ typedef struct prvm_stack_s
 
 typedef union prvm_eval_s
 {
-	string_t		string;
-	float			_float;
-	float			vector[3];
-	func_t			function;
-	int				ivector[3];
-	int				_int;
-	int				edict;
+	prvm_int_t		string;
+	prvm_vec_t	_float;
+	prvm_vec_t	vector[3];
+	prvm_int_t		function;
+	prvm_int_t		ivector[3];
+	prvm_int_t		_int;
+	prvm_int_t		edict;
 } prvm_eval_t;
 
 typedef struct prvm_required_field_s
@@ -84,7 +84,8 @@ typedef struct prvm_edict_s
 	union
 	{
 		prvm_edict_private_t *required;
-		vec_t *vp;
+		prvm_vec_t *fp;
+		prvm_int_t *ip;
 		// FIXME: this server pointer really means world, not server
 		// (it is used by both server qc and client qc, but not menu qc)
 		edict_engineprivate_t *server;
@@ -108,7 +109,8 @@ typedef struct prvm_edict_s
 	// QuakeC fields (stored in dynamically resized array)
 	union
 	{
-		vec_t *vp;
+		prvm_vec_t *fp;
+		prvm_int_t *ip;
 //		entvars_t		*server;
 //		cl_entvars_t	*client;
 	} fields;
@@ -226,31 +228,31 @@ extern prvm_eval_t prvm_badvalue;
 #define PRVM_menufunction(funcname)           (prog->funcoffsets.funcname)
 
 #if 1
-#define PRVM_EDICTFIELDVALUE(ed, fieldoffset)    (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset)    (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)(ed->fields.fp + fieldoffset))
 #define PRVM_EDICTFIELDFLOAT(ed, fieldoffset)    (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->_float)
 #define PRVM_EDICTFIELDVECTOR(ed, fieldoffset)   (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->vector)
 #define PRVM_EDICTFIELDSTRING(ed, fieldoffset)   (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->string)
 #define PRVM_EDICTFIELDEDICT(ed, fieldoffset)    (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->edict)
 #define PRVM_EDICTFIELDFUNCTION(ed, fieldoffset) (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->function)
-#define PRVM_GLOBALFIELDVALUE(fieldoffset)       (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))
+#define PRVM_GLOBALFIELDVALUE(fieldoffset)       (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)(prog->globals.fp + fieldoffset))
 #define PRVM_GLOBALFIELDFLOAT(fieldoffset)       (PRVM_GLOBALFIELDVALUE(fieldoffset)->_float)
 #define PRVM_GLOBALFIELDVECTOR(fieldoffset)      (PRVM_GLOBALFIELDVALUE(fieldoffset)->vector)
 #define PRVM_GLOBALFIELDSTRING(fieldoffset)      (PRVM_GLOBALFIELDVALUE(fieldoffset)->string)
 #define PRVM_GLOBALFIELDEDICT(fieldoffset)       (PRVM_GLOBALFIELDVALUE(fieldoffset)->edict)
 #define PRVM_GLOBALFIELDFUNCTION(fieldoffset)    (PRVM_GLOBALFIELDVALUE(fieldoffset)->function)
 #else
-#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) ((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))
-#define PRVM_EDICTFIELDFLOAT(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->_float)
-#define PRVM_EDICTFIELDVECTOR(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->vector)
-#define PRVM_EDICTFIELDSTRING(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->string)
-#define PRVM_EDICTFIELDEDICT(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->edict)
-#define PRVM_EDICTFIELDFUNCTION(ed, fieldoffset) (((prvm_eval_t *)((int *)ed->fields.vp + fieldoffset))->function)
-#define PRVM_GLOBALFIELDVALUE(fieldoffset) ((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))
-#define PRVM_GLOBALFIELDFLOAT(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->_float)
-#define PRVM_GLOBALFIELDVECTOR(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->vector)
-#define PRVM_GLOBALFIELDSTRING(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->string)
-#define PRVM_GLOBALFIELDEDICT(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->edict)
-#define PRVM_GLOBALFIELDFUNCTION(fieldoffset) (((prvm_eval_t *)((int *)prog->globals.generic + fieldoffset))->function)
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset) ((prvm_eval_t *)(ed->fields.fp + fieldoffset))
+#define PRVM_EDICTFIELDFLOAT(ed, fieldoffset) (((prvm_eval_t *)(ed->fields.fp + fieldoffset))->_float)
+#define PRVM_EDICTFIELDVECTOR(ed, fieldoffset) (((prvm_eval_t *)(ed->fields.fp + fieldoffset))->vector)
+#define PRVM_EDICTFIELDSTRING(ed, fieldoffset) (((prvm_eval_t *)(ed->fields.fp + fieldoffset))->string)
+#define PRVM_EDICTFIELDEDICT(ed, fieldoffset) (((prvm_eval_t *)(ed->fields.fp + fieldoffset))->edict)
+#define PRVM_EDICTFIELDFUNCTION(ed, fieldoffset) (((prvm_eval_t *)(ed->fields.fp + fieldoffset))->function)
+#define PRVM_GLOBALFIELDVALUE(fieldoffset) ((prvm_eval_t *)(prog->globals.fp + fieldoffset))
+#define PRVM_GLOBALFIELDFLOAT(fieldoffset) (((prvm_eval_t *)(prog->globals.fp + fieldoffset))->_float)
+#define PRVM_GLOBALFIELDVECTOR(fieldoffset) (((prvm_eval_t *)(prog->globals.fp + fieldoffset))->vector)
+#define PRVM_GLOBALFIELDSTRING(fieldoffset) (((prvm_eval_t *)(prog->globals.fp + fieldoffset))->string)
+#define PRVM_GLOBALFIELDEDICT(fieldoffset) (((prvm_eval_t *)(prog->globals.fp + fieldoffset))->edict)
+#define PRVM_GLOBALFIELDFUNCTION(fieldoffset) (((prvm_eval_t *)(prog->globals.fp + fieldoffset))->function)
 #endif
 
 //============================================================================
@@ -562,7 +564,8 @@ typedef struct prvm_prog_s
 	double				*statement_profile; // only incremented if prvm_statementprofiling is on
 
 	union {
-		vec_t *generic;
+		prvm_vec_t *fp;
+		prvm_int_t *ip;
 //		globalvars_t *server;
 //		cl_globalvars_t *client;
 	} globals;
@@ -596,7 +599,7 @@ typedef struct prvm_prog_s
 	prvm_stack_t		stack[PRVM_MAX_STACK_DEPTH+1];
 	int					depth;
 
-	int					localstack[PRVM_LOCALSTACK_SIZE];
+	prvm_int_t			localstack[PRVM_LOCALSTACK_SIZE];
 	int					localstack_used;
 
 	unsigned short		filecrc;
@@ -628,8 +631,8 @@ typedef struct prvm_prog_s
 	int					reserved_edicts; // [INIT]
 
 	prvm_edict_t		*edicts;
-	vec_t				*edictsfields;
-	void					*edictprivate;
+	prvm_vec_t		*edictsfields;
+	void				*edictprivate;
 
 	// size of the engine private struct
 	int					edictprivate_size; // [INIT]
@@ -809,19 +812,19 @@ unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char 
 
 //============================================================================
 
-#define	PRVM_G_FLOAT(o) (prog->globals.generic[o])
-#define	PRVM_G_INT(o) (*(int *)&prog->globals.generic[o])
-#define	PRVM_G_EDICT(o) (PRVM_PROG_TO_EDICT(*(int *)&prog->globals.generic[o]))
+#define	PRVM_G_FLOAT(o) (prog->globals.fp[o])
+#define	PRVM_G_INT(o) (prog->globals.ip[o])
+#define	PRVM_G_EDICT(o) (PRVM_PROG_TO_EDICT(prog->globals.ip[o]))
 #define PRVM_G_EDICTNUM(o) PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(o))
-#define	PRVM_G_VECTOR(o) (&prog->globals.generic[o])
-#define	PRVM_G_STRING(o) (PRVM_GetString(prog, *(string_t *)&prog->globals.generic[o]))
-//#define	PRVM_G_FUNCTION(prog, o) (*(func_t *)&prog->globals.generic[o])
+#define	PRVM_G_VECTOR(o) (&prog->globals.fp[o])
+#define	PRVM_G_STRING(o) (PRVM_GetString(prog, prog->globals.ip[o]))
+//#define	PRVM_G_FUNCTION(prog, o) (prog->globals.ip[o])
 
 // FIXME: make these go away?
-#define	PRVM_E_FLOAT(e,o) (((float*)e->fields.vp)[o])
-#define	PRVM_E_INT(e,o) (((int*)e->fields.vp)[o])
-//#define	PRVM_E_VECTOR(e,o) (&((float*)e->fields.vp)[o])
-#define	PRVM_E_STRING(e,o) (PRVM_GetString(prog, *(string_t *)&((float*)e->fields.vp)[o]))
+#define	PRVM_E_FLOAT(e,o) (e->fields.fp[o])
+#define	PRVM_E_INT(e,o) (e->fields.fp[o])
+//#define	PRVM_E_VECTOR(e,o) (&(e->fields.fp[o]))
+#define	PRVM_E_STRING(e,o) (PRVM_GetString(prog, e->fields.ip[o]))
 
 extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-project is to
 // make the new vm mostly independent from the old one, thus if it's necessary, I copy everything

@@ -2107,7 +2107,6 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	const int *ie;
 	dBodyID body = (dBodyID)ed->priv.server->ode_body;
 	dMass mass;
-	dReal test;
 	const dReal *ovelocity, *ospinvelocity;
 	void *dataID;
 	dp_model_t *model;
@@ -2142,6 +2141,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec_t radius;
 	vec3_t scale;
 	vec_t spinlimit;
+	vec_t test;
 	qboolean gravity;
 	qboolean geom_modified = false;
 	edict_odefunc_t *func, *nextf;
@@ -2726,17 +2726,17 @@ treatasbox:
 	if (physics_ode_trick_fixnan.integer)
 	{
 		test = VectorLength2(origin) + VectorLength2(forward) + VectorLength2(left) + VectorLength2(up) + VectorLength2(velocity) + VectorLength2(spinvelocity);
-		if (IS_NAN(test))
+		if (VEC_IS_NAN(test))
 		{
 			modified = true;
 			//Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .axis_forward = '%f %f %f' .axis_left = '%f %f %f' .axis_up = %f %f %f' .spinvelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], forward[0], forward[1], forward[2], left[0], left[1], left[2], up[0], up[1], up[2], spinvelocity[0], spinvelocity[1], spinvelocity[2]);
 			if (physics_ode_trick_fixnan.integer >= 2)
 				Con_Printf("Fixing NAN values on entity %i : .classname = \"%s\" .origin = '%f %f %f' .velocity = '%f %f %f' .angles = '%f %f %f' .avelocity = '%f %f %f'\n", PRVM_NUM_FOR_EDICT(ed), PRVM_GetString(prog, PRVM_gameedictstring(ed, classname)), origin[0], origin[1], origin[2], velocity[0], velocity[1], velocity[2], angles[0], angles[1], angles[2], avelocity[0], avelocity[1], avelocity[2]);
 			test = VectorLength2(origin);
-			if (IS_NAN(test))
+			if (VEC_IS_NAN(test))
 				VectorClear(origin);
 			test = VectorLength2(forward) * VectorLength2(left) * VectorLength2(up);
-			if (IS_NAN(test))
+			if (VEC_IS_NAN(test))
 			{
 				VectorSet(angles, 0, 0, 0);
 				VectorSet(forward, 1, 0, 0);
@@ -2744,10 +2744,10 @@ treatasbox:
 				VectorSet(up, 0, 0, 1);
 			}
 			test = VectorLength2(velocity);
-			if (IS_NAN(test))
+			if (VEC_IS_NAN(test))
 				VectorClear(velocity);
 			test = VectorLength2(spinvelocity);
-			if (IS_NAN(test))
+			if (VEC_IS_NAN(test))
 			{
 				VectorClear(avelocity);
 				VectorClear(spinvelocity);

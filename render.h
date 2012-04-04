@@ -223,8 +223,8 @@ void R_TimeReport(const char *name);
 // r_stain
 void R_Stain(const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
 
-void R_CalcBeam_Vertex3f(float *vert, const vec3_t org1, const vec3_t org2, float width);
-void R_CalcSprite_Vertex3f(float *vertex3f, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2);
+void R_CalcBeam_Vertex3f(float *vert, const float *org1, const float *org2, float width);
+void R_CalcSprite_Vertex3f(float *vertex3f, const float *origin, const float *left, const float *up, float scalex1, float scalex2, float scaley1, float scaley2);
 
 extern mempool_t *r_main_mempool;
 

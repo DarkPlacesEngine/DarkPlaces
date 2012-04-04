@@ -110,7 +110,7 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 {
 	prvm_prog_t *prog = SVVM_prog;
 	float		dz;
-	vec3_t		oldorg, neworg, end, traceendpos;
+	vec3_t		oldorg, neworg, end, traceendpos, entorigin, entmins, entmaxs;
 	trace_t		trace;
 	int			i;
 	prvm_edict_t		*enemy;
@@ -118,6 +118,8 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 // try the move
 	VectorCopy (PRVM_serveredictvector(ent, origin), oldorg);
 	VectorAdd (PRVM_serveredictvector(ent, origin), move, neworg);
+	VectorCopy(PRVM_serveredictvector(ent, mins), entmins);
+	VectorCopy(PRVM_serveredictvector(ent, maxs), entmaxs);
 
 // flying monsters don't step up
 	if ( (int)PRVM_serveredictfloat(ent, flags) & (FL_SWIM | FL_FLY) )
@@ -140,7 +142,8 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 						neworg[2] += 8;
 				}
 			}
-			trace = SV_TraceBox(PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), neworg, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+			VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
+			trace = SV_TraceBox(entorigin, entmins, entmaxs, neworg, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 
 			if (trace.fraction == 1)
 			{
@@ -169,12 +172,12 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	VectorCopy (neworg, end);
 	end[2] -= sv_stepheight.value*2;
 
-	trace = SV_TraceBox(neworg, PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+	trace = SV_TraceBox(neworg, entmins, entmaxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
-		trace = SV_TraceBox(neworg, PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
+		trace = SV_TraceBox(neworg, entmins, entmaxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent));
 		if (trace.startsolid)
 			return false;
 	}

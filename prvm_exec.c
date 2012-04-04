@@ -564,7 +564,7 @@ static int PRVM_EnterFunction (prvm_prog_t *prog, mfunction_t *f)
 		prog->error_cmd("PRVM_ExecuteProgram: locals stack overflow in %s", prog->name);
 
 	for (i=0 ; i < c ; i++)
-		prog->localstack[prog->localstack_used+i] = ((int *)prog->globals.generic)[f->parm_start + i];
+		prog->localstack[prog->localstack_used+i] = prog->globals.ip[f->parm_start + i];
 	prog->localstack_used += c;
 
 // copy parameters
@@ -573,7 +573,7 @@ static int PRVM_EnterFunction (prvm_prog_t *prog, mfunction_t *f)
 	{
 		for (j=0 ; j<f->parm_size[i] ; j++)
 		{
-			((int *)prog->globals.generic)[o] = ((int *)prog->globals.generic)[OFS_PARM0+i*3+j];
+			prog->globals.ip[o] = prog->globals.ip[OFS_PARM0+i*3+j];
 			o++;
 		}
 	}
@@ -605,7 +605,7 @@ static int PRVM_LeaveFunction (prvm_prog_t *prog)
 		prog->error_cmd("PRVM_ExecuteProgram: locals stack underflow in %s", prog->name);
 
 	for (i=0 ; i < c ; i++)
-		((int *)prog->globals.generic)[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];
+		prog->globals.ip[prog->xfunction->parm_start + i] = prog->localstack[prog->localstack_used+i];
 
 // up stack
 	prog->depth--;
@@ -644,9 +644,9 @@ void PRVM_Init_Exec(prvm_prog_t *prog)
 	// nothing here yet
 }
 
-#define OPA ((prvm_eval_t *)&prog->globals.generic[st->operand[0]])
-#define OPB ((prvm_eval_t *)&prog->globals.generic[st->operand[1]])
-#define OPC ((prvm_eval_t *)&prog->globals.generic[st->operand[2]])
+#define OPA ((prvm_eval_t *)&prog->globals.fp[st->operand[0]])
+#define OPB ((prvm_eval_t *)&prog->globals.fp[st->operand[1]])
+#define OPC ((prvm_eval_t *)&prog->globals.fp[st->operand[2]])
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern qboolean prvm_runawaycheck;

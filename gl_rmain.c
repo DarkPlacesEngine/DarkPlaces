@@ -7463,7 +7463,7 @@ void R_DrawNoModel(entity_render_t *ent)
 		R_DrawNoModel_TransparentCallback(ent, rsurface.rtlight, 0, NULL);
 }
 
-void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, float width)
+void R_CalcBeam_Vertex3f (float *vert, const float *org1, const float *org2, float width)
 {
 	vec3_t right1, right2, diff, normal;
 

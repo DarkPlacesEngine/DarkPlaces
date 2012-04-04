@@ -740,7 +740,7 @@ static void VM_M_copyentity (prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(2,VM_M_copyentity);
 	in = PRVM_G_EDICT(OFS_PARM0);
 	out = PRVM_G_EDICT(OFS_PARM1);
-	memcpy(out->fields.vp, in->fields.vp, prog->entityfields * 4);
+	memcpy(out->fields.fp, in->fields.fp, prog->entityfields * sizeof(prvm_vec_t));
 }
 
 //#66 vector() getmousepos (EXT_CSQC)

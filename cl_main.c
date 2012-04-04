@@ -927,7 +927,7 @@ static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean int
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;
 	int frame;
-	float origin[3], angles[3], lerp;
+	vec_t origin[3], angles[3], lerp;
 	entity_t *t;
 	entity_render_t *r;
 	//entity_persistent_t *p = &e->persistent;
@@ -1520,7 +1520,7 @@ static void CL_LinkNetworkEntity(entity_t *e)
 	if ((e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) && r_refdef.scene.numlights < MAX_DLIGHTS)
 	{
 		matrix4x4_t dlightmatrix;
-		float light[4];
+		vec4_t light;
 		VectorScale(e->state_current.light, (1.0f / 256.0f), light);
 		light[3] = e->state_current.light[3];
 		if (light[0] == 0 && light[1] == 0 && light[2] == 0)
