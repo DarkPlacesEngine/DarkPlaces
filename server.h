@@ -233,7 +233,7 @@ typedef struct client_s
 	float clmovement_inputtimeout;
 
 /// spawn parms are carried from level to level
-	float spawn_parms[NUM_SPAWN_PARMS];
+	prvm_vec_t spawn_parms[NUM_SPAWN_PARMS];
 
 	// properties that are sent across the network only when changed
 	char name[MAX_SCOREBOARDNAME], old_name[MAX_SCOREBOARDNAME];
