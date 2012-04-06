@@ -6910,10 +6910,6 @@ void R_RenderView(void)
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
 
-	// apply bloom brightness offset
-	if(r_bloom.integer)
-		r_refdef.view.colorscale *= r_bloom_scenebrightness.value;
-
 	if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 		// in sRGB fallback, behave similar to true sRGB: convert this
 		// value from linear to sRGB
@@ -6924,6 +6920,11 @@ void R_RenderView(void)
 	R_Shadow_UpdateWorldLightSelection();
 
 	R_Bloom_StartFrame();
+
+	// apply bloom brightness offset
+	if(r_fb.bloomtexture[0])
+		r_refdef.view.colorscale *= r_bloom_scenebrightness.value;
+
 	R_Water_StartFrame();
 
 	// now we probably have an fbo to render into
