@@ -203,6 +203,7 @@ cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
 cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
 cvar_t r_bloom_colorexponent = {CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
 cvar_t r_bloom_colorsubtract = {CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
+cvar_t r_bloom_scenebrightness = {CVAR_SAVE, "r_bloom_scenebrightness", "1", "global rendering brightness when bloom is enabled"};
 
 cvar_t r_hdr_scenebrightness = {CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
 cvar_t r_hdr_glowintensity = {CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
@@ -4297,6 +4298,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_bloom_resolution);
 	Cvar_RegisterVariable(&r_bloom_colorexponent);
 	Cvar_RegisterVariable(&r_bloom_colorsubtract);
+	Cvar_RegisterVariable(&r_bloom_scenebrightness);
 	Cvar_RegisterVariable(&r_hdr_scenebrightness);
 	Cvar_RegisterVariable(&r_hdr_glowintensity);
 	Cvar_RegisterVariable(&r_hdr_irisadaptation);
@@ -6907,6 +6909,10 @@ void R_RenderView(void)
 	}
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
+
+	// apply bloom brightness offset
+	if(r_bloom.integer)
+		r_refdef.view.colorscale *= r_bloom_scenebrightness.value;
 
 	if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 		// in sRGB fallback, behave similar to true sRGB: convert this
