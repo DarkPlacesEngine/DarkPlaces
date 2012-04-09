@@ -822,7 +822,7 @@ unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char 
 
 // FIXME: make these go away?
 #define	PRVM_E_FLOAT(e,o) (e->fields.fp[o])
-#define	PRVM_E_INT(e,o) (e->fields.fp[o])
+#define	PRVM_E_INT(e,o) (e->fields.ip[o])
 //#define	PRVM_E_VECTOR(e,o) (&(e->fields.fp[o]))
 #define	PRVM_E_STRING(e,o) (PRVM_GetString(prog, e->fields.ip[o]))
 
