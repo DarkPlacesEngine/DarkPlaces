@@ -1602,7 +1602,7 @@ static void VM_CL_getplayerkey (prvm_prog_t *prog)
 			{
 				vec3_t origin;
 				Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
-				dpsnprintf(t, sizeof(t), "%.9g %.9g %.9g", origin[0], origin[1], origin[2]);
+				dpsnprintf(t, sizeof(t), VECTOR_LOSSLESS_FORMAT, origin[0], origin[1], origin[2]);
 			}
 		}
 	if(!t[0])
