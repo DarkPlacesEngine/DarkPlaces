@@ -1949,7 +1949,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	prog->numglobals = prog->progs_numglobals;
 	prog->entityfields = prog->progs_entityfields;
 
-	if (LittleLong(dprograms->ofs_strings) + prog->progs_numstrings >= (int)filesize)
+	if (LittleLong(dprograms->ofs_strings) + prog->progs_numstrings > (int)filesize)
 		prog->error_cmd("%s: %s strings go past end of file", prog->name, filename);
 	prog->strings = (char *)Mem_Alloc(prog->progs_mempool, prog->progs_numstrings);
 	memcpy(prog->strings, instrings, prog->progs_numstrings);
