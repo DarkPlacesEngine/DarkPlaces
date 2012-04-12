@@ -535,9 +535,9 @@ static void CL_Particles_LoadEffectInfo(const char *customfile)
 		if (filepass == 0)
 		{
 			if (customfile)
-				dpsnprintf(filename, sizeof(filename), customfile);
+				strlcpy(filename, customfile, sizeof(filename));
 			else
-				dpsnprintf(filename, sizeof(filename), "effectinfo.txt");
+				strlcpy(filename, "effectinfo.txt", sizeof(filename));
 		}
 		else if (filepass == 1)
 		{
