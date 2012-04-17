@@ -185,8 +185,11 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	vec3_t paddedmins, paddedmaxs;
 	int igrid[3], igridmins[3], igridmaxs[3];
 
-	VectorSet(paddedmins, requestmins[0] - 1.0f, requestmins[1] - 1.0f, requestmins[2] - 1.0f);
-	VectorSet(paddedmaxs, requestmaxs[0] + 1.0f, requestmaxs[1] + 1.0f, requestmaxs[2] + 1.0f);
+	// LordHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
+	//VectorSet(paddedmins, requestmins[0] - 1.0f, requestmins[1] - 1.0f, requestmins[2] - 1.0f);
+	//VectorSet(paddedmaxs, requestmaxs[0] + 1.0f, requestmaxs[1] + 1.0f, requestmaxs[2] + 1.0f);
+	VectorCopy(requestmins, paddedmins);
+	VectorCopy(requestmaxs, paddedmaxs);
 
 	// FIXME: if areagrid_marknumber wraps, all entities need their
 	// ent->priv.server->areagridmarknumber reset
