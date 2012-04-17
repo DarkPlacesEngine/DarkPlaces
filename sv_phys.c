@@ -723,8 +723,11 @@ int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_e
 	vec3_t paddedmins, paddedmaxs;
 	if (maxedicts < 1 || resultedicts == NULL)
 		return 0;
-	VectorSet(paddedmins, mins[0] - 10, mins[1] - 10, mins[2] - 1);
-	VectorSet(paddedmaxs, maxs[0] + 10, maxs[1] + 10, maxs[2] + 1);
+	// LordHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
+	//VectorSet(paddedmins, mins[0] - 10, mins[1] - 10, mins[2] - 1);
+	//VectorSet(paddedmaxs, maxs[0] + 10, maxs[1] + 10, maxs[2] + 1);
+	VectorCopy(mins, paddedmins);
+	VectorCopy(maxs, paddedmaxs);
 	if (sv_areadebug.integer)
 	{
 		int numresultedicts = 0;
