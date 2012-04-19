@@ -5548,8 +5548,8 @@ void R_Shadow_LoadWorldLights(void)
 		n = 0;
 		while (*s)
 		{
-			t = s;
 			/*
+			t = s;
 			shadow = true;
 			for (;COM_Parse(t, true) && strcmp(
 			if (COM_Parse(t, true))

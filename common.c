@@ -742,7 +742,6 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 		{
 			case 0: // end of string
 				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);
-				isContinuation = false;
 				goto out;
 			case '\n': // end of line
 				result += processLine(passthroughPL, startOfLine, cursor - startOfLine, spaceUsedInLine, isContinuation);

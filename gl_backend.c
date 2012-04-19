@@ -706,8 +706,6 @@ qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 	if (BoxesOverlap(r_refdef.view.origin, r_refdef.view.origin, mins, maxs))
 		return false;
 
-	x1 = y1 = x2 = y2 = 0;
-
 	// transform all corners that are infront of the nearclip plane
 	VectorNegate(r_refdef.view.frustum[4].normal, plane4f);
 	plane4f[3] = r_refdef.view.frustum[4].dist;

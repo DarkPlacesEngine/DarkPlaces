@@ -1387,7 +1387,8 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	else
 		width_of = fnt->width_of;
 
-	for (i = 0;((bytes_left = *maxlen - (text - text_start)) > 0) && *text;)
+	i = 0;
+	while (((bytes_left = *maxlen - (text - text_start)) > 0) && *text)
 	{
 		size_t i0 = i;
 		nextch = ch = u8_getnchar(text, &text, bytes_left);
@@ -1616,7 +1617,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 			y += r_textshadow.value * vid.height / vid_conheight.value;
 		}
 		*/
-		for (i = 0;((bytes_left = maxlen - (text - text_start)) > 0) && *text;)
+		while (((bytes_left = maxlen - (text - text_start)) > 0) && *text)
 		{
 			nextch = ch = u8_getnchar(text, &text, bytes_left);
 			i = text - text_start;

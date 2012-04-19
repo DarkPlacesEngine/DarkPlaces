@@ -4367,7 +4367,6 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
 	{
 		surface = model->data_surfaces + surfaceindex;
-		e = model->surfmesh.data_element3i + surface->num_firsttriangle*3;
 		if (!surface->num_triangles)
 			continue;
 		lightmapindex = mod_generatelightmaps_lightmaptriangles[surface->num_firsttriangle].lightmapindex;

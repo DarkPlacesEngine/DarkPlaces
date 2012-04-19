@@ -236,9 +236,6 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 	float *c;
 	DrawQ_Fill(graphx, graphy, graphwidth, graphheight + textsize * 2, 0, 0, 0, 0.5, 0);
 	// draw the bar graph itself
-	// advance the packet counter because it is the latest packet column being
-	// built up and should come last
-	packetcounter = (packetcounter + 1) % NETGRAPH_PACKETS;
 	memset(g, 0, sizeof(g));
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{

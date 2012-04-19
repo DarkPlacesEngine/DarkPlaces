@@ -360,7 +360,6 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 
 			// do the actual paint now (may skip work if silent)
 			paint = paintbuffer;
-			wantframes = totalmixframes;
 			istartframe = 0;
 			for (wantframes = totalmixframes;wantframes > 0;posd += count * speedd, wantframes -= count)
 			{

@@ -583,7 +583,7 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 	{
 		Con_Printf("Failed to load face %i of %s. Falling back to face 0\n", _face, name);
 		_face = 0;
-		status = qFT_New_Memory_Face(font_ft2lib, (FT_Bytes)data, datasize, 0, (FT_Face*)&font->face);
+		status = qFT_New_Memory_Face(font_ft2lib, (FT_Bytes)data, datasize, _face, (FT_Face*)&font->face);
 	}
 	font->data = data;
 	if (status)

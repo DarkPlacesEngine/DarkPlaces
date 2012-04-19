@@ -672,7 +672,6 @@ void Host_Main(void)
 	Host_Init();
 
 	realtime = 0;
-	dirtytime = Sys_DirtyTime();
 	for (;;)
 	{
 		if (setjmp(host_abortframe))
