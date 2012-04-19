@@ -2055,11 +2055,9 @@ static void DPSOFTRAST_Draw_Span_FinishBGRA8(DPSOFTRAST_State_Thread *thread, co
 	int subx;
 	const unsigned int * RESTRICT ini = (const unsigned int *)in4ub;
 	unsigned char * RESTRICT pixelmask = span->pixelmask;
-	unsigned char * RESTRICT pixel = (unsigned char *)dpsoftrast.fb_colorpixels[0];
 	unsigned int * RESTRICT pixeli = (unsigned int *)dpsoftrast.fb_colorpixels[0];
-	if (!pixel)
+	if (!pixeli)
 		return;
-	pixel += (span->y * dpsoftrast.fb_width + span->x) * 4;
 	pixeli += span->y * dpsoftrast.fb_width + span->x;
 	// handle alphatest now (this affects depth writes too)
 	if (thread->shader_permutation & SHADERPERMUTATION_ALPHAKILL)
