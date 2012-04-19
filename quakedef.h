@@ -25,9 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #if defined(__GNUC__) && (__GNUC__ > 2)
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
+#define DP_FUNC_NORETURN  __attribute__ ((noreturn))
 #else
 #define DP_FUNC_PRINTF(n)
 #define DP_FUNC_PURE
+#define DP_FUNC_NORETURN
 #endif
 
 #include <sys/types.h>
@@ -508,7 +510,7 @@ void Host_InitCommands(void);
 void Host_Main(void);
 void Host_Shutdown(void);
 void Host_StartVideo(void);
-void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1);
+void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 void Host_Quit_f(void);
 void Host_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Host_ShutdownServer(void);
