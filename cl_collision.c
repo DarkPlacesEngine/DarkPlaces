@@ -94,7 +94,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		}
 	}
 	maxfrac = bound(0, maxfrac, 1);
-	maxrealfrac = bound(0, maxrealfrac, 1);
+	//maxrealfrac = bound(0, maxrealfrac, 1);
 	//if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __FILE__, __LINE__);
 	if (impact)
 		VectorLerp(start, maxfrac, end, impact);

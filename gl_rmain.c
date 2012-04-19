@@ -9496,7 +9496,6 @@ static void RSurf_DrawBatch_GL11_ApplyFog(void)
 	if (rsurface.passcolor4f)
 	{
 		// generate color arrays
-		c = rsurface.passcolor4f + rsurface.batchfirstvertex * 4;
 		rsurface.passcolor4f = (float *)R_FrameData_Alloc(rsurface.batchnumvertices * sizeof(float[4]));
 		rsurface.passcolor4f_vertexbuffer = 0;
 		rsurface.passcolor4f_bufferoffset = 0;
@@ -11191,7 +11190,6 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 	else
 		frametime = 0;
 	decalsystem->lastupdatetime = r_refdef.scene.time;
-	decal = decalsystem->decals;
 	numdecals = decalsystem->numdecals;
 
 	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
@@ -11268,7 +11266,6 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		RSurf_ActiveModelEntity(ent, false, false, false);
 
 	decalsystem->lastupdatetime = r_refdef.scene.time;
-	decal = decalsystem->decals;
 
 	faderate = 1.0f / max(0.001f, cl_decals_fadetime.value);
 

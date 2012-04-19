@@ -3467,7 +3467,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	// TODO: calculate node bounding boxes during recursion and calculate a maximum plane size accordingly to improve precision (as most maps do not need 1 billion unit plane polygons)
 	PolygonD_QuadForPlane(nodeportal->points, nodeportal->plane.normal[0], nodeportal->plane.normal[1], nodeportal->plane.normal[2], nodeportal->plane.dist, 1024.0*1024.0*1024.0);
 	nodeportal->numpoints = 4;
-	side = 0;	// shut up compiler warning
+	// side = 0;	// shut up compiler warning -> should be no longer needed, Host_Error is declared noreturn now
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
 		clipplane = portal->plane;

@@ -3664,7 +3664,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_chokecount:
-				i = MSG_ReadByte(&cl_message);
+				(void) MSG_ReadByte(&cl_message);
 				// FIXME: apply to netgraph
 				//for (j = 0;j < i;j++)
 				//	cl.frames[(cls.netcon->qw.incoming_acknowledged-1-j)&QW_UPDATE_MASK].receivedtime = -2;

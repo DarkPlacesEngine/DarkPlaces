@@ -781,7 +781,6 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *ve
 		// read frames
 		for (i = 0;i < groupframes;i++)
 		{
-			pinframe = (daliasframe_t *)datapointer;
 			datapointer += sizeof(daliasframe_t);
 			Mod_ConvertAliasVerts(inverts, (trivertx_t *)datapointer, loadmodel->surfmesh.data_morphmdlvertex + pose * loadmodel->surfmesh.num_vertices, vertremap);
 			datapointer += sizeof(trivertx_t) * inverts;
