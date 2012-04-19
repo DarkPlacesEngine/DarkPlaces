@@ -11457,13 +11457,12 @@ static void R_DrawDebugModel(void)
 	{
 		int triangleindex;
 		int bihleafindex;
-		qboolean cullbox = ent == r_refdef.scene.worldentity;
+		qboolean cullbox = false;
 		const q3mbrush_t *brush;
 		const bih_t *bih = &model->collision_bih;
 		const bih_leaf_t *bihleaf;
 		float vertex3f[3][3];
 		GL_PolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);
-		cullbox = false;
 		for (bihleafindex = 0, bihleaf = bih->leafs;bihleafindex < bih->numleafs;bihleafindex++, bihleaf++)
 		{
 			if (cullbox && R_CullBox(bihleaf->mins, bihleaf->maxs))
