@@ -2158,7 +2158,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		int clientid = -1, serverid = -1, wantserverid = -1;
 		qboolean server_can_auth = true;
 		char wantserver_idfp[FP64_SIZE+1];
-		int wantserver_aeslevel;
+		int wantserver_aeslevel = 0;
 
 		// if we have a stored host key for the server, assume serverid to already be selected!
 		// (the loop will refuse to overwrite this one then)
