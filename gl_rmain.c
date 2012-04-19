@@ -3584,7 +3584,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
 	if (skinframe->base)
 		return skinframe;
-	textureflags &= ~TEXF_FORCE_RELOAD;
+	//textureflags &= ~TEXF_FORCE_RELOAD;
 
 	skinframe->stain = NULL;
 	skinframe->merged = NULL;
