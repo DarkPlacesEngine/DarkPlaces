@@ -442,11 +442,11 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 		break;
 	case ev_float:
 		// LordHavoc: changed from %5.1f to %10.4f
-		dpsnprintf (line, linelength, "%10.4f", val->_float);
+		dpsnprintf (line, linelength, FLOAT_LOSSLESS_FORMAT, val->_float);
 		break;
 	case ev_vector:
 		// LordHavoc: changed from %5.1f to %10.4f
-		dpsnprintf (line, linelength, "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, linelength, "'" VECTOR_LOSSLESS_FORMAT "'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
 		dpsnprintf (line, linelength, "pointer");
