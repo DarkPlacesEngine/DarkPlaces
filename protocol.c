@@ -3265,7 +3265,6 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 	newsnapindex = cl.qw_validsequence & QW_UPDATE_MASK;
 	newsnap = d->snapshot + newsnapindex;
 	memset(newsnap, 0, sizeof(*newsnap));
-	oldsnapindex = -1;
 	oldsnap = NULL;
 	if (delta)
 	{

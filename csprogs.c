@@ -1000,7 +1000,6 @@ void CL_VM_Init (void)
 		return;
 
 	// see if the requested csprogs.dat file matches the requested crc
-	csprogsdatacrc = -1;
 	if (!cls.demoplayback || csqc_usedemoprogs.integer)
 	{
 		csprogsfn = va(vabuf, sizeof(vabuf), "dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc);

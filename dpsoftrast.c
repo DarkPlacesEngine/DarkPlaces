@@ -617,9 +617,6 @@ int DPSOFTRAST_Texture_New(int flags, int width, int height, int depth)
 	d = depth;
 	size = 0;
 	mipmaps = 0;
-	w = width;
-	h = height;
-	d = depth;
 	for (;;)
 	{
 		s = w * h * d * sides * 4;
@@ -4050,7 +4047,7 @@ void DPSOFTRAST_PixelShader_LightDirection(DPSOFTRAST_State_Thread *thread, cons
 	{
 		for (x = startx;x < endx;x++)
 		{
-			z = buffer_z[x];
+			// z = buffer_z[x];
 			diffusetex[0] = buffer_texture_colorbgra8[x*4+0];
 			diffusetex[1] = buffer_texture_colorbgra8[x*4+1];
 			diffusetex[2] = buffer_texture_colorbgra8[x*4+2];
@@ -4587,7 +4584,7 @@ static void DPSOFTRAST_VertexShader_Water(void)
 static void DPSOFTRAST_PixelShader_Water(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
-	float z;
+	// float z;
 	int x, startx = span->startx, endx = span->endx;
 
 	// texture reads
@@ -4656,7 +4653,7 @@ static void DPSOFTRAST_PixelShader_Water(DPSOFTRAST_State_Thread *thread, const 
 		unsigned char c2[4];
 		float Fresnel;
 
-		z = buffer_z[x];
+		// z = buffer_z[x];
 
 		// "    vec4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
 		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
@@ -4795,8 +4792,6 @@ static void DPSOFTRAST_Draw_DepthTest(DPSOFTRAST_State_Thread *thread, DPSOFTRAS
 	int depthslope;
 	unsigned int d;
 	unsigned char *pixelmask;
-	DPSOFTRAST_State_Triangle *triangle;
-	triangle = &thread->triangles[span->triangle];
 	depthpixel = dpsoftrast.fb_depthpixels + span->y * dpsoftrast.fb_width + span->x;
 	startx = span->startx;
 	endx = span->endx;
