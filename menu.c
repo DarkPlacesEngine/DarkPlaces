@@ -5272,8 +5272,8 @@ static void MP_KeyEvent (int key, int ascii, qboolean downevent)
 	prvm_prog_t *prog = MVM_prog;
 
 	// pass key
-	prog->globals.fp[OFS_PARM0] = (float) key;
-	prog->globals.fp[OFS_PARM1] = (float) ascii;
+	prog->globals.fp[OFS_PARM0] = (prvm_vec_t) key;
+	prog->globals.fp[OFS_PARM1] = (prvm_vec_t) ascii;
 	if (downevent)
 		prog->ExecuteProgram(prog, PRVM_menufunction(m_keydown),"m_keydown(float key, float ascii) required");
 	else if (PRVM_menufunction(m_keyup))
@@ -5312,7 +5312,7 @@ static void MP_ToggleMenu(int mode)
 {
 	prvm_prog_t *prog = MVM_prog;
 
-	prog->globals.fp[OFS_PARM0] = (float) mode;
+	prog->globals.fp[OFS_PARM0] = (prvm_vec_t) mode;
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_toggle),"m_toggle(float mode) required");
 }
 
