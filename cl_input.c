@@ -697,7 +697,6 @@ void CL_Input (void)
 		{
 			// digital direction, analog amount
 			vec_t wishvel_x, wishvel_y;
-			f *= max(cl_sidespeed.value, max(cl_forwardspeed.value, cl_backspeed.value));
 			wishvel_x = fabs(cl.cmd.forwardmove);
 			wishvel_y = fabs(cl.cmd.sidemove);
 			if(wishvel_x != 0 && wishvel_y != 0 && wishvel_x != wishvel_y)
