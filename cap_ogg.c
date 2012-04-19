@@ -828,7 +828,7 @@ static void SCR_CaptureVideo_Ogg_ConvertFrame_BGRA_to_YUV(void)
 	yuv_buffer *yuv;
 	int x, y;
 	int blockr, blockg, blockb;
-	unsigned char *b = cls.capturevideo.outbuffer;
+	unsigned char *b;
 	int w = cls.capturevideo.width;
 	int h = cls.capturevideo.height;
 	int inpitch = w*4;
