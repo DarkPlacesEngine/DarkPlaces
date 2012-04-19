@@ -936,7 +936,7 @@ void VID_Finish (void)
 			if (vid_usingvsync != vid_usevsync)
 			{
 				vid_usingvsync = vid_usevsync;
-				if (qglXSwapIntervalSGI (vid_usevsync))
+				if (qglXSwapIntervalSGI && qglXSwapIntervalSGI (vid_usevsync))
 					Con_Print("glXSwapIntervalSGI didn't accept the vid_vsync change, it will take effect on next vid_restart (GLX_SGI_swap_control does not allow turning off vsync)\n");
 			}
 
