@@ -68,7 +68,7 @@ char *Sys_TimeString(const char *timeformat);
 //
 
 /// an error will cause the entire program to exit
-void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1);
+void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 
 /// (may) output text to terminal which launched program
 void Sys_PrintToTerminal(const char *text);
