@@ -2108,7 +2108,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	prvm_prog_t *prog = world->prog;
 	const float *iv;
 	const int *ie;
-	dBodyID body = (dBodyID)ed->priv.server->ode_body;
+	dBodyID body;
 	dMass mass;
 	const dReal *ovelocity, *ospinvelocity;
 	void *dataID;
