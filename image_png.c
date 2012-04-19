@@ -487,7 +487,9 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 	}
 
 	png = (void *)qpng_create_write_struct( 
-		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 : PNG_LIBPNG_VER_STRING_14, // nasty hack to support both libpng12 and libpng14
+		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 :
+		(qpng_access_version_number() / 100 == 104) ? PNG_LIBPNG_VER_STRING_14 :
+		PNG_LIBPNG_VER_STRING_15, // nasty hack... whatever
 		0, PNG_error_fn, PNG_warning_fn
 	);
 	if(!png)
