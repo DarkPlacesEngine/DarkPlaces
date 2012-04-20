@@ -6433,6 +6433,7 @@ void VM_sprintf(prvm_prog_t *prog)
 	const char *s, *s0;
 	char outbuf[MAX_INPUTLINE];
 	char *o = outbuf, *end = outbuf + sizeof(outbuf), *err;
+	const char *p;
 	int argpos = 1;
 	int width, precision, thisarg, flags;
 	char formatbuf[16];
@@ -6639,6 +6640,12 @@ nolength:
 					if(flags & PRINTF_LEFT) *f++ = '-';
 					if(flags & PRINTF_SPACEPOSITIVE) *f++ = ' ';
 					if(flags & PRINTF_SIGNPOSITIVE) *f++ = '+';
+					if(*s == 'd' || *s == 'i' || *s == 'o' || *s == 'u' || *s == 'x' || *s == 'X')
+					{
+						// make it use a good integer type
+						for(p = INT_LOSSLESS_FORMAT_SIZE; *p; )
+							*f++ = *p++;
+					}
 					*f++ = '*';
 					if(precision >= 0)
 					{
@@ -6655,15 +6662,15 @@ nolength:
 					{
 						case 'd': case 'i':
 							if(precision < 0) // not set
-								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? INT_LOSSLESS_FORMAT_CONVERT_S(GETARG_FLOAT(thisarg)) : INT_LOSSLESS_FORMAT_CONVERT_S(GETARG_INT(thisarg))));
 							else
-								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (int) GETARG_FLOAT(thisarg) : (int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? INT_LOSSLESS_FORMAT_CONVERT_S(GETARG_FLOAT(thisarg)) : INT_LOSSLESS_FORMAT_CONVERT_S(GETARG_INT(thisarg))));
 							break;
 						case 'o': case 'u': case 'x': case 'X':
 							if(precision < 0) // not set
-								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, (isfloat ? INT_LOSSLESS_FORMAT_CONVERT_U(GETARG_FLOAT(thisarg)) : INT_LOSSLESS_FORMAT_CONVERT_U(GETARG_INT(thisarg))));
 							else
-								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? (unsigned int) GETARG_FLOAT(thisarg) : (unsigned int) GETARG_INT(thisarg)));
+								o += dpsnprintf(o, end - o, formatbuf, width, precision, (isfloat ? INT_LOSSLESS_FORMAT_CONVERT_U(GETARG_FLOAT(thisarg)) : INT_LOSSLESS_FORMAT_CONVERT_U(GETARG_INT(thisarg))));
 							break;
 						case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
 							if(precision < 0) // not set

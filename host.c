@@ -97,6 +97,7 @@ Host_AbortCurrentFrame
 aborts the current host frame and goes on with the next one
 ================
 */
+void Host_AbortCurrentFrame(void) DP_FUNC_NORETURN;
 void Host_AbortCurrentFrame(void)
 {
 	// in case we were previously nice, make us mean again
