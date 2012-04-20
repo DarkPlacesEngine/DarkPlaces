@@ -2736,7 +2736,7 @@ static void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme, prvm_prog_t *
 	// VorteX: int only can store 0-255, not 0-256 which means 0 - 0,99609375...
 	VectorSet(PRVM_clientglobalvector(particle_color1), (theme->color1 >> 16) & 0xFF, (theme->color1 >> 8) & 0xFF, (theme->color1 >> 0) & 0xFF);
 	VectorSet(PRVM_clientglobalvector(particle_color2), (theme->color2 >> 16) & 0xFF, (theme->color2 >> 8) & 0xFF, (theme->color2 >> 0) & 0xFF);
-	PRVM_clientglobalfloat(particle_tex) = (float)theme->tex;
+	PRVM_clientglobalfloat(particle_tex) = (prvm_vec_t)theme->tex;
 	PRVM_clientglobalfloat(particle_size) = theme->size;
 	PRVM_clientglobalfloat(particle_sizeincrease) = theme->sizeincrease;
 	PRVM_clientglobalfloat(particle_alpha) = theme->alpha/256;
@@ -2752,9 +2752,9 @@ static void VM_CL_ParticleThemeToGlobals(vmparticletheme_t *theme, prvm_prog_t *
 	PRVM_clientglobalfloat(particle_stretch) = theme->stretch;
 	VectorSet(PRVM_clientglobalvector(particle_staincolor1), ((int)theme->staincolor1 >> 16) & 0xFF, ((int)theme->staincolor1 >> 8) & 0xFF, ((int)theme->staincolor1 >> 0) & 0xFF);
 	VectorSet(PRVM_clientglobalvector(particle_staincolor2), ((int)theme->staincolor2 >> 16) & 0xFF, ((int)theme->staincolor2 >> 8) & 0xFF, ((int)theme->staincolor2 >> 0) & 0xFF);
-	PRVM_clientglobalfloat(particle_staintex) = (float)theme->staintex;
-	PRVM_clientglobalfloat(particle_stainalpha) = (float)theme->stainalpha/256;
-	PRVM_clientglobalfloat(particle_stainsize) = (float)theme->stainsize;
+	PRVM_clientglobalfloat(particle_staintex) = (prvm_vec_t)theme->staintex;
+	PRVM_clientglobalfloat(particle_stainalpha) = (prvm_vec_t)theme->stainalpha/256;
+	PRVM_clientglobalfloat(particle_stainsize) = (prvm_vec_t)theme->stainsize;
 	PRVM_clientglobalfloat(particle_delayspawn) = theme->delayspawn;
 	PRVM_clientglobalfloat(particle_delaycollision) = theme->delaycollision;
 	PRVM_clientglobalfloat(particle_angle) = theme->angle;
