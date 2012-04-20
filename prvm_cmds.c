@@ -777,15 +777,15 @@ string	ftos(float)
 
 void VM_ftos(prvm_prog_t *prog)
 {
-	float v;
+	prvm_vec_t v;
 	char s[128];
 
 	VM_SAFEPARMCOUNT(1, VM_ftos);
 
 	v = PRVM_G_FLOAT(OFS_PARM0);
 
-	if ((float)((int)v) == v)
-		dpsnprintf(s, sizeof(s), "%i", (int)v);
+	if ((prvm_vec_t)((prvm_int_t)v) == v)
+		dpsnprintf(s, sizeof(s), "%.0f", v);
 	else
 		dpsnprintf(s, sizeof(s), "%f", v);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s);
@@ -801,7 +801,7 @@ float	fabs(float)
 
 void VM_fabs(prvm_prog_t *prog)
 {
-	float	v;
+	prvm_vec_t v;
 
 	VM_SAFEPARMCOUNT(1,VM_fabs);
 
@@ -864,7 +864,7 @@ void VM_stof(prvm_prog_t *prog)
 ========================
 VM_itof
 
-float itof(intt ent)
+float itof(int ent)
 ========================
 */
 void VM_itof(prvm_prog_t *prog)
@@ -882,10 +882,10 @@ entity ftoe(float num)
 */
 void VM_ftoe(prvm_prog_t *prog)
 {
-	int ent;
+	prvm_int_t ent;
 	VM_SAFEPARMCOUNT(1, VM_ftoe);
 
-	ent = (int)PRVM_G_FLOAT(OFS_PARM0);
+	ent = (prvm_int_t)PRVM_G_FLOAT(OFS_PARM0);
 	if (ent < 0 || ent >= prog->max_edicts || PRVM_PROG_TO_EDICT(ent)->priv.required->free)
 		ent = 0; // return world instead of a free or invalid entity
 
@@ -1192,9 +1192,9 @@ entity	findflags(entity start, .float field, float match)
 // LordHavoc: search for flags in float fields
 void VM_findflags(prvm_prog_t *prog)
 {
-	int		e;
-	int		f;
-	int		s;
+	prvm_int_t	e;
+	prvm_int_t	f;
+	prvm_int_t	s;
 	prvm_edict_t	*ed;
 
 	VM_SAFEPARMCOUNT(3, VM_findflags);
@@ -1202,7 +1202,7 @@ void VM_findflags(prvm_prog_t *prog)
 
 	e = PRVM_G_EDICTNUM(OFS_PARM0);
 	f = PRVM_G_INT(OFS_PARM1);
-	s = (int)PRVM_G_FLOAT(OFS_PARM2);
+	s = (prvm_int_t)PRVM_G_FLOAT(OFS_PARM2);
 
 	for (e++ ; e < prog->num_edicts ; e++)
 	{
@@ -1212,7 +1212,7 @@ void VM_findflags(prvm_prog_t *prog)
 			continue;
 		if (!PRVM_E_FLOAT(ed,f))
 			continue;
-		if ((int)PRVM_E_FLOAT(ed,f) & s)
+		if ((prvm_int_t)PRVM_E_FLOAT(ed,f) & s)
 		{
 			VM_RETURN_EDICT(ed);
 			return;
@@ -1232,9 +1232,9 @@ entity	findchainflags(.float field, float match)
 // LordHavoc: chained search for flags in float fields
 void VM_findchainflags(prvm_prog_t *prog)
 {
-	int		i;
-	int		f;
-	int		s;
+	prvm_int_t		i;
+	prvm_int_t		f;
+	prvm_int_t		s;
 	prvm_edict_t	*ent, *chain;
 	int chainfield;
 
@@ -1250,7 +1250,7 @@ void VM_findchainflags(prvm_prog_t *prog)
 	chain = (prvm_edict_t *)prog->edicts;
 
 	f = PRVM_G_INT(OFS_PARM0);
-	s = (int)PRVM_G_FLOAT(OFS_PARM1);
+	s = (prvm_int_t)PRVM_G_FLOAT(OFS_PARM1);
 
 	ent = PRVM_NEXT_EDICT(prog->edicts);
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
@@ -1260,7 +1260,7 @@ void VM_findchainflags(prvm_prog_t *prog)
 			continue;
 		if (!PRVM_E_FLOAT(ent,f))
 			continue;
-		if (!((int)PRVM_E_FLOAT(ent,f) & s))
+		if (!((prvm_int_t)PRVM_E_FLOAT(ent,f) & s))
 			continue;
 
 		PRVM_EDICTFIELDEDICT(ent,chainfield) = PRVM_EDICT_TO_PROG(chain);
@@ -1406,7 +1406,7 @@ float	rint(float)
 */
 void VM_rint(prvm_prog_t *prog)
 {
-	float f;
+	prvm_vec_t f;
 	VM_SAFEPARMCOUNT(1,VM_rint);
 
 	f = PRVM_G_FLOAT(OFS_PARM0);
@@ -2029,14 +2029,14 @@ void VM_entityfieldname(prvm_prog_t *prog)
 {
 	ddef_t *d;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	
+
 	if (i < 0 || i >= prog->numfielddefs)
 	{
-        VM_Warning(prog, "VM_entityfieldname: %s: field index out of bounds\n", prog->name);
-        PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		VM_Warning(prog, "VM_entityfieldname: %s: field index out of bounds\n", prog->name);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
 		return;
 	}
-	
+
 	d = &prog->fielddefs[i];
 	PRVM_G_INT(OFS_RETURN) = d->s_name; // presuming that s_name points to a string already
 }
@@ -2062,7 +2062,7 @@ void VM_entityfieldtype(prvm_prog_t *prog)
 	}
 	
 	d = &prog->fielddefs[i];
-	PRVM_G_FLOAT(OFS_RETURN) = (float)d->type;
+	PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t)d->type;
 }
 
 // KrimZon - DP_QC_ENTITYDATA
@@ -2877,7 +2877,7 @@ void VM_gettime(prvm_prog_t *prog)
 
 	if(prog->argc == 0)
 	{
-		PRVM_G_FLOAT(OFS_RETURN) = (float) realtime;
+		PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) realtime;
 	}
 	else
 	{
@@ -2934,7 +2934,7 @@ void VM_getsoundtime (prvm_prog_t *prog)
 	entchannel = CHAN_USER2ENGINE(entchannel);
 	if (!IS_CHAN(entchannel))
 		VM_Warning(prog, "VM_getsoundtime: %s: bad channel %i\n", prog->name, entchannel);
-	PRVM_G_FLOAT(OFS_RETURN) = (float)S_GetEntChannelPosition(entnum, entchannel);
+	PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t)S_GetEntChannelPosition(entnum, entchannel);
 }
 
 /*
@@ -3039,13 +3039,13 @@ float	mod(float val, float m)
 */
 void VM_modulo(prvm_prog_t *prog)
 {
-	int val, m;
+	prvm_int_t val, m;
 	VM_SAFEPARMCOUNT(2,VM_module);
 
-	val = (int) PRVM_G_FLOAT(OFS_PARM0);
-	m	= (int) PRVM_G_FLOAT(OFS_PARM1);
+	val = (prvm_int_t) PRVM_G_FLOAT(OFS_PARM0);
+	m	= (prvm_int_t) PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = (float) (val % m);
+	PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) (val % m);
 }
 
 static void VM_Search_Init(prvm_prog_t *prog)
@@ -4360,11 +4360,11 @@ void VM_drawline (prvm_prog_t *prog)
 // float(float number, float quantity) bitshift (EXT_BITSHIFT)
 void VM_bitshift (prvm_prog_t *prog)
 {
-	int n1, n2;
+	prvm_int_t n1, n2;
 	VM_SAFEPARMCOUNT(2, VM_bitshift);
 
-	n1 = (int)fabs((float)((int)PRVM_G_FLOAT(OFS_PARM0)));
-	n2 = (int)PRVM_G_FLOAT(OFS_PARM1);
+	n1 = (prvm_int_t)fabs((prvm_vec_t)((prvm_int_t)PRVM_G_FLOAT(OFS_PARM0)));
+	n2 = (prvm_int_t)PRVM_G_FLOAT(OFS_PARM1);
 	if(!n1)
 		PRVM_G_FLOAT(OFS_RETURN) = n1;
 	else
@@ -4405,7 +4405,7 @@ void VM_altstr_count(prvm_prog_t *prog)
 		}
 	}
 
-	PRVM_G_FLOAT( OFS_RETURN ) = (float) (count / 2);
+	PRVM_G_FLOAT( OFS_RETURN ) = (prvm_vec_t) (count / 2);
 }
 
 /*

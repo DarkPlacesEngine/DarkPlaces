@@ -440,16 +440,16 @@ particle(origin, color, count)
 static void VM_SV_particle(prvm_prog_t *prog)
 {
 	vec3_t		org, dir;
-	float		color;
-	float		count;
+	int		color;
+	int		count;
 
 	VM_SAFEPARMCOUNT(4, VM_SV_particle);
 
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
-	color = PRVM_G_FLOAT(OFS_PARM2);
-	count = PRVM_G_FLOAT(OFS_PARM3);
-	SV_StartParticle (org, dir, (int)color, (int)count);
+	color = (int)PRVM_G_FLOAT(OFS_PARM2);
+	count = (int)PRVM_G_FLOAT(OFS_PARM3);
+	SV_StartParticle (org, dir, color, count);
 }
 
 
@@ -463,7 +463,7 @@ static void VM_SV_ambientsound(prvm_prog_t *prog)
 {
 	const char	*samp;
 	vec3_t		pos;
-	float 		vol, attenuation;
+	prvm_vec_t	vol, attenuation;
 	int			soundnum, large;
 
 	VM_SAFEPARMCOUNT(4, VM_SV_ambientsound);
