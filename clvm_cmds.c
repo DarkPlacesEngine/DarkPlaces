@@ -1705,14 +1705,14 @@ static void VM_CL_ReadPicture (prvm_prog_t *prog)
 	const char *name;
 	unsigned char *data;
 	unsigned char *buf;
-	int size;
+	unsigned short size;
 	int i;
 	cachepic_t *pic;
 
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadPicture);
 
 	name = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
-	size = MSG_ReadShort(&cl_message);
+	size = (unsigned short) MSG_ReadShort(&cl_message);
 
 	// check if a texture of that name exists
 	// if yes, it is used and the data is discarded

@@ -1488,7 +1488,7 @@ static void VM_SV_WritePicture(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(3, VM_SV_WritePicture);
 
 	imgname = PRVM_G_STRING(OFS_PARM1);
-	size = (int) PRVM_G_FLOAT(OFS_PARM2);
+	size = (size_t) PRVM_G_FLOAT(OFS_PARM2);
 	if(size > 65535)
 		size = 65535;
 
