@@ -563,5 +563,15 @@ void Sys_Shared_Init(void);
 #define VECTOR_LOSSLESS_FORMAT "%.9g %.9g %.9g"
 #endif
 
+#ifdef _MSC_VER
+#define INT_LOSSLESS_FORMAT_SIZE "I64"
+#define INT_LOSSLESS_FORMAT_CONVERT_S(x) ((__int64)(x))
+#define INT_LOSSLESS_FORMAT_CONVERT_U(x) ((unsigned __int64)(x))
+#else
+#define INT_LOSSLESS_FORMAT_SIZE "j"
+#define INT_LOSSLESS_FORMAT_CONVERT_S(x) ((intmax_t)(x))
+#define INT_LOSSLESS_FORMAT_CONVERT_U(x) ((uintmax_t)(x))
+#endif
+
 #endif
 
