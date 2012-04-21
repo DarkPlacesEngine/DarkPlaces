@@ -48,7 +48,8 @@ STRIP?=strip
 OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o snd_modplug.o
 
 # statically loading d0_blind_id
-LIB_CRYPTO=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && echo \ $(DP_CRYPTO_STATIC_LIBDIR)/libd0_blind_id.a\ $(DP_CRYPTO_STATIC_LIBDIR)/libgmp.a`
+LIB_CRYPTO=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && echo \ $(DP_CRYPTO_STATIC_LIBDIR)/libd0_blind_id.a`
+LIB_GMP=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && { [ -n "$(DP_GMP_STATIC_LIBDIR)" ] && echo \ $(DP_GMP_STATIC_LIBDIR)/libgmp.a || echo \ -lgmp; }`
 CFLAGS_CRYPTO=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && echo \ -I$(DP_CRYPTO_STATIC_LIBDIR)/../include\ -DCRYPTO_STATIC`
 LIB_CRYPTO_RIJNDAEL=`[ -n "$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)" ] && echo \ $(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)/libd0_rijndael.a`
 CFLAGS_CRYPTO_RIJNDAEL=`[ -n "$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)" ] && echo \ -I$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)/../include\ -DCRYPTO_RIJNDAEL_STATIC`
@@ -217,7 +218,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_pthread.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm -pthread $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
@@ -302,9 +303,9 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_SND_WIN) $(OBJ_WINC
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
-LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LDFLAGS_D3D) $(LIB_JPEG)
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32 $(LIB_JPEG)
+LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LDFLAGS_D3D) $(LIB_JPEG)
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32 $(LIB_JPEG)
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
