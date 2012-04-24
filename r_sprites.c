@@ -424,6 +424,6 @@ void R_Model_Sprite_Draw(entity_render_t *ent)
 		return;
 
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-	R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((ent->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
+	R_MeshQueue_AddTransparent((ent->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : ((ent->flags & RENDER_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : MESHQUEUE_SORT_DISTANCE), org, R_Model_Sprite_Draw_TransparentCallback, ent, 0, rsurface.rtlight);
 }
 
