@@ -1535,7 +1535,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						center[1] += r_refdef.view.forward[1]*ent->transparent_offset;
 						center[2] += r_refdef.view.forward[2]*ent->transparent_offset;
 					}
-					R_MeshQueue_AddTransparent((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : ((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : MESHQUEUE_SORT_DISTANCE), center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
+					R_MeshQueue_AddTransparent((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : ((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : MESHQUEUE_SORT_DISTANCE), center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 				}
 				continue;
 			}
