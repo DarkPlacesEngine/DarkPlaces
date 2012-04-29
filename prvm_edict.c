@@ -1964,7 +1964,10 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 
 	// we need to expand the globaldefs and fielddefs to include engine defs
 	prog->globaldefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobaldefs + numrequiredglobals) * sizeof(ddef_t));
-	prog->globals.fp = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobals + requiredglobalspace) * sizeof(prvm_vec_t));
+	prog->globals.fp = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobals + requiredglobalspace + 2) * sizeof(prvm_vec_t));
+		// + 2 is because of an otherwise occurring overrun in RETURN instruction
+		// when trying to return the last or second-last global
+		// (RETURN always returns a vector, there is no RETURN_F instruction)
 	prog->fielddefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numfielddefs + numrequiredfields) * sizeof(ddef_t));
 	// we need to convert the statements to our memory format
 	prog->statements = (mstatement_t *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(mstatement_t));
