@@ -3482,7 +3482,10 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 			side = 1;
 		}
 		else
+		{
 			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+			side = 0; // hush warning
+		}
 
 		for (i = 0;i < nodeportal->numpoints*3;i++)
 			frontpoints[i] = nodeportal->points[i];
@@ -3515,7 +3518,10 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		else if (portal->nodes[1] == node)
 			side = 1;
 		else
+		{
 			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+			side = 0; // hush warning
+		}
 		nextportal = portal->next[side];
 		if (!portal->numpoints)
 			continue;
