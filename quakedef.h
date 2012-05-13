@@ -563,7 +563,9 @@ void Sys_Shared_Init(void);
 #define VECTOR_LOSSLESS_FORMAT "%.9g %.9g %.9g"
 #endif
 
-#ifdef _MSC_VER
+// originally this was _MSC_VER
+// but here we want to test the system libc, which on win32 is borked, and NOT the compiler
+#ifdef WIN32
 #define INT_LOSSLESS_FORMAT_SIZE "I64"
 #define INT_LOSSLESS_FORMAT_CONVERT_S(x) ((__int64)(x))
 #define INT_LOSSLESS_FORMAT_CONVERT_U(x) ((unsigned __int64)(x))
