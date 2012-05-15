@@ -6640,17 +6640,17 @@ nolength:
 					if(flags & PRINTF_LEFT) *f++ = '-';
 					if(flags & PRINTF_SPACEPOSITIVE) *f++ = ' ';
 					if(flags & PRINTF_SIGNPOSITIVE) *f++ = '+';
-					if(*s == 'd' || *s == 'i' || *s == 'o' || *s == 'u' || *s == 'x' || *s == 'X')
-					{
-						// make it use a good integer type
-						for(p = INT_LOSSLESS_FORMAT_SIZE; *p; )
-							*f++ = *p++;
-					}
 					*f++ = '*';
 					if(precision >= 0)
 					{
 						*f++ = '.';
 						*f++ = '*';
+					}
+					if(*s == 'd' || *s == 'i' || *s == 'o' || *s == 'u' || *s == 'x' || *s == 'X')
+					{
+						// make it use a good integer type
+						for(p = INT_LOSSLESS_FORMAT_SIZE; *p; )
+							*f++ = *p++;
 					}
 					*f++ = *s;
 					*f++ = 0;
