@@ -10021,7 +10021,7 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 		switch (layer->type)
 		{
 		case TEXTURELAYERTYPE_LITTEXTURE:
-			if (layer->blendfunc1 == GL_ONE && layer->blendfunc2 == GL_ZERO)
+			if (layer->blendfunc1 == GL_ONE && layer->blendfunc2 == GL_ZERO && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))
 			{
 				// two-pass lit texture with 2x rgbscale
 				// first the lightmap pass
@@ -10054,6 +10054,8 @@ static void R_DrawTextureSurfaceList_GL11(int texturenumsurfaces, const msurface
 				R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordtexture2f_vertexbuffer, rsurface.batchtexcoordtexture2f_bufferoffset);
 				if (rsurface.texture->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 					RSurf_DrawBatch_GL11_VertexShade(layer->color[0], layer->color[1], layer->color[2], layer->color[3], layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
+				else if (FAKELIGHT_ENABLED)
+					RSurf_DrawBatch_GL11_FakeLight(layer->color[0], layer->color[1], layer->color[2], layer->color[3], layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
 				else
 					RSurf_DrawBatch_GL11_VertexColor(layer->color[0], layer->color[1], layer->color[2], layer->color[3], layer->color[0] != 1 || layer->color[1] != 1 || layer->color[2] != 1 || layer->color[3] != 1, applyfog);
 			}
