@@ -462,13 +462,13 @@ static void R_Shadow_SetShadowMode(void)
 			{
 				if (!r_fb.usedepthtextures)
 					r_shadow_shadowmappcf = 1;
-				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
-					r_shadow_shadowmappcf = 1;
-				else if(strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) 
+				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && vid.support.arb_shadow && r_shadow_shadowmapshadowsampler) 
 				{
-					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
+					r_shadow_shadowmapsampler = true;
 					r_shadow_shadowmappcf = 1;
 				}
+                else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
+                    r_shadow_shadowmappcf = 1;
 				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa")) 
 					r_shadow_shadowmappcf = 1;
 				else 
