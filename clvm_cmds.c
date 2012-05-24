@@ -3429,7 +3429,7 @@ void VM_CL_AddPolygonsToMeshQueue (prvm_prog_t *prog)
 	for (i = 0;i < polys->num_triangles;i++)
 	{
 		VectorMAMAM(1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[0], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[1], 1.0f / 3.0f, polys->data_vertex3f + 3*polys->data_triangles[i].elements[2], center);
-		R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, VM_DrawPolygonCallback, (entity_render_t *)polys, i, NULL);
+		R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, center, VM_DrawPolygonCallback, (entity_render_t *)polys, i, NULL);
 	}
 
 	/*polys->num_triangles = 0; // now done after rendering the scene,

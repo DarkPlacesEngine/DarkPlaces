@@ -251,6 +251,7 @@ shadowmesh_t;
 #define Q3TEXTUREFLAG_REFLECTION 512
 #define Q3TEXTUREFLAG_WATERSHADER 1024
 #define Q3TEXTUREFLAG_CAMERA 2048
+#define Q3TEXTUREFLAG_TRANSPARENTSORT 4096
 
 #define Q3PATHLENGTH 64
 #define TEXTURE_MAXFRAMES 64
@@ -426,6 +427,12 @@ typedef enum dpoffsetmapping_technique_s
 	OFFSETMAPPING_RELIEF		// relief
 }dpoffsetmapping_technique_t;
 
+typedef enum dptransparentsort_category_e
+{
+	TRANSPARENTSORT_SKY,
+	TRANSPARENTSORT_DISTANCE,
+	TRANSPARENTSORT_HUD,
+}dptransparentsortcategory_t;
 
 typedef struct q3shaderinfo_s
 {
@@ -476,6 +483,9 @@ typedef struct q3shaderinfo_s
 
 	// polygonoffset (only used if Q3TEXTUREFLAG_POLYGONOFFSET)
 	float biaspolygonoffset, biaspolygonfactor;
+
+	// transparent sort category
+	dptransparentsortcategory_t transparentsort;
 
 	// gloss
 	float specularscalemod;
@@ -617,6 +627,9 @@ typedef struct texture_s
 	dpoffsetmapping_technique_t offsetmapping;
 	float offsetscale;
 	float offsetbias;
+
+	// transparent sort category
+	dptransparentsortcategory_t transparentsort;
 
 	// gloss
 	float specularscalemod;
