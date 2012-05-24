@@ -275,7 +275,7 @@ void R_DrawExplosions(void)
 		{
 			R_MoveExplosion(&explosion[i]);
 			if (explosion[i].alpha)
-				R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
+				R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, explosion[i].origin, R_DrawExplosion_TransparentCallback, NULL, i, NULL);
 		}
 	}
 	while (numexplosions > 0 && explosion[i-1].alpha <= 0)
