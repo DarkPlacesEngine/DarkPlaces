@@ -320,7 +320,7 @@ void R_DrawLightningBeams(void)
 			dist = bound(0, dist, 1);
 			VectorLerp(start, dist, end, org);
 			// now we have the nearest point on the line, so sort with it
-			R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, org, R_DrawLightningBeam_TransparentCallback, NULL, i, NULL);
+			R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, org, R_DrawLightningBeam_TransparentCallback, NULL, i, NULL);
 		}
 	}
 }

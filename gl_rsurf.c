@@ -393,7 +393,7 @@ void R_DrawPortals(void)
 						VectorAdd(center, portal->points[i].position, center);
 					f = ixtable[portal->numpoints];
 					VectorScale(center, f, center);
-					R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, rsurface.rtlight);
+					R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, center, R_DrawPortal_Callback, (entity_render_t *)portal, leafnum, rsurface.rtlight);
 				}
 			}
 		}
@@ -1535,7 +1535,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 						center[1] += r_refdef.view.forward[1]*ent->transparent_offset;
 						center[2] += r_refdef.view.forward[2]*ent->transparent_offset;
 					}
-					R_MeshQueue_AddTransparent((rsurface.entity->flags & RENDER_WORLDOBJECT) ? MESHQUEUE_SORT_SKY : ((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? MESHQUEUE_SORT_HUD : MESHQUEUE_SORT_DISTANCE), center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
+					R_MeshQueue_AddTransparent((rsurface.entity->flags & RENDER_WORLDOBJECT) ? TRANSPARENTSORT_SKY : ((rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST) ? TRANSPARENTSORT_HUD : rsurface.texture->transparentsort), center, R_Q1BSP_DrawLight_TransparentCallback, ent, surface - rsurface.modelsurfaces, rsurface.rtlight);
 				}
 				continue;
 			}

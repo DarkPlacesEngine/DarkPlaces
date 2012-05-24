@@ -2551,7 +2551,7 @@ void R_DrawDecals (void)
 			continue;
 
 		if (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size))
-			R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
+			R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
 		continue;
 killdecal:
 		decal->typeindex = 0;
@@ -3039,7 +3039,7 @@ void R_DrawParticles (void)
 		{
 		case pt_beam:
 			// beams have no culling
-			R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, p->sortorigin, R_DrawParticle_TransparentCallback, NULL, i, NULL);
+			R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, p->sortorigin, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			break;
 		default:
 			if(cl_particles_visculling.integer)
@@ -3053,7 +3053,7 @@ void R_DrawParticles (void)
 					}
 			// anything else just has to be in front of the viewer and visible at this distance
 			if (DotProduct(p->org, r_refdef.view.forward) >= minparticledist_start && VectorDistance2(p->org, r_refdef.view.origin) < drawdist2 * (p->size * p->size))
-				R_MeshQueue_AddTransparent(MESHQUEUE_SORT_DISTANCE, p->sortorigin, R_DrawParticle_TransparentCallback, NULL, i, NULL);
+				R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, p->sortorigin, R_DrawParticle_TransparentCallback, NULL, i, NULL);
 			break;
 		}
 

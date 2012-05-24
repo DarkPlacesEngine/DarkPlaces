@@ -1653,6 +1653,7 @@ extern cvar_t mod_q3shader_default_offsetmapping_bias;
 extern cvar_t mod_q3shader_default_polygonoffset;
 extern cvar_t mod_q3shader_default_polygonfactor;
 extern cvar_t mod_q3shader_force_addalpha;
+extern cvar_t mod_q3shader_force_terrain_alphaflag;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -1747,6 +1748,7 @@ void Mod_LoadQ3Shaders(void)
 			shader.specularpowermod = 1;
 			shader.biaspolygonoffset = mod_q3shader_default_polygonoffset.value;
 			shader.biaspolygonfactor = mod_q3shader_default_polygonfactor.value;
+			shader.transparentsort = TRANSPARENTSORT_DISTANCE;
 
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -1999,6 +2001,8 @@ void Mod_LoadQ3Shaders(void)
 						{
 							// multilayer terrain shader or similar
 							shader.textureblendalpha = true;
+							if (mod_q3shader_force_terrain_alphaflag.integer)
+								shader.layers[0].texflags |= TEXF_ALPHA;
 						}
 					}
 
@@ -2009,7 +2013,7 @@ void Mod_LoadQ3Shaders(void)
 						if(layer->blendfunc[0] == GL_ONE && layer->blendfunc[1] == GL_ONE)
 							layer->blendfunc[0] = GL_SRC_ALPHA;
 					}
-
+					
 					layer->texflags = 0;
 					if (layer->alphatest)
 						layer->texflags |= TEXF_ALPHA;
@@ -2244,6 +2248,18 @@ void Mod_LoadQ3Shaders(void)
 						else
 							shader.biaspolygonoffset = 0;
 					}
+				}
+				else if (!strcasecmp(parameter[0], "dptransparentsort") && numparameters >= 2)
+				{
+					shader.textureflags |= Q3TEXTUREFLAG_TRANSPARENTSORT;
+					if (!strcasecmp(parameter[1], "sky"))
+						shader.transparentsort = TRANSPARENTSORT_SKY;
+					else if (!strcasecmp(parameter[1], "distance"))
+						shader.transparentsort = TRANSPARENTSORT_DISTANCE;
+					else if (!strcasecmp(parameter[1], "hud"))
+						shader.transparentsort = TRANSPARENTSORT_HUD;
+					else
+						Con_DPrintf("%s parsing warning: unknown dptransparentsort category \"%s\", or not enough arguments\n", search->filenames[fileindex], parameter[1]);
 				}
 				else if (!strcasecmp(parameter[0], "dprefract") && numparameters >= 5)
 				{
@@ -2484,6 +2500,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 			texture->basematerialflags |= MATERIALFLAG_CAMERA;
 		texture->customblendfunc[0] = GL_ONE;
 		texture->customblendfunc[1] = GL_ZERO;
+		texture->transparentsort = shader->transparentsort;
 		if (shader->numlayers > 0)
 		{
 			texture->customblendfunc[0] = shader->layers[0].blendfunc[0];
