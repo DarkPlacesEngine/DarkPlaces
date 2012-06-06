@@ -382,7 +382,12 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 		return NULL;
 	}
 	if (pool == NULL)
-		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
+	{
+		if(olddata)
+			pool = ((memheader_t *)((unsigned char *) olddata - sizeof(memheader_t)))->pool;
+		else
+			Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
+	}
 	if (mem_mutex)
 		Thread_LockMutex(mem_mutex);
 	if (developer_memory.integer)
