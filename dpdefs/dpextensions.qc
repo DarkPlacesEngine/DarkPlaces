@@ -593,9 +593,11 @@ float(float a) tan = #475; // returns tangent value (which is simply sin(a)/cos(
 // string autocvar__cl_name;
 //NOTE: copying a string-typed autocvar to another variable/field, and then
 //changing the cvar or returning from progs is UNDEFINED. Writing to autocvar
-//globals is UNDEFINED.  Accessing autocvar globals after cvar_set()ing that
-//cvar in the same frame is IMPLEMENTATION DEFINED (an implementation may
-//either yield the previous, or the current, value). Whether autocvar globals,
+//globals is UNDEFINED. Accessing autocvar globals after changing that cvar in
+//the same frame by any means other than cvar_set() from the same QC VM is
+//IMPLEMENTATION DEFINED (an implementation may either yield the previous, or
+//the current, value). Changing them via cvar_set() in the same QC VM
+//immediately must reflect on the autocvar globals. Whether autocvar globals,
 //after restoring a savegame, have the cvar's current value, or the original
 //value at time of saving, is UNDEFINED. Restoring a savegame however must not
 //restore the cvar values themselves.
