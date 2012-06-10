@@ -1426,3 +1426,4 @@ vector gettaginfo_offset;
 vector gettaginfo_forward;
 vector gettaginfo_right;
 vector gettaginfo_up;
+float checkpvs(vector viewpos, entity viewee) = #240;
