@@ -7465,7 +7465,7 @@ void R_DrawNoModel(entity_render_t *ent)
 	vec3_t org;
 	Matrix4x4_OriginFromMatrix(&ent->matrix, org);
 	if ((ent->flags & RENDER_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? TRANSPARENTSORT_HUD : rsurface.texture->transparentsort, org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
+		R_MeshQueue_AddTransparent((ent->flags & RENDER_NODEPTHTEST) ? TRANSPARENTSORT_HUD : TRANSPARENTSORT_DISTANCE, org, R_DrawNoModel_TransparentCallback, ent, 0, rsurface.rtlight);
 	else
 		R_DrawNoModel_TransparentCallback(ent, rsurface.rtlight, 0, NULL);
 }
