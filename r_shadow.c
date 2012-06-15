@@ -1300,7 +1300,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 				v[2] = invertex3f + e[2] * 3;
 				TriangleNormal(v[0], v[1], v[2], normal);
 				if (r_shadow_frontsidecasting.integer == (DotProduct(normal, projectdirection) < 0)
-				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
+				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 					shadowmarklist[numshadowmark++] = t;
 			}
 		}
@@ -1312,7 +1312,7 @@ void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *inv
 				v[1] = invertex3f + e[1] * 3;
 				v[2] = invertex3f + e[2] * 3;
 				if (r_shadow_frontsidecasting.integer == PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
-				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
+				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 					shadowmarklist[numshadowmark++] = t;
 			}
 		}
@@ -1684,7 +1684,7 @@ int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *inv
 				v[0] = invertex3f + e[0] * 3, v[1] = invertex3f + e[1] * 3,	v[2] = invertex3f + e[2] * 3;
 				TriangleNormal(v[0], v[1], v[2], normal);
 				if (r_shadow_frontsidecasting.integer == (DotProduct(normal, projectdirection) < 0)
-				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
+				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);
@@ -1704,7 +1704,7 @@ int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *inv
 			{
 				v[0] = invertex3f + e[0] * 3, v[1] = invertex3f + e[1] * 3, v[2] = invertex3f + e[2] * 3;
 				if (r_shadow_frontsidecasting.integer == PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
-				 && TriangleOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
+				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
 				{
 					Matrix4x4_Transform(worldtolight, v[0], p[0]), Matrix4x4_Transform(worldtolight, v[1], p[1]), Matrix4x4_Transform(worldtolight, v[2], p[2]);
 					mask = R_Shadow_CalcTriangleSideMask(p[0], p[1], p[2], bias);

@@ -894,7 +894,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 						VectorCopy(v[0], v2[0]);
 						VectorCopy(v[1], v2[1]);
 						VectorCopy(v[2], v2[2]);
-						if (insidebox || TriangleOverlapsBox(v2[0], v2[1], v2[2], info->lightmins, info->lightmaxs))
+						if (insidebox || TriangleBBoxOverlapsBox(v2[0], v2[1], v2[2], info->lightmins, info->lightmaxs))
 							SVBSP_AddPolygon(&r_svbsp, 3, v2[0], true, NULL, NULL, 0);
 					}
 				}
@@ -922,7 +922,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 						VectorCopy(v[0], v2[0]);
 						VectorCopy(v[1], v2[1]);
 						VectorCopy(v[2], v2[2]);
-						if (!insidebox && !TriangleOverlapsBox(v2[0], v2[1], v2[2], info->lightmins, info->lightmaxs))
+						if (!insidebox && !TriangleBBoxOverlapsBox(v2[0], v2[1], v2[2], info->lightmins, info->lightmaxs))
 							continue;
 						if (svbspactive && !(SVBSP_AddPolygon(&r_svbsp, 3, v2[0], false, NULL, NULL, 0) & 2))
 							continue;
