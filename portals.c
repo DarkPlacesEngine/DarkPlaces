@@ -339,7 +339,7 @@ static void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, in
 					VectorCopy(vertex3f + elements[1] * 3, v + 3);
 					VectorCopy(vertex3f + elements[2] * 3, v + 6);
 					if (PointInfrontOfTriangle(info->eye, v + 0, v + 3, v + 6)
-					 && (insidebox || TriangleOverlapsBox(v, v + 3, v + 6, info->boxmins, info->boxmaxs))
+					 && (insidebox || TriangleBBoxOverlapsBox(v, v + 3, v + 6, info->boxmins, info->boxmaxs))
 					 && (!info->exact || Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, v, 3, &portaltemppoints2[0][0], 256) > 0))
 					{
 						addedtris = true;

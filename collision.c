@@ -1036,7 +1036,7 @@ void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *th
 	{
 		for (i = 0;i < numtriangles;i++, element3i += 3)
 		{
-			if (TriangleOverlapsBox(vertex3f + element3i[0]*3, vertex3f + element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
+			if (TriangleBBoxOverlapsBox(vertex3f + element3i[0]*3, vertex3f + element3i[1]*3, vertex3f + element3i[2]*3, segmentmins, segmentmaxs))
 			{
 				VectorCopy(vertex3f + element3i[0] * 3, points[0].v);
 				VectorCopy(vertex3f + element3i[1] * 3, points[1].v);
