@@ -6075,6 +6075,7 @@ typedef struct
 	double starttime;
 	float id;
 	char buffer[MAX_INPUTLINE];
+	char posttype[128];
 	unsigned char *postdata; // free when uri_to_prog_t is freed
 	size_t postlen;
 	char *sigdata; // free when uri_to_prog_t is freed
@@ -6234,7 +6235,8 @@ void VM_uri_get (prvm_prog_t *prog)
 			handle->sigdata[handle->siglen] = 0;
 		}
 out1:
-		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
+		strlcpy(handle->posttype, posttype, sizeof(handle->posttype));
+		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, handle->posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	else
 	{
