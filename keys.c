@@ -108,6 +108,8 @@ static void Key_History_Push(void)
 	if(key_line[1]) // empty?
 	if(strcmp(key_line, "]quit")) // putting these into the history just sucks
 	if(strncmp(key_line, "]quit ", 6)) // putting these into the history just sucks
+	if(strcmp(key_line, "]rcon_password")) // putting these into the history just sucks
+	if(strncmp(key_line, "]rcon_password ", 15)) // putting these into the history just sucks
 		ConBuffer_AddLine(&history, key_line + 1, strlen(key_line) - 1, 0);
 	Con_Printf("%s\n", key_line); // don't mark empty lines as history
 	history_line = -1;
