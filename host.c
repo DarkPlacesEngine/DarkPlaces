@@ -961,13 +961,15 @@ void Host_Main(void)
 				if (cls.demopaused)
 					clframetime = 0;
 			}
+			else
+			{
+				// host_framerate overrides all else
+				if (host_framerate.value)
+					clframetime = host_framerate.value;
 
-			// host_framerate overrides all else
-			if (host_framerate.value)
-				clframetime = host_framerate.value;
-
-			if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
-				clframetime = 0;
+				if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+					clframetime = 0;
+			}
 
 			if (cls.timedemo)
 				clframetime = cl.realframetime = cl_timer;
