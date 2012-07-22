@@ -1509,8 +1509,8 @@ void CL_UpdateMoveVars(void)
 	else
 	{
 		cl.moveflags = 0;
-		cl.movevars_ticrate = slowmo.value / bound(1.0f, cl_netfps.value, 1000.0f);
-		cl.movevars_timescale = slowmo.value;
+		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : slowmo.value) / bound(1.0f, cl_netfps.value, 1000.0f);
+		cl.movevars_timescale = (cls.demoplayback ? 1.0f : slowmo.value);
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
 		cl.movevars_maxspeed = cl_movement_maxspeed.value;
