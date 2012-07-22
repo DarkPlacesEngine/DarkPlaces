@@ -6380,6 +6380,8 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 	unsigned int permutation;
 	float uservecs[4][4];
 
+	R_EntityMatrix(&identitymatrix);
+
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
