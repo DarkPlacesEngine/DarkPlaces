@@ -747,6 +747,7 @@ void Cvar_RestoreInitState(void)
 			if (!(c->flags & CVAR_ALLOCATED))
 			{
 				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it was registered after init!\n", c->name);
+				cp = &c->next;
 				continue;
 			}
 			// remove this cvar, it did not exist at init
