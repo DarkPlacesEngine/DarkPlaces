@@ -220,7 +220,7 @@ cvar_t r_smoothnormals_areaweighting = {0, "r_smoothnormals_areaweighting", "1",
 
 cvar_t developer_texturelogging = {0, "developer_texturelogging", "0", "produces a textures.log file containing names of skins and map textures the engine tried to load"};
 
-cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers)"};
+cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers), a value of 2 keeps normalmap shading"};
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 
@@ -7974,13 +7974,15 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->basetexture = r_texture_grey128;
 		t->pantstexture = r_texture_black;
 		t->shirttexture = r_texture_black;
-		t->nmaptexture = r_texture_blanknormalmap;
+		if (gl_lightmaps.integer < 2)
+			t->nmaptexture = r_texture_blanknormalmap;
 		t->glosstexture = r_texture_black;
 		t->glowtexture = NULL;
 		t->fogtexture = NULL;
 		t->reflectmasktexture = NULL;
 		t->backgroundbasetexture = NULL;
-		t->backgroundnmaptexture = r_texture_blanknormalmap;
+		if (gl_lightmaps.integer < 2)
+			t->backgroundnmaptexture = r_texture_blanknormalmap;
 		t->backgroundglosstexture = r_texture_black;
 		t->backgroundglowtexture = NULL;
 		t->specularscale = 0;
