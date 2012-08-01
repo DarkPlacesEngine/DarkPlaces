@@ -1264,7 +1264,12 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
 			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
 			// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
+#ifdef USE_GLES2
+			// FIXME: separate stencil attachment on GLES
+			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+#else
 			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, depthtexture->glisdepthstencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+#endif
 			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, depthtexture->glisdepthstencil ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
 			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
 			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
@@ -1275,6 +1280,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
 			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
 
+#ifndef USE_GLES2
 			if (colortexture4 && qglDrawBuffersARB)
 			{
 				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
@@ -1300,6 +1306,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 				qglDrawBuffer(GL_NONE);CHECKGLERROR
 				qglReadBuffer(GL_NONE);CHECKGLERROR
 			}
+#endif
 			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
 			if (status != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -1327,6 +1334,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
 			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
 
+#ifndef USE_GLES2
 			if (colortexture4 && qglDrawBuffersARB)
 			{
 				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
@@ -1352,6 +1360,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 				qglDrawBuffer(GL_NONE);CHECKGLERROR
 				qglReadBuffer(GL_NONE);CHECKGLERROR
 			}
+#endif
 			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
 			if (status != GL_FRAMEBUFFER_COMPLETE)
 			{
