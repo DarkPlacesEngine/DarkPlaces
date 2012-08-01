@@ -1056,7 +1056,11 @@ extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
 #define DEBUGGL
 
 #ifdef DEBUGGL
+#ifdef USE_GLES2
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = glGetError();if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#else
 #define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError ? qglGetError() : 0;if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#endif
 extern int errornumber;
 void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
