@@ -42,6 +42,7 @@ cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of l
 cvar_t scr_loadingscreen_firstforstartup = {0, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
 cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
 cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
+cvar_t scr_loadingscreen_maxfps = {0, "scr_loadingscreen_maxfps", "10", "restrict maximal FPS for loading screen so it will not update very often (this will make lesser loading times on a maps loading large number of models)"};
 cvar_t scr_infobar_height = {0, "scr_infobar_height", "8", "the height of the infobar items"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
@@ -917,6 +918,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_loadingscreen_firstforstartup);
 	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
 	Cvar_RegisterVariable (&scr_loadingscreen_barheight);
+	Cvar_RegisterVariable (&scr_loadingscreen_maxfps);
 	Cvar_RegisterVariable (&scr_infobar_height);
 	Cvar_RegisterVariable (&scr_showram);
 	Cvar_RegisterVariable (&scr_showturtle);
@@ -2127,6 +2129,8 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 	VID_Finish();
 }
 
+static float loadingscreen_lastupdate;
+
 void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 {
 	keydest_t	old_key_dest;
@@ -2135,6 +2139,15 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	// don't do anything if not initialized yet
 	if (vid_hidden || cls.state == ca_dedicated)
 		return;
+
+	// limit update rate
+	if (scr_loadingscreen_maxfps.value)
+	{
+		float t = Sys_DirtyTime();
+		if ((t - loadingscreen_lastupdate) < 1.0f/scr_loadingscreen_maxfps.value)
+			return;
+		loadingscreen_lastupdate = t;
+	}
 
 	if(!scr_loadingscreen_background.integer)
 		clear = true;
