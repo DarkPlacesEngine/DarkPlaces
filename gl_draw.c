@@ -446,7 +446,7 @@ reload:
 	// show up the right size in the menu even if they were replaced with
 	// higher or lower resolution versions
 	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", pic->name);
-	if (!strncmp(pic->name, "gfx/", 4) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
+	if ((!strncmp(pic->name, "gfx/", 4) || (gamemode == GAME_BLOODOMNICIDE && !strncmp(pic->name, "locale/", 6))) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
 	{
 		if (developer_loading.integer)
 			Con_Printf("loading lump \"%s\"\n", pic->name);

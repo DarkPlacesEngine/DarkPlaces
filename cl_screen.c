@@ -38,6 +38,7 @@ cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "s
 cvar_t scr_loadingscreen_scale = {0, "scr_loadingscreen_scale","1", "scale factor of the background"};
 cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
 cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
+cvar_t scr_loadingscreen_picture = {CVAR_SAVE, "scr_loadingscreen_picture", "gfx/loading", "picture shown during loading"};
 cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
 cvar_t scr_loadingscreen_firstforstartup = {0, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
 cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
@@ -914,6 +915,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_loadingscreen_scale);
 	Cvar_RegisterVariable (&scr_loadingscreen_scale_base);
 	Cvar_RegisterVariable (&scr_loadingscreen_scale_limit);
+	Cvar_RegisterVariable (&scr_loadingscreen_picture);
 	Cvar_RegisterVariable (&scr_loadingscreen_count);
 	Cvar_RegisterVariable (&scr_loadingscreen_firstforstartup);
 	Cvar_RegisterVariable (&scr_loadingscreen_barcolor);
@@ -2047,7 +2049,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
 	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "gfx/loading%d", loadingscreenpic_number+1) : "gfx/loading", loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
+	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
 	w = loadingscreenpic->width;
 	h = loadingscreenpic->height;
