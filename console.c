@@ -1125,7 +1125,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 					while(*p)
 					{
 						int ch = u8_getchar(p, &q);
-						if(ch >= 0xE000 && ch <= 0xE0FF)
+						if(ch >= 0xE000 && ch <= 0xE0FF && ((unsigned char) qfont_table[ch - 0xE000]) >= 0x20)
 						{
 							*p = qfont_table[ch - 0xE000];
 							if(q > p+1)
