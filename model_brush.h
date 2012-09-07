@@ -127,7 +127,7 @@ mplane_t;
 
 typedef struct medge_s
 {
-	unsigned short v[2];
+	unsigned int v[2];
 }
 medge_t;
 
@@ -151,8 +151,8 @@ typedef struct mnode_s
 	struct mnode_s *children[2];
 
 	// q1bsp specific
-	unsigned short firstsurface;
-	unsigned short numsurfaces;
+	unsigned int firstsurface;
+	unsigned int numsurfaces;
 }
 mnode_t;
 
