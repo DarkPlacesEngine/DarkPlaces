@@ -534,7 +534,7 @@ extern cvar_t r_shadows_throwdistance;
 extern cvar_t r_shadows_throwdirection;
 extern cvar_t r_shadows_focus;
 extern cvar_t r_shadows_shadowmapscale;
-
+extern cvar_t r_shadows_shadowmapbias;
 extern cvar_t r_transparent_alphatocoverage;
 extern cvar_t r_transparent_sortsurfacesbynearest;
 extern cvar_t r_transparent_useplanardistance;

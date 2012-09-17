@@ -120,6 +120,7 @@ cvar_t r_shadows_drawafterrtlighting = {CVAR_SAVE, "r_shadows_drawafterrtlightin
 cvar_t r_shadows_castfrombmodels = {CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
 cvar_t r_shadows_focus = {CVAR_SAVE, "r_shadows_focus", "0 0 0", "offset the shadowed area focus"};
 cvar_t r_shadows_shadowmapscale = {CVAR_SAVE, "r_shadows_shadowmapscale", "1", "increases shadowmap quality (multiply global shadowmap precision) for fake shadows. Needs shadowmapping ON."};
+cvar_t r_shadows_shadowmapbias = {CVAR_SAVE, "r_shadows_shadowmapbias", "-1", "sets shadowmap bias for fake shadows. -1 sets the value of r_shadow_shadowmapping_bias. Needs shadowmapping ON."};
 cvar_t r_q1bsp_skymasking = {0, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
 cvar_t r_polygonoffset_submodel_factor = {0, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
 cvar_t r_polygonoffset_submodel_offset = {0, "r_polygonoffset_submodel_offset", "14", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
@@ -4230,6 +4231,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_shadows_throwdirection);
 	Cvar_RegisterVariable(&r_shadows_focus);
 	Cvar_RegisterVariable(&r_shadows_shadowmapscale);
+	Cvar_RegisterVariable(&r_shadows_shadowmapbias);
 	Cvar_RegisterVariable(&r_q1bsp_skymasking);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_factor);
 	Cvar_RegisterVariable(&r_polygonoffset_submodel_offset);
