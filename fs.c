@@ -2155,6 +2155,9 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
+	if(COM_CheckParm("-readonly") && mod != O_RDONLY)
+		return -1;
+
 #ifdef WIN32
 # if _MSC_VER >= 1400
 	_sopen_s(&handle, filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
@@ -3372,6 +3375,9 @@ qboolean FS_SysFileExists (const char *path)
 
 void FS_mkdir (const char *path)
 {
+	if(COM_CheckParm("-readonly"))
+		return;
+
 #if WIN32
 	_mkdir (path);
 #else
