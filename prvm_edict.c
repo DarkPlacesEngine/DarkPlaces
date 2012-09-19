@@ -1875,7 +1875,7 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 PRVM_LoadProgs
 ===============
 */
-void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global)
+void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global)
 {
 	int i;
 	dprograms_t *dprograms;
@@ -1906,7 +1906,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	Host_LockSession(); // all progs can use the session cvar
 	Crypto_LoadKeys(); // all progs might use the keys at init time
 
-	dprograms = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
+	if (data)
+	{
+		dprograms = (dprograms_t *) data;
+		filesize = size;
+	}
+	else
+		dprograms = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
 	if (dprograms == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
 		prog->error_cmd("PRVM_LoadProgs: couldn't load %s for %s", filename, prog->name);
 	// TODO bounds check header fields (e.g. numstatements), they must never go behind end of file
@@ -2213,7 +2219,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, int numrequiredfun
 	}
 
 	// we're done with the file now
-	Mem_Free(dprograms);
+	if(!data)
+		Mem_Free(dprograms);
 	dprograms = NULL;
 
 	// check required functions
