@@ -857,7 +857,7 @@ Load a program with LoadProgs
 */
 // Load expects to be called right after Init
 void PRVM_Prog_Init(prvm_prog_t *prog);
-void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
+void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
 void PRVM_Prog_Reset(prvm_prog_t *prog);
 
 void PRVM_StackTrace(prvm_prog_t *prog);
