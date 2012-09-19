@@ -1405,6 +1405,15 @@ static void CL_StopDownload(int size, int crc)
 					{
 						Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", name, size, crc);
 						FS_WriteFile(name, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+						if(!strcmp(cls.qw_downloadname, csqc_progname.string))
+						{
+							if(cls.caughtcsprogsdata)
+								Mem_Free(cls.caughtcsprogsdata);
+							cls.caughtcsprogsdata = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorycursize);
+							memcpy(cls.caughtcsprogsdata, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
+							cls.caughtcsprogsdatasize = cls.qw_downloadmemorycursize;
+							Con_DPrintf("Buffered \"%s\"\n", name);
+						}
 					}
 				}
 			}

@@ -1003,7 +1003,19 @@ void CL_VM_Init (void)
 	if (!cls.demoplayback || csqc_usedemoprogs.integer)
 	{
 		csprogsfn = va(vabuf, sizeof(vabuf), "dlcache/%s.%i.%i", csqc_progname.string, requiredsize, requiredcrc);
-		csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
+		if(cls.caughtcsprogsdata && cls.caughtcsprogsdatasize == requiredsize && CRC_Block(cls.caughtcsprogsdata, (size_t)cls.caughtcsprogsdatasize) == requiredcrc)
+		{
+			Con_DPrintf("Using buffered \"%s\"\n", csprogsfn);
+			csprogsdata = cls.caughtcsprogsdata;
+			csprogsdatasize = cls.caughtcsprogsdatasize;
+			cls.caughtcsprogsdata = NULL;
+			cls.caughtcsprogsdatasize = 0;
+		}
+		else
+		{
+			Con_DPrintf("Not using buffered \"%s\" (buffered: %p, %d)\n", csprogsfn, cls.caughtcsprogsdata, (int) cls.caughtcsprogsdatasize);
+			csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
+		}
 	}
 	if (!csprogsdata)
 	{
@@ -1073,7 +1085,7 @@ void CL_VM_Init (void)
 	prog->error_cmd             = Host_Error;
 	prog->ExecuteProgram        = CLVM_ExecuteProgram;
 
-	PRVM_Prog_Load(prog, csprogsfn, cl_numrequiredfunc, cl_required_func, CL_REQFIELDS, cl_reqfields, CL_REQGLOBALS, cl_reqglobals);
+	PRVM_Prog_Load(prog, csprogsfn, csprogsdata, csprogsdatasize, cl_numrequiredfunc, cl_required_func, CL_REQFIELDS, cl_reqfields, CL_REQGLOBALS, cl_reqglobals);
 
 	if (!prog->loaded)
 	{

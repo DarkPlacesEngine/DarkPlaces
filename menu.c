@@ -5364,7 +5364,7 @@ static void MP_Init (void)
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
-	PRVM_Prog_Load(prog, M_PROG_FILENAME, m_numrequiredfunc, m_required_func, m_numrequiredfields, m_required_fields, m_numrequiredglobals, m_required_globals);
+	PRVM_Prog_Load(prog, M_PROG_FILENAME, NULL, 0, m_numrequiredfunc, m_required_func, m_numrequiredfields, m_required_fields, m_numrequiredglobals, m_required_globals);
 
 	// note: OP_STATE is not supported by menu qc, we don't even try to detect
 	// it here

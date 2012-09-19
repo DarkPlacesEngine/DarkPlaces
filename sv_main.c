@@ -3711,7 +3711,7 @@ static void SV_VM_Setup(void)
 	prog->error_cmd             = Host_Error;
 	prog->ExecuteProgram        = SVVM_ExecuteProgram;
 
-	PRVM_Prog_Load(prog, sv_progs.string, SV_REQFUNCS, sv_reqfuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
+	PRVM_Prog_Load(prog, sv_progs.string, NULL, 0, SV_REQFUNCS, sv_reqfuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
 
 	// some mods compiled with scrambling compilers lack certain critical
 	// global names and field names such as "self" and "time" and "nextthink"

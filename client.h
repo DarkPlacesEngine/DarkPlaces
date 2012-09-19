@@ -718,6 +718,10 @@ typedef struct client_static_s
 	int proquake_servermod; // 0 = not proquake, 1 = proquake
 	int proquake_serverversion; // actual proquake server version * 10 (3.40 = 34, etc)
 	int proquake_serverflags; // 0 (PQF_CHEATFREE not supported)
+
+	// don't write-then-read csprogs.dat (useful for demo playback)
+	unsigned char *caughtcsprogsdata;
+	fs_offset_t caughtcsprogsdatasize;
 }
 client_static_t;
 
