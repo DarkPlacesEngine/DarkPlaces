@@ -1106,7 +1106,7 @@ void Host_LockSession(void)
 	if(locksession_run)
 		return;
 	locksession_run = true;
-	if(locksession.integer != 0)
+	if(locksession.integer != 0 && !COM_CheckParm("-readonly"))
 	{
 		char vabuf[1024];
 		char *p = va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
